@@ -1,0 +1,71 @@
+FARM     = "farm"
+STATE    = "state"
+TURBINE  = "turbine"
+POINT    = "point"
+POINTS   = "points"
+RPOINT   = "rotor_point"
+RPOINTS  = "rotor_points"
+RWEIGHTS = "rotor_weights"
+ORDER    = "order"
+
+ST_DATA     = "state_turbine_data"
+ST_VARS     = "state_turbine_vars"
+SP_DATA     = "state_point_data"
+SP_VARS     = "state_point_vars"
+TMODELS     = "tmodels"
+TMODEL_SELS = "tmodel_sels"
+
+X       = "X"
+Y       = "Y"
+H       = "H"
+D       = "D"
+XYH     = "xyh"
+TXYH    = "txyh"
+WEIGHT  = "weight"
+
+WS  = "WS"
+WD  = "WD"
+TI  = "TI"
+RHO = "RHO"
+YAW = "YAW"
+P   = "P"
+CT  = "CT"
+
+REWS  = "REWS"
+REWS2 = "REWS2"
+REWS3 = "REWS3"
+
+AMB_WS  = "AMB_WS"
+AMB_WD  = "AMB_WD"
+AMB_TI  = "AMB_TI"
+AMB_RHO = "AMB_RHO"
+AMB_YAW = "AMB_YAW"
+AMB_P   = "AMB_P"
+AMB_CT  = "AMB_CT"
+
+AMB_REWS  = "AMB_REWS"
+AMB_REWS2 = "AMB_REWS2"
+AMB_REWS3 = "AMB_REWS3"
+
+var2amb = {
+    v: f"AMB_{v}" for v in [
+        WS, WD, TI, RHO, YAW, P, CT, 
+        REWS, REWS2, REWS3
+    ]
+}
+
+AMB_RPOINT_RESULTS = "amb_rpoint_res"
+
+WCOOS_ID = "wcoos_id"
+WCOOS_X  = "wcoos_x"
+WCOOS_R  = "wcoos_r"
+
+K    = "k"
+KY   = "ky"
+KZ   = "kz"
+KTI  = "kTI"
+KTIY = "kTIy"
+KTIZ = "kTIz"
+
+Z0  = "z0"
+MOL = "MOL"

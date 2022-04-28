@@ -1,0 +1,23 @@
+
+from foxes.core import VerticalProfile
+from foxes.tools.abl import neutral
+import foxes.constants as FC
+import foxes.variables as FV
+
+class ABLLogNeutralWsProfile(VerticalProfile):
+    """
+    The neutral ABL wind speed log profile.
+    """
+
+    def input_vars(self):
+        return [FV.WS, FV.H, FV.Z0]
+
+    def calculate(self, data, heights):
+
+        z0  = data[FV.Z0]
+        h0  = data[FV.H]
+        ws  = data[FV.WS]
+
+        ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
+
+        return neutral.calc_ws(heights, z0, ustar, kappa=FC.KAPPA)

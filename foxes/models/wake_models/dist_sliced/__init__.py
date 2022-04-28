@@ -1,0 +1,3 @@
+from foxes.models.wake_models.dist_sliced.dist_sliced_wake_model import DistSlicedWakeModel
+
+import foxes.models.wake_models.dist_sliced.axisymmetric

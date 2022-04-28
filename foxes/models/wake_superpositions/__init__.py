@@ -1,0 +1,1 @@
+from foxes.models.wake_superpositions.linear import LinearWakeSuperposition

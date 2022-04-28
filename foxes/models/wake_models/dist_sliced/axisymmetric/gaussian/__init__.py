@@ -1,0 +1,2 @@
+from foxes.models.wake_models.dist_sliced.axisymmetric.gaussian.gaussian_wake_model import GaussianWakeModel
+from foxes.models.wake_models.dist_sliced.axisymmetric.gaussian.bastankhah import BastankhahWake
