@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# foxes
+dask-worker-space/
+veri_*
+log.*
+
