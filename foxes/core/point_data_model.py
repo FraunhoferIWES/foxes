@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dask.distributed import progress
 
 from foxes.core.model import Model
-from foxes.core.data import MData, FData, PData
+from foxes.core.data import Data
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -36,7 +36,7 @@ class PointDataModel(Model):
         mdata.update({v: d for v, d in edata.items() if v in mkeys})
         mdims = {v: d for v, d in idims.items() if v in mkeys}
         mdims.update({v: d for v, d in edims.items() if v in mkeys})
-        mdata = MData(mdata, mdims)
+        mdata = Data(mdata, mdims, loop_dims=[FV.STATE, FV.POINT])
         del mdims
 
         # extract farm data:
@@ -44,7 +44,7 @@ class PointDataModel(Model):
         fdata.update({v: d for v, d in edata.items() if v in fkeys})
         fdims = {v: d for v, d in idims.items() if v in fkeys}
         fdims.update({v: d for v, d in edims.items() if v in fkeys})
-        fdata = FData(fdata, fdims)
+        fdata = Data(fdata, fdims, loop_dims=[FV.STATE, FV.POINT])
         del fdims
 
         # extract point data:
@@ -54,8 +54,8 @@ class PointDataModel(Model):
         pdims.update({v: d for v, d in edims.items() if v in pkeys})
         n_points = len(pdata[FV.POINT])
         pdata.update({v: np.full((mdata.n_states, n_points), np.nan, dtype=FC.DTYPE) for v in ovars})
-        pdims.update({v: (FV.STATE, FV.POINTS) for v in ovars})
-        pdata = PData(pdata, pdims)
+        pdims.update({v: (FV.STATE, FV.POINT) for v in ovars})
+        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
         del pdims, data, edata, idims, edims
 
         # run model calculation:

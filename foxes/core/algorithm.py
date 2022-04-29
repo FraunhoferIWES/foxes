@@ -3,8 +3,6 @@ import numpy as np
 import xarray as xr
 
 import foxes.variables as FV
-from foxes.core.point_data_model import PointDataModel
-from foxes.core.point_data_model_list import PointDataModelList
 
 class Algorithm(metaclass=ABCMeta):
 
@@ -27,74 +25,18 @@ class Algorithm(metaclass=ABCMeta):
     def calc_farm(self):
         pass
 
+    @abstractmethod
     def calc_points(
             self, 
             farm_data, 
             points, 
             vars=None, 
             point_models=None,
-            init_pars=None,
-            calc_pars=None,
-            final_pars=None
+            init_pars={},
+            calc_pars={},
+            final_pars={}
         ):
-
-        # update models:
-        pmodels = [self.states]
-        ipars   = [{}]
-        cpars   = [{}]
-        fpars   = [{}]
-        if point_models is not None:
-            if not isinstance(point_models, list):
-                point_models = [point_models]
-            for mi, m in enumerate(point_models):
-                if isinstance(m, str):
-                    pname  = m
-                    pmodel = self.mbook.point_models[pname]
-                    pmodel.name = pname
-                    pmodels.append(pmodel)
-                elif isinstance(m, PointDataModel):
-                    pmodels.append(m)
-                else:
-                    raise TypeError(f"Model '{m}' is neither str nor PointDataModel")
-                ipars.append({} if init_pars is None else init_pars[mi])
-                cpars.append({} if calc_pars is None else calc_pars[mi])
-                fpars.append({} if final_pars is None else final_pars[mi])
-
-        # create model list:
-        pmodels = PointDataModelList(pmodels)
-
-        # initialize models:
-        pmodels.initialize(self, parameters=ipars, verbosity=self.verbosity)
-
-        # get input model data:
-        models_data = self.get_models_data()
-        self.print("\nInput model data:\n\n", models_data, "\n")
-
-        self.print("\nInput farm data:\n\n", farm_data, "\n")
-
-        # get point data:
-        point_data = self.new_point_data(points).persist()
-        self.print("\nInput point data:\n\n", point_data, "\n")
-
-        # check vars:
-        ovars = pmodels.output_point_vars(self)
-        if vars is None:
-            vars = ovars
-        self.print(f"Calculating {len(vars)} variables with model '{pmodels.name}':")
-        self.print(", ".join(ovars))
-        for v in vars:
-            if v not in ovars:
-                raise KeyError(f"Variable '{v}' not in output point vars of model '{pmodels.name}': {ovars}")
-
-        # calculate:
-        pdata = pmodels.run_calculation(self, models_data, farm_data, point_data, 
-                                            vars, parameters=cpars)
-
-        # finalize models:
-        self.print("\n")
-        pmodels.finalize(self, parameters=fpars, verbosity=self.verbosity)
-
-        return pdata
+        pass
 
     def __get_sizes(self, idata, mtype):
 
@@ -156,7 +98,7 @@ class Algorithm(metaclass=ABCMeta):
     def new_point_data(self, points):
         
         idata = {"coords": {}, "data_vars": {}}
-        if len(points.shape) != 3 or points.shap[0] != self.n_states or points.shape[2] != 3:
+        if len(points.shape) != 3 or points.shape[0] != self.n_states or points.shape[2] != 3:
             raise ValueError(f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}")
         idata["data_vars"][FV.POINTS] = ((FV.STATE, FV.POINT, FV.XYH), points)
 

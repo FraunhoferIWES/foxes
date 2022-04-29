@@ -2,7 +2,7 @@
 import foxes.variables as FV
 from foxes.core import FarmDataModel
 
-class SetAmbResults(FarmDataModel):
+class SetAmbFarmResults(FarmDataModel):
 
     def __init__(self, vars_to_amb=None):
         super().__init__()

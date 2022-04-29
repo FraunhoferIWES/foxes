@@ -59,4 +59,4 @@ class PointDataModelList(PointDataModel):
             m.finalize(algo, **parameters[mi])  
         
         self.models = None
-        super.finalize(clear_mem)
+        super().finalize(algo, clear_mem)

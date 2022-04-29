@@ -3,6 +3,7 @@ import numpy as np
 import time
 import dask
 from dask.diagnostics import ProgressBar
+import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     n_p = 22
     p0  = np.array([0., 0.])
     stp = np.array([500., 0.])
-    cks = {FV.STATE: 5, FV.POINT:5}
+    cks = None#FV.STATE: 5, FV.POINT:5}
     D   = 120.
     H   = 100.
     h   = 100.
@@ -75,7 +76,18 @@ if __name__ == "__main__":
     points[:, :, 2] = h
     print("\nPOINTS:\n", points[0])
 
+    time0 = time.time()
+
     with ProgressBar():
-        data = algo.calc_points(fdata, points)
+        pdata = algo.calc_points(fdata, points)
+
+    time1 = time.time()
+    print("\nCalc time =",time1 - time0, "\n")
+
+    print(pdata)
+
+    for s in range(points.shape[0]):
+        plt.plot(points[s, :, 0], pdata[FV.WS][s, :])
+    plt.show()
     
 

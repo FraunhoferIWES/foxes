@@ -5,7 +5,7 @@ from dask.distributed import progress
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core.data import MData, FData
+from foxes.core.data import Data
 from foxes.core.model import Model
 
 class FarmDataModel(Model):
@@ -33,13 +33,13 @@ class FarmDataModel(Model):
         mdata.update(edata)
         n_states = len(mdata[FV.STATE])
         idims.update(edims)
-        mdata = MData(mdata, idims)
+        mdata = Data(mdata, idims, loop_dims=[FV.STATE])
         del data, edata, idims, edims
 
         # create zero output data:
         dims  = {v: (FV.STATE, FV.TURBINE) for v in ovars}
         fdata = {v: np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE) for v in ovars}
-        fdata = FData(fdata, dims)
+        fdata = Data(fdata, dims, loop_dims=[FV.STATE])
         del dims
 
         # run model calculation:

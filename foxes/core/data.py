@@ -1,29 +1,35 @@
+import numpy as np
+
 import foxes.variables as FV
 
-class FData(dict):
+class Data(dict):
 
-    def __init__(self, data, dims):
+    def __init__(self, data, dims, loop_dims):
+
         self.update(data)
         self.dims = dims
+        self.loop_dims = loop_dims
 
-        data0 = next(iter(data.values()))
-        self.n_states   = data0.shape[0]
-        self.n_turbines = data0.shape[1]
+        self.sizes = {}
+        for v, d in data.items():
+            
+            dim = dims[v]
 
-class PData(dict):
+            # remove axes of size 1, added by dask for extra loop dimensions:
+            if len(dim) != len(d.shape):
+                for li, l in enumerate(loop_dims):
+                    if d.shape[li] == 1 and (len(dim) < li + 1 or dim[li] != l):
+                        self[v] = np.squeeze(d, axis=li)
 
-    def __init__(self, data, dims):
-        self.update(data)
-        self.dims = dims
+            for ci, c in enumerate(dim):
+                if c not in self.sizes:
+                    self.sizes[c] = d.shape[ci]
+                elif self.sizes[c] != d.shape[ci]:
+                    raise ValueError(f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {d.shape[ci]} in shape {d.shape}")
 
-        self.n_states = data[FV.POINTS].shape[0]
-        self.n_points = data[FV.POINTS].shape[1]
-
-class MData(dict):
-
-    def __init__(self, data, dims):
-        self.update(data)
-        self.dims = dims
-
-        if FV.STATE in data:
-            self.n_states = len(data[FV.STATE])
+        if FV.STATE in self.sizes:
+            self.n_states = self.sizes[FV.STATE]
+        if FV.TURBINE in self.sizes:
+            self.n_turbines = self.sizes[FV.TURBINE]
+        if FV.POINT in self.sizes:
+            self.n_points = self.sizes[FV.POINT]

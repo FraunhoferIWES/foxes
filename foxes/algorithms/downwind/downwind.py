@@ -1,5 +1,6 @@
 
 from foxes.core import Algorithm, FarmDataModelList
+from foxes.core import PointDataModel, PointDataModelList
 import foxes.algorithms.downwind.models as dm
 import foxes.models as fm
 import foxes.variables as FV
@@ -47,14 +48,16 @@ class Downwind(Algorithm):
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
-    def calc_farm(self):
+    def _print_deco(self, func_name, n_points=None):
 
         deco = "-" * 50
         self.print(f"\n{deco}")
-        self.print(f"  Running {self.name}: calc_farm")
+        self.print(f"  Running {self.name}: {func_name}")
         self.print(deco)
         self.print(f"  n_states  : {self.n_states}")
         self.print(f"  n_turbines: {self.n_turbines}")
+        if n_points is not None:
+            self.print(f"  n_points  : {n_points}")
         self.print(deco)
         self.print(f"  states    : {self.states}")
         self.print(f"  rotor     : {self.rotor_model}")
@@ -72,6 +75,10 @@ class Downwind(Algorithm):
         for i, m in enumerate(self.farm_controller.turbine_models):
             self.print(f"    {i}) {m}")
         self.print(deco)
+
+    def calc_farm(self):
+
+        self._print_deco("calc_farm")
 
         # prepare:
         init_pars  = []
@@ -118,7 +125,7 @@ class Downwind(Algorithm):
 
         # 5) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
-        mlist.models.append(dm.SetAmbResults(self.vars_to_amb))
+        mlist.models.append(dm.SetAmbFarmResults(self.vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
         init_pars.append({})
         calc_pars.append({})
@@ -150,4 +157,84 @@ class Downwind(Algorithm):
         mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
 
         return farm_data
+
+    def calc_points(
+            self, 
+            farm_data, 
+            points, 
+            vars=None, 
+            point_models=None,
+            init_pars={},
+            calc_pars={},
+            final_pars={}
+        ):
+
+        self._print_deco("calc_points", n_points=points.shape[1])
+
+        # update eval models:
+        emodels = [self.states]
+        ipars   = [{}]
+        cpars   = [{}]
+        fpars   = [{}]
+        if point_models is not None:
+            if not isinstance(point_models, list):
+                point_models = [point_models]
+            for mi, m in enumerate(point_models):
+                if isinstance(m, str):
+                    pname  = m
+                    pmodel = self.mbook.point_models[pname]
+                    pmodel.name = pname
+                    emodels.append(pmodel)
+                elif isinstance(m, PointDataModel):
+                    emodels.append(m)
+                else:
+                    raise TypeError(f"Model '{m}' is neither str nor PointDataModel")
+                ipars.append(init_pars.get(emodels[-1].name, {}))
+                cpars.append(calc_pars.get(emodels[-1].name, {}))
+                fpars.append(final_pars.get(emodels[-1].name, {}))
+
+        # prepare:
+        init_pars  = []
+        calc_pars  = []
+        final_pars = []
+        mlist      = PointDataModelList(models=[])
+
+        # 1) calculate ambient point results:
+        mlist.models += emodels
+        init_pars    += ipars
+        calc_pars    += cpars
+        final_pars   += fpars
+
+        # initialize models:
+        mlist.initialize(self, parameters=ipars, verbosity=self.verbosity)
+
+        # get input model data:
+        models_data = self.get_models_data()
+        self.print("\nInput model data:\n\n", models_data, "\n")
+
+        self.print("\nInput farm data:\n\n", farm_data, "\n")
+
+        # get point data:
+        point_data = self.new_point_data(points).persist()
+        self.print("\nInput point data:\n\n", point_data, "\n")
+
+        # check vars:
+        ovars = mlist.output_point_vars(self)
+        if vars is None:
+            vars = ovars
+        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points:",
+                    ", ".join(ovars))
+        for v in vars:
+            if v not in ovars:
+                raise KeyError(f"Variable '{v}' not in output point vars of model '{pmodels.name}': {ovars}")
+
+        # calculate:
+        pdata = mlist.run_calculation(self, models_data, farm_data, point_data, 
+                                            vars, parameters=cpars)
+
+        # finalize models:
+        self.print("\n")
+        mlist.finalize(self, parameters=fpars, verbosity=self.verbosity)
+
+        return pdata
         

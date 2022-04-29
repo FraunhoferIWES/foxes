@@ -1,4 +1,4 @@
-from foxes.core.data import FData, PData, MData
+from foxes.core.data import Data
 from foxes.core.model import Model
 from foxes.core.states import States
 from foxes.core.wind_farm import WindFarm

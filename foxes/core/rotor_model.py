@@ -5,7 +5,7 @@ from abc import abstractmethod
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core.farm_data_model import FarmDataModel
-from foxes.core.data import PData
+from foxes.core.data import Data
 from foxes.tools import wd2uv, uv2wd
 
 
@@ -192,7 +192,7 @@ class RotorModel(FarmDataModel):
         pdims  = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
         pdata.update({v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars})
         pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-        pdata = PData(pdata, pdims)
+        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
         del pdims, points
 
         algo.states.calculate(algo, mdata, fdata, pdata)
