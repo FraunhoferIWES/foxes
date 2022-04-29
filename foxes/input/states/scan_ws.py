@@ -21,11 +21,11 @@ class ScanWS(States):
         self.ti   = ti
         self.rho  = rho
 
-    def input_farm_data(self, algo):
+    def model_input_data(self, algo):
 
         self.WS = f"{self.name}_ws"
 
-        idata = super().input_farm_data(algo)
+        idata = super().model_input_data(algo)
         idata["data_vars"][self.WS] = ((FV.STATE, ), self._wsl)
 
         del self._wsl
@@ -48,19 +48,13 @@ class ScanWS(States):
     def weights(self, algo):
         return np.full((self.N, algo.n_turbines), 1./self.N, dtype=FC.DTYPE)
 
-    def calculate(self, algo, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, pdata):
 
-        n_states = fdata.n_states
-        n_points = pdata.n_points
-        
-        out = {FV.WS: np.zeros((n_states, n_points), dtype=FC.DTYPE)}
-        out[FV.WS][:] = fdata[self.WS][:, None]
+        pdata[FV.WS][:] = mdata[self.WS][:, None]
 
         if self.wd is not None:
-            out[FV.WD] = np.full((n_states, n_points), self.wd, dtype=FC.DTYPE)
+            pdata[FV.WD][:] = self.wd
         if self.ti is not None:
-            out[FV.TI] = np.full((n_states, n_points), self.ti, dtype=FC.DTYPE)
+            pdata[FV.TI][:] = self.ti
         if self.rho is not None:
-            out[FV.RHO] = np.full((n_states, n_points), self.rho, dtype=FC.DTYPE)
-
-        return out
+            pdata[FV.RHO][:] = self.rho

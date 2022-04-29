@@ -12,57 +12,57 @@ class PartialTopHat(PartialWakesModel):
         super().__init__(wake_models, wake_frame)
         self.rotor_model = rotor_model
 
-    def initialize(self, algo, farm_data):
-        super().initialize(algo, farm_data)
+    def initialize(self, algo):
+        super().initialize(algo)
 
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
         if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo, farm_data)
+            self.rotor_model.initialize(algo)
             
         for w in self.wake_models:
             if not isinstance(w, TopHatWakeModel):
                 raise TypeError(f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not a TopHatWakeModel")
 
-    def n_wake_points(self, algo, fdata):
+    def n_wake_points(self, algo, mdata, fdata):
         return algo.n_turbines
 
-    def get_wake_points(self, algo, fdata):
+    def get_wake_points(self, algo, mdata, fdata):
         return fdata[FV.TXYH]
 
-    def contribute_to_wake_deltas(self, algo, fdata, states_source_turbine, 
-                                    wake_deltas):
+    def contribute_to_wake_deltas(self, algo, mdata, fdata, 
+                                    states_source_turbine, wake_deltas):
 
-        n_states = len(fdata[FV.STATE])
-        n_points = self.n_wake_points(algo, fdata)
+        n_states = mdata.n_states
+        n_points = self.n_wake_points(algo, mdata, fdata)
         stsel    = (np.arange(n_states), states_source_turbine)
 
-        if FV.WCOOS_ID not in fdata or not np.all(fdata[FV.WCOOS_ID] == states_source_turbine):
-            points = self.get_wake_points(algo, fdata)
-            wcoos  = self.wake_frame.get_wake_coos(algo, fdata, states_source_turbine, points)
-            fdata[FV.WCOOS_ID] = states_source_turbine
-            fdata[FV.WCOOS_X]  = wcoos[:, :, 0]
-            fdata[FV.WCOOS_R]  = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
+        if FV.WCOOS_ID not in mdata or mdata[FV.WCOOS_ID] != states_source_turbine[0]:
+            points = self.get_wake_points(algo, mdata, fdata)
+            wcoos  = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
+            mdata[FV.WCOOS_ID] = states_source_turbine[0]
+            mdata[FV.WCOOS_X]  = wcoos[:, :, 0]
+            mdata[FV.WCOOS_R]  = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
             wcoos[:, :, 1:3]   = 0
             del points
         else:
             wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            wcoos[:, :, 0] = fdata[FV.WCOOS_X]
+            wcoos[:, :, 0] = mdata[FV.WCOOS_X]
         
         ct    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ct[:] = fdata[FV.CT][stsel][:, None]
-        x     = fdata[FV.WCOOS_X]
+        x     = mdata[FV.WCOOS_X]
 
         sel0 = (ct > 0.) & (x > 0.)
         if np.any(sel0):
 
-            R  = fdata[FV.WCOOS_R]
+            R  = mdata[FV.WCOOS_R]
             r  = np.zeros_like(R)
             D  = fdata[FV.D]
 
             for w in self.wake_models:
 
-                wr = w.calc_wake_radius(algo, fdata, states_source_turbine, x, r, ct)
+                wr = w.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, r, ct)
 
                 sel_sp = sel0 & (wr > R - D/2) 
                 if np.any(sel_sp):
@@ -72,7 +72,7 @@ class PartialTopHat(PartialWakesModel):
                     hct = ct[sel_sp]
                     hwr = wr[sel_sp]
 
-                    clw = w.calc_centreline_wake_deltas(algo, fdata, states_source_turbine,
+                    clw = w.calc_centreline_wake_deltas(algo, mdata, fdata, states_source_turbine,
                                                             n_points, sel_sp, hx, hr, hwr, hct)
                     del hx, hr, hct
 
@@ -87,14 +87,14 @@ class PartialTopHat(PartialWakesModel):
                         except KeyError:
                             raise KeyError(f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}")
 
-                        wake_deltas[v] = superp.calc_wakes_plus_wake(algo, fdata, states_source_turbine, 
+                        wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                                     sel_sp, v, wake_deltas[v], weights*d)
 
-    def evaluate_results(self, algo, fdata, wake_deltas, states_turbine):
+    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
         
-        weights = self.get_data(FV.RWEIGHTS, fdata)
-        rpoints = self.get_data(FV.RPOINTS, fdata)
-        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, fdata)
+        weights = self.get_data(FV.RWEIGHTS, mdata)
+        rpoints = self.get_data(FV.RPOINTS, mdata)
+        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wdel   = {}
@@ -102,7 +102,7 @@ class PartialTopHat(PartialWakesModel):
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, fdata, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, wdel)
 
         wres = {}
         for v, ares in amb_res.items():
@@ -111,5 +111,5 @@ class PartialTopHat(PartialWakesModel):
                 wres[v] += wdel[v]
             wres[v] = wres[v][:, None]
         
-        wres = self.rotor_model.eval_rpoint_results(algo, fdata, wres, weights, states_turbine=states_turbine)
-        fdata.update(wres)
+        self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 
+                                                states_turbine=states_turbine)

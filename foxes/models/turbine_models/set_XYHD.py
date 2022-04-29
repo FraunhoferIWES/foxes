@@ -24,21 +24,18 @@ class SetXYHD(TurbineModel):
             ovars.append(FV.D)
         return ovars
     
-    def calculate(self, algo, fdata, st_sel):
+    def calculate(self, algo, mdata, fdata, st_sel):
 
-        n_states   = len(fdata[FV.STATE])
+        n_states   = mdata.n_states
         n_turbines = algo.n_turbines
 
-        out = {}
         if self.set_XY or self.set_H:
             fdata[FV.TXYH] = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
             if self.set_XY:
-                out[FV.X] = fdata[FV.TXYH][..., 0] 
-                out[FV.Y] = fdata[FV.TXYH][..., 1] 
+                fdata[FV.X] = fdata[FV.TXYH][..., 0] 
+                fdata[FV.Y] = fdata[FV.TXYH][..., 1] 
             if self.set_H:
-                out[FV.H] = fdata[FV.TXYH][..., 2] 
-        if self.set_D:
-            out[FV.D] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+                fdata[FV.H] = fdata[FV.TXYH][..., 2] 
 
         for ti in range(n_turbines):
             ssel = st_sel[:, ti]
@@ -48,19 +45,17 @@ class SetXYHD(TurbineModel):
                     ssel = np.s_[:]
                     
                 if self.set_XY:
-                    out[FV.X][ssel, ti] = algo.farm.turbines[ti].xy[0]
-                    out[FV.Y][ssel, ti] = algo.farm.turbines[ti].xy[1]
+                    fdata[FV.X][ssel, ti] = algo.farm.turbines[ti].xy[0]
+                    fdata[FV.Y][ssel, ti] = algo.farm.turbines[ti].xy[1]
 
                 if self.set_H:
                     H = algo.farm.turbines[ti].H
                     if H is None:
                         H = algo.farm_controller.turbine_types[ti].H
-                    out[FV.H][ssel, ti] = H
+                    fdata[FV.H][ssel, ti] = H
                             
                 if self.set_D:
                     D = algo.farm.turbines[ti].D
                     if D is None:
                         D = algo.farm_controller.turbine_types[ti].D
-                    out[FV.D][ssel, ti] = D    
-
-        return out    
+                    fdata[FV.D][ssel, ti] = D    

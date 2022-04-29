@@ -11,9 +11,9 @@ class MeanFarmWind(WakeFrame):
         super().__init__()
         self.var_wd = var_wd
 
-    def get_wake_coos(self, algo, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
 
-        n_states = len(fdata[FV.STATE])
+        n_states = mdata.n_states
         stsel    = (np.arange(n_states), states_source_turbine)
 
         xyz   = fdata[FV.TXYH][stsel]

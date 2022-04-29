@@ -10,11 +10,9 @@ class OrderWD(TurbineOrder):
         super().__init__()
         self.var_wd = var_wd
 
-    def calculate(self, algo, fdata):
+    def calculate(self, algo, mdata, fdata):
 
         n  = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
         xy = fdata[FV.TXYH][:, :, :2]
 
-        order = np.argsort(np.einsum('std,sd->st', xy, n), axis=-1)
-
-        return {FV.ORDER: order}
+        fdata[FV.ORDER] = np.argsort(np.einsum('std,sd->st', xy, n), axis=-1)

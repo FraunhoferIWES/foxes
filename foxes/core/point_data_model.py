@@ -4,28 +4,18 @@ from abc import abstractmethod
 from dask.distributed import progress
 
 from foxes.core.model import Model
-from foxes.core.farm_data import FarmData
-from foxes.core.point_data import PointData
+from foxes.core.data import MData, FData, PData
 import foxes.variables as FV
 import foxes.constants as FC
 
 class PointDataModel(Model):
 
-    def input_point_data(self, algo):
-        return {"coords": {}, "data_vars": {}}
-
     @abstractmethod
     def output_point_vars(self, algo):
         return []
-
-    def initialize(self, algo, farm_data, point_data):
-        super().initialize()
     
     @abstractmethod
-    def calculate(self, algo, fdata, pdata):
-        pass
-
-    def finalize(self, algo, farm_data, point_data):
+    def calculate(self, algo, mdata, fdata, pdata):
         pass
 
     def _wrap_calc(
@@ -36,54 +26,73 @@ class PointDataModel(Model):
         edata,
         edims,
         ovars,
+        mkeys,
+        fkeys,
+        pkeys,
         calc_pars
     ):
-        # extract data into dicts, for better accessability:
-        pdata = {v: data[i] for i, v in enumerate(idims.keys()) if FV.POINT in idims[v]}
-        fdata = {v: data[i] for i, v in enumerate(idims.keys()) if v not in pdata}
-        fdata.update(edata)
-        n_states = len(fdata[FV.STATE])
-        n_points = len(pdata[FV.POINT])
-        del data, edata
+        # extract models data:
+        mdata = {v: data[i] for i, v in enumerate(idims.keys()) if v in mkeys}
+        mdata.update({v: d for v, d in edata.items() if v in mkeys})
+        mdims = {v: d for v, d in idims.items() if v in mkeys}
+        mdims.update({v: d for v, d in edims.items() if v in mkeys})
+        mdata = MData(mdata, mdims)
+        del mdims
 
-        # collect dimensions info:
-        dims = {v: (FV.STATE, FV.POINT) for v in ovars}
-        dims.update(idims)
-        dims.update(edims)
-        del idims, edims
+        # extract farm data:
+        fdata = {v: data[i] for i, v in enumerate(idims.keys()) if v in fkeys}
+        fdata.update({v: d for v, d in edata.items() if v in fkeys})
+        fdims = {v: d for v, d in idims.items() if v in fkeys}
+        fdims.update({v: d for v, d in edims.items() if v in fkeys})
+        fdata = FData(fdata, fdims)
+        del fdims
+
+        # extract point data:
+        pdata = {v: data[i] for i, v in enumerate(idims.keys()) if v in pkeys}
+        pdata.update({v: d for v, d in edata.items() if v in pkeys})
+        pdims = {v: d for v, d in idims.items() if v in pkeys}
+        pdims.update({v: d for v, d in edims.items() if v in pkeys})
+        n_points = len(pdata[FV.POINT])
+        pdata.update({v: np.full((mdata.n_states, n_points), np.nan, dtype=FC.DTYPE) for v in ovars})
+        pdims.update({v: (FV.STATE, FV.POINTS) for v in ovars})
+        pdata = PData(pdata, pdims)
+        del pdims, data, edata, idims, edims
 
         # run model calculation:
-        fdata = FarmData(fdata, {v: d for v, d in dims.items() if v in fdata}, algo.n_turbines)
-        pdata = PointData(pdata, {v: d for v, d in dims.items() if v in pdata})
-        hres  = self.calculate(algo=algo, fdata=fdata, pdata=pdata, **calc_pars)
-        ores  = {v: d for v, d in pdata.items() if v not in hres}
-        del fdata, pdata, dims
+        self.calculate(algo, mdata, fdata, pdata, **calc_pars)
+        del mdata, fdata
         
         # create output:
         n_vars = len(ovars)
-        data   = np.zeros((n_states, n_points, n_vars), dtype=FC.DTYPE)
+        data   = np.zeros((pdata.n_states, pdata.n_points, n_vars), dtype=FC.DTYPE)
         for v in ovars:
-            data[:, :, ovars.index(v)] = hres[v] if v in hres else ores[v]
+            data[:, :, ovars.index(v)] = pdata[v]
         
         return data
 
-    def run_calculation(self, algo, farm_data, point_data, ovars, **parameters):
+    def run_calculation(self, algo, models_data, farm_data, point_data, ovars, **parameters):
 
         if not self.initialized:
-            raise ValueError(f"Model '{self.name}': run_calc called before initialization")
+            raise ValueError(f"PointDataModel '{self.name}': run_calc called before initialization")
+
+        # collect models data:
+        idata = {v: d for v, d in models_data.items() if FV.STATE in d.dims or FV.POINT in d.dims}
+        edata = {v: d.to_numpy() for v, d in models_data.items() if v not in idata}
+        mkeys = list(models_data.keys())
 
         # collect farm data:
-        idata = {v: d for v, d in farm_data.items() if FV.STATE in d.dims or FV.POINT in d.dims}
-        edata = {v: d.to_numpy() for v, d in farm_data.items() if v not in idata}
-
+        idata.update({v: d for v, d in farm_data.items() if FV.STATE in d.dims or FV.POINT in d.dims})
+        edata.update({v: d.to_numpy() for v, d in farm_data.items() if v not in idata})
+        fkeys = list(farm_data.keys())
+        
         # collect point data:
         idata.update({v: d for v, d in point_data.items() if FV.STATE in d.dims or FV.POINT in d.dims})
         edata.update({v: d.to_numpy() for v, d in point_data.items() if v not in idata})
-        otypes = [FC.DTYPE]
+        pkeys = list(point_data.keys())
 
-        # extract states data:
+        # add states:
         states = None
-        for v, d in farm_data.items():
+        for d in farm_data.values():
             for ci, c in enumerate(d.dims):
                 if c == FV.STATE:
                     crds   = {c: farm_data.coords[c]} if c in farm_data.coords else None
@@ -93,11 +102,15 @@ class PointDataModel(Model):
                     break
             if states is not None:
                 idata[FV.STATE] = states
+                if not FV.STATE in mkeys:
+                    mkeys.append(FV.STATE)
                 break
-
-        # extract points data:
+        if states is None:
+            raise ValueError(f"FarmDataModel '{self.name}': Missing dimension '{FV.STATE}' in farm data coordinates.")
+        
+        # add points:
         points = None
-        for v, d in point_data.items():
+        for d in point_data.values():
             for ci, c in enumerate(d.dims):
                 if c == FV.POINT:
                     crds   = {c: point_data.coords[c]} if c in point_data.coords else None
@@ -107,13 +120,23 @@ class PointDataModel(Model):
                     break
             if points is not None:
                 idata[FV.POINT] = points
+                if not FV.POINT in pkeys:
+                    pkeys.append(FV.POINT)
                 break
+        if points is None:
+            raise ValueError(f"FarmDataModel '{self.name}': Missing dimension '{FV.POINT}' in point data coordinates.")
 
         # collect dims:
         idims  = {v: d.dims for v, d in idata.items()}
-        edims  = {v: farm_data[v].dims if v in farm_data else point_data[v].dims for v in edata.keys()}
         icdims = [[c for c in d if c != FV.STATE and c != FV.POINT] for d in idims.values()] 
         ocdims = [[FV.SP_VARS]]
+        otypes = [FC.DTYPE]
+        edims  = {}
+        for v in edata.keys():
+            for s in (models_data, farm_data, point_data):
+                if v in s:
+                    edims[v] = s[v].dims
+                    break
 
         # setup dask options:
         dargs = dict(
@@ -127,6 +150,9 @@ class PointDataModel(Model):
             edata=edata,
             edims=edims,
             ovars=ovars,
+            mkeys=mkeys,
+            fkeys=fkeys,
+            pkeys=pkeys,
             calc_pars=parameters
         )
 

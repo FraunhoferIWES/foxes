@@ -15,7 +15,7 @@ class kTI(TurbineModel):
     def output_farm_vars(self, algo):
         return [FV.K]
     
-    def calculate(self, algo, fdata, st_sel):
+    def calculate(self, algo, mdata, fdata, st_sel):
 
         kTI = self.get_data(FV.KTI, fdata, st_sel)
         ti  = self.get_data(FV.TI, fdata, st_sel)

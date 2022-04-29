@@ -8,33 +8,33 @@ class DistSlicedWakeModel(WakeModel):
         super().__init__()
         self.superp = superpositions
     
-    def initialize(self, algo, data):
-        super().initialize(algo, data)
+    def initialize(self, algo):
+        super().initialize(algo)
 
         self.superp = {v: algo.mbook.wake_superpositions[s] for v, s in self.superp.items()} 
         for v, s in self.superp.items():
             if not s.initialized:
-                s.initialize(algo, data)
+                s.initialize(algo)
 
     @abstractmethod
-    def calc_xdata_spsel(self, algo, fdata, states_source_turbine, x):
+    def calc_xdata_spsel(self, algo, mdata, fdata, states_source_turbine, x):
         pass
 
     @abstractmethod
-    def calc_wakes_ortho(self, algo, fdata, states_source_turbine, 
+    def calc_wakes_ortho(self, algo, mdata, fdata, states_source_turbine, 
                             n_points, sp_sel, xdata, yz):
         pass
 
-    def contribute_to_wake_deltas(self, algo, fdata, states_source_turbine, 
+    def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
                                     wake_coos, wake_deltas):
 
         n_points = wake_coos.shape[1]
 
         x = wake_coos[:, :, 0]
-        xdata, sp_sel = self.calc_xdata_spsel(algo, fdata, states_source_turbine, x)
+        xdata, sp_sel = self.calc_xdata_spsel(algo, mdata, fdata, states_source_turbine, x)
 
         yz = wake_coos[:, :, 1:3][sp_sel]
-        wdeltas = self.calc_wakes_ortho(algo, fdata, states_source_turbine,
+        wdeltas = self.calc_wakes_ortho(algo, mdata, fdata, states_source_turbine,
                                             n_points, sp_sel, xdata, yz)
                 
         for v, hdel in wdeltas.items():
@@ -45,10 +45,10 @@ class DistSlicedWakeModel(WakeModel):
                 raise KeyError(f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}")
 
             wake_deltas[v] = superp.calc_wakes_plus_wake(
-                                        algo, fdata, states_source_turbine,
+                                        algo, mdata, fdata, states_source_turbine,
                                         sp_sel, v, wake_deltas[v], hdel)
 
-    def finalize_wake_deltas(self, algo, fdata, wake_deltas):
+    def finalize_wake_deltas(self, algo, mdata, fdata, wake_deltas):
         for v, s in self.superp.items():
-            wake_deltas[v] = s.calc_final_wake_delta(algo, fdata, v, wake_deltas[v])
+            wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v, wake_deltas[v])
         

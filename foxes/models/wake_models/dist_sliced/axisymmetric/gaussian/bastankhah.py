@@ -19,14 +19,14 @@ class BastankhahWake(GaussianWakeModel):
         self.ct_max       = ct_max
         self.sbeta_factor = sbeta_factor
 
-    def init_wake_deltas(self, algo, fdata, n_points, wake_deltas):
-        n_states = fdata.n_states
+    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+        n_states = mdata.n_states
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
-    def calc_amplitude_sigma_spsel(self, algo, fdata, states_source_turbine, x):
+    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
 
         # prepare:
-        n_states = fdata.n_states
+        n_states = mdata.n_states
         n_points = x.shape[1]
         st_sel   = (np.arange(n_states), states_source_turbine)
 

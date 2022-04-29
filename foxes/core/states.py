@@ -16,7 +16,7 @@ class States(PointDataModel):
     def weights(self, algo):
         pass
 
-    def input_farm_data(self, algo):
+    def model_input_data(self, algo):
 
         idata = {"coords": {}, "data_vars": {}}
 
@@ -35,9 +35,3 @@ class States(PointDataModel):
 
     def output_point_vars(self, algo):
         return [FV.WS, FV.WD, FV.TI, FV.RHO]
-
-    def initialize(self, algo, farm_data, point_data=None):
-        super().initialize(algo, farm_data, point_data)
-
-    def finalize(self, algo, farm_data, point_data=None):
-        super().finalize(algo, farm_data, point_data)

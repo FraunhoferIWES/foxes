@@ -134,20 +134,20 @@ class Downwind(Algorithm):
         # update variables:
         self.farm_vars = mlist.output_farm_vars(self)   
 
-        # create data, filled with zeros:
-        farm_data  = self.new_farm_data(mlist.input_farm_data(self), self.chunks).persist()
-        self.print("\nInput data:\n\n", farm_data, "\n")
-
         # initialize models:
-        mlist.initialize(self, farm_data, parameters=init_pars, verbosity=self.verbosity)
+        mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
+
+        # get input model data:
+        models_data = self.get_models_data()
+        self.print("\nInput model data:\n\n", models_data, "\n")
 
         # run main calculation:
         self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
-        farm_data = mlist.run_calculation(self, farm_data, parameters=calc_pars)
+        farm_data = mlist.run_calculation(self, models_data, parameters=calc_pars)
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, farm_data, parameters=final_pars, verbosity=self.verbosity)
+        mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
 
         return farm_data
         

@@ -27,15 +27,23 @@ class Model(metaclass=ABCMeta):
     def model_input_data(self, algo):
         return {"coords": {}, "data_vars": {}}
 
-    def initialize(self, algo):
-        idata = self.model_input_data(algo)
-        algo.models_idata["coords"].update(idata["coords"])
-        algo.models_idata["data_vars"].update(idata["data_vars"])
-        self.__initialized = True
-    
     @property
     def initialized(self):
         return self.__initialized
+
+    def initialize(self, algo):
+        idata = self.model_input_data(algo)
+        if len(idata["coords"]) or len(idata["data_vars"]):
+            algo.models_idata[self.name] = idata
+        self.__initialized = True
+    
+    def finalize(self, algo, clear_mem=False):
+        if self.name in algo.models_idata:
+            if clear_mem:
+                del algo.models_idata[self.name]
+                self.__initialized = False
+        else:
+            self.__initialized = False
 
     def get_data(
             self,

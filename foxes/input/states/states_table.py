@@ -36,7 +36,7 @@ class StatesTable(States):
             self._data = PandasFileHelper().read_file(self._data, **rpars)
         self.N = len(self._data.index)
 
-    def input_farm_data(self, algo):
+    def model_input_data(self, algo):
 
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
@@ -75,7 +75,7 @@ class StatesTable(States):
                 raise KeyError(f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars")
         self._data = self._data[tcols]
 
-        idata  = super().input_farm_data(algo)
+        idata  = super().model_input_data(algo)
 
         if self._data.index.name is not None:
             idata["coords"][FV.STATE] = self._data.index.to_numpy()
@@ -87,12 +87,12 @@ class StatesTable(States):
 
         return idata
 
-    def initialize(self, algo, farm_data, point_data):
-        super().initialize(algo, farm_data, point_data)
+    def initialize(self, algo):
+        super().initialize(algo)
 
         for p in self.profiles.values():
             if not p.initialized:
-                p.initialize(algo, point_data)
+                p.initialize(algo)
 
     def size(self):
         return self.N
@@ -103,33 +103,16 @@ class StatesTable(States):
     def weights(self, algo):
         return self._weights
 
-    def calculate(self, algo, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, pdata):
 
-        n_states = len(fdata[FV.STATE])
-        n_points = pdata.n_points
-        z        = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FV.POINTS][:, :, 2]
         
-        out = {}
         for i, v in enumerate(self.tvars):
-            if v not in pdata:
-                pdata[v] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            if v in self.ovars:
-                out[v] = pdata[v]
-            pdata[v][:] = fdata[self.DATA][:, i, None]
+            pdata[v][:] = mdata[self.DATA][:, i, None]
         
         for v, f in self.fixed_vars.items():
-            if v not in pdata:
-                pdata[v] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            if v in self.ovars:
-                out[v] = pdata[v]
-            pdata[v][:] = f 
+            pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE) 
 
         for v, p in self.profiles.items():
-            if v not in pdata:
-                pdata[v] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            if v in self.ovars:
-                out[v] = pdata[v]
             pres = p.calculate(pdata, z)
-            pdata[v][:] = pres
-
-        return out
+            pdata[v] = pres

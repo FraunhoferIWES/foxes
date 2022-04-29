@@ -81,12 +81,12 @@ class FarmController(FarmDataModelList):
 
         self.models = self.turbine_models
 
-    def input_farm_data(self, algo):
+    def model_input_data(self, algo):
 
         if self.turbine_models is None:
             self.collect_models(algo)
 
-        idata = super().input_farm_data(algo)
+        idata = super().model_input_data(algo)
         idata["data_vars"][FV.TMODEL_SELS] = (
             (FV.STATE, FV.TURBINE, FV.TMODELS), self.turbine_model_sels
         )
@@ -94,26 +94,30 @@ class FarmController(FarmDataModelList):
         return idata
 
     def output_farm_vars(self, algo):
-
         if self.turbine_models is None:
             self.collect_models(algo)
-
         return super().output_farm_vars(algo)
     
-    def get_pars(self, farm_data, st_sel=None, from_data=True):
-        s = farm_data[FV.TMODEL_SELS] if from_data else self.turbine_model_sels
+    def get_pars(self, algo, mdata=None, st_sel=None, from_data=True):
+        if from_data:
+            s = mdata[FV.TMODEL_SELS] 
+        else:
+            if self.turbine_models is None:
+                self.collect_models(algo)
+            s = self.turbine_model_sels
         if st_sel is not None:
             s = s & st_sel[:, :, None]
         return [{"st_sel": s[:, :, mi]} for mi in range(len(self.models))]
 
-    def initialize(self, algo, farm_data, verbosity=0):
-        pars = self.get_pars(farm_data)
-        super().initialize(algo, farm_data, parameters=pars, verbosity=verbosity)
+    def initialize(self, algo, st_sel=None, verbosity=0):
+        pars = self.get_pars(algo, st_sel=st_sel, from_data=False)
+        super().initialize(algo, parameters=pars, verbosity=verbosity)
     
-    def calculate(self, algo, fdata, st_sel=None):
-        pars = self.get_pars(fdata, st_sel)
-        return super().calculate(algo, fdata, parameters=pars)
+    def calculate(self, algo, mdata, fdata, st_sel=None):
+        pars = self.get_pars(algo, mdata, st_sel, from_data=True)
+        super().calculate(algo, mdata, fdata, parameters=pars)
+        self.turbine_model_sels = mdata[FV.TMODEL_SELS] 
     
-    def finalize(self, algo, farm_data, verbosity=0):
-        pars = self.get_pars(farm_data, from_data=False)
-        super().finalize(algo, farm_data, parameters=pars, verbosity=verbosity)
+    def finalize(self, algo, st_sel=None, verbosity=0):
+        pars = self.get_pars(algo, st_sel=st_sel, from_data=False)
+        super().finalize(algo, parameters=pars, verbosity=verbosity)

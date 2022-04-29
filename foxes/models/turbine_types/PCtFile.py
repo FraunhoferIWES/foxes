@@ -30,15 +30,15 @@ class PCtFile(TurbineType):
     def output_farm_vars(self, algo):
         return [FV.P, FV.CT]
     
-    def initialize(self, algo, farm_data, st_sel):
+    def initialize(self, algo, st_sel):
         data = PandasFileHelper.read_file(self.fpath, **self.rpars)
         data = data.set_index(self.col_ws).sort_index()
         self.data_ws = data.index.to_numpy()
         self.data_P  = data[self.col_P].to_numpy()
         self.data_ct = data[self.col_ct].to_numpy()
-        super().initialize(algo, farm_data, st_sel)
+        super().initialize(algo, st_sel)
     
-    def calculate(self, algo, fdata, st_sel):
+    def calculate(self, algo, mdata, fdata, st_sel):
         
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel] if self.WSP != self.WSCT else rews2
@@ -52,4 +52,9 @@ class PCtFile(TurbineType):
         out[FV.CT][st_sel] = np.interp(rews2, self.data_ws, self.data_ct, left=0., right=0.)
 
         return out
+    
+    def finalize(self, algo, st_sel, clear_mem=False):
+        if clear_mem:
+            del self.data_ws, self.data_P, self.data_ct
+        super().finalize(algo, clear_mem)
         

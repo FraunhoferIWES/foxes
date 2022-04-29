@@ -5,26 +5,17 @@ from dask.distributed import progress
 
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core.farm_data import FarmData
+from foxes.core.data import MData, FData
 from foxes.core.model import Model
 
 class FarmDataModel(Model):
-    
-    def input_farm_data(self, algo):
-        return {"coords": {}, "data_vars": {}}
 
     @abstractmethod
     def output_farm_vars(self, algo):
         return []
 
-    def initialize(self, algo, farm_data):
-        super().initialize()
-
     @abstractmethod
-    def calculate(self, algo, fdata):
-        pass
-
-    def finalize(self, algo, farm_data):
+    def calculate(self, algo, mdata, fdata):
         pass
 
     def _wrap_calc(
@@ -37,40 +28,40 @@ class FarmDataModel(Model):
         ovars,
         calc_pars
     ):
-        # extract data into dicts, for better accessability:
-        fdata = {v: data[i] for i, v in enumerate(idims.keys())}
-        fdata.update(edata)
-        n_states = len(fdata[FV.STATE])
-        del data, edata
+        # extract model data:
+        mdata = {v: data[i] for i, v in enumerate(idims.keys())}
+        mdata.update(edata)
+        n_states = len(mdata[FV.STATE])
+        idims.update(edims)
+        mdata = MData(mdata, idims)
+        del data, edata, idims, edims
 
-        # collect dimensions info:
-        dims = {v: (FV.STATE, FV.TURBINE) for v in ovars}
-        dims.update(idims)
-        dims.update(edims)
-        del idims, edims
+        # create zero output data:
+        dims  = {v: (FV.STATE, FV.TURBINE) for v in ovars}
+        fdata = {v: np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE) for v in ovars}
+        fdata = FData(fdata, dims)
+        del dims
 
         # run model calculation:
-        fdata = FarmData(fdata, dims, algo.n_turbines)
-        hres  = self.calculate(algo, fdata, **calc_pars)
-        ores  = {v: d for v, d in fdata.items() if v not in hres}
-        del fdata, dims
+        self.calculate(algo, mdata, fdata, **calc_pars)
+        del mdata
         
         # create output:
         n_vars = len(ovars)
         data   = np.zeros((n_states, algo.n_turbines, n_vars), dtype=FC.DTYPE)
         for v in ovars:
-            data[:, :, ovars.index(v)] = hres[v] if v in hres else ores[v]
+            data[:, :, ovars.index(v)] = fdata[v]
         
         return data
             
-    def run_calculation(self, algo, farm_data, **parameters):
+    def run_calculation(self, algo, models_data, **parameters):
 
         if not self.initialized:
             raise ValueError(f"FarmDataModel '{self.name}': run_calc called before initialization")
 
-        # collect data:
-        idata  = {v: d for v, d in farm_data.items() if FV.STATE in d.dims}
-        edata  = {v: d.to_numpy() for v, d in farm_data.items() if v not in idata}
+        # collect models data:
+        idata  = {v: d for v, d in models_data.items() if FV.STATE in d.dims}
+        edata  = {v: d.to_numpy() for v, d in models_data.items() if v not in idata}
         otypes = [FC.DTYPE]
         ovars  = algo.farm_vars 
         if not FV.WEIGHT in ovars:
@@ -78,21 +69,23 @@ class FarmDataModel(Model):
 
         # extract states data:
         states = None
-        for v, d in farm_data.items():
+        for d in models_data.values():
             for ci, c in enumerate(d.dims):
                 if c == FV.STATE:
-                    crds   = {FV.STATE: farm_data.coords[c]} if c in farm_data.coords else None
-                    states = xr.DataArray(data=farm_data[c].to_numpy(), coords=crds, dims=[c])
+                    crds   = {FV.STATE: models_data.coords[c]} if c in models_data.coords else None
+                    states = xr.DataArray(data=models_data[c].to_numpy(), coords=crds, dims=[c])
                     if d.chunks is not None:
                         states = states.chunk(d.chunks[ci])
                     break
             if states is not None:
                 idata[FV.STATE] = states
                 break
+        if states is None:
+            raise ValueError(f"FarmDataModel '{self.name}': Missing dimension '{FV.STATE}' in models data coordinates.")
 
         # collect dims:
         idims  = {v: d.dims for v, d in idata.items()}
-        edims  = {v: farm_data[v].dims for v in edata.keys()}
+        edims  = {v: models_data[v].dims for v in edata.keys()}
         icdims = [[c for c in d if c != FV.STATE] for d in idims.values()] 
         ocdims = [[FV.TURBINE, FV.ST_VARS]]
 

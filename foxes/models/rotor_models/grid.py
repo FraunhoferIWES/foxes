@@ -46,7 +46,7 @@ class GridRotor(RotorModel):
     def __repr__(self):
         return super().__repr__() + f"(n={self.n})"
     
-    def initialize(self, algo, farm_data):
+    def initialize(self, algo):
 
         N     = self.n * self.n
         delta = 2. / self.n 
@@ -84,7 +84,7 @@ class GridRotor(RotorModel):
             self.dpoints[:, 2] = y.reshape(N)
             self.weights       = np.ones(N, dtype=FC.DTYPE) / N
 
-        super().initialize(algo, farm_data)
+        super().initialize(algo)
 
     def n_rotor_points(self):
         return len(self.weights)

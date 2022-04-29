@@ -1,3 +1,4 @@
+from foxes.core.data import FData, PData, MData
 from foxes.core.model import Model
 from foxes.core.states import States
 from foxes.core.wind_farm import WindFarm
@@ -12,7 +13,6 @@ from foxes.core.turbine_model import TurbineModel
 from foxes.core.turbine_type import TurbineType
 from foxes.core.turbine_order import TurbineOrder
 from foxes.core.farm_controller import FarmController
-from foxes.core.farm_data import FarmData
 from foxes.core.turbine import Turbine
 from foxes.core.partial_wakes_model import PartialWakesModel
 from foxes.core.wake_frame import WakeFrame

@@ -12,13 +12,13 @@ class JensenWake(TopHatWakeModel):
         self.k      = k
         self.ct_max = ct_max
 
-    def init_wake_deltas(self, algo, fdata, n_points, wake_deltas):
-        n_states = fdata.n_states
+    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+        n_states = mdata.n_states
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
-    def calc_wake_radius(self, algo, fdata, states_source_turbine, x, r, ct):
+    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, r, ct):
 
-        n_states = fdata.n_states
+        n_states = mdata.n_states
         st_sel   = (np.arange(n_states), states_source_turbine)
 
         R = fdata[FV.D][st_sel][:, None] / 2
@@ -29,10 +29,10 @@ class JensenWake(TopHatWakeModel):
 
         return R + k * x
 
-    def calc_centreline_wake_deltas(self, algo, fdata, states_source_turbine,
+    def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
                                         n_points, sp_sel, x, r, wake_r, ct):
 
-        n_states = fdata.n_states
+        n_states = mdata.n_states
         st_sel   = (np.arange(n_states), states_source_turbine)
 
         R    = np.zeros((n_states, n_points), dtype=FC.DTYPE)

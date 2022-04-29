@@ -11,7 +11,7 @@ class LinearWakeSuperposition(WakeSuperposition):
         super().__init__()
         self.scalings = scalings
 
-    def calc_wakes_plus_wake(self, algo, fdata, states_source_turbine,
+    def calc_wakes_plus_wake(self, algo, mdata, fdata, states_source_turbine,
                                 sel_sp, variable, wake_delta, wake_model_result):
 
         if isinstance(self.scalings, dict):
@@ -49,7 +49,7 @@ class LinearWakeSuperposition(WakeSuperposition):
             except KeyError:
                 raise KeyError(f"Model '{self.name}': Scaling variable '{var}' for wake variable '{variable}' not found in fdata {sorted(list(fdata.keys()))}")
             
-            n_states = len(fdata[FV.STATE])
+            n_states = mdata.n_states
             n_points = wake_delta.shape[1]
             stsel    = (np.arange(n_states), states_source_turbine)
             scale    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -63,6 +63,6 @@ class LinearWakeSuperposition(WakeSuperposition):
         else:
             raise ValueError(f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_<var>'")
 
-    def calc_final_wake_delta(self, algo, fdata, variable, wake_delta):
+    def calc_final_wake_delta(self, algo, mdata, fdata, variable, wake_delta):
         return wake_delta
         

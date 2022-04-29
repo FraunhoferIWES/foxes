@@ -13,9 +13,6 @@ class SetAmbResults(FarmDataModel):
             self.vars = [v for v in algo.farm_vars if v in FV.var2amb]
         return [FV.var2amb[v] for v in self.vars]
 
-    def calculate(self, algo, fdata):
-        out = {}
+    def calculate(self, algo, mdata, fdata):
         for v in self.vars:
-            out[FV.var2amb[v]] = fdata[v].copy()
-        return out
-
+            fdata[FV.var2amb[v]][:] = fdata[v]
