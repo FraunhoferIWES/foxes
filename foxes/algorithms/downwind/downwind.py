@@ -217,6 +217,12 @@ class Downwind(Algorithm):
         calc_pars.append({})
         final_pars.append({})
 
+        # 3) calc wake effects:
+        mlist.models.append(dm.PointWakesCalculation(point_vars=vars))
+        init_pars.append({})
+        calc_pars.append({})
+        final_pars.append({})
+
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
@@ -234,11 +240,11 @@ class Downwind(Algorithm):
         ovars = mlist.output_point_vars(self)
         if vars is None:
             vars = ovars
-        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points:",
+        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states:",
                     ", ".join(ovars))
         for v in vars:
             if v not in ovars:
-                raise KeyError(f"Variable '{v}' not in output point vars of model '{pmodels.name}': {ovars}")
+                raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
 
         # calculate:
         pdata = mlist.run_calculation(self, models_data, farm_data, point_data, 

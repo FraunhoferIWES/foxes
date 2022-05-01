@@ -1,3 +1,4 @@
-from foxes.algorithms.downwind.models.farm_wakes_calc import FarmWakesCalculation
 from foxes.algorithms.downwind.models.set_amb_farm_results import SetAmbFarmResults
 from foxes.algorithms.downwind.models.set_amb_point_results import SetAmbPointResults
+from foxes.algorithms.downwind.models.farm_wakes_calc import FarmWakesCalculation
+from foxes.algorithms.downwind.models.point_wakes_calc import PointWakesCalculation

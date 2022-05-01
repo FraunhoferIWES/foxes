@@ -58,6 +58,7 @@ class BastankhahWake(GaussianWakeModel):
             sblim = 1 / ( np.sqrt(8) * self.sbeta_factor )
             sbeta[sbeta > sblim] = sblim
             sigma = k * x + self.sbeta_factor * sbeta * D
+            
             del x, k, sbeta, sblim
 
             # calculate amplitude:

@@ -48,7 +48,8 @@ class CentreRotor(RotorModel):
             uvp = wd2uv(wd, ws, axis=-1)
             uv  = uvp[:, :, 0]
 
-        wd  = None
+        wd    = None
+        vdone = []
         for v in self.calc_vars:
 
             if states_turbine is not None:
@@ -62,6 +63,7 @@ class CentreRotor(RotorModel):
                     fdata[v] = wd
                 else:
                     fdata[v][stsel] = wd[:, 0]
+                vdone.append(v)
 
             elif v == FV.WS:
                 ws = np.linalg.norm(uv, axis=-1)
@@ -70,6 +72,7 @@ class CentreRotor(RotorModel):
                 else:
                     fdata[v][stsel] = ws[:, 0]
                 del ws
+                vdone.append(v)
         del uv, wd
         
         if FV.REWS in self.calc_vars \
@@ -89,12 +92,13 @@ class CentreRotor(RotorModel):
                     else:
                         fdata[v][stsel] = rews[:, 0]
                     del rews
+                    vdone.append(v)
 
             del wsp
         del uvp
 
         for v in self.calc_vars:
-            if v not in fdata:
+            if v not in vdone:
                 res = rpoint_results[v][:, :, 0]
                 if states_turbine is None:
                     fdata[v] = res

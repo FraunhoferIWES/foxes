@@ -51,7 +51,8 @@ class Model(metaclass=ABCMeta):
             data, 
             st_sel=None, 
             upcast=None, 
-            data_prio=True
+            data_prio=True,
+            accept_none=False
         ):
 
         sources = (data, self.__dict__) if data_prio \
@@ -79,5 +80,11 @@ class Model(metaclass=ABCMeta):
             except TypeError:
                 pass
         
+        if not accept_none:
+            try:
+                if np.all(np.isnan(np.atleast_1d(out))):
+                    raise ValueError(f"Model '{self.name}': Variable '{variable}' requested but not provided.")
+            except TypeError:
+                pass    
         return out
         

@@ -13,10 +13,10 @@ if __name__ == "__main__":
 
     n_s = 10
     n_t = 6
-    n_p = 22
+    n_p = 2200
     p0  = np.array([0., 0.])
     stp = np.array([500., 0.])
-    cks = None#FV.STATE: 5, FV.POINT:5}
+    cks = None#{FV.STATE: 4, FV.POINT:5}
     D   = 120.
     H   = 100.
     h   = 100.
@@ -24,6 +24,7 @@ if __name__ == "__main__":
     dask.config.set(scheduler='synchronous')
     #dask.config.set(scheduler='threads')
     #dask.config.set(scheduler='processes')
+    #dask.config.set(scheduler='distributed')
     #client = Client(n_workers=4, threads_per_worker=1) 
     #print(f"\n{client}")
     #print(f"Dashboard: {client.dashboard_link}\n")
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 
     states = foxes.input.states.ScanWS(
         ws_list=np.linspace(3., 30., n_s),
-        wd=90.,
+        wd=270.,
         ti=0.08,
         rho=1.225
     )
@@ -69,9 +70,11 @@ if __name__ == "__main__":
     print("\nCalc time =",time1 - time0, "\n")
 
     print(fdata)
+    df = fdata.to_dataframe()
+    print(df[[FV.WD, FV.AMB_TI, FV.TI, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]) 
     
     points          = np.zeros((n_s, n_p, 3))
-    points[:, :, 0] = np.linspace(p0[0], p0[0] + 10*D, n_p)[None, :]
+    points[:, :, 0] = np.linspace(p0[0], p0[0] + n_s*stp[0] + 10*D, n_p)[None, :]
     points[:, :, 1] = p0[1]
     points[:, :, 2] = h
     print("\nPOINTS:\n", points[0])
