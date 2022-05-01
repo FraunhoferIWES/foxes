@@ -172,14 +172,14 @@ class Downwind(Algorithm):
         self._print_deco("calc_points", n_points=points.shape[1])
 
         # update eval models:
-        emodels = [self.states]
-        ipars   = [{}]
-        cpars   = [{}]
-        fpars   = [{}]
+        emodels = []
+        ipars   = []
+        cpars   = []
+        fpars   = []
         if point_models is not None:
             if not isinstance(point_models, list):
                 point_models = [point_models]
-            for mi, m in enumerate(point_models):
+            for m in point_models:
                 if isinstance(m, str):
                     pname  = m
                     pmodel = self.mbook.point_models[pname]
@@ -199,14 +199,26 @@ class Downwind(Algorithm):
         final_pars = []
         mlist      = PointDataModelList(models=[])
 
+        # 0) calculate states results:
+        mlist.models.append(self.states)
+        init_pars.append({})
+        calc_pars.append({})
+        final_pars.append({})
+
         # 1) calculate ambient point results:
         mlist.models += emodels
         init_pars    += ipars
         calc_pars    += cpars
         final_pars   += fpars
 
+        # 2) transfer ambient results:
+        mlist.models.append(dm.SetAmbPointResults(point_vars=vars))
+        init_pars.append({})
+        calc_pars.append({})
+        final_pars.append({})
+
         # initialize models:
-        mlist.initialize(self, parameters=ipars, verbosity=self.verbosity)
+        mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
         models_data = self.get_models_data()
@@ -230,11 +242,11 @@ class Downwind(Algorithm):
 
         # calculate:
         pdata = mlist.run_calculation(self, models_data, farm_data, point_data, 
-                                            vars, parameters=cpars)
+                                            vars, parameters=calc_pars)
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, parameters=fpars, verbosity=self.verbosity)
+        mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
 
         return pdata
         

@@ -27,6 +27,8 @@ class PointDataModelList(PointDataModel):
                 if verbosity > 0:
                     print(f"{self.name}, sub-model '{m.name}': Initializing")
                 m.initialize(algo, **parameters[mi])
+            elif verbosity > 0:
+                print(f"{self.name}, sub-model '{m.name}'")
 
         super().initialize(algo)
 
