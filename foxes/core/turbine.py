@@ -7,13 +7,13 @@ class Turbine:
         xy,
         turbine_models=[],
         index=None,
-        label=None,
+        name=None,
         models_state_sel=None,
         D=None,
         H=None
     ):
         self.index  = index
-        self.label  = label
+        self.name   = name
         self.xy     = np.array(xy)
         self.models = turbine_models
         self.D      = D

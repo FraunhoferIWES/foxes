@@ -59,11 +59,11 @@ if __name__ == "__main__":
                     chunks=cks
                 )
         
-        data = algo.calc_farm()
+        farm_results = algo.calc_farm()
 
-        print("\nResults data:\n", data)
+        print("\nResults data:\n", farm_results)
     
-    df = data.to_dataframe()
+    fr = farm_results.to_dataframe()
     print()
-    print(df[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
+    print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
             FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])

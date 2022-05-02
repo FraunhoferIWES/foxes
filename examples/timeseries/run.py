@@ -1,9 +1,9 @@
 
-import numpy as np
 import time
 import argparse
 import dask
 from dask.diagnostics import ProgressBar
+import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -46,6 +46,9 @@ if __name__ == "__main__":
             args.lfile,
             turbine_models=["TOYT"]
         )
+
+        foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
         
         algo = foxes.algorithms.Downwind(
                     mbook,
@@ -62,12 +65,13 @@ if __name__ == "__main__":
         time0 = time.time()
         
         with ProgressBar():
-            data = algo.calc_farm()
+            farm_results = algo.calc_farm()
 
         time1 = time.time()
         print("\nCalc time =",time1 - time0, "\n")
 
-        print(data)
+        print(farm_results)
     
-    df = data.to_dataframe()
-    print(df[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+    fr = farm_results.to_dataframe()
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+        

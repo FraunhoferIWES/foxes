@@ -64,13 +64,13 @@ if __name__ == "__main__":
     time0 = time.time()
     
     with ProgressBar():
-        fdata = algo.calc_farm()
+        fresults = algo.calc_farm()
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
 
-    print(fdata)
-    df = fdata.to_dataframe()
+    print(fresults)
+    df = fresults.to_dataframe()
     print(df[[FV.WD, FV.AMB_TI, FV.TI, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]) 
     
     points          = np.zeros((n_s, n_p, 3))
@@ -82,15 +82,15 @@ if __name__ == "__main__":
     time0 = time.time()
 
     with ProgressBar():
-        pdata = algo.calc_points(fdata, points)
+        presults = algo.calc_points(fresults, points)
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
 
-    print(pdata)
+    print(presults)
 
     for s in range(points.shape[0]):
-        plt.plot(points[s, :, 0], pdata[FV.WS][s, :])
+        plt.plot(points[s, :, 0], presults[FV.WS][s, :])
     plt.show()
     
 

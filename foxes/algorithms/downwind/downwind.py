@@ -1,5 +1,4 @@
 
-from xml.parsers.expat import model
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList
 import foxes.algorithms.downwind.models as dm
@@ -161,17 +160,18 @@ class Downwind(Algorithm):
 
         # run main calculation:
         self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
-        farm_data = mlist.run_calculation(self, models_data, parameters=calc_pars)
+        farm_results = mlist.run_calculation(self, models_data, parameters=calc_pars)
+        del models_data
 
         # finalize models:
         self.print("\n")
         mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
 
-        return farm_data
+        return farm_results
 
     def calc_points(
             self, 
-            farm_data, 
+            farm_results, 
             points, 
             vars=None, 
             point_models=None,
@@ -247,7 +247,7 @@ class Downwind(Algorithm):
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
 
-        self.print("\nInput farm data:\n\n", farm_data, "\n")
+        self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
         point_data = self.new_point_data(points)
@@ -259,19 +259,20 @@ class Downwind(Algorithm):
         ovars = mlist.output_point_vars(self)
         if vars is None:
             vars = ovars
-        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states:",
-                    ", ".join(ovars))
         for v in vars:
             if v not in ovars:
                 raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
+        self.print(f"\nOutput farm variables:", ", ".join(vars), "\n")  
+        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
 
         # calculate:
-        pdata = mlist.run_calculation(self, models_data, farm_data, point_data, 
+        point_results = mlist.run_calculation(self, models_data, farm_results, point_data, 
                                             vars, parameters=calc_pars)
+        del models_data, farm_results, point_data
 
         # finalize models:
         self.print("\n")
         mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
 
-        return pdata
+        return point_results
         

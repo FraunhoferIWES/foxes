@@ -6,7 +6,7 @@ def add_row(
     xy_step,
     n_turbines,
     indices=None,
-    labels=None,
+    names=None,
     verbosity=1,
     **turbine_parameters
 ):
@@ -15,7 +15,7 @@ def add_row(
             Turbine(
                 xy    = xy_base + i * xy_step,
                 index = None if indices is None else indices[i],
-                label = None if labels is None else labels[i],
+                name  = None if names is None else names[i],
                 **turbine_parameters
             ),
             verbosity=verbosity

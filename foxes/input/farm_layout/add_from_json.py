@@ -43,7 +43,7 @@ def add_from_json(
             Turbine(
                 xy    = np.array([wdict['UTMX'], wdict['UTMY']]),
                 index = wdict.get('id', None),
-                label = wt_name,
+                name  = wt_name,
                 **pars
             ),
             verbosity=verbosity

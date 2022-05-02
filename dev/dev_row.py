@@ -58,14 +58,14 @@ if __name__ == "__main__":
     time0 = time.time()
     
     with ProgressBar():
-        data = algo.calc_farm()
+        fresults = algo.calc_farm()
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
 
-    print(data)
+    print(fresults)
     
-    df = data.to_dataframe()
+    df = fresults.to_dataframe()
     print(df[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
     
 

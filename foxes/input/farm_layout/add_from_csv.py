@@ -84,7 +84,7 @@ def add_from_csv(
 
         wind_farm.add_turbine(
             Turbine(
-                label = tname,
+                name  = tname,
                 index = tid,
                 xy    = txy,
                 H     = H if col_H not in data.columns else data.loc[i, col_H],

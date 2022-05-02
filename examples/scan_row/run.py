@@ -71,12 +71,12 @@ if __name__ == "__main__":
         time0 = time.time()
         
         with ProgressBar():
-            data = algo.calc_farm()
+            farm_results = algo.calc_farm()
 
         time1 = time.time()
         print("\nCalc time =",time1 - time0, "\n")
 
-        print("\nResults data:\n", data)
+        print("\nFarm results:\n", farm_results)
     
-    df = data.to_dataframe()
-    print(df[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+    fr = farm_results.to_dataframe()
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
