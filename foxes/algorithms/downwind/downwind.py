@@ -24,9 +24,8 @@ class Downwind(Algorithm):
         ):
         super().__init__(mbook, farm, chunks, verbosity)
 
-        self.states      = states
-        self.n_states    = states.size()
-        self.vars_to_amb = vars_to_amb
+        self.states   = states
+        self.n_states = states.size()
 
         self.rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
@@ -78,6 +77,7 @@ class Downwind(Algorithm):
 
     def calc_farm(
             self, 
+            vars_to_amb=None,
             init_parameters={},
             calc_parameters={},
             final_parameters={},
@@ -132,7 +132,7 @@ class Downwind(Algorithm):
 
         # 5) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
-        mlist.models.append(dm.SetAmbFarmResults(self.vars_to_amb))
+        mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
@@ -174,6 +174,7 @@ class Downwind(Algorithm):
             farm_results, 
             points, 
             vars=None, 
+            vars_to_amb=None,
             point_models=None,
             init_parameters={},
             calc_parameters={},
@@ -225,7 +226,7 @@ class Downwind(Algorithm):
         final_pars   += fpars
 
         # 2) transfer ambient results:
-        mlist.models.append(dm.SetAmbPointResults(point_vars=vars))
+        mlist.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))

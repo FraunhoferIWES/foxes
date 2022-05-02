@@ -64,7 +64,7 @@ if __name__ == "__main__":
     time0 = time.time()
     
     with ProgressBar():
-        fresults = algo.calc_farm()
+        fresults = algo.calc_farm(vars_to_amb=[FV.REWS, FV.TI, FV.P])
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     time0 = time.time()
 
     with ProgressBar():
-        presults = algo.calc_points(fresults, points)
+        presults = algo.calc_points(fresults, points, vars_to_amb=[FV.WS, FV.TI])
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
