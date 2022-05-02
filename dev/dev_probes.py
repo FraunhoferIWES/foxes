@@ -16,7 +16,7 @@ if __name__ == "__main__":
     n_p = 2200
     p0  = np.array([0., 0.])
     stp = np.array([500., 0.])
-    cks = None#{FV.STATE: 4, FV.POINT:5}
+    cks = None#{FV.STATE: 2000}#, FV.POINT:5}
     D   = 120.
     H   = 100.
     h   = 100.
