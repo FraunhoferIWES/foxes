@@ -40,11 +40,11 @@ class SingleStateStates(States):
     def calculate(self, algo, mdata, fdata, pdata):
 
         if self.ws is not None:
-            pdata[FV.WS][:] = self.ws
+            pdata[FV.WS] = np.full((pdata.n_states, pdata.n_points), self.ws, dtype=FC.DTYPE)
         if self.wd is not None:
-            pdata[FV.WD][:] = self.wd
+            pdata[FV.WD] = np.full((pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE)
         if self.ti is not None:
-            pdata[FV.TI][:] = self.ti
+            pdata[FV.TI] = np.full((pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE)
         if self.rho is not None:
-            pdata[FV.RHO][:] = self.rho
+            pdata[FV.RHO] = np.full((pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE)
         

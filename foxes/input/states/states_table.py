@@ -18,6 +18,7 @@ class StatesTable(States):
         fixed_vars={},
         profiles={},
         pd_read_pars={},
+        states_sel=None,
         verbosity=1
     ):
         super().__init__()
@@ -34,6 +35,8 @@ class StatesTable(States):
                 print(f"States '{self.name}': Reading file {self._data}")
             rpars      = dict(self.RDICT, **self.rpars)
             self._data = PandasFileHelper().read_file(self._data, **rpars)
+        if states_sel is not None:
+            self._data = self._data.iloc[states_sel]
         self.N = len(self._data.index)
 
     def model_input_data(self, algo):

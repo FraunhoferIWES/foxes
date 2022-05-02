@@ -18,7 +18,6 @@ class Downwind(Algorithm):
             wake_frame,
             partial_wakes_model,
             farm_controller="basic_ctrl",
-            vars_to_amb=None,
             chunks={FV.STATE: 'auto', FV.TURBINE: -1},
             verbosity=1
         ):
@@ -263,7 +262,7 @@ class Downwind(Algorithm):
         for v in vars:
             if v not in ovars:
                 raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
-        self.print(f"\nOutput farm variables:", ", ".join(vars), "\n")  
+        self.print(f"\nOutput point variables:", ", ".join(vars), "\n")  
         self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
 
         # calculate:

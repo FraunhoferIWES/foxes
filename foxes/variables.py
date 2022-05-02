@@ -53,6 +53,7 @@ var2amb = {
         REWS, REWS2, REWS3
     ]
 }
+amb2var = {a: v for v, a in var2amb.items()}
 
 AMB_RPOINT_RESULTS = "amb_rpoint_res"
 

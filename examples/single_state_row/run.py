@@ -1,8 +1,8 @@
 
 import numpy as np
-import time
 import argparse
 import dask
+import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -63,7 +63,12 @@ if __name__ == "__main__":
 
         print("\nResults data:\n", farm_results)
     
-    fr = farm_results.to_dataframe()
-    print()
-    print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
-            FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])
+        fr = farm_results.to_dataframe()
+        print()
+        print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
+                FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])
+        
+        o = foxes.output.FlowPlot2DOutput(algo, farm_results)
+        g = o.generate_figures(FV.WS, 10)
+        __, fig = next(g)
+        plt.show()

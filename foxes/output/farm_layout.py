@@ -13,7 +13,7 @@ class FarmLayoutOutput(Output):
 
     Parameters
     ----------
-    wind_farm: flappy.WindFarm
+    wind_farm: foxes.WindFarm
         The wind farm
     farm_results: xarray.Dataset, optional
         The wind farm calculation results
@@ -26,7 +26,7 @@ class FarmLayoutOutput(Output):
 
     Attributes
     ----------
-    farm: WindFarm
+    farm: foxes.WindFarm
         The wind farm 
     fres: xarray.Dataset
         The wind farm calculation results
