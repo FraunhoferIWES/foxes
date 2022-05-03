@@ -41,7 +41,10 @@ class FarmDataModelList(FarmDataModel):
 
         for mi, m in enumerate(self.models):
             #print("MLIST VARS BEFORE",m.name,list(fdata.keys()),parameters[mi])
-            m.calculate(algo, mdata, fdata, **parameters[mi])
+            res = m.calculate(algo, mdata, fdata, **parameters[mi])
+            fdata.update(res)
+        
+        return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
     def finalize(self, algo, parameters=[], verbosity=0, clear_mem=False):
 

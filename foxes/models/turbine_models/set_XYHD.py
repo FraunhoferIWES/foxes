@@ -30,7 +30,7 @@ class SetXYHD(TurbineModel):
         n_turbines = algo.n_turbines
 
         if self.set_XY or self.set_H:
-            fdata[FV.TXYH] = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
+            fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
             if self.set_XY:
                 fdata[FV.X] = fdata[FV.TXYH][..., 0] 
                 fdata[FV.Y] = fdata[FV.TXYH][..., 1] 
@@ -59,3 +59,5 @@ class SetXYHD(TurbineModel):
                     if D is None:
                         D = algo.farm_controller.turbine_types[ti].D
                     fdata[FV.D][ssel, ti] = D    
+
+        return {v: fdata[v] for v in self.output_farm_vars(algo)}

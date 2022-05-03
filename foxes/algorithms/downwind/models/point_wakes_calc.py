@@ -20,7 +20,6 @@ class PointWakesCalculation(PointDataModel):
         
         torder   = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order  = torder.shape[1]
-        n_states = pdata.n_states
         points   = pdata[FV.POINTS]
 
         wdeltas = {}
@@ -41,3 +40,5 @@ class PointWakesCalculation(PointDataModel):
         for v in self.pvars:
             if v in wdeltas:
                 pdata[v] = pdata[FV.var2amb[v]] + wdeltas[v]
+        
+        return {v: pdata[v] for v in self.output_point_vars(algo)}

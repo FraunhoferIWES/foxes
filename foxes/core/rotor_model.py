@@ -212,3 +212,5 @@ class RotorModel(FarmDataModel):
 
         self.eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
                                     weights, states_turbine)
+        
+        return {v: fdata[v] for v in self.output_farm_vars(algo)}

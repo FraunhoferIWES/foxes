@@ -52,21 +52,22 @@ class PointDataModel(Model):
         pdata.update({v: d for v, d in edata.items() if v in pkeys})
         pdims = {v: d for v, d in idims.items() if v in pkeys}
         pdims.update({v: d for v, d in edims.items() if v in pkeys})
+        n_states = mdata.n_states
         n_points = len(pdata[FV.POINT])
-        pdata.update({v: np.full((mdata.n_states, n_points), np.nan, dtype=FC.DTYPE) for v in ovars})
+        pdata.update({v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in ovars})
         pdims.update({v: (FV.STATE, FV.POINT) for v in ovars})
         pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
         del pdims, data, edata, idims, edims
 
         # run model calculation:
-        self.calculate(algo, mdata, fdata, pdata, **calc_pars)
-        del mdata, fdata
+        results = self.calculate(algo, mdata, fdata, pdata, **calc_pars)
+        del mdata, fdata, pdata
         
         # create output:
         n_vars = len(ovars)
-        data   = np.zeros((pdata.n_states, pdata.n_points, n_vars), dtype=FC.DTYPE)
+        data   = np.zeros((n_states, n_points, n_vars), dtype=FC.DTYPE)
         for v in ovars:
-            data[:, :, ovars.index(v)] = pdata[v]
+            data[:, :, ovars.index(v)] = results[v]
         
         return data
 

@@ -48,3 +48,5 @@ class SingleStateStates(States):
         if self.rho is not None:
             pdata[FV.RHO] = np.full((pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE)
         
+        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        

@@ -119,3 +119,5 @@ class StatesTable(States):
         for v, p in self.profiles.items():
             pres = p.calculate(pdata, z)
             pdata[v] = pres
+        
+        return {v: pdata[v] for v in self.output_point_vars(algo)}

@@ -455,7 +455,7 @@ class FlowPlot2DOutput(Output):
             y_pos /= normalize_xy
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE]):
+        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
 
             # create plot:
             if fig is None:

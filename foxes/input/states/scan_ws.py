@@ -58,3 +58,5 @@ class ScanWS(States):
             pdata[FV.TI][:] = self.ti
         if self.rho is not None:
             pdata[FV.RHO][:] = self.rho
+        
+        return {v: pdata[v] for v in self.output_point_vars(algo)}

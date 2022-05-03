@@ -115,8 +115,9 @@ class FarmController(FarmDataModelList):
     
     def calculate(self, algo, mdata, fdata, st_sel=None):
         pars = self.get_pars(algo, mdata, st_sel, from_data=True)
-        super().calculate(algo, mdata, fdata, parameters=pars)
+        res  = super().calculate(algo, mdata, fdata, parameters=pars)
         self.turbine_model_sels = mdata[FV.TMODEL_SELS] 
+        return res
     
     def finalize(self, algo, st_sel=None, verbosity=0):
         pars = self.get_pars(algo, st_sel=st_sel, from_data=False)

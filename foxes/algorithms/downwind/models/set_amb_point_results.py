@@ -19,3 +19,4 @@ class SetAmbPointResults(PointDataModel):
     def calculate(self, algo, mdata, fdata, pdata):
         for v in self.vars:
             pdata[FV.var2amb[v]] = pdata[v].copy()
+        return {v: pdata[v] for v in self.output_point_vars(algo)}

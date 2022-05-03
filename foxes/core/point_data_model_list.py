@@ -41,10 +41,12 @@ class PointDataModelList(PointDataModel):
         elif len(parameters) != len(self.models):
             raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
 
-        results = {}
         for mi, m in enumerate(self.models):
             #print("PMLIST VARS BEFORE",m.name,list(fdata.keys()))
-            m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
+            res = m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
+            pdata.update(res)
+        
+        return {v: pdata[v] for v in self.output_point_vars(algo)}
 
     def finalize(self, algo, parameters=[], verbosity=0, clear_mem=False):
 

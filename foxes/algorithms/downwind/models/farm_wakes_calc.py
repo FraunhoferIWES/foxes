@@ -36,8 +36,10 @@ class FarmWakesCalculation(FarmDataModel):
                 trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
                 np.put_along_axis(trbs, o[:, None], True, axis=1)
 
-                algo.farm_controller.calculate(algo, mdata, fdata, st_sel=trbs)
+                res = algo.farm_controller.calculate(algo, mdata, fdata, st_sel=trbs)
+                fdata.update(res)
 
             if oi < n_order - 1:
                 self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, o, wdeltas)
 
+        return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -40,23 +40,26 @@ class FarmDataModel(Model):
         dims  = {v: (FV.STATE, FV.TURBINE) for v in ovars}
         fdata = {v: np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE) \
                     for v in ovars if v not in idims.keys()}
-        for v in set(ovars).intersection(set(idims.keys())):
-            if idims[v] == (FV.STATE, FV.TURBINE):
-                fdata[v] = data[list(idims.keys()).index(v)]
+        for v in set(ovars).intersection(set(mdata.keys())):
+            if mdata.dims[v] == (FV.STATE, FV.TURBINE):
+                fdata[v] = mdata[v]
+                dims[v]  = mdata.dims[v]
             else:
-                raise ValueError(f"Wrong dimension for output variable '{v}': Expected {(FV.STATE, FV.TURBINE)}, got {idims[v]}")
+                raise ValueError(f"Wrong dimension for output variable '{v}': Expected {(FV.STATE, FV.TURBINE)}, got {mdata.dims[v]}")
         fdata = Data(fdata, dims, loop_dims=[FV.STATE])
         del dims, idims, data
 
         # run model calculation:
-        self.calculate(algo, mdata, fdata, **calc_pars)
-        del mdata
+        results = self.calculate(algo, mdata, fdata, **calc_pars)
+        for v in set(ovars).difference(set(results.keys())):
+            results[v] = fdata[v]
+        del mdata, fdata
         
         # create output:
         n_vars = len(ovars)
         data   = np.zeros((n_states, algo.n_turbines, n_vars), dtype=FC.DTYPE)
         for v in ovars:
-            data[:, :, ovars.index(v)] = fdata[v]
+            data[:, :, ovars.index(v)] = results[v]
         
         return data
             
