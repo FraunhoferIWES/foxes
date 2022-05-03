@@ -247,10 +247,13 @@ class Downwind(Algorithm):
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
 
+        # chunk farm results:
+        farm_results = farm_results.chunk(chunks={FV.STATE: self.chunks[FV.STATE]})
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
-        point_data = self.new_point_data(points)
+        sinds = farm_results.coords[FV.STATE] if len(farm_results.coords) else None
+        point_data = self.new_point_data(points, sinds)
         if persist_pdata:
             point_data = point_data.persist()
         self.print("\nInput point data:\n\n", point_data, "\n")

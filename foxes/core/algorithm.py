@@ -95,9 +95,13 @@ class Algorithm(metaclass=ABCMeta):
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)
 
-    def new_point_data(self, points):
+    def new_point_data(self, points, states_indices=None):
         
-        idata = {"coords": {}, "data_vars": {}}
+        if states_indices is None:
+            idata = {"coords": {}, "data_vars": {}}
+        else:
+            idata = {"coords": {FV.STATE: states_indices}, "data_vars": {}}
+
         if len(points.shape) != 3 or points.shape[0] != self.n_states or points.shape[2] != 3:
             raise ValueError(f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}")
         idata["data_vars"][FV.POINTS] = ((FV.STATE, FV.POINT, FV.XYH), points)

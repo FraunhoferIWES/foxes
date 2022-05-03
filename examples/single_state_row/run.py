@@ -72,3 +72,9 @@ if __name__ == "__main__":
         g   = o.gen_states_fig_horizontal(FV.WS, resolution=10)
         fig = next(g)
         plt.show()
+        plt.close(fig)
+
+        o   = foxes.output.FlowPlots2D(algo, farm_results)
+        g   = o.gen_states_fig_vertical(FV.WS, resolution=10, x_direction=90.)
+        fig = next(g)
+        plt.show()

@@ -118,9 +118,6 @@ if __name__ == "__main__":
             plt.close(fig)
 
         if args.calc_mean:
-
             o   = foxes.output.FlowPlots2D(algo, farm_results)
-            #g   = o.gen_states_fig_horizontal(FV.WS, resolution=10)
-            #fig = next(g)
             fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
             plt.show()
