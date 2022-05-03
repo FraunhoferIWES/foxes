@@ -36,7 +36,7 @@ class BastankhahWake(GaussianWakeModel):
         ct[ct>self.ct_max] = self.ct_max
 
         # select targets:
-        sp_sel = (x > 0.) & (ct > 0.)
+        sp_sel = (x > 1e-5) & (ct > 0.)
         if np.any(sp_sel):
 
             # apply selection:

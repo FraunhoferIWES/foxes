@@ -43,7 +43,7 @@ class TopHatWakeModel(WakeModel):
 
         wake_r = self.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, r, ct)
 
-        sp_sel = (ct > 0.) & (x > 0.) & (r < wake_r)
+        sp_sel = (ct > 0.) & (x > 1e-5) & (r < wake_r)
         if np.any(sp_sel):
 
             x      = x[sp_sel]

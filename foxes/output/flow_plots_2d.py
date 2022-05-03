@@ -7,7 +7,7 @@ import foxes.constants as FC
 from foxes.output.output import Output
 
 
-class FlowPlot2DOutput(Output):
+class FlowPlots2D(Output):
     """
     Class for horizontal or vertical 2D flow plots
 
@@ -272,11 +272,10 @@ class FlowPlot2DOutput(Output):
 
         return ax, im
 
-    def generate_figures(
+    def gen_states_fig_horizontal(
             self,
             var,
             resolution, 
-            xaxis=np.array([1,0,0]),zaxis=np.array([0,0,1]), 
             xmin=None, ymin=None, 
             xmax=None, ymax=None, 
             xlabel='x [m]', ylabel='y [m]',
@@ -291,6 +290,7 @@ class FlowPlot2DOutput(Output):
             fig=None,
             ax=None,
             add_bar=True,
+            verbosity=1,
             ret_im=False,
             **kwargs
         ):
@@ -355,6 +355,8 @@ class FlowPlot2DOutput(Output):
             The figure axes
         add_bar: bool, optional
             Add a color bar
+        verbosity: int, optional
+            The verbosity level
         ret_im: bool, optional
             Flag for return image
         
@@ -424,20 +426,20 @@ class FlowPlot2DOutput(Output):
         g_pts[:, :, :, 2] = z_pos
         g_pts = g_pts.reshape(n_states, n_pts, 3)
 
-        print("\nFlowPlot2DOutput plot grid:")
-        print("Min XYZ  =",x_min,y_min,z_min)
-        print("Max XYZ  =",x_max,y_max,z_max)
-        print("Pos Z    =",z_pos)
-        print("Res XY   =",x_res,y_res)
-        print("Dim XY   =",N_x,N_y)
-        print("Grid pts =",n_pts)
+        if verbosity > 0:
+            print("\nFlowPlot2DOutput plot grid:")
+            print("Min XYZ  =",x_min,y_min,z_min)
+            print("Max XYZ  =",x_max,y_max,z_max)
+            print("Pos Z    =",z_pos)
+            print("Res XY   =",x_res,y_res)
+            print("Dim XY   =",N_x,N_y)
+            print("Grid pts =",n_pts)
 
         # calculate point results:
         point_results = self.algo.calc_points(
                             self.fres,
-                            g_pts,
-                            vars=[FV.amb2var.get(var, var)],
-                            vars_to_amb=[FV.amb2var[var]] if var in FV.amb2var else None,
+                            points=g_pts,
+                            vars=[var],
                             **kwargs
                         )
         data = point_results[var].to_numpy()
