@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     parser.add_argument("-cl", "--calc_cline", help="Calculate centreline", action="store_true")
+    parser.add_argument("-cm", "--calc_mean", help="Calculate states mean", action="store_true")
     args  = parser.parse_args()
 
     n_s = args.n_s
@@ -113,4 +114,13 @@ if __name__ == "__main__":
             ax.set_xlabel("x [m]")
             ax.set_ylabel("Wind speed [m/s]")
             ax.set_title("Centreline wind speed")
+            plt.show()
+            plt.close(fig)
+
+        if args.calc_mean:
+
+            o   = foxes.output.FlowPlots2D(algo, farm_results)
+            #g   = o.gen_states_fig_horizontal(FV.WS, resolution=10)
+            #fig = next(g)
+            fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
             plt.show()

@@ -68,7 +68,7 @@ if __name__ == "__main__":
         print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
                 FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])
         
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_horizontal(FV.WS, resolution=10)
-        __, fig = next(g)
+        o   = foxes.output.FlowPlots2D(algo, farm_results)
+        g   = o.gen_states_fig_horizontal(FV.WS, resolution=10)
+        fig = next(g)
         plt.show()

@@ -53,10 +53,10 @@ class ScanWS(States):
         pdata[FV.WS][:] = mdata[self.WS][:, None]
 
         if self.wd is not None:
-            pdata[FV.WD][:] = self.wd
+            pdata[FV.WD] = np.full((pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE)
         if self.ti is not None:
-            pdata[FV.TI][:] = self.ti
+            pdata[FV.TI] = np.full((pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE)
         if self.rho is not None:
-            pdata[FV.RHO][:] = self.rho
+            pdata[FV.RHO] = np.full((pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE)
         
         return {v: pdata[v] for v in self.output_point_vars(algo)}
