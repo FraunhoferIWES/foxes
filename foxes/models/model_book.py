@@ -39,7 +39,8 @@ class ModelBook:
 
         self.partial_wakes = {
             "rotor_points"   : fm.partial_wakes.RotorPoints(),
-            "partial_top_hat": fm.partial_wakes.PartialTopHat()
+            "partial_top_hat": fm.partial_wakes.PartialTopHat(),
+            "partial_axiwake_5"   : fm.partial_wakes.PartialAxiwake(5)
         }
 
         self.wake_frames = {

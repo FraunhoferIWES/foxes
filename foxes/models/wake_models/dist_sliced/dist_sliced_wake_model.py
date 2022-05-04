@@ -17,7 +17,7 @@ class DistSlicedWakeModel(WakeModel):
                 s.initialize(algo)
 
     @abstractmethod
-    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, tates_source_turbine, x, yz):
+    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
         pass
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
