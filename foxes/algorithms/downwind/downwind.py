@@ -248,7 +248,8 @@ class Downwind(Algorithm):
         self.print("\nInput model data:\n\n", models_data, "\n")
 
         # chunk farm results:
-        farm_results = farm_results.chunk(chunks={FV.STATE: self.chunks[FV.STATE]})
+        if self.chunks is not None:
+            farm_results = farm_results.chunk(chunks={FV.STATE: self.chunks[FV.STATE]})
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:

@@ -62,10 +62,13 @@ class BastankhahWake(GaussianWakeModel):
             del x, k, sbeta, sblim
 
             # calculate amplitude:
-            radicant     =  1. - ct / ( 8 * ( sigma / D )**2 ) 
-            reals        = radicant>=0
-            ampld        = -np.ones_like(radicant)
-            ampld[reals] = np.sqrt(radicant[reals]) - 1.
+            if self.sbeta_factor < 0.25:
+                radicant     = 1. - ct / ( 8 * ( sigma / D )**2 ) 
+                reals        = radicant>=0
+                ampld        = -np.ones_like(radicant)
+                ampld[reals] = np.sqrt(radicant[reals]) - 1.
+            else:
+                ampld = np.sqrt( 1. - ct / ( 8 * ( sigma / D )**2 ) ) - 1.
 
         # case no targets:
         else:

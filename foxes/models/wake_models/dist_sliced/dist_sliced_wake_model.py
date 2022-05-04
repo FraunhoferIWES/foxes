@@ -17,25 +17,17 @@ class DistSlicedWakeModel(WakeModel):
                 s.initialize(algo)
 
     @abstractmethod
-    def calc_xdata_spsel(self, algo, mdata, fdata, states_source_turbine, x):
-        pass
-
-    @abstractmethod
-    def calc_wakes_ortho(self, algo, mdata, fdata, states_source_turbine, 
-                            n_points, sp_sel, xdata, yz):
+    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, tates_source_turbine, x, yz):
         pass
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
                                     wake_coos, wake_deltas):
 
-        n_points = wake_coos.shape[1]
+        x  = wake_coos[:, :, 0]
+        yz = wake_coos[:, :, None, 1:3]
 
-        x = wake_coos[:, :, 0]
-        xdata, sp_sel = self.calc_xdata_spsel(algo, mdata, fdata, states_source_turbine, x)
-
-        yz = wake_coos[:, :, 1:3][sp_sel]
-        wdeltas = self.calc_wakes_ortho(algo, mdata, fdata, states_source_turbine,
-                                            n_points, sp_sel, xdata, yz)
+        wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(algo, mdata, fdata, 
+                                                        states_source_turbine, x, yz)
                 
         for v, hdel in wdeltas.items():
 
@@ -46,7 +38,7 @@ class DistSlicedWakeModel(WakeModel):
 
             wake_deltas[v] = superp.calc_wakes_plus_wake(
                                         algo, mdata, fdata, states_source_turbine,
-                                        sp_sel, v, wake_deltas[v], hdel)
+                                        sp_sel, v, wake_deltas[v], hdel[:, 0])
 
     def finalize_wake_deltas(self, algo, mdata, fdata, wake_deltas):
         for v, s in self.superp.items():

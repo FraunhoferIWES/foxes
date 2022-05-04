@@ -9,15 +9,14 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
         pass
 
-    def calc_xdata_spsel(self, algo, mdata, fdata, states_source_turbine, x):
-        return self.calc_amplitude_sigma_spsel(algo, mdata, fdata, states_source_turbine, x)
+    def calc_wakes_spsel_x_r(self, algo, mdata, fdata, states_source_turbine, x, r):
 
-    def calc_wakes_radial(self, algo, mdata, fdata, states_source_turbine, 
-                            n_points, sp_sel, xdata, r):
+        amsi, sp_sel = self.calc_amplitude_sigma_spsel(algo, mdata, fdata, 
+                                                        states_source_turbine, x)
 
         out = {}
-        for v in xdata.keys():
-            ampld, sigma = xdata[v]
-            out[v] = ampld * np.exp(-0.5 * (r/sigma)**2)
+        for v in amsi.keys():
+            ampld, sigma = amsi[v]
+            out[v] = ampld[:, None] * np.exp(-0.5 * (r[sp_sel]/sigma[:, None])**2)
         
-        return out
+        return out, sp_sel

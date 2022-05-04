@@ -6,14 +6,9 @@ from foxes.models.wake_models.dist_sliced.dist_sliced_wake_model import DistSlic
 class AxisymmetricWakeModel(DistSlicedWakeModel):
 
     @abstractmethod
-    def calc_wakes_radial(self, algo, mdata, fdata, states_source_turbine, 
-                            n_points, sp_sel, xdata, r):
+    def calc_wakes_spsel_x_r(self, algo, mdata, fdata, tates_source_turbine, x, r):
         pass
 
-    def calc_wakes_ortho(self, algo, mdata, fdata, states_source_turbine, 
-                            n_points, sp_sel, xdata, yz):
-        
+    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, tates_source_turbine, x, yz):
         r = np.linalg.norm(yz, axis=-1)
-
-        return self.calc_wakes_radial(algo, mdata, fdata, states_source_turbine, 
-                                            n_points, sp_sel, xdata, r)
+        return self.calc_wakes_spsel_x_r(algo, mdata, fdata, tates_source_turbine, x, r)
