@@ -18,10 +18,11 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0)
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
+    parser.add_argument("-dy", "--deltay", help="Turbine layout y step", type=float, default=0.)
     args  = parser.parse_args()
 
     p0  = np.array([0., 0.])
-    stp = np.array([args.dist_x, 0.])
+    stp = np.array([args.dist_x, args.deltay])
     cks = None
 
     with dask.config.set(scheduler=None):
@@ -78,4 +79,3 @@ if __name__ == "__main__":
         print()
         print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
                 FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])
-                

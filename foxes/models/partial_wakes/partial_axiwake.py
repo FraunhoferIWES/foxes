@@ -95,6 +95,32 @@ class PartialAxiwake(PartialWakesModel):
             Rsel[:] = R[:, :, None]
             Rsel    = Rsel[~sel]
 
+            # equal delta R2:
+            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1[:, 1:] = Dsel / 2
+            R2        = np.zeros_like(R1)
+            R2[:, 1:] = Rsel[:, :-1] + Dsel/2
+            R2[:]    *= np.linspace(0., 1, self.n_steps + 1, endpoint=True)[None, :]
+            hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
+            hr[:, 0]  = 0.
+            r[~sel]   = hr
+        
+            """
+            # equal delta r:
+            # seems to perform worse than equal delta R2
+            steps     = np.linspace(0., 1., self.n_steps, endpoint=False)
+            r[~sel]   = ( Rsel[:, :-1] + Dsel/2 ) * steps[None, :]
+            hr        = r[~sel]
+            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1[:, 1:] = Dsel / 2
+            R2        = np.zeros_like(R1)
+            R2[:, 1:-1] = 0.5 * ( hr[:, 1:] + hr[:, :-1] )
+            R2[:, -1]   = Rsel[:, -1] + Dsel[:,-1]/2
+            """
+
+            """ 
+            # equal weights:
+            # seems to perform worse than equal delta R2
             R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
             R1[:, 1:] = Dsel / 2
             R2        = np.zeros_like(R1)
@@ -103,6 +129,7 @@ class PartialAxiwake(PartialWakesModel):
             hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
             hr[:, 0]  = 0.
             r[~sel]   = hr
+            """
 
             hA = calc_area(R1, R2, Rsel)
             hA = hA[:, 1:] - hA[:, :-1]
