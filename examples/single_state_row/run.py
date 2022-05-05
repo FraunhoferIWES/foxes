@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument("-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0)
+    parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear'], nargs='+')
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-dy", "--deltay", help="Turbine layout y step", type=float, default=0.)
@@ -54,7 +55,7 @@ if __name__ == "__main__":
                     states=states,
                     rotor_model=args.rotor,
                     turbine_order="order_wd",
-                    wake_models=['Bastankhah_linear'],
+                    wake_models=args.wakes,
                     wake_frame="mean_wd",
                     partial_wakes_model=args.pwakes,
                     chunks=cks

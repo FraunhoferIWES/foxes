@@ -74,6 +74,7 @@ class PartialAxiwake(PartialWakesModel):
             Rsel[:] = R[:, :, None]
             Rsel    = Rsel[sel]
 
+            # equal delta R2:
             R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
             R1[:, 1:] = Dsel / 2
             steps     = np.linspace(0., 1., self.n_steps + 1, endpoint=True) - 0.5
