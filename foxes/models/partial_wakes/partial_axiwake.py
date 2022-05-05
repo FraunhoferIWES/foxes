@@ -50,6 +50,10 @@ class PartialAxiwake(PartialWakesModel):
         r  = np.zeros((n_states, n_turbines, self.n_steps), dtype=FC.DTYPE)
         del wcoos
 
+        # prepare circle section area calculation:
+        A = np.zeros((n_states, n_turbines, self.n_steps), dtype=FC.DTYPE)
+        weights = np.zeros_like(A)
+
         # get normalized 2D vector between rotor and wake centres:
         sel = (R > 0.)
         if np.any(sel):
@@ -63,97 +67,80 @@ class PartialAxiwake(PartialWakesModel):
         # case wake centre outside rotor disk:
         sel = (R >= D/2)
         if np.any(sel):
-            steps  = np.linspace(0., 1., self.n_steps, endpoint=False)
-            steps  = steps + steps[1] / 2
-            steps -= 0.5
-            r[sel] = R[sel] + D[sel] * steps[None, :]
+
+            n_sel   = np.sum(sel)
+            Dsel    = D[sel][:, None]
+            Rsel    = np.zeros((n_states, n_turbines, self.n_steps + 1), dtype=FC.DTYPE)
+            Rsel[:] = R[:, :, None]
+            Rsel    = Rsel[sel]
+
+            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1[:, 1:] = Dsel / 2
+            steps     = np.linspace(0., 1., self.n_steps + 1, endpoint=True) - 0.5
+            R2        = np.zeros_like(R1)
+            R2[:]     = Rsel + Dsel * steps[None, :]
+            r[sel]    = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
+
+            hA = calc_area(R1, R2, Rsel)
+            hA = hA[:, 1:] - hA[:, :-1]
+            weights[sel] = hA / np.sum(hA, axis=-1)[:, None]
+            del hA, Rsel, Dsel, R1, R2
         
         # case wake centre inside rotor disk:
         if np.any(~sel):
-            d       = R[~sel] + D[~sel]
-            steps   = np.linspace(0., 1., self.n_steps, endpoint=False)
-            r[~sel] = d[:, None] * steps[None, :]
-        
-        print("PAWAKE",x[0], r[0])
+
+            n_sel   = np.sum(~sel)
+            Dsel    = D[~sel][:, None]
+            Rsel    = np.zeros((n_states, n_turbines, self.n_steps + 1), dtype=FC.DTYPE)
+            Rsel[:] = R[:, :, None]
+            Rsel    = Rsel[~sel]
+
+            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1[:, 1:] = Dsel / 2
+            R2        = np.zeros_like(R1)
+            R2[:, 1:] = ( Rsel[:, :-1] + Dsel/2 ) / np.sqrt(self.n_steps)
+            R2[:]    *= np.sqrt(np.linspace(0., self.n_steps, self.n_steps + 1, endpoint=True))[None, :]
+            hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
+            hr[:, 0]  = 0.
+            r[~sel]   = hr
+
+            hA = calc_area(R1, R2, Rsel)
+            hA = hA[:, 1:] - hA[:, :-1]
+            weights[~sel] = hA / np.sum(hA, axis=-1)[:, None]
+            del hA, hr, Rsel, Dsel, R1, R2
+
+        # evaluate wake models:
         for w in self.wake_models:
+
             wdeltas, sp_sel = w.calc_wakes_spsel_x_r(algo, mdata, fdata, 
                                                         states_source_turbine, x, r)
-            print(wdeltas, wake_deltas)
-
-        quit()
-
-        for w in self.wake_models:
-
-            xdata, sp_sel = w.calc_xdata_spsel(algo, mdata, fdata, states_source_turbine, x)
-
-            r = np.linalg.norm(wcoos[:, :, :, 1:3], axis=-1)
             
-            TODO
-        
+            for v, wdel in wdeltas.items():
 
-        
+                d = np.einsum('ps,ps->p', wdel, weights[sp_sel])
+                
+                try:
+                    superp = w.superp[v]
+                except KeyError:
+                    raise KeyError(f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}")
 
+                wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
+                                                            sp_sel, v, wake_deltas[v], d)
 
-
-        n   = wcoos[:, :, :, 1:3]
-        R   = np.linalg.norm(n, axis=-1)
-        sel = (R > D[:, :, None])
-        if np.any(sel):
-            n[sel] /= R[sel][:, None]
-        if np.any(~sel):
-            temp = n[~sel]
-            temp[:, 0] = 1.
-            n[~sel] = temp
-            del temp
-        steps  = np.linspace(0., 1., self.n_steps, endpoint=False)
-        steps  = steps + steps[1] / 2
-        steps -= 0.5
-        wcoos[:, :, :, 1:3] += D[:, :, None, None] * steps[None, None, :, None] * n
-        print("WCOOS B",steps, D[0,0], n[0,0], wcoos[0,0])
-        wcoos = wcoos.reshape(n_states, n_points, 3)
-        mdata[self.R] = R
-        del n, sel, steps, R
-
-        for w in self.wake_models:
-            w.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
-                                            wcoos, wake_deltas)
 
     def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
-
-        n_states   = mdata.n_states
-        n_turbines = algo.n_turbines
-        n_wpoints  = self.n_wake_points(algo, mdata, fdata)
-        D          = fdata[FV.D]
-        R          = mdata[self.R]
-
-        A     = np.zeros((n_states, n_turbines, self.n_steps + 1), dtype=FC.DTYPE)
-        steps = np.linspace(0., 1., self.n_steps + 1, endpoint=True) - 0.5
-        R1    = np.zeros((n_states, n_turbines, self.n_steps), dtype=FC.DTYPE)
-        R1[:] = D[:, :, None]/2
-        R2    = R + D[:, :, None] * steps[None, None, 1:]
-        A[:, :, 1:] = calc_area(R1, R2, R)
-        print("AWKE")
-        print(steps)
-        print("R =", R[0,0])
-        print(A[0,0])
-        A           = A[:, :, 1:] - A[:, :, :-1]
-        print(A[0,0])
-        A          /= np.sum(A, axis=-1)[:, :, None]
-        sweights    = A
-        del A, steps, R, R1, R2, D
-
-        wdel   = {}
-        st_sel = (np.arange(n_states), states_turbine)
-        for v, d in wake_deltas.items():
-            wdel[v] = np.einsum('stw,stw->st', d.reshape(n_states, n_turbines, n_wpoints), sweights)
-            wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
-        for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wdel)
 
         weights = self.get_data(FV.RWEIGHTS, mdata)
         rpoints = self.get_data(FV.RPOINTS, mdata)
         amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
-        __, __, n_rpoints, __ = rpoints.shape
+        n_states, n_turbines, n_rpoints, __ = rpoints.shape
+
+        wdel   = {}
+        st_sel = (np.arange(n_states), states_turbine)
+        for v, d in wake_deltas.items():
+            wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
+        for w in self.wake_models:
+            w.finalize_wake_deltas(algo, mdata, fdata, wdel)
 
         wres = {}
         for v, ares in amb_res.items():
