@@ -62,7 +62,7 @@ class PartialAxiwake(PartialWakesModel):
             n[:, :, 0][~sel] = 1
 
         # case wake centre outside rotor disk:
-        sel = (R > D/2)
+        sel = (x > 1e-5) & (R > D/2)
         if np.any(sel):
 
             n_sel   = np.sum(sel)
@@ -84,12 +84,13 @@ class PartialAxiwake(PartialWakesModel):
             del hA, Rsel, Dsel, R1, R2
         
         # case wake centre inside rotor disk:
-        if np.any(~sel):
+        sel = (x > 1e-5) & (R < D/2)
+        if np.any(sel):
 
-            n_sel   = np.sum(~sel)
+            n_sel   = np.sum(sel)
             Rsel    = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
-            Rsel[:] = R[~sel][:, None]
-            Dsel    = D[~sel][:, None]
+            Rsel[:] = R[sel][:, None]
+            Dsel    = D[sel][:, None]
 
             # equal delta R2:
             R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
@@ -99,14 +100,14 @@ class PartialAxiwake(PartialWakesModel):
             R2[:]    *= np.linspace(0., 1, self.n_steps + 1, endpoint=True)[None, :]
             hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
             hr[:, 0]  = 0.
-            r[~sel]   = hr
+            r[sel]    = hr
         
             """
             # equal delta r:
             # seems to perform worse than equal delta R2
             steps     = np.linspace(0., 1., self.n_steps, endpoint=False)
-            r[~sel]   = ( Rsel[:, :-1] + Dsel/2 ) * steps[None, :]
-            hr        = r[~sel]
+            r[sel]    = ( Rsel[:, :-1] + Dsel/2 ) * steps[None, :]
+            hr        = r[sel]
             R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
             R1[:, 1:] = Dsel / 2
             R2        = np.zeros_like(R1)
@@ -124,12 +125,12 @@ class PartialAxiwake(PartialWakesModel):
             R2[:]    *= np.sqrt(np.linspace(0., self.n_steps, self.n_steps + 1, endpoint=True))[None, :]
             hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
             hr[:, 0]  = 0.
-            r[~sel]   = hr
+            r[sel]   = hr
             """
 
             hA = calc_area(R1, R2, Rsel)
             hA = hA[:, 1:] - hA[:, :-1]
-            weights[~sel] = hA / np.sum(hA, axis=-1)[:, None]
+            weights[sel] = hA / np.sum(hA, axis=-1)[:, None]
             del hA, hr, Rsel, Dsel, R1, R2
 
         # evaluate wake models:
