@@ -48,7 +48,11 @@ class ModelBook:
             "axiwake_10"     : fm.partial_wakes.PartialAxiwake(10),
             "axiwake_20"     : fm.partial_wakes.PartialAxiwake(20),
             "axiwake_50"     : fm.partial_wakes.PartialAxiwake(50),
-            "axiwake_100"    : fm.partial_wakes.PartialAxiwake(100)
+            "axiwake_100"    : fm.partial_wakes.PartialAxiwake(100),
+
+            "distsliced"   : fm.partial_wakes.PartialDistSlicedWake(),
+            "distsliced_4"   : fm.partial_wakes.PartialDistSlicedWake(4),
+            "distsliced_9"   : fm.partial_wakes.PartialDistSlicedWake(9)
         }
 
         self.wake_frames = {
