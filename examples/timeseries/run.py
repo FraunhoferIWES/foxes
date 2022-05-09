@@ -49,9 +49,9 @@ if __name__ == "__main__":
         turbine_models=args.tmodels
     )
 
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+    #ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+    #plt.show()
+    #plt.close(ax.get_figure())
 
     with dask.config.set(scheduler=args.scheduler):
         
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                 )
         
         time0 = time.time()
-        
+
         with ProgressBar():
             farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
 
