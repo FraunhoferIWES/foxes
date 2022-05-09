@@ -44,8 +44,10 @@ def area(r1, r2, d):
     b  = np.maximum(r2**2 - d2**2, 0.)
     A2 = r2**2 * np.arccos(a) - d2 * np.sqrt(b)
     
-    #A1 = r1**2 * np.arccos(d1/r1) - d1 * np.sqrt(r1**2 - d1**2)
-    #A2 = r2**2 * np.arccos(d2/r2) - d2 * np.sqrt(r2**2 - d2**2)
+    """
+    A1 = r1**2 * np.arccos(d1/r1) - d1 * np.sqrt(r1**2 - d1**2)
+    A2 = r2**2 * np.arccos(d2/r2) - d2 * np.sqrt(r2**2 - d2**2)
+    """
 
     return A1 + A2
 
@@ -81,30 +83,33 @@ def calc_area(r1, r2, d):
     if np.any(sel0):
 
         # condition r1 >= r2:
-        selr = sel0 & ( r1 >= r2 )
+        sela = ( r1 >= r2 )
+        selr = sel0 & sela
         if np.any(selr):
 
             # condition d <= r1 - r2:
-            seld = selr & ( d <= r1 - r2 )
+            selb = ( d <= r1 - r2 )
+            seld = selr & selb
             if np.any(seld):
                  out[seld] = np.pi * r2[seld]**2
             
             # condition d > r1 - r2:
-            seld = selr & ( d > r1 - r2 )
+            seld = selr & (~selb)
             if np.any(seld):
                 out[seld] = area(r1[seld], r2[seld], d[seld])
     
         # condition r1 < r2:
-        selr = sel0 & ( r1 < r2 )
+        selr = sel0 & (~sela)
         if np.any(selr):
 
             # condition d <= r2 - r1:
-            seld = selr & ( d <= r2 - r1 )
+            selb = ( d <= r2 - r1 )
+            seld = selr & selb
             if np.any(seld):
                  out[seld] = np.pi * r1[seld]**2
             
             # condition d > r2 - r1:
-            seld = selr & ( d > r2 - r1 )
+            seld = selr & (~selb)
             if np.any(seld):
                 out[seld] = area(r2[seld], r1[seld], d[seld]) 
 
