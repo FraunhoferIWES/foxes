@@ -1,4 +1,4 @@
-from foxes.core.wind_farm import WindFarm
+from foxes.core import WindFarm, Turbine
 
 import foxes.algorithms
 import foxes.models

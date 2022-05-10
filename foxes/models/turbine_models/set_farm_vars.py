@@ -26,10 +26,16 @@ class SetFarmVars(TurbineModel):
         self._keys = {}
         for i, v in enumerate(self.vars):
 
+            if not isinstance(self._vdata[i], np.ndarray):
+                raise TypeError(f"Model '{self.name}': Wrong data type for variable '{v}': Expecting '{np.ndarray.__name__}', got '{type(self._vdata[i]).__name__}'")
+
+            data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+            data[:] = self._vdata[i]
+
             k = self.var(f"data_{v}")
             self._keys[v] = k
 
-            idata["data_vars"][k] = ((FV.STATE, FV.TURBINE), self._vdata[i])
+            idata["data_vars"][k] = ((FV.STATE, FV.TURBINE), data)
         
         del self._vdata
 
