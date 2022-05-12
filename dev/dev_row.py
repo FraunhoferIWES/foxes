@@ -47,7 +47,7 @@ if __name__ == "__main__":
                 mbook,
                 farm,
                 states=states,
-                rotor_model="centre",
+                rotor_model="grid4",
                 turbine_order="order_wd",
                 wake_models=['Bastankhah_linear'],
                 wake_frame="mean_wd",

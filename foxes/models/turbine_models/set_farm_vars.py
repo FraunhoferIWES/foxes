@@ -6,8 +6,8 @@ import foxes.variables as FV
 
 class SetFarmVars(TurbineModel):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, pre_rotor=False):
+        super().__init__(pre_rotor=pre_rotor)
 
         self.vars   = []
         self._vdata = []
@@ -23,7 +23,6 @@ class SetFarmVars(TurbineModel):
         
         idata = super().model_input_data(algo)
 
-        self._keys = {}
         for i, v in enumerate(self.vars):
 
             if not isinstance(self._vdata[i], np.ndarray):
@@ -31,11 +30,8 @@ class SetFarmVars(TurbineModel):
 
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
             data[:] = self._vdata[i]
-
-            k = self.var(f"data_{v}")
-            self._keys[v] = k
-
-            idata["data_vars"][k] = ((FV.STATE, FV.TURBINE), data)
+            
+            idata["data_vars"][self.var(v)] = ((FV.STATE, FV.TURBINE), data)
         
         del self._vdata
 
@@ -49,7 +45,7 @@ class SetFarmVars(TurbineModel):
 
         for v in self.vars:
 
-            data  = mdata[self._keys[v]]
+            data  = mdata[self.var(v)]
             hsel  = ~np.isnan(data)
             hallt = np.all(hsel)
 

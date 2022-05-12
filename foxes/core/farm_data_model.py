@@ -10,6 +10,11 @@ from foxes.core.model import Model
 
 class FarmDataModel(Model):
 
+    def __init__(self, pre_rotor=False):
+        super().__init__()
+        
+        self.pre_rotor = pre_rotor
+
     @abstractmethod
     def output_farm_vars(self, algo):
         return []

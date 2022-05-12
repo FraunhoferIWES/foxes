@@ -22,7 +22,8 @@ class Model(metaclass=ABCMeta):
         return s
     
     def var(self, v):
-        return f"{self.name}_{self.id}_{v}"
+        ext = "" if self.id == 0 else f"_id{self.id}"
+        return f"{self.name}{ext}_{v}"
 
     def model_input_data(self, algo):
         return {"coords": {}, "data_vars": {}}

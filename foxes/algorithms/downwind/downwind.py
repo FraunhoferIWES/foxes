@@ -70,8 +70,10 @@ class Downwind(Algorithm):
         self.print(deco)
         self.print(f"  turbine models:")
         self.farm_controller.collect_models(self)
-        for i, m in enumerate(self.farm_controller.turbine_models):
-            self.print(f"    {i}) {m}")
+        for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
+            self.print(f"    {i}) {m} [pre-rotor]")
+        for i, m in enumerate(self.farm_controller.post_rotor_models.models):
+            self.print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}")
         self.print(deco)
 
     def calc_farm(
@@ -99,14 +101,21 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 1) calculate yaw from wind direction at rotor centre:
+        # 1) run pre-rotor turbine models via farm controller:
+        mlist.models.append(self.farm_controller)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        calc_pars[-1]["pre_rotor"] = True
+
+        # 2) calculate yaw from wind direction at rotor centre:
         mlist.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
         mlist.models[-1].name = "calc_yaw"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
-        
-        # 2) calculate ambient rotor results:
+
+        # 3) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
@@ -117,19 +126,20 @@ class Downwind(Algorithm):
             "store_amb_res": True
         })
 
-        # 3) calculate turbine order:
+        # 4) calculate turbine order:
         mlist.models.append(self.turbine_order)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 4) run turbine models via farm controller:
+        # 5) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        calc_pars[-1]["pre_rotor"] = False
 
-        # 5) copy results to ambient, requires self.farm_vars:
+        # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
@@ -137,7 +147,7 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 6) calculate wake effects:
+        # 7) calculate wake effects:
         mlist.models.append(dm.FarmWakesCalculation())
         mlist.models[-1].name = "calc_wakes"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))

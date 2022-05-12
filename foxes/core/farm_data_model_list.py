@@ -60,6 +60,8 @@ class FarmDataModelList(FarmDataModel):
                 print(f"{self.name}, sub-model '{m.name}': Finalizing")
             m.finalize(algo, **parameters[mi])  
         
-        self.models = None
+        if clear_mem:
+            self.models = None
+            
         super().finalize(algo, clear_mem)
 

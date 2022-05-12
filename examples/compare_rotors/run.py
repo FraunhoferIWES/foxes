@@ -52,19 +52,6 @@ if __name__ == "__main__":
 
     with dask.config.set(scheduler=args.scheduler):
 
-        mbook = foxes.models.ModelBook()
-        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                        name="TOYT", filepath="toyTurbine.csv",
-                                        D=args.D0, H=args.H0)
-        mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars()
-        mbook.turbine_models["sety"].add_var(FV.Y, sdata["y"].to_numpy()[:, None])
-
-        states = foxes.input.states.StatesTable(
-            sdata,
-            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"}
-        )
-
         farm = foxes.WindFarm()
         farm.add_turbine(foxes.Turbine(
             xy=np.array([0., 0.]),
@@ -76,6 +63,22 @@ if __name__ == "__main__":
             D=args.D,
             H=args.H
         ))
+
+        states = foxes.input.states.StatesTable(
+            sdata,
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"}
+        )
+
+        mbook = foxes.models.ModelBook()
+        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
+                                        name="TOYT", filepath="toyTurbine.csv",
+                                        D=args.D0, H=args.H0)
+
+        ydata = np.full((states.size(), farm.n_turbines), np.nan)
+        ydata[:, 1] = sdata["y"].to_numpy()
+        mbook.turbine_models["sety"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["sety"].add_var(FV.Y, ydata)
         
         algo = foxes.algorithms.Downwind(
                     mbook,

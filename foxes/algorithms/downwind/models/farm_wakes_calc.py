@@ -36,7 +36,7 @@ class FarmWakesCalculation(FarmDataModel):
                 trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
                 np.put_along_axis(trbs, o[:, None], True, axis=1)
 
-                res = algo.farm_controller.calculate(algo, mdata, fdata, st_sel=trbs)
+                res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False, st_sel=trbs)
                 fdata.update(res)
 
             if oi < n_order - 1:
