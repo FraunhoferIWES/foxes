@@ -2,9 +2,9 @@
 import unittest
 from pathlib import Path
 import inspect
-import dask
 from dask.diagnostics import ProgressBar
-from dask.distributed import Client
+#import dask
+#from dask.distributed import Client
 
 import foxes
 import foxes.variables as FV

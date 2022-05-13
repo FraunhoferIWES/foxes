@@ -63,6 +63,6 @@ class LinearWakeSuperposition(WakeSuperposition):
         else:
             raise ValueError(f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_<var>'")
 
-    def calc_final_wake_delta(self, algo, mdata, fdata, variable, wake_delta):
+    def calc_final_wake_delta(self, algo, mdata, fdata, variable, amb_results, wake_delta):
         return wake_delta
         

@@ -39,7 +39,8 @@ class DistSlicedWakeModel(WakeModel):
                                         algo, mdata, fdata, states_source_turbine,
                                         sp_sel, v, wake_deltas[v], hdel[:, 0])
 
-    def finalize_wake_deltas(self, algo, mdata, fdata, wake_deltas):
+    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
         for v, s in self.superp.items():
-            wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v, wake_deltas[v])
+            wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v,
+                                                        amb_results[v], wake_deltas[v])
         

@@ -1,1 +1,2 @@
 from foxes.models.wake_superpositions.linear import LinearWakeSuperposition
+from foxes.models.wake_superpositions.ti_superp import TISuperposition

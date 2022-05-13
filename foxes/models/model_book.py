@@ -39,9 +39,9 @@ class ModelBook:
         }
 
         self.partial_wakes = {
-            "rotor_points"   : fm.partial_wakes.RotorPoints(),
-            "partial_top_hat": fm.partial_wakes.PartialTopHat(),
-            "distsliced"     : fm.partial_wakes.PartialDistSlicedWake()
+            "rotor_points": fm.partial_wakes.RotorPoints(),
+            "top_hat"     : fm.partial_wakes.PartialTopHat(),
+            "distsliced"  : fm.partial_wakes.PartialDistSlicedWake()
         }
         nlst = list(range(2, 11)) + [20, 50, 100]
         for n in nlst:
@@ -56,17 +56,25 @@ class ModelBook:
 
         self.wake_superpositions = {
             "linear"    : fm.wake_superpositions.LinearWakeSuperposition(scalings=f'source_turbine_{FV.REWS}'),
-            "linear_amb": fm.wake_superpositions.LinearWakeSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}')
+            "linear_amb": fm.wake_superpositions.LinearWakeSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
+
+            "ti_linear"   : fm.wake_superpositions.TISuperposition(ti_superp="linear", superp_to_amb="quadratic"),
+            "ti_quadratic": fm.wake_superpositions.TISuperposition(ti_superp="quadratic", superp_to_amb="quadratic")
         }
 
         self.wake_models = {}
-        for s in self.wake_superpositions.keys():
+        slist = ["linear", "linear_amb"]
+        for s in slist:
 
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.top_hat.JensenWake(superposition=s)
             self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.top_hat.JensenWake(k=0.07, superposition=s)
 
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.gaussian.BastankhahWake(superposition=s)
             self.wake_models[f"Bastankhah_{s}_k002"] = fm.wake_models.gaussian.BastankhahWake(k=0.02, superposition=s)
+
+        slist = ["ti_linear", "ti_quadratic"]
+        for s in slist:
+            self.wake_models[f"CrespoHernandez_{s[3:]}"] = fm.wake_models.top_hat.CrespoHernandezTIWake(superposition=s)
 
 
  

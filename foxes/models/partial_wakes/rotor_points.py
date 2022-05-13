@@ -53,19 +53,23 @@ class RotorPoints(PartialWakesModel):
         rpoints = self.get_data(FV.RPOINTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
-        wdel   = {}
+        wres   = {}
         st_sel = (np.arange(n_states), states_turbine)
+        for v, ares in amb_res.items():
+            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+        del amb_res
+
+        wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
 
-        wres = {}
-        for v, ares in amb_res.items():
-            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+        for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
             wres[v] = wres[v][:, None]
         
         self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 
                                                 states_turbine=states_turbine)
+                                                

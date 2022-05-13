@@ -79,4 +79,4 @@ if __name__ == "__main__":
         fr = farm_results.to_dataframe()
         print()
         print(fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, 
-                FV.AMB_TI, FV.AMB_P, FV.P, FV.CT]])
+                FV.AMB_TI, FV.TI, FV.AMB_P, FV.P, FV.CT]])

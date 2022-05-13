@@ -55,7 +55,7 @@ class Test(unittest.TestCase):
                     turbine_order="order_wd",
                     wake_models=['Jensen_linear_k007'],
                     wake_frame="mean_wd",
-                    partial_wakes_model="partial_top_hat",
+                    partial_wakes_model="top_hat",
                     chunks=ck,
                     verbosity=0
                 )

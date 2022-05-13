@@ -10,5 +10,5 @@ class WakeSuperposition(Model):
         pass
 
     @abstractmethod
-    def calc_final_wake_delta(self, algo, mdata, fdata, variable, wake_delta):
+    def calc_final_wake_delta(self, algo, mdata, fdata, variable, amb_results, wake_delta):
         pass

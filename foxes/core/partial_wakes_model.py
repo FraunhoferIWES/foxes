@@ -1,6 +1,8 @@
 from abc import abstractmethod
+import numpy as np
 
 from foxes.core.model import Model
+import foxes.variables as FV
 
 class PartialWakesModel(Model):
 
@@ -42,6 +44,5 @@ class PartialWakesModel(Model):
         pass
 
     @abstractmethod
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, 
-                            states_turbine):
+    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
         pass

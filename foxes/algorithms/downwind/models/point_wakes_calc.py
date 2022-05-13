@@ -34,11 +34,12 @@ class PointWakesCalculation(PointDataModel):
             for w in algo.wake_models:
                 w.contribute_to_wake_deltas(algo, mdata, fdata, o, wcoos, wdeltas)
         
+        amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in algo.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wdeltas)
+            w.finalize_wake_deltas(algo, mdata, fdata, amb_res, wdeltas)
 
         for v in self.pvars:
             if v in wdeltas:
-                pdata[v] = pdata[FV.var2amb[v]] + wdeltas[v]
+                pdata[v] = amb_res[v] + wdeltas[v]
         
         return {v: pdata[v] for v in self.output_point_vars(algo)}

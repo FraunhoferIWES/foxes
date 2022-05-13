@@ -13,5 +13,5 @@ class WakeModel(Model):
                             states_source_turbine, wake_coos, wake_deltas):
         pass
 
-    def finalize_wake_deltas(self, algo, mdata, fdata, wake_deltas):
+    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
         pass
