@@ -50,8 +50,14 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         # evaluate grid rotor:
         if not self.YZ in mdata:
-            mdata[self.YZ] = self.grotor.get_rotor_points(algo, mdata, fdata)[:, :, :, 1:3]
+            n_states       = fdata.n_states
+            n_turbines     = fdata.n_turbines
+            n_rpoints      = self.grotor.n_rotor_points()
+            points         = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(n_states, n_turbines*n_rpoints, 3)
+            wcoos          = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
+            mdata[self.YZ] = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
             mdata[self.W]  = self.grotor.rotor_point_weights()
+            del points, wcoos
         yz      = mdata[self.YZ]
         weights = mdata[self.W]
 
@@ -64,7 +70,7 @@ class PartialDistSlicedWake(PartialWakesModel):
             for v, wdel in wdeltas.items():
 
                 d = np.einsum('ps,s->p', wdel, weights)
-                
+
                 try:
                     superp = w.superp[v]
                 except KeyError:
@@ -72,8 +78,7 @@ class PartialDistSlicedWake(PartialWakesModel):
 
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                             sp_sel, v, wake_deltas[v], d)
-
-
+                    
     def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
 
         weights = self.get_data(FV.RWEIGHTS, mdata)

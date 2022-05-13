@@ -101,33 +101,7 @@ class PartialAxiwake(PartialWakesModel):
             hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
             hr[:, 0]  = 0.
             r[sel]    = hr
-        
-            """
-            # equal delta r:
-            # seems to perform worse than equal delta R2
-            steps     = np.linspace(0., 1., self.n_steps, endpoint=False)
-            r[sel]    = ( Rsel[:, :-1] + Dsel/2 ) * steps[None, :]
-            hr        = r[sel]
-            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
-            R1[:, 1:] = Dsel / 2
-            R2        = np.zeros_like(R1)
-            R2[:, 1:-1] = 0.5 * ( hr[:, 1:] + hr[:, :-1] )
-            R2[:, -1]   = Rsel[:, -1] + Dsel[:,-1]/2
-            """
-
-            """ 
-            # equal weights:
-            # seems to perform worse than equal delta R2
-            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
-            R1[:, 1:] = Dsel / 2
-            R2        = np.zeros_like(R1)
-            R2[:, 1:] = ( Rsel[:, :-1] + Dsel/2 ) / np.sqrt(self.n_steps)
-            R2[:]    *= np.sqrt(np.linspace(0., self.n_steps, self.n_steps + 1, endpoint=True))[None, :]
-            hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
-            hr[:, 0]  = 0.
-            r[sel]   = hr
-            """
-
+            
             hA = calc_area(R1, R2, Rsel)
             hA = hA[:, 1:] - hA[:, :-1]
             weights[sel] = hA / np.sum(hA, axis=-1)[:, None]
@@ -142,15 +116,14 @@ class PartialAxiwake(PartialWakesModel):
             for v, wdel in wdeltas.items():
 
                 d = np.einsum('ps,ps->p', wdel, weights[sp_sel])
-                
+
                 try:
                     superp = w.superp[v]
                 except KeyError:
                     raise KeyError(f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}")
 
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
-                                                            sp_sel, v, wake_deltas[v], d)
-
+                                                            sp_sel, v, wake_deltas[v], d)  
 
     def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
 
