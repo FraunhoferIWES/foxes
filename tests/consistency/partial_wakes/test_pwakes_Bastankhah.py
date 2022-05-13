@@ -27,6 +27,8 @@ class Test(unittest.TestCase):
         lfile = self.thisdir / "test_farm.csv"
         cases = [
             ("grid100", "rotor_points", None),
+            ("grid4", "rotor_points", 0.13),
+            ("grid9", "rotor_points", 0.05),
             ("centre", "axiwake_5", 0.06),
             ("centre", "axiwake_10", 0.04),
             ("grid9", "distsliced", 0.05),
