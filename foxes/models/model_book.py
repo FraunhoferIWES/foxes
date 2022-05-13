@@ -40,20 +40,13 @@ class ModelBook:
         self.partial_wakes = {
             "rotor_points"   : fm.partial_wakes.RotorPoints(),
             "partial_top_hat": fm.partial_wakes.PartialTopHat(),
-
-            "axiwake_2"      : fm.partial_wakes.PartialAxiwake(2),
-            "axiwake_3"      : fm.partial_wakes.PartialAxiwake(3),
-            "axiwake_4"      : fm.partial_wakes.PartialAxiwake(4),
-            "axiwake_5"      : fm.partial_wakes.PartialAxiwake(5),
-            "axiwake_10"     : fm.partial_wakes.PartialAxiwake(10),
-            "axiwake_20"     : fm.partial_wakes.PartialAxiwake(20),
-            "axiwake_50"     : fm.partial_wakes.PartialAxiwake(50),
-            "axiwake_100"    : fm.partial_wakes.PartialAxiwake(100),
-
-            "distsliced"   : fm.partial_wakes.PartialDistSlicedWake(),
-            "distsliced_4"   : fm.partial_wakes.PartialDistSlicedWake(4),
-            "distsliced_9"   : fm.partial_wakes.PartialDistSlicedWake(9)
+            "distsliced"     : fm.partial_wakes.PartialDistSlicedWake()
         }
+        nlst = list(range(2, 11)) + [20, 50, 100]
+        for n in nlst:
+            self.partial_wakes[f"axiwake_{n}"] = fm.partial_wakes.PartialAxiwake(n)
+        for n in range(2, 11):
+            self.partial_wakes[f"distsliced_{n**2}"] = fm.partial_wakes.PartialDistSlicedWake(n)
 
         self.wake_frames = {
             "mean_wd": fm.wake_frames.MeanFarmWind(var_wd=FV.WD)
