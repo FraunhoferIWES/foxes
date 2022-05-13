@@ -1,6 +1,5 @@
 
 import pandas as pd
-import dask
 import unittest
 from pathlib import Path
 import inspect
@@ -20,51 +19,48 @@ class Test(unittest.TestCase):
 
     def test(self):
             
-        s     = "threads"
         c     = 2000
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "toyTurbine.csv"
         sfile = self.thisdir / "states.csv.gz"
         lfile = self.thisdir / "test_farm.csv"
 
-        with dask.config.set(scheduler=s):
+        ck = {FV.STATE: c}
 
-            ck = {FV.STATE: c}
+        mbook = foxes.models.ModelBook()
+        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
+                                        name="TOYT", filepath=tfile, D=120., H=100.)
 
-            mbook = foxes.models.ModelBook()
-            mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                            name="TOYT", filepath=tfile, D=120., H=100.)
+        states = foxes.input.states.StatesTable(
+            data_source=sfile,
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
+            fixed_vars={FV.RHO: 1.225},
+            verbosity=0
+        )
 
-            states = foxes.input.states.StatesTable(
-                data_source=sfile,
-                output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-                var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-                fixed_vars={FV.RHO: 1.225},
-                verbosity=0
-            )
-
-            farm = foxes.WindFarm()
-            foxes.input.farm_layout.add_from_file(
-                farm,
-                lfile,
-                turbine_models=["TOYT"],
-                verbosity=0
-            )
-            
-            algo = foxes.algorithms.Downwind(
-                        mbook,
-                        farm,
-                        states=states,
-                        rotor_model="centre",
-                        turbine_order="order_wd",
-                        wake_models=['Jensen_linear_k007'],
-                        wake_frame="mean_wd",
-                        partial_wakes_model="partial_top_hat",
-                        chunks=ck,
-                        verbosity=0
-                    )
-            
-            data = algo.calc_farm()
+        farm = foxes.WindFarm()
+        foxes.input.farm_layout.add_from_file(
+            farm,
+            lfile,
+            turbine_models=["TOYT"],
+            verbosity=0
+        )
+        
+        algo = foxes.algorithms.Downwind(
+                    mbook,
+                    farm,
+                    states=states,
+                    rotor_model="centre",
+                    turbine_order="order_wd",
+                    wake_models=['Jensen_linear_k007'],
+                    wake_frame="mean_wd",
+                    partial_wakes_model="partial_top_hat",
+                    chunks=ck,
+                    verbosity=0
+                )
+        
+        data = algo.calc_farm()
 
         df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
