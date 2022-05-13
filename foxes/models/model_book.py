@@ -13,7 +13,8 @@ class ModelBook:
         self.rotor_models = {
             "centre": fm.rotor_models.CentreRotor(calc_vars=rvars)
         } 
-        for n in range(2, 11):
+        nlist = list(range(2, 11)) + [20]
+        for n in nlist:
             self.rotor_models[f"grid{n**2}"] = fm.rotor_models.GridRotor(calc_vars=rvars, n=n, reduce=True)
 
         self.turbine_types = {}
@@ -45,7 +46,8 @@ class ModelBook:
         nlst = list(range(2, 11)) + [20, 50, 100]
         for n in nlst:
             self.partial_wakes[f"axiwake_{n}"] = fm.partial_wakes.PartialAxiwake(n)
-        for n in range(2, 11):
+        nlist = list(range(2, 11)) + [20]
+        for n in nlist:
             self.partial_wakes[f"distsliced_{n**2}"] = fm.partial_wakes.PartialDistSlicedWake(n)
 
         self.wake_frames = {

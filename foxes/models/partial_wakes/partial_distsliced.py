@@ -49,17 +49,14 @@ class PartialDistSlicedWake(PartialWakesModel):
         del wcoos
 
         # evaluate grid rotor:
-        if not self.YZ in mdata:
-            n_states       = fdata.n_states
-            n_turbines     = fdata.n_turbines
-            n_rpoints      = self.grotor.n_rotor_points()
-            points         = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(n_states, n_turbines*n_rpoints, 3)
-            wcoos          = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
-            mdata[self.YZ] = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
-            mdata[self.W]  = self.grotor.rotor_point_weights()
-            del points, wcoos
-        yz      = mdata[self.YZ]
-        weights = mdata[self.W]
+        n_states   = fdata.n_states
+        n_turbines = fdata.n_turbines
+        n_rpoints  = self.grotor.n_rotor_points()
+        points     = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(n_states, n_turbines*n_rpoints, 3)
+        wcoos      = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
+        yz         = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
+        weights    = self.grotor.rotor_point_weights()
+        del points, wcoos
 
         # evaluate wake models:
         for w in self.wake_models:
