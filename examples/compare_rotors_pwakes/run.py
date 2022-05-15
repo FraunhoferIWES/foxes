@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
-    parser.add_argument("-v", "--var", help="The variable selection", default=FV.WS)
+    parser.add_argument("-v", "--var", help="The variable selection", default=FV.REWS)
     parser.add_argument("-D", help="The rotor diameter", type=float, default=120.)
     parser.add_argument("-H", help="The hub height", type=float, default=100.)
     parser.add_argument("-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0)
@@ -75,12 +75,22 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02", "TOYT"], nargs='+')
     parser.add_argument("-r", "--rotors", help="The rotor model(s)", default=["grid100"], nargs='+')
     parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["rotor_points", "distsliced", "axiwake_5"], nargs='+')
+    parser.add_argument("-t", "--title", help="The figure title", default=None)
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     args  = parser.parse_args()
     D     = args.D
     ws    = args.ws
+    var   = args.var
+    swks  = ", ".join(args.wakes)
+    ttl0  = f"ws$_0$ = {ws} m, ti$_0$ = {args.ti}"
+    
+    varn = 1
+    vlab = var
+    if var in [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]:
+        varn = ws
+        vlab = f"{var}/ws$_0$"
 
     Ny    = int( (args.ymax - args.ymin) // args.ystep )
     sdata = pd.DataFrame(index=range(Ny+1))
@@ -105,9 +115,9 @@ if __name__ == "__main__":
 
             farm_results = calc(args, args.rotors[0], pwake)
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[FV.REWS][:, 1]/ws, label=pwake)
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=pwake)
 
-            ax.set_title(f"Variable {args.var}: Varying partial wake models, ws$_0$ = {ws} m/s, rotor = {args.rotors[0]}")
+            title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
     
     elif len(args.pwakes) == 1:
 
@@ -115,9 +125,9 @@ if __name__ == "__main__":
 
             farm_results = calc(args, rotor, args.pwakes[0])
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[FV.REWS][:, 1]/ws, label=rotor)
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=rotor)
 
-            ax.set_title(f"Variable {args.var}: Varying rotor models, ws$_0$ = {ws} m/s, pwake = {args.pwakes[0]}")
+            title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
     
     elif len(args.rotors) == len(args.pwakes):
 
@@ -125,14 +135,18 @@ if __name__ == "__main__":
 
             farm_results = calc(args, rotor, pwake)
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[FV.REWS][:, 1]/ws, label=f"{rotor}, {pwake}")
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=f"{rotor}, {pwake}")
 
-            ax.set_title("Variable {args.var}: Varying rotor and partial wake models, ws$_0$ = {ws} m/s")
+            title = "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
 
     else:
         raise ValueError(f"Please either give one rotor, or one pwake, or same number of both")
 
+    if args.title is not None:
+        title= args.title
+    
+    ax.set_title(title)
     ax.set_xlabel("y/D")
-    ax.set_ylabel("ws/ws$_0$")
+    ax.set_ylabel(vlab)
     ax.legend()
     plt.show()

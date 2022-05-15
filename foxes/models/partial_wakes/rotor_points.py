@@ -26,7 +26,7 @@ class RotorPoints(PartialWakesModel):
 
     def get_wake_points(self, algo, mdata, fdata):
         rpoints = self.get_data(FV.RPOINTS, mdata)
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
+        n_states, n_turbines, n_rpoints, __ = rpoints.shape     
         return rpoints.reshape(n_states, n_turbines*n_rpoints, 3)
 
     def new_wake_deltas(self, algo, mdata, fdata):

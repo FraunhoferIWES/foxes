@@ -38,7 +38,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         wake_deltas[FV.TI] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
     def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, r, ct):
-
+        
         # prepare:
         n_states = fdata.n_states
         st_sel   = (np.arange(n_states), states_source_turbine)
@@ -63,13 +63,18 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         return radius
 
     def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
-                                        n_points, sp_sel, x, r, wake_r, ct):
+                                        n_points, sp_sel, x, r, wake_r, ct):  
 
         # prepare:
         n_states = fdata.n_states
         n_targts = np.sum(sp_sel)
         st_sel   = (np.arange(n_states), states_source_turbine)
         TI       = FV.AMB_TI if self.use_ambti else FV.TI
+
+        print("CHER",sp_sel)
+        print("x",x)
+        print("r",r)
+        print("wake_r",wake_r)
 
         # read D from extra data:
         D    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -93,6 +98,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         # calc near wake:
         sel = ( x < near_wake_D * D )
+        print("NWD",near_wake_D,sel)
         if np.any(sel):
             wake_deltas[sel] = self.a_near * ( 1. - np.sqrt( 1. - ct[sel] ) )
         
@@ -110,4 +116,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             wake_deltas[~sel] =  self.a_far * ( ( 1. - np.sqrt( 1. - ct[~sel] ) ) / 2 )**self.e1 \
                                         * ti[~sel]**self.e2 * ( x[~sel] / D[~sel] )**self.e3
         
+        print("wdel",wake_deltas)
+
         return {FV.TI: wake_deltas}
