@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import PartialWakesModel
-from foxes.models.wake_models.top_hat.top_hat_wake_model import TopHatWakeModel
+from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import TopHatWakeModel
 from foxes.tools.two_circles import calc_area
 import foxes.variables as FV
 import foxes.constants as FC
@@ -62,19 +62,18 @@ class PartialTopHat(PartialWakesModel):
 
             for w in self.wake_models:
 
-                wr = w.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, r, ct)
+                wr = w.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, ct)
 
                 sel_sp = sel0 & (wr > R - D/2) 
                 if np.any(sel_sp):
 
                     hx  = x[sel_sp]
-                    hr  = r[sel_sp]
                     hct = ct[sel_sp]
                     hwr = wr[sel_sp]
 
                     clw = w.calc_centreline_wake_deltas(algo, mdata, fdata, states_source_turbine,
-                                                            n_points, sel_sp, hx, hr, hwr, hct)
-                    del hx, hr, hct
+                                                            n_points, sel_sp, hx, hwr, hct)
+                    del hx, hct
 
                     hR = R[sel_sp]
                     hD = D[sel_sp]

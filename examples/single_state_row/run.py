@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-dy", "--deltay", help="Turbine layout y step", type=float, default=0.)
+    parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args  = parser.parse_args()
 
     p0  = np.array([0., 0.])
@@ -66,13 +67,13 @@ if __name__ == "__main__":
         print("\nResults data:\n", farm_results)
         
         o   = foxes.output.FlowPlots2D(algo, farm_results)
-        g   = o.gen_states_fig_horizontal(FV.WS, resolution=10)
+        g   = o.gen_states_fig_horizontal(args.var, resolution=10)
         fig = next(g)
         plt.show()
         plt.close(fig)
 
         o   = foxes.output.FlowPlots2D(algo, farm_results)
-        g   = o.gen_states_fig_vertical(FV.WS, resolution=10, x_direction=90.)
+        g   = o.gen_states_fig_vertical(args.var, resolution=10, x_direction=90.)
         fig = next(g)
         plt.show()
 

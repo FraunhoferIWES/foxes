@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.models.wake_models.top_hat.top_hat_wake_model import TopHatWakeModel
+from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -16,7 +16,7 @@ class JensenWake(TopHatWakeModel):
         n_states = mdata.n_states
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
-    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, r, ct):
+    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
 
         n_states = mdata.n_states
         st_sel   = (np.arange(n_states), states_source_turbine)
@@ -30,7 +30,7 @@ class JensenWake(TopHatWakeModel):
         return R + k * x
 
     def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
-                                        n_points, sp_sel, x, r, wake_r, ct):
+                                        n_points, sp_sel, x, wake_r, ct):
 
         n_states = mdata.n_states
         st_sel   = (np.arange(n_states), states_source_turbine)
