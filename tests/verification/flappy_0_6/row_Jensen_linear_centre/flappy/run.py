@@ -1,6 +1,5 @@
 
 import numpy as np
-import pandas as pd
 import time
 import argparse
 from pathlib import Path
@@ -13,14 +12,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=500)
     parser.add_argument("-o", "--ofile", help="The output file name", default="results.csv.gz")
-    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=4)
+    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=1)
     args  = parser.parse_args()
 
-    n_s   = 1000
-    n_t   = 55
+    n_s   = 800
+    n_t   = 76
     c     = args.chunksize
     p0    = np.array([0., 0.])
-    stp   = np.array([500., 0.])
+    stp   = np.array([497., 0.])
     ofile = Path(args.ofile)
 
     # init flappy:

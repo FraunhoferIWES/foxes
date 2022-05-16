@@ -24,7 +24,7 @@ class Test(unittest.TestCase):
         n_t   = 84
         wd    = 88.1
         ti    = 0.04
-        rotor = "centre"
+        rotor = "grid9"
         c     = 100
         p0    = np.array([0., 0.])
         stp   = np.array([533., 12.])
@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
                                         D=120., H=100.)
 
         states = foxes.input.states.ScanWS(
-            ws_list=np.linspace(3., 30., n_s),
+            ws_list=np.linspace(6., 16., n_s),
             wd=wd,
             ti=ti,
             rho=1.225
@@ -99,12 +99,12 @@ class Test(unittest.TestCase):
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
-        assert((chk.loc[sel, var] < 1e-7 ).all())
+        assert((chk[var] < 1e-7 ).all())
 
         var = FV.P
         sel = chk[var] >= 1e-3
         self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-        assert((chk.loc[sel, var] < 1e-5).all())
+        assert((chk[var] < 1e-5).all())
         
 
 if __name__ == '__main__':

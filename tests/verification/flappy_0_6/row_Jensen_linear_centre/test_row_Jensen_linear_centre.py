@@ -20,11 +20,11 @@ class Test(unittest.TestCase):
 
     def test(self):
             
-        n_s   = 1000
-        n_t   = 55
+        n_s   = 800
+        n_t   = 76
         c     = 1000
         p0    = np.array([0., 0.])
-        stp   = np.array([500., 0.])
+        stp   = np.array([497., 0.])
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "toyTurbine.csv"
 
@@ -69,19 +69,20 @@ class Test(unittest.TestCase):
 
         df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
+        self.print("\Reading file", cfile)
+        fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+
         self.print()
         self.print("TRESULTS\n")
-        self.print(df.loc[df[FV.P]>0])
-
-        self.print("\Reading file", cfile)
-        fdata = pd.read_csv(cfile)
-        self.print(fdata.loc[fdata[FV.P]>0])
+        sel = (df[FV.REWS]!=df[FV.AMB_REWS]) & (df[FV.AMB_REWS]>5) & (df[FV.AMB_REWS]<9)
+        self.print(df.loc[sel])
+        self.print(fdata[sel])
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
-        delta = df.reset_index() - fdata
+        delta = df - fdata
         self.print(delta.max())
         chk = delta[[FV.WS, FV.P]].abs().max()
         self.print(chk)

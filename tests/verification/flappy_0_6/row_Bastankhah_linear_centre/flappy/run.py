@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--ofile", help="The output file name", default="results.csv.gz")
-    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=4)
+    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=1)
     args  = parser.parse_args()
 
     n_s   = 99
@@ -46,8 +46,8 @@ if __name__ == "__main__":
         )
 
     # create states:
-    ws0 = 3.
-    ws1 = 30.
+    ws0 = 6.
+    ws1 = 16.
     states = fl.input.AFSScan(
                 ws_min = ws0,
                 ws_delta = (ws1 - ws0)/(n_s - 1),
