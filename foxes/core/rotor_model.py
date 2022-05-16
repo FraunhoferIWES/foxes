@@ -55,6 +55,14 @@ class RotorModel(FarmDataModel):
         points[:] += 0.5 * D[:, :, None, None] * np.einsum('stad,pa->stpd', rax, dpoints)
 
         return points
+    
+    def __set_res(self, fdata, v, res, states_turbine, stsel):
+        if states_turbine is None:
+            fdata[v] = res
+        elif res.shape[1] == 1:
+            fdata[v][stsel] = res[:, 0]
+        else:
+            fdata[v][stsel] = res[stsel]
 
     def eval_rpoint_results(
             self, 
@@ -70,6 +78,8 @@ class RotorModel(FarmDataModel):
         n_turbines = algo.n_turbines
         if states_turbine is not None:
             stsel = (np.arange(n_states), states_turbine)
+        else:
+            stsel = None
 
         uvp = None
         uv  = None
@@ -96,18 +106,12 @@ class RotorModel(FarmDataModel):
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
-                if states_turbine is None:
-                    fdata[v] = wd
-                else:
-                    fdata[v][stsel] = wd[:, 0]
+                self.__set_res(fdata, v, wd, states_turbine, stsel)
                 vdone.append(v)
 
             elif v == FV.WS:
                 ws = np.linalg.norm(uv, axis=-1)
-                if states_turbine is None:
-                    fdata[v] = ws
-                else:
-                    fdata[v][stsel] = ws[:, 0]
+                self.__set_res(fdata, v, ws, states_turbine, stsel)
                 del ws
                 vdone.append(v)
         del uv, wd
@@ -124,28 +128,19 @@ class RotorModel(FarmDataModel):
 
                 if v == FV.REWS:
                     rews = np.einsum('stp,p->st', wsp, weights)
-                    if states_turbine is None:
-                        fdata[v] = rews
-                    else:
-                        fdata[v][stsel] = rews[:, 0]
+                    self.__set_res(fdata, v, rews, states_turbine, stsel)
                     del rews
                     vdone.append(v)
 
                 elif v == FV.REWS2:
                     rews2 = np.sqrt(np.einsum('stp,p->st', wsp**2, weights))
-                    if states_turbine is None:
-                        fdata[v] = rews2
-                    else:
-                        fdata[v][stsel] = rews2[:, 0]
+                    self.__set_res(fdata, v, rews2, states_turbine, stsel)
                     del rews2
                     vdone.append(v)
 
                 elif v == FV.REWS3:
                     rews3 = (np.einsum('stp,p->st', wsp**3, weights))**(1./3.)
-                    if states_turbine is None:
-                        fdata[v] = rews3
-                    else:
-                        fdata[v][stsel] = rews3[:, 0]
+                    self.__set_res(fdata, v, rews3, states_turbine, stsel)
                     del rews3
                     vdone.append(v)
 
@@ -154,12 +149,8 @@ class RotorModel(FarmDataModel):
 
         for v in self.calc_vars:
             if v not in vdone:
-                res = rpoint_results[v][:, :, 0]
-                if states_turbine is None:
-                    fdata[v] = res
-                else:
-                    fdata[v][stsel] = res[:, 0]
-                del res
+                res = np.einsum('stp,p->st', rpoint_results[v], weights)
+                self.__set_res(fdata, v, res, states_turbine, stsel)
 
     def calculate(
             self, 

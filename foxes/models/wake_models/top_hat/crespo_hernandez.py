@@ -106,7 +106,5 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             #
             wake_deltas[~sel] =  self.a_far * ( ( 1. - np.sqrt( 1. - ct[~sel] ) ) / 2 )**self.e1 \
                                         * ti[~sel]**self.e2 * ( x[~sel] / D[~sel] )**self.e3
-        
-        print("wdel",wake_deltas)
 
         return {FV.TI: wake_deltas}
