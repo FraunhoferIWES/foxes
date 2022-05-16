@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear_k002'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02", "TOYT"], nargs='+')
     parser.add_argument("-r", "--rotors", help="The rotor model(s)", default=["grid100"], nargs='+')
-    parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["rotor_points", "distsliced", "axiwake_5"], nargs='+')
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["distsliced_4", "axiwake_5", "rotor_points"], nargs='+')
     parser.add_argument("-t", "--title", help="The figure title", default=None)
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
@@ -115,7 +115,8 @@ if __name__ == "__main__":
 
             farm_results = calc(args, args.rotors[0], pwake)
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=pwake)
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, 
+                    linewidth=2, alpha=0.6, label=pwake)
 
             title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
     
@@ -125,7 +126,8 @@ if __name__ == "__main__":
 
             farm_results = calc(args, rotor, args.pwakes[0])
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=rotor)
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, 
+                    linewidth=2, alpha=0.6, label=rotor)
 
             title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
     
@@ -135,7 +137,8 @@ if __name__ == "__main__":
 
             farm_results = calc(args, rotor, pwake)
 
-            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, label=f"{rotor}, {pwake}")
+            ax.plot(farm_results[FV.Y][:, 1]/D, farm_results[var][:, 1]/varn, 
+                    linewidth=2, alpha=0.6, label=f"{rotor}, {pwake}")
 
             title = "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
 

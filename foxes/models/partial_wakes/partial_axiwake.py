@@ -8,10 +8,10 @@ import foxes.constants as FC
 
 class PartialAxiwake(PartialWakesModel):
 
-    def __init__(self, n_steps, wake_models=None, wake_frame=None, rotor_model=None):
+    def __init__(self, n, wake_models=None, wake_frame=None, rotor_model=None):
         super().__init__(wake_models, wake_frame)
 
-        self.n_steps     = n_steps
+        self.n = n
         self.rotor_model = rotor_model
 
     def initialize(self, algo):
@@ -47,11 +47,11 @@ class PartialAxiwake(PartialWakesModel):
         x  = wcoos[:, :, 0]
         n  = wcoos[:, :, 1:3]
         R  = np.linalg.norm(n, axis=-1)
-        r  = np.zeros((n_states, n_turbines, self.n_steps), dtype=FC.DTYPE)
+        r  = np.zeros((n_states, n_turbines, self.n), dtype=FC.DTYPE)
         del wcoos
 
         # prepare circle section area calculation:
-        A       = np.zeros((n_states, n_turbines, self.n_steps), dtype=FC.DTYPE)
+        A       = np.zeros((n_states, n_turbines, self.n), dtype=FC.DTYPE)
         weights = np.zeros_like(A)
 
         # get normalized 2D vector between rotor and wake centres:
@@ -66,14 +66,14 @@ class PartialAxiwake(PartialWakesModel):
         if np.any(sel):
 
             n_sel   = np.sum(sel)
-            Rsel    = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            Rsel    = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             Rsel[:] = R[sel][:, None]
             Dsel    = D[sel][:, None]
 
             # equal delta R2:
-            R1     = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1     = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             R1[:]  = Dsel / 2
-            steps  = np.linspace(0., 1., self.n_steps + 1, endpoint=True) - 0.5
+            steps  = np.linspace(0., 1., self.n + 1, endpoint=True) - 0.5
             R2     = np.zeros_like(R1)
             R2[:]  = Rsel + Dsel * steps[None, :]
             r[sel] = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
@@ -88,16 +88,16 @@ class PartialAxiwake(PartialWakesModel):
         if np.any(sel):
 
             n_sel   = np.sum(sel)
-            Rsel    = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            Rsel    = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             Rsel[:] = R[sel][:, None]
             Dsel    = D[sel][:, None]
 
             # equal delta R2:
-            R1        = np.zeros((n_sel, self.n_steps + 1), dtype=FC.DTYPE)
+            R1        = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             R1[:, 1:] = Dsel / 2
             R2        = np.zeros_like(R1)
             R2[:, 1:] = Rsel[:, :-1] + Dsel/2
-            R2[:]    *= np.linspace(0., 1, self.n_steps + 1, endpoint=True)[None, :]
+            R2[:]    *= np.linspace(0., 1, self.n + 1, endpoint=True)[None, :]
             hr        = 0.5 * ( R2[:, 1:] + R2[:, :-1] )
             hr[:, 0]  = 0.
             r[sel]    = hr
@@ -125,7 +125,7 @@ class PartialAxiwake(PartialWakesModel):
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                             sp_sel, v, wake_deltas[v], d)  
 
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
+    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
         
         weights = self.get_data(FV.RWEIGHTS, mdata)
         amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
@@ -147,6 +147,8 @@ class PartialAxiwake(PartialWakesModel):
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
+                if update_amb_res:
+                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
         
         self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 

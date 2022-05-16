@@ -1,8 +1,7 @@
 from abc import abstractmethod
-import numpy as np
 
 from foxes.core.model import Model
-import foxes.variables as FV
+from foxes.tools import all_subclasses
 
 class PartialWakesModel(Model):
 
@@ -44,5 +43,33 @@ class PartialWakesModel(Model):
         pass
 
     @abstractmethod
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
+    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
         pass
+
+    @classmethod
+    def new(cls, pwake_type, **kwargs):
+        """
+        Run-time partial wakes factory.
+
+        Parameters
+        ----------
+        pwake_type : str
+            The selected derived class name
+
+        """
+
+        if pwake_type is None:
+            return None
+
+        allc  = all_subclasses(cls)
+        found = pwake_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == pwake_type:
+                    return scls(**kwargs)
+
+        else:
+            estr = "Partial wakes model type '{}' is not defined, available types are \n {}".format(
+                pwake_type, sorted([ i.__name__ for i in allc]))
+            raise KeyError(estr)

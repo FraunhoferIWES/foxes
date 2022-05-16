@@ -41,7 +41,8 @@ class ModelBook:
         self.partial_wakes = {
             "rotor_points": fm.partial_wakes.RotorPoints(),
             "top_hat"     : fm.partial_wakes.PartialTopHat(),
-            "distsliced"  : fm.partial_wakes.PartialDistSlicedWake()
+            "distsliced"  : fm.partial_wakes.PartialDistSlicedWake(),
+            "auto"        : fm.partial_wakes.Mapped()
         }
         nlst = list(range(2, 11)) + [20, 50, 100]
         for n in nlst:

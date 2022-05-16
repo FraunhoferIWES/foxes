@@ -12,7 +12,7 @@ class Model(metaclass=ABCMeta):
         if t not in self._ids:
             self._ids[t] = count(0)
 
-        self.id   = next(self._ids[t]) 
+        self._id  = next(self._ids[t]) 
         self.name = type(self).__name__ 
         self.__initialized = False
 
@@ -20,9 +20,13 @@ class Model(metaclass=ABCMeta):
         t = type(self).__name__
         s = self.name if self.name == t else f"{self.name} ({t})"
         return s
+
+    @property
+    def model_id(self):
+        return self._id
     
     def var(self, v):
-        ext = "" if self.id == 0 else f"_id{self.id}"
+        ext = "" if self._id == 0 else f"_id{self._id}"
         return f"{self.name}{ext}_{v}"
 
     def model_input_data(self, algo):

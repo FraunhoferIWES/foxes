@@ -76,7 +76,7 @@ class PartialDistSlicedWake(PartialWakesModel):
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                             sp_sel, v, wake_deltas[v], d)
                                                             
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine):
+    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
         
         weights = self.get_data(FV.RWEIGHTS, mdata)
         amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
@@ -98,6 +98,8 @@ class PartialDistSlicedWake(PartialWakesModel):
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
+                if update_amb_res:
+                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
         
         self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 
