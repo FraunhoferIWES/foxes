@@ -62,6 +62,9 @@ class RotorPoints(PartialWakesModel):
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+            print("ROTP EVAL",v,d.shape,wres[v].shape)
+            print("points",fdata[FV.TXYH][st_sel])
+            print("wdel",wdel[v])
         for w in self.wake_models:
             w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
 

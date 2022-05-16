@@ -46,9 +46,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         # get D:
         D = fdata[FV.D][st_sel][:, None]
 
-        # get ct:
-        ct = np.minimum(fdata[FV.CT][st_sel][:, None], self.ct_max)
-
         # get k:
         k = self.get_data(FV.K, fdata, st_sel)
         if isinstance(k, np.ndarray):
@@ -70,11 +67,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         n_targts = np.sum(sp_sel)
         st_sel   = (np.arange(n_states), states_source_turbine)
         TI       = FV.AMB_TI if self.use_ambti else FV.TI
-
-        print("CHER",sp_sel)
-        print("x",x)
-        print("r",r)
-        print("wake_r",wake_r)
 
         # read D from extra data:
         D    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -98,7 +90,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         # calc near wake:
         sel = ( x < near_wake_D * D )
-        print("NWD",near_wake_D,sel)
         if np.any(sel):
             wake_deltas[sel] = self.a_near * ( 1. - np.sqrt( 1. - ct[sel] ) )
         

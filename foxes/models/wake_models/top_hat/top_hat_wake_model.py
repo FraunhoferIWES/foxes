@@ -41,6 +41,9 @@ class TopHatWakeModel(WakeModel):
         x  = wake_coos[:, :, 0]
         r  = np.linalg.norm(wake_coos[:, :, 1:3], axis=-1)
 
+        print("THAT")
+        print("r",r)
+
         wake_r = self.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, r, ct)
 
         sp_sel = (ct > 0.) & (x > 1e-5) & (r < wake_r)
@@ -67,6 +70,9 @@ class TopHatWakeModel(WakeModel):
 
     def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
         for v, s in self.superp.items():
+            print("THAT",self.name,v,wake_deltas.shape)
+            print("wdel A",wake_deltas[v])
             wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v, 
                                                         amb_results[v], wake_deltas[v])
+            print("wdel B",wake_deltas[v])
         

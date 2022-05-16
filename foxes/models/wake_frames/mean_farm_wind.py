@@ -33,9 +33,8 @@ class MeanFarmWind(WakeFrame):
         coos = np.einsum('spd,sad->spa', delta, nax)
 
         print("WFRAME")
-        print(points)
-        print(coos)
-        quit()
+        print("points",points)
+        print("wcoos",coos)
 
         return coos
 
