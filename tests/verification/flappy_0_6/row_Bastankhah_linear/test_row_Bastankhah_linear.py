@@ -12,7 +12,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+        self.verbosity = 1
 
     def print(self, *args):
         if self.verbosity:
@@ -24,7 +24,7 @@ class Test(unittest.TestCase):
         n_t   = 84
         wd    = 88.1
         ti    = 0.04
-        rotor = "grid9"
+        rotor = "centre"
         c     = 100
         p0    = np.array([0., 0.])
         stp   = np.array([533., 12.])
@@ -72,36 +72,39 @@ class Test(unittest.TestCase):
 
         df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
-        self.print()
-        self.print("TRESULTS\n")
-        self.print(df)
-
         self.print("\Reading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
-        self.print(fdata)
+
+        self.print()
+        self.print("TRESULTS\n")
+        sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
+        df    = df.loc[sel]
+        fdata = fdata.loc[sel]
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
         delta = df - fdata
-        delta = delta.loc[delta[FV.AMB_WS] > 3.]
         self.print(delta)
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]]
-        self.print(chk)
-        chk = chk.abs()
+
+        chk = delta.abs()
         self.print(chk.max())
 
         var = FV.WS
+        self.print(f"\nCHECKING {var}")
         sel = chk[var] >= 1e-5
-        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-        assert(chk.loc[sel, var].all())
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
+        self.print(chk.loc[sel])
+        assert((chk.loc[sel, var] < 1e-7 ).all())
 
         var = FV.P
         sel = chk[var] >= 1e-3
         self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-        assert(chk.loc[sel, var].all())
-        
+        assert((chk.loc[sel, var] < 1e-5).all())
         
 
 if __name__ == '__main__':

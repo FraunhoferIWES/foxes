@@ -11,7 +11,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+        self.verbosity = 1
 
     def print(self, *args):
         if self.verbosity:
@@ -35,7 +35,7 @@ class Test(unittest.TestCase):
 
         for i, (wakes, rotor) in enumerate(cases):
 
-            self.print(f"\nCase {(wakes, rotor)}")
+            self.print(f"\nENTERING CASE {(wakes, rotor)}\n")
 
             mbook = foxes.models.ModelBook()
             mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
@@ -76,13 +76,16 @@ class Test(unittest.TestCase):
 
             df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
-            self.print()
-            self.print("TRESULTS\n")
-            self.print(df)
-
             cfile = cpath / f"results_{i}.csv.gz"
             self.print("\nReading file", cfile)
             fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+
+            self.print()
+            self.print("TRESULTS\n")
+            sel = (df[FV.P] > 0) & (fdata[FV.P]>0)
+            df = df.loc[sel]
+            fdata = fdata.loc[sel]
+            self.print(df)
             self.print(fdata)
 
             self.print("\nVERIFYING\n")
@@ -90,7 +93,6 @@ class Test(unittest.TestCase):
             df[FV.AMB_WS] = df["AMB_REWS"]
 
             delta = df - fdata
-            delta = delta.loc[delta[FV.AMB_WS] > 3.]
             self.print(delta)
             chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]]
             self.print(chk)
@@ -100,22 +102,22 @@ class Test(unittest.TestCase):
             var = FV.AMB_WS
             sel = chk[var] >= 1e-5
             self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[sel, var].all())
+            assert(chk.loc[~sel, var].all())
 
             var = FV.AMB_P
             sel = chk[var] >= 1e-3
             self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[sel, var].all())
+            assert(chk.loc[~sel, var].all())
 
             var = FV.WS
             sel = chk[var] >= 1e-5
             self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[sel, var].all())
+            assert(chk.loc[~sel, var].all())
 
             var = FV.P
             sel = chk[var] >= 1e-3
             self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[sel, var].all())
+            assert(chk.loc[~sel, var].all())
         
             self.print()
             

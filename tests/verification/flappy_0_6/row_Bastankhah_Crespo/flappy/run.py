@@ -1,6 +1,5 @@
 
 import numpy as np
-import pandas as pd
 import time
 import argparse
 from pathlib import Path
@@ -12,17 +11,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--ofile", help="The output file name", default="results.csv.gz")
-    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=4)
+    parser.add_argument("--n_cpus", help="The number of processors", type=int, default=1)
     args  = parser.parse_args()
 
-    n_s   = 99
-    n_t   = 84
-    wd    = 88.1
-    ti    = 0.04
+    n_s   = 30
+    n_t   = 52
+    wd    = 270.0
+    ti    = 0.08
     rotor = "centre"
     c     = 100
     p0    = np.array([0., 0.])
-    stp   = np.array([533., 12.])
+    stp   = np.array([601., 15.])
     ofile = Path(args.ofile)
 
     # init flappy:
@@ -35,10 +34,10 @@ if __name__ == "__main__":
     farm = fl.WindFarm()
     fl.input.add_turbine_row(
         farm,
-        rotor_diameter = 120.,
+        rotor_diameter = 100.,
         hub_height = 100.,
         rotor_model = rotor,
-        wake_models = ["Bastankhah_rotor"],
+        wake_models = ["Bastankhah", "CrespoHernandez"],
         turbine_models = ['ct_P_curves'],
         base_point = p0,
         step_vector = stp,
@@ -47,7 +46,7 @@ if __name__ == "__main__":
 
     # create states:
     ws0 = 3.
-    ws1 = 30.
+    ws1 = 15.
     states = fl.input.AFSScan(
                 ws_min = ws0,
                 ws_delta = (ws1 - ws0)/(n_s - 1),
@@ -72,12 +71,12 @@ if __name__ == "__main__":
     time0 = time.time()
 
     # run calculation:
-    results = farm.calculate(mbook, states, wake_superp=["wind_linear"])
+    results = farm.calculate(mbook, states, wake_superp=["wind_linear", "ti_quadratic"])
 
     time1 = time.time()
     print("\nCalc time =",time1 - time0, "\n")
 
-    df = results.state_turbine_results[[FV.WD, FV.AMB_WS, FV.WS, FV.AMB_P, FV.P]]
+    df = results.state_turbine_results[[FV.WD, FV.AMB_WS, FV.WS, FV.AMB_TI, FV.TI]]
 
     print()
     print("TRESULTS\n")

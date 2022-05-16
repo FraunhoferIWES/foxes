@@ -12,19 +12,22 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+        self.verbosity = 1
 
     def print(self, *args):
         if self.verbosity:
             print(*args)
 
     def test(self):
-            
-        n_s   = 1000
-        n_t   = 55
-        c     = 1000
+
+        n_s   = 30
+        n_t   = 52
+        wd    = 270.0
+        ti    = 0.08
+        rotor = "centre"
+        c     = 100
         p0    = np.array([0., 0.])
-        stp   = np.array([500., 0.])
+        stp   = np.array([601., 15.])
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "toyTurbine.csv"
 
@@ -33,12 +36,12 @@ class Test(unittest.TestCase):
         mbook = foxes.models.ModelBook()
         mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
                                         name="TOYT", filepath=tfile, 
-                                        D=120., H=100.)
+                                        D=100., H=100.)
 
         states = foxes.input.states.ScanWS(
-            ws_list=np.linspace(3., 30., n_s),
-            wd=270.,
-            ti=0.08,
+            ws_list=np.linspace(3., 15., n_s),
+            wd=wd,
+            ti=ti,
             rho=1.225
         )
 
@@ -48,46 +51,57 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["TOYT"],
-            verbosity=0
+            turbine_models=["kTI_02", "TOYT"],
+            verbosity=self.verbosity
         )
         
         algo = foxes.algorithms.Downwind(
                     mbook,
                     farm,
                     states=states,
-                    rotor_model="centre",
+                    rotor_model=rotor,
                     turbine_order="order_wd",
-                    wake_models=['Jensen_linear_k007'],
+                    wake_models=['Bastankhah_linear', 'CrespoHernandez_quadratic'],
                     wake_frame="mean_wd",
-                    partial_wakes_model="rotor_points",
+                    partial_wakes_model="auto",
                     chunks=ck,
-                    verbosity=0
+                    verbosity=self.verbosity
                 )
         
         data = algo.calc_farm()
 
-        df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+        df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI]]
 
         self.print()
         self.print("TRESULTS\n")
-        self.print(df.loc[df[FV.P]>0])
+        self.print(df)
 
         self.print("\Reading file", cfile)
-        fdata = pd.read_csv(cfile)
-        self.print(fdata.loc[fdata[FV.P]>0])
+        fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+        self.print(fdata)
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
-        delta = df.reset_index() - fdata
-        self.print(delta.max())
-        chk = delta[[FV.WS, FV.P]].abs().max()
-        self.print(chk)
 
-        assert((chk[FV.WS] < 1e-5).all())
-        assert((chk[FV.P] < 1e-3).all())
+        delta = df - fdata
+        #delta = delta.loc[df[FV.WS] > 3.]
+        self.print(delta)
+        chk = delta[[FV.AMB_WS, FV.AMB_TI, FV.WS, FV.TI]]
+        self.print(chk)
+        chk = chk.abs()
+        self.print(chk.max())
+
+        var = FV.WS
+        sel = chk[var] >= 1e-5
+        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
+        assert(chk.loc[sel, var].all() < 1e-5)
+
+        var = FV.TI
+        sel = chk[var] >= 1e-7
+        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
+        assert(chk.loc[sel, var].all() < 1e-7)
         
         
 
