@@ -34,8 +34,14 @@ class PartialDistSlicedWake(PartialWakesModel):
         self.YZ = self.var("YZ")
         self.W  = self.var(FV.WEIGHT)
 
-    def n_wake_points(self, algo, mdata, fdata):
-        return algo.n_turbines
+    def new_wake_deltas(self, algo, mdata, fdata):
+
+        n_points    = fdata.n_turbines
+        wake_deltas = {}
+        for w in self.wake_models:
+            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+
+        return wake_deltas
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, 
                                     states_source_turbine, wake_deltas):

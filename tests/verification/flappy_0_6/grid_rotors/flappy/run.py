@@ -39,6 +39,7 @@ if __name__ == "__main__":
 
         # load model book:
         mbook = fl.ModelBook(ct_power_curve_file = tfile)
+        mbook.wake_models["Bastankhah_rotor"].width_sigma = 1000
 
         # create wind farm:
         farm = fl.WindFarm()
@@ -60,12 +61,12 @@ if __name__ == "__main__":
         states = fl.input.AFSStatesTable(
                     data_file   = sfile,
                     col_wd      = 'wd',
-                    col_ws_ref  = 'ws',
+                    col_ws      = 'ws',
                     col_ti      = 'ti',
                     col_weight  = 'weight',
                     air_density = 1.225,
-                    z0          = 0.1,
-                    h_ref       = 100.,
+                    #z0          = 0.1,
+                    #h_ref       = 100.,
                     max_chunk_size=args.chunksize,
                     output_level=0
                 )

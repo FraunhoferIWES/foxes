@@ -20,25 +20,25 @@ class RotorPoints(PartialWakesModel):
 
         super().initialize(algo)
 
-    def n_wake_points(self, algo, mdata, fdata):
-        __, n_turbines, n_rpoints, __ = self.get_data(FV.RPOINTS, mdata).shape
-        return n_turbines * n_rpoints
-
     def get_wake_points(self, algo, mdata, fdata):
         rpoints = self.get_data(FV.RPOINTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape     
         return rpoints.reshape(n_states, n_turbines*n_rpoints, 3)
 
     def new_wake_deltas(self, algo, mdata, fdata):
-        mdata[self.WPOINTS] = None
-        return super().new_wake_deltas(algo, mdata, fdata)
+
+        mdata[self.WPOINTS] = self.get_wake_points(algo, mdata, fdata)
+        n_points = mdata[self.WPOINTS].shape[1]
+
+        wake_deltas = {}
+        for w in self.wake_models:
+            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+
+        return wake_deltas
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
                                     wake_deltas):
-        
-        if mdata[self.WPOINTS] is None:
-            mdata[self.WPOINTS] = self.get_wake_points(algo, mdata, fdata)
-        
+
         points = mdata[self.WPOINTS]
         wcoos  = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
 

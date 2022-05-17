@@ -24,11 +24,17 @@ class PartialTopHat(PartialWakesModel):
             if not isinstance(w, TopHatWakeModel):
                 raise TypeError(f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not a TopHatWakeModel")
 
-    def n_wake_points(self, algo, mdata, fdata):
-        return algo.n_turbines
-
     def get_wake_points(self, algo, mdata, fdata):
         return fdata[FV.TXYH]
+
+    def new_wake_deltas(self, algo, mdata, fdata):
+
+        n_points    = fdata.n_turbines
+        wake_deltas = {}
+        for w in self.wake_models:
+            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+
+        return wake_deltas
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, 
                                     states_source_turbine, wake_deltas):

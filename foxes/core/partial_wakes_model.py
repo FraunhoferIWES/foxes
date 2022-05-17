@@ -25,17 +25,10 @@ class PartialWakesModel(Model):
                 w.initialize(algo)
 
         super().initialize(algo)
-
-    @abstractmethod
-    def n_wake_points(self, algo, mdata, fdata):
-        pass
     
+    @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
-        n_points    = self.n_wake_points(algo, mdata, fdata)
-        wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
-        return wake_deltas
+        pass
 
     @abstractmethod
     def contribute_to_wake_deltas(self, algo, mdata, fdata, 

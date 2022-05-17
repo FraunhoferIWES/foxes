@@ -25,17 +25,17 @@ class Test(unittest.TestCase):
         sfile = self.thisdir / "states.csv.gz"
         lfile = self.thisdir / "test_farm.csv"
         cases = [
-            (['Bastankhah_linear'], "centre"), 
-            (['Bastankhah_linear'], "grid4"),
-            (['Bastankhah_linear'], "grid16"),
-            (['Bastankhah_linear'], "grid64")
+            (['Bastankhah_linear'], "centre", "rotor_points"), 
+            (['Bastankhah_linear'], "centre", "distsliced_4"),
+            (['Bastankhah_linear'], "centre", "distsliced_16"),
+            (['Bastankhah_linear'], "centre", "distsliced_64")
         ]
 
         ck = {FV.STATE: c}
 
-        for i, (wakes, rotor) in enumerate(cases):
+        for i, (wakes, rotor, pwake) in enumerate(cases):
 
-            self.print(f"\nENTERING CASE {(wakes, rotor)}\n")
+            self.print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")
 
             mbook = foxes.models.ModelBook()
             mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
                 output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
                 var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
                 fixed_vars={FV.RHO: 1.225, FV.Z0: 0.1, FV.H: 100.},
-                profiles={FV.WS: "ABLLogNeutralWsProfile"},
+                #profiles={FV.WS: "ABLLogNeutralWsProfile"},
                 verbosity=self.verbosity
             )
 
@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
                         turbine_order="order_wd",
                         wake_models=wakes,
                         wake_frame="mean_wd",
-                        partial_wakes_model="rotor_points",
+                        partial_wakes_model=pwake,
                         chunks=ck,
                         verbosity=self.verbosity
                     )
@@ -101,23 +101,35 @@ class Test(unittest.TestCase):
 
             var = FV.AMB_WS
             sel = chk[var] >= 1e-5
-            self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[~sel, var].all())
+            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            self.print(df.loc[sel])
+            self.print(fdata.loc[sel])
+            self.print(delta.loc[sel])
+            assert((chk[var] < 1e-5).all())
 
             var = FV.AMB_P
             sel = chk[var] >= 1e-3
-            self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[~sel, var].all())
+            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            self.print(df.loc[sel])
+            self.print(fdata.loc[sel])
+            self.print(delta.loc[sel])
+            assert((chk[var] < 1e-3).all())
 
             var = FV.WS
-            sel = chk[var] >= 1e-5
-            self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[~sel, var].all())
+            sel = chk[var] >= 1.55e-3
+            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            self.print(df.loc[sel])
+            self.print(fdata.loc[sel])
+            self.print(delta.loc[sel])
+            assert((chk[var] < 1.55e-3).all())
 
             var = FV.P
-            sel = chk[var] >= 1e-3
-            self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-            assert(chk.loc[~sel, var].all())
+            sel = chk[var] >= 1.5
+            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            self.print(df.loc[sel])
+            self.print(fdata.loc[sel])
+            self.print(delta.loc[sel])
+            assert((chk[var] < 1.5).all())
         
             self.print()
             

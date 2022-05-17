@@ -60,9 +60,6 @@ class Mapped(PartialWakesModel):
         for pname, pars in pws.items():
             self._pwakes.append(PartialWakesModel.new(pname, **pars))
             self._pwakes[-1].initialize(algo)
-            
-    def n_wake_points(self, algo, mdata, fdata):
-        raise NotImplementedError()
 
     def new_wake_deltas(self, algo, mdata, fdata):
         return [pw.new_wake_deltas(algo, mdata, fdata) for pw in self._pwakes]

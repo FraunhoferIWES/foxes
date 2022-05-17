@@ -12,7 +12,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 1
+        self.verbosity = 0
 
     def print(self, *args):
         if self.verbosity:

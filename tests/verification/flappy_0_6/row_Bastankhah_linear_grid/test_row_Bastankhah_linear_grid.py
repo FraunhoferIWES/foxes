@@ -12,7 +12,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 1
+        self.verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -24,7 +24,8 @@ class Test(unittest.TestCase):
         n_t   = 84
         wd    = 88.1
         ti    = 0.04
-        rotor = "grid9"
+        rotor = "centre"
+        pwake = "distsliced_9"
         c     = 100
         p0    = np.array([0., 0.])
         stp   = np.array([533., 12.])
@@ -63,7 +64,7 @@ class Test(unittest.TestCase):
                     turbine_order="order_wd",
                     wake_models=['Bastankhah_linear'],
                     wake_frame="mean_wd",
-                    partial_wakes_model="rotor_points",
+                    partial_wakes_model=pwake,
                     chunks=ck,
                     verbosity=self.verbosity
                 )
