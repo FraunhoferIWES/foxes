@@ -27,9 +27,15 @@ class FarmWakesCalculation(FarmDataModel):
 
         for oi in range(n_order):
 
+            print("\nDW WCALC OI",oi)
+
             o = torder[:, oi]
 
+            print(o,"\n")
+
             if oi > 0:
+
+                print("DW EVAL",oi)
 
                 self.pwakes.evaluate_results(algo, mdata, fdata, wdeltas, states_turbine=o)
 
@@ -39,7 +45,16 @@ class FarmWakesCalculation(FarmDataModel):
                 res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False, st_sel=trbs)
                 fdata.update(res)
 
+                print("DW EVAL RESULT",oi)
+                print(fdata[FV.REWS][-1])
+                print(fdata[FV.TI][-1])
+                print(fdata[FV.K][-1])
+
             if oi < n_order - 1:
+                print("DW CWAKE",oi)
                 self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, o, wdeltas)
+            
+            if oi > 1:
+                quit()
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

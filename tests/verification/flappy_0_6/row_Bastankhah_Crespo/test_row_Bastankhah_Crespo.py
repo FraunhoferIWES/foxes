@@ -27,13 +27,15 @@ class Test(unittest.TestCase):
         rotor = "centre"
         c     = 100
         p0    = np.array([0., 0.])
-        stp   = np.array([601., 15.])
+        stp   = np.array([601., 0])#15.])
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "toyTurbine.csv"
 
         ck = {FV.STATE: c}
 
-        mbook = foxes.models.ModelBook()
+        rplugins = [dict(mode="post", model="kTI_02", verbosity=self.verbosity)]
+
+        mbook = foxes.models.ModelBook(rotor_model_plugins=rplugins)
         mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
                                         name="TOYT", filepath=tfile, 
                                         D=100., H=100.)
@@ -51,7 +53,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["kTI_02", "TOYT"],
+            turbine_models=["TOYT"],
             verbosity=self.verbosity
         )
         
@@ -63,14 +65,14 @@ class Test(unittest.TestCase):
                     turbine_order="order_wd",
                     wake_models=['Bastankhah_linear', 'CrespoHernandez_quadratic'],
                     wake_frame="mean_wd",
-                    partial_wakes_model="auto",
+                    partial_wakes_model="rotor_points",
                     chunks=ck,
                     verbosity=self.verbosity
                 )
         
         data = algo.calc_farm()
 
-        df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI]]
+        df = data.to_dataframe()[[FV.X, FV.Y,FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI]]
 
         self.print()
         self.print("TRESULTS\n")
@@ -78,30 +80,40 @@ class Test(unittest.TestCase):
 
         self.print("\Reading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+
+        self.print()
+        self.print("TRESULTS\n")
+        #sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
+        #df    = df.loc[sel]
+        #fdata = fdata.loc[sel]
+        self.print(df)
         self.print(fdata)
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
-
         delta = df - fdata
-        #delta = delta.loc[df[FV.WS] > 3.]
         self.print(delta)
-        chk = delta[[FV.AMB_WS, FV.AMB_TI, FV.WS, FV.TI]]
-        self.print(chk)
-        chk = chk.abs()
+
+        chk = delta.abs()
         self.print(chk.max())
 
         var = FV.WS
-        sel = chk[var] >= 1e-5
-        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-        assert(chk.loc[sel, var].all() < 1e-5)
+        self.print(f"\nCHECKING {var}")
+        sel = chk[var] >= 1e-7
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
+        self.print(chk.loc[sel])
+        assert((chk[var] < 1e-7 ).all())
 
         var = FV.TI
+        self.print(f"\nCHECKING {var}")
         sel = chk[var] >= 1e-7
-        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
-        assert(chk.loc[sel, var].all() < 1e-7)
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
+        self.print(chk.loc[sel])
+        assert((chk[var] < 1e-7 ).all())
         
         
 

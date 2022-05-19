@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear'], nargs='+')
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
+    parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02", "TOYT"], nargs='+')
     parser.add_argument("-dy", "--deltay", help="Turbine layout y step", type=float, default=0.)
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args  = parser.parse_args()
@@ -47,7 +48,7 @@ if __name__ == "__main__":
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=args.n_t,
-            turbine_models=["kTI_02", "TOYT"]
+            turbine_models=args.tmodels
         )
         
         algo = foxes.algorithms.Downwind(

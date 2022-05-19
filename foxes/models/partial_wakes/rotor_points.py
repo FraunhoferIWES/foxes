@@ -5,16 +5,13 @@ import foxes.variables as FV
 
 class RotorPoints(PartialWakesModel):
 
-    def __init__(self, wake_models=None, wake_frame=None, rotor_model=None):
+    def __init__(self, wake_models=None, wake_frame=None):
         super().__init__(wake_models, wake_frame)
-        self.rotor_model = rotor_model
     
     def initialize(self, algo):
 
-        if self.rotor_model is None:
-            self.rotor_model = algo.rotor_model
-        if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo)
+        if not algo.rotor_model.initialized:
+            algo.rotor_model.initialize(algo)
         
         self.WPOINTS = self.var("WPOINTS")
 
@@ -43,8 +40,10 @@ class RotorPoints(PartialWakesModel):
         wcoos  = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
 
         for w in self.wake_models:
+            print("ROTP CONTR",w.name)
             w.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
                                             wcoos, wake_deltas)
+            print({v:d[-1] for v,d in wake_deltas.items()})
 
     def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
         
@@ -57,13 +56,21 @@ class RotorPoints(PartialWakesModel):
         st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+            print("ROTP EVAL WRES A")
+            print(v,wres[v][-1])
         del amb_res
+        
 
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+            print("ROTP EVAL WDEL")
+            print(v,wdel[v].shape,wake_deltas[v][-1])
         for w in self.wake_models:
+            print("ROTP EVAL FLZ",w.name)
             w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+            print({v:wake_deltas[v][-1] for v,d in wdel.items()})
+        
 
         for v in wres.keys():
             if v in wake_deltas:
@@ -72,6 +79,5 @@ class RotorPoints(PartialWakesModel):
                     mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
         
-        self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 
+        algo.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, weights, 
                                                 states_turbine=states_turbine)
-                                                

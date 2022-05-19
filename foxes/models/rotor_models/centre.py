@@ -29,8 +29,21 @@ class CentreRotor(RotorModel):
             states_turbine=None
         ):
 
+        print("CENTRE EVAL",self.calc_vars)
+        print(states_turbine)
+        print(weights.shape, {v:d.shape for v,d in rpoint_results.items()})
+
+        if len(weights) > 1:
+            print("TO SUPER")
+            return super().eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
+                                                weights, states_turbine)
+        
+        self.run_plugins("pre", algo, mdata, fdata)
+
         n_states   = mdata.n_states
         n_turbines = algo.n_turbines
+
+        stsel = None
         if states_turbine is not None:
             stsel = (np.arange(n_states), states_turbine)
 
@@ -52,25 +65,17 @@ class CentreRotor(RotorModel):
         vdone = []
         for v in self.calc_vars:
 
-            if states_turbine is not None:
-                if v not in fdata:
-                    fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+            if v not in fdata:
+                fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
 
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
-                if states_turbine is None:
-                    fdata[v] = wd
-                else:
-                    fdata[v][stsel] = wd[:, 0]
+                self._set_res(fdata, v, wd, stsel)
                 vdone.append(v)
 
             elif v == FV.WS:
-                ws = np.linalg.norm(uv, axis=-1)
-                if states_turbine is None:
-                    fdata[v] = ws
-                else:
-                    fdata[v][stsel] = ws[:, 0]
+                self._set_res(fdata, v, ws, stsel)
                 del ws
                 vdone.append(v)
         del uv, wd
@@ -87,10 +92,7 @@ class CentreRotor(RotorModel):
 
                 if v == FV.REWS or v == FV.REWS2 or v == FV.REWS3:
                     rews = wsp[: ,:, 0]
-                    if states_turbine is None:
-                        fdata[v] = rews
-                    else:
-                        fdata[v][stsel] = rews[:, 0]
+                    self._set_res(fdata, v, rews, stsel)
                     del rews
                     vdone.append(v)
 
@@ -100,8 +102,7 @@ class CentreRotor(RotorModel):
         for v in self.calc_vars:
             if v not in vdone:
                 res = rpoint_results[v][:, :, 0]
-                if states_turbine is None:
-                    fdata[v] = res
-                else:
-                    fdata[v][stsel] = res[:, 0]
+                self._set_res(fdata, v, res, stsel)
                 del res
+        
+        self.run_plugins("post", algo, mdata, fdata)

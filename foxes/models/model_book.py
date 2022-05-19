@@ -3,9 +3,10 @@ import foxes.variables as FV
 
 class ModelBook:
 
-    def __init__(self):
-
-        self.states_models = {}
+    def __init__(
+            self,
+            rotor_model_plugins=[]
+        ):
 
         self.point_models = {}
 
@@ -44,12 +45,13 @@ class ModelBook:
             "distsliced"  : fm.partial_wakes.PartialDistSlicedWake(),
             "auto"        : fm.partial_wakes.Mapped()
         }
-        nlst = list(range(2, 11)) + [20, 50, 100]
+        nlst = list(range(2, 11)) + [20]
         for n in nlst:
-            self.partial_wakes[f"axiwake_{n}"] = fm.partial_wakes.PartialAxiwake(n)
-        nlist = list(range(2, 11)) + [20]
+            self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
-            self.partial_wakes[f"distsliced_{n**2}"] = fm.partial_wakes.PartialDistSlicedWake(n)
+            self.partial_wakes[f"distsliced{n**2}"] = fm.partial_wakes.PartialDistSlicedWake(n)
+        for n in nlist:
+            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n)
 
         self.wake_frames = {
             "mean_wd": fm.wake_frames.MeanFarmWind(var_wd=FV.WD)
@@ -76,6 +78,26 @@ class ModelBook:
         slist = ["ti_linear", "ti_quadratic"]
         for s in slist:
             self.wake_models[f"CrespoHernandez_{s[3:]}"] = fm.wake_models.top_hat.CrespoHernandezTIWake(superposition=s)
+            self.wake_models[f"CrespoHernandez_{s[3:]}_k002"] = fm.wake_models.top_hat.CrespoHernandezTIWake(k=0.02, superposition=s)
 
+        self.sources = {
+            "point_models"       : self.point_models, 
+            "rotor_models"       : self.rotor_models,
+            "turbine_types"      : self.turbine_types,
+            "turbine_models"     : self.turbine_models,
+            "turbine_orders"     : self.turbine_orders,
+            "farm_models"        : self.farm_models,
+            "farm_controllers"   : self.farm_controllers,
+            "partial_wakes"      : self.partial_wakes,
+            "wake_frames"        : self.wake_frames,
+            "wake_superpositions": self.wake_superpositions,
+            "wake_models"        : self.wake_models
+        }
 
+        for s in self.sources.values():
+            for k, m in s.items():
+                m.name = k
  
+        for rp in rotor_model_plugins:
+            for r in self.rotor_models.values():
+                r.add_plugin(mbook=self, **rp)

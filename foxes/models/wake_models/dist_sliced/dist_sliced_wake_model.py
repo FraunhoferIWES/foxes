@@ -22,7 +22,7 @@ class DistSlicedWakeModel(WakeModel):
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
                                     wake_coos, wake_deltas):
-
+        
         x  = wake_coos[:, :, 0]
         yz = wake_coos[:, :, None, 1:3]
 

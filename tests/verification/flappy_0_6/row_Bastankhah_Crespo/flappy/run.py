@@ -21,7 +21,7 @@ if __name__ == "__main__":
     rotor = "centre"
     c     = 100
     p0    = np.array([0., 0.])
-    stp   = np.array([601., 15.])
+    stp   = np.array([601., 0.])#15.])
     ofile = Path(args.ofile)
 
     # init flappy:
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         rotor_diameter = 100.,
         hub_height = 100.,
         rotor_model = rotor,
-        wake_models = ["Bastankhah", "CrespoHernandez"],
+        wake_models = ["Bastankhah"],#, "CrespoHernandez_rotor"],
         turbine_models = ['ct_P_curves'],
         base_point = p0,
         step_vector = stp,
@@ -77,6 +77,8 @@ if __name__ == "__main__":
     print("\nCalc time =",time1 - time0, "\n")
 
     df = results.state_turbine_results[[FV.WD, FV.AMB_WS, FV.WS, FV.AMB_TI, FV.TI]]
+
+    print(results.turbine_results[[FV.X,FV.Y]])
 
     print()
     print("TRESULTS\n")

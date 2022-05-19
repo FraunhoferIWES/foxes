@@ -40,7 +40,7 @@ class PartialTopHat(PartialWakesModel):
                                     states_source_turbine, wake_deltas):
 
         n_states = mdata.n_states
-        n_points = self.n_wake_points(algo, mdata, fdata)
+        n_points = fdata.n_turbines
         stsel    = (np.arange(n_states), states_source_turbine)
 
         if FV.WCOOS_ID not in mdata or mdata[FV.WCOOS_ID] != states_source_turbine[0]:

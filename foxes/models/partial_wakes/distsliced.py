@@ -102,21 +102,23 @@ class PartialDistSlicedWake(PartialWakesModel):
         st_sel    = (np.arange(n_states), states_turbine)
 
         uv = None
-        if FV.WS in amb_res and FV.WD in amb_res:
+        if (FV.WS in amb_res and FV.WD not in amb_res) \
+            or (FV.WS not in amb_res and FV.WD in amb_res):
+            raise KeyError(f"Model '{self.name}': Missing one of the variables '{FV.WS}', '{FV.WD}' in ambient rotor results: {list(amb_res.keys())}")
+
+        elif FV.WD in amb_res and np.any(np.min(amb_res[FV.WD], axis=2) != np.max(amb_res[FV.WD], axis=2)):
+
             wd = amb_res[FV.WD].reshape(n_states, n_turbines, n_rpoints)[st_sel]
             ws = amb_res[FV.WS].reshape(n_states, n_turbines, n_rpoints)[st_sel]
             uv = wd2uv(wd, ws, axis=-1)
             uv = np.einsum('spd,p->sd', uv, rweights)
             del ws, wd
-        elif (FV.WS in amb_res and FV.WD not in amb_res) \
-            or (FV.WS not in amb_res and FV.WD in amb_res):
-            raise KeyError(f"Model '{self.name}': Missing one of the variables '{FV.WS}', '{FV.WD}' in ambient rotor results: {list(amb_res.keys())}")
 
         wres = {}
         for v, ares in amb_res.items():
-            if v == FV.WS:
+            if v == FV.WS and uv is not None:
                 wres[v] = np.linalg.norm(uv, axis=-1)
-            elif v == FV.WD:
+            elif v == FV.WD and uv is not None:
                 wres[v] = uv2wd(uv, axis=-1)
             else:
                 wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]

@@ -1,15 +1,13 @@
-import numpy as np
 from copy import deepcopy
 
 from foxes.core import PartialWakesModel
 from foxes.models.partial_wakes.rotor_points import RotorPoints
-from foxes.models.partial_wakes.partial_top_hat import PartialTopHat
-from foxes.models.partial_wakes.partial_axiwake import PartialAxiwake
-from foxes.models.partial_wakes.partial_distsliced import PartialDistSlicedWake
+from foxes.models.partial_wakes.top_hat import PartialTopHat
+from foxes.models.partial_wakes.axiwake import PartialAxiwake
+from foxes.models.partial_wakes.distsliced import PartialDistSlicedWake
 from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import TopHatWakeModel
 from foxes.models.wake_models.dist_sliced.dist_sliced_wake_model import DistSlicedWakeModel
 from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import AxisymmetricWakeModel
-import foxes.variables as FV
 
 class Mapped(PartialWakesModel):
 

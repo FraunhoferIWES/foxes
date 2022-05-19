@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         wd    = 88.1
         ti    = 0.04
         rotor = "centre"
-        pwake = "distsliced_9"
+        pwake = "grid9"
         c     = 100
         p0    = np.array([0., 0.])
         stp   = np.array([533., 12.])
@@ -78,11 +78,11 @@ class Test(unittest.TestCase):
 
         self.print()
         self.print("TRESULTS\n")
-        sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
-        df    = df.loc[sel]
-        fdata = fdata.loc[sel]
-        self.print(df.loc[sel])
-        self.print(fdata.loc[sel])
+        #sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
+        #df    = df.loc[sel]
+        #fdata = fdata.loc[sel]
+        self.print(df)
+        self.print(fdata)
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
@@ -96,15 +96,18 @@ class Test(unittest.TestCase):
 
         var = FV.WS
         self.print(f"\nCHECKING {var}")
-        sel = chk[var] >= 1e-5
+        sel = chk[var] >= 1e-7
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
         assert((chk[var] < 1e-7 ).all())
 
         var = FV.P
-        sel = chk[var] >= 1e-3
-        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
+        self.print(f"\nCHECKING {var}")
+        sel = chk[var] >= 1e-5
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
+        self.print(chk.loc[sel])
         assert((chk[var] < 1e-5).all())
         
 
