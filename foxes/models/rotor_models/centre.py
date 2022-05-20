@@ -37,8 +37,6 @@ class CentreRotor(RotorModel):
             print("TO SUPER")
             return super().eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
                                                 weights, states_turbine)
-        
-        self.run_plugins("pre", algo, mdata, fdata)
 
         n_states   = mdata.n_states
         n_turbines = algo.n_turbines
@@ -104,5 +102,3 @@ class CentreRotor(RotorModel):
                 res = rpoint_results[v][:, :, 0]
                 self._set_res(fdata, v, res, stsel)
                 del res
-        
-        self.run_plugins("post", algo, mdata, fdata)

@@ -33,9 +33,7 @@ class Test(unittest.TestCase):
 
         ck = {FV.STATE: c}
 
-        rplugins = [dict(mode="post", model="kTI_02", verbosity=self.verbosity)]
-
-        mbook = foxes.models.ModelBook(rotor_model_plugins=rplugins)
+        mbook = foxes.models.ModelBook()
         mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
                                         name="TOYT", filepath=tfile, 
                                         D=100., H=100.)
@@ -53,7 +51,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["TOYT"],
+            turbine_models=["kTI_02", "TOYT"],
             verbosity=self.verbosity
         )
         
