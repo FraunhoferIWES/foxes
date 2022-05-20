@@ -42,7 +42,6 @@ class RotorPoints(PartialWakesModel):
         for w in self.wake_models:
             w.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
                                             wcoos, wake_deltas)
-            print({v:d[-1] for v,d in wake_deltas.items()})
 
     def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
         

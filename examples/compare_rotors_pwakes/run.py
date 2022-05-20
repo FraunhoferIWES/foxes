@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear_k002'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02", "TOYT"], nargs='+')
     parser.add_argument("-r", "--rotors", help="The rotor model(s)", default=["grid100"], nargs='+')
-    parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["distsliced_4", "axiwake_5", "rotor_points"], nargs='+')
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["distsliced4", "axiwake5", "rotor_points"], nargs='+')
     parser.add_argument("-t", "--title", help="The figure title", default=None)
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)

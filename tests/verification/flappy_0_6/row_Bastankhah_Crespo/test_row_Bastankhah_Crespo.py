@@ -99,19 +99,19 @@ class Test(unittest.TestCase):
 
         var = FV.WS
         self.print(f"\nCHECKING {var}")
-        sel = chk[var] >= 1e-7
+        sel = chk[var] >= 8e-3
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
-        assert((chk[var] < 1e-7 ).all())
+        assert((chk[var] < 8e-3 ).all())
 
         var = FV.TI
         self.print(f"\nCHECKING {var}")
-        sel = chk[var] >= 1e-7
+        sel = chk[var] >= 3e-4
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
-        assert((chk[var] < 1e-7 ).all())
+        assert((chk[var] < 3e-4 ).all())
         
         
 
