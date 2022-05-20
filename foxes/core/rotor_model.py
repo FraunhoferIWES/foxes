@@ -19,7 +19,7 @@ class RotorModel(FarmDataModel):
         self.calc_vars = calc_vars
 
     def output_farm_vars(self, algo):
-        return self.calc_vars
+        return self.calc_vars + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
     
     def initialize(self, algo):
         if not algo.states.initialized:
@@ -74,7 +74,8 @@ class RotorModel(FarmDataModel):
             fdata, 
             rpoint_results, 
             weights,
-            states_turbine=None
+            states_turbine=None,
+            copy_to_ambient=False
         ):
 
         n_states   = mdata.n_states
@@ -153,6 +154,8 @@ class RotorModel(FarmDataModel):
             if v not in vdone:
                 res = np.einsum('stp,p->st', rpoint_results[v], weights)
                 self._set_res(fdata, v, res, stsel)
+            if copy_to_ambient and v in FV.var2amb:
+                fdata[FV.var2amb[v]] = fdata[v].copy()
 
     def calculate(
             self, 
@@ -204,19 +207,6 @@ class RotorModel(FarmDataModel):
             mdata[FV.AMB_RPOINT_RESULTS] = rpoint_results
 
         self.eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
-                                    weights, states_turbine)
+                                    weights, states_turbine, copy_to_ambient=True)
         
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
-
-    def finalize(self, algo, clear_mem=False):
-        stall = None
-        for plugs in self.plugins.values():
-            for p in plugs:
-                if not p.initialized:
-                    if isinstance(p, TurbineModel):
-                        if stall is None:
-                            stall = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-                        p.finalize(algo, clear_mem=clear_mem, st_sel=stall)
-                    else:
-                        p.finalize(algo, clear_mem=clear_mem)
-        super().finalize(algo, clear_mem=clear_mem)

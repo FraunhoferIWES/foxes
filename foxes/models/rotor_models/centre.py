@@ -26,15 +26,11 @@ class CentreRotor(RotorModel):
             fdata, 
             rpoint_results, 
             weights,
-            states_turbine=None
+            states_turbine=None,
+            copy_to_ambient=False
         ):
 
-        print("CENTRE EVAL",self.calc_vars)
-        print(states_turbine)
-        print(weights.shape, {v:d.shape for v,d in rpoint_results.items()})
-
         if len(weights) > 1:
-            print("TO SUPER")
             return super().eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
                                                 weights, states_turbine)
 
@@ -102,3 +98,5 @@ class CentreRotor(RotorModel):
                 res = rpoint_results[v][:, :, 0]
                 self._set_res(fdata, v, res, stsel)
                 del res
+            if copy_to_ambient and v in FV.var2amb:
+                fdata[FV.var2amb[v]] = fdata[v].copy()

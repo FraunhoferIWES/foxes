@@ -121,24 +121,24 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1].update({
-            "store_rpoints": True, 
-            "store_rweights": True, 
-            "store_amb_res": True
+            "store_rpoints"  : True, 
+            "store_rweights" : True, 
+            "store_amb_res"  : True
         })
-
+        
         # 4) calculate turbine order:
         mlist.models.append(self.turbine_order)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
-
+        
         # 5) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = False
-
+        
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))

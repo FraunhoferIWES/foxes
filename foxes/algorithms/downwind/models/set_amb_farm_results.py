@@ -10,7 +10,8 @@ class SetAmbFarmResults(FarmDataModel):
 
     def output_farm_vars(self, algo):
         if self.vars is None:
-            self.vars = [v for v in algo.farm_vars if v in FV.var2amb]
+            self.vars  = set([v for v in algo.farm_vars if v in FV.var2amb])
+            self.vars -= set(algo.rotor_model.output_farm_vars(algo))
         return [FV.var2amb[v] for v in self.vars]
 
     def calculate(self, algo, mdata, fdata):

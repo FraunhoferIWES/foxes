@@ -40,7 +40,6 @@ class RotorPoints(PartialWakesModel):
         wcoos  = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
 
         for w in self.wake_models:
-            print("ROTP CONTR",w.name)
             w.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
                                             wcoos, wake_deltas)
             print({v:d[-1] for v,d in wake_deltas.items()})
@@ -56,21 +55,14 @@ class RotorPoints(PartialWakesModel):
         st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-            print("ROTP EVAL WRES A")
-            print(v,wres[v][-1])
         del amb_res
         
 
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-            print("ROTP EVAL WDEL")
-            print(v,wdel[v].shape,wake_deltas[v][-1])
         for w in self.wake_models:
-            print("ROTP EVAL FLZ",w.name)
             w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
-            print({v:wake_deltas[v][-1] for v,d in wdel.items()})
-        
 
         for v in wres.keys():
             if v in wake_deltas:

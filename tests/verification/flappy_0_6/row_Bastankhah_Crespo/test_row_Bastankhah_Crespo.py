@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
         rotor = "centre"
         c     = 100
         p0    = np.array([0., 0.])
-        stp   = np.array([601., 0])#15.])
+        stp   = np.array([601., 15.])
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "toyTurbine.csv"
 
@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
                                         D=100., H=100.)
 
         states = foxes.input.states.ScanWS(
-            ws_list=np.linspace(3., 15., n_s),
+            ws_list=np.linspace(6., 16., n_s),
             wd=wd,
             ti=ti,
             rho=1.225
@@ -51,7 +51,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["kTI_02", "TOYT"],
+            turbine_models=["kTI_amb_02", "TOYT"],
             verbosity=self.verbosity
         )
         
@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
                     turbine_order="order_wd",
                     wake_models=['Bastankhah_linear', 'CrespoHernandez_quadratic'],
                     wake_frame="mean_wd",
-                    partial_wakes_model="rotor_points",
+                    partial_wakes_model="auto",
                     chunks=ck,
                     verbosity=self.verbosity
                 )
