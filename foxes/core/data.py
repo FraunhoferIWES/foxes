@@ -4,6 +4,35 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class Data(dict):
+    """
+    Container for data and meta data.
+    
+    Used during the calculation of single chunks,
+    usually for numpy data (not xarray data).
+
+    Parameters
+    ----------
+    data : dict
+        The initial data to be stored
+    dims : dict
+        The dimensions tuples, same or subset
+        of data keys
+    loop_dims : array_like of str
+        List of the loop dimensions during xarray's
+        `apply_ufunc` calculations
+    
+    Attributes
+    ----------
+    dims : dict
+        The dimensions tuples, same or subset
+        of data keys
+    loop_dims : array_like of str
+        List of the loop dimensions during xarray's
+        `apply_ufunc` calculations
+    sizes : dict
+        The dimension sizes
+
+    """
 
     def __init__(self, data, dims, loop_dims):
 
@@ -49,5 +78,3 @@ class Data(dict):
             self[FV.X] = self[FV.TXYH][:, :, 0]
             self[FV.Y] = self[FV.TXYH][:, :, 1]
             self[FV.H] = self[FV.TXYH][:, :, 2]
-
-        

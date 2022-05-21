@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     with dask.config.set(scheduler=None):
 
-        mbook = foxes.models.ModelBook()
+        mbook = foxes.ModelBook()
         mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
                                         name="TOYT", filepath="toyTurbine.csv", 
                                         D=100., H=100.)

@@ -5,6 +5,46 @@ import xarray as xr
 import foxes.variables as FV
 
 class Algorithm(metaclass=ABCMeta):
+    """
+    Abstract base class for algorithms.
+
+    Algorithms collect required objects for running
+    calculations, and contain the calculation functions
+    which are meant to be called from top level code.
+
+    Parameters
+    ----------
+    mbook : foxes.ModelBook
+        The model book 
+    farm : foxes.WindFarm
+        The wind farm
+    chunks : dict
+        The chunks choice for running in parallel with dask,
+        e.g. `{"state": 1000}` for chunks of 1000 states
+    verbosity : int
+        The verbosity level, 0 means silent
+    
+    Parameters
+    ----------
+    name : str
+        The object's name
+    mbook : foxes.ModelBook
+        The model book 
+    farm : foxes.WindFarm
+        The wind farm
+    chunks : dict
+        The chunks choice for running in parallel with dask,
+        e.g. `{"state": 1000}` for chunks of 1000 states
+    verbosity : int
+        The verbosity level, 0 means silent
+    n_states : int
+        The number of states
+    n_turbines : int
+        The number of turbines
+    models_idata : dict
+        The input data for the models, filled by models
+
+    """
 
     def __init__(self, mbook, farm, chunks, verbosity):
         
@@ -18,27 +58,16 @@ class Algorithm(metaclass=ABCMeta):
         self.models_idata = {}
     
     def print(self, *args, **kwargs):
+        """
+        Print function, based on verbosity.
+        """
         if self.verbosity > 0:
             print(*args, **kwargs)
 
-    @abstractmethod
-    def calc_farm(self):
-        pass
-
-    @abstractmethod
-    def calc_points(
-            self, 
-            farm_data, 
-            points, 
-            vars=None, 
-            point_models=None,
-            init_pars={},
-            calc_pars={},
-            final_pars={}
-        ):
-        pass
-
     def __get_sizes(self, idata, mtype):
+        """
+        Private helper function
+        """
 
         sizes = {}
         for v, t in idata["data_vars"].items():
@@ -76,6 +105,9 @@ class Algorithm(metaclass=ABCMeta):
         return sizes
     
     def __get_xrdata(self, idata, sizes):
+        """
+        Private helper function
+        """
         xrdata = xr.Dataset(**idata)
         if self.chunks is not None:
             if FV.TURBINE in self.chunks.keys():
@@ -86,6 +118,15 @@ class Algorithm(metaclass=ABCMeta):
         return xrdata
 
     def get_models_data(self):
+        """
+        Creates xarray from model input data.
+
+        Returns
+        -------
+        xarray.Dataset
+            The model input data
+
+        """
 
         idata = {"coords": {}, "data_vars": {}}
         for ida in self.models_idata.values():
@@ -96,6 +137,22 @@ class Algorithm(metaclass=ABCMeta):
         return self.__get_xrdata(idata, sizes)
 
     def new_point_data(self, points, states_indices=None):
+        """
+        Creates a point data xarray object, containing only points.
+
+        Parameters
+        ----------
+        points : numpy.ndarray
+            The points, shape: (n_states, n_points, 3)
+        states_indices : array_like, optional
+            The indices of the states dimension
+        
+        Returns
+        -------
+        xarray.Dataset
+            A dataset containing the points data
+            
+        """
         
         if states_indices is None:
             idata = {"coords": {}, "data_vars": {}}
