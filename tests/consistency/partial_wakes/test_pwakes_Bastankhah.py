@@ -29,12 +29,15 @@ class Test(unittest.TestCase):
             ("grid100", "rotor_points", None),
             ("grid4", "rotor_points", 0.13),
             ("grid9", "rotor_points", 0.05),
-            ("centre", "axiwake_5", 0.06),
-            ("centre", "axiwake_10", 0.04),
+            ("centre", "axiwake5", 0.04),
+            ("centre", "axiwake10", 0.038),
             ("grid9", "distsliced", 0.05),
-            ("centre", "distsliced_9", 0.05),
-            ("centre", "distsliced_16", 0.03),
-            ("centre", "distsliced_36", 0.016)
+            ("centre", "distsliced9", 0.05),
+            ("centre", "distsliced16", 0.03),
+            ("centre", "distsliced36", 0.016),
+            ("centre", "grid9", 0.05),
+            ("centre", "grid16", 0.03),
+            ("centre", "grid36", 0.016)
         ]
 
         ck = {FV.STATE: c}
@@ -103,8 +106,8 @@ class Test(unittest.TestCase):
                 delta = df - base_results
                 self.print(delta)
                 self.print(delta.min(), delta.max())
-                chk = delta[FV.REWS].abs().max()
-                self.print(chk)
+                chk = delta[FV.REWS].abs()
+                self.print(f"CASE {(rotor, pwake, lim)}:", chk.max())
             
                 assert((chk < lim).all())
         

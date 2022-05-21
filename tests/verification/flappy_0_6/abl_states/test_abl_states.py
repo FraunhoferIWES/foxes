@@ -83,8 +83,8 @@ class Test(unittest.TestCase):
         delta = df.reset_index() - fdata
         self.print(delta)
         self.print(delta.max())
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs().max()
-        self.print(chk)
+        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
+        self.print(chk.max())
 
         assert((chk[FV.AMB_WS] < 1e-5).all())
         assert((chk[FV.AMB_P] < 1e-3).all())

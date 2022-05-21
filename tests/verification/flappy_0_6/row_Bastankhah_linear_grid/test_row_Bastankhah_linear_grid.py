@@ -52,7 +52,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["kTI_02", "TOYT"],
+            turbine_models=["kTI_amb_02", "TOYT"],
             verbosity=self.verbosity
         )
         

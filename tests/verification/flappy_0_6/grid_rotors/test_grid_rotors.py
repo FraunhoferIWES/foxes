@@ -11,7 +11,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 1
+        self.verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -26,9 +26,9 @@ class Test(unittest.TestCase):
         lfile = self.thisdir / "test_farm.csv"
         cases = [
             (['Bastankhah_linear'], "centre", "rotor_points"), 
-            (['Bastankhah_linear'], "centre", "distsliced_4"),
-            (['Bastankhah_linear'], "centre", "distsliced_16"),
-            (['Bastankhah_linear'], "centre", "distsliced_64")
+            (['Bastankhah_linear'], "grid4", "grid4"),
+            (['Bastankhah_linear'], "grid16", "grid16"),
+            (['Bastankhah_linear'], "grid64", "grid64")
         ]
 
         ck = {FV.STATE: c}
@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
                 output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
                 var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
                 fixed_vars={FV.RHO: 1.225, FV.Z0: 0.1, FV.H: 100.},
-                #profiles={FV.WS: "ABLLogNeutralWsProfile"},
+                profiles={FV.WS: "ABLLogNeutralWsProfile"},
                 verbosity=self.verbosity
             )
 
@@ -55,7 +55,7 @@ class Test(unittest.TestCase):
             foxes.input.farm_layout.add_from_file(
                 farm,
                 lfile,
-                turbine_models=["kTI_02", "TOYT"],
+                turbine_models=["kTI_amb_02", "TOYT"],
                 verbosity=self.verbosity
             )
             
@@ -82,9 +82,6 @@ class Test(unittest.TestCase):
 
             self.print()
             self.print("TRESULTS\n")
-            sel = (df[FV.P] > 0) & (fdata[FV.P]>0)
-            df = df.loc[sel]
-            fdata = fdata.loc[sel]
             self.print(df)
             self.print(fdata)
 
@@ -100,20 +97,20 @@ class Test(unittest.TestCase):
             self.print(chk.max())
 
             var = FV.AMB_WS
+            sel = chk[var] >= 1e-7
+            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            self.print(df.loc[sel])
+            self.print(fdata.loc[sel])
+            self.print(delta.loc[sel])
+            assert((chk[var] < 1e-7).all())
+
+            var = FV.AMB_P
             sel = chk[var] >= 1e-5
             self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
             self.print(df.loc[sel])
             self.print(fdata.loc[sel])
             self.print(delta.loc[sel])
             assert((chk[var] < 1e-5).all())
-
-            var = FV.AMB_P
-            sel = chk[var] >= 1e-3
-            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
-            self.print(df.loc[sel])
-            self.print(fdata.loc[sel])
-            self.print(delta.loc[sel])
-            assert((chk[var] < 1e-3).all())
 
             var = FV.WS
             sel = chk[var] >= 1.55e-3

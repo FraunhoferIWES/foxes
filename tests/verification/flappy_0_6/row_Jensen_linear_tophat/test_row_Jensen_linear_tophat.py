@@ -74,21 +74,34 @@ class Test(unittest.TestCase):
 
         self.print()
         self.print("TRESULTS\n")
-        sel = (df[FV.REWS]!=df[FV.AMB_REWS]) & (df[FV.AMB_REWS]>5) & (df[FV.AMB_REWS]<9)
+        sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
+        df    = df.loc[sel]
+        fdata = fdata.loc[sel]
         self.print(df.loc[sel])
-        self.print(fdata[sel])
+        self.print(fdata.loc[sel])
 
         self.print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
         delta = df - fdata
-        self.print(delta.max())
-        chk = delta[[FV.WS, FV.P]].abs().max()
-        self.print(chk)
+        self.print(delta)
 
-        assert((chk[FV.WS] < 1e-5).all())
-        assert((chk[FV.P] < 1e-3).all())
+        chk = delta.abs()
+        self.print(chk.max())
+
+        var = FV.WS
+        self.print(f"\nCHECKING {var}")
+        sel = chk[var] >= 1e-7
+        self.print(df.loc[sel])
+        self.print(fdata.loc[sel])
+        self.print(chk.loc[sel])
+        assert((chk[var] < 1e-7 ).all())
+
+        var = FV.P
+        sel = chk[var] >= 1e-5
+        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
+        assert((chk[var] < 1e-5).all())
         
         
 

@@ -51,7 +51,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["kTI_02", "TOYT"],
+            turbine_models=["kTI_amb_02", "TOYT"],
             verbosity=self.verbosity
         )
         
@@ -95,14 +95,14 @@ class Test(unittest.TestCase):
 
         var = FV.WS
         self.print(f"\nCHECKING {var}")
-        sel = chk[var] >= 1e-5
+        sel = chk[var] >= 1e-7
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
         assert((chk[var] < 1e-7 ).all())
 
         var = FV.P
-        sel = chk[var] >= 1e-3
+        sel = chk[var] >= 1e-5
         self.print(f"\nCHECKING {var}\n", delta.loc[sel])
         assert((chk[var] < 1e-5).all())
         
