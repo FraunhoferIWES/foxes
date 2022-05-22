@@ -3,6 +3,17 @@ from abc import ABCMeta
 from itertools import count
 
 class Model(metaclass=ABCMeta):
+    """
+    Abstract base class for all models.
+
+    Attributes
+    ----------
+    name : str
+        The model name
+    model_id
+    initialized
+
+    """
 
     _ids = {}
 
@@ -23,26 +34,101 @@ class Model(metaclass=ABCMeta):
 
     @property
     def model_id(self):
+        """
+        Unique id based on the model type.
+
+        Returns
+        -------
+        int
+            Unique id of the model object
+            
+        """
         return self._id
     
     def var(self, v):
+        """
+        Creates a model specific variable name.
+
+        Paramters
+        ---------
+        v : str
+            The variable name
+        
+        Returns
+        -------
+        str
+            Model specific variable name
+
+        """
         ext = "" if self._id == 0 else f"_id{self._id}"
         return f"{self.name}{ext}_{v}"
 
     def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
+
+        This function is automatically called during
+        initialization. It should specify all data
+        that is either state or point dependent, or
+        intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
         return {"coords": {}, "data_vars": {}}
 
     @property
     def initialized(self):
+        """
+        Initialization flag.
+
+        Returns
+        -------
+        bool :
+            True if the model has been initialized.
+
+        """
         return self.__initialized
 
     def initialize(self, algo):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+
+        """
         idata = self.model_input_data(algo)
         if len(idata["coords"]) or len(idata["data_vars"]):
             algo.models_idata[self.name] = idata
         self.__initialized = True
     
     def finalize(self, algo, clear_mem=False):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+            
+        """
         if self.name in algo.models_idata:
             if clear_mem:
                 del algo.models_idata[self.name]
@@ -59,6 +145,29 @@ class Model(metaclass=ABCMeta):
             data_prio=True,
             accept_none=False
         ):
+        """
+        Getter for a data entry in either the given
+        data source, or the model object.
+
+        Parameters
+        ----------
+        variable : str
+            The variable, serves as data key
+        data : dict
+            The data source
+        st_sel : numpy.ndarray of bool, optional
+            If given, get the specified state-turbine subset
+        upcast : str, optional
+            Either 'farm' or 'points', broadcasts potential
+            scalar data to numpy.ndarray with dimensions
+            (n_states, n_turbines) or (n_states, n_points),
+            respectively
+        data_prio: bool
+            First search the data source, then the object
+        accept_none: bool
+            Do not throw an error if data entry is None or np.nan
+            
+        """
 
         sources = (data, self.__dict__) if data_prio \
                     else (self.__dict__, data)

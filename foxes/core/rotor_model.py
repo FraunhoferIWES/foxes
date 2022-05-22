@@ -5,33 +5,92 @@ from abc import abstractmethod
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core.farm_data_model import FarmDataModel
-from foxes.core.turbine_model import TurbineModel
-from foxes.core.farm_model import FarmModel
 from foxes.core.data import Data
 from foxes.tools import wd2uv, uv2wd
 
 
 class RotorModel(FarmDataModel):
+    """
+    Abstract base class of rotor models.
+
+    Rotor models calculate ambient farm data from 
+    states, and provide rotor points and weights
+    for the calculation of rotor effective quantities.
+
+    Parameters
+    ----------
+    calc_vars : list of str
+        The variables that are calculated by the model
+        (Their ambients are added automatically)
+    
+    Attributes
+    ----------
+    calc_vars : list of str
+        The variables that are calculated by the model
+        (Their ambients are added automatically)
+
+    """
 
     def __init__(self, calc_vars):
         super().__init__()
-
         self.calc_vars = calc_vars
 
     def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         return self.calc_vars + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
     
     def initialize(self, algo):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+
+        """
         if not algo.states.initialized:
             algo.states.initialize(algo)
         super().initialize(algo)
 
     @abstractmethod
     def n_rotor_points(self):
+        """
+        The number of rotor points
+
+        Returns
+        -------
+        n_rpoints : int
+            The number of rotor points
+
+        """
         pass
 
     @abstractmethod
     def rotor_point_weights(self):
+        """
+        The weights of the rotor points
+
+        Returns
+        -------
+        weights : numpy.ndarray
+            The weights of the rotor points,
+            add to one, shape: (n_rpoints,)
+
+        """
         pass
 
     @abstractmethod

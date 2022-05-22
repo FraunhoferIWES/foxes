@@ -9,21 +9,73 @@ from foxes.core.data import Data
 from foxes.core.model import Model
 
 class FarmDataModel(Model):
+    """
+    Abstract base class for models that modify
+    farm data.
+
+    Parameters
+    ----------
+    pre_rotor : bool
+        Flag for running this model before
+        running the rotor model.
+    
+    Attributes
+    ----------
+    pre_rotor : bool
+        Flag for running this model before
+        running the rotor model.
+
+    """
 
     def __init__(self, pre_rotor=False):
         super().__init__()
-        
         self.pre_rotor = pre_rotor
 
     @abstractmethod
     def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         return []
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata):
+        """"
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        results : dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_turbines)
+
+        """
         pass
 
-    def _wrap_calc(
+    def __wrap_calc(
         self,
         *data,
         algo,
@@ -32,7 +84,11 @@ class FarmDataModel(Model):
         edims,
         ovars,
         calc_pars
-    ):
+        ):
+        """
+        Private helper function that calls `calculate`.
+        """
+
         # extract model data:
         mdata = {v: data[i] for i, v in enumerate(idims.keys())}
         mdata.update(edata)
@@ -69,6 +125,27 @@ class FarmDataModel(Model):
         return data
             
     def run_calculation(self, algo, models_data, **parameters):
+        """
+        Starts the model calculation in parallel, via
+        xarray's `apply_ufunc`.
+
+        Typically this function is called by algorithms.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        models_data : xarray.Dataset
+            The model input data
+        **parameters : dict, optional
+            Additional arguments for the `calculate` function
+        
+        Returns
+        -------
+        results : xarray.Dataset
+            The calculation results
+
+        """
 
         if not self.initialized:
             raise ValueError(f"FarmDataModel '{self.name}': run_calc called before initialization")
@@ -122,7 +199,7 @@ class FarmDataModel(Model):
 
         # run parallel computation:
         results = xr.apply_ufunc(
-                    self._wrap_calc, 
+                    self.__wrap_calc, 
                     *idata.values(), 
                     input_core_dims=icdims, 
                     output_core_dims=ocdims, 
