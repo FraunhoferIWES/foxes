@@ -114,6 +114,31 @@ class PointDataModel(Model):
         return data
 
     def run_calculation(self, algo, models_data, farm_data, point_data, ovars, **parameters):
+        """
+        Starts the model calculation in parallel, via
+        xarray's `apply_ufunc`.
+
+        Typically this function is called by algorithms.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        models_data : xarray.Dataset
+            The model input data
+        farm_data : xarray.Dataset
+            The farm results data
+        point_data : xarray.Dataset
+            The point input data
+        **parameters : dict, optional
+            Additional arguments for the `calculate` function
+        
+        Returns
+        -------
+        results : xarray.Dataset
+            The calculation results
+
+        """
 
         if not self.initialized:
             raise ValueError(f"PointDataModel '{self.name}': run_calc called before initialization")

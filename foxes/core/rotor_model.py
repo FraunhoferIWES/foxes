@@ -192,11 +192,18 @@ class RotorModel(FarmDataModel):
         fdata : foxes.core.Data
             The farm data
         rpoint_results : dict
-            The results at rotor points. Keys:
-            variable str. Values: numpy.ndarray,
-            shape: (n_states, n_turbines, n_rpoints)
-            if `states_turbine` is None, else
-            shape: (n_states, 1, n_rpoints)
+            The results at rotor points. Keys: variable str. 
+            Values: numpy.ndarray, shape if `states_turbine` 
+            is None: (n_states, n_turbines, n_rpoints).
+            Else: (n_states, 1, n_rpoints)
+        weights : numpy.ndarray
+            The rotor point weights, shape: (n_rpoints,)
+        states_turbine: numpy.ndarray of int, optional
+            The turbine indices, one per state. Shape: (n_states,)
+        copy_to_ambient : bool, optional
+            If `True`, the fdata results are copied to ambient
+            variables after calculation
+
         """
 
         n_states   = mdata.n_states
@@ -293,7 +300,40 @@ class RotorModel(FarmDataModel):
             store_amb_res=False,
             states_turbine=None
         ):
-        """ Calculate ambient results """
+        """
+        Calculate ambient rotor effective results.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        rpoints : numpy.ndarray, optional
+            The rotor points, or None for automatic for
+            this rotor. Shape: (n_states, n_turbines, n_rpoints, 3)
+        weights : numpy.ndarray, optional
+            The rotor point weights, or None for automatic
+            for this rotor. Shape: (n_rpoints,)
+        store_rpoints : bool, optional
+            Switch for storing rotor points to mdata
+        store_rweights : bool, optional
+            Switch for storing rotor point weights to mdata
+        store_amb_res : bool, optional
+            Switch for storing ambient rotor point reults as they
+            come from the states to mdata
+        states_turbine: numpy.ndarray of int, optional
+            The turbine indices, one per state. Shape: (n_states,)
+        
+        Returns
+        -------
+        results : dict
+            results dict. Keys: Variable name str. Values:
+            numpy.ndarray with results, shape: (n_states, n_turbines)
+            
+        """
 
         if rpoints is None:
             rpoints = mdata.get(FV.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
