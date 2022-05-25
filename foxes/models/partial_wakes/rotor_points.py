@@ -56,7 +56,6 @@ class RotorPoints(PartialWakesModel):
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
         del amb_res
         
-
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]

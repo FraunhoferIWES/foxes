@@ -95,9 +95,44 @@ class RotorModel(FarmDataModel):
 
     @abstractmethod
     def design_points(self):
+        """
+        The rotor model design points.
+
+        Design points are formulated in rotor plane
+        (x,y,z)-coordinates in rotor frame, such that
+        - (0,0,0) is the centre point,
+        - (1,0,0) is the point radius * n_rotor_axis
+        - (0,1,0) is the point radius * n_rotor_side
+        - (0,0,1) is the point radius * n_rotor_up
+
+        Returns
+        -------
+        dpoints : numpy.ndarray
+            The design points, shape: (n_points, 3)
+
+        """
         pass
 
     def get_rotor_points(self, algo, mdata, fdata):
+        """
+        Calculates rotor points from design points.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        points : numpy.ndarray
+            The rotor points, shape: 
+            (n_states, n_turbines, n_rpoints, 3)
+
+        """
 
         n_states   = mdata.n_states
         n_points   = self.n_rotor_points()
@@ -119,12 +154,15 @@ class RotorModel(FarmDataModel):
         return points
     
     def _set_res(self, fdata, v, res, stsel):
+        """
+        Helper function for results setting
+        """
         if stsel is None:
             fdata[v] = res
         elif res.shape[1] == 1:
             fdata[v][stsel] = res[:, 0]
         else:
-            fdata[v][stsel] = res[stsel]
+            raise ValueError(f"Rotor model '{self.name}': states_turbine is not None, but results shape for '{v}' has more than one turbine, {res.shape}")
 
     def eval_rpoint_results(
             self, 
@@ -136,6 +174,30 @@ class RotorModel(FarmDataModel):
             states_turbine=None,
             copy_to_ambient=False
         ):
+        """
+        Evaluate rotor point results.
+
+        This function modifies `fdata`, either
+        for all turbines or one turbine per state,
+        depending on parameter `states_turbine`. In
+        the latter case, the turbine dimension of the
+        `rpoint_results` is expected to have size one.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        rpoint_results : dict
+            The results at rotor points. Keys:
+            variable str. Values: numpy.ndarray,
+            shape: (n_states, n_turbines, n_rpoints)
+            if `states_turbine` is None, else
+            shape: (n_states, 1, n_rpoints)
+        """
 
         n_states   = mdata.n_states
         n_turbines = algo.n_turbines
@@ -182,7 +244,10 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars \
             or FV.REWS3 in self.calc_vars:
 
-            yaw = fdata[FV.YAW]
+            if stsel is None:
+                yaw = fdata[FV.YAW]
+            else:
+                yaw = fdata[FV.YAW][stsel][:, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum('stpd,std->stp', uvp, nax)
 

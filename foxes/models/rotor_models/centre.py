@@ -78,7 +78,10 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars \
             or FV.REWS3 in self.calc_vars:
 
-            yaw = fdata.get(FV.YAW, fdata[FV.YAW])
+            if stsel is None:
+                yaw = fdata[FV.YAW]
+            else:
+                yaw = fdata[FV.YAW][stsel][:, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum('stpd,std->stp', uvp, nax)
 
