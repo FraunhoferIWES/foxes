@@ -361,7 +361,9 @@ class RotorModel(FarmDataModel):
         pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
         del pdims, points
 
-        algo.states.calculate(algo, mdata, fdata, pdata)
+        sres = algo.states.calculate(algo, mdata, fdata, pdata)
+        pdata.update(sres)
+        del sres
 
         rpoint_results = {}
         for v in svars:

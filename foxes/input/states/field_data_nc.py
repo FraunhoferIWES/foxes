@@ -228,5 +228,5 @@ class FieldDataNC(States):
                     out[v] = data[..., dkys[v]]
                 else:
                     out[v] = np.full((n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE)
-        pdata.update(out)
+
         return out
