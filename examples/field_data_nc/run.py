@@ -4,6 +4,7 @@ import argparse
 import dask
 from dask.diagnostics import ProgressBar
 import matplotlib.pyplot as plt
+import numpy as np
 
 import foxes
 import foxes.variables as FV
@@ -20,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["TOYT"], nargs='+')
+    parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=4, type=int)
     parser.add_argument("-k", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
     parser.add_argument("-t", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
@@ -39,14 +41,16 @@ if __name__ == "__main__":
     states = foxes.input.states.FieldDataNC(
         file_pattern=args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
+        #var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225}
     )
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_from_file(
+    foxes.input.farm_layout.add_grid(
         farm,
-        args.lfile,
+        xy_base = np.array([220913., 6056004.]),
+        step_vectors = np.array([[500., 0], [0, 500.]]),
+        steps = (args.n_turbines - 1, args.n_turbines - 1),
         turbine_models=args.tmodels
     )
 

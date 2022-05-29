@@ -18,7 +18,7 @@ class FieldDataNC(States):
         states_coord="Time",
         x_coord='UTMX',
         y_coord='UTMY',
-        h_coord='HEIGHT',
+        h_coord='height',
         weight_ncvar=None,
         bounds_error=True,
         fill_value=None
@@ -41,6 +41,8 @@ class FieldDataNC(States):
 
         self._inds = None
         self._N    = None
+                
+    def model_input_data(self, algo):
 
         if (FV.WS in self.ovars and FV.WD not in self.ovars) \
             or (FV.WS not in self.ovars and FV.WD in self.ovars):
@@ -67,16 +69,14 @@ class FieldDataNC(States):
 
             if self.weight_ncvar is not None:
                 self._weights = ds[self.weight_ncvar].values
-                
-    def model_input_data(self, algo):
         
+        self._N = len(self._inds)
+
         if self._weights is None:
             self._weights = np.full((self._N, algo.n_turbines), 1./self._N, dtype=FC.DTYPE)
 
         idata = super().model_input_data(algo)
         idata["coords"][FV.STATE] = self._inds
-
-        self._N = len(self._inds)
 
         return idata
 
@@ -142,7 +142,7 @@ class FieldDataNC(States):
 
         # prepare:
         points   = pdata[FV.POINTS]
-        n_pts    = points.shape[1]
+        n_pts    = pdata.n_points
         n_states = fdata.n_states
         n_vars   = len(self.var2ncvar)
         if FV.WD in self.fixed_vars:
@@ -159,7 +159,7 @@ class FieldDataNC(States):
                 dkys[v] = len(dkys)
 
         # read data for this chunk:
-        i0 = np.where(self._inds==fdata[FV.STATE][0])[0]
+        i0 = np.where(self._inds==mdata[FV.STATE][0])[0][0]
         s  = slice(i0, i0 + n_states)
         ds = xr.open_mfdataset(self.file_pattern, parallel=False, 
                     concat_dim=self.states_coord, combine="nested", 
@@ -167,24 +167,24 @@ class FieldDataNC(States):
                 ).isel({self.states_coord: s})
         
         # prepare data:
-        data   = np.zeros((n_states, n_y, n_x, n_h, n_vars), dtype=FC.DTYPE)
         x      = ds[self.x_coord].values
         y      = ds[self.y_coord].values
         h      = ds[self.h_coord].values
         n_x    = len(x)
         n_y    = len(y)
         n_h    = len(h)
-        cor_xy = (self.states_coord, self.x_coord, self.y_coord, self.h_coord) 
-        cor_yx = (self.states_coord, self.y_coord, self.x_coord, self.h_coord)
+        data   = np.zeros((n_states, n_h, n_y, n_x, n_vars), dtype=FC.DTYPE)
+        cor_xy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord) 
+        cor_yx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
         for v, ncv in self.var2ncvar.items():
             if ds[ncv].dims == cor_yx:
                 data[..., dkys[v]] = ds[ncv][:]
             elif ds[ncv].dims == cor_xy:
-                data[..., dkys[v]] = np.swapaxes(ds[ncv].values, 1, 2)
+                data[..., dkys[v]] = np.swapaxes(ds[ncv].values, 2, 3)
             else:
                 raise ValueError(f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_xy} or {cor_yx}")
         if FV.WD in self.fixed_vars:
-            data[..., dkys[FV.WD]] = np.full((n_states, n_y, n_x, n_h), self.fixed_vars[FV.WD], dtype=FC.DTYPE)
+            data[..., dkys[FV.WD]] = np.full((n_states, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE)
         del ds
         
         # translate WS, WD into U, V:
@@ -208,7 +208,7 @@ class FieldDataNC(States):
         try:
             data = iterp(pts).reshape(n_states, n_pts, n_vars)
         except ValueError as e:
-            print(f"States '{self.name}': Interpolation error")
+            print(f"\n\nStates '{self.name}': Interpolation error")
             print("INPUT VARS : (state, heights, y, x)")
             print("DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars])
             print("EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T])
@@ -228,5 +228,5 @@ class FieldDataNC(States):
                     out[v] = data[..., dkys[v]]
                 else:
                     out[v] = np.full((n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE)
-        
+        pdata.update(out)
         return out

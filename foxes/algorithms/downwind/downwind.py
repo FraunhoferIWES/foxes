@@ -85,6 +85,9 @@ class Downwind(Algorithm):
             persist=True
         ):
 
+        # welcome:
+        self.states.initialize(self)
+        self.n_states = self.states.size()
         self._print_deco("calc_farm")
 
         # prepare:
