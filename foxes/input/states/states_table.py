@@ -37,7 +37,7 @@ class StatesTable(States):
             self._data = PandasFileHelper().read_file(self._data, **rpars)
         if states_sel is not None:
             self._data = self._data.iloc[states_sel]
-        self.N = len(self._data.index)
+        self._N = len(self._data.index)
 
     def model_input_data(self, algo):
 
@@ -45,13 +45,13 @@ class StatesTable(States):
         self.DATA = self.var("data")
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self.N, algo.n_turbines), dtype=FC.DTYPE)
+        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
         if col_w in self._data:
             self._weights[:] = self._data[col_w].to_numpy()[:, None]
         elif FV.WEIGHT in self.var2col:
             raise KeyError(f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {self._data.columns}")
         else:
-            self._weights[:] = 1./self.N
+            self._weights[:] = 1./self._N
 
         self.profiles = {}
         self.tvars    = set(self.ovars)
@@ -98,7 +98,7 @@ class StatesTable(States):
                 p.initialize(algo)
 
     def size(self):
-        return self.N
+        return self._N
 
     def output_point_vars(self, algo):
         return self.ovars

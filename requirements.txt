@@ -3,4 +3,6 @@ numpy
 xarray
 dask
 dask[distributed]
+scipy
+netcdf4
 
