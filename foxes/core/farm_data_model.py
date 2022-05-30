@@ -75,7 +75,7 @@ class FarmDataModel(Model):
         """
         pass
 
-    def __wrap_calc(
+    def _wrap_calc(
         self,
         *data,
         algo,
@@ -199,7 +199,7 @@ class FarmDataModel(Model):
 
         # run parallel computation:
         results = xr.apply_ufunc(
-                    self.__wrap_calc, 
+                    self._wrap_calc, 
                     *idata.values(), 
                     input_core_dims=icdims, 
                     output_core_dims=ocdims, 
