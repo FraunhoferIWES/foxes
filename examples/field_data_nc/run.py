@@ -48,7 +48,7 @@ if __name__ == "__main__":
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_grid(
         farm,
-        xy_base = np.array([220913., 6056004.]),
+        xy_base = np.array([0., 0.]),
         step_vectors = np.array([[500., 0], [0, 500.]]),
         steps = (args.n_turbines - 1, args.n_turbines - 1),
         turbine_models=args.tmodels
@@ -82,3 +82,7 @@ if __name__ == "__main__":
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+    o   = foxes.output.FlowPlots2D(algo, farm_results)
+    fig = o.get_mean_fig_horizontal(FV.WS, resolution=15)
+    plt.show()
