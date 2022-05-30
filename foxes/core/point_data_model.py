@@ -145,18 +145,21 @@ class PointDataModel(Model):
 
         # collect models data:
         idata = {v: d for v, d in models_data.items() if FV.STATE in d.dims or FV.POINT in d.dims}
-        edata = {v: d.to_numpy() for v, d in models_data.items() if v not in idata}
-        mkeys = list(models_data.keys())
+        edata = {v: d.values for v, d in models_data.items() if v not in idata}
+        edata.update({c: d.values for c, d in models_data.coords.items() if c not in (FV.STATE, FV.POINT)})
+        mkeys = list(models_data.keys()) + [c for c in models_data.coords.keys() if c not in (FV.STATE, FV.POINT)]
 
         # collect farm data:
         idata.update({v: d for v, d in farm_data.items() if FV.STATE in d.dims or FV.POINT in d.dims})
-        edata.update({v: d.to_numpy() for v, d in farm_data.items() if v not in idata})
-        fkeys = list(farm_data.keys())
+        edata.update({v: d.values for v, d in farm_data.items() if v not in idata})
+        edata.update({c: d.values for c, d in farm_data.coords.items() if c not in (FV.STATE, FV.POINT)})
+        fkeys = list(farm_data.keys()) + [c for c in farm_data.coords.keys() if c not in (FV.STATE, FV.POINT)]
         
         # collect point data:
         idata.update({v: d for v, d in point_data.items() if FV.STATE in d.dims or FV.POINT in d.dims})
-        edata.update({v: d.to_numpy() for v, d in point_data.items() if v not in idata})
-        pkeys = list(point_data.keys())
+        edata.update({v: d.values for v, d in point_data.items() if v not in idata})
+        edata.update({c: d.values for c, d in point_data.coords.items() if c not in (FV.STATE, FV.POINT)})
+        pkeys = list(point_data.keys()) + [c for c in point_data.coords.keys() if c not in (FV.STATE, FV.POINT)]
 
         # add states:
         states = None
@@ -175,7 +178,7 @@ class PointDataModel(Model):
                 break
         if states is None:
             raise ValueError(f"FarmDataModel '{self.name}': Missing dimension '{FV.STATE}' in farm data coordinates.")
-        
+
         # add points:
         points = None
         for d in point_data.values():

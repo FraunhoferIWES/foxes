@@ -152,7 +152,7 @@ class FarmDataModel(Model):
 
         # collect models data:
         idata  = {v: d for v, d in models_data.items() if FV.STATE in d.dims}
-        edata  = {v: d.to_numpy() for v, d in models_data.items() if v not in idata}
+        edata  = {v: d.values for v, d in models_data.items() if v not in idata}
         otypes = [FC.DTYPE]
         ovars  = algo.farm_vars 
         if not FV.WEIGHT in ovars:
@@ -173,6 +173,9 @@ class FarmDataModel(Model):
                 break
         if states is None:
             raise ValueError(f"FarmDataModel '{self.name}': Missing dimension '{FV.STATE}' in models data coordinates.")
+
+        # add remaining coordinates:
+        edata.update({c: d.values for c, d in models_data.coords.items() if c != FV.STATE})
 
         # collect dims:
         idims  = {v: d.dims for v, d in idata.items()}
