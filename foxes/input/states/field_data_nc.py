@@ -164,7 +164,7 @@ class FieldDataNC(States):
         ds = xr.open_mfdataset(self.file_pattern, parallel=False, 
                     concat_dim=self.states_coord, combine="nested", 
                     data_vars='minimal', coords='minimal', compat='override'
-                ).isel({self.states_coord: s})
+                ).isel({self.states_coord: s}).load()
         
         # prepare data:
         x      = ds[self.x_coord].values
@@ -186,7 +186,7 @@ class FieldDataNC(States):
         if FV.WD in self.fixed_vars:
             data[..., dkys[FV.WD]] = np.full((n_states, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE)
         del ds
-        
+
         # translate WS, WD into U, V:
         if FV.WD in self.ovars and FV.WS in self.ovars:
             wd = data[..., dkys[FV.WD]]

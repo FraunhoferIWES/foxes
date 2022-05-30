@@ -18,7 +18,8 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
-    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=1000)
+    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default="distributed")
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["TOYT"], nargs='+')
     parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=4, type=int)
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     args  = parser.parse_args()
     
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FV.STATE: args.chunksize, "point": args.chunksize_points}
     if args.scheduler == 'distributed':
         client = Client(n_workers=args.n_workers, threads_per_worker=args.threads_per_worker)
         print(f"\n{client}")
@@ -84,5 +85,5 @@ if __name__ == "__main__":
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o   = foxes.output.FlowPlots2D(algo, farm_results)
-    fig = o.get_mean_fig_horizontal(FV.WS, resolution=15)
+    fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
     plt.show()
