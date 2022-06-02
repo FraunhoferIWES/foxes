@@ -407,12 +407,7 @@ class FlowPlots2D(Output):
             print("Grid pts =",n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-                            self.fres,
-                            points=g_pts,
-                            vars=[var],
-                            **kwargs
-                        )
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
         data = point_results[var].to_numpy()
         del point_results
         
@@ -577,14 +572,8 @@ class FlowPlots2D(Output):
             print("Grid pts =",n_pts)
 
         # calculate point results:
-        vars = [var] if quiver_n is None else list(set([FV.WD, FV.WS, var]))
-        point_results = self.algo.calc_points(
-                            self.fres,
-                            points=g_pts,
-                            vars=vars,
-                            **kwargs
-                        )
-        data  = point_results[var].values
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        data = point_results[var].values
         quiv = None if quiver_n is None \
                 else (quiver_n, quiver_pars, point_results[FV.WD].values, point_results[FV.WS].values)
         del point_results
@@ -715,6 +704,7 @@ class FlowPlots2D(Output):
             The state index
         im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image
+            
         """
         
         # prepare:
@@ -764,13 +754,7 @@ class FlowPlots2D(Output):
             print("Grid pts =",n_pts)
 
         # calculate point results:
-        vars = [var] if quiver_n is None else list(set([FV.WD, FV.WS, var]))
-        point_results = self.algo.calc_points(
-                            self.fres,
-                            points=g_pts,
-                            vars=vars,
-                            **kwargs
-                        )
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
         data  = point_results[var].values
         quiv = None if quiver_n is None \
                 else (quiver_n, quiver_pars, point_results[FV.WD].values, point_results[FV.WS].values)

@@ -9,5 +9,6 @@ import foxes.models.wake_models
 import foxes.models.wake_superpositions
 import foxes.models.farm_controllers
 import foxes.models.vertical_profiles
+import foxes.models.point_models
 
 from foxes.models.model_book import ModelBook

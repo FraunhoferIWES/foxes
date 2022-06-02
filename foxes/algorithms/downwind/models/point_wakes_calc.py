@@ -1,6 +1,3 @@
-import numpy as np
-from copy import deepcopy
-
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel

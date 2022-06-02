@@ -233,25 +233,25 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 1) calculate ambient point results:
-        mlist.models += emodels
-        init_pars    += ipars
-        calc_pars    += cpars
-        final_pars   += fpars
-
-        # 2) transfer ambient results:
+        # 1) transfer ambient results:
         mlist.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 3) calc wake effects:
+        # 2) calc wake effects:
         mlist.models.append(dm.PointWakesCalculation(point_vars=vars))
         mlist.models[-1].name = "calc_wakes"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+
+        # 3) calculate ambient point results:
+        mlist.models += emodels
+        init_pars    += ipars
+        calc_pars    += cpars
+        final_pars   += fpars
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
