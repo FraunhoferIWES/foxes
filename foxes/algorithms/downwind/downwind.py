@@ -200,10 +200,10 @@ class Downwind(Algorithm):
         self._print_deco("calc_points", n_points=points.shape[1])
 
         # update eval models:
-        emodels = []
-        ipars   = []
-        cpars   = []
-        fpars   = []
+        self.emodels       = []
+        self.emodels_ipars = []
+        self.emodels_cpars = []
+        self.emodels_fpars = []
         if point_models is not None:
             if not isinstance(point_models, list):
                 point_models = [point_models]
@@ -212,14 +212,14 @@ class Downwind(Algorithm):
                     pname  = m
                     pmodel = self.mbook.point_models[pname]
                     pmodel.name = pname
-                    emodels.append(pmodel)
+                    self.emodels.append(pmodel)
                 elif isinstance(m, PointDataModel):
-                    emodels.append(m)
+                    self.emodels.append(m)
                 else:
                     raise TypeError(f"Model '{m}' is neither str nor PointDataModel")
-                ipars.append(init_parameters.get(emodels[-1].name, {}))
-                cpars.append(calc_parameters.get(emodels[-1].name, {}))
-                fpars.append(final_parameters.get(emodels[-1].name, {}))
+                self.emodels_ipars.append(init_parameters.get(self.emodels[-1].name, {}))
+                self.emodels_cpars.append(calc_parameters.get(self.emodels[-1].name, {}))
+                self.emodels_fpars.append(final_parameters.get(self.emodels[-1].name, {}))
 
         # prepare:
         init_pars  = []
@@ -233,25 +233,25 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 1) transfer ambient results:
+        # 1) calculate ambient point results:
+        mlist.models += self.emodels
+        init_pars    += self.emodels_ipars
+        calc_pars    += self.emodels_cpars
+        final_pars   += self.emodels_fpars
+
+        # 2) transfer ambient results:
         mlist.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
-        # 2) calc wake effects:
+        # 3) calc wake effects:
         mlist.models.append(dm.PointWakesCalculation(point_vars=vars))
         mlist.models[-1].name = "calc_wakes"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
-
-        # 3) calculate ambient point results:
-        mlist.models += emodels
-        init_pars    += ipars
-        calc_pars    += cpars
-        final_pars   += fpars
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)

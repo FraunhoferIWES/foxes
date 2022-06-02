@@ -1,6 +1,6 @@
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.core import PointDataModel
+from foxes.core import PointDataModel, PointDataModelList
 
 class PointWakesCalculation(PointDataModel):
 
@@ -39,4 +39,7 @@ class PointWakesCalculation(PointDataModel):
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]
         
+        emodels = PointDataModelList(algo.emodels)
+        emodels.calculate(algo, mdata, fdata, pdata, algo.emodels_cpars)
+
         return {v: pdata[v] for v in self.output_point_vars(algo)}

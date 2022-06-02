@@ -1,4 +1,3 @@
-from asyncore import loop
 import numpy as np
 import xarray as xr
 from abc import abstractmethod
