@@ -321,7 +321,7 @@ class FarmController(FarmDataModel):
         self.turbine_model_sels = mdata[FV.TMODEL_SELS] 
         return res
     
-    def finalize(self, algo, st_sel=None, verbosity=0, clear_mem=False):
+    def finalize(self, algo, results, st_sel=None, verbosity=0, clear_mem=False):
         """
         Finalizes the model.
 
@@ -329,6 +329,8 @@ class FarmController(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
         st_sel : numpy.ndarray of bool, optional
             Selection of states and turbines, shape: 
             (n_states, n_turbines). None for all.
@@ -342,6 +344,6 @@ class FarmController(FarmDataModel):
         for s in [self.pre_rotor_models, self.post_rotor_models]:
             if s is not None:
                 pars = self.__get_pars(algo, s.models, "final", st_sel=st_sel, from_data=False)
-                s.finalize(algo, parameters=pars, verbosity=verbosity, clear_mem=clear_mem)
+                s.finalize(algo, results=results, parameters=pars, verbosity=verbosity, clear_mem=clear_mem)
         
-        super().finalize(algo, clear_mem=clear_mem)
+        super().finalize(algo, results, clear_mem=clear_mem)

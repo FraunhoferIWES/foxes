@@ -53,8 +53,8 @@ class PCtFile(TurbineType):
 
         return out
     
-    def finalize(self, algo, st_sel, clear_mem=False):
+    def finalize(self, algo, results, st_sel, clear_mem=False):
         if clear_mem:
             del self.data_ws, self.data_P, self.data_ct
-        super().finalize(algo, clear_mem)
+        super().finalize(algo, results, clear_mem)
         

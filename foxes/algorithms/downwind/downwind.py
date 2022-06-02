@@ -164,7 +164,7 @@ class Downwind(Algorithm):
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
-        models_data = self.get_models_data()
+        models_data = self.get_models_data([self.states, mlist])
         if persist:
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
@@ -172,12 +172,14 @@ class Downwind(Algorithm):
 
         # run main calculation:
         self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
-        farm_results = mlist.run_calculation(self, models_data, parameters=calc_pars)
+        farm_results = mlist.run_calculation(self, models_data, out_vars=self.farm_vars, 
+                                    loop_dims=[FV.STATE], out_core_vars=[FV.TURBINE, FV.VARS],
+                                    parameters=calc_pars)
         del models_data
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
+        mlist.finalize(self, results=farm_results, parameters=final_pars, verbosity=self.verbosity)
 
         return farm_results
 
@@ -255,7 +257,7 @@ class Downwind(Algorithm):
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
-        models_data = self.get_models_data()
+        models_data = self.get_models_data([self.states, mlist])
         if persist_mdata:
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
@@ -284,12 +286,13 @@ class Downwind(Algorithm):
 
         # calculate:
         point_results = mlist.run_calculation(self, models_data, farm_results, point_data, 
-                                            vars, parameters=calc_pars)
+                                    out_vars=vars, loop_dims=[FV.STATE, FV.POINT], 
+                                    parameters=calc_pars)
         del models_data, farm_results, point_data
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, parameters=final_pars, verbosity=self.verbosity)
+        mlist.finalize(self, point_results, parameters=final_pars, verbosity=self.verbosity)
 
         return point_results
         

@@ -8,10 +8,7 @@ RPOINTS  = "rotor_points"
 RWEIGHTS = "rotor_weights"
 ORDER    = "order"
 
-ST_DATA     = "state_turbine_data"
-ST_VARS     = "state_turbine_vars"
-SP_DATA     = "state_point_data"
-SP_VARS     = "state_point_vars"
+VARS        = "vars"
 TMODELS     = "tmodels"
 TMODEL_SELS = "tmodel_sels"
 
@@ -56,10 +53,6 @@ var2amb = {
 amb2var = {a: v for v, a in var2amb.items()}
 
 AMB_RPOINT_RESULTS = "amb_rpoint_res"
-
-WCOOS_ID = "wcoos_id"
-WCOOS_X  = "wcoos_x"
-WCOOS_R  = "wcoos_r"
 
 K    = "k"
 KY   = "ky"

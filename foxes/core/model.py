@@ -68,10 +68,9 @@ class Model(metaclass=ABCMeta):
         The model input data, as needed for the
         calculation.
 
-        This function is automatically called during
-        initialization. It should specify all data
-        that is either state or point dependent, or
-        intended to be shared between chunks.
+        This function should specify all data
+        that depend on the loop variable (e.g. state), 
+        or that are intended to be shared between chunks.
 
         Parameters
         ----------
@@ -111,12 +110,9 @@ class Model(metaclass=ABCMeta):
             The calculation algorithm
 
         """
-        idata = self.model_input_data(algo)
-        if len(idata["coords"]) or len(idata["data_vars"]):
-            algo.models_idata[self.name] = idata
         self.__initialized = True
     
-    def finalize(self, algo, clear_mem=False):
+    def finalize(self, algo, results, clear_mem=False):
         """
         Finalizes the model.
 
@@ -124,16 +120,14 @@ class Model(metaclass=ABCMeta):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
         clear_mem : bool
             Flag for deleting model data and
             resetting initialization flag
             
         """
-        if self.name in algo.models_idata:
-            if clear_mem:
-                del algo.models_idata[self.name]
-                self.__initialized = False
-        else:
+        if clear_mem:
             self.__initialized = False
 
     def get_data(

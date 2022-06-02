@@ -56,7 +56,7 @@ class TurbineModel(FarmDataModel):
         """
         pass
 
-    def finalize(self, algo, st_sel, clear_mem=False):
+    def finalize(self, algo, results, st_sel, clear_mem=False):
         """
         Finalizes the model.
 
@@ -64,6 +64,8 @@ class TurbineModel(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
         st_sel : numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
@@ -72,4 +74,4 @@ class TurbineModel(FarmDataModel):
             resetting initialization flag
             
         """
-        super().finalize(algo, clear_mem)
+        super().finalize(algo, results, clear_mem)

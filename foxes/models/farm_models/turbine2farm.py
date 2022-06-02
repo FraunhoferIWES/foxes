@@ -24,7 +24,7 @@ class Turbine2FarmModel(FarmModel):
         s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
         return self.turbine_model.calculate(algo, mdata, fdata, st_sel=s, **parameters)
 
-    def finalize(self, algo, **parameters):
+    def finalize(self, algo, results, **parameters):
         s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-        self.turbine_model.finalize(algo, st_sel=s, **parameters)
+        self.turbine_model.finalize(algo, results, st_sel=s, **parameters)
     

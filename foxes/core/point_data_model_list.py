@@ -116,7 +116,7 @@ class PointDataModelList(PointDataModel):
         
         return {v: pdata[v] for v in self.output_point_vars(algo)}
 
-    def finalize(self, algo, parameters=[], verbosity=0, clear_mem=False):
+    def finalize(self, algo, results, parameters=[], verbosity=0, clear_mem=False):
         """
         Finalizes the model.
 
@@ -124,6 +124,8 @@ class PointDataModelList(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
         parameters : list of dict, optional
             A list of parameter dicts, one for each model
         verbosity : int
@@ -143,7 +145,7 @@ class PointDataModelList(PointDataModel):
         for mi, m in enumerate(self.models):
             if verbosity > 0:
                 print(f"{self.name}, sub-model '{m.name}': Finalizing")
-            m.finalize(algo, **parameters[mi])  
+            m.finalize(algo, results, **parameters[mi])  
         
         self.models = None
-        super().finalize(algo, clear_mem)
+        super().finalize(algo, results, clear_mem)

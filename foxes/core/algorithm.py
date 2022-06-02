@@ -48,14 +48,13 @@ class Algorithm(metaclass=ABCMeta):
 
     def __init__(self, mbook, farm, chunks, verbosity):
         
-        self.name         = type(self).__name__
-        self.mbook        = mbook
-        self.farm         = farm
-        self.chunks       = chunks
-        self.verbosity    = verbosity
-        self.n_states     = None
-        self.n_turbines   = farm.n_turbines
-        self.models_idata = {}
+        self.name       = type(self).__name__
+        self.mbook      = mbook
+        self.farm       = farm
+        self.chunks     = chunks
+        self.verbosity  = verbosity
+        self.n_states   = None
+        self.n_turbines = farm.n_turbines
     
     def print(self, *args, **kwargs):
         """
@@ -117,9 +116,14 @@ class Algorithm(metaclass=ABCMeta):
             xrdata = xrdata.chunk(chunks={c: v for c, v in self.chunks.items() if c in sizes})
         return xrdata
 
-    def get_models_data(self):
+    def get_models_data(self, models):
         """
         Creates xarray from model input data.
+
+        Parameters
+        ----------
+        models : array_like of foxes.core.Model
+            The models whose data to collect
 
         Returns
         -------
@@ -129,9 +133,10 @@ class Algorithm(metaclass=ABCMeta):
         """
 
         idata = {"coords": {}, "data_vars": {}}
-        for ida in self.models_idata.values():
-            idata["coords"].update(ida["coords"])
-            idata["data_vars"].update(ida["data_vars"])
+        for m in models:
+            hidata = m.model_input_data(self)
+            idata["coords"].update(hidata["coords"])
+            idata["data_vars"].update(hidata["data_vars"])
 
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)

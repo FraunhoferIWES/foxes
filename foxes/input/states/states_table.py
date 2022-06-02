@@ -53,22 +53,6 @@ class StatesTable(States):
         else:
             self._weights[:] = 1./self._N
 
-        self.profiles = {}
-        self.tvars    = set(self.ovars)
-        for v, d in self.profdicts.items():
-            if isinstance(d, str):
-                self.profiles[v] = VerticalProfile.new(d)
-            elif isinstance(d, VerticalProfile):
-                self.profiles[v] = d
-            elif isinstance(d, dict):
-                t = d.pop("type")
-                self.profiles[v] = VerticalProfile.new(t, **d)
-            else:
-                raise TypeError(f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict")
-            self.tvars.update(self.profiles[v].input_vars())
-        self.tvars -= set(self.fixed_vars.keys())
-        self.tvars  = list(self.tvars)
-
         tcols = []
         for v in self.tvars:
             c = self.var2col.get(v, v)
@@ -93,6 +77,22 @@ class StatesTable(States):
     def initialize(self, algo):
         super().initialize(algo)
 
+        self.profiles = {}
+        self.tvars    = set(self.ovars)
+        for v, d in self.profdicts.items():
+            if isinstance(d, str):
+                self.profiles[v] = VerticalProfile.new(d)
+            elif isinstance(d, VerticalProfile):
+                self.profiles[v] = d
+            elif isinstance(d, dict):
+                t = d.pop("type")
+                self.profiles[v] = VerticalProfile.new(t, **d)
+            else:
+                raise TypeError(f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict")
+            self.tvars.update(self.profiles[v].input_vars())
+        self.tvars -= set(self.fixed_vars.keys())
+        self.tvars  = list(self.tvars)
+        
         for p in self.profiles.values():
             if not p.initialized:
                 p.initialize(algo)

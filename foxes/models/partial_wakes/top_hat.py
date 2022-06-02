@@ -24,6 +24,10 @@ class PartialTopHat(PartialWakesModel):
             if not isinstance(w, TopHatWakeModel):
                 raise TypeError(f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not a TopHatWakeModel")
 
+        self.WCOOS_ID = self.var("WCOOS_ID")  
+        self.WCOOS_X  = self.var("WCOOS_X")
+        self.WCOOS_R  = self.var("WCOOS_R")
+
     def get_wake_points(self, algo, mdata, fdata):
         return fdata[FV.TXYH]
 
@@ -43,26 +47,26 @@ class PartialTopHat(PartialWakesModel):
         n_points = fdata.n_turbines
         stsel    = (np.arange(n_states), states_source_turbine)
 
-        if FV.WCOOS_ID not in mdata or mdata[FV.WCOOS_ID] != states_source_turbine[0]:
+        if self.WCOOS_ID not in mdata or mdata[self.WCOOS_ID] != states_source_turbine[0]:
             points = self.get_wake_points(algo, mdata, fdata)
             wcoos  = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
-            mdata[FV.WCOOS_ID] = states_source_turbine[0]
-            mdata[FV.WCOOS_X]  = wcoos[:, :, 0]
-            mdata[FV.WCOOS_R]  = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
+            mdata[self.WCOOS_ID] = states_source_turbine[0]
+            mdata[self.WCOOS_X]  = wcoos[:, :, 0]
+            mdata[self.WCOOS_R]  = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
             wcoos[:, :, 1:3]   = 0
             del points
         else:
             wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            wcoos[:, :, 0] = mdata[FV.WCOOS_X]
+            wcoos[:, :, 0] = mdata[self.WCOOS_X]
         
         ct    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ct[:] = fdata[FV.CT][stsel][:, None]
-        x     = mdata[FV.WCOOS_X]
+        x     = mdata[self.WCOOS_X]
 
         sel0 = (ct > 0.) & (x > 0.)
         if np.any(sel0):
 
-            R  = mdata[FV.WCOOS_R]
+            R  = mdata[self.WCOOS_R]
             r  = np.zeros_like(R)
             D  = fdata[FV.D]
 

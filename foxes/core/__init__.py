@@ -1,5 +1,6 @@
 from foxes.core.data import Data
 from foxes.core.model import Model
+from foxes.core.data_calc_model import DataCalcModel
 from foxes.core.states import States
 from foxes.core.wind_farm import WindFarm
 from foxes.core.algorithm import Algorithm

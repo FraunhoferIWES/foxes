@@ -45,6 +45,36 @@ class FarmDataModelList(FarmDataModel):
             ovars += m.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
+    def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
+
+        This function should specify all data
+        that depend on the loop variable (e.g. state), 
+        or that are intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        idata = super().model_input_data(algo)
+        for m in self.models:
+            hidata = m.model_input_data(algo)
+            idata["coords"].update(hidata["coords"])
+            idata["data_vars"].update(hidata["data_vars"])
+
+        return idata
+
     def initialize(self, algo, parameters=None, verbosity=0):
         """
         Initializes the model.
@@ -113,7 +143,7 @@ class FarmDataModelList(FarmDataModel):
         
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
-    def finalize(self, algo, parameters=[], verbosity=0, clear_mem=False):
+    def finalize(self, algo, results, parameters=[], verbosity=0, clear_mem=False):
         """
         Finalizes the model.
 
@@ -140,9 +170,9 @@ class FarmDataModelList(FarmDataModel):
         for mi, m in enumerate(self.models):
             if verbosity > 0:
                 print(f"{self.name}, sub-model '{m.name}': Finalizing")
-            m.finalize(algo, **parameters[mi])  
+            m.finalize(algo, results, **parameters[mi])  
         
         if clear_mem:
             self.models = None
             
-        super().finalize(algo, clear_mem)
+        super().finalize(algo, results, clear_mem)
