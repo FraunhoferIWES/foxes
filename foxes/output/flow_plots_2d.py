@@ -1,11 +1,11 @@
-import foxes.constants as FC
-import foxes.variables as FV
 import matplotlib.pyplot as plt
 import numpy as np
-from foxes.output.output import Output
-from foxes.tools import wd2wdvec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from foxes.output.output import Output
+from foxes.tools import wd2wdvec, wd2uv
+import foxes.constants as FC
+import foxes.variables as FV
 
 class FlowPlots2D(Output):
     """
@@ -33,7 +33,7 @@ class FlowPlots2D(Output):
 
     def _get_fig(self, var, fig, figsize, ax, data, si, s, N_x, N_y, normalize_var, levels, 
                         x_pos, y_pos, vmin, vmax, cmap, xlabel, ylabel, title, add_bar, vlabel,
-                        ret_state, ret_im):
+                        ret_state, ret_im, quiv=None):
 
             # create plot:
             if fig is None:
@@ -57,6 +57,14 @@ class FlowPlots2D(Output):
             # contour plot:
             else:
                 im = hax.contourf(x_pos, y_pos,zz, levels, vmax=vmax, vmin=vmin, cmap=cmap)
+
+            if quiv is not None and quiv[0] is not None:
+                n, pars, wd, ws = quiv
+                uv = wd2uv(wd[si], ws[si])
+                u = uv[:, 0].reshape([N_x, N_y]).T[::n, ::n]
+                v = uv[:, 1].reshape([N_x, N_y]).T[::n, ::n]
+                hax.quiver(x_pos[::n], y_pos[::n], u, v, **pars)
+                del n, pars, u, v, uv
 
             hax.autoscale_view()
             hax.set_xlabel(xlabel)
@@ -349,6 +357,7 @@ class FlowPlots2D(Output):
             The state index
         im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image
+
         """
 
         # prepare:
@@ -453,6 +462,8 @@ class FlowPlots2D(Output):
             ax=None,
             add_bar=True,
             cmap=None,
+            quiver_n=None,
+            quiver_pars={},
             verbosity=1,
             ret_state=False,
             ret_im=False,
@@ -512,6 +523,10 @@ class FlowPlots2D(Output):
             Add a color bar
         cmap: str, optional
             The colormap
+        quiver_n : int, optional
+            Place a vector at ech `n`th point
+        quiver_pars : dict, optional
+            Parameters for plt.quiver
         verbosity: int, optional
             The verbosity level
         ret_state: bool, optional
@@ -562,13 +577,16 @@ class FlowPlots2D(Output):
             print("Grid pts =",n_pts)
 
         # calculate point results:
+        vars = [var] if quiver_n is None else list(set([FV.WD, FV.WS, var]))
         point_results = self.algo.calc_points(
                             self.fres,
                             points=g_pts,
-                            vars=[var],
+                            vars=vars,
                             **kwargs
                         )
-        data = point_results[var].to_numpy()
+        data  = point_results[var].values
+        quiv = None if quiver_n is None \
+                else (quiver_n, quiver_pars, point_results[FV.WD].values, point_results[FV.WS].values)
         del point_results
 
         # find data min max:
@@ -588,7 +606,7 @@ class FlowPlots2D(Output):
 
             out = self._get_fig(var, fig, figsize, ax, data, si, s, N_x, N_y, normalize_var,
                         levels, x_pos, y_pos, vmin, vmax, cmap, xlabel, ylabel, title, add_bar, 
-                        vlabel, ret_state, ret_im)
+                        vlabel, ret_state, ret_im, quiv)
             
             yield out
 
@@ -613,6 +631,8 @@ class FlowPlots2D(Output):
             ax=None,
             add_bar=True,
             cmap=None,
+            quiver_n=None,
+            quiver_pars={},
             verbosity=1,
             ret_state=False,
             ret_im=False,
@@ -676,6 +696,10 @@ class FlowPlots2D(Output):
             Add a color bar
         cmap: str, optional
             The colormap
+        quiver_n : int, optional
+            Place a vector at ech `n`th point
+        quiver_pars : dict, optional
+            Parameters for plt.quiver
         verbosity: int, optional
             The verbosity level
         ret_state: bool, optional
@@ -740,13 +764,16 @@ class FlowPlots2D(Output):
             print("Grid pts =",n_pts)
 
         # calculate point results:
+        vars = [var] if quiver_n is None else list(set([FV.WD, FV.WS, var]))
         point_results = self.algo.calc_points(
                             self.fres,
                             points=g_pts,
-                            vars=[var],
+                            vars=vars,
                             **kwargs
                         )
-        data = point_results[var].to_numpy()
+        data  = point_results[var].values
+        quiv = None if quiver_n is None \
+                else (quiver_n, quiver_pars, point_results[FV.WD].values, point_results[FV.WS].values)
         del point_results
 
         # find data min max:
@@ -770,6 +797,6 @@ class FlowPlots2D(Output):
             
             out = self._get_fig(var, fig, figsize, ax, data, si, s, N_x, N_z, 
                     normalize_var, levels, x_pos, z_pos, vmin, vmax, cmap, xlabel, zlabel, ttl, 
-                    add_bar, vlabel, ret_state, ret_im)
+                    add_bar, vlabel, ret_state, ret_im, quiv)
             
             yield out
