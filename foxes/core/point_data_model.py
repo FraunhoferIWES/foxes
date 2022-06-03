@@ -71,4 +71,4 @@ class PointDataModel(DataCalcModel):
             The verbosity level
 
         """
-        super().finalize(algo, clear_mem=clear_mem, verbostiy=verbosity)
+        super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

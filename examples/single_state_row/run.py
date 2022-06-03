@@ -68,7 +68,7 @@ if __name__ == "__main__":
         print("\nResults data:\n", farm_results)
         
         o   = foxes.output.FlowPlots2D(algo, farm_results)
-        g   = o.gen_states_fig_horizontal("DELTA_WS", resolution=10,point_models=[foxes.models.point_models.WakeDeltas(["WS"])])
+        g   = o.gen_states_fig_horizontal("WS", resolution=10)
         fig = next(g)
         plt.show()
         plt.close(fig)

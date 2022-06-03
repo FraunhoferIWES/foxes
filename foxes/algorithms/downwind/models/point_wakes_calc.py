@@ -4,9 +4,11 @@ from foxes.core import PointDataModel, PointDataModelList
 
 class PointWakesCalculation(PointDataModel):
 
-    def __init__(self, point_vars):
+    def __init__(self, point_vars, emodels, emodels_cpars):
         super().__init__()
         self.pvars = point_vars
+        self.emodels = emodels
+        self.emodels_cpars = emodels_cpars
 
     def output_point_vars(self, algo):
         if self.pvars is None:
@@ -39,7 +41,6 @@ class PointWakesCalculation(PointDataModel):
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]
         
-        emodels = PointDataModelList(algo.emodels)
-        emodels.calculate(algo, mdata, fdata, pdata, algo.emodels_cpars)
+        self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
