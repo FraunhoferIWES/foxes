@@ -1,10 +1,10 @@
-from abc import ABCMeta, abstractmethod
 import numpy as np
 import xarray as xr
 
+from foxes.core.model import Model
 import foxes.variables as FV
 
-class Algorithm(metaclass=ABCMeta):
+class Algorithm(Model):
     """
     Abstract base class for algorithms.
 
@@ -47,6 +47,7 @@ class Algorithm(metaclass=ABCMeta):
     """
 
     def __init__(self, mbook, farm, chunks, verbosity):
+        super().__init__()
         
         self.name       = type(self).__name__
         self.mbook      = mbook
@@ -116,6 +117,31 @@ class Algorithm(metaclass=ABCMeta):
             xrdata = xrdata.chunk(chunks={c: v for c, v in self.chunks.items() if c in sizes})
         return xrdata
 
+    def initialize(self):
+        """
+        Initializes the algorithm.
+        """
+        super().initialize(self)
+
+    def model_input_data(self, algo):
+        """
+        The algorithm input data, as needed for the
+        calculation.
+
+        This function should specify all data
+        that depend on the loop variable (e.g. state), 
+        or that are intended to be shared between chunks.
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        raise NotImplementedError(f"Algorithm '{self.name}': model_input_data called, illegally")
+
     def get_models_data(self, models):
         """
         Creates xarray from model input data.
@@ -171,3 +197,15 @@ class Algorithm(metaclass=ABCMeta):
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
         
+    def finalize(self, clear_mem=False):
+        """
+        Finalizes the algorithm.
+
+        Parameters
+        ----------
+        clear_mem : bool
+            Flag for deleting algorithm data and
+            resetting initialization flag
+            
+        """
+        super().finalize(self, clear_mem=clear_mem)

@@ -11,11 +11,15 @@ import foxes.constants as FC
 class DataCalcModel(Model):
     """
     Abstract base class for models with
-    a `calculate` function.
+    that run calculation on xarray Dataset
+    data.
 
-    Such models calculate data via xarray's
-    `apply_ufunc` function. Input and output
-    are xarray Dataset objects.
+    The calculations are run via xarray's
+    `apply_ufunc` function, i.e., they run in
+    parallel depending on the dask settings.
+
+    For each individual data chunk the `calculate`
+    function is called.
 
     """
 

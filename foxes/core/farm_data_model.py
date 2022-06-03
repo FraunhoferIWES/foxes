@@ -68,3 +68,21 @@ class FarmDataModel(DataCalcModel):
 
         """
         pass
+
+    def finalize(self, algo, results, clear_mem=False):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+            
+        """
+        super().finalize(algo, clear_mem=clear_mem)
+        
