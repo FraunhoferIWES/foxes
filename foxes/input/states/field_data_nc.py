@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import xarray as xr
 from scipy.interpolate import RegularGridInterpolator
 
@@ -22,7 +23,8 @@ class FieldDataNC(States):
         pre_load=True,
         weight_ncvar=None,
         bounds_error=True,
-        fill_value=None
+        fill_value=None,
+        time_format="%Y-%m-%d_%H:%M:%S"
     ):
         super().__init__()
 
@@ -37,6 +39,7 @@ class FieldDataNC(States):
         self.pre_load     = pre_load
         self.bounds_error = bounds_error
         self.fill_value   = fill_value
+        self.time_format  = time_format
 
         self.var2ncvar = {v: var2ncvar.get(v, v) for v in output_vars \
                                 if v not in fixed_vars}
@@ -106,7 +109,9 @@ class FieldDataNC(States):
                 if not c in ds:
                     raise KeyError(f"States '{self.name}': Missing coordinate '{c}' in data")
 
-            self._inds = ds[self.states_coord].astype(str).values
+            self._inds = ds[self.states_coord].values
+            if self.time_format is not None:
+                self._inds = pd.to_datetime(self._inds, format=self.time_format).to_numpy()
             self._N = len(self._inds)
 
             if self.weight_ncvar is not None:

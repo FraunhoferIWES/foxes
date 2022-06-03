@@ -121,7 +121,7 @@ class Algorithm(Model):
         """
         Initializes the algorithm.
         """
-        super().initialize(self)
+        super().initialize(self, verbosity=self.verbosity)
 
     def model_input_data(self, algo):
         """
@@ -157,6 +157,8 @@ class Algorithm(Model):
             The model input data
 
         """
+        if not isinstance(models, tuple) and not isinstance(models, list):
+            models = [models]
 
         idata = {"coords": {}, "data_vars": {}}
         for m in models:
@@ -208,4 +210,4 @@ class Algorithm(Model):
             resetting initialization flag
             
         """
-        super().finalize(self, clear_mem=clear_mem)
+        super().finalize(self, clear_mem=clear_mem, verbostiy=self.verbosity)

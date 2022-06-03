@@ -76,7 +76,7 @@ class Model(metaclass=ABCMeta):
         """
         return self.__initialized
 
-    def initialize(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
@@ -84,6 +84,8 @@ class Model(metaclass=ABCMeta):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level
 
         """
         self.__initialized = True
@@ -112,7 +114,7 @@ class Model(metaclass=ABCMeta):
         """
         return {"coords": {}, "data_vars": {}}
 
-    def finalize(self, algo, clear_mem=False):
+    def finalize(self, algo, clear_mem=False, verbosity=0):
         """
         Finalizes the model.
 
@@ -123,7 +125,9 @@ class Model(metaclass=ABCMeta):
         clear_mem : bool
             Flag for deleting model data and
             resetting initialization flag
-            
+        verbosity : int
+            The verbosity level
+
         """
         if clear_mem:
             self.__initialized = False

@@ -69,7 +69,7 @@ class FarmDataModel(DataCalcModel):
         """
         pass
 
-    def finalize(self, algo, results, clear_mem=False):
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """
         Finalizes the model.
 
@@ -82,7 +82,8 @@ class FarmDataModel(DataCalcModel):
         clear_mem : bool
             Flag for deleting model data and
             resetting initialization flag
-            
+        verbosity : int
+            The verbosity level
+
         """
-        super().finalize(algo, clear_mem=clear_mem)
-        
+        super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

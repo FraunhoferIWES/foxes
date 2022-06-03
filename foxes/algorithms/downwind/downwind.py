@@ -23,8 +23,9 @@ class Downwind(Algorithm):
         ):
         super().__init__(mbook, farm, chunks, verbosity)
 
-        self.states   = states
-        self.n_states = states.size()
+        self.states      = states
+        self.n_states    = None
+        self.states_data = None
 
         self.rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
@@ -45,8 +46,6 @@ class Downwind(Algorithm):
         
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
-
-        self.models_data = None
 
     def _print_deco(self, func_name, n_points=None):
 
@@ -78,100 +77,18 @@ class Downwind(Algorithm):
             self.print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}")
         self.print(deco)
 
-    def initialize(
-            self,       
-            vars_to_amb=None,  
-            init_parameters={},
-            calc_parameters={},
-            final_parameters={},
-            persist=True
-        ):
+    def initialize(self, **states_init_pars):
         """
         Initializes the algorithm.
         """
-
         if not self.states.initialized:
-            self.states.initialize(self)
-            self.n_states = self.states.size()
-
-        # prepare:
-        self.init_pars_farm  = []
-        self.calc_pars_farm  = []
-        self.final_pars_farm = []
-        t2f                  = fm.farm_models.Turbine2FarmModel
-        self.mlist_farm      = FarmDataModelList(models=[])
-
-        # 0) set XHYD:
-        self.mlist_farm.models.append(t2f(fm.turbine_models.SetXYHD()))
-        self.mlist_farm.models[-1].name = "set_xyhd"
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-
-        # 1) run pre-rotor turbine models via farm controller:
-        self.mlist_farm.models.append(self.farm_controller)
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm[-1]["pre_rotor"] = True
-
-        # 2) calculate yaw from wind direction at rotor centre:
-        self.mlist_farm.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
-        self.mlist_farm.models[-1].name = "calc_yaw"
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-
-        # 3) calculate ambient rotor results:
-        self.mlist_farm.models.append(self.rotor_model)
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm[-1].update({
-            "store_rpoints"  : True, 
-            "store_rweights" : True, 
-            "store_amb_res"  : True
-        })
+            self.print(f"\nInitializing states '{self.states.name}'")
+            self.states.initialize(self, verbosity=self.verbosity, **states_init_pars)
+            self.n_states    = self.states.size()
+            self.states_data = self.get_models_data(self.states)
+            self.print("States data:\n")
+            self.print(self.states_data)
         
-        # 4) calculate turbine order:
-        self.mlist_farm.models.append(self.turbine_order)
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-        
-        # 5) run post-rotor turbine models via farm controller:
-        self.mlist_farm.models.append(self.farm_controller)
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm[-1]["pre_rotor"] = False
-        
-        # 6) copy results to ambient, requires self.farm_vars:
-        self.farm_vars = self.mlist_farm.output_farm_vars(self)
-        self.mlist_farm.models.append(dm.SetAmbFarmResults(vars_to_amb))
-        self.mlist_farm.models[-1].name = "set_amb_results"
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-
-        # 7) calculate wake effects:
-        self.mlist_farm.models.append(dm.FarmWakesCalculation())
-        self.mlist_farm.models[-1].name = "calc_wakes"
-        self.init_pars_farm.append(init_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.calc_pars_farm.append(calc_parameters.get(self.mlist_farm.models[-1].name, {}))
-        self.final_pars_farm.append(final_parameters.get(self.mlist_farm.models[-1].name, {}))
-
-        # update variables:
-        self.farm_vars = [FV.WEIGHT] + self.mlist_farm.output_farm_vars(self) 
-
-        # initialize models:
-        self.mlist_farm.initialize(self, parameters=self.init_pars_farm, verbosity=self.verbosity)
-
-        # get input model data:
-        self.models_data = self.get_models_data([self.states, self.mlist_farm])
-        if persist:
-            self.models_data = self.models_data.persist()
-
         super().initialize()
 
     def calc_farm(
@@ -180,34 +97,107 @@ class Downwind(Algorithm):
             init_parameters={},
             calc_parameters={},
             final_parameters={},
-            persist=True
+            persist=True,
+            **states_init_pars
         ):
 
         if not self.initialized:
-            self.initialize(vars_to_amb, init_parameters, calc_parameters, 
-                                final_parameters, persist)
+            self.initialize(**states_init_pars)
 
         # welcome:
         self._print_deco("calc_farm")
-        self.print("\nInput model data:\n\n", self.models_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars), "\n")  
 
-        # initialize models, if needed:
-        if not self.mlist_farm.initialized:
-            self.mlist_farm.initialize(self, parameters=self.init_pars_farm, 
-                                            verbosity=self.verbosity)
+        # prepare:
+        init_pars  = []
+        calc_pars  = []
+        final_pars = []
+        t2f        = fm.farm_models.Turbine2FarmModel
+        mlist      = FarmDataModelList(models=[])
+
+        # 0) set XHYD:
+        mlist.models.append(t2f(fm.turbine_models.SetXYHD()))
+        mlist.models[-1].name = "set_xyhd"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+
+        # 1) run pre-rotor turbine models via farm controller:
+        mlist.models.append(self.farm_controller)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        calc_pars[-1]["pre_rotor"] = True
+
+        # 2) calculate yaw from wind direction at rotor centre:
+        mlist.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
+        mlist.models[-1].name = "calc_yaw"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+
+        # 3) calculate ambient rotor results:
+        mlist.models.append(self.rotor_model)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        calc_pars[-1].update({
+            "store_rpoints"  : True, 
+            "store_rweights" : True, 
+            "store_amb_res"  : True
+        })
+        
+        # 4) calculate turbine order:
+        mlist.models.append(self.turbine_order)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        
+        # 5) run post-rotor turbine models via farm controller:
+        mlist.models.append(self.farm_controller)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        calc_pars[-1]["pre_rotor"] = False
+        
+        # 6) copy results to ambient, requires self.farm_vars:
+        self.farm_vars = mlist.output_farm_vars(self)
+        mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
+        mlist.models[-1].name = "set_amb_results"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+
+        # 7) calculate wake effects:
+        mlist.models.append(dm.FarmWakesCalculation())
+        mlist.models[-1].name = "calc_wakes"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+
+        # update variables:
+        self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self) 
+
+        # initialize models:
+        mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
+
+        # get input model data:
+        models_data = self.get_models_data(mlist).merge(self.states_data, compat="identical")
+        if persist:
+            models_data = models_data.persist()
+        self.print("\nInput model data:\n\n", models_data, "\n")
+        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))  
+        self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
         self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
-        farm_results = self.mlist_farm.run_calculation(self, self.models_data, out_vars=self.farm_vars, 
+        farm_results = mlist.run_calculation(self, models_data, out_vars=self.farm_vars, 
                                     loop_dims=[FV.STATE], out_core_vars=[FV.TURBINE, FV.VARS],
-                                    parameters=self.calc_pars_farm)
-        del self.models_data
+                                    parameters=calc_pars)
+        del models_data
 
         # finalize models:
         self.print("\n")
-        self.mlist_farm.finalize(self, results=farm_results, parameters=self.final_pars_farm, 
-                                    verbosity=self.verbosity)
+        mlist.finalize(self, results=farm_results, parameters=final_pars, verbosity=self.verbosity)
 
         return farm_results
 
@@ -224,9 +214,6 @@ class Downwind(Algorithm):
             persist_mdata=True,
             persist_pdata=False
         ):
-
-        if not self.initialized:
-            raise Exception(f"Algorithm '{self.name}': calc_points called before initialization")
 
         self._print_deco("calc_points", n_points=points.shape[1])
 
@@ -253,45 +240,45 @@ class Downwind(Algorithm):
                 self.emodels_fpars.append(final_parameters.get(self.emodels[-1].name, {}))
 
         # prepare:
-        init_pars_points  = []
-        calc_pars_points  = []
-        final_pars_points = []
-        mlist_points      = PointDataModelList(models=[])
+        init_pars  = []
+        calc_pars  = []
+        final_pars = []
+        mlist      = PointDataModelList(models=[])
 
         # 0) calculate states results:
-        mlist_points.models.append(self.states)
-        init_pars_points.append(init_parameters.get(mlist_points.models[-1].name, {}))
-        calc_pars_points.append(calc_parameters.get(mlist_points.models[-1].name, {}))
-        final_pars_points.append(final_parameters.get(mlist_points.models[-1].name, {}))
+        mlist.models.append(self.states)
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
         # 1) calculate ambient point results:
-        mlist_points.models += self.emodels
-        init_pars_points    += self.emodels_ipars
-        calc_pars_points    += self.emodels_cpars
-        final_pars_points   += self.emodels_fpars
+        mlist.models += self.emodels
+        init_pars    += self.emodels_ipars
+        calc_pars    += self.emodels_cpars
+        final_pars   += self.emodels_fpars
 
         # 2) transfer ambient results:
-        mlist_points.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
-        mlist_points.models[-1].name = "set_amb_results"
-        init_pars_points.append(init_parameters.get(mlist_points.models[-1].name, {}))
-        calc_pars_points.append(calc_parameters.get(mlist_points.models[-1].name, {}))
-        final_pars_points.append(final_parameters.get(mlist_points.models[-1].name, {}))
+        mlist.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
+        mlist.models[-1].name = "set_amb_results"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
-        mlist_points.models.append(dm.PointWakesCalculation(point_vars=vars))
-        mlist_points.models[-1].name = "calc_wakes"
-        init_pars_points.append(init_parameters.get(mlist_points.models[-1].name, {}))
-        calc_pars_points.append(calc_parameters.get(mlist_points.models[-1].name, {}))
-        final_pars_points.append(final_parameters.get(mlist_points.models[-1].name, {}))
+        mlist.models.append(dm.PointWakesCalculation(point_vars=vars))
+        mlist.models[-1].name = "calc_wakes"
+        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
 
         # initialize models:
-        mlist_points.initialize(self, parameters=init_pars_points, verbosity=self.verbosity)
+        mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
-        self.models_data = self.get_models_data([self.states, mlist_points])
+        models_data = self.get_models_data(mlist).merge(self.states_data, compat="identical")
         if persist_mdata:
-            self.models_data = self.models_data.persist()
-        self.print("\nInput model data:\n\n", self.models_data, "\n")
+            models_data = models_data.persist()
+        self.print("\nInput model data:\n\n", models_data, "\n")
 
         # chunk farm results:
         if self.chunks is not None:
@@ -306,25 +293,39 @@ class Downwind(Algorithm):
         self.print("\nInput point data:\n\n", point_data, "\n")
 
         # check vars:
-        ovars = mlist_points.output_point_vars(self)
+        ovars = mlist.output_point_vars(self)
         if vars is None:
             vars = ovars
         for v in vars:
             if v not in ovars:
                 raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
-        self.print(f"\nOutput point variables:", ", ".join(vars), "\n")  
-        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
+        self.print(f"\nOutput point variables:", ", ".join(vars))  
+        self.print(f"\nChunks: {self.chunks}\n")
 
         # calculate:
-        point_results = mlist_points.run_calculation(self, self.models_data, farm_results, point_data, 
+        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
+        point_results = mlist.run_calculation(self, models_data, farm_results, point_data, 
                                     out_vars=vars, loop_dims=[FV.STATE, FV.POINT], 
-                                    parameters=calc_pars_points)
-        del self.models_data, farm_results, point_data
+                                    parameters=calc_pars)
+        del models_data, farm_results, point_data
 
         # finalize models:
         self.print("\n")
-        mlist_points.finalize(self, point_results, parameters=final_pars_points, 
-                                    verbosity=self.verbosity)
+        mlist.finalize(self, point_results, parameters=final_pars, verbosity=self.verbosity)
 
         return point_results
-        
+
+    def finalize(self, clear_mem=False):
+        """
+        Finalizes the algorithm.
+
+        Parameters
+        ----------
+        clear_mem : bool
+            Flag for deleting algorithm data and
+            resetting initialization flag
+            
+        """
+        if clear_mem:
+            self.states_data = None
+        super().finalize(clear_mem=clear_mem)

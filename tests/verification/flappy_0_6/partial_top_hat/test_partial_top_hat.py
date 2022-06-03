@@ -35,8 +35,7 @@ class Test(unittest.TestCase):
             data_source=sfile,
             output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
             var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-            fixed_vars={FV.RHO: 1.225},
-            verbosity=0
+            fixed_vars={FV.RHO: 1.225}
         )
 
         farm = foxes.WindFarm()

@@ -36,8 +36,7 @@ class Test(unittest.TestCase):
             output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO, FV.MOL],
             var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.MOL: "mol"},
             fixed_vars={FV.RHO: 1.225, FV.Z0: 0.05, FV.H: 100.0},
-            profiles={FV.WS: "ABLLogWsProfile"},
-            verbosity=0
+            profiles={FV.WS: "ABLLogWsProfile"}
         )
 
         farm = foxes.WindFarm()

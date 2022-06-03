@@ -47,8 +47,7 @@ class Test(unittest.TestCase):
                 output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
                 var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
                 fixed_vars={FV.RHO: 1.225, FV.Z0: 0.1, FV.H: 100.},
-                profiles={FV.WS: "ABLLogNeutralWsProfile"},
-                verbosity=self.verbosity
+                profiles={FV.WS: "ABLLogNeutralWsProfile"}
             )
 
             farm = foxes.WindFarm()
