@@ -19,10 +19,11 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=1000)
-    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default="distributed")
+    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=["TOYT"], nargs='+')
     parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=4, type=int)
+    parser.add_argument("-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true")
     parser.add_argument("-k", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
     parser.add_argument("-t", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
@@ -43,7 +44,8 @@ if __name__ == "__main__":
         file_pattern=args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         #var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        fixed_vars={FV.RHO: 1.225}
+        fixed_vars={FV.RHO: 1.225},
+        pre_load=not args.no_pre_load
     )
 
     farm = foxes.WindFarm()

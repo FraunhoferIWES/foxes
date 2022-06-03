@@ -192,7 +192,7 @@ class DataCalcModel(Model):
                     edims.append((c,))
                     evars.append(c)
             
-            dvars.append(list(ds.keys()))
+            dvars.append(list(ds.keys()) + list(ds.coords.keys()))
         
         # setup dask options:
         dargs = dict(output_sizes = {FV.VARS: len(out_vars)})
