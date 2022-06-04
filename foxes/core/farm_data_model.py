@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from foxes.core.data_calc_model import DataCalcModel
+import foxes.variables as FV
 
 class FarmDataModel(DataCalcModel):
     """
@@ -68,6 +69,41 @@ class FarmDataModel(DataCalcModel):
 
         """
         pass
+
+    def run_calculation(
+            self, 
+            algo, 
+            *data, 
+            out_vars,
+            **calc_pars
+        ):
+        """
+        Starts the model calculation in parallel, via
+        xarray's `apply_ufunc`.
+
+        Typically this function is called by algorithms.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        *data : tuple of xarray.Dataset
+            The input data
+        out_vars: list of str
+            The calculation output variables
+        **calc_pars : dict, optional
+            Additional arguments for the `calculate` function
+        
+        Returns
+        -------
+        results : xarray.Dataset
+            The calculation results
+
+        """
+        return super().run_calculation(algo, *data, out_vars=out_vars,
+                                        loop_dims=[FV.STATE], 
+                                        out_core_vars=[FV.TURBINE, FV.VARS],
+                                        **calc_pars)
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """

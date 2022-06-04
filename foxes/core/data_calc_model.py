@@ -131,10 +131,10 @@ class DataCalcModel(Model):
             self, 
             algo, 
             *data, 
-            loop_dims, 
-            out_vars, 
-            out_core_vars=[FV.VARS],
-            **parameters
+            out_vars,
+            loop_dims,  
+            out_core_vars,
+            **calc_pars
         ):
         """
         Starts the model calculation in parallel, via
@@ -148,12 +148,15 @@ class DataCalcModel(Model):
             The calculation algorithm
         *data : tuple of xarray.Dataset
             The input data
+        out_vars: list of str
+            The calculation output variables
         loop_dims : array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
-        out_vars: list of str
-            The calculation output variables
-        **parameters : dict, optional
+        out_core_vars : list of str
+            The core dimensions of the output data, use
+            `FV.VARS` for variables dimension (required)
+        **calc_pars : dict, optional
             Additional arguments for the `calculate` function
         
         Returns
@@ -218,7 +221,7 @@ class DataCalcModel(Model):
             loop_dims=loop_dims,
             out_vars=out_vars,
             out_dims=out_dims,
-            calc_pars=parameters
+            calc_pars=calc_pars
         )
 
         # run parallel computation:

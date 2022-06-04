@@ -193,8 +193,7 @@ class Downwind(Algorithm):
         # run main calculation:
         self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
         farm_results = mlist.run_calculation(self, models_data, out_vars=self.farm_vars, 
-                                    loop_dims=[FV.STATE], out_core_vars=[FV.TURBINE, FV.VARS],
-                                    parameters=calc_pars)
+                                                parameters=calc_pars)
         del models_data
 
         # finalize models:
@@ -308,8 +307,7 @@ class Downwind(Algorithm):
         # calculate:
         self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
         point_results = mlist.run_calculation(self, models_data, farm_results, point_data, 
-                                    out_vars=vars, loop_dims=[FV.STATE, FV.POINT], 
-                                    parameters=calc_pars)
+                                                    out_vars=vars, parameters=calc_pars)
         del models_data, farm_results, point_data
 
         # finalize models:
