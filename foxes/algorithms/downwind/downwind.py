@@ -98,6 +98,7 @@ class Downwind(Algorithm):
             calc_parameters={},
             final_parameters={},
             persist=True,
+            cleam_mem_models=True,
             **states_init_pars
         ):
 
@@ -113,19 +114,20 @@ class Downwind(Algorithm):
         final_pars = []
         t2f        = fm.farm_models.Turbine2FarmModel
         mlist      = FarmDataModelList(models=[])
+        fdict      = {"clear_mem": cleam_mem_models}
 
         # 0) set XHYD:
         mlist.models.append(t2f(fm.turbine_models.SetXYHD()))
         mlist.models[-1].name = "set_xyhd"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 1) run pre-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
         calc_pars[-1]["pre_rotor"] = True
 
         # 2) calculate yaw from wind direction at rotor centre:
@@ -133,13 +135,13 @@ class Downwind(Algorithm):
         mlist.models[-1].name = "calc_yaw"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 3) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
         calc_pars[-1].update({
             "store_rpoints"  : True, 
             "store_rweights" : True, 
@@ -150,13 +152,13 @@ class Downwind(Algorithm):
         mlist.models.append(self.turbine_order)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
         
         # 5) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
         calc_pars[-1]["pre_rotor"] = False
         
         # 6) copy results to ambient, requires self.farm_vars:
@@ -165,14 +167,14 @@ class Downwind(Algorithm):
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 7) calculate wake effects:
         mlist.models.append(dm.FarmWakesCalculation())
         mlist.models[-1].name = "calc_wakes"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # update variables:
         self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self) 

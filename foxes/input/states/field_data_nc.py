@@ -74,7 +74,7 @@ class FieldDataNC(States):
 
         return data
 
-    def initialize(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
@@ -101,6 +101,8 @@ class FieldDataNC(States):
         self._n_dvars = len(self._dkys)
 
         self._weights = None
+        if verbosity:
+            print(f"States '{self.name}': Reading files {self.file_pattern}")
         with xr.open_mfdataset(self.file_pattern, parallel=True, 
                 concat_dim=self.states_coord, combine="nested", 
                 data_vars='minimal', coords='minimal', compat='override') as ds:

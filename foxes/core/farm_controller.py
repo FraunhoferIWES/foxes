@@ -342,7 +342,7 @@ class FarmController(FarmDataModel):
             
         """
         for s in [self.pre_rotor_models, self.post_rotor_models]:
-            if s is not None:
+            if s is not None and s.initialized:
                 pars = self.__get_pars(algo, s.models, "final", st_sel=st_sel, from_data=False)
                 s.finalize(algo, results=results, parameters=pars, verbosity=verbosity, clear_mem=clear_mem)
         
