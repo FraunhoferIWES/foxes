@@ -213,8 +213,13 @@ class Downwind(Algorithm):
             calc_parameters={},
             final_parameters={},
             persist_mdata=True,
-            persist_pdata=False
+            persist_pdata=False,
+            cleam_mem_models=True,
+            **states_init_pars
         ):
+
+        if not self.initialized:
+            self.initialize(**states_init_pars)
 
         self._print_deco("calc_points", n_points=points.shape[1])
 
@@ -238,7 +243,7 @@ class Downwind(Algorithm):
                     raise TypeError(f"Model '{m}' is neither str nor PointDataModel")
                 emodels_ipars.append(init_parameters.get(emodels[-1].name, {}))
                 emodels_cpars.append(calc_parameters.get(emodels[-1].name, {}))
-                emodels_fpars.append(final_parameters.get(emodels[-1].name, {}))
+                emodels_fpars.append(final_parameters.get(emodels[-1].name, fdict))
         emodels = PointDataModelList(models=emodels)
 
         # prepare:
@@ -246,6 +251,7 @@ class Downwind(Algorithm):
         calc_pars  = []
         final_pars = []
         mlist      = PointDataModelList(models=[])
+        fdict      = {"clear_mem": cleam_mem_models}
 
         # 0) calculate states results:
         mlist.models.append(self.states)
@@ -264,14 +270,14 @@ class Downwind(Algorithm):
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 3) calc wake effects:
         mlist.models.append(dm.PointWakesCalculation(vars, emodels, emodels_cpars))
         mlist.models[-1].name = "calc_wakes"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, {}))
+        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
