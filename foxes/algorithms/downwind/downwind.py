@@ -6,6 +6,46 @@ import foxes.models as fm
 import foxes.variables as FV
 
 class Downwind(Algorithm):
+    """
+    The downwind algorithm.
+
+    The turbines are evaluated once, in the order 
+    that is calculated by the provided `TurbineOrder`
+    object.
+
+    Parameters
+    ----------
+    mbook : foxes.ModelBook
+        The model book 
+    farm : foxes.WindFarm
+        The wind farm
+    states : foxes.core.States
+        The ambient states
+    rotor_model : str
+        The rotor model, for all turbines. Will be
+        looked up in the model book
+    turbine_order : str
+        The turbine order model. Will be
+        looked up in the model book
+    wake_models : list of str
+        The wake models, applied to all turbines. 
+        Will be looked up in the model book
+    wake_frame : str
+        The wake frame. Will be looked up in the 
+        model book
+    partial_wakes_model : str
+        The partial wakes model. Will be
+        looked up in the model book
+    farm_controller : str
+        The farm controller. Will be
+        looked up in the model book
+    chunks : dict
+        The chunks choice for running in parallel with dask,
+        e.g. `{"state": 1000}` for chunks of 1000 states
+    verbosity : int
+        The verbosity level, 0 means silent
+
+    """
 
     def __init__(
             self, 
@@ -48,6 +88,9 @@ class Downwind(Algorithm):
         self.farm_controller.name = farm_controller
 
     def _print_deco(self, func_name, n_points=None):
+        """
+        Helper function for printing model names
+        """
 
         deco = "-" * 50
         self.print(f"\n{deco}")
@@ -80,6 +123,12 @@ class Downwind(Algorithm):
     def initialize(self, **states_init_pars):
         """
         Initializes the algorithm.
+
+        Parameters
+        ----------
+        **states_init_pars : dict, optional
+            Parameters for states initialization
+
         """
         if not self.states.initialized:
             self.print(f"\nInitializing states '{self.states.name}'")
@@ -98,9 +147,42 @@ class Downwind(Algorithm):
             calc_parameters={},
             final_parameters={},
             persist=True,
-            cleam_mem_models=True,
+            clear_mem_models=True,
             **states_init_pars
         ):
+        """
+        Calculate farm data.
+
+        Parameters
+        ----------
+        vars_to_amb : list of str, optional
+            Variables for which ambient variables should
+            be stored. None means all.
+        init_parameters : dict
+            Parameters for model initialization.
+            Key: model name str, value: parameter dict
+        calc_parameters : dict
+            Parameters for model calculation.
+            Key: model name str, value: parameter dict
+        final_parameters : dict
+            Parameters for model finalization.
+            Key: model name str, value: parameter dict
+        persist : bool
+            Switch for forcing dask to load all model data
+            into memory
+        clear_mem_models : bool
+            Switch for clearing model memory during model
+            finalization
+        **states_init_pars : dict, optional
+            Parameters for states initialization
+        
+        Returns
+        -------
+        farm_results : xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+        
+        """
 
         if not self.initialized:
             self.initialize(**states_init_pars)
@@ -114,7 +196,7 @@ class Downwind(Algorithm):
         final_pars = []
         t2f        = fm.farm_models.Turbine2FarmModel
         mlist      = FarmDataModelList(models=[])
-        fdict      = {"clear_mem": cleam_mem_models}
+        fdict      = {"clear_mem": clear_mem_models}
 
         # 0) set XHYD:
         mlist.models.append(t2f(fm.turbine_models.SetXYHD()))
@@ -214,9 +296,55 @@ class Downwind(Algorithm):
             final_parameters={},
             persist_mdata=True,
             persist_pdata=False,
-            cleam_mem_models=True,
+            clear_mem_models=True,
             **states_init_pars
         ):
+        """
+        Calculate data at a given set of points.
+
+        Parameters
+        ----------
+        farm_results : xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+        points : numpy.ndarray
+            The points of interest, shape: (n_states, n_points)
+        vars : list of str, optional
+            The variables that should be kept in the output,
+            or `None` for all
+        vars_to_amb : list of str, optional
+            Variables for which ambient variables should
+            be stored. None means all.
+        point_models : str or foxes.core.PointDataModel
+            Additional point models to be executed
+        init_parameters : dict
+            Parameters for model initialization.
+            Key: model name str, value: parameter dict
+        calc_parameters : dict
+            Parameters for model calculation.
+            Key: model name str, value: parameter dict
+        final_parameters : dict
+            Parameters for model finalization.
+            Key: model name str, value: parameter dict
+        persist_mdata : bool
+            Switch for forcing dask to load all model data
+            into memory
+        persist_fdata : bool
+            Switch for forcing dask to load all farm data
+            into memory
+        clear_mem_models : bool
+            Switch for clearing model memory during model
+            finalization
+        **states_init_pars : dict, optional
+            Parameters for states initialization
+        
+        Returns
+        -------
+        point_results : xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+        
+        """
 
         if not self.initialized:
             self.initialize(**states_init_pars)
@@ -251,7 +379,7 @@ class Downwind(Algorithm):
         calc_pars  = []
         final_pars = []
         mlist      = PointDataModelList(models=[])
-        fdict      = {"clear_mem": cleam_mem_models}
+        fdict      = {"clear_mem": clear_mem_models}
 
         # 0) calculate states results:
         mlist.models.append(self.states)
