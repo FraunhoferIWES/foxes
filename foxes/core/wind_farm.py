@@ -1,11 +1,39 @@
 
 class WindFarm:
+    """
+    The wind farm.
+
+    Parameters
+    ----------
+    name : str
+        The wind farm name
+    
+    Attributes
+    ----------
+    name : str
+        The wind farm name
+    turbines : list of foxes.core.Turbine
+        The wind turbines
+    n_turbines
+
+    """
 
     def __init__(self, name="MyFarm"):
         self.name     = name
         self.turbines = []
     
     def add_turbine(self, turbine, verbosity=1):
+        """
+        Add a wind turbine to the list.
+
+        Parameters
+        ----------
+        turbine : foxes.core.Turbine
+            The wind turbine 
+        verbosity : int
+            The output verbosity, 0 = silent
+
+        """
         if turbine.index is None:
             turbine.index = len(self.turbines)
         if turbine.name is None:
@@ -16,6 +44,13 @@ class WindFarm:
     
     @property
     def n_turbines(self):
-        return len(self.turbines)
+        """
+        The number of turbines in the wind farm
 
-        
+        Returns
+        -------
+        n_turbines : int
+            The total number of turbines
+
+        """
+        return len(self.turbines)
