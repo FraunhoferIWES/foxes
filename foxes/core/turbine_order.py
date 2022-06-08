@@ -12,5 +12,19 @@ class TurbineOrder(FarmDataModel):
     """
 
     def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         return [FV.ORDER]
         

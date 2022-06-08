@@ -4,13 +4,43 @@ from foxes.core.model import Model
 from foxes.tools import all_subclasses
 
 class VerticalProfile(Model):
+    """
+    Abstract base class for vertical profiles.
+    """
 
     @abstractmethod
     def input_vars(self):
+        """
+        The input variables needed for the profile
+        calculation.
+
+        Returns
+        -------
+        vars : list of str
+            The variable names
+
+        """
         return []
 
     @abstractmethod
     def calculate(self, data, heights):
+        """
+        Run the profile calculation.
+
+        Parameters
+        ----------
+        data : dict
+            The input data
+        heights : numpy.ndarray
+            The evaluation heights
+        
+        Returns
+        -------
+        results : numpy.ndarray
+            The profile results, same
+            shape as heights
+
+        """
         pass
 
     @classmethod
