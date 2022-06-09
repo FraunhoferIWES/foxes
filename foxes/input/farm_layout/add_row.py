@@ -1,15 +1,38 @@
 from foxes.core import Turbine
 
 def add_row(
-    farm,
-    xy_base,
-    xy_step,
-    n_turbines,
-    indices=None,
-    names=None,
-    verbosity=1,
-    **turbine_parameters
-):
+        farm,
+        xy_base,
+        xy_step,
+        n_turbines,
+        indices=None,
+        names=None,
+        verbosity=1,
+        **turbine_parameters
+    ):
+    """
+    Add a single row of turbines.
+
+    Parameters
+    ----------
+    farm : foxes.WindFarm
+        The wind farm
+    xy_base : numpy.ndarray
+        The base point, shape: (2,)
+    xy_step : numpy.ndarray
+        The step vector, shape: (2,)
+    n_turbines : int
+        The number of turbines
+    indices : list of int, optional
+        The turbine indices
+    names : list of str, optional
+        The turbine names
+    verbosity : int
+        The verbosity level, 0 = silent
+    **turbine_parameters : dict, optional
+        Parameters forwarded to `foxes.core.Turbine`
+
+    """
     for i in range(n_turbines):
         farm.add_turbine(
             Turbine(
@@ -20,3 +43,4 @@ def add_row(
             ),
             verbosity=verbosity
         )
+        

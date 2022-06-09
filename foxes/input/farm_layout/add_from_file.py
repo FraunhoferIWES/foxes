@@ -4,6 +4,23 @@ from foxes.input.farm_layout.add_from_json import add_from_json
 from foxes.input.farm_layout.add_from_csv import add_from_csv
 
 def add_from_file(farm, file_path, *args, **kwargs):
+    """
+    Add turbines from file.
+
+    The method is inferred according to the file suffix.
+
+    Parameters
+    ----------
+    farm : foxes.WindFarm
+        The wind farm
+    file_path : str
+        Path to the file
+    *args : tuple, optional
+        Parameters forwarded to the method
+    **kwargs : dict, optional
+        Parameters forwarded to the method
+
+    """
 
     fpath = Path(file_path)
     if fpath.suffix == ".json":

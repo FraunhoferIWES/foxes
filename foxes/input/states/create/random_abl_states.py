@@ -4,13 +4,38 @@ import numpy as np
 import foxes.variables as FV
 import foxes.constants as FC
 
-def create_abl_states(
+def create_random_abl_states(
         n_states, 
         cols_minmax, 
         var2col={},
         mol_abs_range=(50., 5000.),
         normalize=True
     ):
+    """
+    Create random abl states.
+
+    Parameters
+    ----------
+    n_states : int
+        The number of states
+    cols_minmax : dict
+        For each variable the min and max values,
+        keys: variable name str, values: array_like
+        with length 2
+    var2col : dict, optional
+        Mapping from variables to column names
+    mol_abs_range : tuple
+        Min and max of allowed MOL values, set to 
+        nan if exceeded (i.e., neutral stratification)
+    normalize : bool
+        Normalize weights to 1
+    
+    Returns
+    -------
+    data : pandas.DataFrame
+        The created states data 
+
+    """
 
     data = pd.DataFrame(index=range(n_states))
     data.index.name = FV.STATE
@@ -29,7 +54,7 @@ def create_abl_states(
         
     return data
 
-def write_abl_states(
+def write_random_abl_states(
         file_path, 
         n_states, 
         cols_minmax, 
@@ -40,11 +65,35 @@ def write_abl_states(
         digits='auto',
         **kwargs
     ):
+    """
+    file_path : str
+        Path to the file
+    n_states : int
+        The number of states
+    cols_minmax : dict
+        For each variable the min and max values,
+        keys: variable name str, values: array_like
+        with length 2
+    var2col : dict, optional
+        Mapping from variables to column names
+    mol_abs_range : tuple
+        Min and max of allowed MOL values, set to 
+        nan if exceeded (i.e., neutral stratification)
+    normalize : bool
+        Normalize weights to 1
+    verbosity : int
+        The verbosity level, 0 = silent
+    digits : int or 'auto'
+        The number of digits to be written
+    **kwargs : dict, optional
+        Parameters for `pandas.DataFrame.to_csv`
+
+    """
 
     if verbosity:
         print("Writing file", file_path)
     
-    data = create_abl_states(n_states, cols_minmax, var2col, mol_abs_range, normalize)
+    data = create_random_abl_states(n_states, cols_minmax, var2col, mol_abs_range, normalize)
     
     if digits is not None:
 

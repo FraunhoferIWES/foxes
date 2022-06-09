@@ -7,6 +7,44 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class StatesTable(States):
+    """
+    States from a `pandas.DataFrame` or a pandas readable file.
+
+    Parameters
+    ----------
+    data_source : str or pandas.DataFrame
+        Either path to a file or data
+    output_vars : list of str
+        The output variables
+    var2col : dict, optional
+        Mapping from variable names to data column names
+    fixed_vars : dict, optional
+        Fixed uniform variable values, instead of 
+        reading from data
+    profiles : dict, optional
+        Key: output variable name str, Value: str or dict
+        or `foxes.core.VerticalProfile`
+    pd_read_pars : dict, optional
+        pandas file reading parameters
+    
+    Attributes
+    ----------
+    oars : list of str
+        The output variables
+    var2col : dict, optional
+        Mapping from variable names to data column names
+    fixed_vars : dict, optional
+        Fixed uniform variable values, instead of 
+        reading from data
+    profdicts : dict, optional
+        Key: output variable name str, Value: str or dict
+        or `foxes.core.VerticalProfile`
+    pd_read_pars : dict, optional
+        pandas file reading parameters
+    RDICT : dict
+        Default pandas file reading parameters
+
+    """
 
     RDICT = {'index_col': 0}
 
@@ -29,7 +67,27 @@ class StatesTable(States):
         self.profdicts  = profiles
 
     def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
 
+        This function should specify all data
+        that depend on the loop variable (e.g. state), 
+        or that are intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
 
@@ -64,7 +122,20 @@ class StatesTable(States):
         return idata
 
     def initialize(self, algo, states_sel=None, verbosity=1):
-        super().initialize(algo)
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        states_sel : slice or range or list of int, optional
+            States subset selection
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
 
         if not isinstance(self._data, pd.DataFrame):
             if verbosity:
@@ -96,16 +167,76 @@ class StatesTable(States):
                 p.initialize(algo)
 
     def size(self):
+        """
+        The total number of states.
+
+        Returns
+        -------
+        int:
+            The total number of states
+
+        """
         return self._N
 
     def output_point_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         return self.ovars
 
     def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        weights : numpy.ndarray
+            The weights, shape: (n_states,)
+
+        """
         return self._weights
 
     def calculate(self, algo, mdata, fdata, pdata):
+        """"
+        The main model calculation.
 
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        pdata : foxes.core.Data
+            The point data
+        
+        Returns
+        -------
+        results : dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_points)
+
+        """
         z = pdata[FV.POINTS][:, :, 2]
         
         for i, v in enumerate(self.tvars):

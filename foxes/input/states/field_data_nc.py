@@ -9,6 +9,77 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class FieldDataNC(States):
+    """
+    Heterogeneous ambient states on a regular
+    horizontal grid in NetCDF format.
+
+    Parameters
+    ----------
+    file_pattern : str
+        The file search pattern, should end with
+        suffix '.nc'. One or many files.
+    output_vars : list of str
+        The output variables
+    var2ncvar : dict, optional
+        Mapping from variable names to variable names
+        in the nc file
+    fixed_vars : dict, optional
+        Uniform values for output variables, instead
+        of reading from data
+    states_coord : str
+        The states coordinate name in the data
+    x_coord : str
+        The x coordinate name in the data
+    y_coord : str
+        The y coordinate name in the data
+    h_coord : str
+        The height coordinate name in the data
+    pre_load : bool
+        Flag for loading all data into memory during
+        initialization
+    weight_ncvar : str, optional
+        Name of the weight data variable in the nc file(s)
+    bounds_error : bool
+        Flag for raising errors if bounds are exceeded
+    fill_value : number, optional
+        Fill value in case of exceeding bounds, if no bounds error
+    time_format : str
+        The datetime parsing format string
+    
+    Attributes
+    ----------
+    file_pattern : str
+        The file search pattern, should end with
+        suffix '.nc'. One or many files.
+    ovars : list of str
+        The output variables
+    var2ncvar : dict
+        Mapping from variable names to variable names
+        in the nc file
+    fixed_vars : dict
+        Uniform values for output variables, instead
+        of reading from data
+    states_coord : str
+        The states coordinate name in the data
+    x_coord : str
+        The x coordinate name in the data
+    y_coord : str
+        The y coordinate name in the data
+    h_coord : str
+        The height coordinate name in the data
+    pre_load : bool
+        Flag for loading all data into memory during
+        initialization
+    weight_ncvar : str
+        Name of the weight data variable in the nc file(s)
+    bounds_error : bool
+        Flag for raising errors if bounds are exceeded
+    fill_value : number
+        Fill value in case of exceeding bounds, if no bounds error
+    time_format : str
+        The datetime parsing format string
+
+    """
 
     def __init__(
         self,
@@ -48,6 +119,9 @@ class FieldDataNC(States):
         self._N    = None
     
     def _get_data(self, ds):
+        """
+        Helper function for data extraction
+        """
 
         x      = ds[self.x_coord].values
         y      = ds[self.y_coord].values
@@ -82,6 +156,8 @@ class FieldDataNC(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
 
         """
 
@@ -149,7 +225,27 @@ class FieldDataNC(States):
         super().initialize(algo)
 
     def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
 
+        This function should specify all data
+        that depend on the loop variable (e.g. state), 
+        or that are intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
         idata = super().model_input_data(algo)
         idata["coords"][FV.STATE] = self._inds
 
@@ -224,7 +320,30 @@ class FieldDataNC(States):
         return self._weights
 
     def calculate(self, algo, mdata, fdata, pdata):
+        """"
+        The main model calculation.
 
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        pdata : foxes.core.Data
+            The point data
+        
+        Returns
+        -------
+        results : dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_points)
+
+        """
         # prepare:
         points   = pdata[FV.POINTS]
         n_pts    = pdata.n_points

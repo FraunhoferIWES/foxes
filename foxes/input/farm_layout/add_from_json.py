@@ -5,12 +5,30 @@ from copy import deepcopy
 from foxes.core import Turbine
 
 def add_from_json(
-    farm,
-    file_path,
-    set_farm_name=True,
-    verbosity=1,
-    **turbine_parameters
-):
+        farm,
+        file_path,
+        set_farm_name=True,
+        verbosity=1,
+        **turbine_parameters
+    ):
+    """
+    Add turbimes from a json file.
+
+    Parameters
+    ----------
+    farm : foxes.WindFarm
+        The wind farm
+    file_path : str
+        Path to the file
+    set_farm_name : bool
+        Flag for inferring wind farm name from data
+    verbosity : int
+        The verbosity level, 0 = silent
+    **turbine_parameters : dict, optional
+        Parameters forwarded to `foxes.core.Turbine`
+
+    """
+
 
     if verbosity:
         print("Reading file", file_path)

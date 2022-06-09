@@ -3,15 +3,39 @@ import numpy as np
 from foxes.core import Turbine
 
 def add_grid(
-    farm,
-    xy_base,
-    step_vectors,
-    steps,
-    indices=None,
-    names=None,
-    verbosity=1,
-    **turbine_parameters
-):
+        farm,
+        xy_base,
+        step_vectors,
+        steps,
+        indices=None,
+        names=None,
+        verbosity=1,
+        **turbine_parameters
+    ):
+    """
+    Add a regular grid of turbines.
+
+    Parameters
+    ----------
+    farm : foxes.WindFarm
+        The wind farm
+    xy_base : numpy.ndarray
+        The base point, shape: (2,)
+    step_vectors : numpy.ndarray
+        The two step vectors in x and y,
+        respectively, shape: (2, 2)
+    steps : array_like of int
+        The steps in x, y. Length 2
+    indices : list of int, optional
+        The turbine indices
+    names : list of str, optional
+        The turbine names
+    verbosity : int
+        The verbosity level, 0 = silent
+    **turbine_parameters : dict, optional
+        Parameters forwarded to `foxes.core.Turbine`
+
+    """
 
     inds = list(np.ndindex(*steps))
     n_turbines = len(inds)
