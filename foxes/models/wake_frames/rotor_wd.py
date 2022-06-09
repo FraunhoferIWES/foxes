@@ -5,7 +5,7 @@ from foxes.tools import wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
-class MeanFarmWind(WakeFrame):
+class RotorWD(WakeFrame):
 
     def __init__(self, var_wd=FV.WD):
         super().__init__()
@@ -33,5 +33,3 @@ class MeanFarmWind(WakeFrame):
         coos = np.einsum('spd,sad->spa', delta, nax)
 
         return coos
-
-        

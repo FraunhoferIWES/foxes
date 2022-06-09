@@ -6,17 +6,78 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class CentreRotor(RotorModel):
+    """
+    The centre rotor model.
+
+    Evaluates states at a single point, located
+    at the rotor centre.
+
+    """
 
     def n_rotor_points(self):
+        """
+        The number of rotor points
+
+        Returns
+        -------
+        n_rpoints : int
+            The number of rotor points
+
+        """
         return 1
 
     def design_points(self):
+        """
+        The rotor model design points.
+
+        Design points are formulated in rotor plane
+        (x,y,z)-coordinates in rotor frame, such that
+        - (0,0,0) is the centre point,
+        - (1,0,0) is the point radius * n_rotor_axis
+        - (0,1,0) is the point radius * n_rotor_side
+        - (0,0,1) is the point radius * n_rotor_up
+
+        Returns
+        -------
+        dpoints : numpy.ndarray
+            The design points, shape: (n_points, 3)
+
+        """
         return np.array([[0., 0., 0.]])
     
     def rotor_point_weights(self):
+        """
+        The weights of the rotor points
+
+        Returns
+        -------
+        weights : numpy.ndarray
+            The weights of the rotor points,
+            add to one, shape: (n_rpoints,)
+
+        """
         return np.array([1.])
 
     def get_rotor_points(self, algo, mdata, fdata):
+        """
+        Calculates rotor points from design points.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        points : numpy.ndarray
+            The rotor points, shape: 
+            (n_states, n_turbines, n_rpoints, 3)
+
+        """
         return fdata[FV.TXYH][:, :, None, :]
 
     def eval_rpoint_results(
@@ -29,7 +90,37 @@ class CentreRotor(RotorModel):
             states_turbine=None,
             copy_to_ambient=False
         ):
+        """
+        Evaluate rotor point results.
 
+        This function modifies `fdata`, either
+        for all turbines or one turbine per state,
+        depending on parameter `states_turbine`. In
+        the latter case, the turbine dimension of the
+        `rpoint_results` is expected to have size one.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        rpoint_results : dict
+            The results at rotor points. Keys: variable str. 
+            Values: numpy.ndarray, shape if `states_turbine` 
+            is None: (n_states, n_turbines, n_rpoints).
+            Else: (n_states, 1, n_rpoints)
+        weights : numpy.ndarray
+            The rotor point weights, shape: (n_rpoints,)
+        states_turbine: numpy.ndarray of int, optional
+            The turbine indices, one per state. Shape: (n_states,)
+        copy_to_ambient : bool, optional
+            If `True`, the fdata results are copied to ambient
+            variables after calculation
+
+        """
         if len(weights) > 1:
             return super().eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
                                                 weights, states_turbine)

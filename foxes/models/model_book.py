@@ -58,7 +58,7 @@ class ModelBook:
             self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n)
 
         self.wake_frames = {
-            "mean_wd": fm.wake_frames.MeanFarmWind(var_wd=FV.WD)
+            "rotor_wd": fm.wake_frames.RotorWD(var_wd=FV.WD)
         }
 
         self.wake_superpositions = {

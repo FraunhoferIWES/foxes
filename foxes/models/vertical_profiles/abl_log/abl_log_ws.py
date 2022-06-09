@@ -14,10 +14,36 @@ class ABLLogWsProfile(VerticalProfile):
     """
 
     def input_vars(self):
+        """
+        The input variables needed for the profile
+        calculation.
+
+        Returns
+        -------
+        vars : list of str
+            The variable names
+
+        """
         return [FV.WS, FV.H, FV.Z0, FV.MOL]
 
     def calculate(self, data, heights):
+        """
+        Run the profile calculation.
 
+        Parameters
+        ----------
+        data : dict
+            The input data
+        heights : numpy.ndarray
+            The evaluation heights
+        
+        Returns
+        -------
+        results : numpy.ndarray
+            The profile results, same
+            shape as heights
+
+        """
         ws = np.zeros_like(heights)
         ws[:] = data[FV.WS]
 

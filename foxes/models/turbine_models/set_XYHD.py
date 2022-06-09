@@ -5,6 +5,29 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class SetXYHD(TurbineModel):
+    """
+    Sets basic turbine data, from
+    turbine object to farm data.
+
+    Parameters
+    ----------
+    set_XY : bool
+        Flag for (x,y) data
+    set_H : bool
+        Flag for height data
+    set_D : bool
+        Flag for rotor diameter data
+    
+    Attributes
+    ----------
+    set_XY : bool
+        Flag for (x,y) data
+    set_H : bool
+        Flag for height data
+    set_D : bool
+        Flag for rotor diameter data
+
+    """
 
     def __init__(self, set_XY=True, set_H=True, set_D=True):
         super().__init__()
@@ -14,6 +37,20 @@ class SetXYHD(TurbineModel):
         self.set_D  = set_D
     
     def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         ovars = []
         if self.set_XY:
             ovars.append(FV.X)
@@ -25,7 +62,31 @@ class SetXYHD(TurbineModel):
         return ovars
     
     def calculate(self, algo, mdata, fdata, st_sel):
+        """"
+        The main model calculation.
 
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        st_sel : numpy.ndarray of bool
+            The state-turbine selection,
+            shape: (n_states, n_turbines)
+
+        Returns
+        -------
+        results : dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_turbines)
+
+        """
         n_states   = mdata.n_states
         n_turbines = algo.n_turbines
 

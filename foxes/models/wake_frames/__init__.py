@@ -1,1 +1,1 @@
-from foxes.models.wake_frames.mean_farm_wind import MeanFarmWind
+from foxes.models.wake_frames.rotor_wd import RotorWD

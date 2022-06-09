@@ -97,10 +97,45 @@ class GridRotor(RotorModel):
         super().initialize(algo, verbosity=verbosity)
 
     def n_rotor_points(self):
+        """
+        The number of rotor points
+
+        Returns
+        -------
+        n_rpoints : int
+            The number of rotor points
+
+        """
         return len(self.weights)
 
     def design_points(self):
+        """
+        The rotor model design points.
+
+        Design points are formulated in rotor plane
+        (x,y,z)-coordinates in rotor frame, such that
+        - (0,0,0) is the centre point,
+        - (1,0,0) is the point radius * n_rotor_axis
+        - (0,1,0) is the point radius * n_rotor_side
+        - (0,0,1) is the point radius * n_rotor_up
+
+        Returns
+        -------
+        dpoints : numpy.ndarray
+            The design points, shape: (n_points, 3)
+
+        """
         return self.dpoints
     
     def rotor_point_weights(self):
+        """
+        The weights of the rotor points
+
+        Returns
+        -------
+        weights : numpy.ndarray
+            The weights of the rotor points,
+            add to one, shape: (n_rpoints,)
+
+        """
         return self.weights

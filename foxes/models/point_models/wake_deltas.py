@@ -3,6 +3,25 @@ from foxes.core import PointDataModel
 import foxes.variables as FV
 
 class WakeDeltas(PointDataModel):
+    """
+    This point model simply subtracts ambient results
+    from waked results.
+
+    Parameters
+    ----------
+    vars : list of str
+        The variables
+    normalize : bool
+        Divide resulting deltas by ambient values
+
+    Attributes
+    ----------
+    vars : list of str
+        The variables
+    normalize : bool
+        Divide resulting deltas by ambient values
+
+    """
 
     def __init__(self, vars, normalize=False):
         super().__init__()
