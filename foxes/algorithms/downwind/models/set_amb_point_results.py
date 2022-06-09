@@ -3,6 +3,24 @@ import foxes.variables as FV
 from foxes.core import PointDataModel
 
 class SetAmbPointResults(PointDataModel):
+    """
+    This model copies point results to ambient results.
+
+    Parameters
+    ----------
+    point_vars : list of str
+        The point variables to be treated
+    vars_to_amb : list of str, optional
+        The variables to be copied to output
+    
+    Attributes
+    ----------
+    pvars : list of str
+        The point variables to be treated
+    vars : list of str
+        The variables to be copied to output
+
+    """
 
     def __init__(self, point_vars, vars_to_amb=None):
         super().__init__()

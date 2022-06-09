@@ -5,20 +5,69 @@ import foxes.variables as FV
 from foxes.core import FarmDataModel
 
 class FarmWakesCalculation(FarmDataModel):
+    """
+    This model calculates wakes effects on farm data.
+    """
 
     def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
         ovars  = deepcopy(algo.rotor_model.output_farm_vars(algo))
         ovars += algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def initialize(self, algo):
-        super().initialize(algo)
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity)
         self.pwakes = algo.partial_wakes_model
         if not self.pwakes.initialized:
             self.pwakes.initialize(algo)
 
     def calculate(self, algo, mdata, fdata):
+        """"
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
         
+        Returns
+        -------
+        results : dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_turbines)
+
+        """
         torder   = fdata[FV.ORDER]
         n_order  = torder.shape[1]
         n_states = mdata.n_states
