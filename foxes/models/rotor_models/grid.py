@@ -46,8 +46,18 @@ class GridRotor(RotorModel):
     def __repr__(self):
         return super().__repr__() + f"(n={self.n})"
     
-    def initialize(self, algo):
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
         N     = self.n * self.n
         delta = 2. / self.n 
         x     = [ -1. + ( i + 0.5 ) * delta for i in range(self.n) ]
@@ -84,7 +94,7 @@ class GridRotor(RotorModel):
             self.dpoints[:, 2] = y.reshape(N)
             self.weights       = np.ones(N, dtype=FC.DTYPE) / N
 
-        super().initialize(algo)
+        super().initialize(algo, verbosity=verbosity)
 
     def n_rotor_points(self):
         return len(self.weights)

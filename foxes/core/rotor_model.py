@@ -52,7 +52,7 @@ class RotorModel(FarmDataModel):
         """
         return self.calc_vars + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
     
-    def initialize(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
@@ -60,11 +60,13 @@ class RotorModel(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
 
         """
         if not algo.states.initialized:
-            algo.states.initialize(algo)
-        super().initialize(algo)
+            algo.states.initialize(algo, verbosity=verbosity)
+        super().initialize(algo, verbosity=verbosity)
 
     @abstractmethod
     def n_rotor_points(self):

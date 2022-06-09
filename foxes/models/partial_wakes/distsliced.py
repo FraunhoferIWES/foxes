@@ -8,6 +8,27 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class PartialDistSlicedWake(PartialWakesModel):
+    """
+    Partial wakes for distance sliced wake models,
+    making use of their structure.
+
+    The evaluations are optinally done on a grid rotor
+    that can differ from the algorithm's rotor model.
+
+    Parameters
+    ----------
+    n : int, optional
+        The `GridRotor`'s `n` parameter
+    wake_models : list of foxes.core.WakeModel, optional
+        The wake models, default are the ones from the algorithm
+    wake_frame : foxes.core.WakeFrame, optional
+        The wake frame, default is the one from the algorithm
+    rotor_model : foxes.core.RotorModel, optional
+        The rotor model, default is the one from the algorithm
+    **kwargs : dict, optional
+        Additional parameters for the `GridRotor`
+
+    """
 
     def __init__(self, n=None, wake_models=None, wake_frame=None, rotor_model=None, **kwargs):
         super().__init__(wake_models, wake_frame)
@@ -15,13 +36,24 @@ class PartialDistSlicedWake(PartialWakesModel):
         self.rotor_model = rotor_model
         self.grotor      = None if n is None else GridRotor(n=n, calc_vars=[], **kwargs)
 
-    def initialize(self, algo):
-        super().initialize(algo)
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
 
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
         if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo)
+            self.rotor_model.initialize(algo, verbosity=verbosity)
             
         for w in self.wake_models:
             if not isinstance(w, DistSlicedWakeModel):
@@ -31,13 +63,31 @@ class PartialDistSlicedWake(PartialWakesModel):
             self.grotor = self.rotor_model
         else:
             self.grotor.name = f"{self.name}_grotor"
-            self.grotor.initialize(algo)
+            self.grotor.initialize(algo, verbosity=verbosity)
 
         self.YZ = self.var("YZ")
         self.W  = self.var(FV.WEIGHT)
 
     def new_wake_deltas(self, algo, mdata, fdata):
+        """
+        Creates new initial wake deltas, filled
+        with zeros.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        wake_deltas : dict
+            Keys: Variable name str, values: any
+
+        """
         n_rpoints   = self.grotor.n_rotor_points()
         n_points    = fdata.n_turbines * n_rpoints
         wake_deltas = {}
@@ -48,7 +98,26 @@ class PartialDistSlicedWake(PartialWakesModel):
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, 
                                     states_source_turbine, wake_deltas):
+        """
+        Modifies wake deltas by contributions from the 
+        specified wake source turbines.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray of int
+            For each state, one turbine index corresponding
+            to the wake causing turbine. Shape: (n_states,)
+        wake_deltas : Any
+            The wake deltas object created by the 
+            `new_wake_deltas` function
+
+        """
         # calc coordinates to rotor centres:
         wcoos = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, 
                                                 fdata[FV.TXYH])
@@ -91,8 +160,40 @@ class PartialDistSlicedWake(PartialWakesModel):
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                             wsps, v, wake_deltas[v], d)
                                                             
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
-        
+    def evaluate_results(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            wake_deltas, 
+            states_turbine, 
+            update_amb_res=False
+        ):
+        """
+        Updates the farm data according to the wake 
+        deltas.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+            Modified in-place by this function
+        wake_deltas : Any
+            The wake deltas object, created by the 
+            `new_wake_deltas` function and filled 
+            by `contribute_to_wake_deltas`
+        states_turbine : numpy.ndarray of int
+            For each state, the index of one turbine
+            for which to evaluate the wake deltas.
+            Shape: (n_states,)
+        update_amb_res : bool
+            Flag for updating ambient results
+
+        """
         amb_res   = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
         rpoints   = self.get_data(FV.RPOINTS, mdata)
         rweights  = self.get_data(FV.RWEIGHTS, mdata)
@@ -144,6 +245,20 @@ class PartialDistSlicedWake(PartialWakesModel):
         self.rotor_model.eval_rpoint_results(algo, mdata, fdata, wres, np.array([1.]), 
                                                 states_turbine=states_turbine)
 
-    def finalize(self, algo, clear_mem=False):
-        self.grotor.finalize(algo, clear_mem=clear_mem)
-        super().finalize(algo, clear_mem=clear_mem)
+    def finalize(self, algo, verbosity=0, clear_mem=False):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level
+
+        """
+        self.grotor.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
+        super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

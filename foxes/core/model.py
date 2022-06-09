@@ -126,7 +126,7 @@ class Model(metaclass=ABCMeta):
             Flag for deleting model data and
             resetting initialization flag
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
 
         """
         if clear_mem:

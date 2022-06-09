@@ -33,7 +33,7 @@ class PartialWakesModel(Model):
         self.wake_models = wake_models
         self.wake_frame  = wake_frame
 
-    def initialize(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
@@ -41,6 +41,8 @@ class PartialWakesModel(Model):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level
 
         """
         if self.wake_models is None:
@@ -49,12 +51,12 @@ class PartialWakesModel(Model):
             self.wake_frame = algo.wake_frame
 
         if not self.wake_frame.initialized:
-            self.wake_frame.initialize(algo)
+            self.wake_frame.initialize(algo, verbosity=verbosity)
         for w in self.wake_models:
             if not w.initialized:
-                w.initialize(algo)
+                w.initialize(algo, verbosity=verbosity)
 
-        super().initialize(algo)
+        super().initialize(algo, verbosity=verbosity)
     
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
@@ -128,7 +130,9 @@ class PartialWakesModel(Model):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-
+        update_amb_res : bool
+            Flag for updating ambient results
+            
         """
         pass
 

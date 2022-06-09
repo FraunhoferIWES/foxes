@@ -7,6 +7,35 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class PartialAxiwake(PartialWakesModel):
+    """
+    Partial wake calculation for axial wake models.
+
+    The basic idea is that the x-dependent part of
+    the wake model is evaluated only once, and the radial
+    part then for `n` radii that cover the target rotor discs.
+
+    The latter results are then weighted according to the overlap
+    of radial wake circle area deltas and the target rotor disc area.
+
+    Parameters
+    ----------
+    n : int
+        The number of radial evaluation points
+    wake_models : list of foxes.core.WakeModel, optional
+        The wake models, default are the ones from the algorithm
+    wake_frame : foxes.core.WakeFrame, optional
+        The wake frame, default is the one from the algorithm
+    rotor_model : foxes.core.RotorModel, optional
+        The rotor model, default is the one from the algorithm
+
+    Attributes
+    ----------
+    n : int
+        The number of radial evaluation points
+    rotor_model : foxes.core.RotorModel
+        The rotor model, default is the one from the algorithm
+
+    """
 
     def __init__(self, n, wake_models=None, wake_frame=None, rotor_model=None):
         super().__init__(wake_models, wake_frame)
@@ -14,20 +43,49 @@ class PartialAxiwake(PartialWakesModel):
         self.n = n
         self.rotor_model = rotor_model
 
-    def initialize(self, algo):
-        super().initialize(algo)
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
 
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
         if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo)
+            self.rotor_model.initialize(algo, verbosity=verbosity)
             
         for w in self.wake_models:
             if not isinstance(w, AxisymmetricWakeModel):
                 raise TypeError(f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not an AxisymmetricWakeModel")
 
     def new_wake_deltas(self, algo, mdata, fdata):
+        """
+        Creates new initial wake deltas, filled
+        with zeros.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        wake_deltas : dict
+            Keys: Variable name str, values: any
+
+        """
         n_points    = fdata.n_turbines
         wake_deltas = {}
         for w in self.wake_models:
@@ -37,7 +95,26 @@ class PartialAxiwake(PartialWakesModel):
 
     def contribute_to_wake_deltas(self, algo, mdata, fdata, 
                                     states_source_turbine, wake_deltas):
+        """
+        Modifies wake deltas by contributions from the 
+        specified wake source turbines.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray of int
+            For each state, one turbine index corresponding
+            to the wake causing turbine. Shape: (n_states,)
+        wake_deltas : Any
+            The wake deltas object created by the 
+            `new_wake_deltas` function
+
+        """
         # prepare:
         n_states   = mdata.n_states
         n_turbines = algo.n_turbines
@@ -131,8 +208,40 @@ class PartialAxiwake(PartialWakesModel):
                 wake_deltas[v] = superp.calc_wakes_plus_wake(algo, mdata, fdata, states_source_turbine, 
                                                             sp_sel, v, wake_deltas[v], d)  
 
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False):
-        
+    def evaluate_results(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            wake_deltas, 
+            states_turbine, 
+            update_amb_res=False
+        ):
+        """
+        Updates the farm data according to the wake 
+        deltas.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+            Modified in-place by this function
+        wake_deltas : Any
+            The wake deltas object, created by the 
+            `new_wake_deltas` function and filled 
+            by `contribute_to_wake_deltas`
+        states_turbine : numpy.ndarray of int
+            For each state, the index of one turbine
+            for which to evaluate the wake deltas.
+            Shape: (n_states,)
+        update_amb_res : bool
+            Flag for updating ambient results
+
+        """
         weights = self.get_data(FV.RWEIGHTS, mdata)
         amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
         rpoints = self.get_data(FV.RPOINTS, mdata)

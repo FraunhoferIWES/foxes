@@ -8,13 +8,24 @@ class DistSlicedWakeModel(WakeModel):
         super().__init__()
         self.superp = superpositions
     
-    def initialize(self, algo):
-        super().initialize(algo)
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
 
         self.superp = {v: algo.mbook.wake_superpositions[s] for v, s in self.superp.items()} 
         for v, s in self.superp.items():
             if not s.initialized:
-                s.initialize(algo)
+                s.initialize(algo, verbosity=verbosity)
 
     @abstractmethod
     def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
