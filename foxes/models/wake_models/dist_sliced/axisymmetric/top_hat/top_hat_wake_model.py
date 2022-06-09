@@ -6,18 +6,111 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 class TopHatWakeModel(AxisymmetricWakeModel):
+    """
+    Abstract base class for top-hat wake models.
+    """
 
     @abstractmethod
     def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
+        """
+        Calculate the wake radius, depending on x only (not r).
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        x : numpy.ndarray
+            The x values, shape: (n_states, n_points)
+        r : numpy.ndarray
+            The radial values for each x value, shape:
+            (n_states, n_points, n_r_per_x, 2)
+        ct : numpy.ndarray
+            The ct values of the wake-causing turbines,
+            shape: (n_states, n_points)
+        
+        Returns
+        -------
+        wake_r : numpy.ndarray
+            The wake radii, shape: (n_states, n_points)
+        
+        """
         pass
 
     @abstractmethod
     def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
-                                        n_points, sp_sel, x, wake_r, ct):
+                                        sp_sel, x, wake_r, ct):
+        """
+        Calculate centre line results of wake deltas.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        sp_sel : numpy.ndarray of bool
+            The state-point selection, for which the wake
+            is non-zero, shape: (n_states, n_points)
+        x : numpy.ndarray
+            The x values, shape: (n_sp_sel,)
+        wake_r : numpy.ndarray
+            The wake radii, shape: (n_sp_sel,)
+        ct : numpy.ndarray
+            The ct values of the wake-causing turbines,
+            shape: (n_sp_sel,)
+        
+        Returns
+        -------
+        cl_del : dict
+            The centre line wake deltas. Key: variable name str,
+            varlue: numpy.ndarray, shape: (n_sp_sel,) 
+
+        """
         pass
 
     def calc_wakes_spsel_x_r(self, algo, mdata, fdata, states_source_turbine, x, r):
+        """
+        Calculate wake deltas.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        x : numpy.ndarray
+            The x values, shape: (n_states, n_points)
+        r : numpy.ndarray
+            The radial values for each x value, shape:
+            (n_states, n_points, n_r_per_x, 2)
+        
+        Returns
+        -------
+        wdeltas : dict
+            The wake deltas. Key: variable name str,
+            value: numpy.ndarray, shape: (n_sp_sel, n_r_per_x)
+        sp_sel : numpy.ndarray of bool
+            The state-point selection, for which the wake
+            is non-zero, shape: (n_states, n_points)
+
+        """
         n_states = mdata.n_states
         n_points = x.shape[1]
         st_sel   = (np.arange(n_states), states_source_turbine)
@@ -37,7 +130,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             wake_r = wake_r[sp_sel]
 
             cl_del = self.calc_centreline_wake_deltas(algo, mdata, fdata, states_source_turbine,
-                                                        n_points, sp_sel, x, wake_r, ct)
+                                                        sp_sel, x, wake_r, ct)
             
             nsel = (r >= wake_r[:, None])
             for v, wdel in cl_del.items():
@@ -46,9 +139,3 @@ class TopHatWakeModel(AxisymmetricWakeModel):
                 wdeltas[v][nsel] = 0.
 
         return wdeltas, sp_sel
-
-    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
-        for v, s in self.superp.items():
-            wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v, 
-                                                        amb_results[v], wake_deltas[v])
-        

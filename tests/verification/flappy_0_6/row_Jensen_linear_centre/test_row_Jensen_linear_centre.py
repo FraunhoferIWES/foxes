@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
                     rotor_model="centre",
                     turbine_order="order_wd",
                     wake_models=['Jensen_linear_k007'],
-                    wake_frame="mean_wd",
+                    wake_frame="rotor_wd",
                     partial_wakes_model="rotor_points",
                     chunks=ck,
                     verbosity=0

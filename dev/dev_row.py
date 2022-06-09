@@ -50,7 +50,7 @@ if __name__ == "__main__":
                 rotor_model="grid4",
                 turbine_order="order_wd",
                 wake_models=['Bastankhah_linear'],
-                wake_frame="mean_wd",
+                wake_frame="rotor_wd",
                 partial_wakes_model="rotor_points",
                 chunks=cks
             )

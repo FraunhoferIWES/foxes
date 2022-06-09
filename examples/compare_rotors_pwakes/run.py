@@ -44,7 +44,7 @@ def calc(args, rotor, pwake):
                 rotor_model=rotor,
                 turbine_order="order_wd",
                 wake_models=args.wakes,
-                wake_frame="mean_wd",
+                wake_frame="rotor_wd",
                 partial_wakes_model=pwake,
                 chunks=cks,
                 verbosity=0

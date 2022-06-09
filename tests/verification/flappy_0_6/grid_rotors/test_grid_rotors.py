@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
                         rotor_model=rotor,
                         turbine_order="order_wd",
                         wake_models=wakes,
-                        wake_frame="mean_wd",
+                        wake_frame="rotor_wd",
                         partial_wakes_model=pwake,
                         chunks=ck,
                         verbosity=self.verbosity

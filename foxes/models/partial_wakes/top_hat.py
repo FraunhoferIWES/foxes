@@ -169,7 +169,7 @@ class PartialTopHat(PartialWakesModel):
                     hwr = wr[sel_sp]
 
                     clw = w.calc_centreline_wake_deltas(algo, mdata, fdata, states_source_turbine,
-                                                            n_points, sel_sp, hx, hwr, hct)
+                                                            sel_sp, hx, hwr, hct)
                     del hx, hct
 
                     hR = R[sel_sp]
