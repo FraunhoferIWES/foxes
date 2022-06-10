@@ -26,8 +26,8 @@ class kTI(TurbineModel):
         super().__init__()
 
         self.ti_var = ti_var
-        self.__setattr__(FV.KTI, kTI)
-        self.__setattr__(ti_var, ti_val)
+        setattr(self, FV.KTI, kTI)
+        setattr(self, ti_var, ti_val)
 
     def output_farm_vars(self, algo):
         """
