@@ -8,14 +8,14 @@ def psi(height, mol):
 
     Parameters
     ----------
-    height: float
+    height : float
         The height value
-    mol: float
+    mol : float
         The Monin-Obukhov height
     
     Returns
     -------
-    psi: float
+    psi : float
         The Psi function value
 
     """
@@ -30,20 +30,20 @@ def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
 
     Parameters
     ----------
-    ws_ref: float
+    ws_ref : float
         The reference wind speed
-    h_ref: float
+    h_ref : float
         The reference height
-    z0: float
+    z0 : float
         The roughness length
-    mol: float
+    mol : float
         The Monin-Obukhov height
-    kappa: float
+    kappa : float
         The van-Karman constant
     
     Returns
     -------
-    ustar: float
+    ustar : float
         The friction velocity
 
     """
@@ -55,20 +55,20 @@ def calc_ws(height, z0, ustar, psi, kappa=0.41):
 
     Parameters
     ----------
-    height: float
+    height : float
         The evaluation height
-    z0: float
+    z0 : float
         The roughness length
-    ustar: float
+    ustar : float
         The friction velocity
-    psi: float
+    psi : float
         The Psi function values
-    kappa: float
+    kappa : float
         The van-Karman constant
 
     Returns
     -------
-    ws: float
+    ws : float
         The wind speed
 
     """

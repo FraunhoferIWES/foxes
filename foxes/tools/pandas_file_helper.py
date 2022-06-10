@@ -11,15 +11,15 @@ class PandasFileHelper:
 
     Attributes
     ----------
-    DEFAULT_READING_PARAMETERS: dict
+    DEFAULT_READING_PARAMETERS : dict
         Default parameters for file reading
         for the supported file formats
-    DEFAULT_WRITING_PARAMETERS: dict
+    DEFAULT_WRITING_PARAMETERS : dict
         Default parameters for file writing 
         for the supported file formats
-    DATA_FILE_FORMAT: list:str
+    DATA_FILE_FORMAT : list:str
         The supported file formats for data export
-    DEFAULT_FORMAT_DICT: dict
+    DEFAULT_FORMAT_DICT : dict
         Default column formatting
 
     """
@@ -50,25 +50,25 @@ class PandasFileHelper:
     DATA_FILE_FORMATS = list(DEFAULT_READING_PARAMETERS.keys())
     
     @classmethod
-    def read_file(cls, filename, **kwargs):
+    def read_file(cls, file_path, **kwargs):
         """
         Helper for reading data according to file ending.
 
-        The kwargs are forwarded to the pandas reading method.
-
         Parameters
         ----------
-        filename: str
+        file_path : str
             The path to the file
+        **kwargs : dict, optional
+            Parameters forwarded to the pandas reading method.
         
         Returns
         -------
-        pandas.DataFrame:
+        pandas.DataFrame :
             The data
 
         """
 
-        fname = str(filename)
+        fname = str(file_path)
         L = len(fname)
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
@@ -89,26 +89,26 @@ class PandasFileHelper:
                 if f is not None:
                     pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
                     pars.update(kwargs)
-                    return f(filename, **pars)
+                    return f(file_path, **pars)
 
         raise KeyError(f"Unknown file format '{fname}'. Supported formats: {cls.DATA_FILE_FORMATS}")
 
     @classmethod
-    def write_file(cls, data, filename, format_dict={}, **kwargs):
+    def write_file(cls, data, file_path, format_dict={}, **kwargs):
         """
         Helper for writing data according to file ending.
 
-        The kwargs are forwarded to the pandas writing method.
-
         Parameters
         ----------
-        data: pandas.DataFrame
+        data : pandas.DataFrame
             The data
-        filename: str
+        file_path : str
             The path to the file
-        format_dict: dict
+        format_dict : dict
             Dictionary with format entries for
             columns, e.g. '{:.4f}'
+        **kwargs : dict, optional
+            Parameters forwarded to the pandas writing method.
 
         """
 
@@ -122,12 +122,12 @@ class PandasFileHelper:
             else:
                 out[c] = data[c]
 
-        L = len(filename)
+        L = len(file_path)
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
 
             l = len(fmt)
-            if filename[L-l:] == fmt:
+            if file_path[L-l:] == fmt:
 
                 if fmt[:3] == 'csv':
                     f = out.to_csv
@@ -143,11 +143,8 @@ class PandasFileHelper:
                     pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
                     pars.update(kwargs)
 
-                    f(filename, **pars)
+                    f(file_path, **pars)
 
                     return
 
-        raise KeyError(f"Unknown file format '{filename}'. Supported formats: {cls.DATA_FILE_FORMATS}")
-
-        
-
+        raise KeyError(f"Unknown file format '{file_path}'. Supported formats: {cls.DATA_FILE_FORMATS}")
