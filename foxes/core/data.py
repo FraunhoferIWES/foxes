@@ -1,9 +1,10 @@
 import numpy as np
 
+from foxes.tools import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
-class Data(dict):
+class Data(Dict):
     """
     Container for data and meta data.
     
@@ -12,6 +13,8 @@ class Data(dict):
 
     Parameters
     ----------
+    name : str
+        The data container name
     data : dict
         The initial data to be stored
     dims : dict
@@ -35,6 +38,7 @@ class Data(dict):
     """
 
     def __init__(self, data, dims, loop_dims):
+        super().__init__(name="data")
 
         self.update(data)
         self.dims = dims
