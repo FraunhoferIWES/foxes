@@ -133,3 +133,4 @@ dask-worker-space/
 veri_*
 log.*
 .vscode/
+docs/source/

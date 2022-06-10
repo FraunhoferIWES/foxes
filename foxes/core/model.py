@@ -49,8 +49,8 @@ class Model(metaclass=ABCMeta):
         """
         Creates a model specific variable name.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         v : str
             The variable name
         
