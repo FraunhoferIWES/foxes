@@ -10,7 +10,7 @@ class Output:
     """
     
     @classmethod
-    def write(cls, file_name, data, format_col2var={}, format_dict={}, **kwargs):
+    def write(cls, file_path, data, format_col2var={}, format_dict={}, **kwargs):
         """
         Writes data to file via pandas.
 
@@ -18,14 +18,14 @@ class Output:
 
         Parameters
         ----------
-        file_name: string
-            The name of the output file
-        data: pandas.DataFrame
+        file_path : string
+            The path to the output file
+        data : pandas.DataFrame
             The data
-        format_col2var: dict
+        format_col2var : dict
             Mapping from column names to flappy variables,
             for formatting
-        format_dict: dict
+        format_dict : dict
             Dictionary with format entries for columns, e.g. 
             {FV.P: '{:.4f}'}. Note that the keys are flappy variables
         
@@ -39,7 +39,7 @@ class Output:
             elif v in PandasFileHelper.DEFAULT_FORMAT_DICT:
                 fdict[c] = PandasFileHelper.DEFAULT_FORMAT_DICT[v]
         
-        PandasFileHelper.write_file(data, file_name, fdict, **kwargs)
+        PandasFileHelper.write_file(data, file_path, fdict, **kwargs)
 
     @classmethod 
     def print_models(cls):
