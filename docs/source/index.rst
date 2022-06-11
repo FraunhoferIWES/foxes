@@ -27,14 +27,15 @@ License:
 
 .. _MIT: https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE
 
-API
-===
+Contents:
+    .. toctree::
+        :maxdepth: 2
+    
+        installation
 
-**Module summary**
+    .. toctree::
+        :maxdepth: 2
 
-.. autosummary::
-   :toctree: _autosummary
-   :template: custom-module-template.rst
-   :recursive:
-   
-   foxes
+        api
+
+
