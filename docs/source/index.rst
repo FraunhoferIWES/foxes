@@ -27,6 +27,11 @@ License:
 
 .. _MIT: https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE
 
+API
+===
+
+**Module summary**
+
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
