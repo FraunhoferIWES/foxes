@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: logo/Logo_FOXES_IWES.svg
+.. image:: ../logo/Logo_FOXES_IWES.svg
     :align: center
 
 Welcome to foxes
@@ -31,5 +31,5 @@ License:
    :toctree: _autosummary
    :template: custom-module-template.rst
    :recursive:
-
-    foxes
+   
+   foxes

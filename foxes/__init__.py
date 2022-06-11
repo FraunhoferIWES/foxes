@@ -3,13 +3,13 @@ foxes
 
 Farm Optimization and eXtended yield Evaluation Software
 """
-from foxes.core import WindFarm, Turbine
-from foxes.models import ModelBook
+from .core import WindFarm, Turbine
+from .models import ModelBook
 
-import foxes.algorithms
-import foxes.models
-import foxes.input
-import foxes.output
+from . import algorithms
+from . import models
+from . import input
+from . import output
 
 # 'filled_by_setup.py'
 __version__ = '0.1.0'

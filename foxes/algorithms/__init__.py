@@ -1,1 +1,3 @@
-from foxes.algorithms.downwind.downwind import Downwind
+from .downwind.downwind import Downwind
+
+from . import downwind

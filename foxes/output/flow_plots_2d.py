@@ -178,7 +178,7 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im : bool, optional
             Flag for image return
-        **kwargs : dict, optional
+        kwargs : dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
         
@@ -348,7 +348,7 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im : bool, optional
             Flag for image return
-        **kwargs : dict, optional
+        kwargs : dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
@@ -528,7 +528,7 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im : bool, optional
             Flag for image return
-        **kwargs : dict, optional
+        kwargs : dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
@@ -695,7 +695,7 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im : bool, optional
             Flag for image return
-        **kwargs : dict, optional
+        kwargs : dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 

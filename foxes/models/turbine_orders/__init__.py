@@ -1,1 +1,1 @@
-from foxes.models.turbine_orders.order_wd import OrderWD
+from .order_wd import OrderWD

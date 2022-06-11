@@ -10,8 +10,6 @@ class Model(metaclass=ABCMeta):
     ----------
     name : str
         The model name
-    model_id
-    initialized
 
     """
 

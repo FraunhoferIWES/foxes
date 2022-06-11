@@ -83,9 +83,9 @@ def write_random_abl_states(
         Normalize weights to 1
     verbosity : int
         The verbosity level, 0 = silent
-    digits : int or 'auto'
+    digits : int or auto
         The number of digits to be written
-    **kwargs : dict, optional
+    kwargs : dict, optional
         Parameters for `pandas.DataFrame.to_csv`
 
     """

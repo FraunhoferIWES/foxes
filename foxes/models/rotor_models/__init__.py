@@ -1,2 +1,2 @@
-from foxes.models.rotor_models.centre import CentreRotor
-from foxes.models.rotor_models.grid import GridRotor
+from .centre import CentreRotor
+from .grid import GridRotor

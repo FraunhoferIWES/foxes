@@ -1,3 +1,3 @@
-from foxes.models.vertical_profiles.uniform import UniformProfile
+from .uniform import UniformProfile
 
-import foxes.models.vertical_profiles.abl_log
+from . import abl_log

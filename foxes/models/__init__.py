@@ -1,14 +1,14 @@
-import foxes.models.turbine_types
-import foxes.models.rotor_models
-import foxes.models.turbine_models
-import foxes.models.turbine_orders
-import foxes.models.farm_models
-import foxes.models.partial_wakes
-import foxes.models.wake_frames
-import foxes.models.wake_models
-import foxes.models.wake_superpositions
-import foxes.models.farm_controllers
-import foxes.models.vertical_profiles
-import foxes.models.point_models
+from . import turbine_types
+from . import rotor_models
+from . import turbine_models
+from . import turbine_orders
+from . import farm_models
+from . import partial_wakes
+from . import wake_frames
+from . import wake_models
+from . import wake_superpositions
+from . import farm_controllers
+from . import vertical_profiles
+from . import point_models
 
-from foxes.models.model_book import ModelBook
+from .model_book import ModelBook

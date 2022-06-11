@@ -14,7 +14,6 @@ class WindFarm:
         The wind farm name
     turbines : list of foxes.core.Turbine
         The wind turbines
-    n_turbines
 
     """
 

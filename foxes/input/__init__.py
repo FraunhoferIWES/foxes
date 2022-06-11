@@ -1,2 +1,2 @@
-import foxes.input.farm_layout
-import foxes.input.states
+from . import farm_layout
+from . import states

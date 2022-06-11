@@ -1,1 +1,1 @@
-from foxes.models.turbine_types.PCtFile import PCtFile
+from .PCt_file import PCtFile

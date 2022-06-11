@@ -1,1 +1,1 @@
-from foxes.models.farm_models.turbine2farm import Turbine2FarmModel
+from .turbine2farm import Turbine2FarmModel
