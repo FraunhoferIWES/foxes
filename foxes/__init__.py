@@ -10,5 +10,3 @@ from . import algorithms
 from . import models
 from . import input
 from . import output
-
-from .version import __version__

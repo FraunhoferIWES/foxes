@@ -36,5 +36,3 @@ options and dependencies are::
    cd foxes
    pip install -e .[dev]
    
-
-
