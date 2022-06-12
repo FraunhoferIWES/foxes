@@ -15,7 +15,7 @@ Install foxes (for users)
 
 * Install from gitlab  (includes any recent updates)::
   
-    pip install git+https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
+    pip install git+https://github.com/FraunhoferIWES/foxes.git
         
 
 
@@ -33,7 +33,7 @@ For example, on a Linux system (note that you can replace ``~/venv/foxes`` by an
 options including dependencies required to run the tests into the current active 
 environment in an Anaconda Prommpt are as follows::
 
-   git clone https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake.git
+   git clone https://github.com/FraunhoferIWES/foxes.git
    cd foxes
    pip install -e .[test]
    
