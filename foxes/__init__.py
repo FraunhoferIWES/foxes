@@ -11,6 +11,4 @@ from . import models
 from . import input
 from . import output
 
-# 'filled_by_setup.py'
-__version__ = '0.1.0'
-__release__ = '0.1.0'
+from .version import __version__

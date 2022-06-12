@@ -30,12 +30,11 @@ For example, on a Linux system (note that you can replace ``~/venv/foxes`` by an
     source ~/venv/foxes/bin/activate
 
 (For Windows, see link above). The commands to clone and install foxes with developer
-options including dependencies required to run the tests into the current active 
-environment in an Anaconda Prommpt are as follows::
+options and dependencies are::
 
    git clone https://github.com/FraunhoferIWES/foxes.git
    cd foxes
-   pip install -e .[test]
+   pip install -e .[dev]
    
 
 
