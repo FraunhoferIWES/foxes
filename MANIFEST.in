@@ -1,8 +1,3 @@
-include foxes/data/power_ct_curves/DTU-10MW.csv
-include foxes/data/power_ct_curves/IEA-15MW-240.csv
-include foxes/data/power_ct_curves/NREL-5MW.csv
-include foxes/data/power_ct_curves/IWT-7d5MW.csv
-
-include foxes/data/states/test_abl_states.csv.gz
-
-include foxes/data/farms/test_farm_67.csv
+include foxes/data/power_ct_curves/*.csv
+include foxes/data/states/*.csv.gz
+include foxes/data/farms/*.csv
