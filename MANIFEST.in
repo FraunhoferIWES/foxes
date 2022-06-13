@@ -1,3 +1,4 @@
+include foxes/VERSION
 include foxes/data/power_ct_curves/DTU-10MW.csv
 include foxes/data/power_ct_curves/IEA-15MW-240.csv
 include foxes/data/power_ct_curves/NREL-5MW.csv
