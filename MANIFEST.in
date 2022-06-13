@@ -1,0 +1,3 @@
+include foxes/data/test_farm_67.csv
+include foxes/data/test_abl_states.csv.gz
+include foxes/data/test_turbine.csv
