@@ -10,6 +10,9 @@ STATES   = "states"
 PCTCURVE = "power_ct_curve"
 
 def _get_pkg(context):
+    """
+    Helper for translating context to package
+    """
     if context == FARM:
         return farms
     elif context == STATES:
@@ -20,6 +23,9 @@ def _get_pkg(context):
         raise KeyError(f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}")
 
 def _get_sfx(context):
+    """
+    Helper for translating context to file suffix
+    """
     if context == FARM:
         return ".csv"
     elif context == STATES:
@@ -30,11 +36,41 @@ def _get_sfx(context):
         raise KeyError(f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}")
 
 def static_contents(context):
+    """
+    Get list of static content for the given context
+
+    Parameters
+    ----------
+    context : str
+        The data context: farm, states, power_ct_curve
+    
+    Returns
+    -------
+    contents : list of str
+        The available data names
+
+    """
     s = _get_sfx(context)
     n = len(s)
     return [c[:-n] for c in resources.contents(_get_pkg(context)) if s in c]
 
 def get_static_path(context, data_name):
+    """
+    Get path to static data
+
+    Parameters
+    ----------
+    context : str
+        The data context: farm, states, power_ct_curve
+    data_name : str
+        The data name (without suffix)
+    
+    Returns
+    -------
+    path : pathlib.PosixPath
+        Path to the static file
+
+    """
     pkg = _get_pkg(context)
     sfx = _get_sfx(context)
     try:
@@ -44,9 +80,30 @@ def get_static_path(context, data_name):
         raise FileNotFoundError(f"Data '{data_name}' not found in context '{context}'. Available: {static_contents(context)}")
 
 def read_static_file(context, data_name):
+    """
+    Read a static (non-gz) file
+
+    Parameters
+    ----------
+    context : str
+        The data context: farm, states, power_ct_curve
+    data_name : str
+        The data name (without suffix)
+    
+    Returns
+    -------
+    file: file_object
+        The file
+
+    """
+
     pkg   = _get_pkg(context)
     sfx   = _get_sfx(context)
     fname = data_name + sfx
+
+    if sfx[-3:] == ".gz":
+        raise NotImplementedError(f"Cannot run read_static_file on gz type file '{fname}'. Use get_static_path and read manually instead")
+
     try:
         return resources.open_text(pkg, fname)
     except FileNotFoundError:
@@ -54,7 +111,20 @@ def read_static_file(context, data_name):
         raise FileExistsError(e)
 
 def parse_Pct_file_name(file_name):
+    """
+    Parse file name data
 
+    Parameters
+    ----------
+    file_name : str or pathlib.Path
+        Path to the file
+    
+    Returns
+    -------
+    parsed_data : dict
+        dict with data parsed from file name
+        
+    """
     sname = Path(file_name).stem     
     pars  = {"name": sname.split(".")[0]}
 
@@ -77,9 +147,9 @@ def parse_Pct_file_name(file_name):
                 pars["P_nominal"] = 1.e-3 * float(p[:-1])
 
         elif p[0] == "D":
-            pars["D"] = float(p[1:])
+            pars["D"] = float(p[1:].replace("d", "."))
         elif p[0] == "H":
-            pars["H"] = float(p[1:])
+            pars["H"] = float(p[1:].replace("d", "."))
         else:
             raise ValueError(f"Failed to parse piece '{p}' of '{sname}'")
 
