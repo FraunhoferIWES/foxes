@@ -54,6 +54,8 @@ def add_from_csv(
         index
     turbine_base_name_count_shift : bool, optional
         Start turbine names by 1 instead of 0
+    verbosity : int
+        The verbosity level, 0 = silent
 
     """
 

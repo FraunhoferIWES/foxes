@@ -5,7 +5,7 @@ This example models a single row of turbines in a single ambient state of unifor
 ## Check options
 Check options by
 ```
-pythonn3 run.py -h
+python3 run.py -h
 ```
 
 ## Run command

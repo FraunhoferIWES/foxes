@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from foxes.core import States, VerticalProfile
 from foxes.tools import PandasFileHelper
+from foxes.data import get_static_path, STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -66,6 +68,59 @@ class StatesTable(States):
         self.fixed_vars = fixed_vars
         self.profdicts  = profiles
 
+    def initialize(self, algo, states_sel=None, verbosity=1):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        states_sel : slice or range or list of int, optional
+            States subset selection
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
+
+        if not isinstance(self._data, pd.DataFrame):
+            
+            if not Path(self._data).is_file():
+                if verbosity:
+                    print(f"States '{self.name}': Reading static data '{self._data}' from context '{STATES}'")
+                self._data = get_static_path(STATES, self._data)
+                if verbosity:
+                    print(f"Path: {self._data}")
+            elif verbosity:
+                print(f"States '{self.name}': Reading file {self._data}")
+            rpars      = dict(self.RDICT, **self.rpars)
+            self._data = PandasFileHelper().read_file(self._data, **rpars)
+
+        if states_sel is not None:
+            self._data = self._data.iloc[states_sel]
+        self._N = len(self._data.index)
+
+        self.profiles = {}
+        self.tvars    = set(self.ovars)
+        for v, d in self.profdicts.items():
+            if isinstance(d, str):
+                self.profiles[v] = VerticalProfile.new(d)
+            elif isinstance(d, VerticalProfile):
+                self.profiles[v] = d
+            elif isinstance(d, dict):
+                t = d.pop("type")
+                self.profiles[v] = VerticalProfile.new(t, **d)
+            else:
+                raise TypeError(f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict")
+            self.tvars.update(self.profiles[v].input_vars())
+        self.tvars -= set(self.fixed_vars.keys())
+        self.tvars  = list(self.tvars)
+        
+        for p in self.profiles.values():
+            if not p.initialized:
+                p.initialize(algo)
+
     def model_input_data(self, algo):
         """
         The model input data, as needed for the
@@ -120,51 +175,6 @@ class StatesTable(States):
         del self._data
 
         return idata
-
-    def initialize(self, algo, states_sel=None, verbosity=1):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        states_sel : slice or range or list of int, optional
-            States subset selection
-        verbosity : int
-            The verbosity level
-
-        """
-        super().initialize(algo, verbosity=verbosity)
-
-        if not isinstance(self._data, pd.DataFrame):
-            if verbosity:
-                print(f"States '{self.name}': Reading file {self._data}")
-            rpars      = dict(self.RDICT, **self.rpars)
-            self._data = PandasFileHelper().read_file(self._data, **rpars)
-        if states_sel is not None:
-            self._data = self._data.iloc[states_sel]
-        self._N = len(self._data.index)
-
-        self.profiles = {}
-        self.tvars    = set(self.ovars)
-        for v, d in self.profdicts.items():
-            if isinstance(d, str):
-                self.profiles[v] = VerticalProfile.new(d)
-            elif isinstance(d, VerticalProfile):
-                self.profiles[v] = d
-            elif isinstance(d, dict):
-                t = d.pop("type")
-                self.profiles[v] = VerticalProfile.new(t, **d)
-            else:
-                raise TypeError(f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict")
-            self.tvars.update(self.profiles[v].input_vars())
-        self.tvars -= set(self.fixed_vars.keys())
-        self.tvars  = list(self.tvars)
-        
-        for p in self.profiles.values():
-            if not p.initialized:
-                p.initialize(algo)
 
     def size(self):
         """
