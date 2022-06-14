@@ -114,6 +114,8 @@ def parse_Pct_file_name(file_name):
     """
     Parse file name data
 
+    Expected format: `[name]-[...]MW-D[...]-H[...].csv`
+
     Parameters
     ----------
     file_name : str or pathlib.Path
@@ -123,7 +125,7 @@ def parse_Pct_file_name(file_name):
     -------
     parsed_data : dict
         dict with data parsed from file name
-        
+
     """
     sname = Path(file_name).stem     
     pars  = {"name": sname.split(".")[0]}
