@@ -9,12 +9,14 @@ class TurbineType(TurbineModel):
 
     Parameters
     ----------
-    name : str
+    name : str, optional
         The model name
-    D : float
+    D : float, optional
         The rotor diameter
     H : float, optional
         The hub height
+    P_nominal : float, optional
+        The nominal power in kW
     
     Attributes
     ----------
@@ -22,18 +24,23 @@ class TurbineType(TurbineModel):
         The model name
     D : float
         The rotor diameter
-    H : float, optional
+    H : float
         The hub height    
+    P_nominal : float
+        The nominal power in kW
 
     """
 
     def __init__(
         self,
-        name,
-        D,
-        H=None
+        name=None,
+        D=None,
+        H=None,
+        P_nominal=None
     ):
         super().__init__()
-        self.name = name
-        self.D    = D
-        self.H    = H
+
+        self.name      = name if name is not None else type(self).__name__
+        self.D         = D
+        self.H         = H
+        self.P_nominal = P_nominal

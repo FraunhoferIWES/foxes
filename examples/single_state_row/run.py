@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("n_t", help="The number of turbines", type=int)
+    parser.add_argument("-t", "--turbine_type", help="The turbine type, either csv file or static type name", default="NREL-5MW-D126-H90")
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear'], nargs='+')
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
-    parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02", "TOYT"], nargs='+')
+    parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs='+')
     parser.add_argument("-dy", "--deltay", help="Turbine layout y step", type=float, default=0.)
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args  = parser.parse_args()
@@ -31,9 +32,8 @@ if __name__ == "__main__":
     with dask.config.set(scheduler=None):
 
         mbook = foxes.ModelBook()
-        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                        name="TOYT", filepath="toyTurbine.csv", 
-                                        D=100., H=100.)
+        ttype = foxes.models.turbine_types.PCtFile(args.turbine_type)
+        mbook.turbine_types[ttype.name] = ttype
 
         states = foxes.input.states.SingleStateStates(
             ws=args.ws,
@@ -48,7 +48,7 @@ if __name__ == "__main__":
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=args.n_t,
-            turbine_models=args.tmodels
+            turbine_models=args.tmodels + [ttype.name]
         )
         
         algo = foxes.algorithms.Downwind(

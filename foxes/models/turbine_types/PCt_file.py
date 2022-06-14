@@ -1,7 +1,10 @@
 import numpy as np
+import pandas as pd
+from pathlib import Path
 
 from foxes.core import TurbineType
 from foxes.tools import PandasFileHelper
+from foxes.data import PCTCURVE, parse_Pct_file_name, get_static_path, static_contents
 import foxes.variables as FV
 
 class PCtFile(TurbineType):
@@ -11,8 +14,8 @@ class PCtFile(TurbineType):
 
     Parameters
     ----------
-    filepath : str
-        The file path
+    data_source : str or pandas.DataFrame
+        The file path, static name, or data 
     col_ws : str
         The wind speed column
     col_P : str
@@ -28,8 +31,8 @@ class PCtFile(TurbineType):
 
     Attributes
     ----------
-    fpath : str
-        The file path
+    source : str or pandas.DataFrame
+        The file path, static name, or data
     col_ws : str
         The wind speed column
     col_P : str
@@ -47,7 +50,7 @@ class PCtFile(TurbineType):
 
     def __init__(
         self,
-        filepath,
+        data_source,
         col_ws="ws",
         col_P="P",
         col_ct="ct",
@@ -56,9 +59,15 @@ class PCtFile(TurbineType):
         pd_file_read_pars={},
         **parameters
     ):
-        super().__init__(**parameters)
+        if not isinstance(data_source, pd.DataFrame):
+            pars = parse_Pct_file_name(data_source)
+            pars.update(parameters)
+        else:
+            pars = parameters
 
-        self.fpath  = filepath
+        super().__init__(**pars)
+
+        self.source = data_source
         self.col_ws = col_ws
         self.col_P  = col_P
         self.col_ct = col_ct
@@ -98,7 +107,17 @@ class PCtFile(TurbineType):
             The verbosity level
 
         """
-        data = PandasFileHelper.read_file(self.fpath, **self.rpars)
+        if isinstance(self.source, pd.DataFrame):
+            data = self.source
+        elif isinstance(self.source, Path):
+            data = PandasFileHelper.read_file(self.source, **self.rpars)
+        elif isinstance(self.source, str):
+            try:
+                data = PandasFileHelper.read_file(self.source, **self.rpars)
+            except KeyError:
+                fpath = get_static_path(PCTCURVE, self.source)
+                data  = PandasFileHelper.read_file(fpath, **self.rpars)
+
         data = data.set_index(self.col_ws).sort_index()
         self.data_ws = data.index.to_numpy()
         self.data_P  = data[self.col_P].to_numpy()
