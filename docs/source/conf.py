@@ -17,7 +17,6 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
 from foxes import __version__
-from foxes import __release__
 
 # -- Project information -----------------------------------------------------
 
@@ -28,7 +27,7 @@ author = 'Fraunhofer IWES'
 # The short X.Y version
 version = __version__
 # The full version, including alpha/beta/rc tags
-release = __release__
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
