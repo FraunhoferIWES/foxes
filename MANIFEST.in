@@ -1,3 +1,4 @@
+include foxes/VERSION
 include foxes/data/power_ct_curves/*.csv
 include foxes/data/states/*.csv.gz
 include foxes/data/farms/*.csv
