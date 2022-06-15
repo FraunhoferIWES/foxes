@@ -5,6 +5,7 @@ import dask
 from dask.diagnostics import ProgressBar
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 import foxes
 import foxes.variables as FV
@@ -18,8 +19,8 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
-    parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=1000)
-    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=4000)
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=[], nargs='+')
     parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=4, type=int)

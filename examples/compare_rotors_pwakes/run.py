@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pwakes", help="The partial wakes model(s)", default=["distsliced4", "axiwake5", "rotor_points"], nargs='+')
     parser.add_argument("-tt", "--title", help="The figure title", default=None)
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
-    parser.add_argument("-s", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     args  = parser.parse_args()
     ws    = args.ws
