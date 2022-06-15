@@ -186,62 +186,6 @@ class FarmController(FarmDataModel):
         else:
             raise ValueError(f"Controller '{self.name}': No turbine model found.")
 
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function is automatically called during
-        initialization. It should specify all data
-        that is either state or point dependent, or
-        intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        if self.turbine_model_names is None:
-            self.collect_models(algo)
-
-        idata = super().model_input_data(algo)
-        idata["coords"][FV.TMODELS] = self.turbine_model_names
-        idata["data_vars"][FV.TMODEL_SELS] = (
-            (FV.STATE, FV.TURBINE, FV.TMODELS), self.turbine_model_sels
-        )
-
-        return idata
-
-    def output_farm_vars(self, algo):
-        """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        
-        Returns
-        -------
-        output_vars : list of str
-            The output variable names
-
-        """
-        if self.turbine_model_names is None:
-            self.collect_models(algo)
-        return list(dict.fromkeys(
-                    self.pre_rotor_models.output_farm_vars(algo) \
-                    + self.post_rotor_models.output_farm_vars(algo)
-                ))
-    
     def __get_pars(self, algo, models, ptype, mdata=None, st_sel=None, from_data=True):
         """
         Private helper function for gathering model parameters.
@@ -280,11 +224,73 @@ class FarmController(FarmDataModel):
         if self.turbine_model_names is None:
             self.collect_models(algo)
         
-        super().initialize(algo)
+        super().initialize(algo, verbosity=verbosity)
 
         for s in [self.pre_rotor_models, self.post_rotor_models]:
             pars = self.__get_pars(algo, s.models, "init", st_sel=st_sel, from_data=False)
-            s.initialize(algo, parameters=pars, verbosity=verbosity)
+            if not s.initialized:
+                s.initialize(algo, parameters=pars, verbosity=verbosity)
+
+    def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
+
+        This function is automatically called during
+        initialization. It should specify all data
+        that is either state or point dependent, or
+        intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        if self.turbine_model_names is None:
+            self.collect_models(algo)
+
+        idata = super().model_input_data(algo)
+        idata["coords"][FV.TMODELS] = self.turbine_model_names
+        idata["data_vars"][FV.TMODEL_SELS] = (
+            (FV.STATE, FV.TURBINE, FV.TMODELS), self.turbine_model_sels
+        )
+
+        for s in [self.pre_rotor_models, self.post_rotor_models]:
+            jdata = s.model_input_data(algo)
+            idata["coords"].update(jdata["coords"])
+            idata["data_vars"].update(jdata["data_vars"])
+
+        return idata
+
+    def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        
+        Returns
+        -------
+        output_vars : list of str
+            The output variable names
+
+        """
+        if self.turbine_model_names is None:
+            self.collect_models(algo)
+        return list(dict.fromkeys(
+                    self.pre_rotor_models.output_farm_vars(algo) \
+                    + self.post_rotor_models.output_farm_vars(algo)
+                ))
     
     def calculate(self, algo, mdata, fdata, pre_rotor, st_sel=None):
         """"

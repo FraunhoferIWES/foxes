@@ -4,7 +4,7 @@ from pathlib import Path
 
 from foxes.core import States, VerticalProfile
 from foxes.tools import PandasFileHelper
-from foxes.data import get_static_path, STATES
+from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -89,7 +89,7 @@ class StatesTable(States):
             if not Path(self._data).is_file():
                 if verbosity:
                     print(f"States '{self.name}': Reading static data '{self._data}' from context '{STATES}'")
-                self._data = get_static_path(STATES, self._data)
+                self._data = algo.dbook.get_file_path(STATES, self._data, check_raw=False)
                 if verbosity:
                     print(f"Path: {self._data}")
             elif verbosity:

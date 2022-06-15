@@ -81,6 +81,7 @@ class SetFarmVars(TurbineModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+
         idata = super().model_input_data(algo)
 
         for i, v in enumerate(self.vars):
@@ -92,8 +93,6 @@ class SetFarmVars(TurbineModel):
             data[:] = self._vdata[i]
             
             idata["data_vars"][self.var(v)] = ((FV.STATE, FV.TURBINE), data)
-        
-        del self._vdata
 
         return idata
     

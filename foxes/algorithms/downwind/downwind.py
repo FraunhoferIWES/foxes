@@ -42,6 +42,8 @@ class Downwind(Algorithm):
     chunks : dict
         The chunks choice for running in parallel with dask,
         e.g. `{"state": 1000}` for chunks of 1000 states
+    dbook : foxes.DataBook, optional
+        The data book, or None for default
     verbosity : int
         The verbosity level, 0 means silent
 
@@ -59,9 +61,10 @@ class Downwind(Algorithm):
             partial_wakes_model,
             farm_controller="basic_ctrl",
             chunks={FV.STATE: 'auto', FV.TURBINE: -1},
+            dbook=None,
             verbosity=1
         ):
-        super().__init__(mbook, farm, chunks, verbosity)
+        super().__init__(mbook, farm, chunks, verbosity, dbook)
 
         self.states      = states
         self.n_states    = None

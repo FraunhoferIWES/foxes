@@ -1,4 +1,4 @@
-# foxes example script: _single_state_row_
+# foxes example: _single\_state\_row_
 
 This example models a single row of turbines in a single ambient state of uniform wind conditions.
 

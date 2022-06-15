@@ -4,7 +4,7 @@ from pathlib import Path
 
 from foxes.core import TurbineType
 from foxes.tools import PandasFileHelper
-from foxes.data import PCTCURVE, parse_Pct_file_name, get_static_path, static_contents
+from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 
 class PCtFile(TurbineType):
@@ -109,14 +109,9 @@ class PCtFile(TurbineType):
         """
         if isinstance(self.source, pd.DataFrame):
             data = self.source
-        elif isinstance(self.source, Path):
-            data = PandasFileHelper.read_file(self.source, **self.rpars)
-        elif isinstance(self.source, str):
-            try:
-                data = PandasFileHelper.read_file(self.source, **self.rpars)
-            except KeyError:
-                fpath = get_static_path(PCTCURVE, self.source)
-                data  = PandasFileHelper.read_file(fpath, **self.rpars)
+        else:
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
+            data  = PandasFileHelper.read_file(fpath, **self.rpars)
 
         data = data.set_index(self.col_ws).sort_index()
         self.data_ws = data.index.to_numpy()

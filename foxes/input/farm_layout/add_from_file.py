@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from foxes.data import get_static_path, FARM
+from foxes.data import FARM, data_book
 from foxes.input.farm_layout.add_from_json import add_from_json
 from foxes.input.farm_layout.add_from_csv import add_from_csv
 
-def add_from_file(farm, file_path, *args, verbosity=1, **kwargs):
+def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
     """
     Add turbines from file.
 
@@ -21,17 +21,20 @@ def add_from_file(farm, file_path, *args, verbosity=1, **kwargs):
         Parameters forwarded to the method
     verbosity : int
         The verbosity level, 0 = silent
+    dbook : foxes.DataBook, optional
+        The data book, or None for default
     kwargs : dict, optional
         Parameters forwarded to the method
 
     """
 
     fpath = Path(file_path)
+    dbook = data_book if dbook is None else dbook
 
     if not fpath.is_file():
         if verbosity:
-            print(f"Reading static data '{file_path}' from context '{FARM}'")
-        fpath = get_static_path(FARM, file_path)
+            print(f"Reading static data '{fpath.name}' from context '{FARM}'")
+        fpath = dbook.get_file_path(FARM, fpath.name, check_raw=False)
 
     if fpath.suffix == ".json":
         add_from_json(farm, fpath, *args, **kwargs)

@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument("-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0)
-    parser.add_argument("-t", "--turbine_type", help="The P-ct-curve csv file or static type name", default="NREL-5MW-D126-H90")
+    parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear'], nargs='+')
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     stp = np.array([args.dist_x, args.deltay])
 
     mbook = foxes.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_type)
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.SingleStateStates(

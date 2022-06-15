@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 
 from foxes.core.model import Model
+from foxes.data import data_book
 import foxes.variables as FV
 
 class Algorithm(Model):
@@ -26,8 +27,6 @@ class Algorithm(Model):
     
     Parameters
     ----------
-    name : str
-        The object's name
     mbook : foxes.ModelBook
         The model book 
     farm : foxes.WindFarm
@@ -37,16 +36,13 @@ class Algorithm(Model):
         e.g. `{"state": 1000}` for chunks of 1000 states
     verbosity : int
         The verbosity level, 0 means silent
-    n_states : int
-        The number of states
-    n_turbines : int
-        The number of turbines
-    models_idata : dict
-        The input data for the models, filled by models
+    dbook : foxes.DataBook, optional
+        The data book, or None for default
+
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity):
+    def __init__(self, mbook, farm, chunks, verbosity, dbook=None):
         super().__init__()
         
         self.name       = type(self).__name__
@@ -56,6 +52,7 @@ class Algorithm(Model):
         self.verbosity  = verbosity
         self.n_states   = None
         self.n_turbines = farm.n_turbines
+        self.dbook      = data_book if dbook is None else dbook
     
     def print(self, *args, **kwargs):
         """

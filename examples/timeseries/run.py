@@ -12,9 +12,9 @@ from dask.distributed import Client
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--layout", help="The wind farm layout file or static data name", default="test_farm_67")
-    parser.add_argument("-s", "--states", help="The timeseries input file or static data name", default="timeseries")
-    parser.add_argument("-t", "--turbine_type", help="The P-ct-curve csv file or static type name", default="NREL-5MW-D126-H90")
+    parser.add_argument("-l", "--layout", help="The wind farm layout file (path or static)", default="test_farm_67.csv")
+    parser.add_argument("-s", "--states", help="The timeseries input file (path or static)", default="timeseries.csv.gz")
+    parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     dask.config.set(scheduler=args.scheduler)
 
     mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_type)
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.Timeseries(
