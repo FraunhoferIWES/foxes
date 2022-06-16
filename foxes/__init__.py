@@ -3,7 +3,7 @@ Farm Optimization and eXtended yield Evaluation Software
 """
 from .core import WindFarm, Turbine
 from .models import ModelBook
-from .data import data_book, parse_Pct_file_name
+from .data import parse_Pct_file_name, FARM, STATES, PCTCURVE, StaticData
 
 from . import algorithms
 from . import models

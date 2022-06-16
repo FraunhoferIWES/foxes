@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 from foxes.core.model import Model
-from foxes.data import data_book
+from foxes.data import StaticData
 import foxes.variables as FV
 
 class Algorithm(Model):
@@ -52,7 +52,7 @@ class Algorithm(Model):
         self.verbosity  = verbosity
         self.n_states   = None
         self.n_turbines = farm.n_turbines
-        self.dbook      = data_book if dbook is None else dbook
+        self.dbook      = StaticData() if dbook is None else dbook
     
     def print(self, *args, **kwargs):
         """

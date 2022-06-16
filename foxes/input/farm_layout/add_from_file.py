@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from foxes.data import FARM, data_book
+from foxes.data import FARM, StaticData
 from foxes.input.farm_layout.add_from_json import add_from_json
 from foxes.input.farm_layout.add_from_csv import add_from_csv
 
@@ -29,7 +29,7 @@ def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
     """
 
     fpath = Path(file_path)
-    dbook = data_book if dbook is None else dbook
+    dbook = StaticData() if dbook is None else dbook
 
     if not fpath.is_file():
         if verbosity:
