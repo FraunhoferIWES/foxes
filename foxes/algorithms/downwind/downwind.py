@@ -21,20 +21,20 @@ class Downwind(Algorithm):
         The wind farm
     states : foxes.core.States
         The ambient states
-    rotor_model : str
-        The rotor model, for all turbines. Will be
-        looked up in the model book
-    turbine_order : str
-        The turbine order model. Will be
-        looked up in the model book
     wake_models : list of str
         The wake models, applied to all turbines. 
         Will be looked up in the model book
+    rotor_model : str
+        The rotor model, for all turbines. Will be
+        looked up in the model book
     wake_frame : str
         The wake frame. Will be looked up in the 
         model book
     partial_wakes_model : str
         The partial wakes model. Will be
+        looked up in the model book
+    turbine_order : str
+        The turbine order model. Will be
         looked up in the model book
     farm_controller : str
         The farm controller. Will be
@@ -54,13 +54,13 @@ class Downwind(Algorithm):
             mbook, 
             farm,
             states,
-            rotor_model,
-            turbine_order,
             wake_models,
-            wake_frame,
-            partial_wakes_model,
+            rotor_model="centre",
+            wake_frame="rotor_wd",
+            partial_wakes_model="auto",
+            turbine_order="order_wd",
             farm_controller="basic_ctrl",
-            chunks={FV.STATE: 'auto', FV.TURBINE: -1},
+            chunks=None,
             dbook=None,
             verbosity=1
         ):

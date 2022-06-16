@@ -37,5 +37,10 @@ Contents:
         :maxdepth: 1
 
         api
+    
+    .. toctree::
+        :maxdepth: 2
+
+        notebooks/examples
 
 
