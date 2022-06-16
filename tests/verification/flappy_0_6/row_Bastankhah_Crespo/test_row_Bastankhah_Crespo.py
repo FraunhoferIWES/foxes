@@ -12,7 +12,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 1
+        self.verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -37,6 +37,13 @@ class Test(unittest.TestCase):
         ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
                                         var_ws_ct=FV.REWS, var_ws_P=FV.REWS)
         mbook.turbine_types[ttype.name] = ttype
+
+        mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
+            wname2pwake={
+                'Bastankhah_linear': ("PartialAxiwake", dict(n=6)),
+                'CrespoHernandez_quadratic': ("PartialTopHat", {})
+            }
+        )
 
         states = foxes.input.states.ScanWS(
             ws_list=np.linspace(6., 16., n_s),
@@ -63,7 +70,7 @@ class Test(unittest.TestCase):
                     turbine_order="order_wd",
                     wake_models=['Bastankhah_linear', 'CrespoHernandez_quadratic'],
                     wake_frame="rotor_wd",
-                    partial_wakes_model="auto",
+                    partial_wakes_model="mapped",
                     chunks=ck,
                     verbosity=self.verbosity
                 )
@@ -99,11 +106,11 @@ class Test(unittest.TestCase):
 
         var = FV.WS
         self.print(f"\nCHECKING {var}")
-        sel = chk[var] >= 8e-3
+        sel = chk[var] >= 3e-3
         self.print(df.loc[sel])
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
-        assert((chk[var] < 8e-3 ).all())
+        assert((chk[var] < 3e-3 ).all())
 
         var = FV.TI
         self.print(f"\nCHECKING {var}")

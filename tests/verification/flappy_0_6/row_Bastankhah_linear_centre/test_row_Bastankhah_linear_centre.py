@@ -29,14 +29,14 @@ class Test(unittest.TestCase):
         p0    = np.array([0., 0.])
         stp   = np.array([533., 12.])
         cfile = self.thisdir / "flappy" / "results.csv.gz"
-        tfile = self.thisdir / "toyTurbine.csv"
+        tfile = self.thisdir / "NREL-5MW-D126-H90.csv"
 
         ck = {FV.STATE: c}
 
         mbook = foxes.models.ModelBook()
-        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                        name="TOYT", filepath=tfile, 
-                                        D=120., H=100.)
+        ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
+                                        var_ws_ct=FV.REWS, var_ws_P=FV.REWS)
+        mbook.turbine_types[ttype.name] = ttype
 
         states = foxes.input.states.ScanWS(
             ws_list=np.linspace(6., 16., n_s),
@@ -51,7 +51,7 @@ class Test(unittest.TestCase):
             xy_base=p0, 
             xy_step=stp, 
             n_turbines=n_t,
-            turbine_models=["kTI_amb_02", "TOYT"],
+            turbine_models=["kTI_amb_02", ttype.name],
             verbosity=self.verbosity
         )
         

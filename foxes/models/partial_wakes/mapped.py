@@ -52,7 +52,7 @@ class Mapped(PartialWakesModel):
         if wtype2pwake is None:
             self.wtype2pwake = {
                 TopHatWakeModel      : (PartialTopHat.__name__, {}),
-                AxisymmetricWakeModel: (PartialAxiwake.__name__, {"n": 5}),
+                AxisymmetricWakeModel: (PartialAxiwake.__name__, {"n": 6}),
                 DistSlicedWakeModel  : (PartialDistSlicedWake.__name__, {"n": 9})
             }
         else:

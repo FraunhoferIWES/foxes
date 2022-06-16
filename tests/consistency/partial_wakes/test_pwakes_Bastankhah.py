@@ -22,21 +22,21 @@ class Test(unittest.TestCase):
     def test(self):
             
         c     = 180
-        tfile = self.thisdir / "toyTurbine.csv"
+        tfile = self.thisdir / "NREL-5MW-D126-H90.csv"
         sfile = self.thisdir / "states.csv.gz"
         lfile = self.thisdir / "test_farm.csv"
         cases = [
             ("grid100", "rotor_points", None),
-            ("grid4", "rotor_points", 0.13),
-            ("grid9", "rotor_points", 0.05),
+            ("grid4", "rotor_points", 0.15),
+            ("grid9", "rotor_points", 0.06),
             ("centre", "axiwake5", 0.04),
             ("centre", "axiwake10", 0.038),
-            ("grid9", "distsliced", 0.05),
-            ("centre", "distsliced9", 0.05),
-            ("centre", "distsliced16", 0.03),
+            ("grid9", "distsliced", 0.06),
+            ("centre", "distsliced9", 0.06),
+            ("centre", "distsliced16", 0.04),
             ("centre", "distsliced36", 0.016),
-            ("centre", "grid9", 0.05),
-            ("centre", "grid16", 0.03),
+            ("centre", "grid9", 0.06),
+            ("centre", "grid16", 0.04),
             ("centre", "grid36", 0.016)
         ]
 
@@ -52,8 +52,9 @@ class Test(unittest.TestCase):
             self.print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
 
             mbook = foxes.models.ModelBook()
-            mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                            name="TOYT", filepath=tfile, D=120., H=100.)
+            ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
+                                            var_ws_ct=FV.REWS, var_ws_P=FV.REWS)
+            mbook.turbine_types[ttype.name] = ttype
 
             states = foxes.input.states.StatesTable(
                 data_source=sfile,
@@ -66,7 +67,7 @@ class Test(unittest.TestCase):
             foxes.input.farm_layout.add_from_file(
                 farm,
                 lfile,
-                turbine_models=["TOYT"],
+                turbine_models=[ttype.name],
                 verbosity=self.verbosity
             )
 
