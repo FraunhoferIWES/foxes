@@ -31,13 +31,13 @@ def parse_Pct_file_name(file_name):
 
         if p[-1] == "W":
             if p[-2] == "k":
-                pars["P_nominal"] = float(p[:-2])
+                pars["P_nominal"] = float(p[:-2].replace("d", "."))
             elif p[-2] == "M":
-                pars["P_nominal"] = 1.e3 * float(p[:-2])
+                pars["P_nominal"] = 1.e3 * float(p[:-2].replace("d", "."))
             elif p[-2] == "G":
-                pars["P_nominal"] = 1.e6 * float(p[:-2])  
+                pars["P_nominal"] = 1.e6 * float(p[:-2].replace("d", "."))  
             else:
-                pars["P_nominal"] = 1.e-3 * float(p[:-1])
+                pars["P_nominal"] = 1.e-3 * float(p[:-1].replace("d", "."))
 
         elif p[0] == "D":
             pars["D"] = float(p[1:].replace("d", "."))
