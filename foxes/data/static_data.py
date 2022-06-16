@@ -21,3 +21,4 @@ class StaticData(DataBook):
         self.add_data_package(FARM, farms, ".csv")
         self.add_data_package(STATES, states, [".csv.gz", ".nc"])
         self.add_data_package(PCTCURVE, power_ct_curves, ".csv")
+        
