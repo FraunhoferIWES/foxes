@@ -40,10 +40,10 @@ class FarmWakesCalculation(FarmDataModel):
             The verbosity level
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity=verbosity)
         self.pwakes = algo.partial_wakes_model
         if not self.pwakes.initialized:
-            self.pwakes.initialize(algo)
+            self.pwakes.initialize(algo, verbosity=verbosity)
 
     def calculate(self, algo, mdata, fdata):
         """"

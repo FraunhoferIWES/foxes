@@ -20,25 +20,27 @@ XYH     = "xyh"
 TXYH    = "txyh"
 WEIGHT  = "weight"
 
-WS  = "WS"
-WD  = "WD"
-TI  = "TI"
-RHO = "RHO"
-YAW = "YAW"
-P   = "P"
-CT  = "CT"
+WS   = "WS"
+WD   = "WD"
+TI   = "TI"
+RHO  = "RHO"
+YAW  = "YAW"
+YAWM = "YAWM"
+P    = "P"
+CT   = "CT"
 
 REWS  = "REWS"
 REWS2 = "REWS2"
 REWS3 = "REWS3"
 
-AMB_WS  = "AMB_WS"
-AMB_WD  = "AMB_WD"
-AMB_TI  = "AMB_TI"
-AMB_RHO = "AMB_RHO"
-AMB_YAW = "AMB_YAW"
-AMB_P   = "AMB_P"
-AMB_CT  = "AMB_CT"
+AMB_WS   = "AMB_WS"
+AMB_WD   = "AMB_WD"
+AMB_TI   = "AMB_TI"
+AMB_RHO  = "AMB_RHO"
+AMB_YAW  = "AMB_YAW"
+AMB_YAWM = "AMB_YAWM"
+AMB_P    = "AMB_P"
+AMB_CT   = "AMB_CT"
 
 AMB_REWS  = "AMB_REWS"
 AMB_REWS2 = "AMB_REWS2"
@@ -46,7 +48,7 @@ AMB_REWS3 = "AMB_REWS3"
 
 var2amb = {
     v: f"AMB_{v}" for v in [
-        WS, WD, TI, RHO, YAW, P, CT, 
+        WS, WD, TI, RHO, YAW, YAWM, P, CT, 
         REWS, REWS2, REWS3
     ]
 }

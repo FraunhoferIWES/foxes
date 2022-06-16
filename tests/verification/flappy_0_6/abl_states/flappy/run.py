@@ -20,7 +20,7 @@ if __name__ == "__main__":
     p0    = np.array([0., 0.])
     stp   = np.array([500., 0.])
     ofile = Path(args.ofile)
-    tfile = "../toyTurbine.csv"
+    tfile = "../NREL-5MW-D126-H90.csv"
     sfile = "../states.csv.gz"
     lfile = "../test_farm.csv"
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         col_x="x",
         col_y="y",
         col_h="H",
-        rotor_diameter = 120.,
+        rotor_diameter = 126.,
         rotor_model = "centre",
         wake_models = ["Jensen007_rotor"],
         turbine_models = ['ct_P_curves']

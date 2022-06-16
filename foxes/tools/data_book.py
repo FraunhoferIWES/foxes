@@ -136,6 +136,8 @@ class DataBook:
             path = Path(file_name)
             if path.is_file():
                 return path
+        
+        file_name = str(file_name)
 
         try:
             cdata = self.dbase[context]

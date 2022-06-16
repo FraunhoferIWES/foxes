@@ -22,20 +22,21 @@ if __name__ == "__main__":
     c     = 100
     p0    = np.array([0., 0.])
     stp   = np.array([601., 15.])
+    tfile = "../NREL-5MW-D126-H90.csv"
     ofile = Path(args.ofile)
 
     # init flappy:
     fl.init_flappy(n_cpus=args.n_cpus)
 
     # load model book:
-    mbook = fl.ModelBook(ct_power_curve_file = '../toyTurbine.csv')
+    mbook = fl.ModelBook(ct_power_curve_file=tfile)
 
     # create wind farm:
     farm = fl.WindFarm()
     fl.input.add_turbine_row(
         farm,
-        rotor_diameter = 100.,
-        hub_height = 100.,
+        rotor_diameter = 126.,
+        hub_height = 90.,
         rotor_model = rotor,
         wake_models = ["Bastankhah", "CrespoHernandez"],
         turbine_models = ['ct_P_curves'],

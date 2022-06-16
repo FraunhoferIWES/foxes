@@ -21,7 +21,7 @@ class Test(unittest.TestCase):
             
         c     = 500
         cpath = self.thisdir / "flappy"
-        tfile = self.thisdir / "toyTurbine.csv"
+        tfile = self.thisdir / "NREL-5MW-D126-H90.csv"
         sfile = self.thisdir / "states.csv.gz"
         lfile = self.thisdir / "test_farm.csv"
         cases = [
@@ -38,9 +38,9 @@ class Test(unittest.TestCase):
             self.print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")
 
             mbook = foxes.models.ModelBook()
-            mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                            name="TOYT", filepath=tfile, D=120., H=100.,
+            ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
                                             var_ws_ct=FV.REWS, var_ws_P=FV.REWS)
+            mbook.turbine_types[ttype.name] = ttype
 
             states = foxes.input.states.StatesTable(
                 data_source=sfile,
@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
             foxes.input.farm_layout.add_from_file(
                 farm,
                 lfile,
-                turbine_models=["kTI_amb_02", "TOYT"],
+                turbine_models=["kTI_amb_02", ttype.name],
                 verbosity=self.verbosity
             )
             
@@ -112,20 +112,20 @@ class Test(unittest.TestCase):
             assert((chk[var] < 1e-5).all())
 
             var = FV.WS
-            sel = chk[var] >= 1.55e-3
+            sel = chk[var] >= 1.7e-3
             self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
             self.print(df.loc[sel])
             self.print(fdata.loc[sel])
             self.print(delta.loc[sel])
-            assert((chk[var] < 1.55e-3).all())
+            assert((chk[var] < 1.7e-3).all())
 
             var = FV.P
-            sel = chk[var] >= 1.5
+            sel = chk[var] >= 1.51
             self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
             self.print(df.loc[sel])
             self.print(fdata.loc[sel])
             self.print(delta.loc[sel])
-            assert((chk[var] < 1.5).all())
+            assert((chk[var] < 1.51).all())
         
             self.print()
             

@@ -22,6 +22,15 @@ class PCtFile(TurbineType):
         The power column
     col_ct : str
         The ct column
+    rho: float, optional
+        The air densitiy for which the data is valid
+        or None for no correction
+    flag_yawm: bool
+        Flag for yaw misalignment consideration
+    p_ct: float
+        The exponent for yaw dependency of ct
+    p_P: float
+        The exponent for yaw dependency of P
     var_ws_ct : str
         The wind speed variable for ct lookup
     var_ws_P : str
@@ -39,6 +48,11 @@ class PCtFile(TurbineType):
         The power column
     col_ct : str
         The ct column
+    rho: float
+        The air densitiy for which the data is valid
+        or None for no correction
+    flag_yawm: bool
+        Flag for yaw misalignment consideration
     WSCT : str
         The wind speed variable for ct lookup
     WSP : str
@@ -54,6 +68,10 @@ class PCtFile(TurbineType):
         col_ws="ws",
         col_P="P",
         col_ct="ct",
+        rho=None,
+        flag_yawm=False,
+        p_ct=1.,
+        p_P=1.88,
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
         pd_file_read_pars={},
@@ -67,13 +85,17 @@ class PCtFile(TurbineType):
 
         super().__init__(**pars)
 
-        self.source = data_source
-        self.col_ws = col_ws
-        self.col_P  = col_P
-        self.col_ct = col_ct
-        self.WSCT   = var_ws_ct
-        self.WSP    = var_ws_P
-        self.rpars  = pd_file_read_pars
+        self.source    = data_source
+        self.col_ws    = col_ws
+        self.col_P     = col_P
+        self.col_ct    = col_ct
+        self.rho       = rho
+        self.flag_yawm = flag_yawm
+        self.p_ct      = p_ct
+        self.p_P       = p_P
+        self.WSCT      = var_ws_ct
+        self.WSP       = var_ws_P
+        self.rpars     = pd_file_read_pars
 
     def output_farm_vars(self, algo):
         """
@@ -146,7 +168,30 @@ class PCtFile(TurbineType):
 
         """  
         rews2 = fdata[self.WSCT][st_sel]
-        rews3 = fdata[self.WSP][st_sel] if self.WSP != self.WSCT else rews2
+        rews3 = fdata[self.WSP][st_sel]
+
+        # apply air density correction:
+        if self.rho is not None:
+            
+            # correct wind speed by air density, such
+            # that in the partial load region the
+            # correct value is reconstructed:
+            rho    = fdata[FV.RHO][st_sel]
+            rews2 *= ( self.rho / rho )**0.5
+            rews3 *= ( self.rho / rho )**(1./3.) 
+            del rho
+
+        # in yawed case, calc yaw corrected wind speed:
+        if self.flag_yawm:
+
+            # calculate corrected wind speed wsc,
+            # gives ws**3 * cos**p_P in partial load region
+            # and smoothly deals with full load region:
+            yawm   = fdata[FV.YAWM][st_sel]
+            cosm   = np.cos(yawm / 180 * np.pi)
+            rews2 *= ( cosm**self.p_ct )**0.5
+            rews3 *= ( cosm**self.p_P )**(1./3.) 
+            del yawm, cosm
 
         out = {
             FV.P : fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),

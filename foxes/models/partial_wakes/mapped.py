@@ -99,8 +99,12 @@ class Mapped(PartialWakesModel):
         
         self._pwakes = []
         for pname, pars in pws.items():
+            if verbosity:
+                print(f"Partial wakes '{self.name}': Applying {pname} to {[w.name for w in pars['wake_models']]}")
             self._pwakes.append(PartialWakesModel.new(pname, **pars))
-            self._pwakes[-1].initialize(algo, verbosity=verbosity)
+
+        for pwake in self._pwakes:
+            pwake.initialize(algo, verbosity=verbosity)
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """

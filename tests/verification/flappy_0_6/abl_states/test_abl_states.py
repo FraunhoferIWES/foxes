@@ -21,15 +21,17 @@ class Test(unittest.TestCase):
             
         c     = 2000
         cfile = self.thisdir / "flappy" / "results.csv.gz"
-        tfile = self.thisdir / "toyTurbine.csv"
+        tfile = self.thisdir / "NREL-5MW-D126-H90.csv"
         sfile = self.thisdir / "states.csv.gz"
         lfile = self.thisdir / "test_farm.csv"
 
         ck = {FV.STATE: c}
 
         mbook = foxes.models.ModelBook()
-        mbook.turbine_types["TOYT"] = foxes.models.turbine_types.PCtFile(
-                                        name="TOYT", filepath=tfile, D=120.)
+        ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
+                                        var_ws_ct=FV.REWS, var_ws_P=FV.REWS)
+        mbook.turbine_types[ttype.name] = ttype
+
 
         states = foxes.input.states.StatesTable(
             data_source=sfile,
@@ -46,7 +48,7 @@ class Test(unittest.TestCase):
             col_x="x",
             col_y="y",
             col_H="H",
-            turbine_models=["TOYT"],
+            turbine_models=[ttype.name],
             verbosity=0
         )
         

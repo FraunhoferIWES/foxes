@@ -100,7 +100,7 @@ class FarmDataModelList(FarmDataModel):
             if not m.initialized:
                 if verbosity > 0:
                     print(f"{self.name}, sub-model '{m.name}': Initializing")
-                m.initialize(algo, **parameters[mi])
+                m.initialize(algo, verbosity=verbosity, **parameters[mi])
 
         super().initialize(algo)
 
