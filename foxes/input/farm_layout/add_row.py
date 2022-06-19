@@ -1,3 +1,5 @@
+import numpy as np
+
 from foxes.core import Turbine
 
 def add_row(
@@ -33,10 +35,13 @@ def add_row(
         Parameters forwarded to `foxes.core.Turbine`
 
     """
+    p0    = np.array(xy_base)
+    delta = np.array(xy_step)
+
     for i in range(n_turbines):
         farm.add_turbine(
             Turbine(
-                xy    = xy_base + i * xy_step,
+                xy    = p0 + i * delta,
                 index = None if indices is None else indices[i],
                 name  = None if names is None else names[i],
                 **turbine_parameters

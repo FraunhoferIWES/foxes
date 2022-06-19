@@ -80,7 +80,7 @@ language = 'en'
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     # ipynb checkpoints
-    #'notebooks/.ipynb_checkpoints/*.ipynb',
+    'notebooks/.ipynb_checkpoints/*.ipynb',
     'build/*'
 ]
 
@@ -135,10 +135,10 @@ nbsphinx_prolog = r"""
 # """
 
 # Input prompt for code cells. "%s" is replaced by the execution count.
-#nbsphinx_input_prompt = 'In [%s]:'
+nbsphinx_input_prompt = 'In [%s]:'
 
 # Output prompt for code cells. "%s" is replaced by the execution count.
-#nbsphinx_output_prompt = 'Out[%s]:'
+nbsphinx_output_prompt = 'Out[%s]:'
 
 # Specify conversion functions for custom notebook formats:
 #import jupytext
@@ -152,7 +152,7 @@ nbsphinx_prolog = r"""
 # Options for loading require.js
 #nbsphinx_requirejs_options = {'async': 'async'}
 
-mathjax_config = {
+mathjax3_config = {
     'TeX': {'equationNumbers': {'autoNumber': 'AMS', 'useLabelIds': True}},
 }
 
