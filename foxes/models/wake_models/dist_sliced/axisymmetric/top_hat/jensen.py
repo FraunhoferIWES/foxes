@@ -38,6 +38,11 @@ class JensenWake(TopHatWakeModel):
         self.k      = k
         self.ct_max = ct_max
 
+    def __repr__(self):
+        s = super().__repr__()
+        s += f"(k={self.k}, sp={self.superp[FV.WS]})"
+        return s
+
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.

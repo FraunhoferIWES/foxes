@@ -29,6 +29,9 @@ class kTI(TurbineModel):
         setattr(self, FV.KTI, kTI)
         setattr(self, ti_var, ti_val)
 
+    def __repr__(self):
+        return super().__repr__() + f"(kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

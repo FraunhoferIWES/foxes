@@ -43,6 +43,9 @@ class PartialAxiwake(PartialWakesModel):
         self.n = n
         self.rotor_model = rotor_model
 
+    def __repr__(self):
+        return super().__repr__() + f"(n={self.n})"
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.

@@ -34,13 +34,13 @@ Contents:
         installation
 
     .. toctree::
-        :maxdepth: 1
-
-        api
-    
-    .. toctree::
         :maxdepth: 2
 
         notebooks/examples
+        
+    .. toctree::
+        :maxdepth: 1
+
+        api
 
 

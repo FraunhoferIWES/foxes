@@ -98,6 +98,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.sbeta_factor = sbeta_factor
         self.near_wake_D  = near_wake_D
 
+    def __repr__(self):
+        s = super().__repr__()
+        s += f"(k={self.k}, sp={self.superp[FV.TI]})"
+        return s
+
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.

@@ -141,3 +141,31 @@ class ModelBook:
         for s in self.sources.values():
             for k, m in s.items():
                 m.name = k
+
+    def __getitem__(self, key):
+        return self.sources.__getitem__(key)
+    
+    def print_toc(self, subset=None, search=None):
+        """
+        Print the contents.
+
+        Parameters
+        ----------
+        subset : list of str, optional
+            Selection of model types
+        search :  str, optional
+            String that has to be part of the model name
+
+        """
+        for k in sorted(list(self.sources.keys())):
+            ms = self.sources[k]
+            if subset is None or k in subset:
+                print(k)
+                print("-" * len(k))
+                if len(ms):
+                    for mname in sorted(list(ms.keys())):
+                        if search is None or search in mname:
+                            print(f"{mname}: {ms[mname]}")
+                else:
+                    print("(none)")
+                print()

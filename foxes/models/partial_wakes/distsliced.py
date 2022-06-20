@@ -27,6 +27,13 @@ class PartialDistSlicedWake(PartialWakesModel):
         The rotor model, default is the one from the algorithm
     **kwargs : dict, optional
         Additional parameters for the `GridRotor`
+    
+    Attributes
+    ----------
+    rotor_model : foxes.core.RotorModel
+        The rotor model, default is the one from the algorithm
+    grotor : foxes.models.rotor_models.GridRotor
+        The grid rotor model
 
     """
 
@@ -35,6 +42,14 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         self.rotor_model = rotor_model
         self.grotor      = None if n is None else GridRotor(n=n, calc_vars=[], **kwargs)
+
+    def __repr__(self):
+        if self.grotor is not None:
+            return super().__repr__() + f"(n={self.grotor.n})"
+        elif self.rotor_model is not None and isinstance(self.rotor_model, GridRotor):
+            return super().__repr__() + f"(n={self.rotor_model.n})"
+        else:
+            return super().__repr__()
 
     def initialize(self, algo, verbosity=0):
         """
