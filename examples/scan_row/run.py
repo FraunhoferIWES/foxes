@@ -8,27 +8,9 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("n_s", help="The number of states", type=int)
-    parser.add_argument("n_t", help="The number of turbines", type=int)
-    parser.add_argument("--n_p", help="The number of turbines", type=int, default=2000)
-    parser.add_argument("--ws0", help="The lowest wind speed", type=float, default=3.)
-    parser.add_argument("--ws1", help="The highest wind speed", type=float, default=30.)
-    parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
-    parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument("-w", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
-    parser.add_argument("-tw", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
-    parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
-    parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
-    parser.add_argument("-cl", "--calc_cline", help="Calculate centreline", action="store_true")
-    parser.add_argument("-cm", "--calc_mean", help="Calculate states mean", action="store_true")
-    args  = parser.parse_args()
+def run_foxes(args):
 
     n_s = args.n_s
     n_t = args.n_t
@@ -37,11 +19,6 @@ if __name__ == "__main__":
     stp = np.array([500., 0.])
     
     cks = None if args.nodask else {FV.STATE: args.chunksize}
-    if args.scheduler == 'distributed':
-        client = Client(n_workers=args.n_workers, threads_per_worker=args.threads_per_worker)
-        print(f"\n{client}")
-        print(f"Dashboard: {client.dashboard_link}\n")
-    dask.config.set(scheduler=args.scheduler)
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
@@ -122,7 +99,38 @@ if __name__ == "__main__":
         fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
         plt.show()
 
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("n_s", help="The number of states", type=int)
+    parser.add_argument("n_t", help="The number of turbines", type=int)
+    parser.add_argument("--n_p", help="The number of turbines", type=int, default=2000)
+    parser.add_argument("--ws0", help="The lowest wind speed", type=float, default=3.)
+    parser.add_argument("--ws1", help="The highest wind speed", type=float, default=30.)
+    parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
+    parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-w", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
+    parser.add_argument("-tw", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
+    parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
+    parser.add_argument("-cl", "--calc_cline", help="Calculate centreline", action="store_true")
+    parser.add_argument("-cm", "--calc_mean", help="Calculate states mean", action="store_true")
+    args  = parser.parse_args()
+
+    # parallel run:
     if args.scheduler == 'distributed':
-        print("\nClosing dask client")
-        client.close()
         
+        print("Launching dask cluster..")
+        with LocalCluster() as cluster, Client(cluster) as client:
+            print(cluster)
+            print(f"Dashboard: {client.dashboard_link}\n")
+            run_foxes(args)
+            print("\n\nShutting down dask cluster")
+
+    # serial run:
+    else:
+        with dask.config.set(scheduler=args.scheduler):
+            run_foxes(args)
+            
