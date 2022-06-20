@@ -151,3 +151,7 @@ if __name__ == "__main__":
     ax.set_ylabel(vlab)
     ax.legend()
     plt.show()
+
+    if args.scheduler == 'distributed':
+        print("\nClosing dask client")
+        client.close()

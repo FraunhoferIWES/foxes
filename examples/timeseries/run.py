@@ -81,3 +81,7 @@ if __name__ == "__main__":
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+    if args.scheduler == 'distributed':
+        print("\nClosing dask client")
+        client.close()

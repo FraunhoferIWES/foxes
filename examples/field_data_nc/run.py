@@ -86,3 +86,8 @@ if __name__ == "__main__":
     o   = foxes.output.FlowPlots2D(algo, farm_results)
     fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
     plt.show()
+
+    if args.scheduler == 'distributed':
+        print("\nClosing dask client")
+        client.close()
+        
