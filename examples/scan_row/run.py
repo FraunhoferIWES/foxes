@@ -39,7 +39,7 @@ def run_foxes(args):
         xy_base=p0, 
         xy_step=stp, 
         n_turbines=n_t,
-        turbine_models=["kTI_04", ttype.name]
+        turbine_models=args.tmodels + [ttype.name]
     )
     
     algo = foxes.algorithms.Downwind(
@@ -48,7 +48,7 @@ def run_foxes(args):
                 states=states,
                 rotor_model=args.rotor,
                 turbine_order="order_wd",
-                wake_models=['Bastankhah_linear'],
+                wake_models=args.wakes,
                 wake_frame="rotor_wd",
                 partial_wakes_model=args.pwakes,
                 chunks=cks
@@ -108,6 +108,8 @@ if __name__ == "__main__":
     parser.add_argument("--ws0", help="The lowest wind speed", type=float, default=3.)
     parser.add_argument("--ws1", help="The highest wind speed", type=float, default=30.)
     parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
+    parser.add_argument("-w", "--wakes", help="The wake models", default=['Bastankhah_linear'], nargs='+')
+    parser.add_argument("-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs='+')
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-n", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
