@@ -110,20 +110,25 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--turbine_file", help="The P-ct-curve csv file (path or static)", default="NREL-5MW-D126-H90.csv")
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument("-w", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
+    parser.add_argument("-n", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
     parser.add_argument("-tw", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument("-p", "--pwakes", help="The partial wakes model", default="rotor_points")
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     parser.add_argument("-cl", "--calc_cline", help="Calculate centreline", action="store_true")
     parser.add_argument("-cm", "--calc_mean", help="Calculate states mean", action="store_true")
-    args  = parser.parse_args()
+    args = parser.parse_args()
 
     # parallel run:
-    if args.scheduler == 'distributed':
+    if args.scheduler == 'distributed' or args.n_workers is not None:
         
         print("Launching dask cluster..")
-        with LocalCluster() as cluster, Client(cluster) as client:
+        with LocalCluster(
+                n_workers=args.n_workers, 
+                processes=True,
+                threads_per_worker=args.threads_per_worker
+            ) as cluster, Client(cluster) as client:
+
             print(cluster)
             print(f"Dashboard: {client.dashboard_link}\n")
             run_foxes(args)
@@ -133,4 +138,3 @@ if __name__ == "__main__":
     else:
         with dask.config.set(scheduler=args.scheduler):
             run_foxes(args)
-            

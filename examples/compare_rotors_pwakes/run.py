@@ -145,14 +145,21 @@ if __name__ == "__main__":
     parser.add_argument("-tt", "--title", help="The figure title", default=None)
     parser.add_argument("-c", "--chunksize", help="The maximal chunk size", type=int, default=1000)
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-n", "--n_workers", help="The number of workers for distributed run", type=int, default=None)
+    parser.add_argument("-tw", "--threads_per_worker", help="The number of threads per worker for distributed run", type=int, default=None)
     parser.add_argument("--nodask", help="Use numpy arrays instead of dask arrays", action="store_true")
     args  = parser.parse_args()
 
     # parallel run:
-    if args.scheduler == 'distributed':
+    if args.scheduler == 'distributed' or args.n_workers is not None:
         
         print("Launching dask cluster..")
-        with LocalCluster() as cluster, Client(cluster) as client:
+        with LocalCluster(
+                n_workers=args.n_workers, 
+                processes=True,
+                threads_per_worker=args.threads_per_worker
+            ) as cluster, Client(cluster) as client:
+
             print(cluster)
             print(f"Dashboard: {client.dashboard_link}\n")
             run_foxes(args)
