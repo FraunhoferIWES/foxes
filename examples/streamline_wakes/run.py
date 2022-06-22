@@ -15,7 +15,7 @@ def run_foxes(args):
     cks = None if args.nodask else {FV.STATE: args.chunksize, "point": args.chunksize_points}
 
     mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file, H=100.)
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.FieldDataNC(
@@ -47,7 +47,7 @@ def run_foxes(args):
                 rotor_model=args.rotor,
                 turbine_order="order_wd",
                 wake_models=args.wakes,
-                wake_frame="rotor_wd",
+                wake_frame="streamlines_100",
                 partial_wakes_model=args.pwakes,
                 chunks=cks
             )

@@ -19,7 +19,7 @@ s[:] = [0, 1]
 h = ncfile.createVariable('h', np.float32, ('h',))#, zlib=True, least_significant_digit=2)
 h.units = 'm'
 h.long_name = "Height"
-h[:] = [80., 120.]
+h[:] = [0., 300.]
 
 y = ncfile.createVariable('y', np.float32, ('y',))#, zlib=True, least_significant_digit=2) 
 y.units = 'm'
