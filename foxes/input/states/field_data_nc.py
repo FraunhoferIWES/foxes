@@ -5,6 +5,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 from foxes.core import States
 from foxes.tools import wd2uv, uv2wd
+from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -148,38 +149,9 @@ class FieldDataNC(States):
 
         return data
 
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
+    def _read_nc(self, algo, pattern):
 
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-
-        if (FV.WS in self.ovars and FV.WD not in self.ovars) \
-            or (FV.WS not in self.ovars and FV.WD in self.ovars):
-            raise KeyError(f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}")
-
-        # ensure WD and WS get the first two slots of data:
-        self._dkys = {}
-        if FV.WS in self.ovars:
-            self._dkys[FV.WD] = 0
-        if FV.WS in self.var2ncvar:
-            self._dkys[FV.WS] = 1
-        for v in self.var2ncvar:
-            if v not in self._dkys:
-                self._dkys[v] = len(self._dkys)
-        self._n_dvars = len(self._dkys)
-
-        self._weights = None
-        if verbosity:
-            print(f"States '{self.name}': Reading files {self.file_pattern}")
-        with xr.open_mfdataset(self.file_pattern, parallel=True, 
+        with xr.open_mfdataset(pattern, parallel=True, 
                 concat_dim=self.states_coord, combine="nested", 
                 data_vars='minimal', coords='minimal', compat='override') as ds:
             
@@ -221,6 +193,47 @@ class FieldDataNC(States):
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
                 data = self._get_data(ds)
                 self._data = (coos, data)
+
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+
+        if (FV.WS in self.ovars and FV.WD not in self.ovars) \
+            or (FV.WS not in self.ovars and FV.WD in self.ovars):
+            raise KeyError(f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}")
+
+        # ensure WD and WS get the first two slots of data:
+        self._dkys = {}
+        if FV.WS in self.ovars:
+            self._dkys[FV.WD] = 0
+        if FV.WS in self.var2ncvar:
+            self._dkys[FV.WS] = 1
+        for v in self.var2ncvar:
+            if v not in self._dkys:
+                self._dkys[v] = len(self._dkys)
+        self._n_dvars = len(self._dkys)
+        self._weights = None
+
+        if verbosity:
+            print(f"States '{self.name}': Reading files {self.file_pattern}")
+        try:
+            self._read_nc(algo, self.file_pattern)
+        except OSError:
+            if verbosity:
+                print(f"States '{self.name}': Reading static data '{self.file_pattern}' from context '{STATES}'")
+            fpath = algo.dbook.get_file_path(STATES, self.file_pattern, check_raw=False)
+            if verbosity:
+                print(f"Path: {fpath}")
+            self._read_nc(algo, fpath)
 
         super().initialize(algo)
 
