@@ -41,7 +41,6 @@ def calc(args, rotor, sdata, pwake, cks):
                 farm,
                 states=states,
                 rotor_model=rotor,
-                turbine_order="order_wd",
                 wake_models=args.wakes,
                 wake_frame="rotor_wd",
                 partial_wakes_model=pwake,

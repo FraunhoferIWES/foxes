@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 from foxes.core.model import Model
+import foxes.variables as FV
 
 class WakeFrame(Model):
     """
@@ -10,7 +11,35 @@ class WakeFrame(Model):
     wake frame coordinates, which are then evaluated
     by wake models.
 
+    They are also responsible for the calculation of
+    the turbine evaluation order.
+
     """
+
+    @abstractmethod
+    def calc_order(self, algo, mdata, fdata):
+        """"
+        Calculates the order of turbine evaluation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        order : numpy.ndarray
+            The turbine order, shape: (n_states, n_turbines)
+
+        """
+        pass
 
     @abstractmethod
     def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):

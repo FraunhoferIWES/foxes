@@ -69,10 +69,6 @@ class ModelBook:
             kTI_amb_04 = fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4)
         )
 
-        self.turbine_orders = Dict(name="turbine_orders",
-            order_wd = fm.turbine_orders.OrderWD(var_wd=FV.WD)
-        )
-
         self.farm_models = Dict(name="farm_models", 
             **{f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m) \
                                 for mname, m in self.turbine_models.items()
@@ -99,7 +95,7 @@ class ModelBook:
 
         self.wake_frames = Dict(name="wake_frames",
             rotor_wd = fm.wake_frames.RotorWD(var_wd=FV.WD),
-            streamlines_100 = fm.wake_frames.Streamlines(step=100) 
+            #streamlines_100 = fm.wake_frames.Streamlines(step=100) 
         )
 
         self.wake_superpositions = Dict(name="wake_superpositions",
@@ -130,7 +126,6 @@ class ModelBook:
             rotor_models        = self.rotor_models,
             turbine_types       = self.turbine_types,
             turbine_models      = self.turbine_models,
-            turbine_orders      = self.turbine_orders,
             farm_models         = self.farm_models,
             farm_controllers    = self.farm_controllers,
             partial_wakes       = self.partial_wakes,

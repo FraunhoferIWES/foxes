@@ -52,7 +52,6 @@ if __name__ == "__main__":
                 farm,
                 states=states,
                 rotor_model=args.rotor,
-                turbine_order="order_wd",
                 wake_models=args.wakes,
                 wake_frame="rotor_wd",
                 partial_wakes_model=args.pwakes,

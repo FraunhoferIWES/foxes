@@ -43,6 +43,8 @@ class FarmWakesCalculation(FarmDataModel):
         super().initialize(algo, verbosity=verbosity)
         self.pwakes = algo.partial_wakes_model
         if not self.pwakes.initialized:
+            if verbosity:
+                print(f"{self.name}, linked model '{self.pwakes.name}': Initializing")
             self.pwakes.initialize(algo, verbosity=verbosity)
 
     def calculate(self, algo, mdata, fdata):

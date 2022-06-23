@@ -1,7 +1,6 @@
 from . import turbine_types
 from . import rotor_models
 from . import turbine_models
-from . import turbine_orders
 from . import farm_models
 from . import partial_wakes
 from . import wake_frames

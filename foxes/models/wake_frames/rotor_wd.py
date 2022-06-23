@@ -26,6 +26,35 @@ class RotorWD(WakeFrame):
         super().__init__()
         self.var_wd = var_wd
 
+    def calc_order(self, algo, mdata, fdata):
+        """"
+        Calculates the order of turbine evaluation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        
+        Returns
+        -------
+        order : numpy.ndarray
+            The turbine order, shape: (n_states, n_turbines)
+
+        """
+        n  = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
+        xy = fdata[FV.TXYH][:, :, :2]
+
+        order = np.argsort(np.einsum('std,sd->st', xy, n), axis=-1)
+
+        return order
+
     def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
         """
         Calculate wake coordinates.

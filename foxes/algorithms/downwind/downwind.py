@@ -33,9 +33,6 @@ class Downwind(Algorithm):
     partial_wakes_model : str
         The partial wakes model. Will be
         looked up in the model book
-    turbine_order : str
-        The turbine order model. Will be
-        looked up in the model book
     farm_controller : str
         The farm controller. Will be
         looked up in the model book
@@ -58,7 +55,6 @@ class Downwind(Algorithm):
             rotor_model="centre",
             wake_frame="rotor_wd",
             partial_wakes_model="auto",
-            turbine_order="order_wd",
             farm_controller="basic_ctrl",
             chunks=None,
             dbook=None,
@@ -72,9 +68,6 @@ class Downwind(Algorithm):
 
         self.rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
-
-        self.turbine_order = self.mbook.turbine_orders[turbine_order]
-        self.turbine_order.name = turbine_order
 
         self.partial_wakes_model = self.mbook.partial_wakes[partial_wakes_model]
         self.partial_wakes_model.name = partial_wakes_model
@@ -106,7 +99,6 @@ class Downwind(Algorithm):
         self.print(deco)
         self.print(f"  states    : {self.states}")
         self.print(f"  rotor     : {self.rotor_model}")
-        self.print(f"  order     : {self.turbine_order}")
         self.print(f"  controller: {self.farm_controller}")
         self.print(f"  partialwks: {self.partial_wakes_model}")
         self.print(f"  wake frame: {self.wake_frame}")
@@ -234,7 +226,7 @@ class Downwind(Algorithm):
         })
         
         # 4) calculate turbine order:
-        mlist.models.append(self.turbine_order)
+        mlist.models.append(dm.CalcOrder())
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))

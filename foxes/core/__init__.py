@@ -12,7 +12,6 @@ from .rotor_model import RotorModel
 from .farm_model import FarmModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
-from .turbine_order import TurbineOrder
 from .farm_controller import FarmController
 from .turbine import Turbine
 from .partial_wakes_model import PartialWakesModel
