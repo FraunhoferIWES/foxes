@@ -359,7 +359,7 @@ class FieldDataNC(States):
         """
         # prepare:
         points   = pdata[FV.POINTS]
-        n_pts    = pdata.n_points
+        n_pts    = points.shape[1]
         n_states = fdata.n_states
         
         # pick pre-loaded data:

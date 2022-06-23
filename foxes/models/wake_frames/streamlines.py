@@ -45,6 +45,7 @@ class Streamlines(WakeFrame):
         """
         self.DATA = self.var("DATA")
         self.CNTR = self.var("CNTR")
+        self.PRES = self.var("PRES")
         super().initialize(algo, verbosity)
 
     def _calc_coos(self, algo, mdata, fdata, points, tcase=False):
@@ -76,6 +77,8 @@ class Streamlines(WakeFrame):
         done = inds < n_spts - 1
         while not np.all(done):
 
+            #print("CALC STREAMLINES, TODO", np.sum(~done))
+
             # ensure storage size:
             if n_spts == data.shape[2]:
                 data = np.append(data, np.full((n_states, n_turbines, self.n_delstor, 7), 
@@ -98,7 +101,7 @@ class Streamlines(WakeFrame):
             svars  = algo.states.output_point_vars(algo)
             pdata  = {FV.POINTS: newpts}
             pdims  = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
-            pdata.update({v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars})
+            pdata.update({v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars})
             pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
             pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
             data[:, :, n_spts, 3:5] = wd2uv(algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD])
@@ -122,23 +125,42 @@ class Streamlines(WakeFrame):
         
         # shrink to size:
         mdata[self.DATA] = data[:, :, :n_spts]
-        data = mdata[self.DATA]
+        del data, spts, sn, slen
+
+        # select streamline points:
+        # n_states, n_turbines, n_points, 7
+        data = np.take_along_axis(mdata[self.DATA][:, :, :, None], inds[:, :, None, :, None], axis=2)[:, :, 0]
         spts = data[..., :3]
         sn   = data[..., 3:6]
         slen = data[..., 6]
 
-        # select:
-        print("HERE",mdata[self.DATA].shape, inds.shape)
+        # calculate coordinates:
+        coos  = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
+        delta = points[:, None] - spts
+        nx    = sn
+        nz    = np.array([0., 0., 1.], dtype=FC.DTYPE)[None, None, None, :]
+        ny    = np.cross(nz, nx, axis=-1)
+        coos[..., 0] = slen + np.einsum('stpd,stpd->stp', delta, nx)
+        coos[..., 1] =        np.einsum('stpd,stpd->stp', delta, ny)
+        coos[..., 2] = delta[..., 2]
+        
+        return coos
 
+    def _init_data(self, mdata, fdata):
 
-        print("INDS",inds)
-        print("SLEN", slen)
+        # prepare:
+        n_states   = mdata.n_states
+        n_turbines = mdata.n_turbines 
 
+        # x, y, z, u, v, w, len
+        mdata[self.DATA] = np.full((n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE)
+        mdata[self.CNTR] = 1
 
-
-        quit()
-
-
+        # set streamline start point data (rotor centre):
+        mdata[self.DATA][:, :, 0, :3]  = fdata[FV.TXYH]
+        mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
+        mdata[self.DATA][:, :, 0, 5]   = 0.
+        mdata[self.DATA][:, :, 0, 6]   = 0.
 
     def calc_order(self, algo, mdata, fdata):
         """"
@@ -163,85 +185,25 @@ class Streamlines(WakeFrame):
 
         """
 
-        print("\nHERE STRLNS CORDER")
-
         # prepare:
         n_states   = mdata.n_states
         n_turbines = mdata.n_turbines 
 
         # initialize storage:
         if self.DATA not in mdata:
-
-            # x, y, z, u, v, w, len
-            mdata[self.DATA] = np.full((n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE)
-            mdata[self.CNTR] = 1
- 
-            # set streamline start point data (rotor centre):
-            mdata[self.DATA][:, :, 0, :3]  = fdata[FV.TXYH]
-            mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
-            mdata[self.DATA][:, :, 0, 5]   = 0.
-            mdata[self.DATA][:, :, 0, 6]   = 0.
+            self._init_data(mdata, fdata)
         
-        coos = self._calc_coos(algo, mdata, fdata, fdata[FV.TXYH], tcase=True)
-        print("STRLNS CORDER: COOS")
-        print(coos)
-        quit()
+        # calculate streamline x coordinates for turbines rotor centre points:
+        # n_states, n_turbines_source, n_turbines_target
+        coosx = self._calc_coos(algo, mdata, fdata, fdata[FV.TXYH], tcase=True)[..., 0]
 
-
-    def _next_point(self, algo, mdata, fdata, coos, done, points, stsel, case_id):
-        """
-        Helper function, calculates and evaluates next streamline point
-        """
-
-        # prepare:
-        n_states = mdata.n_states
-        data     = mdata[self.DATA][case_id]
-        inds     = mdata[self.CNTR][case_id]
-        dist     = mdata[self.DIST][case_id]
-        
-        # ensure storage:
-        if np.any(~np.isnan(data[:, -1])):
-            data = np.append(data, np.full((n_states, self.n_delstor, 6), 
-                                np.nan, dtype=FC.DTYPE), axis=1)
-            mdata[self.DATA][case_id] = data
-
-        # look at subset of states of interest:
-        ssel  = ~np.all(done, axis=1)
-        sinds = inds[ssel]
-        sdata = data[ssel]
-        sdist = dist[ssel]
-        spts  = points[ssel]
-
-        # calculate next point:
-        ldata = np.take_along_axis(sdata, sinds[:, None, None], axis=1)[:, 0]
-        p0    = ldata[..., :3]
-        n     = ldata[..., 3:]
-        p     = p0 + self.step * n
-        d     = np.linalg.norm(spts - p[:, None], axis=2)
-        del ldata, p0, n
-
-        # this point is better:
-        bsel = d < sdist
-        if np.any(bsel):
-
-            svars  = algo.states.output_point_vars(algo)
-            points = rpoints.reshape(n_states, n_points, 3)
-            pdata  = {FV.POINTS: points}
-            pdims  = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
-            pdata.update({v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars})
-            pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-            pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
-            del pdims, points
-            
-            algo.states.calculate(algo, mdata, fdata, pdata)
-
-
-        print("\nHERE STRLNS CCOOS")
-        print(sdata.shape, sinds.shape)
-        print(mdata[self.DIST][case_id])
-        print(ldata.shape)
-        quit()
-
+        # derive turbine order:
+        # TODO: Remove loop over states
+        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
+        for si in range(n_states):
+            order[si] = np.lexsort(keys=coosx[si])
+    
+        return order
         
     def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
         """
@@ -270,32 +232,18 @@ class Streamlines(WakeFrame):
 
         # prepare:
         n_states = mdata.n_states
-        n_points = points.shape[1]
         stsel    = (np.arange(n_states), states_source_turbine)
+        pid      = id(points)
 
-        # init data:
+        # initialize storage:
         if self.DATA not in mdata:
-            mdata[self.DATA] = {}
-            mdata[self.CNTR] = {}
-            mdata[self.DIST] = {}
-        case_id = states_source_turbine[0]
-        data = mdata[self.DATA]
-        if case_id not in data:
+            self._init_data(mdata, fdata)
 
-            # x, y, z, nx, ny, nz
-            data[case_id] = np.full((n_states, self.n_delstor, 6), np.nan, dtype=FC.DTYPE) 
+        # calc streamlines, once for given points:
+        if self.PRES not in mdata or pid not in mdata[self.PRES]:
+            mdata[self.PRES] = {
+                pid: self._calc_coos(algo, mdata, fdata, points, tcase=False)
+            }
+        
+        return mdata[self.PRES][pid][stsel]
 
-            data[case_id][:, 0, :3]  = fdata[FV.TXYH][stsel]
-            data[case_id][:, 0, 3:5] = wd2uv(fdata[FV.AMB_WD][stsel])
-            data[case_id][:, 0, 5]   = 0.
-
-            mdata[self.CNTR][case_id] = np.zeros(n_states, dtype=FC.ITYPE)
-            mdata[self.DIST][case_id] = np.linalg.norm(points - data[case_id][:, 0, None, :3], axis=2) 
-
-        # calculate coordinates, stored on the fly in mdata:
-        coos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
-        done = np.zeros((n_states, n_points), dtype=bool)
-        while not np.all(done):
-            self._next_point(algo, mdata, fdata, coos, done, points, stsel, case_id)
-
-        return coos

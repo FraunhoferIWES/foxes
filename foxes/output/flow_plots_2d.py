@@ -521,7 +521,7 @@ class FlowPlots2D(Output):
         cmap : str, optional
             The colormap
         quiver_n : int, optional
-            Place a vector at ech `n`th point
+            Place a vector at each `n`th point
         quiver_pars : dict, optional
             Parameters for plt.quiver
         verbosity : int, optional
