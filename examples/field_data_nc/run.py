@@ -42,7 +42,7 @@ def run_foxes(args):
                 states=states,
                 rotor_model=args.rotor,
                 wake_models=args.wakes,
-                wake_frame="rotor_wd",
+                wake_frame=args.wake_frame,
                 partial_wakes_model=args.pwakes,
                 chunks=cks
             )
@@ -75,6 +75,7 @@ if __name__ == "__main__":
     parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=4000)
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
+    parser.add_argument("-wf", "--wake_frame", help="The wake frame choice", default="rotor_wd")
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=[], nargs='+')
     parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=9, type=int)
     parser.add_argument("-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true")

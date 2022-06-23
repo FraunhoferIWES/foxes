@@ -23,11 +23,11 @@ h[:] = [0., 300.]
 
 y = ncfile.createVariable('y', np.float32, ('y',))#, zlib=True, least_significant_digit=2) 
 y.units = 'm'
-y[:] = [0., 5000.]
+y[:] = [0., 2500.]
 
 x = ncfile.createVariable('x', np.float32, ('x',))#, zlib=True, least_significant_digit=2) 
 x.units = 'm'
-x[:] = [0., 5000.]
+x[:] = [0., 2500.]
 
 ws = ncfile.createVariable('ws', np.float32, ('state', 'h', 'y', 'x'))#, zlib=True, least_significant_digit=2)
 ws.units = 'm/s'
@@ -37,10 +37,14 @@ ws[:] = 9.
 wd = ncfile.createVariable('wd', np.float32, ('state', 'h', 'y', 'x'))#, zlib=True, least_significant_digit=2)
 wd.units = 'deg'
 wd.long_name = 'Wind direction'
-wd[:, :, 0, 0] = 180.
-wd[:, :, 1, 0] = 220.
-wd[:, :, 1, 1] = 250.
-wd[:, :, 0, 1] = 270.
+wd[0, :, 0, 0] = 180.
+wd[0, :, 1, 0] = 220.
+wd[0, :, 1, 1] = 250.
+wd[0, :, 0, 1] = 270.
+wd[1, :, 0, 0] = 0.
+wd[1, :, 1, 0] = 30.
+wd[1, :, 1, 1] = 90.
+wd[1, :, 0, 1] = 120.
 
 print(ncfile)
 

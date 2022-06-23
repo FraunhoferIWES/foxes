@@ -28,7 +28,8 @@ def run_foxes(args):
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2ncvar={FV.WS: "ws", FV.WD: "wd"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
-        pre_load=not args.no_pre_load
+        pre_load=not args.no_pre_load,
+        bounds_error=False
     )
 
     farm = foxes.WindFarm()
@@ -47,7 +48,7 @@ def run_foxes(args):
                 states=states,
                 rotor_model=args.rotor,
                 wake_models=args.wakes,
-                wake_frame="streamlines_100",
+                wake_frame=args.wake_frame,
                 partial_wakes_model=args.pwakes,
                 chunks=cks
             )
@@ -65,11 +66,11 @@ def run_foxes(args):
     fr = farm_results.to_dataframe()
     print(fr[[FV.X,FV.Y,FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-    o   = foxes.output.FlowPlots2D(algo, farm_results)
-    g   = o.gen_states_fig_horizontal(FV.WS, resolution=10, quiver_n=10)
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    for fig in o.gen_states_fig_horizontal(FV.WS, resolution=10, quiver_n=10,
+                                            xspace=1000, yspace=1000):
+        plt.show()
+        plt.close(fig)
 
 if __name__ == "__main__":
 
@@ -82,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("-cp", "--chunksize_points", help="The maximal chunk size for points", type=int, default=4000)
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument("-w", "--wakes", help="The wake models", default=['Jensen_linear_k007'], nargs='+')
+    parser.add_argument("-wf", "--wake_frame", help="The wake frame choice", default="streamlines_100")
     parser.add_argument("-m", "--tmodels", help="The turbine models", default=[], nargs='+')
     parser.add_argument("-nt", "--n_turbines", help="The number of turbines", default=9, type=int)
     parser.add_argument("-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true")

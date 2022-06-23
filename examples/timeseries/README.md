@@ -10,5 +10,5 @@ python3 run.py -h
 
 ## Run command
 ```
-python3 run.py -sc distributed
+python3 run.py
 ```
