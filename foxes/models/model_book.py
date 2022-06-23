@@ -95,7 +95,7 @@ class ModelBook:
 
         self.wake_frames = Dict(name="wake_frames",
             rotor_wd = fm.wake_frames.RotorWD(var_wd=FV.WD),
-            #streamlines_100 = fm.wake_frames.Streamlines(step=100) 
+            streamlines_100 = fm.wake_frames.Streamlines(step=100) 
         )
 
         self.wake_superpositions = Dict(name="wake_superpositions",

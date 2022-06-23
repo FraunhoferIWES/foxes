@@ -32,11 +32,12 @@ def run_foxes(args):
     )
 
     farm = foxes.WindFarm()
+    N    = int(args.n_turbines**0.5)
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base = np.array([500., 500.]),
         step_vectors = np.array([[500., 0], [0, 500.]]),
-        steps = (args.n_turbines - 1, args.n_turbines - 1),
+        steps = (N, N),
         turbine_models=args.tmodels + [ttype.name]
     )
         
