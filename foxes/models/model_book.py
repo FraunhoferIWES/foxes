@@ -105,12 +105,16 @@ class ModelBook:
             quadratic     = fm.wake_superpositions.QuadraticSuperposition(scalings=f'source_turbine_{FV.REWS}'),
             quadratic_amb = fm.wake_superpositions.QuadraticSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
 
+            max     = fm.wake_superpositions.MaxSuperposition(scalings=f'source_turbine_{FV.REWS}'),
+            max_amb = fm.wake_superpositions.MaxSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
+
             ti_linear    = fm.wake_superpositions.TISuperposition(ti_superp="linear", superp_to_amb="quadratic"),
-            ti_quadratic = fm.wake_superpositions.TISuperposition(ti_superp="quadratic", superp_to_amb="quadratic")
+            ti_quadratic = fm.wake_superpositions.TISuperposition(ti_superp="quadratic", superp_to_amb="quadratic"),
+            ti_max       = fm.wake_superpositions.TISuperposition(ti_superp="max", superp_to_amb="quadratic")
         )
 
         self.wake_models = Dict(name="wake_models")
-        slist = ["linear", "linear_amb", "quadratic", "quadratic_amb"]
+        slist = ["linear", "linear_amb", "quadratic", "quadratic_amb", "max", "max_amb"]
         for s in slist:
 
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.top_hat.JensenWake(superposition=s)
@@ -119,7 +123,7 @@ class ModelBook:
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.gaussian.BastankhahWake(superposition=s)
             self.wake_models[f"Bastankhah_{s}_k002"] = fm.wake_models.gaussian.BastankhahWake(k=0.02, superposition=s)
 
-        slist = ["ti_linear", "ti_quadratic"]
+        slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:
             self.wake_models[f"CrespoHernandez_{s[3:]}"] = fm.wake_models.top_hat.CrespoHernandezTIWake(superposition=s)
             self.wake_models[f"CrespoHernandez_{s[3:]}_k002"] = fm.wake_models.top_hat.CrespoHernandezTIWake(k=0.02, superposition=s)
