@@ -163,17 +163,27 @@ class Model(metaclass=ABCMeta):
             
         """
 
-        sources = (data, self.__dict__) if data_prio \
-                    else (self.__dict__, data)
+        sources = ("data", "self") if data_prio \
+                    else ("self", "data")
 
-        try:
-            out = sources[0][variable]
-        except KeyError:
-            try:
-                out = sources[1][variable]
-            except KeyError:
-                raise KeyError(f"Model '{self.name}': Variable '{variable}' neither found in data {sorted(list(data.keys()))} nor among attributes")
+        out = None
+        for s in sources:
+            if s == "self":
+                try:
+                    out = getattr(self, variable)
+                    break
+                except AttributeError:
+                    pass
+            else:
+                try:
+                    out = data[variable]
+                    break
+                except KeyError:
+                    pass
         
+        if out is None:
+            raise KeyError(f"Model '{self.name}': Variable '{variable}' neither found in data {sorted(list(data.keys()))} nor among attributes")
+
         if upcast is not None and not isinstance(out, np.ndarray):
             if upcast == "farm":
                 out = np.full((data.n_states, data.n_turbines), out)

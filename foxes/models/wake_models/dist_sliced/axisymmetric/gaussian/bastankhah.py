@@ -49,9 +49,10 @@ class BastankhahWake(GaussianWakeModel):
         ):
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.k            = k
         self.ct_max       = ct_max
         self.sbeta_factor = sbeta_factor
+
+        setattr(self, FV.K, k)
 
     def __repr__(self):
         s = super().__repr__()

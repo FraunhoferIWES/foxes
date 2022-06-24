@@ -87,7 +87,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         ):
         super().__init__(superpositions={FV.TI: superposition})
 
-        self.k            = k
         self.ct_max       = ct_max
         self.a_near       = a_near
         self.a_far        = a_far
@@ -98,9 +97,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.sbeta_factor = sbeta_factor
         self.near_wake_D  = near_wake_D
 
+        setattr(self, FV.K, k)
+
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superp[FV.TI]})"
+        s += f"(k={getattr(self, FV.K)}, sp={self.superp[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):

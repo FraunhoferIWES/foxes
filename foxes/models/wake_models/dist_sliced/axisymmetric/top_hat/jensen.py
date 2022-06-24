@@ -35,8 +35,9 @@ class JensenWake(TopHatWakeModel):
     def __init__(self, superposition, k=None, ct_max=0.9999):
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.k      = k
         self.ct_max = ct_max
+
+        setattr(self, FV.K, k)
 
     def __repr__(self):
         s = super().__repr__()
