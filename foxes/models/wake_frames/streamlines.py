@@ -31,6 +31,9 @@ class Streamlines(WakeFrame):
         self.step      = step
         self.n_delstor = n_delstor
 
+    def __repr__(self):
+        return super().__repr__() + f"(step={self.step})"
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
