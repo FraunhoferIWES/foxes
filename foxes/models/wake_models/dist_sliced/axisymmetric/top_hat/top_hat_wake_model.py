@@ -8,7 +8,22 @@ import foxes.constants as FC
 class TopHatWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for top-hat wake models.
+
+    Parameters
+    ----------
+    superpositions : dict
+        The superpositions. Key: variable name str,
+        value: The wake superposition model name,
+        will be looked up in model book
+    ct_max : float
+        The maximal value for ct, values beyond will be limited
+        to this number
+    
     """
+
+    def __init__(self, superpositions, ct_max=0.9999):
+        super().__init__(superpositions)
+        self.ct_max = ct_max
 
     @abstractmethod
     def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
@@ -117,6 +132,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
         ct    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct[ct>self.ct_max] = self.ct_max
 
         wake_r = self.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, ct)
 

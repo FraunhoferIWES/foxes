@@ -48,9 +48,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     k : float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
     a_near : float
         Model parameter
     a_far : float
@@ -85,9 +82,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             e2     = -0.0325,
             e3     = -0.32,
         ):
-        super().__init__(superpositions={FV.TI: superposition})
+        super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
-        self.ct_max       = ct_max
         self.a_near       = a_near
         self.a_far        = a_far
         self.e1           = e1

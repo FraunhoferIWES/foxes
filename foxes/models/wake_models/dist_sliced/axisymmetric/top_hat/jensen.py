@@ -26,16 +26,11 @@ class JensenWake(TopHatWakeModel):
     k : float, optional
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
 
     """
 
     def __init__(self, superposition, k=None, ct_max=0.9999):
-        super().__init__(superpositions={FV.WS: superposition})
-
-        self.ct_max = ct_max
+        super().__init__(superpositions={FV.WS: superposition}, ct_max=ct_max)
 
         setattr(self, FV.K, k)
 
