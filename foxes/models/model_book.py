@@ -99,15 +99,18 @@ class ModelBook:
         )
 
         self.wake_superpositions = Dict(name="wake_superpositions",
-            linear     = fm.wake_superpositions.LinearWakeSuperposition(scalings=f'source_turbine_{FV.REWS}'),
-            linear_amb = fm.wake_superpositions.LinearWakeSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
+            linear     = fm.wake_superpositions.LinearSuperposition(scalings=f'source_turbine_{FV.REWS}'),
+            linear_amb = fm.wake_superpositions.LinearSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
+
+            quadratic     = fm.wake_superpositions.QuadraticSuperposition(scalings=f'source_turbine_{FV.REWS}'),
+            quadratic_amb = fm.wake_superpositions.QuadraticSuperposition(scalings=f'source_turbine_{FV.AMB_REWS}'),
 
             ti_linear    = fm.wake_superpositions.TISuperposition(ti_superp="linear", superp_to_amb="quadratic"),
             ti_quadratic = fm.wake_superpositions.TISuperposition(ti_superp="quadratic", superp_to_amb="quadratic")
         )
 
         self.wake_models = Dict(name="wake_models")
-        slist = ["linear", "linear_amb"]
+        slist = ["linear", "linear_amb", "quadratic", "quadratic_amb"]
         for s in slist:
 
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.top_hat.JensenWake(superposition=s)

@@ -51,7 +51,8 @@ class FieldDataNC(States):
     ----------
     file_pattern : str
         The file search pattern, should end with
-        suffix '.nc'. One or many files.
+        suffix '.nc'. One or many files, in the later case
+        use pattern 'some/path/*.nc'
     ovars : list of str
         The output variables
     var2ncvar : dict

@@ -5,9 +5,9 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
-class LinearSuperposition(WakeSuperposition):
+class QuadraticSuperposition(WakeSuperposition):
     """
-    Linear supersposition of wake model results,
+    Quadratic supersposition of wake model results,
     optionally rescaled.
 
     Parameters
@@ -29,6 +29,21 @@ class LinearSuperposition(WakeSuperposition):
     def __init__(self, scalings):
         super().__init__()
         self.scalings = scalings
+
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        self.SIGNS = self.var("SIGNS")
+        super().initialize(algo, verbosity)
 
     def calc_wakes_plus_wake(self, algo, mdata, fdata, states_source_turbine,
                                 sel_sp, variable, wake_delta, wake_model_result):
@@ -62,6 +77,12 @@ class LinearSuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
+
+        if self.SIGNS not in mdata:
+            mdata[self.SIGNS] = {}
+        if variable not in mdata[self.SIGNS]:
+            mdata[self.SIGNS][variable] = -1 if np.all(wake_model_result <= 0.) else 1.
+
         if isinstance(self.scalings, dict):
             try:
                 scaling = self.scalings[variable]
@@ -71,11 +92,11 @@ class LinearSuperposition(WakeSuperposition):
             scaling = self.scalings
 
         if scaling is None:
-            wake_delta[sel_sp] += wake_model_result
+            wake_delta[sel_sp] += wake_model_result**2
             return wake_delta
         
         elif isinstance(scaling, numbers.Number):
-            wake_delta[sel_sp] += scaling * wake_model_result
+            wake_delta[sel_sp] += (scaling * wake_model_result)**2
             return wake_delta
 
         elif isinstance(scaling, str) and len(scaling) >= 14 and (
@@ -104,7 +125,7 @@ class LinearSuperposition(WakeSuperposition):
             scale[:] = vdata[stsel][:, None]
             scale    = scale[sel_sp]
 
-            wake_delta[sel_sp] += scale * wake_model_result
+            wake_delta[sel_sp] += (scale * wake_model_result)**2
 
             return wake_delta
         
@@ -138,5 +159,5 @@ class LinearSuperposition(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        return wake_delta
+        return mdata[self.SIGNS][variable] * np.sqrt(wake_delta)
         
