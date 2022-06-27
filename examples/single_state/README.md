@@ -11,5 +11,5 @@ python3 run.py -h
 ## Run command
 For 5 turbines in a row, run
 ```
-python3 run.py 5
+python3 run.py -nt 5
 ```

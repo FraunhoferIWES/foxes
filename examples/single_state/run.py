@@ -9,7 +9,8 @@ import foxes.variables as FV
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("n_t", help="The number of turbines", type=int)
+    parser.add_argument("-nt", "--n_t", help="The number of turbines", type=int, default=5)
+    parser.add_argument("-l", "--layout", help="The wind farm layout file (path or static)", default=None)
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
@@ -39,13 +40,20 @@ if __name__ == "__main__":
     )
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_row(
-        farm=farm,
-        xy_base=p0, 
-        xy_step=stp, 
-        n_turbines=args.n_t,
-        turbine_models=args.tmodels + [ttype.name]
-    )
+    if args.layout is None:
+        foxes.input.farm_layout.add_row(
+            farm=farm,
+            xy_base=p0, 
+            xy_step=stp, 
+            n_turbines=args.n_t,
+            turbine_models=args.tmodels + [ttype.name]
+        )
+    else:
+        foxes.input.farm_layout.add_from_file(
+            farm,
+            args.layout,
+            turbine_models=args.tmodels + [ttype.name]
+        )
     
     algo = foxes.algorithms.Downwind(
                 mbook,
@@ -69,7 +77,7 @@ if __name__ == "__main__":
     plt.close(fig)
 
     o   = foxes.output.FlowPlots2D(algo, farm_results)
-    g   = o.gen_states_fig_vertical(args.var, resolution=10, x_direction=90.)
+    g   = o.gen_states_fig_vertical(args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.))
     fig = next(g)
     plt.show()
 

@@ -159,5 +159,10 @@ class QuadraticSuperposition(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        return mdata[self.SIGNS][variable] * np.sqrt(wake_delta)
+        try:
+            return mdata[self.SIGNS][variable] * np.sqrt(wake_delta)
+        except KeyError as e:
+            if np.max(np.abs(wake_delta)) < 1e-10:
+                return wake_delta
+            raise e
         
