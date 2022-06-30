@@ -4,7 +4,7 @@
 ![](docs/logo/Logo_FOXES_IWES.svg)
 
 ## Overview
-The software `foxes` is a wind farm simulation and wake modelling tool which is based on engineering wake models. It has many applications, for example
+The software `foxes` is a modular wind farm simulation and wake modelling toolbox which is based on engineering wake models. It has many applications, for example
 - Wind farm optimization, e.g. layout optimization or wake steering,
 - Wind farm post-construction analysis,
 - Wake model studies, comparison and validation,
