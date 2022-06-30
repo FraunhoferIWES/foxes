@@ -6,6 +6,12 @@ class ModelBook:
     """
     Container for all kinds of models.
 
+    Parameters
+    ----------
+    Pct_file : str, optional
+        Path to power/ct curve file, for creation
+        of default turbine type model
+
     Attributes
     ----------
     point_models : foxes.tools.Dict
@@ -46,7 +52,7 @@ class ModelBook:
 
     """
 
-    def __init__(self):
+    def __init__(self, Pct_file=None):
 
         self.point_models = Dict(name="point_models")
 
@@ -58,6 +64,8 @@ class ModelBook:
             self.rotor_models[f"grid{n**2}"] = fm.rotor_models.GridRotor(calc_vars=rvars, n=n, reduce=True)
 
         self.turbine_types = Dict(name="turbine_types")
+        if Pct_file is not None:
+            self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
         self.turbine_models = Dict(name="turbine_models",
             kTI    = fm.turbine_models.kTI(),

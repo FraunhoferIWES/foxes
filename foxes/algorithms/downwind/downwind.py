@@ -56,7 +56,7 @@ class Downwind(Algorithm):
             wake_frame="rotor_wd",
             partial_wakes_model="auto",
             farm_controller="basic_ctrl",
-            chunks=None,
+            chunks={FV.STATE: 1000},
             dbook=None,
             verbosity=1
         ):
