@@ -4,8 +4,8 @@
 ![](docs/logo/Logo_FOXES_IWES.svg)
 
 ## Overview
-`foxes` is a wind farm simulation and wake modelling tool which is based on engineering wake models. It has many applications, for example
-- Wind farm optimization, for example layout optimization or wake steering,
+The software `foxes` is a wind farm simulation and wake modelling tool which is based on engineering wake models. It has many applications, for example
+- Wind farm optimization, e.g. layout optimization or wake steering,
 - Wind farm post-construction analysis,
 - Wake model studies, comparison and validation,
 - Wind farm simulations invoking complex model chains.
@@ -42,9 +42,10 @@ pip install -r requirements.txt
 
 ## Minimal example
 
-For detailed examples, check the corresponding folder `examples` in this repository. A minimal running example is the following, based on provided static `csv` data files:
+For detailed examples, check the `examples` folder in this repository. A minimal running example is the following, based on provided static `csv` data files:
 ```python
 import foxes
+
 states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
 
 farm = foxes.WindFarm()
