@@ -78,8 +78,9 @@ class Tests:
         self.print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs().max()
         self.print(chk)
-        
-        assert 1==2
+
+        print("CHK WS =", chk[FV.WS])
+        print("CHK P =", chk[FV.P])
 
         assert chk[FV.WS] < 1e-5
         assert chk[FV.P] < 1e-3
