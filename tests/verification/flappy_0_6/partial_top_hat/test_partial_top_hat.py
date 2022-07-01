@@ -70,12 +70,11 @@ class Tests:
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
-        delta = df.reset_index() - fdata
-        print(delta)
-        print(delta.max())
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs().max()
-        print(chk)
+        delta = (df.reset_index() - fdata)[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]]
+        print("\nDELTA\n", delta.describe())
 
+        chk = delta.abs().max()
+        print("\nCHK\n", chk)
         print("CHK WS =", chk[FV.WS])
         print("CHK P =", chk[FV.P])
 
