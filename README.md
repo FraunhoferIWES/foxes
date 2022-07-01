@@ -12,6 +12,12 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 
 Currently the modelled time scales are related to 10-min averages or longer periods, and also statistical data like wind rose data can be modelled. High-frequency effects are not supported.
 
+Source code: [https://github.com/FraunhoferIWES/foxes](https://github.com/FraunhoferIWES/foxes)
+PyPi reference: [https://pypi.org/project/foxes/](https://pypi.org/project/foxes/)
+
+## Requirements
+The installation requires `Python >= 3.7`.
+
 ## Installation
 
 ### Virtual Python environment
@@ -28,7 +34,7 @@ All subsequent installation commands via `pip` can then be executed directly wit
 
 ### Standard users
 
-- As a standard user, you can install the latest release by
+- As a standard user, you can install the latest release via [pip](https://pypi.org/project/foxes/) by
 ```
 pip install foxes
 ```
