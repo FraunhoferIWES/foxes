@@ -9,13 +9,10 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
 
     def test(self):
+
+        print(self.thisdir)
 
         c = 2000
         cfile = self.thisdir / "flappy" / "results.csv.gz"
@@ -61,23 +58,25 @@ class Tests:
             [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
         ]
 
-        self.print()
-        self.print("TRESULTS\n")
-        self.print(df)
+        print()
+        print("TRESULTS\n")
+        print(df)
 
-        self.print("\nReading file", cfile)
+        print("\nReading file", cfile)
         fdata = pd.read_csv(cfile)
-        self.print(fdata)
+        print(fdata)
 
-        self.print("\nVERIFYING\n")
+        print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
-        delta = df.reset_index() - fdata
-        self.print(delta)
-        self.print(delta.max())
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        self.print(chk.max())
+        delta = (df.reset_index() - fdata)[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]]
+        print("\nDELTA\n", delta.describe())
 
-        assert (chk[FV.WS] < 1e-5).all()
-        assert (chk[FV.P] < 1e-3).all()
+        chk = delta.abs().max()
+        print("\nCHK\n", chk)
+        print("CHK WS =", chk[FV.WS])
+        print("CHK P =", chk[FV.P])
+
+        assert chk[FV.WS] < 1e-5
+        assert chk[FV.P] < 1e-3

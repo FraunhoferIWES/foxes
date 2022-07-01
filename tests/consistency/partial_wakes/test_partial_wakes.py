@@ -9,11 +9,6 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
 
     def test(self):
 
@@ -41,7 +36,7 @@ class Tests:
         base_results = None
         for rotor, pwake, lim in cases:
 
-            self.print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
+            print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
 
             mbook = foxes.models.ModelBook()
             ttype = foxes.models.turbine_types.PCtFile(
@@ -58,7 +53,7 @@ class Tests:
 
             farm = foxes.WindFarm()
             foxes.input.farm_layout.add_from_file(
-                farm, lfile, turbine_models=[ttype.name], verbosity=self.verbosity
+                farm, lfile, turbine_models=[ttype.name], verbosity=1
             )
 
             algo = foxes.algorithms.Downwind(
@@ -70,10 +65,10 @@ class Tests:
                 wake_frame="rotor_wd",
                 partial_wakes_model=pwake,
                 chunks=ck,
-                verbosity=self.verbosity,
+                verbosity=1,
             )
 
-            if self.verbosity:
+            if 1:
                 with ProgressBar():
                     data = algo.calc_farm()
             else:
@@ -83,9 +78,9 @@ class Tests:
                 [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
             ]
 
-            self.print()
-            self.print("TRESULTS\n")
-            self.print(df)
+            print()
+            print("TRESULTS\n")
+            print(df)
 
             df = df.reset_index()
 
@@ -93,11 +88,11 @@ class Tests:
                 base_results = df
 
             else:
-                self.print(f"CASE {(rotor, pwake, lim)}")
+                print(f"CASE {(rotor, pwake, lim)}")
                 delta = df - base_results
-                self.print(delta)
-                self.print(delta.min(), delta.max())
+                print(delta)
+                print(delta.min(), delta.max())
                 chk = delta[FV.REWS].abs()
-                self.print(f"CASE {(rotor, pwake, lim)}:", chk.max())
+                print(f"CASE {(rotor, pwake, lim)}:", chk.max())
 
                 assert (chk < lim).all()

@@ -11,6 +11,9 @@ from . import input # noqa: F401
 from . import output # noqa: F401
 from . import tools # noqa: F401
 
-from importlib.resources import read_text
+try:
+    from importlib_resources import read_text
+except ModuleNotFoundError:
+    from importlib.resources import read_text
 
 __version__ = read_text(__package__, "VERSION")

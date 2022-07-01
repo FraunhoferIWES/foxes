@@ -9,11 +9,6 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
 
     def test(self):
 
@@ -68,23 +63,23 @@ class Tests:
             [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
         ]
 
-        self.print()
-        self.print("TRESULTS\n")
-        self.print(df)
+        print()
+        print("TRESULTS\n")
+        print(df)
 
-        self.print("\nReading file", cfile)
+        print("\nReading file", cfile)
         fdata = pd.read_csv(cfile)
-        self.print(fdata)
+        print(fdata)
 
-        self.print("\nVERIFYING\n")
+        print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
         delta = df.reset_index() - fdata
-        self.print(delta)
-        self.print(delta.max())
+        print(delta)
+        print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        self.print(chk.max())
+        print(chk.max())
 
         assert (chk[FV.AMB_WS] < 1e-5).all()
         assert (chk[FV.AMB_P] < 1e-3).all()

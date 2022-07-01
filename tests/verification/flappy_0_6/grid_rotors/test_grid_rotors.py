@@ -9,11 +9,6 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
 
     def test(self):
 
@@ -33,7 +28,7 @@ class Tests:
 
         for i, (wakes, rotor, pwake) in enumerate(cases):
 
-            self.print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")
+            print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")
 
             mbook = foxes.models.ModelBook()
             ttype = foxes.models.turbine_types.PCtFile(
@@ -54,7 +49,7 @@ class Tests:
                 farm,
                 lfile,
                 turbine_models=["kTI_amb_02", ttype.name],
-                verbosity=self.verbosity,
+                verbosity=1,
             )
 
             algo = foxes.algorithms.Downwind(
@@ -66,7 +61,7 @@ class Tests:
                 wake_frame="rotor_wd",
                 partial_wakes_model=pwake,
                 chunks=ck,
-                verbosity=self.verbosity,
+                verbosity=1,
             )
 
             data = algo.calc_farm()
@@ -76,55 +71,55 @@ class Tests:
             ]
 
             cfile = cpath / f"results_{i}.csv.gz"
-            self.print("\nReading file", cfile)
+            print("\nReading file", cfile)
             fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
-            self.print()
-            self.print("TRESULTS\n")
-            self.print(df)
-            self.print(fdata)
+            print()
+            print("TRESULTS\n")
+            print(df)
+            print(fdata)
 
-            self.print("\nVERIFYING\n")
+            print("\nVERIFYING\n")
             df[FV.WS] = df["REWS"]
             df[FV.AMB_WS] = df["AMB_REWS"]
 
             delta = df - fdata
-            self.print(delta)
+            print(delta)
             chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]]
-            self.print(chk)
+            print(chk)
             chk = chk.abs()
-            self.print(chk.max())
+            print(chk.max())
 
             var = FV.AMB_WS
             sel = chk[var] >= 1e-7
-            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
-            self.print(df.loc[sel])
-            self.print(fdata.loc[sel])
-            self.print(delta.loc[sel])
+            print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            print(df.loc[sel])
+            print(fdata.loc[sel])
+            print(delta.loc[sel])
             assert (chk[var] < 1e-7).all()
 
             var = FV.AMB_P
             sel = chk[var] >= 1e-5
-            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
-            self.print(df.loc[sel])
-            self.print(fdata.loc[sel])
-            self.print(delta.loc[sel])
+            print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            print(df.loc[sel])
+            print(fdata.loc[sel])
+            print(delta.loc[sel])
             assert (chk[var] < 1e-5).all()
 
             var = FV.WS
             sel = chk[var] >= 1.7e-3
-            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
-            self.print(df.loc[sel])
-            self.print(fdata.loc[sel])
-            self.print(delta.loc[sel])
+            print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            print(df.loc[sel])
+            print(fdata.loc[sel])
+            print(delta.loc[sel])
             assert (chk[var] < 1.7e-3).all()
 
             var = FV.P
             sel = chk[var] >= 1.51
-            self.print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
-            self.print(df.loc[sel])
-            self.print(fdata.loc[sel])
-            self.print(delta.loc[sel])
+            print(f"\nCHECKING {var}, {(wakes, rotor, pwake)}\n")
+            print(df.loc[sel])
+            print(fdata.loc[sel])
+            print(delta.loc[sel])
             assert (chk[var] < 1.51).all()
 
-            self.print()
+            print()

@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: ../logo/Logo_FOXES_IWES.svg
+.. image:: ../../Logo_FOXES_IWES.svg
     :align: center
 
 Welcome to foxes
@@ -43,4 +43,7 @@ Contents:
 
         api
 
+    .. toctree::
+        :maxdepth: 2
 
+        history
