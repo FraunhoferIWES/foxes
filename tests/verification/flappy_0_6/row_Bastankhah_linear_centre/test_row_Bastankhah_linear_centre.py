@@ -10,12 +10,7 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
-
+    
     def test(self):
 
         n_s = 99
@@ -67,36 +62,36 @@ class Tests:
 
         df = data.to_dataframe()[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
-        self.print("\nReading file", cfile)
+        print("\nReading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
-        self.print()
-        self.print("TRESULTS\n")
+        print()
+        print("TRESULTS\n")
         sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
         df = df.loc[sel]
         fdata = fdata.loc[sel]
-        self.print(df.loc[sel])
-        self.print(fdata.loc[sel])
+        print(df.loc[sel])
+        print(fdata.loc[sel])
 
-        self.print("\nVERIFYING\n")
+        print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
         delta = df - fdata
-        self.print(delta)
+        print(delta)
 
         chk = delta.abs()
-        self.print(chk.max())
+        print(chk.max())
 
         var = FV.WS
-        self.print(f"\nCHECKING {var}")
+        print(f"\nCHECKING {var}")
         sel = chk[var] >= 1e-7
-        self.print(df.loc[sel])
-        self.print(fdata.loc[sel])
-        self.print(chk.loc[sel])
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
         assert (chk[var] < 1e-7).all()
 
         var = FV.P
         sel = chk[var] >= 1e-5
-        self.print(f"\nCHECKING {var}\n", delta.loc[sel])
+        print(f"\nCHECKING {var}\n", delta.loc[sel])
         assert (chk[var] < 1e-5).all()
