@@ -1,19 +1,15 @@
-import unittest
 from pathlib import Path
 import inspect
 from dask.diagnostics import ProgressBar
-
-# import dask
-# from dask.distributed import Client
 
 import foxes
 import foxes.variables as FV
 
 
-class Test(unittest.TestCase):
-    def setUp(self):
-        self.thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+class Tests:
+
+    thisdir = Path(inspect.getfile(inspect.currentframe())).parent
+    verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -41,10 +37,6 @@ class Test(unittest.TestCase):
         ]
 
         ck = {FV.STATE: c}
-        # client = Client()
-        # self.print(f"\n{client}")
-        # self.print(f"Dashboard: {client.dashboard_link}\n")
-        # dask.config.set(scheduler="distributed")
 
         base_results = None
         for rotor, pwake, lim in cases:
@@ -109,7 +101,3 @@ class Test(unittest.TestCase):
                 self.print(f"CASE {(rotor, pwake, lim)}:", chk.max())
 
                 assert (chk < lim).all()
-
-
-if __name__ == "__main__":
-    unittest.main()

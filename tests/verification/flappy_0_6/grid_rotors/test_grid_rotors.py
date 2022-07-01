@@ -1,5 +1,4 @@
 import pandas as pd
-import unittest
 from pathlib import Path
 import inspect
 
@@ -7,10 +6,10 @@ import foxes
 import foxes.variables as FV
 
 
-class Test(unittest.TestCase):
-    def setUp(self):
-        self.thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+class Tests:
+
+    thisdir = Path(inspect.getfile(inspect.currentframe())).parent
+    verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -129,7 +128,3 @@ class Test(unittest.TestCase):
             assert (chk[var] < 1.51).all()
 
             self.print()
-
-
-if __name__ == "__main__":
-    unittest.main()

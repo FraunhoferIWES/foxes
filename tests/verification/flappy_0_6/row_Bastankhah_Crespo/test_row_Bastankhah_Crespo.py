@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import unittest
 from pathlib import Path
 import inspect
 
@@ -8,10 +7,10 @@ import foxes
 import foxes.variables as FV
 
 
-class Test(unittest.TestCase):
-    def setUp(self):
-        self.thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 0
+class Tests:
+
+    thisdir = Path(inspect.getfile(inspect.currentframe())).parent
+    verbosity = 0
 
     def print(self, *args):
         if self.verbosity:
@@ -81,7 +80,7 @@ class Test(unittest.TestCase):
         self.print("TRESULTS\n")
         self.print(df)
 
-        self.print("\Reading file", cfile)
+        self.print("\nReading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
         self.print()
@@ -117,7 +116,3 @@ class Test(unittest.TestCase):
         self.print(fdata.loc[sel])
         self.print(chk.loc[sel])
         assert (chk[var] < 3e-4).all()
-
-
-if __name__ == "__main__":
-    unittest.main()
