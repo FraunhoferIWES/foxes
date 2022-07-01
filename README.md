@@ -1,7 +1,7 @@
 # foxes
 ## Farm Optimization and eXtended yield Evaluation Software
 
-![](docs/logo/Logo_FOXES_IWES.svg)
+![](Logo_FOXES_IWES.svg)
 
 ## Overview
 The software `foxes` is a modular wind farm simulation and wake modelling toolbox which is based on engineering wake models. It has many applications, for example
@@ -13,7 +13,10 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 Currently the modelled time scales are related to 10-min averages or longer periods, and also statistical data like wind rose data can be modelled. High-frequency effects are not supported.
 
 ## Installation
-- We recommend working in a Python virtual environment and install `foxes` there. Such an environment can be created by
+
+### Virtual Python environment
+
+We recommend working in a Python virtual environment and install `foxes` there. Such an environment can be created by
 ```
 python -m venv /path/to/my_venv
 ```
@@ -21,28 +24,41 @@ and afterwards be activated by
 ```
 source /path/to/my_venv/bin/activate
 ```
-You can leave the environment by the command `deactivate`.
-- As a general user, you can install the latest release by
+All subsequent installation commands via `pip` can then be executed directly within the active environment without changes. After your work with `foxes` is done you can leave the environment by the command `deactivate`. 
+
+### Standard users
+
+- As a standard user, you can install the latest release by
 ```
 pip install foxes
 ```
-This should correspond to the `main` branch here at GitHub.
-- As a developer, you can either install from this directory via
+This in general corresponds to the `main` branch at [github](https://github.com/FraunhoferIWES/foxes). Alternatively, you can decide to install the latest pre-release developments by
+```
+pip install git+https://github.com/FraunhoferIWES/foxes/tree/dev
+```
+
+### Developers
+
+- The first step as a develop is to clone the `foxes` repository by
+```
+git clone https://github.com/FraunhoferIWES/foxes.git
+```
+Enter the root directory by `cd foxes`. Then you can either install from this directory via
 ```
 pip install -e .
 ```
-- Alternatively, you can add the path to your local `foxes` clone directory to your `PYTHONPATH`, e.g. by
+- Alternatively, add the `foxes` directory to your `PYTHONPATH`, e.g. by running
 ```
 export PYTHONPATH=`pwd`:$PYTHONPATH
 ```
-and then run
+from the root `foxes` directory, and then
 ```
 pip install -r requirements.txt
 ```
 
 ## Minimal example
 
-For detailed examples, check the `examples` folder in this repository. A minimal running example is the following, based on provided static `csv` data files:
+For detailed examples of how to run _foxes_, check the `examples` and `notebooks` folders in this repository. A minimal running example is the following, based on provided static `csv` data files:
 ```python
 import foxes
 
