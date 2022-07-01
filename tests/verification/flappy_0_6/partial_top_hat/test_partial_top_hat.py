@@ -12,6 +12,8 @@ class Tests:
 
     def test(self):
 
+        print(self.thisdir)
+
         c = 2000
         cfile = self.thisdir / "flappy" / "results.csv.gz"
         tfile = self.thisdir / "NREL-5MW-D126-H90.csv"
