@@ -53,7 +53,7 @@ class Tests:
 
             farm = foxes.WindFarm()
             foxes.input.farm_layout.add_from_file(
-                farm, lfile, turbine_models=[ttype.name], verbosity=self.verbosity
+                farm, lfile, turbine_models=[ttype.name], verbosity=1
             )
 
             algo = foxes.algorithms.Downwind(
@@ -65,10 +65,10 @@ class Tests:
                 wake_frame="rotor_wd",
                 partial_wakes_model=pwake,
                 chunks=ck,
-                verbosity=self.verbosity,
+                verbosity=1,
             )
 
-            if self.verbosity:
+            if 1:
                 with ProgressBar():
                     data = algo.calc_farm()
             else:
