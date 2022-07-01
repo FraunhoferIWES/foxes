@@ -76,8 +76,14 @@ class Tests:
         delta = df.reset_index() - fdata
         self.print(delta)
         self.print(delta.max())
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        self.print(chk.max())
+        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs().max()
+        
+        print(chk)
+        assert chk[FV.WS] < 1e-5
+        assert chk[FV.P] < 1e-3
 
-        assert (chk[FV.WS] < 1e-5).all()
-        assert (chk[FV.P] < 1e-3).all()
+
+        #self.print(chk.max())
+
+        #assert (chk[FV.WS] < 1e-5).all()
+        #assert (chk[FV.P] < 1e-3).all()
