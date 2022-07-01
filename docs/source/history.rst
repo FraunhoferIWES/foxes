@@ -28,4 +28,4 @@ v0.1.2-alpha
 
 v0.1.3-alpha
 ------------
-* (none)
+* Adding docu: https://fraunhoferiwes.github.io/foxes.docs/index.html
