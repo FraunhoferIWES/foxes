@@ -43,7 +43,7 @@ class Tests:
             xy_step=stp,
             n_turbines=n_t,
             turbine_models=["kTI_amb_02", ttype.name],
-            verbosity=self.verbosity,
+            verbosity=1,
         )
 
         algo = foxes.algorithms.Downwind(
@@ -55,7 +55,7 @@ class Tests:
             wake_frame="rotor_wd",
             partial_wakes_model="rotor_points",
             chunks=ck,
-            verbosity=self.verbosity,
+            verbosity=1,
         )
 
         data = algo.calc_farm()
