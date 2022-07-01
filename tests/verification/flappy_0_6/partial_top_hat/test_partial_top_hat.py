@@ -82,6 +82,8 @@ class Tests:
         print("CHK WS =", chk[FV.WS])
         print("CHK P =", chk[FV.P])
 
+        assert 1==2
+
         assert chk[FV.WS] < 1e-5
         assert chk[FV.P] < 1e-3
 
