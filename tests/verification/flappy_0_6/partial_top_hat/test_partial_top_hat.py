@@ -9,7 +9,7 @@ import foxes.variables as FV
 class Tests:
 
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-    verbosity = 0
+    verbosity = 1
 
     def print(self, *args):
         if self.verbosity:
