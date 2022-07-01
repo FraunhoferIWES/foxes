@@ -1,4 +1,4 @@
-from importlib import resources
+import importlib_resources as resources
 from pathlib import Path
 
 
