@@ -20,6 +20,7 @@ PyPi reference: [https://pypi.org/project/foxes/](https://pypi.org/project/foxes
 The currently supported Python versions are: 
 - `Python 3.7`
 - `Python 3.8`
+- `Python 3.9`
 
 ## Installation
 

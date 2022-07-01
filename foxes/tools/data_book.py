@@ -36,7 +36,7 @@ class DataBook:
         context : str
             The context
         package : str or package
-            The package, must contain `\_\_init\_\_.py` file
+            The package, must contain init file
         file_sfx : list of str
             File endings to include
 
@@ -66,7 +66,7 @@ class DataBook:
         context : str
             The context
         package : str or package
-            The package, must contain `\_\_init\_\_.py` file
+            The package, must contain init.py` file
         file_mane : str
             The file name
 
