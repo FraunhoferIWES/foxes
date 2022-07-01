@@ -39,7 +39,7 @@ pip install git+https://github.com/FraunhoferIWES/foxes/tree/dev
 
 ### Developers
 
-- The first step as a develop is to clone the `foxes` repository by
+- The first step as a developer is to clone the `foxes` repository by
 ```
 git clone https://github.com/FraunhoferIWES/foxes.git
 ```
