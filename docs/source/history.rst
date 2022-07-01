@@ -25,3 +25,7 @@ v0.1.2-alpha
 * Adding support for Python 3.9, 3.10
 
 **Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.2
+
+v0.1.3-alpha
+------------
+* (none)
