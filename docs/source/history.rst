@@ -34,4 +34,5 @@ v0.1.3-alpha
 
 v0.1.4-alpha
 ------------
-* (none)
+* Fixes::
+    * Static data: adding missing data `wind_rotation.nc` to manifest
