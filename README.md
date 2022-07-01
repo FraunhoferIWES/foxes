@@ -12,6 +12,8 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 
 Currently the modelled time scales are related to 10-min averages or longer periods, and also statistical data like wind rose data can be modelled. High-frequency effects are not supported.
 
+Documentation: [https://fraunhoferiwes.github.io/foxes.docs/index.html](https://fraunhoferiwes.github.io/foxes.docs/index.html)
+
 Source code: [https://github.com/FraunhoferIWES/foxes](https://github.com/FraunhoferIWES/foxes)
 
 PyPi reference: [https://pypi.org/project/foxes/](https://pypi.org/project/foxes/)
