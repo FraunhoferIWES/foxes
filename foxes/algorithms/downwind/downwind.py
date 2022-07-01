@@ -353,6 +353,13 @@ class Downwind(Algorithm):
 
         self._print_deco("calc_points", n_points=points.shape[1])
 
+        # prepare:
+        init_pars = []
+        calc_pars = []
+        final_pars = []
+        mlist = PointDataModelList(models=[])
+        fdict = {"clear_mem": clear_mem_models}
+        
         # prepare extra eval models:
         emodels = []
         emodels_ipars = []
@@ -375,13 +382,6 @@ class Downwind(Algorithm):
                 emodels_cpars.append(calc_parameters.get(emodels[-1].name, {}))
                 emodels_fpars.append(final_parameters.get(emodels[-1].name, fdict))
         emodels = PointDataModelList(models=emodels)
-
-        # prepare:
-        init_pars = []
-        calc_pars = []
-        final_pars = []
-        mlist = PointDataModelList(models=[])
-        fdict = {"clear_mem": clear_mem_models}
 
         # 0) calculate states results:
         mlist.models.append(self.states)

@@ -37,12 +37,11 @@ def add_from_json(
 
     farm_name = keys[0]
     fdict = dict[farm_name]
-    wt_names = list(fdict.keys())
 
     if set_farm_name:
         farm.name = farm_name
 
-    for wt_name in wt_names:
+    for wt_name, wdict in fdict.items():
 
         pars = deepcopy(turbine_parameters)
         if "D" in wdict:

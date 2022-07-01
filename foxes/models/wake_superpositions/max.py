@@ -89,7 +89,7 @@ class MaxSuperposition(WakeSuperposition):
         """
 
         if np.all(np.max(np.abs(wake_model_result)) < 1e-10):
-            return wake_deltas
+            return wake_delta
 
         if self.SIGNS not in mdata:
             mdata[self.SIGNS] = {}
