@@ -1,7 +1,10 @@
 import numpy as np
 from abc import abstractmethod
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import AxisymmetricWakeModel
+from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import (
+    AxisymmetricWakeModel,
+)
+
 
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
@@ -27,7 +30,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The x values, shape: (n_states, n_points)
-        
+
         Returns
         -------
         amsi : tuple
@@ -60,7 +63,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         r : numpy.ndarray
             The radial values for each x value, shape:
             (n_states, n_points, n_r_per_x, 2)
-        
+
         Returns
         -------
         wdeltas : dict
@@ -71,12 +74,13 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-        amsi, sp_sel = self.calc_amplitude_sigma_spsel(algo, mdata, fdata, 
-                                                         states_source_turbine, x)
+        amsi, sp_sel = self.calc_amplitude_sigma_spsel(
+            algo, mdata, fdata, states_source_turbine, x
+        )
         wdeltas = {}
-        rsel    = r[sp_sel]
+        rsel = r[sp_sel]
         for v in amsi.keys():
             ampld, sigma = amsi[v]
-            wdeltas[v]   = ampld[:, None] * np.exp(-0.5 * (rsel/sigma[:, None])**2)
+            wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
 
         return wdeltas, sp_sel

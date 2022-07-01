@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Turbine:
     """
     An individual wind turbine.
@@ -27,7 +28,7 @@ class Turbine:
     H : float, optional
         The hub height. Overwrites turbine type
         settings if given
-    
+
     Attributes
     ----------
     xy : array_like
@@ -59,19 +60,19 @@ class Turbine:
         name=None,
         models_state_sel=None,
         D=None,
-        H=None
+        H=None,
     ):
-        self.index  = index
-        self.name   = name
-        self.xy     = np.array(xy)
+        self.index = index
+        self.name = name
+        self.xy = np.array(xy)
         self.models = turbine_models
-        self.D      = D
-        self.H      = H
-        
+        self.D = D
+        self.H = H
+
         self.mstates_sel = models_state_sel
         if self.mstates_sel is None:
             self.mstates_sel = [None] * len(self.models)
-    
+
     def add_model(self, model, states_sel=None):
         """
         Add a turbine model to the list.
@@ -86,7 +87,7 @@ class Turbine:
         """
         self.models.append(model)
         self.mstates_sel.append(states_sel)
-    
+
     def insert_model(self, index, model, states_sel=None):
         """
         Insert a turbine model into the list of models.
@@ -99,8 +100,7 @@ class Turbine:
             The model
         states_sel : numpy.ndarray of bool, optional
             The states selection for the model, shape: (n_states,)
-            
+
         """
         self.models.insert(index, model)
         self.mstates_sel.insert(index, states_sel)
-        

@@ -1,5 +1,6 @@
 from foxes.tools import PandasFileHelper, all_subclasses
 
+
 class Output:
     """
     Base class for foxes output.
@@ -8,7 +9,7 @@ class Output:
     helper functions.
 
     """
-    
+
     @classmethod
     def write(cls, file_path, data, format_col2var={}, format_dict={}, **kwargs):
         """
@@ -26,9 +27,9 @@ class Output:
             Mapping from column names to flappy variables,
             for formatting
         format_dict : dict
-            Dictionary with format entries for columns, e.g. 
+            Dictionary with format entries for columns, e.g.
             {FV.P: '{:.4f}'}. Note that the keys are flappy variables
-        
+
         """
 
         fdict = {}
@@ -38,15 +39,15 @@ class Output:
                 fdict[c] = format_dict[v]
             elif v in PandasFileHelper.DEFAULT_FORMAT_DICT:
                 fdict[c] = PandasFileHelper.DEFAULT_FORMAT_DICT[v]
-        
+
         PandasFileHelper.write_file(data, file_path, fdict, **kwargs)
 
-    @classmethod 
+    @classmethod
     def print_models(cls):
         """
         Prints all model names.
         """
-        names = sorted([ scls.__name__ for scls in all_subclasses(cls)])
+        names = sorted([scls.__name__ for scls in all_subclasses(cls)])
         for n in names:
             print(n)
 
@@ -65,7 +66,7 @@ class Output:
         if model_type is None:
             return None
 
-        allc  = all_subclasses(cls)
+        allc = all_subclasses(cls)
         found = model_type in [scls.__name__ for scls in allc]
 
         if found:
@@ -75,5 +76,6 @@ class Output:
 
         else:
             estr = "Output type '{}' is not defined, available types are \n {}".format(
-                model_type,sorted([ i.__name__ for i in allc]))
+                model_type, sorted([i.__name__ for i in allc])
+            )
             raise KeyError(estr)

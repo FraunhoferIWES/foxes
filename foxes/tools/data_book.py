@@ -1,6 +1,7 @@
 from importlib import resources
 from pathlib import Path
 
+
 class DataBook:
     """
     Container class for file paths, either directly
@@ -10,7 +11,7 @@ class DataBook:
     ----------
     data_book : DataBook, optional
         A data book to start from
-    
+
     Attributes
     ----------
     dbase : dict
@@ -18,14 +19,14 @@ class DataBook:
         value: dict (file name str to pathlib.Path)
 
     """
-    
+
     def __init__(self, data_book=None):
         self.dbase = {}
         if data_book is not None:
             for c, d in data_book.items():
                 self.dbase[c] = {}
                 self.dbase[c].update(d)
-    
+
     def add_data_package(self, context, package, file_sfx):
         """
         Add static files from a package location.
@@ -42,12 +43,14 @@ class DataBook:
         """
         if context not in self.dbase:
             self.dbase[context] = {}
-        
+
         if isinstance(file_sfx, str):
             file_sfx = [file_sfx]
 
         contents = list(resources.contents(package))
-        check_f  = lambda f: any([len(f) > len(s) and f[-len(s):] == s for s in file_sfx])
+        check_f = lambda f: any(
+            [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
+        )
         contents = [f for f in contents if check_f(f)]
 
         for f in contents:
@@ -66,16 +69,18 @@ class DataBook:
             The package, must contain `\_\_init\_\_.py` file
         file_mane : str
             The file name
-            
+
         """
         if context not in self.dbase:
             self.dbase[context] = {}
-        
+
         try:
             with resources.path(package, file_name) as path:
                 self.dbase[context][file_name] = path
         except FileNotFoundError:
-            raise FileNotFoundError(f"File '{file_name}' not found in package '{package}'")
+            raise FileNotFoundError(
+                f"File '{file_name}' not found in package '{package}'"
+            )
 
     def add_files(self, context, file_paths):
         """
@@ -92,13 +97,15 @@ class DataBook:
 
         if context not in self.dbase:
             self.dbase[context] = {}
-        
+
         for f in file_paths:
             path = Path(f)
             if not path.is_file():
-                raise FileNotFoundError(f"File '{path}' not found, cannot add to context '{context}'")
+                raise FileNotFoundError(
+                    f"File '{path}' not found, cannot add to context '{context}'"
+                )
             self.dbase[context][path.name] = path
-    
+
     def add_file(self, context, file_path):
         """
         Add a file path
@@ -136,7 +143,7 @@ class DataBook:
             path = Path(file_name)
             if path.is_file():
                 return path
-        
+
         file_name = str(file_name)
 
         try:
@@ -144,11 +151,15 @@ class DataBook:
         except KeyError:
             if not errors:
                 return None
-            raise KeyError(f"Context '{context}' not found in data book. Available: {sorted(list(self.dbase.keys()))}")
-        
-        try: 
+            raise KeyError(
+                f"Context '{context}' not found in data book. Available: {sorted(list(self.dbase.keys()))}"
+            )
+
+        try:
             return cdata[file_name]
         except KeyError:
             if not errors:
                 return None
-            raise KeyError(f"File '{file_name}' not found in context '{context}'. Available: {sorted(list(cdata.keys()))}")
+            raise KeyError(
+                f"File '{file_name}' not found in context '{context}'. Available: {sorted(list(cdata.keys()))}"
+            )

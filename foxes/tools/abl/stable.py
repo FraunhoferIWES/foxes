@@ -1,6 +1,7 @@
 import numpy as np
 from foxes.tools.abl.neutral import logz as lgz
 
+
 def logz(height, z0):
     """
     Calculates the log factor for
@@ -12,7 +13,7 @@ def logz(height, z0):
         The evaluation height
     z0 : float
         The roughness length
-    
+
     Returns
     -------
     lz : float
@@ -20,6 +21,7 @@ def logz(height, z0):
 
     """
     return lgz(height, z0)
+
 
 def psi(height, mol):
     """
@@ -31,7 +33,7 @@ def psi(height, mol):
         The height value
     mol : float
         The Monin-Obukhov height
-    
+
     Returns
     -------
     psi : float
@@ -39,7 +41,8 @@ def psi(height, mol):
 
     """
     h = np.minimum(height, np.abs(mol))
-    return -5. * h / mol
+    return -5.0 * h / mol
+
 
 def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
     """
@@ -58,14 +61,15 @@ def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
         The Monin-Obukhov height
     kappa : float
         The van-Karman constant
-    
+
     Returns
     -------
     ustar : float
         The friction velocity
 
     """
-    return ws_ref * kappa / ( logz(h_ref, z0) - psi(h_ref, mol) )
+    return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+
 
 def calc_ws(height, z0, ustar, psi, kappa=0.41):
     """
@@ -90,4 +94,4 @@ def calc_ws(height, z0, ustar, psi, kappa=0.41):
         The wind speed
 
     """
-    return ustar / kappa * ( logz(height, z0) - psi ); 
+    return ustar / kappa * (logz(height, z0) - psi)

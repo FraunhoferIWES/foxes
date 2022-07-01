@@ -1,6 +1,6 @@
-
 import foxes.variables as FV
 from foxes.core import PointDataModel
+
 
 class SetAmbPointResults(PointDataModel):
     """
@@ -12,7 +12,7 @@ class SetAmbPointResults(PointDataModel):
         The point variables to be treated
     vars_to_amb : list of str, optional
         The variables to be copied to output
-    
+
     Attributes
     ----------
     pvars : list of str
@@ -25,7 +25,7 @@ class SetAmbPointResults(PointDataModel):
     def __init__(self, point_vars, vars_to_amb=None):
         super().__init__()
         self.pvars = point_vars
-        self.vars  = vars_to_amb
+        self.vars = vars_to_amb
 
     def output_point_vars(self, algo):
         if self.pvars is None:

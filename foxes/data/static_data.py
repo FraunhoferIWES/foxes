@@ -1,13 +1,13 @@
-
 from foxes.tools import DataBook
 
 from . import farms
 from . import states
 from . import power_ct_curves
 
-FARM     = "farm"
-STATES   = "states"
+FARM = "farm"
+STATES = "states"
 PCTCURVE = "power_ct_curve"
+
 
 class StaticData(DataBook):
     """
@@ -21,4 +21,3 @@ class StaticData(DataBook):
         self.add_data_package(FARM, farms, ".csv")
         self.add_data_package(STATES, states, [".csv.gz", ".nc"])
         self.add_data_package(PCTCURVE, power_ct_curves, ".csv")
-        

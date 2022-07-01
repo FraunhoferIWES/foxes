@@ -4,6 +4,7 @@ from foxes.core import TurbineModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class kTI(TurbineModel):
     """
     Calculates the wake model parameter `k`
@@ -40,7 +41,7 @@ class kTI(TurbineModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -48,9 +49,9 @@ class kTI(TurbineModel):
 
         """
         return [FV.K]
-    
+
     def calculate(self, algo, mdata, fdata, st_sel):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -67,7 +68,7 @@ class kTI(TurbineModel):
         st_sel : numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
-            
+
         Returns
         -------
         results : dict
@@ -76,11 +77,12 @@ class kTI(TurbineModel):
 
         """
         kTI = self.get_data(FV.KTI, fdata, st_sel)
-        ti  = self.get_data(self.ti_var, fdata, st_sel)
+        ti = self.get_data(self.ti_var, fdata, st_sel)
 
-        k = fdata.get(FV.K, 
-                np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE))
-                
+        k = fdata.get(
+            FV.K, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
+        )
+
         k[st_sel] = kTI * ti
 
-        return {FV.K: k}  
+        return {FV.K: k}

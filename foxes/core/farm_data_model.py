@@ -3,6 +3,7 @@ from abc import abstractmethod
 from foxes.core.data_calc_model import DataCalcModel
 import foxes.variables as FV
 
+
 class FarmDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
@@ -13,7 +14,7 @@ class FarmDataModel(DataCalcModel):
     pre_rotor : bool
         Flag for running this model before
         running the rotor model.
-    
+
     Attributes
     ----------
     pre_rotor : bool
@@ -35,7 +36,7 @@ class FarmDataModel(DataCalcModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -46,7 +47,7 @@ class FarmDataModel(DataCalcModel):
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -60,7 +61,7 @@ class FarmDataModel(DataCalcModel):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         results : dict
@@ -70,13 +71,7 @@ class FarmDataModel(DataCalcModel):
         """
         pass
 
-    def run_calculation(
-            self, 
-            algo, 
-            *data, 
-            out_vars,
-            **calc_pars
-        ):
+    def run_calculation(self, algo, *data, out_vars, **calc_pars):
         """
         Starts the model calculation in parallel, via
         xarray's `apply_ufunc`.
@@ -93,17 +88,21 @@ class FarmDataModel(DataCalcModel):
             The calculation output variables
         **calc_pars : dict, optional
             Additional arguments for the `calculate` function
-        
+
         Returns
         -------
         results : xarray.Dataset
             The calculation results
 
         """
-        return super().run_calculation(algo, *data, out_vars=out_vars,
-                                        loop_dims=[FV.STATE], 
-                                        out_core_vars=[FV.TURBINE, FV.VARS],
-                                        **calc_pars)
+        return super().run_calculation(
+            algo,
+            *data,
+            out_vars=out_vars,
+            loop_dims=[FV.STATE],
+            out_core_vars=[FV.TURBINE, FV.VARS],
+            **calc_pars
+        )
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """

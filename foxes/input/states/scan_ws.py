@@ -4,6 +4,7 @@ from foxes.core import States
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class ScanWS(States):
     """
     A given list of wind speeds, all other variables are fixed.
@@ -18,7 +19,7 @@ class ScanWS(States):
         The TI value
     rho : float, optional
         The air density
-    
+
     Parameters
     ----------
     wd : float
@@ -30,20 +31,14 @@ class ScanWS(States):
 
     """
 
-    def __init__(
-        self,
-        ws_list,
-        wd,
-        ti=None,
-        rho=None
-    ):
+    def __init__(self, ws_list, wd, ti=None, rho=None):
         super().__init__()
 
         self._wsl = np.array(ws_list)
-        self.N    = len(ws_list)
-        self.wd   = wd
-        self.ti   = ti
-        self.rho  = rho
+        self.N = len(ws_list)
+        self.wd = wd
+        self.ti = ti
+        self.rho = rho
 
     def model_input_data(self, algo):
         """
@@ -51,26 +46,26 @@ class ScanWS(States):
         calculation.
 
         This function should specify all data
-        that depend on the loop variable (e.g. state), 
+        that depend on the loop variable (e.g. state),
         or that are intended to be shared between chunks.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         idata : dict
             The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self.WS = f"{self.name}_ws"
 
         idata = super().model_input_data(algo)
-        idata["data_vars"][self.WS] = ((FV.STATE, ), self._wsl)
+        idata["data_vars"][self.WS] = ((FV.STATE,), self._wsl)
 
         del self._wsl
 
@@ -96,7 +91,7 @@ class ScanWS(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -120,17 +115,17 @@ class ScanWS(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         weights : numpy.ndarray
             The weights, shape: (n_states,)
 
         """
-        return np.full((self.N, algo.n_turbines), 1./self.N, dtype=FC.DTYPE)
+        return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=FC.DTYPE)
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -146,7 +141,7 @@ class ScanWS(States):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -157,10 +152,16 @@ class ScanWS(States):
         pdata[FV.WS][:] = mdata[self.WS][:, None]
 
         if self.wd is not None:
-            pdata[FV.WD] = np.full((pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE)
+            pdata[FV.WD] = np.full(
+                (pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE
+            )
         if self.ti is not None:
-            pdata[FV.TI] = np.full((pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE)
+            pdata[FV.TI] = np.full(
+                (pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE
+            )
         if self.rho is not None:
-            pdata[FV.RHO] = np.full((pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE)
-        
+            pdata[FV.RHO] = np.full(
+                (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
+            )
+
         return {v: pdata[v] for v in self.output_point_vars(algo)}

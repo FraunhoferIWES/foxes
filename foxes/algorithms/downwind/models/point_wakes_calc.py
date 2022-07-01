@@ -2,6 +2,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
+
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
@@ -14,7 +15,7 @@ class PointWakesCalculation(PointDataModel):
         The extra evaluation models
     emodels_cpars : list of dict
         The calculation parameters for extra models
-    
+
     Attributes
     ----------
     point_vars : list of str
@@ -40,7 +41,7 @@ class PointWakesCalculation(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -52,7 +53,7 @@ class PointWakesCalculation(PointDataModel):
         return self.pvars
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -68,7 +69,7 @@ class PointWakesCalculation(PointDataModel):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -76,9 +77,9 @@ class PointWakesCalculation(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        torder   = fdata[FV.ORDER].astype(FC.ITYPE)
-        n_order  = torder.shape[1]
-        points   = pdata[FV.POINTS]
+        torder = fdata[FV.ORDER].astype(FC.ITYPE)
+        n_order = torder.shape[1]
+        points = pdata[FV.POINTS]
 
         wdeltas = {}
         for w in algo.wake_models:
@@ -88,10 +89,10 @@ class PointWakesCalculation(PointDataModel):
 
             o = torder[:, oi]
             wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, o, points)
-            
+
             for w in algo.wake_models:
                 w.contribute_to_wake_deltas(algo, mdata, fdata, o, wcoos, wdeltas)
-        
+
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in algo.wake_models:
             w.finalize_wake_deltas(algo, mdata, fdata, amb_res, wdeltas)
@@ -99,7 +100,7 @@ class PointWakesCalculation(PointDataModel):
         for v in self.pvars:
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]
-        
+
         self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}

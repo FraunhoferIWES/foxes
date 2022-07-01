@@ -2,23 +2,24 @@ import pandas as pd
 
 from foxes.core import Turbine
 
+
 def add_from_csv(
-        farm,
-        file_path, 
-        col_index=None,
-        col_name=None,
-        col_x="x",
-        col_y="y",
-        col_H=None,
-        col_D=None,
-        col_id=None,
-        cols_models=None,
-        turbine_base_name="T",
-        turbine_ids=None,
-        turbine_base_name_count_shift=False,
-        verbosity=1,
-        **turbine_parameters
-    ):
+    farm,
+    file_path,
+    col_index=None,
+    col_name=None,
+    col_x="x",
+    col_y="y",
+    col_H=None,
+    col_D=None,
+    col_id=None,
+    cols_models=None,
+    turbine_base_name="T",
+    turbine_ids=None,
+    turbine_base_name_count_shift=False,
+    verbosity=1,
+    **turbine_parameters,
+):
     """
     Add turbines to wind farm via csv input file.
 
@@ -64,14 +65,16 @@ def add_from_csv(
     data = pd.read_csv(file_path, index_col=col_index)
 
     tmodels = turbine_parameters.pop("turbine_models", [])
-    H       = turbine_parameters.pop("H", None)
-    D       = turbine_parameters.pop("D", None)
-    
+    H = turbine_parameters.pop("H", None)
+    D = turbine_parameters.pop("D", None)
+
     for i in data.index:
 
-        s     = 1 if turbine_base_name_count_shift else 0
-        tname = f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]
-        txy   = data.loc[i, [col_x, col_y]].values
+        s = 1 if turbine_base_name_count_shift else 0
+        tname = (
+            f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]
+        )
+        txy = data.loc[i, [col_x, col_y]].values
 
         if turbine_ids is not None:
             tid = turbine_ids[i]
@@ -79,21 +82,19 @@ def add_from_csv(
             tid = data.loc[i, col_id]
         else:
             tid = None
-        
-        
-        hmodels  = [] if cols_models is None else data.loc[i, cols_models].tolist()
+
+        hmodels = [] if cols_models is None else data.loc[i, cols_models].tolist()
         hmodels += tmodels
 
         farm.add_turbine(
             Turbine(
-                name  = tname,
-                index = tid,
-                xy    = txy,
-                H     = H if col_H not in data.columns else data.loc[i, col_H],
-                D     = D if col_D not in data.columns else data.loc[i, col_D],
+                name=tname,
+                index=tid,
+                xy=txy,
+                H=H if col_H not in data.columns else data.loc[i, col_H],
+                D=D if col_D not in data.columns else data.loc[i, col_D],
                 turbine_models=tmodels,
-                **turbine_parameters
+                **turbine_parameters,
             ),
-            verbosity=verbosity
+            verbosity=verbosity,
         )
-

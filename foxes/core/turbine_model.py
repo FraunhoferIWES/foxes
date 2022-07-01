@@ -1,13 +1,13 @@
-
 from abc import abstractmethod
 
 from foxes.core.farm_data_model import FarmDataModel
+
 
 class TurbineModel(FarmDataModel):
     """
     Abstract base class for turbine models.
 
-    Turbine models are FarmDataModels that run 
+    Turbine models are FarmDataModels that run
     on a selection of turbines.
 
     """
@@ -31,7 +31,7 @@ class TurbineModel(FarmDataModel):
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata, st_sel):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,

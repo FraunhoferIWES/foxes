@@ -25,6 +25,7 @@ import argparse
 from contextlib import contextmanager
 import subprocess
 
+
 @contextmanager
 def cd(newdir):
     prevdir = os.getcwd()
@@ -34,15 +35,19 @@ def cd(newdir):
     finally:
         os.chdir(prevdir)
 
+
 def clean():
     if os.path.isfile("clean.sh"):
-        res = subprocess.run(["bash", "clean.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res = subprocess.run(
+            ["bash", "clean.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         ret = res.returncode
         if ret:
             print("\nERROR DURING CLEANING\n")
-            print(res.stderr.decode('utf-8'))
+            print(res.stderr.decode("utf-8"))
             return 1
     return 0
+
 
 def run_tutorial(path):
 
@@ -56,7 +61,7 @@ def run_tutorial(path):
 
                 if not os.path.isfile("README.md"):
                     print(f"\nFILE 'README.md' NOT FOUND\n")
-                    return 0 
+                    return 0
 
                 if not os.path.isfile("run.py"):
                     print(f"\nFILE run.py NOT FOUND\n")
@@ -66,27 +71,29 @@ def run_tutorial(path):
                 with open("README.md") as f:
                     for line in f:
                         if not "-h" in line:
-                            line = line.replace("\"","")
+                            line = line.replace('"', "")
                             s = line.strip().split(" ")
                             if "run.py" in s:
                                 i = s.index("run.py")
-                                commands.append(['python'] + s[i:])
+                                commands.append(["python"] + s[i:])
 
                 if len(commands) == 0:
                     print(f"\nNO COMMAND FOUND IN README.md\n")
                     return 0
-                
+
                 for cmd in commands:
                     print("  ", " ".join(cmd))
 
-                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    res = subprocess.run(
+                        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                    )
                     ret = res.returncode
                     if ret:
                         print("\nERROR DURING RUN\n")
-                        print(res.stderr.decode('utf-8'))
+                        print(res.stderr.decode("utf-8"))
                         clean()
                         return 1
-            
+
             return clean()
 
     except FileNotFoundError:
@@ -94,41 +101,82 @@ def run_tutorial(path):
         print(f"\nFAILED TO ENTER DIRECTORY {path}\n")
         return 1
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--include", help="Include keywords for directory names, or None for all", nargs='+', type=str, default=None)
-    parser.add_argument("-e", "--exclude", help="Exclude keywords for directory names", nargs='+', type=str, default=[])
-    parser.add_argument("-o", "--incopt", help="Flag for inclusion of optimization cases", action='store_true', default=False)
-    parser.add_argument("-O", "--forceopt", help="Flag for inclusion of optimization cases only", action='store_true', default=False)
-    parser.add_argument("-d", "--dry", help="Dry run, only print directories", action='store_true', default=False)
-    parser.add_argument("-D", "--Dry", help="Dry run, only print names", action='store_true', default=False)
-    parser.add_argument("-s", "--step", help="Set the start step, default=0", type=int, default=0)
-    args  = parser.parse_args()
+    parser.add_argument(
+        "-i",
+        "--include",
+        help="Include keywords for directory names, or None for all",
+        nargs="+",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-e",
+        "--exclude",
+        help="Exclude keywords for directory names",
+        nargs="+",
+        type=str,
+        default=[],
+    )
+    parser.add_argument(
+        "-o",
+        "--incopt",
+        help="Flag for inclusion of optimization cases",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-O",
+        "--forceopt",
+        help="Flag for inclusion of optimization cases only",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-d",
+        "--dry",
+        help="Dry run, only print directories",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-D",
+        "--Dry",
+        help="Dry run, only print names",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-s", "--step", help="Set the start step, default=0", type=int, default=0
+    )
+    args = parser.parse_args()
 
     incld = args.include
-    excld = args.exclude 
+    excld = args.exclude
 
     counter = 0
-    dryres  = []
+    dryres = []
     for w in sorted(os.walk(".")):
         for d in sorted(w[1]):
 
             tdir = os.path.join(w[0], d)
 
-            if args.incopt or args.forceopt or not 'optimization' in tdir:
-                
-                ok = True 
+            if args.incopt or args.forceopt or not "optimization" in tdir:
+
+                ok = True
                 for k in excld:
                     if k in tdir:
-                        ok = False 
-                        break 
+                        ok = False
+                        break
                 if ok and incld is not None:
                     for k in incld:
                         if not k in tdir:
-                            ok = False 
+                            ok = False
                             break
-                if args.forceopt and not 'optimization' in tdir:
+                if args.forceopt and not "optimization" in tdir:
                     ok = False
 
                 if ok:
@@ -139,11 +187,11 @@ if __name__ == '__main__':
                             print("\nEXAMPLE", counter)
 
                         if args.dry:
-                            if os.path.isfile(os.path.join(tdir, 'README.md')):
+                            if os.path.isfile(os.path.join(tdir, "README.md")):
                                 dryres.append(tdir)
 
                         elif args.Dry:
-                            if os.path.isfile(os.path.join(tdir, 'README.md')):
+                            if os.path.isfile(os.path.join(tdir, "README.md")):
                                 dryres.append(d)
 
                         elif run_tutorial(tdir):
@@ -154,8 +202,5 @@ if __name__ == '__main__':
     if args.dry or args.Dry:
         for r in sorted(dryres):
             print(r)
-    else:    
+    else:
         print("\nTutorials OK.")
-
-
-

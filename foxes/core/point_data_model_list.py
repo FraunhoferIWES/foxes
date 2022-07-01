@@ -1,10 +1,10 @@
-
 from foxes.core.point_data_model import PointDataModel
+
 
 class PointDataModelList(PointDataModel):
     """
     A list of point data models.
-    
+
     By using the PointDataModelList the models'
     `calculate` functions are called together
     under one common call of xarray's `apply_ufunc`.
@@ -20,6 +20,7 @@ class PointDataModelList(PointDataModel):
         The model list
 
     """
+
     def __init__(self, models=[]):
         super().__init__()
         self.models = models
@@ -32,7 +33,7 @@ class PointDataModelList(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -61,9 +62,13 @@ class PointDataModelList(PointDataModel):
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
             if not m.initialized:
@@ -76,7 +81,7 @@ class PointDataModelList(PointDataModel):
         super().initialize(algo)
 
     def calculate(self, algo, mdata, fdata, pdata, parameters=[]):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -105,15 +110,19 @@ class PointDataModelList(PointDataModel):
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
-            #print("PMLIST VARS BEFORE",m.name,list(fdata.keys()))
+            # print("PMLIST VARS BEFORE",m.name,list(fdata.keys()))
             res = m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
             pdata.update(res)
-        
+
         return {v: pdata[v] for v in self.output_point_vars(algo)}
 
     def finalize(self, algo, results, parameters=[], verbosity=0, clear_mem=False):
@@ -133,19 +142,23 @@ class PointDataModelList(PointDataModel):
         clear_mem : bool
             Flag for deleting model data and
             resetting initialization flag
-            
+
         """
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
             if verbosity > 0:
                 print(f"{self.name}, sub-model '{m.name}': Finalizing")
-            m.finalize(algo, results, **parameters[mi])  
-        
+            m.finalize(algo, results, **parameters[mi])
+
         self.models = None
         super().finalize(algo, results, clear_mem)

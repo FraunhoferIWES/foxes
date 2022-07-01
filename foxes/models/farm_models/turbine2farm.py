@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import FarmModel
 
+
 class Turbine2FarmModel(FarmModel):
     """
     Wrapper that promotes turbine models
@@ -12,7 +13,7 @@ class Turbine2FarmModel(FarmModel):
     ----------
     turbine_model : foxes.core.TurbineModel
         The turbine model
-    
+
     Attributes
     ----------
     turbine_model : foxes.core.TurbineModel
@@ -43,9 +44,11 @@ class Turbine2FarmModel(FarmModel):
         """
         if not self.turbine_model.initialized:
             s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-            self.turbine_model.initialize(algo, st_sel=s, verbosity=verbosity, **parameters)
+            self.turbine_model.initialize(
+                algo, st_sel=s, verbosity=verbosity, **parameters
+            )
         super().initialize(algo, verbosity=verbosity)
-    
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -54,7 +57,7 @@ class Turbine2FarmModel(FarmModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -62,9 +65,9 @@ class Turbine2FarmModel(FarmModel):
 
         """
         return self.turbine_model.output_farm_vars(algo)
-    
+
     def calculate(self, algo, mdata, fdata, **parameters):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -111,6 +114,6 @@ class Turbine2FarmModel(FarmModel):
 
         """
         s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-        self.turbine_model.finalize(algo, results, st_sel=s, verbosity=verbosity, 
-                                        **parameters)
-    
+        self.turbine_model.finalize(
+            algo, results, st_sel=s, verbosity=verbosity, **parameters
+        )

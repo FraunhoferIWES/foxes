@@ -8,6 +8,7 @@ from foxes.core.data import Data
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class DataCalcModel(Model):
     """
     Abstract base class for models with
@@ -25,7 +26,7 @@ class DataCalcModel(Model):
 
     @abstractmethod
     def calculate(self, algo, *data, **parameters):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -39,7 +40,7 @@ class DataCalcModel(Model):
             The input data
         **parameters : dict, optional
             The calculation parameters
-        
+
         Returns
         -------
         results : dict
@@ -50,17 +51,20 @@ class DataCalcModel(Model):
         pass
 
     def _wrap_calc(
-            self, 
-            *ldata, 
-            algo,
-            dvars,
-            lvars, ldims,
-            evars, edims, edata,
-            loop_dims, 
-            out_vars, 
-            out_dims,
-            calc_pars
-        ):
+        self,
+        *ldata,
+        algo,
+        dvars,
+        lvars,
+        ldims,
+        evars,
+        edims,
+        edata,
+        loop_dims,
+        out_vars,
+        out_dims,
+        calc_pars,
+    ):
         """
         Wrapper that mitigates between apply_ufunc and `calculate`.
         """
@@ -91,8 +95,11 @@ class DataCalcModel(Model):
 
         # add zero output data arrays:
         odims = {v: out_dims for v in out_vars}
-        odata = {v: np.full(oshape, np.nan, dtype=FC.DTYPE) \
-                    for v in out_vars if v not in data[-1]}
+        odata = {
+            v: np.full(oshape, np.nan, dtype=FC.DTYPE)
+            for v in out_vars
+            if v not in data[-1]
+        }
         if len(data) == 1:
             data.append(Data(odata, odims, loop_dims))
         else:
@@ -116,26 +123,22 @@ class DataCalcModel(Model):
                         break
             missing -= found
             if len(missing):
-                raise ValueError(f"Model '{self.name}': Missing results {list(missing)}, expected shape {oshape}")
+                raise ValueError(
+                    f"Model '{self.name}': Missing results {list(missing)}, expected shape {oshape}"
+                )
         del data
-        
+
         # create output:
         n_vars = len(out_vars)
-        data   = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
+        data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
         for v in out_vars:
             data[..., out_vars.index(v)] = results[v]
-        
+
         return data
 
     def run_calculation(
-            self, 
-            algo, 
-            *data, 
-            out_vars,
-            loop_dims,  
-            out_core_vars,
-            **calc_pars
-        ):
+        self, algo, *data, out_vars, loop_dims, out_core_vars, **calc_pars
+    ):
         """
         Starts the model calculation in parallel, via
         xarray's `apply_ufunc`.
@@ -158,7 +161,7 @@ class DataCalcModel(Model):
             `FV.VARS` for variables dimension (required)
         **calc_pars : dict, optional
             Additional arguments for the `calculate` function
-        
+
         Returns
         -------
         results : xarray.Dataset
@@ -168,7 +171,7 @@ class DataCalcModel(Model):
 
         # prepare:
         loopd = set(loop_dims)
-        
+
         # extract loop-var dependent and independent data:
         ldata = []
         lvars = []
@@ -191,54 +194,58 @@ class DataCalcModel(Model):
 
             for c, d in ds.coords.items():
                 if c in loopd:
-                    ldata.append(xr.DataArray(data=d.values, coords={c: d} , dims=[c]))
+                    ldata.append(xr.DataArray(data=d.values, coords={c: d}, dims=[c]))
                     ldims.append((c,))
                     lvars.append(c)
                 else:
                     edata.append(d.values)
                     edims.append((c,))
                     evars.append(c)
-            
+
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
-        
+
         # setup dask options:
-        dargs = dict(output_sizes = {FV.VARS: len(out_vars)})
+        dargs = dict(output_sizes={FV.VARS: len(out_vars)})
         if FV.TURBINE in loopd and FV.TURBINE not in ldims.values():
-            dargs['output_sizes'][FV.TURBINE] = algo.n_turbines
+            dargs["output_sizes"][FV.TURBINE] = algo.n_turbines
         if FV.VARS not in out_core_vars:
-            raise ValueError(f"Model '{self.name}': Expecting '{FV.VARS}' in out_core_vars, got {out_core_vars}")
-        
+            raise ValueError(
+                f"Model '{self.name}': Expecting '{FV.VARS}' in out_core_vars, got {out_core_vars}"
+            )
+
         # setup arguments for wrapper function:
         out_dims = loop_dims + list(set(out_core_vars).difference([FV.VARS]))
         wargs = dict(
             algo=algo,
             dvars=dvars,
-            lvars=lvars, 
+            lvars=lvars,
             ldims=ldims,
-            evars=evars, 
-            edims=edims, 
+            evars=evars,
+            edims=edims,
             edata=edata,
             loop_dims=loop_dims,
             out_vars=out_vars,
             out_dims=out_dims,
-            calc_pars=calc_pars
+            calc_pars=calc_pars,
         )
 
         # run parallel computation:
-        icdims  = [[c for c in d if c not in loopd] for d in ldims]
+        icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
-                    self._wrap_calc, 
-                    *ldata, 
-                    input_core_dims=icdims, 
-                    output_core_dims=[out_core_vars], 
-                    output_dtypes=[FC.DTYPE],
-                    dask="parallelized",
-                    dask_gufunc_kwargs=dargs,
-                    kwargs=wargs
-                )
-        
+            self._wrap_calc,
+            *ldata,
+            input_core_dims=icdims,
+            output_core_dims=[out_core_vars],
+            output_dtypes=[FC.DTYPE],
+            dask="parallelized",
+            dask_gufunc_kwargs=dargs,
+            kwargs=wargs,
+        )
+
         # reorganize results Dataset:
-        results = results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS).persist()
+        results = (
+            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS).persist()
+        )
 
         # try to show progress bar:
         try:

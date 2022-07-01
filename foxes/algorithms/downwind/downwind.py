@@ -1,34 +1,34 @@
-
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList
 import foxes.algorithms.downwind.models as dm
 import foxes.models as fm
 import foxes.variables as FV
 
+
 class Downwind(Algorithm):
     """
     The downwind algorithm.
 
-    The turbines are evaluated once, in the order 
+    The turbines are evaluated once, in the order
     that is calculated by the provided `TurbineOrder`
     object.
 
     Parameters
     ----------
     mbook : foxes.ModelBook
-        The model book 
+        The model book
     farm : foxes.WindFarm
         The wind farm
     states : foxes.core.States
         The ambient states
     wake_models : list of str
-        The wake models, applied to all turbines. 
+        The wake models, applied to all turbines.
         Will be looked up in the model book
     rotor_model : str
         The rotor model, for all turbines. Will be
         looked up in the model book
     wake_frame : str
-        The wake frame. Will be looked up in the 
+        The wake frame. Will be looked up in the
         model book
     partial_wakes_model : str
         The partial wakes model. Will be
@@ -47,23 +47,23 @@ class Downwind(Algorithm):
     """
 
     def __init__(
-            self, 
-            mbook, 
-            farm,
-            states,
-            wake_models,
-            rotor_model="centre",
-            wake_frame="rotor_wd",
-            partial_wakes_model="auto",
-            farm_controller="basic_ctrl",
-            chunks={FV.STATE: 1000},
-            dbook=None,
-            verbosity=1
-        ):
+        self,
+        mbook,
+        farm,
+        states,
+        wake_models,
+        rotor_model="centre",
+        wake_frame="rotor_wd",
+        partial_wakes_model="auto",
+        farm_controller="basic_ctrl",
+        chunks={FV.STATE: 1000},
+        dbook=None,
+        verbosity=1,
+    ):
         super().__init__(mbook, farm, chunks, verbosity, dbook)
 
-        self.states      = states
-        self.n_states    = None
+        self.states = states
+        self.n_states = None
         self.states_data = None
 
         self.rotor_model = self.mbook.rotor_models[rotor_model]
@@ -79,7 +79,7 @@ class Downwind(Algorithm):
         for w in wake_models:
             self.wake_models.append(self.mbook.wake_models[w])
             self.wake_models[-1].name = w
-        
+
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
@@ -112,7 +112,9 @@ class Downwind(Algorithm):
         for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
             self.print(f"    {i}) {m} [pre-rotor]")
         for i, m in enumerate(self.farm_controller.post_rotor_models.models):
-            self.print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}")
+            self.print(
+                f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}"
+            )
         self.print(deco)
 
     def initialize(self, **states_init_pars):
@@ -128,23 +130,23 @@ class Downwind(Algorithm):
         if not self.states.initialized:
             self.print(f"\nInitializing states '{self.states.name}'")
             self.states.initialize(self, verbosity=self.verbosity, **states_init_pars)
-            self.n_states    = self.states.size()
+            self.n_states = self.states.size()
             self.states_data = self.get_models_data(self.states)
             self.print("States data:\n")
             self.print(self.states_data)
-        
+
         super().initialize()
 
     def calc_farm(
-            self, 
-            vars_to_amb=None,
-            init_parameters={},
-            calc_parameters={},
-            final_parameters={},
-            persist=True,
-            clear_mem_models=True,
-            **states_init_pars
-        ):
+        self,
+        vars_to_amb=None,
+        init_parameters={},
+        calc_parameters={},
+        final_parameters={},
+        persist=True,
+        clear_mem_models=True,
+        **states_init_pars,
+    ):
         """
         Calculate farm data.
 
@@ -170,13 +172,13 @@ class Downwind(Algorithm):
             finalization
         **states_init_pars : dict, optional
             Parameters for states initialization
-        
+
         Returns
         -------
         farm_results : xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        
+
         """
 
         if not self.initialized:
@@ -186,12 +188,12 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # prepare:
-        init_pars  = []
-        calc_pars  = []
+        init_pars = []
+        calc_pars = []
         final_pars = []
-        t2f        = fm.farm_models.Turbine2FarmModel
-        mlist      = FarmDataModelList(models=[])
-        fdict      = {"clear_mem": clear_mem_models}
+        t2f = fm.farm_models.Turbine2FarmModel
+        mlist = FarmDataModelList(models=[])
+        fdict = {"clear_mem": clear_mem_models}
 
         # 0) set XHYD:
         mlist.models.append(t2f(fm.turbine_models.SetXYHD()))
@@ -219,25 +221,23 @@ class Downwind(Algorithm):
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
-        calc_pars[-1].update({
-            "store_rpoints"  : True, 
-            "store_rweights" : True, 
-            "store_amb_res"  : True
-        })
-        
+        calc_pars[-1].update(
+            {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
+        )
+
         # 4) calculate turbine order:
         mlist.models.append(dm.CalcOrder())
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
-        
+
         # 5) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
         calc_pars[-1]["pre_rotor"] = False
-        
+
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
@@ -254,46 +254,53 @@ class Downwind(Algorithm):
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # update variables:
-        self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self) 
+        self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self)
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
-        models_data = self.get_models_data(mlist).merge(self.states_data, compat="identical")
+        models_data = self.get_models_data(mlist).merge(
+            self.states_data, compat="identical"
+        )
         if persist:
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))  
+        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
-        self.print(f"\nCalculating {self.n_states} states for {self.n_turbines} turbines")
-        farm_results = mlist.run_calculation(self, models_data, out_vars=self.farm_vars, 
-                                                parameters=calc_pars)
+        self.print(
+            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
+        )
+        farm_results = mlist.run_calculation(
+            self, models_data, out_vars=self.farm_vars, parameters=calc_pars
+        )
         del models_data
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, results=farm_results, parameters=final_pars, verbosity=self.verbosity)
+        mlist.finalize(
+            self, results=farm_results, parameters=final_pars, verbosity=self.verbosity
+        )
 
         return farm_results
 
     def calc_points(
-            self, 
-            farm_results, 
-            points, 
-            vars=None, 
-            vars_to_amb=None,
-            point_models=None,
-            init_parameters={},
-            calc_parameters={},
-            final_parameters={},
-            persist_mdata=True,
-            persist_pdata=False,
-            clear_mem_models=True,
-            **states_init_pars
-        ):
+        self,
+        farm_results,
+        points,
+        vars=None,
+        vars_to_amb=None,
+        point_models=None,
+        init_parameters={},
+        calc_parameters={},
+        final_parameters={},
+        persist_mdata=True,
+        persist_pdata=False,
+        clear_mem_models=True,
+        **states_init_pars,
+    ):
         """
         Calculate data at a given set of points.
 
@@ -332,13 +339,13 @@ class Downwind(Algorithm):
             finalization
         **states_init_pars : dict, optional
             Parameters for states initialization
-        
+
         Returns
         -------
         point_results : xarray.Dataset
             The point results. The calculated variables have
             dimensions (state, point)
-        
+
         """
 
         if not self.initialized:
@@ -347,7 +354,7 @@ class Downwind(Algorithm):
         self._print_deco("calc_points", n_points=points.shape[1])
 
         # prepare extra eval models:
-        emodels       = []
+        emodels = []
         emodels_ipars = []
         emodels_cpars = []
         emodels_fpars = []
@@ -356,7 +363,7 @@ class Downwind(Algorithm):
                 point_models = [point_models]
             for m in point_models:
                 if isinstance(m, str):
-                    pname  = m
+                    pname = m
                     pmodel = self.mbook.point_models[pname]
                     pmodel.name = pname
                     emodels.append(pmodel)
@@ -370,11 +377,11 @@ class Downwind(Algorithm):
         emodels = PointDataModelList(models=emodels)
 
         # prepare:
-        init_pars  = []
-        calc_pars  = []
+        init_pars = []
+        calc_pars = []
         final_pars = []
-        mlist      = PointDataModelList(models=[])
-        fdict      = {"clear_mem": clear_mem_models}
+        mlist = PointDataModelList(models=[])
+        fdict = {"clear_mem": clear_mem_models}
 
         # 0) calculate states results:
         mlist.models.append(self.states)
@@ -389,7 +396,9 @@ class Downwind(Algorithm):
         final_pars.append({"parameters": emodels_fpars})
 
         # 2) transfer ambient results:
-        mlist.models.append(dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb))
+        mlist.models.append(
+            dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb)
+        )
         mlist.models[-1].name = "set_amb_results"
         init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
@@ -406,7 +415,9 @@ class Downwind(Algorithm):
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
 
         # get input model data:
-        models_data = self.get_models_data(mlist).merge(self.states_data, compat="identical")
+        models_data = self.get_models_data(mlist).merge(
+            self.states_data, compat="identical"
+        )
         if persist_mdata:
             models_data = models_data.persist()
         self.print("\nInput model data:\n\n", models_data, "\n")
@@ -430,18 +441,28 @@ class Downwind(Algorithm):
         for v in vars:
             if v not in ovars:
                 raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
-        self.print(f"\nOutput point variables:", ", ".join(vars))  
+        self.print(f"\nOutput point variables:", ", ".join(vars))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # calculate:
-        self.print(f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states")
-        point_results = mlist.run_calculation(self, models_data, farm_results, point_data, 
-                                                    out_vars=vars, parameters=calc_pars)
+        self.print(
+            f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states"
+        )
+        point_results = mlist.run_calculation(
+            self,
+            models_data,
+            farm_results,
+            point_data,
+            out_vars=vars,
+            parameters=calc_pars,
+        )
         del models_data, farm_results, point_data
 
         # finalize models:
         self.print("\n")
-        mlist.finalize(self, point_results, parameters=final_pars, verbosity=self.verbosity)
+        mlist.finalize(
+            self, point_results, parameters=final_pars, verbosity=self.verbosity
+        )
 
         return point_results
 
@@ -454,7 +475,7 @@ class Downwind(Algorithm):
         clear_mem : bool
             Flag for deleting algorithm data and
             resetting initialization flag
-            
+
         """
         if clear_mem:
             self.states_data = None

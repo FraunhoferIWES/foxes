@@ -1,9 +1,12 @@
 import numpy as np
 from abc import abstractmethod
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import AxisymmetricWakeModel
+from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import (
+    AxisymmetricWakeModel,
+)
 import foxes.variables as FV
 import foxes.constants as FC
+
 
 class TopHatWakeModel(AxisymmetricWakeModel):
     """
@@ -18,7 +21,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-    
+
     """
 
     def __init__(self, superpositions, ct_max=0.9999):
@@ -49,18 +52,19 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         ct : numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
-        
+
         Returns
         -------
         wake_r : numpy.ndarray
             The wake radii, shape: (n_states, n_points)
-        
+
         """
         pass
 
     @abstractmethod
-    def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
-                                        sp_sel, x, wake_r, ct):
+    def calc_centreline_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+    ):
         """
         Calculate centre line results of wake deltas.
 
@@ -85,12 +89,12 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         ct : numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_sp_sel,)
-        
+
         Returns
         -------
         cl_del : dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,) 
+            varlue: numpy.ndarray, shape: (n_sp_sel,)
 
         """
         pass
@@ -115,7 +119,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         r : numpy.ndarray
             The radial values for each x value, shape:
             (n_states, n_points, n_r_per_x, 2)
-        
+
         Returns
         -------
         wdeltas : dict
@@ -128,30 +132,31 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         n_states = mdata.n_states
         n_points = x.shape[1]
-        st_sel   = (np.arange(n_states), states_source_turbine)
+        st_sel = (np.arange(n_states), states_source_turbine)
 
-        ct    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ct[:] = fdata[FV.CT][st_sel][:, None]
-        ct[ct>self.ct_max] = self.ct_max
+        ct[ct > self.ct_max] = self.ct_max
 
         wake_r = self.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, ct)
 
         wdeltas = {}
-        sp_sel  = (ct > 0.) & (x > 1e-5) & np.any(r < wake_r[:, :, None], axis=2)
+        sp_sel = (ct > 0.0) & (x > 1e-5) & np.any(r < wake_r[:, :, None], axis=2)
         if np.any(sp_sel):
 
-            x      = x[sp_sel]
-            r      = r[sp_sel]
-            ct     = ct[sp_sel]
+            x = x[sp_sel]
+            r = r[sp_sel]
+            ct = ct[sp_sel]
             wake_r = wake_r[sp_sel]
 
-            cl_del = self.calc_centreline_wake_deltas(algo, mdata, fdata, states_source_turbine,
-                                                        sp_sel, x, wake_r, ct)
-            
-            nsel = (r >= wake_r[:, None])
+            cl_del = self.calc_centreline_wake_deltas(
+                algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+            )
+
+            nsel = r >= wake_r[:, None]
             for v, wdel in cl_del.items():
-                wdeltas[v]       = np.zeros_like(r)
-                wdeltas[v][:]    = wdel[:, None]
-                wdeltas[v][nsel] = 0.
+                wdeltas[v] = np.zeros_like(r)
+                wdeltas[v][:] = wdel[:, None]
+                wdeltas[v][nsel] = 0.0
 
         return wdeltas, sp_sel

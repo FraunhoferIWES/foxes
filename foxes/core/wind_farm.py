@@ -1,4 +1,3 @@
-
 class WindFarm:
     """
     The wind farm.
@@ -7,7 +6,7 @@ class WindFarm:
     ----------
     name : str
         The wind farm name
-    
+
     Attributes
     ----------
     name : str
@@ -18,9 +17,9 @@ class WindFarm:
     """
 
     def __init__(self, name="MyFarm"):
-        self.name     = name
+        self.name = name
         self.turbines = []
-    
+
     def add_turbine(self, turbine, verbosity=1):
         """
         Add a wind turbine to the list.
@@ -28,7 +27,7 @@ class WindFarm:
         Parameters
         ----------
         turbine : foxes.core.Turbine
-            The wind turbine 
+            The wind turbine
         verbosity : int
             The output verbosity, 0 = silent
 
@@ -39,8 +38,10 @@ class WindFarm:
             turbine.name = f"T{turbine.index}"
         self.turbines.append(turbine)
         if verbosity > 0:
-            print(f"Turbine {turbine.index}, {turbine.name}: {', '.join(turbine.models)}")
-    
+            print(
+                f"Turbine {turbine.index}, {turbine.name}: {', '.join(turbine.models)}"
+            )
+
     @property
     def n_turbines(self):
         """

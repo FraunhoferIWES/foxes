@@ -1,8 +1,8 @@
-
 from foxes.core import VerticalProfile
 from foxes.tools.abl import neutral
 import foxes.constants as FC
 import foxes.variables as FV
+
 
 class ABLLogNeutralWsProfile(VerticalProfile):
     """
@@ -32,7 +32,7 @@ class ABLLogNeutralWsProfile(VerticalProfile):
             The input data
         heights : numpy.ndarray
             The evaluation heights
-        
+
         Returns
         -------
         results : numpy.ndarray
@@ -40,9 +40,9 @@ class ABLLogNeutralWsProfile(VerticalProfile):
             shape as heights
 
         """
-        z0  = data[FV.Z0]
-        h0  = data[FV.H]
-        ws  = data[FV.WS]
+        z0 = data[FV.Z0]
+        h0 = data[FV.H]
+        ws = data[FV.WS]
 
         ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
 

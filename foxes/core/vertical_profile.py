@@ -3,6 +3,7 @@ from abc import abstractmethod
 from foxes.core.model import Model
 from foxes.tools import all_subclasses
 
+
 class VerticalProfile(Model):
     """
     Abstract base class for vertical profiles.
@@ -33,7 +34,7 @@ class VerticalProfile(Model):
             The input data
         heights : numpy.ndarray
             The evaluation heights
-        
+
         Returns
         -------
         results : numpy.ndarray
@@ -58,7 +59,7 @@ class VerticalProfile(Model):
         if profile_type is None:
             return None
 
-        allc  = all_subclasses(cls)
+        allc = all_subclasses(cls)
         found = profile_type in [scls.__name__ for scls in allc]
 
         if found:
@@ -68,5 +69,6 @@ class VerticalProfile(Model):
 
         else:
             estr = "Vertical profile type '{}' is not defined, available types are \n {}".format(
-                profile_type, sorted([ i.__name__ for i in allc]))
+                profile_type, sorted([i.__name__ for i in allc])
+            )
             raise KeyError(estr)

@@ -1,6 +1,6 @@
-
 import foxes.variables as FV
 from foxes.core import FarmDataModel
+
 
 class CalcOrder(FarmDataModel):
     """
@@ -22,7 +22,9 @@ class CalcOrder(FarmDataModel):
         """
         if not algo.wake_frame.initialized:
             if verbosity:
-                print(f"{self.name}, linked model '{algo.wake_frame.name}': Initializing")
+                print(
+                    f"{self.name}, linked model '{algo.wake_frame.name}': Initializing"
+                )
             algo.wake_frame.initialize(algo, verbosity)
 
     def output_farm_vars(self, algo):
@@ -33,7 +35,7 @@ class CalcOrder(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -43,7 +45,7 @@ class CalcOrder(FarmDataModel):
         return [FV.ORDER]
 
     def calculate(self, algo, mdata, fdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -57,7 +59,7 @@ class CalcOrder(FarmDataModel):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         results : dict

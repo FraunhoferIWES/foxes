@@ -1,8 +1,9 @@
 import numpy as np
 
+
 def logz(height, z0):
     """
-    Calculates the log factor for 
+    Calculates the log factor for
     wind speed profiles.
 
     Parameters
@@ -11,7 +12,7 @@ def logz(height, z0):
         The evaluation height
     z0 : float
         The roughness length
-    
+
     Returns
     -------
     lz : float
@@ -19,7 +20,8 @@ def logz(height, z0):
 
     """
     h = np.maximum(height, z0)
-    return np.log(h/z0)
+    return np.log(h / z0)
+
 
 def ustar(ws_ref, h_ref, z0, kappa=0.41):
     """
@@ -36,7 +38,7 @@ def ustar(ws_ref, h_ref, z0, kappa=0.41):
         The roughness length
     kappa : float
         The van-Karman constant
-    
+
     Returns
     -------
     ustar : float
@@ -45,6 +47,7 @@ def ustar(ws_ref, h_ref, z0, kappa=0.41):
     """
     lz = logz(h_ref, z0)
     return ws_ref * kappa / lz
+
 
 def calc_ws(height, z0, ustar, kappa=0.41):
     """

@@ -5,6 +5,7 @@ from foxes.tools import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class CentreRotor(RotorModel):
     """
     The centre rotor model.
@@ -43,8 +44,8 @@ class CentreRotor(RotorModel):
             The design points, shape: (n_points, 3)
 
         """
-        return np.array([[0., 0., 0.]])
-    
+        return np.array([[0.0, 0.0, 0.0]])
+
     def rotor_point_weights(self):
         """
         The weights of the rotor points
@@ -56,7 +57,7 @@ class CentreRotor(RotorModel):
             add to one, shape: (n_rpoints,)
 
         """
-        return np.array([1.])
+        return np.array([1.0])
 
     def get_rotor_points(self, algo, mdata, fdata):
         """
@@ -70,26 +71,26 @@ class CentreRotor(RotorModel):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         points : numpy.ndarray
-            The rotor points, shape: 
+            The rotor points, shape:
             (n_states, n_turbines, n_rpoints, 3)
 
         """
         return fdata[FV.TXYH][:, :, None, :]
 
     def eval_rpoint_results(
-            self, 
-            algo, 
-            mdata,
-            fdata, 
-            rpoint_results, 
-            weights,
-            states_turbine=None,
-            copy_to_ambient=False
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        rpoint_results,
+        weights,
+        states_turbine=None,
+        copy_to_ambient=False,
+    ):
         """
         Evaluate rotor point results.
 
@@ -108,8 +109,8 @@ class CentreRotor(RotorModel):
         fdata : foxes.core.Data
             The farm data
         rpoint_results : dict
-            The results at rotor points. Keys: variable str. 
-            Values: numpy.ndarray, shape if `states_turbine` 
+            The results at rotor points. Keys: variable str.
+            Values: numpy.ndarray, shape if `states_turbine`
             is None: (n_states, n_turbines, n_rpoints).
             Else: (n_states, 1, n_rpoints)
         weights : numpy.ndarray
@@ -122,10 +123,11 @@ class CentreRotor(RotorModel):
 
         """
         if len(weights) > 1:
-            return super().eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
-                                                weights, states_turbine)
+            return super().eval_rpoint_results(
+                algo, mdata, fdata, rpoint_results, weights, states_turbine
+            )
 
-        n_states   = mdata.n_states
+        n_states = mdata.n_states
         n_turbines = algo.n_turbines
 
         stsel = None
@@ -133,20 +135,22 @@ class CentreRotor(RotorModel):
             stsel = (np.arange(n_states), states_turbine)
 
         uvp = None
-        uv  = None
-        if FV.WS in self.calc_vars \
-            or FV.WD in self.calc_vars \
-            or FV.YAW in self.calc_vars \
-            or FV.REWS in self.calc_vars \
-            or FV.REWS2 in self.calc_vars \
-            or FV.REWS3 in self.calc_vars:
+        uv = None
+        if (
+            FV.WS in self.calc_vars
+            or FV.WD in self.calc_vars
+            or FV.YAW in self.calc_vars
+            or FV.REWS in self.calc_vars
+            or FV.REWS2 in self.calc_vars
+            or FV.REWS3 in self.calc_vars
+        ):
 
-            wd  = rpoint_results[FV.WD]
-            ws  = rpoint_results[FV.WS]
+            wd = rpoint_results[FV.WD]
+            ws = rpoint_results[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
-            uv  = uvp[:, :, 0]
+            uv = uvp[:, :, 0]
 
-        wd    = None
+        wd = None
         vdone = []
         for v in self.calc_vars:
 
@@ -164,22 +168,24 @@ class CentreRotor(RotorModel):
                 del ws
                 vdone.append(v)
         del uv, wd
-        
-        if FV.REWS in self.calc_vars \
-            or FV.REWS2 in self.calc_vars \
-            or FV.REWS3 in self.calc_vars:
+
+        if (
+            FV.REWS in self.calc_vars
+            or FV.REWS2 in self.calc_vars
+            or FV.REWS3 in self.calc_vars
+        ):
 
             if stsel is None:
                 yaw = fdata[FV.YAW]
             else:
                 yaw = fdata[FV.YAW][stsel][:, None]
             nax = wd2uv(yaw, axis=-1)
-            wsp = np.einsum('stpd,std->stp', uvp, nax)
+            wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
 
                 if v == FV.REWS or v == FV.REWS2 or v == FV.REWS3:
-                    rews = wsp[: ,:, 0]
+                    rews = wsp[:, :, 0]
                     self._set_res(fdata, v, rews, stsel)
                     del rews
                     vdone.append(v)

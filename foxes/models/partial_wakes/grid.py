@@ -1,6 +1,6 @@
-
 from foxes.models.partial_wakes.distsliced import PartialDistSlicedWake
 from foxes.models.rotor_models.grid import GridRotor
+
 
 class PartialGrid(PartialDistSlicedWake):
     """
@@ -22,16 +22,21 @@ class PartialGrid(PartialDistSlicedWake):
 
     """
 
-    def __init__(self, n, wake_models=None, wake_frame=None, rotor_model=None, **kwargs):
+    def __init__(
+        self, n, wake_models=None, wake_frame=None, rotor_model=None, **kwargs
+    ):
         super().__init__(n, wake_models, wake_frame, rotor_model, **kwargs)
 
         if not isinstance(self.grotor, GridRotor):
-            raise ValueError(f"Wrong grotor type, expecting {GridRotor.__name__}, got {type(self.grotor).__name__}")
+            raise ValueError(
+                f"Wrong grotor type, expecting {GridRotor.__name__}, got {type(self.grotor).__name__}"
+            )
 
-    def contribute_to_wake_deltas(self, algo, mdata, fdata, 
-                                    states_source_turbine, wake_deltas):
+    def contribute_to_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+    ):
         """
-        Modifies wake deltas by contributions from the 
+        Modifies wake deltas by contributions from the
         specified wake source turbines.
 
         Parameters
@@ -46,20 +51,25 @@ class PartialGrid(PartialDistSlicedWake):
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
         wake_deltas : Any
-            The wake deltas object created by the 
+            The wake deltas object created by the
             `new_wake_deltas` function
 
         """
         # evaluate grid rotor:
-        n_states   = fdata.n_states
+        n_states = fdata.n_states
         n_turbines = fdata.n_turbines
-        n_rpoints  = self.grotor.n_rotor_points()
-        n_points   = n_turbines * n_rpoints
-        points     = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(n_states, n_points, 3)
-        wcoos      = self.wake_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
+        n_rpoints = self.grotor.n_rotor_points()
+        n_points = n_turbines * n_rpoints
+        points = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(
+            n_states, n_points, 3
+        )
+        wcoos = self.wake_frame.get_wake_coos(
+            algo, mdata, fdata, states_source_turbine, points
+        )
         del points
 
         # evaluate wake models:
         for w in self.wake_models:
-            w.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
-                                            wcoos, wake_deltas)                                                            
+            w.contribute_to_wake_deltas(
+                algo, mdata, fdata, states_source_turbine, wcoos, wake_deltas
+            )

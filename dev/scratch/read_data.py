@@ -5,9 +5,10 @@ from . import farms
 from . import states
 from . import power_ct_curves
 
-FARM     = "farm"
-STATES   = "states"
+FARM = "farm"
+STATES = "states"
 PCTCURVE = "power_ct_curve"
+
 
 def _get_pkg(context):
     """
@@ -20,7 +21,10 @@ def _get_pkg(context):
     elif context == PCTCURVE:
         return power_ct_curves
     else:
-        raise KeyError(f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}")
+        raise KeyError(
+            f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}"
+        )
+
 
 def _get_sfx(context):
     """
@@ -33,7 +37,10 @@ def _get_sfx(context):
     elif context == PCTCURVE:
         return ".csv"
     else:
-        raise KeyError(f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}")
+        raise KeyError(
+            f"Unknown context '{context}', choices: {FARM}, {STATES}, {PCTCURVE}"
+        )
+
 
 def static_contents(context):
     """
@@ -43,7 +50,7 @@ def static_contents(context):
     ----------
     context : str
         The data context: farm, states, power_ct_curve
-    
+
     Returns
     -------
     contents : list of str
@@ -53,6 +60,7 @@ def static_contents(context):
     s = _get_sfx(context)
     n = len(s)
     return [c[:-n] for c in resources.contents(_get_pkg(context)) if s in c]
+
 
 def get_static_path(context, data_name):
     """
@@ -64,7 +72,7 @@ def get_static_path(context, data_name):
         The data context: farm, states, power_ct_curve
     data_name : str
         The data name (without suffix)
-    
+
     Returns
     -------
     path : pathlib.PosixPath
@@ -77,7 +85,10 @@ def get_static_path(context, data_name):
         with resources.path(pkg, data_name + sfx) as path:
             return path
     except FileNotFoundError:
-        raise FileNotFoundError(f"Data '{data_name}' not found in context '{context}'. Available: {static_contents(context)}")
+        raise FileNotFoundError(
+            f"Data '{data_name}' not found in context '{context}'. Available: {static_contents(context)}"
+        )
+
 
 def read_static_file(context, data_name):
     """
@@ -89,7 +100,7 @@ def read_static_file(context, data_name):
         The data context: farm, states, power_ct_curve
     data_name : str
         The data name (without suffix)
-    
+
     Returns
     -------
     file: file_object
@@ -97,18 +108,21 @@ def read_static_file(context, data_name):
 
     """
 
-    pkg   = _get_pkg(context)
-    sfx   = _get_sfx(context)
+    pkg = _get_pkg(context)
+    sfx = _get_sfx(context)
     fname = data_name + sfx
 
     if sfx[-3:] == ".gz":
-        raise NotImplementedError(f"Cannot run read_static_file on gz type file '{fname}'. Use get_static_path and read manually instead")
+        raise NotImplementedError(
+            f"Cannot run read_static_file on gz type file '{fname}'. Use get_static_path and read manually instead"
+        )
 
     try:
         return resources.open_text(pkg, fname)
     except FileNotFoundError:
         e = f"Could not find static data '{data_name}' for context '{context}'. Available data: {static_contents(context)}"
         raise FileExistsError(e)
+
 
 def parse_Pct_file_name(file_name):
     """
@@ -120,20 +134,22 @@ def parse_Pct_file_name(file_name):
     ----------
     file_name : str or pathlib.Path
         Path to the file
-    
+
     Returns
     -------
     parsed_data : dict
         dict with data parsed from file name
 
     """
-    sname = Path(file_name).stem     
-    pars  = {"name": sname.split(".")[0]}
+    sname = Path(file_name).stem
+    pars = {"name": sname.split(".")[0]}
 
     i = sname.find(".")
     if i >= 0:
         if "-" in sname[i:]:
-            raise ValueError(f"Illegal use of '.' in '{sname}', please replace by 'd' for float value dots")
+            raise ValueError(
+                f"Illegal use of '.' in '{sname}', please replace by 'd' for float value dots"
+            )
 
     pieces = sname.split("-")[1:]
     for p in pieces:
@@ -142,11 +158,11 @@ def parse_Pct_file_name(file_name):
             if p[-2] == "k":
                 pars["P_nominal"] = float(p[:-2])
             elif p[-2] == "M":
-                pars["P_nominal"] = 1.e3 * float(p[:-2])
+                pars["P_nominal"] = 1.0e3 * float(p[:-2])
             elif p[-2] == "G":
-                pars["P_nominal"] = 1.e6 * float(p[:-2])  
+                pars["P_nominal"] = 1.0e6 * float(p[:-2])
             else:
-                pars["P_nominal"] = 1.e-3 * float(p[:-1])
+                pars["P_nominal"] = 1.0e-3 * float(p[:-1])
 
         elif p[0] == "D":
             pars["D"] = float(p[1:].replace("d", "."))

@@ -1,6 +1,6 @@
-
 from foxes.core import PointDataModel
 import foxes.variables as FV
+
 
 class WakeDeltas(PointDataModel):
     """
@@ -36,17 +36,17 @@ class WakeDeltas(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
             The output variable names
 
         """
-        return [f"DELTA_{v}" for v in self.vars] 
-    
+        return [f"DELTA_{v}" for v in self.vars]
+
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -62,7 +62,7 @@ class WakeDeltas(PointDataModel):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -78,4 +78,3 @@ class WakeDeltas(PointDataModel):
                 out[v] /= pdata[FV.var2amb[v]]
 
         return out
-        
