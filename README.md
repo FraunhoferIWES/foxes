@@ -27,7 +27,7 @@ You can leave the environment by the command `deactivate`.
 pip install foxes
 ```
 This should correspond to the `main` branch here at GitHub.
-- As a devloper, you can either install from this directory via
+- As a developer, you can either install from this directory via
 ```
 pip install -e .
 ```
