@@ -77,10 +77,10 @@ import foxes
 
 states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
 
+mbook = foxes.ModelBook("NREL-5MW-D126-H90.csv")
+
 farm = foxes.WindFarm()
 foxes.input.farm_layout.add_from_file(farm,"test_farm_67.csv",turbine_models=["Pct"])
-
-mbook = foxes.ModelBook("NREL-5MW-D126-H90.csv")
 
 algo = foxes.algorithms.Downwind(mbook, farm, states, ["Jensen_linear_k007"])
 farm_results = algo.calc_farm()
