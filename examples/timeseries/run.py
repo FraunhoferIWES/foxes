@@ -41,7 +41,7 @@ def run_foxes(args):
                 farm,
                 states=states,
                 rotor_model=args.rotor,
-                wake_models=args.wakes,
+                wake_models=['Jensen_linear'],#args.wakes,
                 wake_frame="rotor_wd",
                 partial_wakes_model=args.pwakes,
                 chunks=cks

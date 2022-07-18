@@ -7,17 +7,23 @@ from foxes.tools import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 
-class CtFile(TurbineType):
+class PCtSingleFiles(TurbineType):
     """
-    Calculate ct by interpolating
-    from ct-curve data file.
+    Calculate power and ct by interpolating
+    from power-curve and ct-curve data files.
 
     Parameters
     ----------
-    data_source : str or pandas.DataFrame
-        The file path, static name, or data 
-    col_ws : str
-        The wind speed column
+    data_source_P : str or pandas.DataFrame
+        The file path for the power-curve, static name, or data
+    data_source_ct : str or pandas.DataFrame
+        The file path for the ct-curve, static name, or data 
+    col_ws_P_file : str
+        The wind speed column in the file of the power-curve
+    col_ws_ct_file : str
+        The wind speed column in the file of the ct-curve
+    col_P : str
+        The power column
     col_ct : str
         The ct column
     rho: float, optional
@@ -27,17 +33,29 @@ class CtFile(TurbineType):
         Flag for yaw misalignment consideration
     p_ct: float
         The exponent for yaw dependency of ct
+    p_P: float
+        The exponent for yaw dependency of P
     var_ws_ct : str
         The wind speed variable for ct lookup
+    var_ws_P : str
+        The wind speed variable for power lookup
+    pd_file_read_pars_P:  dict, optional
+        Parameters for pandas power file reading
+    pd_file_read_pars_ct:  dict, optional
+        Parameters for pandas ct file reading
     **parameters : dict, optional
         Parameters for pandas file reading
 
     Attributes
     ----------
-    source : str or pandas.DataFrame
-        The file path, static name, or data
+    source_P : str or pandas.DataFrame
+        The file path for the power-curve, static name, or data
+    source_ct : str or pandas.DataFrame
+        The file path for the ct-curve, static name, or data
     col_ws : str
         The wind speed column
+    col_P : str
+        The power column
     col_ct : str
         The ct column
     rho: float
@@ -47,39 +65,50 @@ class CtFile(TurbineType):
         Flag for yaw misalignment consideration
     WSCT : str
         The wind speed variable for ct lookup
-    rpars : dict, optional
-        Parameters for pandas file reading
+    WSP : str
+        The wind speed variable for power lookup
+    rpars_P : dict, optional
+        Parameters for pandas power file reading
+    rpars_ct : dict, optional
+        Parameters for pandas ct file reading
 
     """
 
     def __init__(
         self,
-        data_source,
-        col_ws="ws",
+        data_source_P,
+        data_source_ct,
+        col_ws_P_file="ws",
+        col_ws_ct_file="ws",
+        col_P="P",
         col_ct="ct",
         rho=None,
         flag_yawm=False,
         p_ct=1.,
+        p_P=1.88,
         var_ws_ct=FV.REWS2,
-        pd_file_read_pars={},
+        var_ws_P=FV.REWS3,
+        pd_file_read_pars_P={},
+        pd_file_read_pars_ct={},
         **parameters
     ):
-        if not isinstance(data_source, pd.DataFrame):
-            pars = parse_Pct_file_name(data_source)
-            pars.update(parameters)
-        else:
-            pars = parameters
-
+        pars = parameters # no parsing because two files are given
         super().__init__(**pars)
 
-        self.source    = data_source
-        self.col_ws    = col_ws
-        self.col_ct    = col_ct
-        self.rho       = rho
-        self.flag_yawm = flag_yawm
-        self.p_ct      = p_ct
-        self.WSCT      = var_ws_ct
-        self.rpars     = pd_file_read_pars
+        self.source_P       = data_source_P
+        self.source_ct      = data_source_ct
+        self.col_ws_P_file  = col_ws_P_file
+        self.col_ws_ct_file = col_ws_ct_file
+        self.col_P          = col_P
+        self.col_ct         = col_ct
+        self.rho            = rho
+        self.flag_yawm      = flag_yawm
+        self.p_ct           = p_ct
+        self.p_P            = p_P
+        self.WSCT           = var_ws_ct
+        self.WSP            = var_ws_P
+        self.rpars_P        = pd_file_read_pars_P
+        self.rpars_ct       = pd_file_read_pars_ct
 
     def output_farm_vars(self, algo):
         """
@@ -96,7 +125,7 @@ class CtFile(TurbineType):
             The output variable names
 
         """
-        return [FV.CT]
+        return [FV.P, FV.CT]
     
     def initialize(self, algo, st_sel, verbosity=0):
         """
@@ -113,15 +142,26 @@ class CtFile(TurbineType):
             The verbosity level
 
         """
-        if isinstance(self.source, pd.DataFrame):
-            data = self.source
+        #read power-curve
+        if isinstance(self.source_P, pd.DataFrame):
+            data_P  = self.source_P
         else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
-            data  = PandasFileHelper.read_file(fpath, **self.rpars)
-
-        data = data.set_index(self.col_ws).sort_index()
-        self.data_ws = data.index.to_numpy()
-        self.data_ct = data[self.col_ct].to_numpy()
+            fpath   = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
+            data_P  = PandasFileHelper.read_file(fpath, **self.rpars_P)
+            
+        #read ct-curve
+        if isinstance(self.source_ct, pd.DataFrame):
+            data_ct  = self.source_ct
+        else:
+            fpath   = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
+            data_ct  = PandasFileHelper.read_file(fpath, **self.rpars_ct)
+            
+        data_P          = data_P.set_index(self.col_ws_P_file).sort_index()
+        data_ct         = data_ct.set_index(self.col_ws_ct_file).sort_index()
+        self.data_ws_P  = data_P.index.to_numpy()
+        self.data_ws_ct = data_ct.index.to_numpy()
+        self.data_P     = data_P[self.col_P].to_numpy()
+        self.data_ct    = data_ct[self.col_ct].to_numpy()
         super().initialize(algo, st_sel, verbosity=verbosity)
     
     def calculate(self, algo, mdata, fdata, st_sel):
@@ -151,6 +191,7 @@ class CtFile(TurbineType):
 
         """  
         rews2 = fdata[self.WSCT][st_sel]
+        rews3 = fdata[self.WSP][st_sel]
 
         # apply air density correction:
         if self.rho is not None:
@@ -160,6 +201,7 @@ class CtFile(TurbineType):
             # correct value is reconstructed:
             rho    = fdata[FV.RHO][st_sel]
             rews2 *= ( self.rho / rho )**0.5
+            rews3 *= ( self.rho / rho )**(1./3.) 
             del rho
 
         # in yawed case, calc yaw corrected wind speed:
@@ -170,13 +212,17 @@ class CtFile(TurbineType):
             # and smoothly deals with full load region:
             yawm   = fdata[FV.YAWM][st_sel]
             cosm   = np.cos(yawm / 180 * np.pi)
-            rews2 *= ( cosm**self.p_ct )**0.5 
+            rews2 *= ( cosm**self.p_ct )**0.5
+            rews3 *= ( cosm**self.p_P )**(1./3.) 
             del yawm, cosm
 
         out = {
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSCT]))
+            FV.P : fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
+            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP]))
         }
-        out[FV.CT][st_sel] = np.interp(rews2, self.data_ws, self.data_ct, left=0., right=0.)
+
+        out[FV.P][st_sel]  = np.interp(rews3, self.data_ws_P, self.data_P, left=0., right=0.)
+        out[FV.CT][st_sel] = np.interp(rews2, self.data_ws_ct, self.data_ct, left=0., right=0.)
 
         return out
     
@@ -201,6 +247,6 @@ class CtFile(TurbineType):
 
         """
         if clear_mem:
-            del self.data_ws, self.data_ct
+            del self.data_ws_P, self.data_ws_ct, self.data_P, self.data_ct
         super().finalize(algo, results, clear_mem, verbosity=verbosity)
         
