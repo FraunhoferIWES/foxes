@@ -50,6 +50,7 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "nbsphinx",
     "sphinx.ext.doctest",
+    'm2r2',
 ]
 
 intersphinx_mapping = {
