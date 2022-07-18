@@ -71,7 +71,7 @@ from the root `foxes` directory, and then
 pip install -r requirements.txt
 ```
 
-## Minimal example
+## Usage
 
 For detailed examples of how to run _foxes_, check the `examples` and `notebooks` folders in this repository. A minimal running example is the following, based on provided static `csv` data files:
 ```python

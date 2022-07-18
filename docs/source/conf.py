@@ -48,6 +48,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
+    'sphinxcontrib.email',
     "nbsphinx",
     "sphinx.ext.doctest",
     'm2r2',
@@ -89,9 +90,12 @@ exclude_patterns = [
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-
 autosummary_generate = True
 napolean_use_rtype = False
+
+# -- Options for sphinxcontrib.email ------------------------------------------
+email_automode = True
+
 
 # -- Options for nbsphinx -----------------------------------------------------
 
