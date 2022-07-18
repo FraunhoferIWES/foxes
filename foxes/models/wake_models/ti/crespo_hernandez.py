@@ -1,8 +1,6 @@
 import numpy as np
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import (
-    TopHatWakeModel,
-)
+from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 

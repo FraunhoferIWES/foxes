@@ -1,9 +1,7 @@
 import numpy as np
 
 from foxes.core import PartialWakesModel
-from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import (
-    TopHatWakeModel,
-)
+from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.tools.two_circles import calc_area
 import foxes.variables as FV
 import foxes.constants as FC

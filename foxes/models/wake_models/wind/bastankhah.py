@@ -1,8 +1,6 @@
 import numpy as np
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.gaussian.gaussian_wake_model import (
-    GaussianWakeModel,
-)
+from foxes.models.wake_models.gaussian import GaussianWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
