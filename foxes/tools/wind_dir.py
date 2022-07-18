@@ -1,6 +1,7 @@
 import numpy as np
 
-def wd2wdvec(wd, ws=1., axis=-1):
+
+def wd2wdvec(wd, ws=1.0, axis=-1):
     """
     Calculate wind direction vectors from wind directions
     in degrees.
@@ -12,25 +13,26 @@ def wd2wdvec(wd, ws=1., axis=-1):
     ws : float or numpy.ndarray
         The wind speed. Has to broadcast against wd.
     axis : int
-        Location where to insert the (x, y) dimension 
+        Location where to insert the (x, y) dimension
         into the shape of wd
-    
+
     Returns
     -------
     wdvec : numpy.ndarray
         The wind direction vectors
 
     """
-    
-    wdr  = wd * np.pi / 180.
-    n    = np.stack([np.sin(wdr), np.cos(wdr)], axis=axis)
-    
+
+    wdr = wd * np.pi / 180.0
+    n = np.stack([np.sin(wdr), np.cos(wdr)], axis=axis)
+
     if np.isscalar(ws):
         return ws * n
 
     return np.expand_dims(ws, axis) * n
 
-def wd2uv(wd, ws=1., axis=-1):
+
+def wd2uv(wd, ws=1.0, axis=-1):
     """
     Calculate wind vectors from wind directions
     in degrees.
@@ -52,6 +54,7 @@ def wd2uv(wd, ws=1., axis=-1):
 
     """
     return -wd2wdvec(wd, ws, axis)
+
 
 def uv2wd(uv, axis=-1):
     """
@@ -81,6 +84,7 @@ def uv2wd(uv, axis=-1):
         v = uv[s]
 
     return np.mod(180 + np.rad2deg(np.arctan2(u, v)), 360)
+
 
 def wdvec2wd(wdvec, axis=-1):
     """

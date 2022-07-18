@@ -1,5 +1,6 @@
 from foxes.core.turbine_model import TurbineModel
 
+
 class TurbineType(TurbineModel):
     """
     Abstract base class for turbine type models.
@@ -17,7 +18,7 @@ class TurbineType(TurbineModel):
         The hub height
     P_nominal : float, optional
         The nominal power in kW
-    
+
     Attributes
     ----------
     name : str
@@ -25,22 +26,16 @@ class TurbineType(TurbineModel):
     D : float
         The rotor diameter
     H : float
-        The hub height    
+        The hub height
     P_nominal : float
         The nominal power in kW
 
     """
 
-    def __init__(
-        self,
-        name=None,
-        D=None,
-        H=None,
-        P_nominal=None
-    ):
+    def __init__(self, name=None, D=None, H=None, P_nominal=None):
         super().__init__()
 
-        self.name      = name if name is not None else type(self).__name__
-        self.D         = D
-        self.H         = H
+        self.name = name if name is not None else type(self).__name__
+        self.D = D
+        self.H = H
         self.P_nominal = P_nominal

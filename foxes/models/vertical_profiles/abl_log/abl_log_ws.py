@@ -1,9 +1,10 @@
 import numpy as np
 
 from foxes.core import VerticalProfile
-from  foxes.tools import abl 
+from foxes.tools import abl
 import foxes.constants as FC
 import foxes.variables as FV
+
 
 class ABLLogWsProfile(VerticalProfile):
     """
@@ -36,7 +37,7 @@ class ABLLogWsProfile(VerticalProfile):
             The input data
         heights : numpy.ndarray
             The evaluation heights
-        
+
         Returns
         -------
         results : numpy.ndarray
@@ -59,37 +60,37 @@ class ABLLogWsProfile(VerticalProfile):
         out = np.zeros_like(heights)
 
         # neutral profiles:
-        sel = np.isnan(mol) | (mol == 0.)
+        sel = np.isnan(mol) | (mol == 0.0)
         if np.any(sel):
             sws = ws[sel]
             sh0 = h0[sel]
             sz0 = z0[sel]
-            sh  = heights[sel]
-            ustar    = abl.neutral.ustar(sws, sh0, sz0, kappa=FC.KAPPA)
+            sh = heights[sel]
+            ustar = abl.neutral.ustar(sws, sh0, sz0, kappa=FC.KAPPA)
             out[sel] = abl.neutral.calc_ws(sh, sz0, ustar, kappa=FC.KAPPA)
 
         # stable profiles:
-        sel = (mol > 0.)
+        sel = mol > 0.0
         if np.any(sel):
             sws = ws[sel]
             sh0 = h0[sel]
             sz0 = z0[sel]
             smo = mol[sel]
-            sh  = heights[sel]
-            ustar    = abl.stable.ustar(sws, sh0, sz0, smo, kappa=FC.KAPPA)
-            psi      = abl.stable.psi(sh, smo)
+            sh = heights[sel]
+            ustar = abl.stable.ustar(sws, sh0, sz0, smo, kappa=FC.KAPPA)
+            psi = abl.stable.psi(sh, smo)
             out[sel] = abl.stable.calc_ws(sh, sz0, ustar, psi, kappa=FC.KAPPA)
 
         # unstable profiles:
-        sel = (mol < 0.)
+        sel = mol < 0.0
         if np.any(sel):
             sws = ws[sel]
             sh0 = h0[sel]
             sz0 = z0[sel]
             smo = mol[sel]
-            sh  = heights[sel]
-            ustar    = abl.unstable.ustar(sws, sh0, sz0, smo, kappa=FC.KAPPA)
-            psi      = abl.unstable.psi(sh, smo)
+            sh = heights[sel]
+            ustar = abl.unstable.ustar(sws, sh0, sz0, smo, kappa=FC.KAPPA)
+            psi = abl.unstable.psi(sh, smo)
             out[sel] = abl.unstable.calc_ws(sh, sz0, ustar, psi, kappa=FC.KAPPA)
 
         return out

@@ -3,6 +3,7 @@ from abc import abstractmethod
 from foxes.core.data_calc_model import DataCalcModel
 import foxes.variables as FV
 
+
 class PointDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
@@ -18,7 +19,7 @@ class PointDataModel(DataCalcModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -26,10 +27,10 @@ class PointDataModel(DataCalcModel):
 
         """
         return []
-    
+
     @abstractmethod
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -45,7 +46,7 @@ class PointDataModel(DataCalcModel):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -55,13 +56,7 @@ class PointDataModel(DataCalcModel):
         """
         pass
 
-    def run_calculation(
-            self, 
-            algo, 
-            *data, 
-            out_vars,
-            **calc_pars
-        ):
+    def run_calculation(self, algo, *data, out_vars, **calc_pars):
         """
         Starts the model calculation in parallel, via
         xarray's `apply_ufunc`.
@@ -78,17 +73,21 @@ class PointDataModel(DataCalcModel):
             The calculation output variables
         **calc_pars : dict, optional
             Additional arguments for the `calculate` function
-        
+
         Returns
         -------
         results : xarray.Dataset
             The calculation results
 
         """
-        return super().run_calculation(algo, *data, out_vars=out_vars,
-                                        loop_dims=[FV.STATE, FV.POINT], 
-                                        out_core_vars=[FV.VARS],
-                                        **calc_pars)
+        return super().run_calculation(
+            algo,
+            *data,
+            out_vars=out_vars,
+            loop_dims=[FV.STATE, FV.POINT],
+            out_core_vars=[FV.VARS],
+            **calc_pars
+        )
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """

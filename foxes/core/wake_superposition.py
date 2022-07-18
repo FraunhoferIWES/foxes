@@ -2,19 +2,29 @@ from abc import abstractmethod
 
 from foxes.core.model import Model
 
+
 class WakeSuperposition(Model):
     """
     Abstract base class for wake superposition models.
 
     Note that it is a matter of the wake model
     if superposition models are used, or if the
-    wake model computes the total wake result by 
+    wake model computes the total wake result by
     other means.
     """
-    
+
     @abstractmethod
-    def calc_wakes_plus_wake(self, algo, mdata, fdata, states_source_turbine,
-                                sel_sp, variable, wake_delta, wake_model_result):
+    def calc_wakes_plus_wake(
+        self,
+        algo,
+        mdata,
+        fdata,
+        states_source_turbine,
+        sel_sp,
+        variable,
+        wake_delta,
+        wake_model_result,
+    ):
         """
         Add a wake delta to previous wake deltas.
 
@@ -38,7 +48,7 @@ class WakeSuperposition(Model):
         wake_model_result : numpy.ndarray
             The new wake deltas of the selected points,
             shape: (n_sel_sp,)
-        
+
         Returns
         -------
         wdelta : numpy.ndarray
@@ -48,7 +58,9 @@ class WakeSuperposition(Model):
         pass
 
     @abstractmethod
-    def calc_final_wake_delta(self, algo, mdata, fdata, variable, amb_results, wake_delta):
+    def calc_final_wake_delta(
+        self, algo, mdata, fdata, variable, amb_results, wake_delta
+    ):
         """
         Calculate the final wake delta after adding all
         contributions.

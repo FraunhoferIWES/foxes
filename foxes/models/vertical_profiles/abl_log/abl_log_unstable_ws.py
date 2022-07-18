@@ -1,8 +1,8 @@
-
 from foxes.core import VerticalProfile
 from foxes.tools.abl import unstable
 import foxes.constants as FC
 import foxes.variables as FV
+
 
 class ABLLogUnstableWsProfile(VerticalProfile):
     """
@@ -32,7 +32,7 @@ class ABLLogUnstableWsProfile(VerticalProfile):
             The input data
         heights : numpy.ndarray
             The evaluation heights
-        
+
         Returns
         -------
         results : numpy.ndarray
@@ -40,12 +40,12 @@ class ABLLogUnstableWsProfile(VerticalProfile):
             shape as heights
 
         """
-        ws  = data[FV.WS]
-        h0  = data[FV.H]
-        z0  = data[FV.Z0]
+        ws = data[FV.WS]
+        h0 = data[FV.H]
+        z0 = data[FV.Z0]
         mol = data[FV.MOL]
 
         ustar = unstable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
-        psi   = unstable.psi(heights, mol)
+        psi = unstable.psi(heights, mol)
 
         return unstable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)

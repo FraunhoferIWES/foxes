@@ -5,6 +5,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class LinearSuperposition(WakeSuperposition):
     """
     Linear supersposition of wake model results,
@@ -14,7 +15,7 @@ class LinearSuperposition(WakeSuperposition):
     ----------
     scalings : dict or number or str
         Scaling rules. If `dict`, key: variable name str,
-        value: number or str. If `str`: 
+        value: number or str. If `str`:
         - `source_turbine`: Scale by source turbine value of variable
         - `source_turbine_amb`: Scale by source turbine ambient value of variable
         - `source_turbine_<var>`: Scale by source turbine value of variable <var>
@@ -30,8 +31,17 @@ class LinearSuperposition(WakeSuperposition):
         super().__init__()
         self.scalings = scalings
 
-    def calc_wakes_plus_wake(self, algo, mdata, fdata, states_source_turbine,
-                                sel_sp, variable, wake_delta, wake_model_result):
+    def calc_wakes_plus_wake(
+        self,
+        algo,
+        mdata,
+        fdata,
+        states_source_turbine,
+        sel_sp,
+        variable,
+        wake_delta,
+        wake_model_result,
+    ):
         """
         Add a wake delta to previous wake deltas.
 
@@ -55,7 +65,7 @@ class LinearSuperposition(WakeSuperposition):
         wake_model_result : numpy.ndarray
             The new wake deltas of the selected points,
             shape: (n_sel_sp,)
-        
+
         Returns
         -------
         wdelta : numpy.ndarray
@@ -66,52 +76,64 @@ class LinearSuperposition(WakeSuperposition):
             try:
                 scaling = self.scalings[variable]
             except KeyError:
-                raise KeyError(f"Model '{self.name}': No scaling found for wake variable '{variable}'")
+                raise KeyError(
+                    f"Model '{self.name}': No scaling found for wake variable '{variable}'"
+                )
         else:
             scaling = self.scalings
 
         if scaling is None:
             wake_delta[sel_sp] += wake_model_result
             return wake_delta
-        
+
         elif isinstance(scaling, numbers.Number):
             wake_delta[sel_sp] += scaling * wake_model_result
             return wake_delta
 
-        elif isinstance(scaling, str) and len(scaling) >= 14 and (
-                scaling == f'source_turbine' \
-                or scaling == 'source_turbine_amb' \
-                or (len(scaling) > 15 and scaling[14] == '_')
-            ):
+        elif (
+            isinstance(scaling, str)
+            and len(scaling) >= 14
+            and (
+                scaling == f"source_turbine"
+                or scaling == "source_turbine_amb"
+                or (len(scaling) > 15 and scaling[14] == "_")
+            )
+        ):
 
-            if scaling == f'source_turbine':
+            if scaling == f"source_turbine":
                 var = variable
-            elif scaling == 'source_turbine_amb':
+            elif scaling == "source_turbine_amb":
                 var = FV.var2amb[variable]
             else:
                 var = scaling[15:]
 
             try:
                 vdata = fdata[var]
-                
+
             except KeyError:
-                raise KeyError(f"Model '{self.name}': Scaling variable '{var}' for wake variable '{variable}' not found in fdata {sorted(list(fdata.keys()))}")
-            
+                raise KeyError(
+                    f"Model '{self.name}': Scaling variable '{var}' for wake variable '{variable}' not found in fdata {sorted(list(fdata.keys()))}"
+                )
+
             n_states = mdata.n_states
             n_points = wake_delta.shape[1]
-            stsel    = (np.arange(n_states), states_source_turbine)
-            scale    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            stsel = (np.arange(n_states), states_source_turbine)
+            scale = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             scale[:] = vdata[stsel][:, None]
-            scale    = scale[sel_sp]
+            scale = scale[sel_sp]
 
             wake_delta[sel_sp] += scale * wake_model_result
 
             return wake_delta
-        
-        else:
-            raise ValueError(f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'")
 
-    def calc_final_wake_delta(self, algo, mdata, fdata, variable, amb_results, wake_delta):
+        else:
+            raise ValueError(
+                f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'"
+            )
+
+    def calc_final_wake_delta(
+        self, algo, mdata, fdata, variable, amb_results, wake_delta
+    ):
         """
         Calculate the final wake delta after adding all
         contributions.
@@ -139,4 +161,3 @@ class LinearSuperposition(WakeSuperposition):
 
         """
         return wake_delta
-        

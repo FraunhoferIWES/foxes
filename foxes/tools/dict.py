@@ -1,4 +1,3 @@
-
 class Dict(dict):
     """
     A slightly enhanced dictionary.
@@ -11,7 +10,7 @@ class Dict(dict):
         The dictionary name
     **kwargs : dict, optional
         Arguments passed to `dict`
-    
+
     Attributes
     ----------
     name : str

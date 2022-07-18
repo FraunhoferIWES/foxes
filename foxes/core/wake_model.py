@@ -2,11 +2,12 @@ from abc import abstractmethod
 
 from foxes.core.model import Model
 
+
 class WakeModel(Model):
     """
     Abstract base class for wake models.
     """
-    
+
     @abstractmethod
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
@@ -34,8 +35,9 @@ class WakeModel(Model):
         pass
 
     @abstractmethod
-    def contribute_to_wake_deltas(self, algo, mdata, fdata, 
-                            states_source_turbine, wake_coos, wake_deltas):
+    def contribute_to_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas
+    ):
         """
         Calculate the contribution to the wake deltas
         by this wake model.
@@ -81,9 +83,9 @@ class WakeModel(Model):
             values: numpy.ndarray with shape (n_states, n_points)
         wake_deltas : dict
             The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta 
-            applies, values: numpy.ndarray with shape 
-            (n_states, n_points, ...) before evaluation, 
+            Key: Variable name str, for which the wake delta
+            applies, values: numpy.ndarray with shape
+            (n_states, n_points, ...) before evaluation,
             numpy.ndarray with shape (n_states, n_points) afterwards
 
         """

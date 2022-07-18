@@ -1,17 +1,13 @@
-.. foxes documentation master file, created by
-   sphinx-quickstart on Fri Jun 10 09:09:06 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
-.. image:: ../logo/Logo_FOXES_IWES.svg
+.. image:: ../../Logo_FOXES_IWES.svg
     :align: center
 
-Welcome to foxes
+Welcome to FOXES
 ================
 
 *Farm Optimization and eXtended yield Evaluation Software*
 
-foxes is a modular wind farm and wake modelling code written in Python 
+*FOXES* is a modular wind farm and wake modelling code written in Python 
 by Fraunhofer IWES. It can be used for wind farm planning, post-construction
 analysis and wind farm optimization.
 
@@ -21,6 +17,9 @@ analysis and wind farm optimization.
 
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes
+
+Contact (please report code issues under the github link above):
+    :email:`Jonas Schmidt <jonas.schmidt@iwes.fraunhofer.de>`
     
 License:
     MIT_
@@ -43,4 +42,7 @@ Contents:
 
         api
 
+    .. toctree::
+        :maxdepth: 2
 
+        history

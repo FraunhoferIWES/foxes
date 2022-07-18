@@ -1,5 +1,3 @@
-
-
 def all_subclasses(cls):
     """
     Searches all classes derived from some
@@ -9,12 +7,13 @@ def all_subclasses(cls):
     ----------
     cls : class
         The base class
-    
+
     Returns
     -------
     list of class:
         The derived classes
-        
+
     """
     return set(cls.__subclasses__()).union(
-        [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+        [s for c in cls.__subclasses__() for s in all_subclasses(c)]
+    )

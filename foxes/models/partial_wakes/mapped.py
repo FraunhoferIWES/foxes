@@ -5,9 +5,10 @@ from foxes.models.partial_wakes.rotor_points import RotorPoints
 from foxes.models.partial_wakes.top_hat import PartialTopHat
 from foxes.models.partial_wakes.axiwake import PartialAxiwake
 from foxes.models.partial_wakes.distsliced import PartialDistSlicedWake
-from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import TopHatWakeModel
-from foxes.models.wake_models.dist_sliced.dist_sliced_wake_model import DistSlicedWakeModel
-from foxes.models.wake_models.dist_sliced.axisymmetric.axisymmetric_wake_model import AxisymmetricWakeModel
+from foxes.models.wake_models.top_hat import TopHatWakeModel
+from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
+from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
+
 
 class Mapped(PartialWakesModel):
     """
@@ -44,16 +45,18 @@ class Mapped(PartialWakesModel):
 
     """
 
-    def __init__(self, wname2pwake={}, wtype2pwake=None, wake_models=None, wake_frame=None):
+    def __init__(
+        self, wname2pwake={}, wtype2pwake=None, wake_models=None, wake_frame=None
+    ):
         super().__init__(wake_models, wake_frame)
 
         self.wname2pwake = wname2pwake
-        
+
         if wtype2pwake is None:
             self.wtype2pwake = {
-                TopHatWakeModel      : (PartialTopHat.__name__, {}),
+                TopHatWakeModel: (PartialTopHat.__name__, {}),
                 AxisymmetricWakeModel: (PartialAxiwake.__name__, {"n": 6}),
-                DistSlicedWakeModel  : (PartialDistSlicedWake.__name__, {"n": 9})
+                DistSlicedWakeModel: (PartialDistSlicedWake.__name__, {"n": 9}),
             }
         else:
             self.wtype2pwake = wtype2pwake
@@ -80,27 +83,29 @@ class Mapped(PartialWakesModel):
             pdat = None
             if w.name in self.wname2pwake:
                 pdat = deepcopy(self.wname2pwake[w.name])
-            
+
             if pdat is None:
                 for pwcls, tdat in self.wtype2pwake.items():
                     if isinstance(w, pwcls):
                         pdat = deepcopy(tdat)
                         break
-            
+
             if pdat is None:
                 pdat = (RotorPoints.__name__, {})
 
             pname = pdat[0]
-            if pname not in  pws:
+            if pname not in pws:
                 pws[pname] = pdat[1]
                 pws[pname]["wake_models"] = []
-                pws[pname]["wake_frame"]  = self.wake_frame
+                pws[pname]["wake_frame"] = self.wake_frame
             pws[pname]["wake_models"].append(w)
-        
+
         self._pwakes = []
         for pname, pars in pws.items():
             if verbosity:
-                print(f"Partial wakes '{self.name}': Applying {pname} to {[w.name for w in pars['wake_models']]}")
+                print(
+                    f"Partial wakes '{self.name}': Applying {pname} to {[w.name for w in pars['wake_models']]}"
+                )
             self._pwakes.append(PartialWakesModel.new(pname, **pars))
 
         for pwake in self._pwakes:
@@ -119,7 +124,7 @@ class Mapped(PartialWakesModel):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         wake_deltas : dict
@@ -128,10 +133,11 @@ class Mapped(PartialWakesModel):
         """
         return [pw.new_wake_deltas(algo, mdata, fdata) for pw in self._pwakes]
 
-    def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
-                                    wake_deltas):
+    def contribute_to_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+    ):
         """
-        Modifies wake deltas by contributions from the 
+        Modifies wake deltas by contributions from the
         specified wake source turbines.
 
         Parameters
@@ -146,25 +152,20 @@ class Mapped(PartialWakesModel):
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
         wake_deltas : Any
-            The wake deltas object created by the 
+            The wake deltas object created by the
             `new_wake_deltas` function
 
         """
         for pwi, pw in enumerate(self._pwakes):
-            pw.contribute_to_wake_deltas(algo, mdata, fdata, states_source_turbine, 
-                                    wake_deltas[pwi])
+            pw.contribute_to_wake_deltas(
+                algo, mdata, fdata, states_source_turbine, wake_deltas[pwi]
+            )
 
     def evaluate_results(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            wake_deltas, 
-            states_turbine, 
-            update_amb_res=True
-        ):
+        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=True
+    ):
         """
-        Updates the farm data according to the wake 
+        Updates the farm data according to the wake
         deltas.
 
         Parameters
@@ -177,8 +178,8 @@ class Mapped(PartialWakesModel):
             The farm data
             Modified in-place by this function
         wake_deltas : Any
-            The wake deltas object, created by the 
-            `new_wake_deltas` function and filled 
+            The wake deltas object, created by the
+            `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
         states_turbine : numpy.ndarray of int
             For each state, the index of one turbine
@@ -189,5 +190,6 @@ class Mapped(PartialWakesModel):
 
         """
         for pwi, pw in enumerate(self._pwakes):
-            pw.evaluate_results(algo, mdata, fdata, wake_deltas[pwi], states_turbine, update_amb_res)
-                      
+            pw.evaluate_results(
+                algo, mdata, fdata, wake_deltas[pwi], states_turbine, update_amb_res
+            )

@@ -1,6 +1,6 @@
-
 from foxes.core import FarmDataModel
 import foxes.variables as FV
+
 
 class TurbineOrder(FarmDataModel):
     """
@@ -8,7 +8,7 @@ class TurbineOrder(FarmDataModel):
 
     Turbine orders define the order of turbine wake
     calculations for each state.
-    
+
     """
 
     def output_farm_vars(self, algo):
@@ -19,7 +19,7 @@ class TurbineOrder(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -27,4 +27,3 @@ class TurbineOrder(FarmDataModel):
 
         """
         return [FV.ORDER]
-        

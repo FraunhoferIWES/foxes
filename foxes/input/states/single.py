@@ -4,6 +4,7 @@ from foxes.core import States
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class SingleStateStates(States):
     """
     A single uniform state.
@@ -18,7 +19,7 @@ class SingleStateStates(States):
         The TI value
     rho : float, optional
         The air density
-    
+
     Attributes
     ----------
     ws : float
@@ -29,22 +30,16 @@ class SingleStateStates(States):
         The TI value
     rho : float
         The air density
-    
+
     """
 
-    def __init__(
-        self,
-        ws,
-        wd,
-        ti=None,
-        rho=None
-    ):
+    def __init__(self, ws, wd, ti=None, rho=None):
         super().__init__()
-        self.ws  = ws
-        self.wd  = wd
-        self.ti  = ti
+        self.ws = ws
+        self.wd = wd
+        self.ti = ti
         self.rho = rho
-    
+
     def size(self):
         """
         The total number of states.
@@ -65,7 +60,7 @@ class SingleStateStates(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -91,7 +86,7 @@ class SingleStateStates(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         weights : numpy.ndarray
@@ -101,7 +96,7 @@ class SingleStateStates(States):
         return np.ones((1, algo.n_turbines), dtype=FC.DTYPE)
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -117,7 +112,7 @@ class SingleStateStates(States):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -126,13 +121,20 @@ class SingleStateStates(States):
 
         """
         if self.ws is not None:
-            pdata[FV.WS] = np.full((pdata.n_states, pdata.n_points), self.ws, dtype=FC.DTYPE)
+            pdata[FV.WS] = np.full(
+                (pdata.n_states, pdata.n_points), self.ws, dtype=FC.DTYPE
+            )
         if self.wd is not None:
-            pdata[FV.WD] = np.full((pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE)
+            pdata[FV.WD] = np.full(
+                (pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE
+            )
         if self.ti is not None:
-            pdata[FV.TI] = np.full((pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE)
+            pdata[FV.TI] = np.full(
+                (pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE
+            )
         if self.rho is not None:
-            pdata[FV.RHO] = np.full((pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE)
-        
+            pdata[FV.RHO] = np.full(
+                (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
+            )
+
         return {v: pdata[v] for v in self.output_point_vars(algo)}
-        

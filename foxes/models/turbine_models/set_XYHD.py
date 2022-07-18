@@ -4,6 +4,7 @@ from foxes.core import TurbineModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class SetXYHD(TurbineModel):
     """
     Sets basic turbine data, from
@@ -17,7 +18,7 @@ class SetXYHD(TurbineModel):
         Flag for height data
     set_D : bool
         Flag for rotor diameter data
-    
+
     Attributes
     ----------
     set_XY : bool
@@ -33,9 +34,9 @@ class SetXYHD(TurbineModel):
         super().__init__()
 
         self.set_XY = set_XY
-        self.set_H  = set_H
-        self.set_D  = set_D
-    
+        self.set_H = set_H
+        self.set_D = set_D
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -44,7 +45,7 @@ class SetXYHD(TurbineModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -60,9 +61,9 @@ class SetXYHD(TurbineModel):
         if self.set_D:
             ovars.append(FV.D)
         return ovars
-    
+
     def calculate(self, algo, mdata, fdata, st_sel):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -87,16 +88,16 @@ class SetXYHD(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        n_states   = mdata.n_states
+        n_states = mdata.n_states
         n_turbines = algo.n_turbines
 
         if self.set_XY or self.set_H:
             fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
             if self.set_XY:
-                fdata[FV.X] = fdata[FV.TXYH][..., 0] 
-                fdata[FV.Y] = fdata[FV.TXYH][..., 1] 
+                fdata[FV.X] = fdata[FV.TXYH][..., 0]
+                fdata[FV.Y] = fdata[FV.TXYH][..., 1]
             if self.set_H:
-                fdata[FV.H] = fdata[FV.TXYH][..., 2] 
+                fdata[FV.H] = fdata[FV.TXYH][..., 2]
 
         for ti in range(n_turbines):
             ssel = st_sel[:, ti]
@@ -104,7 +105,7 @@ class SetXYHD(TurbineModel):
 
                 if np.all(ssel):
                     ssel = np.s_[:]
-                    
+
                 if self.set_XY:
                     fdata[FV.X][ssel, ti] = algo.farm.turbines[ti].xy[0]
                     fdata[FV.Y][ssel, ti] = algo.farm.turbines[ti].xy[1]
@@ -114,11 +115,11 @@ class SetXYHD(TurbineModel):
                     if H is None:
                         H = algo.farm_controller.turbine_types[ti].H
                     fdata[FV.H][ssel, ti] = H
-                            
+
                 if self.set_D:
                     D = algo.farm.turbines[ti].D
                     if D is None:
                         D = algo.farm_controller.turbine_types[ti].D
-                    fdata[FV.D][ssel, ti] = D    
+                    fdata[FV.D][ssel, ti] = D
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

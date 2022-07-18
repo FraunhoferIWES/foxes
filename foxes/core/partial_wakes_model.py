@@ -3,6 +3,7 @@ from abc import abstractmethod
 from foxes.core.model import Model
 from foxes.tools import all_subclasses
 
+
 class PartialWakesModel(Model):
     """
     Abstract base class for partial wakes models.
@@ -17,21 +18,21 @@ class PartialWakesModel(Model):
         from algorithm.
     wake_frame : foxes.core.WakeFrame, optional
         The wake frame, None takes from algorithm
-    
+
     Attributes
     ----------
     wake_models : list of foxes.core.WakeModel
         The wake model selection
     wake_frame : foxes.core.WakeFrame, optional
         The wake frame
-    
+
     """
 
     def __init__(self, wake_models=None, wake_frame=None):
         super().__init__()
 
         self.wake_models = wake_models
-        self.wake_frame  = wake_frame
+        self.wake_frame = wake_frame
 
     def initialize(self, algo, verbosity=0):
         """
@@ -57,7 +58,7 @@ class PartialWakesModel(Model):
                 w.initialize(algo, verbosity=verbosity)
 
         super().initialize(algo, verbosity=verbosity)
-    
+
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -72,7 +73,7 @@ class PartialWakesModel(Model):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         wake_deltas : dict
@@ -82,10 +83,11 @@ class PartialWakesModel(Model):
         pass
 
     @abstractmethod
-    def contribute_to_wake_deltas(self, algo, mdata, fdata, 
-                            states_source_turbine, wake_deltas):
+    def contribute_to_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+    ):
         """
-        Modifies wake deltas by contributions from the 
+        Modifies wake deltas by contributions from the
         specified wake source turbines.
 
         Parameters
@@ -100,17 +102,18 @@ class PartialWakesModel(Model):
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
         wake_deltas : Any
-            The wake deltas object created by the 
+            The wake deltas object created by the
             `new_wake_deltas` function
 
         """
         pass
 
     @abstractmethod
-    def evaluate_results(self, algo, mdata, fdata, wake_deltas, 
-                            states_turbine, update_amb_res=False):
+    def evaluate_results(
+        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+    ):
         """
-        Updates the farm data according to the wake 
+        Updates the farm data according to the wake
         deltas.
 
         Parameters
@@ -123,8 +126,8 @@ class PartialWakesModel(Model):
             The farm data
             Modified in-place by this function
         wake_deltas : Any
-            The wake deltas object, created by the 
-            `new_wake_deltas` function and filled 
+            The wake deltas object, created by the
+            `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
         states_turbine : numpy.ndarray of int
             For each state, the index of one turbine
@@ -132,7 +135,7 @@ class PartialWakesModel(Model):
             Shape: (n_states,)
         update_amb_res : bool
             Flag for updating ambient results
-            
+
         """
         pass
 
@@ -151,7 +154,7 @@ class PartialWakesModel(Model):
         if pwake_type is None:
             return None
 
-        allc  = all_subclasses(cls)
+        allc = all_subclasses(cls)
         found = pwake_type in [scls.__name__ for scls in allc]
 
         if found:
@@ -161,5 +164,6 @@ class PartialWakesModel(Model):
 
         else:
             estr = "Partial wakes model type '{}' is not defined, available types are \n {}".format(
-                pwake_type, sorted([ i.__name__ for i in allc]))
+                pwake_type, sorted([i.__name__ for i in allc])
+            )
             raise KeyError(estr)

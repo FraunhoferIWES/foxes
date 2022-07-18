@@ -7,6 +7,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 from foxes.output.output import Output
 
+
 class FarmLayoutOutput(Output):
     """
     Plot the farm layout
@@ -27,7 +28,7 @@ class FarmLayoutOutput(Output):
     Attributes
     ----------
     farm : foxes.WindFarm
-        The wind farm 
+        The wind farm
     fres : xarray.Dataset
         The wind farm calculation results
     from_res : bool
@@ -40,26 +41,21 @@ class FarmLayoutOutput(Output):
     """
 
     def __init__(
-            self, 
-            farm, 
-            farm_results=None, 
-            from_results=False, 
-            results_state=None, 
-            D=None
-        ):
+        self, farm, farm_results=None, from_results=False, results_state=None, D=None
+    ):
 
-        self.farm     = farm
-        self.fres     = farm_results
+        self.farm = farm
+        self.fres = farm_results
         self.from_res = from_results
-        self.rstate   = results_state
-        self.D        = D
+        self.rstate = results_state
+        self.D = D
 
         if from_results and farm_results is None:
             raise ValueError(f"Missing farm_results for switch from_results.")
-        
+
         if from_results and results_state is None:
             raise ValueError(f"Please specify results_state for switch from_results.")
-    
+
     def get_layout_data(self):
         """
         Returns wind farm layout.
@@ -70,7 +66,7 @@ class FarmLayoutOutput(Output):
             The wind farm layout, shape:
             (n_turbines, 3) where the 3
             represents x, y, h
-        
+
         """
 
         data = np.zeros([self.farm.n_turbines, 3], dtype=FC.DTYPE)
@@ -83,10 +79,10 @@ class FarmLayoutOutput(Output):
         else:
             for ti, t in enumerate(self.farm.turbines):
                 data[ti, :2] = t.xy
-                data[ti, 2]  = t.H
-        
+                data[ti, 2] = t.H
+
         return data
-    
+
     def get_layout_dict(self):
         """
         Returns wind farm layout.
@@ -96,7 +92,7 @@ class FarmLayoutOutput(Output):
         dict :
             The wind farm layout in dict
             format, as in json output
-        
+
         """
 
         data = self.get_layout_data()
@@ -105,22 +101,26 @@ class FarmLayoutOutput(Output):
         for ti, p in enumerate(data):
             t = self.farm.turbines[ti]
             out[self.farm.name][t.name] = {
-                "id": t.index, "name": t.name, "UTMX": p[0], "UTMY": p[1]}
+                "id": t.index,
+                "name": t.name,
+                "UTMX": p[0],
+                "UTMY": p[1],
+            }
 
         return out
 
     def get_figure(
-            self, 
-            fontsize=8, 
-            figsize=None, 
-            annotate=1, 
-            title=None, 
-            fig=None,
-            ax=None,
-            normalize_D=False,
-            ret_im=False,
-            **kwargs
-        ):
+        self,
+        fontsize=8,
+        figsize=None,
+        annotate=1,
+        title=None,
+        fig=None,
+        ax=None,
+        normalize_D=False,
+        ret_im=False,
+        **kwargs,
+    ):
         """
         Creates farm layout figure.
 
@@ -154,18 +154,18 @@ class FarmLayoutOutput(Output):
             The axis object
         im : matplotlib.pyplot.PathCollection, optional
             The image object
-            
+
         """
 
         if fig is None:
             fig = plt.figure(figsize=figsize)
-            ax  = fig.add_subplot(111)
+            ax = fig.add_subplot(111)
         else:
             ax = fig.axes[0] if ax is None else ax
 
-        #for b in self.farm.boundary_geometry:
+        # for b in self.farm.boundary_geometry:
         #    b.add_to_figure(fig, ax)
-        
+
         D = self.D
         if normalize_D and D is None:
             if self.from_res:
@@ -177,47 +177,56 @@ class FarmLayoutOutput(Output):
                 for ti, t in enumerate(self.farm.turbines):
                     hD = t.D
                     if D is None:
-                        D = hD 
+                        D = hD
                     elif D != hD:
-                        raise ValueError(f"Turbine {ti} has wrong rotor diameter, expecting D = {D} m, found D = {hD} m")
+                        raise ValueError(
+                            f"Turbine {ti} has wrong rotor diameter, expecting D = {D} m, found D = {hD} m"
+                        )
                 if D is None:
-                    raise ValueError(f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?")
+                    raise ValueError(
+                        f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
+                    )
 
         data = self.get_layout_data()
-        x    = data[:, 0] / D if normalize_D else data[:, 0]
-        y    = data[:, 1] / D if normalize_D else data[:, 1]
-        n    = range(len(x))
+        x = data[:, 0] / D if normalize_D else data[:, 0]
+        y = data[:, 1] / D if normalize_D else data[:, 1]
+        n = range(len(x))
 
-        kw = {'c': 'orange'}
+        kw = {"c": "orange"}
         kw.update(**kwargs)
 
-        im = ax.scatter(x,y,**kw)
+        im = ax.scatter(x, y, **kw)
 
         if annotate == 1:
             for i, txt in enumerate(n):
-                ax.annotate(int(txt), (x[i],y[i]), size = fontsize)
+                ax.annotate(int(txt), (x[i], y[i]), size=fontsize)
         elif annotate == 2:
             for i, t in enumerate(self.farm.turbines):
-                ax.annotate(t.name, (x[i],y[i]), size = fontsize)
+                ax.annotate(t.name, (x[i], y[i]), size=fontsize)
 
-        ti = title if title is not None else self.farm.name \
-                if D is None or not normalize_D else f"{self.farm.name} (D = {D} m)"
+        ti = (
+            title
+            if title is not None
+            else self.farm.name
+            if D is None or not normalize_D
+            else f"{self.farm.name} (D = {D} m)"
+        )
         ax.set_title(ti)
-        
-        ax.set_xlabel('x [m]' if not normalize_D else 'x [D]')
-        ax.set_ylabel('y [m]' if not normalize_D else 'y [D]')
+
+        ax.set_xlabel("x [m]" if not normalize_D else "x [D]")
+        ax.set_ylabel("y [m]" if not normalize_D else "y [D]")
         ax.grid()
 
-        #if len(self.farm.boundary_geometry) \
+        # if len(self.farm.boundary_geometry) \
         #    or ( min(x) != max(x) and min(y) != max(y) ):
-        if ( min(x) != max(x) and min(y) != max(y) ):
-            ax.set_aspect('equal', adjustable='box')
+        if min(x) != max(x) and min(y) != max(y):
+            ax.set_aspect("equal", adjustable="box")
 
         ax.autoscale_view(tight=True)
-        
+
         if ret_im:
             return ax, im
-        
+
         return ax
 
     def write_plot(self, file_path=None, fontsize=8, **kwargs):
@@ -233,17 +242,17 @@ class FarmLayoutOutput(Output):
             for default
         fontsize : int
             Size of the turbine numbers
-        
+
         """
 
-        ax  = self.get_figure(fontsize=fontsize, ret_im=False, **kwargs)
+        ax = self.get_figure(fontsize=fontsize, ret_im=False, **kwargs)
         fig = ax.get_figure()
 
         fname = file_path if file_path is not None else self.farm.name + ".png"
-        fig.savefig(fname, bbox_inches='tight')
+        fig.savefig(fname, bbox_inches="tight")
 
         plt.close(fig)
-    
+
     def write_xyh(self, file_path=None):
         """
         Writes xyh layout file.
@@ -253,7 +262,7 @@ class FarmLayoutOutput(Output):
         file_path : str
             The file into which to plot, or None
             for default
-        
+
         """
 
         data = self.get_layout_data()
@@ -270,21 +279,23 @@ class FarmLayoutOutput(Output):
         file_path : str
             The file into which to plot, or None
             for default
-        
+
         """
 
         data = self.get_layout_data()
 
         fname = file_path if file_path is not None else self.farm.name + ".csv"
-        
-        lyt = pd.DataFrame(index=range(len(data)), columns=['id', 'name', 'x', 'y', 'h', 'D'])
-        lyt.index.name='index'
-        lyt['id']   = [ t.info['id'] for t in self.farm.turbines ]
-        lyt['name'] = [ t.info['name'] for t in self.farm.turbines ]
-        lyt['x']    = data[:, 0]
-        lyt['y']    = data[:, 1]
-        lyt['h']    = data[:, 2]
-        lyt['D']    = [ t.D for t in self.farm.turbines ]
+
+        lyt = pd.DataFrame(
+            index=range(len(data)), columns=["id", "name", "x", "y", "h", "D"]
+        )
+        lyt.index.name = "index"
+        lyt["id"] = [t.info["id"] for t in self.farm.turbines]
+        lyt["name"] = [t.info["name"] for t in self.farm.turbines]
+        lyt["x"] = data[:, 0]
+        lyt["y"] = data[:, 1]
+        lyt["h"] = data[:, 2]
+        lyt["D"] = [t.D for t in self.farm.turbines]
 
         lyt.to_csv(fname)
 
@@ -297,11 +308,11 @@ class FarmLayoutOutput(Output):
         file_path : str
             The file into which to plot, or None
             for default
-        
+
         """
 
         data = self.get_layout_dict()
 
         fname = file_path if file_path is not None else self.farm.name + ".json"
-        with open(fname, 'w') as outfile:
+        with open(fname, "w") as outfile:
             json.dump(data, outfile, indent=4)

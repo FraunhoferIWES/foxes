@@ -1,8 +1,9 @@
 import numpy as np
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.top_hat.top_hat_wake_model import TopHatWakeModel
+from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
+
 
 class JensenWake(TopHatWakeModel):
     """
@@ -20,7 +21,7 @@ class JensenWake(TopHatWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-    
+
     Attributes
     ----------
     k : float, optional
@@ -88,15 +89,15 @@ class JensenWake(TopHatWakeModel):
         ct : numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
-        
+
         Returns
         -------
         wake_r : numpy.ndarray
             The wake radii, shape: (n_states, n_points)
-        
+
         """
         n_states = mdata.n_states
-        st_sel   = (np.arange(n_states), states_source_turbine)
+        st_sel = (np.arange(n_states), states_source_turbine)
 
         R = fdata[FV.D][st_sel][:, None] / 2
         k = self.get_data(FV.K, fdata, st_sel)
@@ -106,8 +107,9 @@ class JensenWake(TopHatWakeModel):
 
         return R + k * x
 
-    def calc_centreline_wake_deltas(self, algo, mdata, fdata, states_source_turbine,
-                                        sp_sel, x, wake_r, ct):
+    def calc_centreline_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+    ):
         """
         Calculate centre line results of wake deltas.
 
@@ -132,22 +134,20 @@ class JensenWake(TopHatWakeModel):
         ct : numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_sp_sel,)
-        
+
         Returns
         -------
         cl_del : dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,) 
+            varlue: numpy.ndarray, shape: (n_sp_sel,)
 
         """
         n_states = mdata.n_states
         n_points = sp_sel.shape[1]
-        st_sel   = (np.arange(n_states), states_source_turbine)
+        st_sel = (np.arange(n_states), states_source_turbine)
 
-        R    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        R = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         R[:] = fdata[FV.D][st_sel][:, None] / 2
-        R    = R[sp_sel]
+        R = R[sp_sel]
 
-        return {
-            FV.WS: -( R / wake_r )**2 * ( 1. - np.sqrt( 1. - ct ) )
-        }
+        return {FV.WS: -((R / wake_r) ** 2) * (1.0 - np.sqrt(1.0 - ct))}

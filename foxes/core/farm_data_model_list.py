@@ -1,10 +1,10 @@
-
 from foxes.core.farm_data_model import FarmDataModel
+
 
 class FarmDataModelList(FarmDataModel):
     """
     A list of farm data models.
-    
+
     By using the FarmDataModelList the models'
     `calculate` functions are called together
     under one common call of xarray's `apply_ufunc`.
@@ -33,7 +33,7 @@ class FarmDataModelList(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -51,19 +51,19 @@ class FarmDataModelList(FarmDataModel):
         calculation.
 
         This function should specify all data
-        that depend on the loop variable (e.g. state), 
+        that depend on the loop variable (e.g. state),
         or that are intended to be shared between chunks.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         idata : dict
             The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
@@ -92,9 +92,13 @@ class FarmDataModelList(FarmDataModel):
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
             if not m.initialized:
@@ -105,7 +109,7 @@ class FarmDataModelList(FarmDataModel):
         super().initialize(algo)
 
     def calculate(self, algo, mdata, fdata, parameters=[]):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -132,15 +136,19 @@ class FarmDataModelList(FarmDataModel):
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
-            #print("MLIST VARS BEFORE",m.name,list(fdata.keys()),parameters[mi])
+            # print("MLIST VARS BEFORE",m.name,list(fdata.keys()),parameters[mi])
             res = m.calculate(algo, mdata, fdata, **parameters[mi])
             fdata.update(res)
-        
+
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
     def finalize(self, algo, results, parameters=[], verbosity=0, clear_mem=False):
@@ -158,21 +166,25 @@ class FarmDataModelList(FarmDataModel):
         clear_mem : bool
             Flag for deleting model data and
             resetting initialization flag
-            
+
         """
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
-            raise ValueError(f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
+            )
         elif len(parameters) != len(self.models):
-            raise ValueError(f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}")
+            raise ValueError(
+                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
+            )
 
         for mi, m in enumerate(self.models):
             if verbosity > 0:
                 print(f"{self.name}, sub-model '{m.name}': Finalizing")
-            m.finalize(algo, results, **parameters[mi])  
-        
+            m.finalize(algo, results, **parameters[mi])
+
         if clear_mem:
             self.models = None
-            
+
         super().finalize(algo, results, clear_mem)

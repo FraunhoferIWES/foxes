@@ -1,5 +1,7 @@
-from . import dist_sliced
+from .dist_sliced import DistSlicedWakeModel
+from .axisymmetric import AxisymmetricWakeModel
+from .top_hat import TopHatWakeModel
+from .gaussian import GaussianWakeModel
 
-from .dist_sliced import axisymmetric
-from .dist_sliced.axisymmetric import gaussian
-from .dist_sliced.axisymmetric import top_hat
+from . import wind
+from . import ti

@@ -1,4 +1,3 @@
-
 import numpy as np
 from abc import abstractmethod
 
@@ -13,7 +12,7 @@ class RotorModel(FarmDataModel):
     """
     Abstract base class of rotor models.
 
-    Rotor models calculate ambient farm data from 
+    Rotor models calculate ambient farm data from
     states, and provide rotor points and weights
     for the calculation of rotor effective quantities.
 
@@ -22,7 +21,7 @@ class RotorModel(FarmDataModel):
     calc_vars : list of str
         The variables that are calculated by the model
         (Their ambients are added automatically)
-    
+
     Attributes
     ----------
     calc_vars : list of str
@@ -43,15 +42,17 @@ class RotorModel(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
             The output variable names
 
         """
-        return self.calc_vars + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
-    
+        return self.calc_vars + [
+            FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb
+        ]
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -127,34 +128,36 @@ class RotorModel(FarmDataModel):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         points : numpy.ndarray
-            The rotor points, shape: 
+            The rotor points, shape:
             (n_states, n_turbines, n_rpoints, 3)
 
         """
 
-        n_states   = mdata.n_states
-        n_points   = self.n_rotor_points()
+        n_states = mdata.n_states
+        n_points = self.n_rotor_points()
         n_turbines = algo.n_turbines
-        dpoints    = self.design_points()
-        D          = fdata[FV.D]
+        dpoints = self.design_points()
+        D = fdata[FV.D]
 
-        rax  = np.zeros((n_states, n_turbines, 3, 3), dtype=FC.DTYPE)
-        n    = rax[:, :, 0, 0:2]
-        m    = rax[:, :, 1, 0:2]
+        rax = np.zeros((n_states, n_turbines, 3, 3), dtype=FC.DTYPE)
+        n = rax[:, :, 0, 0:2]
+        m = rax[:, :, 1, 0:2]
         n[:] = wd2uv(fdata[FV.YAW], axis=-1)
         m[:] = np.stack([-n[:, :, 1], n[:, :, 0]], axis=-1)
         rax[:, :, 2, 2] = 1
 
-        points     = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
-        points[:]  = fdata[FV.TXYH][:, :, None, :]
-        points[:] += 0.5 * D[:, :, None, None] * np.einsum('stad,pa->stpd', rax, dpoints)
+        points = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
+        points[:] = fdata[FV.TXYH][:, :, None, :]
+        points[:] += (
+            0.5 * D[:, :, None, None] * np.einsum("stad,pa->stpd", rax, dpoints)
+        )
 
         return points
-    
+
     def _set_res(self, fdata, v, res, stsel):
         """
         Helper function for results setting
@@ -164,18 +167,20 @@ class RotorModel(FarmDataModel):
         elif res.shape[1] == 1:
             fdata[v][stsel] = res[:, 0]
         else:
-            raise ValueError(f"Rotor model '{self.name}': states_turbine is not None, but results shape for '{v}' has more than one turbine, {res.shape}")
+            raise ValueError(
+                f"Rotor model '{self.name}': states_turbine is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
+            )
 
     def eval_rpoint_results(
-            self, 
-            algo, 
-            mdata,
-            fdata, 
-            rpoint_results, 
-            weights,
-            states_turbine=None,
-            copy_to_ambient=False
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        rpoint_results,
+        weights,
+        states_turbine=None,
+        copy_to_ambient=False,
+    ):
         """
         Evaluate rotor point results.
 
@@ -194,8 +199,8 @@ class RotorModel(FarmDataModel):
         fdata : foxes.core.Data
             The farm data
         rpoint_results : dict
-            The results at rotor points. Keys: variable str. 
-            Values: numpy.ndarray, shape if `states_turbine` 
+            The results at rotor points. Keys: variable str.
+            Values: numpy.ndarray, shape if `states_turbine`
             is None: (n_states, n_turbines, n_rpoints).
             Else: (n_states, 1, n_rpoints)
         weights : numpy.ndarray
@@ -208,7 +213,7 @@ class RotorModel(FarmDataModel):
 
         """
 
-        n_states   = mdata.n_states
+        n_states = mdata.n_states
         n_turbines = algo.n_turbines
         if states_turbine is not None:
             stsel = (np.arange(n_states), states_turbine)
@@ -216,20 +221,22 @@ class RotorModel(FarmDataModel):
             stsel = None
 
         uvp = None
-        uv  = None
-        if FV.WS in self.calc_vars \
-            or FV.WD in self.calc_vars \
-            or FV.YAW in self.calc_vars \
-            or FV.REWS in self.calc_vars \
-            or FV.REWS2 in self.calc_vars \
-            or FV.REWS3 in self.calc_vars:
+        uv = None
+        if (
+            FV.WS in self.calc_vars
+            or FV.WD in self.calc_vars
+            or FV.YAW in self.calc_vars
+            or FV.REWS in self.calc_vars
+            or FV.REWS2 in self.calc_vars
+            or FV.REWS3 in self.calc_vars
+        ):
 
-            wd  = rpoint_results[FV.WD]
-            ws  = rpoint_results[FV.WS]
+            wd = rpoint_results[FV.WD]
+            ws = rpoint_results[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
-            uv  = np.einsum('stpd,p->std', uvp, weights)
+            uv = np.einsum("stpd,p->std", uvp, weights)
 
-        wd    = None
+        wd = None
         vdone = []
         for v in self.calc_vars:
 
@@ -248,34 +255,36 @@ class RotorModel(FarmDataModel):
                 del ws
                 vdone.append(v)
         del uv, wd
-        
-        if FV.REWS in self.calc_vars \
-            or FV.REWS2 in self.calc_vars \
-            or FV.REWS3 in self.calc_vars:
+
+        if (
+            FV.REWS in self.calc_vars
+            or FV.REWS2 in self.calc_vars
+            or FV.REWS3 in self.calc_vars
+        ):
 
             if stsel is None:
                 yaw = fdata[FV.YAW]
             else:
                 yaw = fdata[FV.YAW][stsel][:, None]
             nax = wd2uv(yaw, axis=-1)
-            wsp = np.einsum('stpd,std->stp', uvp, nax)
+            wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
 
                 if v == FV.REWS:
-                    rews = np.einsum('stp,p->st', wsp, weights)
+                    rews = np.einsum("stp,p->st", wsp, weights)
                     self._set_res(fdata, v, rews, stsel)
                     del rews
                     vdone.append(v)
 
                 elif v == FV.REWS2:
-                    rews2 = np.sqrt(np.einsum('stp,p->st', wsp**2, weights))
+                    rews2 = np.sqrt(np.einsum("stp,p->st", wsp**2, weights))
                     self._set_res(fdata, v, rews2, stsel)
                     del rews2
                     vdone.append(v)
 
                 elif v == FV.REWS3:
-                    rews3 = (np.einsum('stp,p->st', wsp**3, weights))**(1./3.)
+                    rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (1.0 / 3.0)
                     self._set_res(fdata, v, rews3, stsel)
                     del rews3
                     vdone.append(v)
@@ -285,23 +294,23 @@ class RotorModel(FarmDataModel):
 
         for v in self.calc_vars:
             if v not in vdone:
-                res = np.einsum('stp,p->st', rpoint_results[v], weights)
+                res = np.einsum("stp,p->st", rpoint_results[v], weights)
                 self._set_res(fdata, v, res, stsel)
             if copy_to_ambient and v in FV.var2amb:
                 fdata[FV.var2amb[v]] = fdata[v].copy()
 
     def calculate(
-            self, 
-            algo, 
-            mdata,
-            fdata, 
-            rpoints=None, 
-            weights=None, 
-            store_rpoints=False, 
-            store_rweights=False, 
-            store_amb_res=False,
-            states_turbine=None
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        rpoints=None,
+        weights=None,
+        store_rpoints=False,
+        store_rweights=False,
+        store_amb_res=False,
+        states_turbine=None,
+    ):
         """
         Calculate ambient rotor effective results.
 
@@ -328,37 +337,39 @@ class RotorModel(FarmDataModel):
             come from the states to mdata
         states_turbine: numpy.ndarray of int, optional
             The turbine indices, one per state. Shape: (n_states,)
-        
+
         Returns
         -------
         results : dict
             results dict. Keys: Variable name str. Values:
             numpy.ndarray with results, shape: (n_states, n_turbines)
-            
+
         """
 
         if rpoints is None:
             rpoints = mdata.get(FV.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
         if states_turbine is not None:
             n_states = mdata.n_states
-            stsel    = (np.arange(n_states), states_turbine)
-            rpoints  = rpoints[stsel][:, None]
+            stsel = (np.arange(n_states), states_turbine)
+            rpoints = rpoints[stsel][:, None]
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
-        n_points = n_turbines*n_rpoints
+        n_points = n_turbines * n_rpoints
 
         if weights is None:
             weights = mdata.get(FV.RWEIGHTS, self.rotor_point_weights())
-        
+
         if store_rpoints:
             mdata[FV.RPOINTS] = rpoints
         if store_rweights:
             mdata[FV.RWEIGHTS] = weights
 
-        svars  = algo.states.output_point_vars(algo)
+        svars = algo.states.output_point_vars(algo)
         points = rpoints.reshape(n_states, n_points, 3)
-        pdata  = {FV.POINTS: points}
-        pdims  = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
-        pdata.update({v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars})
+        pdata = {FV.POINTS: points}
+        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata.update(
+            {v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars}
+        )
         pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
         pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
         del pdims, points
@@ -374,7 +385,14 @@ class RotorModel(FarmDataModel):
         if store_amb_res:
             mdata[FV.AMB_RPOINT_RESULTS] = rpoint_results
 
-        self.eval_rpoint_results(algo, mdata, fdata, rpoint_results, 
-                                    weights, states_turbine, copy_to_ambient=True)
-        
+        self.eval_rpoint_results(
+            algo,
+            mdata,
+            fdata,
+            rpoint_results,
+            weights,
+            states_turbine,
+            copy_to_ambient=True,
+        )
+
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

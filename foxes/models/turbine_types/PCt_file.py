@@ -7,6 +7,7 @@ from foxes.tools import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 
+
 class PCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
@@ -15,7 +16,7 @@ class PCtFile(TurbineType):
     Parameters
     ----------
     data_source : str or pandas.DataFrame
-        The file path, static name, or data 
+        The file path, static name, or data
     col_ws : str
         The wind speed column
     col_P : str
@@ -70,7 +71,7 @@ class PCtFile(TurbineType):
         col_ct="ct",
         rho=None,
         flag_yawm=False,
-        p_ct=1.,
+        p_ct=1.0,
         p_P=1.88,
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
@@ -85,17 +86,17 @@ class PCtFile(TurbineType):
 
         super().__init__(**pars)
 
-        self.source    = data_source
-        self.col_ws    = col_ws
-        self.col_P     = col_P
-        self.col_ct    = col_ct
-        self.rho       = rho
+        self.source = data_source
+        self.col_ws = col_ws
+        self.col_P = col_P
+        self.col_ct = col_ct
+        self.rho = rho
         self.flag_yawm = flag_yawm
-        self.p_ct      = p_ct
-        self.p_P       = p_P
-        self.WSCT      = var_ws_ct
-        self.WSP       = var_ws_P
-        self.rpars     = pd_file_read_pars
+        self.p_ct = p_ct
+        self.p_P = p_P
+        self.WSCT = var_ws_ct
+        self.WSP = var_ws_P
+        self.rpars = pd_file_read_pars
 
     def output_farm_vars(self, algo):
         """
@@ -105,7 +106,7 @@ class PCtFile(TurbineType):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -113,7 +114,7 @@ class PCtFile(TurbineType):
 
         """
         return [FV.P, FV.CT]
-    
+
     def initialize(self, algo, st_sel, verbosity=0):
         """
         Initializes the model.
@@ -133,16 +134,16 @@ class PCtFile(TurbineType):
             data = self.source
         else:
             fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
-            data  = PandasFileHelper.read_file(fpath, **self.rpars)
+            data = PandasFileHelper.read_file(fpath, **self.rpars)
 
         data = data.set_index(self.col_ws).sort_index()
         self.data_ws = data.index.to_numpy()
-        self.data_P  = data[self.col_P].to_numpy()
+        self.data_P = data[self.col_P].to_numpy()
         self.data_ct = data[self.col_ct].to_numpy()
         super().initialize(algo, st_sel, verbosity=verbosity)
-    
+
     def calculate(self, algo, mdata, fdata, st_sel):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -159,26 +160,26 @@ class PCtFile(TurbineType):
         st_sel : numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
-            
+
         Returns
         -------
         results : dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
-        """  
+        """
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
 
         # apply air density correction:
         if self.rho is not None:
-            
+
             # correct wind speed by air density, such
             # that in the partial load region the
             # correct value is reconstructed:
-            rho    = fdata[FV.RHO][st_sel]
-            rews2 *= ( self.rho / rho )**0.5
-            rews3 *= ( self.rho / rho )**(1./3.) 
+            rho = fdata[FV.RHO][st_sel]
+            rews2 *= (self.rho / rho) ** 0.5
+            rews3 *= (self.rho / rho) ** (1.0 / 3.0)
             del rho
 
         # in yawed case, calc yaw corrected wind speed:
@@ -187,22 +188,26 @@ class PCtFile(TurbineType):
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:
-            yawm   = fdata[FV.YAWM][st_sel]
-            cosm   = np.cos(yawm / 180 * np.pi)
-            rews2 *= ( cosm**self.p_ct )**0.5
-            rews3 *= ( cosm**self.p_P )**(1./3.) 
+            yawm = fdata[FV.YAWM][st_sel]
+            cosm = np.cos(yawm / 180 * np.pi)
+            rews2 *= (cosm**self.p_ct) ** 0.5
+            rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
             del yawm, cosm
 
         out = {
-            FV.P : fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP]))
+            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
+            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP])),
         }
 
-        out[FV.P][st_sel]  = np.interp(rews3, self.data_ws, self.data_P, left=0., right=0.)
-        out[FV.CT][st_sel] = np.interp(rews2, self.data_ws, self.data_ct, left=0., right=0.)
+        out[FV.P][st_sel] = np.interp(
+            rews3, self.data_ws, self.data_P, left=0.0, right=0.0
+        )
+        out[FV.CT][st_sel] = np.interp(
+            rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
+        )
 
         return out
-    
+
     def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
         """
         Finalizes the model.
@@ -226,4 +231,3 @@ class PCtFile(TurbineType):
         if clear_mem:
             del self.data_ws, self.data_P, self.data_ct
         super().finalize(algo, results, clear_mem, verbosity=verbosity)
-        

@@ -3,6 +3,7 @@ from abc import abstractmethod
 from foxes.core.point_data_model import PointDataModel
 import foxes.variables as FV
 
+
 class States(PointDataModel):
     """
     Abstract base class for states.
@@ -29,7 +30,7 @@ class States(PointDataModel):
     def index(self):
         """
         The index list
-        
+
         Returns
         -------
         indices : array_like
@@ -47,7 +48,7 @@ class States(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         weights : numpy.ndarray
@@ -70,12 +71,12 @@ class States(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         idata : dict
             The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
@@ -87,9 +88,13 @@ class States(PointDataModel):
 
         weights = self.weights(algo)
         if len(weights.shape) != 2:
-            raise ValueError(f"States '{self.name}': Wrong weights dimension, expecing ({FV.STATE}, {FV.TURBINE}), got shape {weights.shape}")
+            raise ValueError(
+                f"States '{self.name}': Wrong weights dimension, expecing ({FV.STATE}, {FV.TURBINE}), got shape {weights.shape}"
+            )
         if weights.shape[1] != algo.n_turbines:
-            raise ValueError(f"States '{self.name}': Wrong size of second axis dimension '{FV.TURBINE}': Expecting {self.n_turbines}, got {weights.shape[1]}")
+            raise ValueError(
+                f"States '{self.name}': Wrong size of second axis dimension '{FV.TURBINE}': Expecting {self.n_turbines}, got {weights.shape[1]}"
+            )
         idata["data_vars"][FV.WEIGHT] = ((FV.STATE, FV.TURBINE), weights)
 
         return idata
@@ -102,7 +107,7 @@ class States(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str

@@ -1,8 +1,9 @@
-import pandas as pd 
+import pandas as pd
 import xarray
 from copy import deepcopy
 
 import foxes.variables as FV
+
 
 class PandasFileHelper:
     """
@@ -15,7 +16,7 @@ class PandasFileHelper:
         Default parameters for file reading
         for the supported file formats
     DEFAULT_WRITING_PARAMETERS : dict
-        Default parameters for file writing 
+        Default parameters for file writing
         for the supported file formats
     DATA_FILE_FORMAT : list:str
         The supported file formats for data export
@@ -25,30 +26,30 @@ class PandasFileHelper:
     """
 
     DEFAULT_READING_PARAMETERS = {
-        'csv'    : {},
-        'csv.gz' : {},
-        'csv.bz2': {},
-        'csv.zip': {},
-        'h5'     : {},
-        'nc'     : {}
-    } 
+        "csv": {},
+        "csv.gz": {},
+        "csv.bz2": {},
+        "csv.zip": {},
+        "h5": {},
+        "nc": {},
+    }
 
     DEFAULT_WRITING_PARAMETERS = {
-        'csv'    : {},
-        'csv.gz' : {},
-        'csv.bz2': {},
-        'csv.zip': {},
-        'h5'     : {'key': 'flappy', 'mode': 'w'},
-        'nc'     : {}
-    } 
+        "csv": {},
+        "csv.gz": {},
+        "csv.bz2": {},
+        "csv.zip": {},
+        "h5": {"key": "flappy", "mode": "w"},
+        "nc": {},
+    }
 
     DEFAULT_FORMAT_DICT = {
-        str(FV.__dict__[v]): '{:.4f}' for v in FV.__dict__.keys() if v[0] != '_'
+        str(FV.__dict__[v]): "{:.4f}" for v in FV.__dict__.keys() if v[0] != "_"
     }
-    DEFAULT_FORMAT_DICT['weight'] = '{:.10e}'
+    DEFAULT_FORMAT_DICT["weight"] = "{:.10e}"
 
     DATA_FILE_FORMATS = list(DEFAULT_READING_PARAMETERS.keys())
-    
+
     @classmethod
     def read_file(cls, file_path, **kwargs):
         """
@@ -60,7 +61,7 @@ class PandasFileHelper:
             The path to the file
         **kwargs : dict, optional
             Parameters forwarded to the pandas reading method.
-        
+
         Returns
         -------
         pandas.DataFrame :
@@ -74,24 +75,27 @@ class PandasFileHelper:
         for fmt in cls.DATA_FILE_FORMATS:
 
             l = len(fmt)
-            if fname[L-l:] == fmt:
+            if fname[L - l :] == fmt:
 
-                if fmt[:3] == 'csv':
+                if fmt[:3] == "csv":
                     f = pd.read_csv
-                
-                elif fmt == 'h5':
+
+                elif fmt == "h5":
                     f = pd.read_hdf
-                
-                elif fmt == 'nc':
-                    f = lambda fname, **pars: \
-                            xarray.open_dataset(fname, **pars).to_dataframe()
+
+                elif fmt == "nc":
+                    f = lambda fname, **pars: xarray.open_dataset(
+                        fname, **pars
+                    ).to_dataframe()
 
                 if f is not None:
                     pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
                     pars.update(kwargs)
                     return f(file_path, **pars)
 
-        raise KeyError(f"Unknown file format '{fname}'. Supported formats: {cls.DATA_FILE_FORMATS}")
+        raise KeyError(
+            f"Unknown file format '{fname}'. Supported formats: {cls.DATA_FILE_FORMATS}"
+        )
 
     @classmethod
     def write_file(cls, data, file_path, format_dict={}, **kwargs):
@@ -118,7 +122,9 @@ class PandasFileHelper:
         out = pd.DataFrame(index=data.index)
         for c in data.columns:
             if c in fdict:
-                out[c] = data[c].map(lambda x: fdict[c].format(x) if not pd.isna(x) else x )
+                out[c] = data[c].map(
+                    lambda x: fdict[c].format(x) if not pd.isna(x) else x
+                )
             else:
                 out[c] = data[c]
 
@@ -127,17 +133,17 @@ class PandasFileHelper:
         for fmt in cls.DATA_FILE_FORMATS:
 
             l = len(fmt)
-            if file_path[L-l:] == fmt:
+            if file_path[L - l :] == fmt:
 
-                if fmt[:3] == 'csv':
+                if fmt[:3] == "csv":
                     f = out.to_csv
-                
-                elif fmt == 'h5':
+
+                elif fmt == "h5":
                     f = out.to_hdf
-                
-                elif fmt == 'nc':
+
+                elif fmt == "nc":
                     f = out.to_netcdf
-                
+
                 if f is not None:
 
                     pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
@@ -147,4 +153,6 @@ class PandasFileHelper:
 
                     return
 
-        raise KeyError(f"Unknown file format '{file_path}'. Supported formats: {cls.DATA_FILE_FORMATS}")
+        raise KeyError(
+            f"Unknown file format '{file_path}'. Supported formats: {cls.DATA_FILE_FORMATS}"
+        )

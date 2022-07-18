@@ -2,10 +2,11 @@ from abc import abstractmethod
 
 from foxes.core import WakeModel
 
+
 class DistSlicedWakeModel(WakeModel):
     """
     Abstract base class for wake models for which
-    the x-denpendency can be separated from the 
+    the x-denpendency can be separated from the
     yz-dependency.
 
     The multi-yz ability is used by the `PartialDistSlicedWake`
@@ -17,7 +18,7 @@ class DistSlicedWakeModel(WakeModel):
         The superpositions. Key: variable name str,
         value: The wake superposition model name,
         will be looked up in model book
-    
+
     Attributes
     ----------
     superp : dict
@@ -29,7 +30,7 @@ class DistSlicedWakeModel(WakeModel):
     def __init__(self, superpositions):
         super().__init__()
         self.superp = superpositions
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -44,7 +45,9 @@ class DistSlicedWakeModel(WakeModel):
         """
         super().initialize(algo, verbosity=verbosity)
 
-        self.superp = {v: algo.mbook.wake_superpositions[s] for v, s in self.superp.items()} 
+        self.superp = {
+            v: algo.mbook.wake_superpositions[s] for v, s in self.superp.items()
+        }
         for v, s in self.superp.items():
             if not s.initialized:
                 s.initialize(algo, verbosity=verbosity)
@@ -70,7 +73,7 @@ class DistSlicedWakeModel(WakeModel):
         yz : numpy.ndarray
             The yz values for each x value, shape:
             (n_states, n_points, n_yz_per_x, 2)
-        
+
         Returns
         -------
         wdeltas : dict
@@ -83,8 +86,9 @@ class DistSlicedWakeModel(WakeModel):
         """
         pass
 
-    def contribute_to_wake_deltas(self, algo, mdata, fdata, states_source_turbine, 
-                                    wake_coos, wake_deltas):
+    def contribute_to_wake_deltas(
+        self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas
+    ):
         """
         Calculate the contribution to the wake deltas
         by this wake model.
@@ -109,21 +113,31 @@ class DistSlicedWakeModel(WakeModel):
             shape (n_states, n_points, ...)
 
         """
-        x  = wake_coos[:, :, 0]
+        x = wake_coos[:, :, 0]
         yz = wake_coos[:, :, None, 1:3]
 
-        wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(algo, mdata, fdata, 
-                                                        states_source_turbine, x, yz)
+        wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
+            algo, mdata, fdata, states_source_turbine, x, yz
+        )
         for v, hdel in wdeltas.items():
 
             try:
                 superp = self.superp[v]
             except KeyError:
-                raise KeyError(f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}")
+                raise KeyError(
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
+                )
 
             wake_deltas[v] = superp.calc_wakes_plus_wake(
-                                        algo, mdata, fdata, states_source_turbine,
-                                        sp_sel, v, wake_deltas[v], hdel[:, 0])
+                algo,
+                mdata,
+                fdata,
+                states_source_turbine,
+                sp_sel,
+                v,
+                wake_deltas[v],
+                hdel[:, 0],
+            )
 
     def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
         """
@@ -144,13 +158,13 @@ class DistSlicedWakeModel(WakeModel):
             values: numpy.ndarray with shape (n_states, n_points)
         wake_deltas : dict
             The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta 
-            applies, values: numpy.ndarray with shape 
-            (n_states, n_points, ...) before evaluation, 
+            Key: Variable name str, for which the wake delta
+            applies, values: numpy.ndarray with shape
+            (n_states, n_points, ...) before evaluation,
             numpy.ndarray with shape (n_states, n_points) afterwards
 
         """
         for v, s in self.superp.items():
-            wake_deltas[v] = s.calc_final_wake_delta(algo, mdata, fdata, v,
-                                                        amb_results[v], wake_deltas[v])
-        
+            wake_deltas[v] = s.calc_final_wake_delta(
+                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
+            )

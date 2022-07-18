@@ -5,6 +5,7 @@ from foxes.tools import wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class RotorWD(WakeFrame):
     """
     Align the first axis for each rotor with the
@@ -14,7 +15,7 @@ class RotorWD(WakeFrame):
     ----------
     var_wd : str
         The wind direction variable
-    
+
     Attributes
     ----------
     var_wd : str
@@ -27,7 +28,7 @@ class RotorWD(WakeFrame):
         self.var_wd = var_wd
 
     def calc_order(self, algo, mdata, fdata):
-        """"
+        """ "
         Calculates the order of turbine evaluation.
 
         This function is executed on a single chunk of data,
@@ -41,17 +42,17 @@ class RotorWD(WakeFrame):
             The model data
         fdata : foxes.core.Data
             The farm data
-        
+
         Returns
         -------
         order : numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        n  = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
+        n = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
         xy = fdata[FV.TXYH][:, :, :2]
 
-        order = np.argsort(np.einsum('std,sd->st', xy, n), axis=-1)
+        order = np.argsort(np.einsum("std,sd->st", xy, n), axis=-1)
 
         return order
 
@@ -72,7 +73,7 @@ class RotorWD(WakeFrame):
             wake causing turbine. Shape: (n_states,)
         points : numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
-        
+
         Returns
         -------
         wake_coos : numpy.ndarray
@@ -80,22 +81,22 @@ class RotorWD(WakeFrame):
 
         """
         n_states = mdata.n_states
-        stsel    = (np.arange(n_states), states_source_turbine)
+        stsel = (np.arange(n_states), states_source_turbine)
 
-        xyz   = fdata[FV.TXYH][stsel]
-        delta = points - xyz[:, None, :] 
+        xyz = fdata[FV.TXYH][stsel]
+        delta = points - xyz[:, None, :]
         del xyz
 
         wd = fdata[self.var_wd][stsel]
 
-        nax  = np.zeros((n_states, 3, 3), dtype=FC.DTYPE)
-        n    = nax[:, 0, :2]
+        nax = np.zeros((n_states, 3, 3), dtype=FC.DTYPE)
+        n = nax[:, 0, :2]
         n[:] = wd2uv(wd, axis=-1)
-        m    = nax[:, 1, :2]
+        m = nax[:, 1, :2]
         m[:] = np.stack([-n[:, 1], n[:, 0]], axis=-1)
         nax[:, 2, 2] = 1
         del wd
 
-        coos = np.einsum('spd,sad->spa', delta, nax)
+        coos = np.einsum("spd,sad->spa", delta, nax)
 
         return coos

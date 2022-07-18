@@ -4,10 +4,11 @@ from foxes.tools import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Data(Dict):
     """
     Container for data and meta data.
-    
+
     Used during the calculation of single chunks,
     usually for numpy data (not xarray data).
 
@@ -23,7 +24,7 @@ class Data(Dict):
     loop_dims : array_like of str
         List of the loop dimensions during xarray's
         `apply_ufunc` calculations
-    
+
     Attributes
     ----------
     dims : dict
@@ -59,7 +60,9 @@ class Data(Dict):
                 if c not in self.sizes:
                     self.sizes[c] = self[v].shape[ci]
                 elif self.sizes[c] != self[v].shape[ci]:
-                    raise ValueError(f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {self[v].shape[ci]} in shape {self[v].shape}")
+                    raise ValueError(
+                        f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {self[v].shape[ci]} in shape {self[v].shape}"
+                    )
 
         if FV.STATE in self.sizes:
             self.n_states = self.sizes[FV.STATE]
@@ -68,12 +71,18 @@ class Data(Dict):
         if FV.POINT in self.sizes:
             self.n_points = self.sizes[FV.POINT]
 
-        if FV.X in data and FV.Y in data and FV.H in data \
-            and dims[FV.X] == (FV.STATE, FV.TURBINE) \
-            and dims[FV.Y] == (FV.STATE, FV.TURBINE) \
-            and dims[FV.H] == (FV.STATE, FV.TURBINE):
+        if (
+            FV.X in data
+            and FV.Y in data
+            and FV.H in data
+            and dims[FV.X] == (FV.STATE, FV.TURBINE)
+            and dims[FV.Y] == (FV.STATE, FV.TURBINE)
+            and dims[FV.H] == (FV.STATE, FV.TURBINE)
+        ):
 
-            self[FV.TXYH] = np.zeros((self.n_states, self.n_turbines, 3), dtype=FC.DTYPE)
+            self[FV.TXYH] = np.zeros(
+                (self.n_states, self.n_turbines, 3), dtype=FC.DTYPE
+            )
 
             self[FV.TXYH][:, :, 0] = self[FV.X]
             self[FV.TXYH][:, :, 1] = self[FV.Y]

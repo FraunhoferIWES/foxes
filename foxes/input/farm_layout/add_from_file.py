@@ -4,6 +4,7 @@ from foxes.data import FARM, StaticData
 from foxes.input.farm_layout.add_from_json import add_from_json
 from foxes.input.farm_layout.add_from_csv import add_from_csv
 
+
 def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
     """
     Add turbines from file.
@@ -38,10 +39,14 @@ def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
 
     if fpath.suffix == ".json":
         add_from_json(farm, fpath, *args, **kwargs)
-    elif fpath.suffix == ".csv" \
-        or ( len(fpath) > 7 and fpath[-7:] == ".csv.gz" ) \
-        or ( len(fpath) > 8 and fpath[-8:] == ".csv.bz2" ) \
-        or ( len(fpath) > 8 and fpath[-8:] == ".csv.zip" ):
+    elif (
+        fpath.suffix == ".csv"
+        or (len(fpath) > 7 and fpath[-7:] == ".csv.gz")
+        or (len(fpath) > 8 and fpath[-8:] == ".csv.bz2")
+        or (len(fpath) > 8 and fpath[-8:] == ".csv.zip")
+    ):
         add_from_csv(farm, fpath, *args, verbosity=verbosity, **kwargs)
     else:
-        raise KeyError(f"Unsupported file suffix: '{fpath}'. Please provide any of: json, csv, csv.gz, csv.bz2, csv.zip")
+        raise KeyError(
+            f"Unsupported file suffix: '{fpath}'. Please provide any of: json, csv, csv.gz, csv.bz2, csv.zip"
+        )

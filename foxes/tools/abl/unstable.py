@@ -1,6 +1,7 @@
 import numpy as np
 
-from foxes.tools.abl.stable import logz 
+from foxes.tools.abl.stable import logz
+
 
 def psi(height, mol):
     """
@@ -12,16 +13,21 @@ def psi(height, mol):
         The height value
     mol : float
         The Monin-Obukhov height
-    
+
     Returns
     -------
     psi : float
         The Psi function value
 
     """
-    x = ( 1.- 16. * height / mol )**0.25
-    return    2. * np.log( ( 1. + x ) / 2. ) + np.log( ( 1. + x**2 ) / 2. ) \
-            - 2. * np.arctan(x) + np.pi / 2.
+    x = (1.0 - 16.0 * height / mol) ** 0.25
+    return (
+        2.0 * np.log((1.0 + x) / 2.0)
+        + np.log((1.0 + x**2) / 2.0)
+        - 2.0 * np.arctan(x)
+        + np.pi / 2.0
+    )
+
 
 def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
     """
@@ -40,14 +46,15 @@ def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
         The Monin-Obukhov height
     kappa : float
         The van-Karman constant
-    
+
     Returns
     -------
     ustar : float
         The friction velocity
 
     """
-    return ws_ref * kappa / ( logz(h_ref, z0) - psi(h_ref, mol) )
+    return ws_ref * kappa / (logz(h_ref, z0) - psi(h_ref, mol))
+
 
 def calc_ws(height, z0, ustar, psi, kappa=0.41):
     """
@@ -72,4 +79,4 @@ def calc_ws(height, z0, ustar, psi, kappa=0.41):
         The wind speed
 
     """
-    return ustar / kappa * ( logz(height, z0) - psi ); 
+    return ustar / kappa * (logz(height, z0) - psi)

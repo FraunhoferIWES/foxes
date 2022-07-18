@@ -9,6 +9,7 @@ from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class FieldDataNC(States):
     """
     Heterogeneous ambient states on a regular
@@ -46,7 +47,7 @@ class FieldDataNC(States):
         Fill value in case of exceeding bounds, if no bounds error
     time_format : str
         The datetime parsing format string
-    
+
     Attributes
     ----------
     file_pattern : str
@@ -90,51 +91,52 @@ class FieldDataNC(States):
         var2ncvar={},
         fixed_vars={},
         states_coord="Time",
-        x_coord='UTMX',
-        y_coord='UTMY',
-        h_coord='height',
+        x_coord="UTMX",
+        y_coord="UTMY",
+        h_coord="height",
         pre_load=True,
         weight_ncvar=None,
         bounds_error=True,
         fill_value=None,
-        time_format="%Y-%m-%d_%H:%M:%S"
+        time_format="%Y-%m-%d_%H:%M:%S",
     ):
         super().__init__()
 
         self.file_pattern = file_pattern
         self.states_coord = states_coord
-        self.ovars        = output_vars
-        self.fixed_vars   = fixed_vars
-        self.x_coord      = x_coord
-        self.y_coord      = y_coord
-        self.h_coord      = h_coord
+        self.ovars = output_vars
+        self.fixed_vars = fixed_vars
+        self.x_coord = x_coord
+        self.y_coord = y_coord
+        self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
-        self.pre_load     = pre_load
+        self.pre_load = pre_load
         self.bounds_error = bounds_error
-        self.fill_value   = fill_value
-        self.time_format  = time_format
+        self.fill_value = fill_value
+        self.time_format = time_format
 
-        self.var2ncvar = {v: var2ncvar.get(v, v) for v in output_vars \
-                                if v not in fixed_vars}
+        self.var2ncvar = {
+            v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
+        }
 
         self._inds = None
-        self._N    = None
-    
+        self._N = None
+
     def _get_data(self, ds):
         """
         Helper function for data extraction
         """
 
-        x      = ds[self.x_coord].values
-        y      = ds[self.y_coord].values
-        h      = ds[self.h_coord].values
-        n_x    = len(x)
-        n_y    = len(y)
-        n_h    = len(h)
-        n_sts  = ds.sizes[self.states_coord]
+        x = ds[self.x_coord].values
+        y = ds[self.y_coord].values
+        h = ds[self.h_coord].values
+        n_x = len(x)
+        n_y = len(y)
+        n_h = len(h)
+        n_sts = ds.sizes[self.states_coord]
 
-        data   = np.zeros((n_sts, n_h, n_y, n_x, self._n_dvars), dtype=FC.DTYPE)
-        cor_xy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord) 
+        data = np.zeros((n_sts, n_h, n_y, n_x, self._n_dvars), dtype=FC.DTYPE)
+        cor_xy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
         cor_yx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
 
         for v, ncv in self.var2ncvar.items():
@@ -143,46 +145,66 @@ class FieldDataNC(States):
             elif ds[ncv].dims == cor_xy:
                 data[..., self._dkys[v]] = np.swapaxes(ds[ncv].values, 2, 3)
             else:
-                raise ValueError(f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_xy} or {cor_yx}")
-        
+                raise ValueError(
+                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_xy} or {cor_yx}"
+                )
+
         if FV.WD in self.fixed_vars:
-            data[..., self._dkys[FV.WD]] = np.full((n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE)
+            data[..., self._dkys[FV.WD]] = np.full(
+                (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
+            )
 
         return data
 
     def _read_nc(self, algo, pattern):
 
-        with xr.open_mfdataset(pattern, parallel=True, 
-                concat_dim=self.states_coord, combine="nested", 
-                data_vars='minimal', coords='minimal', compat='override') as ds:
-            
+        with xr.open_mfdataset(
+            pattern,
+            parallel=True,
+            concat_dim=self.states_coord,
+            combine="nested",
+            data_vars="minimal",
+            coords="minimal",
+            compat="override",
+        ) as ds:
+
             for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
                 if not c in ds:
-                    raise KeyError(f"States '{self.name}': Missing coordinate '{c}' in data")
+                    raise KeyError(
+                        f"States '{self.name}': Missing coordinate '{c}' in data"
+                    )
 
             self._inds = ds[self.states_coord].values
             if self.time_format is not None:
-                self._inds = pd.to_datetime(self._inds, format=self.time_format).to_numpy()
+                self._inds = pd.to_datetime(
+                    self._inds, format=self.time_format
+                ).to_numpy()
             self._N = len(self._inds)
 
             if self.weight_ncvar is not None:
                 self._weights = ds[self.weight_ncvar].values
             else:
-                self._weights = np.full((self._N, algo.n_turbines), 1./self._N, dtype=FC.DTYPE)
+                self._weights = np.full(
+                    (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
+                )
 
             for v in self.ovars:
                 if v in self.var2ncvar:
                     ncv = self.var2ncvar[v]
                     if not ncv in ds:
-                        raise KeyError(f"States '{self.name}': nc variable '{ncv}' not found in data, found: {sorted(list(ds.keys()))}")
+                        raise KeyError(
+                            f"States '{self.name}': nc variable '{ncv}' not found in data, found: {sorted(list(ds.keys()))}"
+                        )
                 elif v not in self.fixed_vars:
-                    raise ValueError(f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars")
-    
+                    raise ValueError(
+                        f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
+                    )
+
             if self.pre_load:
 
-                self.X    = self.var(FV.X)
-                self.Y    = self.var(FV.Y)
-                self.H    = self.var(FV.H)
+                self.X = self.var(FV.X)
+                self.Y = self.var(FV.Y)
+                self.H = self.var(FV.H)
                 self.VARS = self.var("vars")
                 self.DATA = self.var("data")
 
@@ -208,9 +230,12 @@ class FieldDataNC(States):
 
         """
 
-        if (FV.WS in self.ovars and FV.WD not in self.ovars) \
-            or (FV.WS not in self.ovars and FV.WD in self.ovars):
-            raise KeyError(f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}")
+        if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
+            FV.WS not in self.ovars and FV.WD in self.ovars
+        ):
+            raise KeyError(
+                f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}"
+            )
 
         # ensure WD and WS get the first two slots of data:
         self._dkys = {}
@@ -230,7 +255,9 @@ class FieldDataNC(States):
             self._read_nc(algo, self.file_pattern)
         except OSError:
             if verbosity:
-                print(f"States '{self.name}': Reading static data '{self.file_pattern}' from context '{STATES}'")
+                print(
+                    f"States '{self.name}': Reading static data '{self.file_pattern}' from context '{STATES}'"
+                )
             fpath = algo.dbook.get_file_path(STATES, self.file_pattern, check_raw=False)
             if verbosity:
                 print(f"Path: {fpath}")
@@ -244,19 +271,19 @@ class FieldDataNC(States):
         calculation.
 
         This function should specify all data
-        that depend on the loop variable (e.g. state), 
+        that depend on the loop variable (e.g. state),
         or that are intended to be shared between chunks.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         idata : dict
             The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`; 
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
@@ -265,10 +292,10 @@ class FieldDataNC(States):
 
         if self.pre_load:
 
-            idata["coords"][self.H]       = self._h
-            idata["coords"][self.Y]       = self._y
-            idata["coords"][self.X]       = self._x
-            idata["coords"][self.VARS]    = self._v
+            idata["coords"][self.H] = self._h
+            idata["coords"][self.Y] = self._y
+            idata["coords"][self.X] = self._x
+            idata["coords"][self.VARS] = self._v
             idata["data_vars"][self.DATA] = self._data
 
             del self._h, self._y, self._x, self._v, self._data
@@ -290,7 +317,7 @@ class FieldDataNC(States):
     def index(self):
         """
         The index list
-        
+
         Returns
         -------
         indices : array_like
@@ -307,7 +334,7 @@ class FieldDataNC(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         output_vars : list of str
@@ -324,7 +351,7 @@ class FieldDataNC(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        
+
         Returns
         -------
         weights : numpy.ndarray
@@ -334,7 +361,7 @@ class FieldDataNC(States):
         return self._weights
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """"
+        """ "
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -350,7 +377,7 @@ class FieldDataNC(States):
             The farm data
         pdata : foxes.core.Data
             The point data
-        
+
         Returns
         -------
         results : dict
@@ -359,36 +386,49 @@ class FieldDataNC(States):
 
         """
         # prepare:
-        points   = pdata[FV.POINTS]
-        n_pts    = points.shape[1]
+        points = pdata[FV.POINTS]
+        n_pts = points.shape[1]
         n_states = fdata.n_states
-        
+
         # pick pre-loaded data:
         if self.pre_load:
-            x    = mdata[self.X]
-            y    = mdata[self.Y]
-            h    = mdata[self.H]
+            x = mdata[self.X]
+            y = mdata[self.Y]
+            h = mdata[self.H]
             data = mdata[self.DATA].copy()
 
         # read data for this chunk:
         else:
-            i0 = np.where(self._inds==mdata[FV.STATE][0])[0][0]
-            s  = slice(i0, i0 + n_states)
-            ds = xr.open_mfdataset(self.file_pattern, parallel=False, 
-                        concat_dim=self.states_coord, combine="nested", 
-                        data_vars='minimal', coords='minimal', compat='override'
-                    ).isel({self.states_coord: s}).load()
+            i0 = np.where(self._inds == mdata[FV.STATE][0])[0][0]
+            s = slice(i0, i0 + n_states)
+            ds = (
+                xr.open_mfdataset(
+                    self.file_pattern,
+                    parallel=False,
+                    concat_dim=self.states_coord,
+                    combine="nested",
+                    data_vars="minimal",
+                    coords="minimal",
+                    compat="override",
+                )
+                .isel({self.states_coord: s})
+                .load()
+            )
 
-            x    = ds[self.x_coord].values
-            y    = ds[self.y_coord].values
-            h    = ds[self.h_coord].values
+            x = ds[self.x_coord].values
+            y = ds[self.y_coord].values
+            h = ds[self.h_coord].values
             data = self._get_data(ds)
             del ds
 
         # translate WS, WD into U, V:
         if FV.WD in self.ovars and FV.WS in self.ovars:
             wd = data[..., self._dkys[FV.WD]]
-            ws = data[..., self._dkys[FV.WS]] if FV.WS in self._dkys else self.fixed_vars[FV.WS]
+            ws = (
+                data[..., self._dkys[FV.WS]]
+                if FV.WS in self._dkys
+                else self.fixed_vars[FV.WS]
+            )
             data[..., :2] = wd2uv(wd, ws, axis=-1)
             del ws, wd
 
@@ -396,20 +436,25 @@ class FieldDataNC(States):
         sts = np.arange(n_states)
         pts = np.append(points, np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE), axis=2)
         pts[:, :, 3] = sts[:, None]
-        pts = pts.reshape(n_states*n_pts, 4)
+        pts = pts.reshape(n_states * n_pts, 4)
         pts = np.flip(pts, axis=1)
 
         # interpolate:
         gvars = (sts, h, y, x)
-        iterp = RegularGridInterpolator(gvars, data, 
-                    bounds_error=self.bounds_error, fill_value=self.fill_value)
+        iterp = RegularGridInterpolator(
+            gvars, data, bounds_error=self.bounds_error, fill_value=self.fill_value
+        )
         try:
             data = iterp(pts).reshape(n_states, n_pts, self._n_dvars)
         except ValueError as e:
             print(f"\n\nStates '{self.name}': Interpolation error")
             print("INPUT VARS : (state, heights, y, x)")
-            print("DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars])
-            print("EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T])
+            print(
+                "DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars]
+            )
+            print(
+                "EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T]
+            )
             raise e
         del pts, iterp, x, y, h, gvars
 
@@ -425,6 +470,8 @@ class FieldDataNC(States):
                 if v in self._dkys:
                     out[v] = data[..., self._dkys[v]]
                 else:
-                    out[v] = np.full((n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE)
+                    out[v] = np.full(
+                        (n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE
+                    )
 
         return out
