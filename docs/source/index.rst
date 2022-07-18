@@ -31,7 +31,7 @@ Contents:
     .. toctree::
         :maxdepth: 2
     
-        installation
+        installation.md
 
     .. toctree::
         :maxdepth: 2
@@ -46,4 +46,4 @@ Contents:
     .. toctree::
         :maxdepth: 2
 
-        history
+        history.md
