@@ -167,10 +167,10 @@ class ModelBook:
             
             self.wake_models[
                 f"TurbOPark_{s}"
-            ] = fm.wake_models.wind.BastankhahWake(superposition=s)
+            ] = fm.wake_models.wind.TurbOParkWake(superposition=s)
             self.wake_models[
-                f"TurbOPark_{s}_k007"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.07, superposition=s)
+                f"TurbOPark_{s}_k004"
+            ] = fm.wake_models.wind.TurbOParkWake(k=0.04, superposition=s)
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:

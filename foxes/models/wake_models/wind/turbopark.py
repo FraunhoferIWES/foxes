@@ -9,7 +9,7 @@ class TurbOParkWake(GaussianWakeModel):
     """
     The TurbOPark wake model
 
-    (https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf)
+    https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
 
     Parameters
     ----------
@@ -132,32 +132,32 @@ class TurbOParkWake(GaussianWakeModel):
         if np.any(sp_sel):
 
             # apply selection:
-            x = x[sp_sel]
+            x  = x[sp_sel]
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            D    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
-            D = D[sp_sel]
+            D    = D[sp_sel]
 
             # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            k    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
-            k = k[sp_sel]
+            k    = k[sp_sel]
             
             # get TI:
-            AMB_TI = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            AMB_TI    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             AMB_TI[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
-            AMB_TI = AMB_TI[sp_sel]
+            AMB_TI    = AMB_TI[sp_sel]
 
             # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            sbeta   = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            sblim   = 1 / (np.sqrt(8) * self.sbeta_factor)
             sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
             
             alpha = self.c1 * AMB_TI
-            beta = self.c2 * AMB_TI / np.sqrt(ct)
+            beta  = self.c2 * AMB_TI / np.sqrt(ct)
 
             mult1   = k * AMB_TI / beta 
             term1   = np.sqrt((alpha + beta * x / D)**2 + 1)
@@ -167,8 +167,7 @@ class TurbOParkWake(GaussianWakeModel):
             
             sigma   = epsilon * D #for x = 0 
             
-            if (x > 1e-5):
-                sigma += sigma + D * mult1 * (term1 - term2 - np.log(term3 / term4))
+            sigma += sigma + D * mult1 * (term1 - term2 - np.log(term3 / term4))
 
             del x, k, sbeta, sblim, mult1, term1, term2, term3, term4, alpha, beta, epsilon
 
