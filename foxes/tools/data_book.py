@@ -50,15 +50,14 @@ class DataBook:
 
         if isinstance(file_sfx, str):
             file_sfx = [file_sfx]
-
-        contents = list(resources.contents(package))
+        contents = list((resource.name for resource in resources.files(package).iterdir() if resource.is_file())) 
         check_f = lambda f: any(
             [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
         )
         contents = [f for f in contents if check_f(f)]
 
         for f in contents:
-            with resources.path(package, f) as path:
+            with resources.as_file(resources.files(package).joinpath(f)) as path: 
                 self.dbase[context][f] = path
 
     def add_data_package_file(self, context, package, file_name):
