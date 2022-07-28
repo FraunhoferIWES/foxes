@@ -1,23 +1,18 @@
 
 import pandas as pd
-import unittest
 from pathlib import Path
 import inspect
 
 import foxes
 import foxes.variables as FV
 
-class Test(unittest.TestCase):
+class Test:
 
-    def setUp(self):
-        self.thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
-        self.verbosity = 1
-
-    def print(self, *args):
-        if self.verbosity:
-            print(*args)
+    thisdir   = Path(inspect.getfile(inspect.currentframe())).parent
 
     def test(self):
+        
+        print(self.thisdir)
             
         c       = 2000
         cfile   = self.thisdir / "flappy" / "results.csv.gz"
@@ -29,8 +24,6 @@ class Test(unittest.TestCase):
         ck = {FV.STATE: c}
 
         mbook = foxes.models.ModelBook()
-        '''ttype = foxes.models.turbine_types.PCtFile(data_source=tfile, 
-                                        var_ws_ct=FV.REWS, var_ws_P=FV.REWS)'''
         ttype = foxes.models.turbine_types.PCtSingleFiles(data_source_P=tPfile,data_source_ct=tCtfile,
                                                         col_ws_P_file ="ws",col_ws_ct_file ="ws",
                                                         col_P = "P",col_ct = "ct",
@@ -68,28 +61,25 @@ class Test(unittest.TestCase):
 
         df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
-        self.print()
-        self.print("TRESULTS\n")
-        self.print(df)
+        print()
+        print("TRESULTS\n")
+        print(df)
 
-        self.print("\Reading file", cfile)
+        #print("\Reading file", cfile)
         fdata = pd.read_csv(cfile)
-        self.print(fdata)
+        print(fdata)
 
-        self.print("\nVERIFYING\n")
+        print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
         delta = df.reset_index() - fdata
-        self.print(delta)
-        self.print(delta.max())
+        print(delta)
+        print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        self.print(chk.max())
+        print(chk.max())
         
         assert((chk[FV.WS] < 1e-5).all())
         assert((chk[FV.P] < 1e-3).all())
         
         
-
-if __name__ == '__main__':
-    unittest.main()
