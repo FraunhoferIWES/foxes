@@ -35,7 +35,7 @@ class Tests:
         mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
             wname2pwake={
                 "Bastankhah_linear": ("PartialAxiwake", dict(n=6)),
-                "CrespoHernandez_quadratic": ("PartialTopHat", {}),
+                "IECTI2005_quadratic": ("PartialTopHat", {}),
             }
         )
 
@@ -58,7 +58,7 @@ class Tests:
             farm,
             states=states,
             rotor_model=rotor,
-            wake_models=["Bastankhah_quadratic", "CrespoHernandez_max"],
+            wake_models=["Bastankhah_quadratic", "IECTI2005_max"],
             wake_frame="rotor_wd",
             partial_wakes_model="mapped",
             chunks=ck,
@@ -98,18 +98,18 @@ class Tests:
 
         var = FV.WS
         print(f"\nCHECKING {var}")
-        sel = chk[var] >= 3e-4
+        sel = chk[var] >= 3e-3
         print(df.loc[sel])
         print(fdata.loc[sel])
         print(chk.loc[sel])
-        assert (chk[var] < 3e-4).all()
+        assert (chk[var] < 3e-3).all()
 
         var = FV.TI
         print(f"\nCHECKING {var}")
         sel = chk[var] >= 3e-4
         print(df.loc[sel])
         print(fdata.loc[sel])
-        print(chk.loc[sel])
+        print(chk.loc[sel,"TI"])
         assert (chk[var] < 3e-4).all()
         
         var = FV.CT
