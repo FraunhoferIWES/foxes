@@ -50,7 +50,7 @@ class DataBook:
 
         if isinstance(file_sfx, str):
             file_sfx = [file_sfx]
-        contents = list((resource.name for resource in resources.files(package).iterdir() if resource.is_file())) 
+        contents = [r.name for r in resources.files(package).iterdir() if r.is_file()]
         check_f = lambda f: any(
             [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
         )
