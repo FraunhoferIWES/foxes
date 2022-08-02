@@ -41,7 +41,7 @@ if __name__ == "__main__":
         rotor_diameter=126.0,
         hub_height=90.0,
         rotor_model=rotor,
-        wake_models=["Bastankhah", "CrespoHernandez"],
+        wake_models=["Bastankhah", "IEC_TI_2005"],
         turbine_models=["ct_P_curves"],
         base_point=p0,
         step_vector=stp,

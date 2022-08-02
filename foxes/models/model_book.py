@@ -174,6 +174,14 @@ class ModelBook:
                 f"CrespoHernandez_{s[3:]}_k002"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=s)
 
+            self.wake_models[
+                f"IECTI2005_{s[3:]}"
+            ] = fm.wake_models.ti.IECTIWake(superposition=s, iec_type = "2005")
+            
+            self.wake_models[
+                f"IECTI2019_{s[3:]}"
+            ] = fm.wake_models.ti.IECTIWake(superposition=s, iec_type = "2019")
+
         self.sources = Dict(
             name="sources",
             point_models=self.point_models,
