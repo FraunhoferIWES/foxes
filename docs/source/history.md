@@ -34,4 +34,4 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 ## v0.1.4-alpha
 
 - Fixes
-    - Static data: adding missing data `wind_rotation.nc` to manifest
+    - Static data: Adding missing data `wind_rotation.nc` to manifest
