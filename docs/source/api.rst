@@ -13,6 +13,5 @@ API
         foxes.input
         foxes.models
         foxes.output
-        foxes.tools
         foxes.utils
         foxes.variables

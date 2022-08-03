@@ -15,40 +15,40 @@ class ModelBook:
 
     Attributes
     ----------
-    point_models : foxes.tools.Dict
+    point_models : foxes.utils.Dict
         The point models. Keys: model name str,
         values: foxes.core.PointDataModel
-    rotor_models : foxes.tools.Dict
+    rotor_models : foxes.utils.Dict
         The rotor models. Keys: model name str,
         values: foxes.core.RotorModel
-    turbine_types : foxes.tools.Dict
+    turbine_types : foxes.utils.Dict
         The turbine type models. Keys: model name str,
         values: foxes.core.TurbineType
-    turbine_models : foxes.tools.Dict
+    turbine_models : foxes.utils.Dict
         The turbine models. Keys: model name str,
         values: foxes.core.TurbineModel
-    turbine_orders : foxes.tools.Dict
+    turbine_orders : foxes.utils.Dict
         The turbine orders. Keys: model name str,
         values: foxes.core.TurbineOrder
-    farm_models : foxes.tools.Dict
+    farm_models : foxes.utils.Dict
         The farm models. Keys: model name str,
         values: foxes.core.FarmModel
-    farm_controllers : foxes.tools.Dict
+    farm_controllers : foxes.utils.Dict
         The farm controllers. Keys: model name str,
         values: foxes.core.FarmController
-    partial_wakes : foxes.tools.Dict
+    partial_wakes : foxes.utils.Dict
         The partial wakes. Keys: model name str,
         values: foxes.core.PartialWakeModel
-    wake_frames : foxes.tools.Dict
+    wake_frames : foxes.utils.Dict
         The wake frames. Keys: model name str,
         values: foxes.core.WakeFrame
-    wake_superpositions : foxes.tools.Dict
+    wake_superpositions : foxes.utils.Dict
         The wake superposition models. Keys: model name str,
         values: foxes.core.WakeSuperposition
-    wake_models : foxes.tools.Dict
+    wake_models : foxes.utils.Dict
         The wake models. Keys: model name str,
         values: foxes.core.WakeModel
-    sources : foxes.tools.Dict
+    sources : foxes.utils.Dict
         All sources dict
 
     """

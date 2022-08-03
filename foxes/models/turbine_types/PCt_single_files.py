@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 from foxes.core import TurbineType
-from foxes.tools import PandasFileHelper
+from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 
