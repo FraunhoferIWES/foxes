@@ -35,3 +35,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Fixes
     - Static data: Adding missing data `wind_rotation.nc` to manifest
+
+- Models
+    - New wake model added: `TurbOParkWake` from Orsted

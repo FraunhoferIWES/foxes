@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from foxes.output.output import Output
-from foxes.tools import wd2wdvec, wd2uv
+from .output import Output
+from foxes.utils import wd2wdvec, wd2uv
 import foxes.constants as FC
 import foxes.variables as FV
 

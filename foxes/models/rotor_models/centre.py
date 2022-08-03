@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import RotorModel
-from foxes.tools import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 

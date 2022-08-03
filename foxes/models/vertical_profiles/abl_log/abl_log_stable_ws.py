@@ -1,5 +1,5 @@
 from foxes.core import VerticalProfile
-from foxes.tools.abl import stable
+from foxes.utils.abl import stable
 import foxes.constants as FC
 import foxes.variables as FV
 

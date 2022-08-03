@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from foxes.core.data_calc_model import DataCalcModel
+from .data_calc_model import DataCalcModel
 import foxes.variables as FV
 
 

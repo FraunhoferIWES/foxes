@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 from foxes.core import States, VerticalProfile
-from foxes.tools import PandasFileHelper
+from foxes.utils import PandasFileHelper
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC

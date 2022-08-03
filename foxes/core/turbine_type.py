@@ -1,4 +1,4 @@
-from foxes.core.turbine_model import TurbineModel
+from .turbine_model import TurbineModel
 
 
 class TurbineType(TurbineModel):

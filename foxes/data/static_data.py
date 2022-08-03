@@ -1,4 +1,4 @@
-from foxes.tools import DataBook
+from foxes.utils import DataBook
 
 from . import farms
 from . import states

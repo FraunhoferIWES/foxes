@@ -4,7 +4,7 @@ import xarray as xr
 from scipy.interpolate import RegularGridInterpolator
 
 from foxes.core import States
-from foxes.tools import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
