@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: on-push
+    name: test-on-push
 
     runs-on: ubuntu-latest
     strategy:

@@ -7,7 +7,7 @@ on: pull_request
 
 jobs:
   build:
-    name: on-pull-request
+    name: test-on-pull-request
 
     runs-on: ubuntu-latest
     strategy:
