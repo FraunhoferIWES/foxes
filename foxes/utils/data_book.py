@@ -1,7 +1,6 @@
 import importlib.resources as resources
-
+ 
 from pathlib import Path
-
 
 class DataBook:
     """
