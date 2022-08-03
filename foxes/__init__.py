@@ -12,8 +12,8 @@ from . import output # noqa: F401
 from . import tools # noqa: F401
 
 try:
-    from importlib_resources import read_text
+    from importlib_resources import files
 except ModuleNotFoundError:
-    from importlib.resources import read_text
+    from importlib.resources import files
 
-__version__ = read_text(__package__, "VERSION")
+__version__ = files(__package__).joinpath("VERSION").read_text()
