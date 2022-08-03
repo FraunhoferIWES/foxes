@@ -1,6 +1,6 @@
 import foxes.models as fm
 import foxes.variables as FV
-from foxes.tools import Dict
+from foxes.utils import Dict
 
 
 class ModelBook:

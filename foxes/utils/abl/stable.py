@@ -1,6 +1,26 @@
 import numpy as np
+from .neutral import logz as lgz
 
-from foxes.tools.abl.stable import logz
+
+def logz(height, z0):
+    """
+    Calculates the log factor for
+    wind speed profiles.
+
+    Parameters
+    ----------
+    height : float
+        The evaluation height
+    z0 : float
+        The roughness length
+
+    Returns
+    -------
+    lz : float
+        The log factor
+
+    """
+    return lgz(height, z0)
 
 
 def psi(height, mol):
@@ -20,13 +40,8 @@ def psi(height, mol):
         The Psi function value
 
     """
-    x = (1.0 - 16.0 * height / mol) ** 0.25
-    return (
-        2.0 * np.log((1.0 + x) / 2.0)
-        + np.log((1.0 + x**2) / 2.0)
-        - 2.0 * np.arctan(x)
-        + np.pi / 2.0
-    )
+    h = np.minimum(height, np.abs(mol))
+    return -5.0 * h / mol
 
 
 def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):

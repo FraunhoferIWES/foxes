@@ -1,4 +1,4 @@
-from foxes.core.farm_data_model import FarmDataModel
+from .farm_data_model import FarmDataModel
 
 
 class FarmDataModelList(FarmDataModel):

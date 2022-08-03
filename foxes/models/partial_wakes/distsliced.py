@@ -3,7 +3,7 @@ import numpy as np
 from foxes.core import PartialWakesModel
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.models.rotor_models.grid import GridRotor
-from foxes.tools import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 

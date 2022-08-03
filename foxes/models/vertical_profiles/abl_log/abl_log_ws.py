@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import VerticalProfile
-from foxes.tools import abl
+from foxes.utils import abl
 import foxes.constants as FC
 import foxes.variables as FV
 

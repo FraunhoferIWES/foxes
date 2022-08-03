@@ -14,4 +14,5 @@ API
         foxes.models
         foxes.output
         foxes.tools
+        foxes.utils
         foxes.variables

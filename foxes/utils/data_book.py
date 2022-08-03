@@ -1,7 +1,4 @@
-try:
-    import importlib_resources as resources
-except ModuleNotFoundError:
-    import importlib.resources as resources
+import importlib.resources as resources
 
 from pathlib import Path
 

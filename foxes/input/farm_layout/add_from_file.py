@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from foxes.data import FARM, StaticData
-from foxes.input.farm_layout.add_from_json import add_from_json
-from foxes.input.farm_layout.add_from_csv import add_from_csv
+from .add_from_json import add_from_json
+from .add_from_csv import add_from_csv
 
 
 def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
