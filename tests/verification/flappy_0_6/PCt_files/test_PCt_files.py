@@ -86,7 +86,6 @@ class Test:
         print(chk.loc[sel & sel_ws])
         print(chk.max())
         
-        chk.to_csv("test.csv")
         
         assert(((chk[FV.WS] < 1e-5 )).all())
         assert((chk[FV.P] < 1e-3).all())
