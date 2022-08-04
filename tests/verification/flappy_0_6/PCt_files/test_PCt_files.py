@@ -73,7 +73,10 @@ class Test:
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
+        # neglecting ws < 5 and ws > 20
         sel_ws =((fdata[FV.WS]>5) &(fdata[FV.WS]<20) &(df["REWS"]>5) &(df["REWS"]<20) )
+        
+        #calculating difference
         delta = df.reset_index() - fdata
         delta = delta[sel_ws]
         print(delta)
