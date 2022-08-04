@@ -77,7 +77,14 @@ class Test:
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
+        sel = chk[FV.WS] >= 3e-3
+        print(sel)
+        print(df.reset_index()[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
         print(chk.max())
+        
+        chk.to_csv("test.csv")
         
         assert((chk[FV.WS] < 1e-5).all())
         assert((chk[FV.P] < 1e-3).all())
