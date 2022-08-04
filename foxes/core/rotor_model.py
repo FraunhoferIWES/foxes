@@ -3,9 +3,9 @@ from abc import abstractmethod
 
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.core.farm_data_model import FarmDataModel
-from foxes.core.data import Data
-from foxes.tools import wd2uv, uv2wd
+from .farm_data_model import FarmDataModel
+from .data import Data
+from foxes.utils import wd2uv, uv2wd
 
 
 class RotorModel(FarmDataModel):

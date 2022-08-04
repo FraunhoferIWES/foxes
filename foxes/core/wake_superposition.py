@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from foxes.core.model import Model
+from .model import Model
 
 
 class WakeSuperposition(Model):

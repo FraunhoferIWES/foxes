@@ -1,4 +1,3 @@
-
 import pandas as pd
 from pathlib import Path
 import inspect
@@ -60,8 +59,7 @@ class Test:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
-        df = df.loc[df[FV.WS]>5]
-        df = df.loc[df[FV.WS]<20]
+        df = df.reset_index()
 
         print()
         print("TRESULTS\n")
@@ -69,23 +67,21 @@ class Test:
 
         #print("\Reading file", cfile)
         fdata = pd.read_csv(cfile)
-        fdata = fdata.loc[fdata[FV.WS]>5]
-        fdata = fdata.loc[fdata[FV.WS]<20]
-        
         print(fdata)
 
         print("\nVERIFYING\n")
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
+        sel_ws =((fdata[FV.WS]>5) &(fdata[FV.WS]<20) &(df["REWS"]>5) &(df["REWS"]<20) )
         delta = df.reset_index() - fdata
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        sel = chk[FV.WS] >= 3e-3
+        sel = (chk[FV.WS] >= 3e-3) & sel_ws
         print(sel)
-        print(df.reset_index()[sel])
-        print(fdata.loc[sel])
+        print(df[sel])
+        print(fdata[sel])
         print(chk.loc[sel])
         print(chk.max())
         
@@ -93,4 +89,3 @@ class Test:
         
         assert((chk[FV.WS] < 1e-5).all())
         assert((chk[FV.P] < 1e-3).all())
-         
