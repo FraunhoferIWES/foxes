@@ -78,7 +78,7 @@ class Test:
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        sel = (chk[FV.WS] >= 1e-5) & sel_ws
+        sel = (chk[FV.WS] >= 1e-5) 
         print(sel)
         print(df[sel])
         print(fdata[sel])
@@ -87,5 +87,5 @@ class Test:
         
         chk.to_csv("test.csv")
         
-        assert(((chk[FV.WS] < 1e-5 )& sel_ws).all())
+        assert(((chk[FV.WS] < 1e-5 )).all())
         assert((chk[FV.P] < 1e-3).all())
