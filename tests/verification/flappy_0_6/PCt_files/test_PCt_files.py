@@ -1,4 +1,3 @@
-
 import pandas as pd
 from pathlib import Path
 import inspect
@@ -60,6 +59,7 @@ class Test:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+        df = df.reset_index()
 
         print()
         print("TRESULTS\n")
@@ -73,12 +73,22 @@ class Test:
         df[FV.WS] = df["REWS"]
         df[FV.AMB_WS] = df["AMB_REWS"]
 
+        # neglecting ws < 5 and ws > 20
+        sel_ws =((fdata[FV.WS]>5) &(fdata[FV.WS]<20) &(df["REWS"]>5) &(df["REWS"]<20) )
+        
+        #calculating difference
         delta = df.reset_index() - fdata
+        delta = delta[sel_ws]
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
+        sel = (chk[FV.WS] >= 1e-5) 
+        print(sel)
+        print(df[sel & sel_ws])
+        print(fdata[sel & sel_ws])
+        print(chk.loc[sel & sel_ws])
         print(chk.max())
         
-        assert((chk[FV.WS] < 1e-5).all())
+        
+        assert(((chk[FV.WS] < 1e-5 )).all())
         assert((chk[FV.P] < 1e-3).all())
-         
