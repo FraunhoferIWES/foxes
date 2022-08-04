@@ -75,14 +75,15 @@ class Test:
 
         sel_ws =((fdata[FV.WS]>5) &(fdata[FV.WS]<20) &(df["REWS"]>5) &(df["REWS"]<20) )
         delta = df.reset_index() - fdata
+        delta = delta[sel_ws]
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
         sel = (chk[FV.WS] >= 1e-5) 
         print(sel)
-        print(df[sel])
-        print(fdata[sel])
-        print(chk.loc[sel])
+        print(df[sel & sel_ws])
+        print(fdata[sel & sel_ws])
+        print(chk.loc[sel & sel_ws])
         print(chk.max())
         
         chk.to_csv("test.csv")
