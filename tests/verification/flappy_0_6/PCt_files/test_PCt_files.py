@@ -60,6 +60,8 @@ class Test:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+        df = df.loc[df[FV.WS]>5]
+        df = df.loc[df[FV.WS]<20]
 
         print()
         print("TRESULTS\n")
@@ -67,6 +69,9 @@ class Test:
 
         #print("\Reading file", cfile)
         fdata = pd.read_csv(cfile)
+        fdata = fdata.loc[fdata[FV.WS]>5]
+        fdata = fdata.loc[fdata[FV.WS]<20]
+        
         print(fdata)
 
         print("\nVERIFYING\n")
