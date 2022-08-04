@@ -87,5 +87,5 @@ class Test:
         
         chk.to_csv("test.csv")
         
-        assert((chk[FV.WS] < 1e-5).all())
+        assert(((chk[FV.WS] < 1e-5 )& sel_ws).all())
         assert((chk[FV.P] < 1e-3).all())
