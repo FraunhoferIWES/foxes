@@ -78,7 +78,7 @@ class Test:
         print(delta)
         print(delta.max())
         chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        sel = (chk[FV.WS] >= 3e-3) & sel_ws
+        sel = (chk[FV.WS] >= 1e-5) & sel_ws
         print(sel)
         print(df[sel])
         print(fdata[sel])
