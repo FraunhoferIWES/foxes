@@ -37,3 +37,5 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
     - Static data: Adding missing data `wind_rotation.nc` to manifest
 - Models
     - New wake model added: `TurbOParkWake` from Orsted
+    - New turbine type added: `PCtSingleFiles`, reads power and thrust curves from two separate files
+
