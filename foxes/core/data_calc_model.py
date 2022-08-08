@@ -3,8 +3,8 @@ import xarray as xr
 from abc import abstractmethod
 from dask.distributed import progress
 
-from foxes.core.model import Model
-from foxes.core.data import Data
+from .model import Model
+from .data import Data
 import foxes.variables as FV
 import foxes.constants as FC
 

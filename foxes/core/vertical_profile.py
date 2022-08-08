@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
-from foxes.core.model import Model
-from foxes.tools import all_subclasses
+from .model import Model
+from foxes.utils import all_subclasses
 
 
 class VerticalProfile(Model):

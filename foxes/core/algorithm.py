@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-from foxes.core.model import Model
+from .model import Model
 from foxes.data import StaticData
 import foxes.variables as FV
 

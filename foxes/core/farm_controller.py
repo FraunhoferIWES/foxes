@@ -1,9 +1,9 @@
 import numpy as np
 
-from foxes.core.farm_data_model_list import FarmDataModelList
-from foxes.core.farm_data_model import FarmDataModel
-from foxes.core.turbine_model import TurbineModel
-from foxes.core.turbine_type import TurbineType
+from .farm_data_model_list import FarmDataModelList
+from .farm_data_model import FarmDataModel
+from .turbine_model import TurbineModel
+from .turbine_type import TurbineType
 import foxes.constants as FC
 import foxes.variables as FV
 
