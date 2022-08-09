@@ -8,7 +8,7 @@ import foxes.variables as FV
 
 
 class Tests:
-    
+
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
     def test(self):
@@ -32,13 +32,6 @@ class Tests:
         )
         mbook.turbine_types[ttype.name] = ttype
 
-        mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
-            wname2pwake={
-                "Bastankhah_linear": ("PartialAxiwake", dict(n=6)),
-                "CrespoHernandez_quadratic": ("PartialTopHat", {}),
-            }
-        )
-
         states = foxes.input.states.ScanWS(
             ws_list=np.linspace(6.0, 16.0, n_s), wd=wd, ti=ti, rho=1.225
         )
@@ -49,7 +42,7 @@ class Tests:
             xy_base=p0,
             xy_step=stp,
             n_turbines=n_t,
-            turbine_models=["kTI_amb_02", ttype.name],
+            turbine_models=[ttype.name],
             verbosity=1,
         )
 
@@ -57,10 +50,10 @@ class Tests:
             mbook,
             farm,
             states=states,
-            rotor_model=rotor,
-            wake_models=["Bastankhah_quadratic", "CrespoHernandez_max"],
+            rotor_model="centre",
+            wake_models=["Jensen_linear_k007", "IECTI2019_max"],
             wake_frame="rotor_wd",
-            partial_wakes_model="mapped",
+            partial_wakes_model="top_hat",
             chunks=ck,
             verbosity=1,
         )
@@ -68,21 +61,17 @@ class Tests:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[
-            [FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI]
+            [FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_CT, FV.CT]
         ]
-
-        print()
-        print("TRESULTS\n")
-        print(df)
-
+       
         print("\nReading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
         print()
         print("TRESULTS\n")
-        # sel   = (df[FV.P]>0) & (fdata[FV.P]>0)
-        # df    = df.loc[sel]
-        # fdata = fdata.loc[sel]
+        '''sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
+        df = df.loc[sel]
+        fdata = fdata.loc[sel]'''
         print(df)
         print(fdata)
 
@@ -111,3 +100,12 @@ class Tests:
         print(fdata.loc[sel])
         print(chk.loc[sel])
         assert (chk[var] < 3e-4).all()
+        
+        var = FV.CT
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-5
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-5).all()
+        
