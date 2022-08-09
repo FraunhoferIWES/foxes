@@ -8,7 +8,7 @@ import foxes.variables as FV
 
 
 class Tests:
-
+    
     thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
     def test(self):
@@ -68,7 +68,7 @@ class Tests:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[
-            [FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_CT, FV.CT]
+            [FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI]
         ]
 
         print()
@@ -98,11 +98,11 @@ class Tests:
 
         var = FV.WS
         print(f"\nCHECKING {var}")
-        sel = chk[var] >= 3e-4
+        sel = chk[var] >= 3e-3
         print(df.loc[sel])
         print(fdata.loc[sel])
         print(chk.loc[sel])
-        assert (chk[var] < 3e-4).all()
+        assert (chk[var] < 3e-3).all()
 
         var = FV.TI
         print(f"\nCHECKING {var}")
@@ -111,11 +111,3 @@ class Tests:
         print(fdata.loc[sel])
         print(chk.loc[sel])
         assert (chk[var] < 3e-4).all()
-        
-        var = FV.CT
-        print(f"\nCHECKING {var}")
-        sel = chk[var] >= 3e-5
-        print(df.loc[sel])
-        print(fdata.loc[sel])
-        print(chk.loc[sel])
-        assert (chk[var] < 3e-5).all()

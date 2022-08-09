@@ -49,7 +49,7 @@ class IECTIWake(TopHatWakeModel):
     ):
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
-        k = np.tan(np.deg2rad(opening_angle / 2.))
+        k = float(np.tan(np.deg2rad(opening_angle / 2.)))
         
         self.iec_type = iec_type
         setattr(self, FV.K, k)
