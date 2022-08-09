@@ -180,12 +180,6 @@ class IECTIWake(TopHatWakeModel):
         ws[:] = fdata[FV.REWS][st_sel][:, None]
         ws = ws[sp_sel]
         
-        # get ct:
-        '''ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
-        ct = ct[sp_sel]'''
-        ct[ct > self.ct_max] = self.ct_max
-
         # calculate wind deficit:
         if self.iec_type == "2005":
             cl_deltas = np.sqrt(0.9) / ( 1.5 + 0.3 * x / D * np.sqrt(ws) )
