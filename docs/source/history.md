@@ -40,3 +40,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
     - New turbine type added: `PCtSingleFiles`, reads power and thrust curves from two separate files
     - New turbulence intensity wake model added: `IECTI2019`/`Frandsen` and `IECTI2005`
 
+**Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.4
+
+## v0.1.5-alpha
+
+**Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.5
+
