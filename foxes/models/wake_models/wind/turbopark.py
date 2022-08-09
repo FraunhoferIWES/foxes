@@ -1,20 +1,15 @@
 import numpy as np
 
-from foxes.models.wake_models.dist_sliced.axisymmetric.gaussian.gaussian_wake_model import (
-    GaussianWakeModel,
-)
+from foxes.models.wake_models.gaussian import GaussianWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class BastankhahWake(GaussianWakeModel):
+class TurbOParkWake(GaussianWakeModel):
     """
-    The Bastankhah wake model
+    The TurbOPark wake model
 
-    (https://doi.org/10.1016/j.renene.2014.01.002)
-    Modifications: In the calculation of the initial wake radius
-    a constant of 0.25 instead of 0.2 is used as it fits better
-    to the validation data
+    https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
 
     Parameters
     ----------
@@ -30,7 +25,11 @@ class BastankhahWake(GaussianWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-
+    c1 : float
+        Factor from Frandsen turbulence model
+    c2 : float
+        Factor from Frandsen turbulence model
+        
     Attributes
     ----------
     k : float, optional
@@ -41,14 +40,20 @@ class BastankhahWake(GaussianWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
+    c1 : float
+        Factor from Frandsen turbulence model
+    c2 : float
+        Factor from Frandsen turbulence model
 
     """
 
-    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999):
+    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, c1 = 1.5, c2 = 0.8):
         super().__init__(superpositions={FV.WS: superposition})
 
         self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
+        self.c1 = c1
+        self.c2 = c2
 
         setattr(self, FV.K, k)
 
@@ -127,28 +132,46 @@ class BastankhahWake(GaussianWakeModel):
         if np.any(sp_sel):
 
             # apply selection:
-            x = x[sp_sel]
+            x  = x[sp_sel]
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            D    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
-            D = D[sp_sel]
+            D    = D[sp_sel]
 
             # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            k    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
-            k = k[sp_sel]
+            k    = k[sp_sel]
+            
+            # get TI:
+            AMB_TI    = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            AMB_TI[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
+            AMB_TI    = AMB_TI[sp_sel]
 
             # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            sbeta   = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            sblim   = 1 / (np.sqrt(8) * self.sbeta_factor)
             sbeta[sbeta > sblim] = sblim
-            sigma = k * x + self.sbeta_factor * sbeta * D
+            epsilon = self.sbeta_factor * sbeta
+            
+            alpha = self.c1 * AMB_TI
+            beta  = self.c2 * AMB_TI / np.sqrt(ct)
 
-            del x, k, sbeta, sblim
+            mult1   = k * AMB_TI / beta 
+            term1   = np.sqrt((alpha + beta * x / D)**2 + 1)
+            term2   = np.sqrt(1 + alpha**2)
+            term3   = (term1 + 1 ) * alpha
+            term4   = (term2 + 1) * (alpha + beta * x / D)
+            
+            sigma   = epsilon * D #for x = 0 
+            
+            sigma += sigma + D * mult1 * (term1 - term2 - np.log(term3 / term4))
 
-            # calculate amplitude:
+            del x, k, sbeta, sblim, mult1, term1, term2, term3, term4, alpha, beta, epsilon
+
+            # calculate amplitude, same as in Bastankha model:
             if self.sbeta_factor < 0.25:
                 radicant = 1.0 - ct / (8 * (sigma / D) ** 2)
                 reals = radicant >= 0

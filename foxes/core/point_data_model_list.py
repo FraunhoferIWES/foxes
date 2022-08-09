@@ -1,4 +1,4 @@
-from foxes.core.point_data_model import PointDataModel
+from .point_data_model import PointDataModel
 
 
 class PointDataModelList(PointDataModel):

@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import TurbineOrder
-from foxes.tools import wd2uv
+from foxes.utils import wd2uv
 import foxes.variables as FV
 
 

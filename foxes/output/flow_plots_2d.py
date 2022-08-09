@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from foxes.output.output import Output
-from foxes.tools import wd2wdvec, wd2uv
+from .output import Output
+from foxes.utils import wd2wdvec, wd2uv
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -99,7 +99,7 @@ class FlowPlots2D(Output):
         hax.set_xlabel(xlabel)
         hax.set_ylabel(ylabel)
         hax.set_title(title if title is not None else f"State {s}")
-        plt.gca().set_aspect("equal", adjustable="box")
+        hax.set_aspect("equal", adjustable="box")
 
         if add_bar:
             divider = make_axes_locatable(hax)

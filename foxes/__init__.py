@@ -9,11 +9,11 @@ from . import algorithms # noqa: F401
 from . import models # noqa: F401
 from . import input # noqa: F401
 from . import output # noqa: F401
-from . import tools # noqa: F401
+from . import utils # noqa: F401
 
 try:
-    from importlib_resources import read_text
-except ModuleNotFoundError:
+    from importlib.resources import files
+    __version__ = files(__package__).joinpath("VERSION").read_text()
+except ImportError:
     from importlib.resources import read_text
-
-__version__ = read_text(__package__, "VERSION")
+    __version__ = read_text(__package__, "VERSION")

@@ -1,4 +1,4 @@
-from foxes.tools import PandasFileHelper, all_subclasses
+from foxes.utils import PandasFileHelper, all_subclasses
 
 
 class Output:

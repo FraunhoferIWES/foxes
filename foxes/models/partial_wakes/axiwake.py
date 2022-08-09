@@ -1,8 +1,8 @@
 import numpy as np
 
 from foxes.core import PartialWakesModel
-from foxes.models.wake_models.dist_sliced.axisymmetric import AxisymmetricWakeModel
-from foxes.tools.two_circles import calc_area
+from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
+from foxes.utils.two_circles import calc_area
 import foxes.variables as FV
 import foxes.constants as FC
 

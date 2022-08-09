@@ -1,10 +1,6 @@
-try:
-    import importlib_resources as resources
-except ModuleNotFoundError:
-    import importlib.resources as resources
-
+import importlib.resources as resources
+ 
 from pathlib import Path
-
 
 class DataBook:
     """
@@ -50,16 +46,25 @@ class DataBook:
 
         if isinstance(file_sfx, str):
             file_sfx = [file_sfx]
+        
+        try:
+            contents = [r.name for r in resources.files(package).iterdir() if r.is_file()]
+        except AttributeError:
+            contents = list(resources.contents(package))
 
-        contents = list(resources.contents(package))
         check_f = lambda f: any(
             [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
         )
         contents = [f for f in contents if check_f(f)]
 
-        for f in contents:
-            with resources.path(package, f) as path:
-                self.dbase[context][f] = path
+        try:
+            for f in contents:
+                with resources.as_file(resources.files(package).joinpath(f)) as path: 
+                    self.dbase[context][f] = path
+        except AttributeError:
+            for f in contents:
+                with resources.path(package, f) as path:
+                    self.dbase[context][f] = path
 
     def add_data_package_file(self, context, package, file_name):
         """

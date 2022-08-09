@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.tools import Dict
+from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
