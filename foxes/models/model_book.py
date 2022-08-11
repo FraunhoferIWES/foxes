@@ -158,19 +158,19 @@ class ModelBook:
                 k=0.07, superposition=s
             )
 
-            self.wake_models[
-                f"Bastankhah_{s}"
-            ] = fm.wake_models.wind.BastankhahWake(superposition=s)
+            self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
+                superposition=s
+            )
             self.wake_models[
                 f"Bastankhah_{s}_k002"
             ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s)
-            
-            self.wake_models[
-                f"TurbOPark_{s}"
-            ] = fm.wake_models.wind.TurbOParkWake(superposition=s)
-            self.wake_models[
-                f"TurbOPark_{s}_k004"
-            ] = fm.wake_models.wind.TurbOParkWake(k=0.04, superposition=s)
+
+            self.wake_models[f"TurbOPark_{s}"] = fm.wake_models.wind.TurbOParkWake(
+                superposition=s
+            )
+            self.wake_models[f"TurbOPark_{s}_k004"] = fm.wake_models.wind.TurbOParkWake(
+                k=0.04, superposition=s
+            )
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:
@@ -181,13 +181,13 @@ class ModelBook:
                 f"CrespoHernandez_{s[3:]}_k002"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=s)
 
-            self.wake_models[
-                f"IECTI2005_{s[3:]}"
-            ] = fm.wake_models.ti.IECTIWake(superposition=s, iec_type = "2005")
-            
-            self.wake_models[
-                f"IECTI2019_{s[3:]}"
-            ] = fm.wake_models.ti.IECTIWake(superposition=s, iec_type = "2019")
+            self.wake_models[f"IECTI2005_{s[3:]}"] = fm.wake_models.ti.IECTIWake(
+                superposition=s, iec_type="2005"
+            )
+
+            self.wake_models[f"IECTI2019_{s[3:]}"] = fm.wake_models.ti.IECTIWake(
+                superposition=s, iec_type="2019"
+            )
 
         self.sources = Dict(
             name="sources",

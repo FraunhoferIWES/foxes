@@ -359,7 +359,7 @@ class Downwind(Algorithm):
         final_pars = []
         mlist = PointDataModelList(models=[])
         fdict = {"clear_mem": clear_mem_models}
-        
+
         # prepare extra eval models:
         emodels = []
         emodels_ipars = []

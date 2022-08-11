@@ -48,10 +48,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
-    'sphinxcontrib.email',
+    "sphinxcontrib.email",
     "nbsphinx",
     "sphinx.ext.doctest",
-    'm2r2',
+    "m2r2",
 ]
 
 intersphinx_mapping = {

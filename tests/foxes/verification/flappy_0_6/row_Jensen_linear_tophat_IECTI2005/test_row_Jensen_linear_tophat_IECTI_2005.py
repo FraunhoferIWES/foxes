@@ -61,17 +61,27 @@ class Tests:
         data = algo.calc_farm()
 
         df = data.to_dataframe()[
-            [FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_CT, FV.CT]
+            [
+                FV.X,
+                FV.Y,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_CT,
+                FV.CT,
+            ]
         ]
-       
+
         print("\nReading file", cfile)
         fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
         print()
         print("TRESULTS\n")
-        '''sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
+        """sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
         df = df.loc[sel]
-        fdata = fdata.loc[sel]'''
+        fdata = fdata.loc[sel]"""
         print(df)
         print(fdata)
 
@@ -100,7 +110,7 @@ class Tests:
         print(fdata.loc[sel])
         print(chk.loc[sel])
         assert (chk[var] < 3e-4).all()
-        
+
         var = FV.CT
         print(f"\nCHECKING {var}")
         sel = chk[var] >= 3e-5
@@ -108,4 +118,3 @@ class Tests:
         print(fdata.loc[sel])
         print(chk.loc[sel])
         assert (chk[var] < 3e-5).all()
-        

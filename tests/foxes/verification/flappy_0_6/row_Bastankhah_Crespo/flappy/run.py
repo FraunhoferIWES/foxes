@@ -80,7 +80,9 @@ if __name__ == "__main__":
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
 
-    df = results.state_turbine_results[[FV.WD, FV.AMB_WS, FV.WS, FV.AMB_TI, FV.TI, FV.AMB_CT, FV.CT]]
+    df = results.state_turbine_results[
+        [FV.WD, FV.AMB_WS, FV.WS, FV.AMB_TI, FV.TI, FV.AMB_CT, FV.CT]
+    ]
 
     print(results.turbine_results[[FV.X, FV.Y]])
 

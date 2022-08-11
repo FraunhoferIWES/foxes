@@ -1,6 +1,7 @@
 import importlib.resources as resources
- 
+
 from pathlib import Path
+
 
 class DataBook:
     """
@@ -46,9 +47,11 @@ class DataBook:
 
         if isinstance(file_sfx, str):
             file_sfx = [file_sfx]
-        
+
         try:
-            contents = [r.name for r in resources.files(package).iterdir() if r.is_file()]
+            contents = [
+                r.name for r in resources.files(package).iterdir() if r.is_file()
+            ]
         except AttributeError:
             contents = list(resources.contents(package))
 
@@ -59,7 +62,7 @@ class DataBook:
 
         try:
             for f in contents:
-                with resources.as_file(resources.files(package).joinpath(f)) as path: 
+                with resources.as_file(resources.files(package).joinpath(f)) as path:
                     self.dbase[context][f] = path
         except AttributeError:
             for f in contents:
