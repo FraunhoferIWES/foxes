@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
-from foxes.data import PCTCURVE, parse_Pct_file_name
+from foxes.data import PCTCURVE
 import foxes.variables as FV
 
 class PCtSingleFiles(TurbineType):
