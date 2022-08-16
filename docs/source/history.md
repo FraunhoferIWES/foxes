@@ -44,9 +44,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.1.5-alpha
 
+- Core
+    - Introducing the concept of runners
 - Models
     - New turbine model: `Thrust2Ct`, calculates ct from thrust values
     - New turbine type: `NullType`, a turbine type with only rotor diameter and hub height data
+    - New runners: `SimpleRunner`, `DaskRunner`. The latter features parallel runs via dask
 
 **Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.5
 
