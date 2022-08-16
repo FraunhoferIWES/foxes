@@ -5,6 +5,7 @@ from iwopy import Problem
 from foxes.models.turbine_models import SetFarmVars
 import foxes.constants as FC
 
+
 class FarmProblem(Problem):
     """
     Abstract base class of wind farm optimization problems.
@@ -41,15 +42,15 @@ class FarmProblem(Problem):
     """
 
     def __init__(
-            self, 
-            name, 
-            algo, 
-            runner, 
-            sel_turbines=None, 
-            pre_rotor=False, 
-            calc_farm_args={},
-            **kwargs,
-        ):
+        self,
+        name,
+        algo,
+        runner,
+        sel_turbines=None,
+        pre_rotor=False,
+        calc_farm_args={},
+        **kwargs,
+    ):
         super().__init__(name, **kwargs)
 
         self.algo = algo
@@ -76,10 +77,14 @@ class FarmProblem(Problem):
                 found = True
                 break
         if not found:
-            raise ValueError(f"FarmProblem '{self.name}': Missing entry '{self.name}' among any of the turbine models")
+            raise ValueError(
+                f"FarmProblem '{self.name}': Missing entry '{self.name}' among any of the turbine models"
+            )
 
         if self.name in self.algo.mbook.turbine_models:
-            raise KeyError(f"FarmProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book")
+            raise KeyError(
+                f"FarmProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
+            )
 
         super().initialize(verbosity)
 
@@ -101,7 +106,7 @@ class FarmProblem(Problem):
         -------
         farm_vars : dict
             The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape: 
+            value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
 
         """
@@ -125,7 +130,7 @@ class FarmProblem(Problem):
         -------
         farm_vars : dict
             The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape: 
+            value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)
 
         """
@@ -162,18 +167,22 @@ class FarmProblem(Problem):
             to the problem
 
         """
-        
+
         # create/overwrite turbine model that sets variables to opt values:
-        self.algo.mbook.turbine_models[self.name] = SetFarmVars(pre_rotor=self.pre_rotor)
+        self.algo.mbook.turbine_models[self.name] = SetFarmVars(
+            pre_rotor=self.pre_rotor
+        )
         model = self.algo.mbook.turbine_models[self.name]
         for v, vals in self.opt2farm_vars_individual(vars_int, vars_float).items:
             if self.all_turbines:
                 model.add_var(v, vals)
             else:
-                data = np.zeros((self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE)
+                data = np.zeros(
+                    (self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE
+                )
                 data[:, self.sel_turbines] = vals
                 model.add_var(v, data)
-        
+
         # run the farm calculation:
         return self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
 
@@ -206,11 +215,11 @@ class FarmProblem(Problem):
         ----------
         ax : matplotlib.pyplot.Axis
             The figure axis
-        
+
         """
         for c in self.cons.functions:
             ax = c.add_to_layout_figure(ax, **kwargs)
         for f in self.objs.functions:
             ax = f.add_to_layout_figure(ax, **kwargs)
-        
+
         return ax

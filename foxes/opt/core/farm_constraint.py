@@ -3,9 +3,10 @@ from iwopy import Constraint
 
 from foxes.utils import all_subclasses
 
+
 class FarmConstraint(Constraint):
     """
-    Abstract base class for foxes wind farm 
+    Abstract base class for foxes wind farm
     optimization constraints.
 
     Parameters
@@ -40,7 +41,7 @@ class FarmConstraint(Constraint):
         ----------
         sel_turbines : list of int
             The turbine indices
-            
+
         """
         self.sel_turbines = sel_turbines
 
@@ -66,15 +67,15 @@ class FarmConstraint(Constraint):
         ----------
         ax : matplotlib.pyplot.Axis
             The figure axis
-        
+
         """
         return ax
 
-    @classmethod 
+    @classmethod
     def print_models(cls):
         """
         Prints all model names.
         """
-        names = sorted([ scls.__name__ for scls in all_subclasses(cls)])
+        names = sorted([scls.__name__ for scls in all_subclasses(cls)])
         for n in names:
             print(n)

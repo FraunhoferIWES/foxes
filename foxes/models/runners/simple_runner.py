@@ -1,5 +1,6 @@
 from foxes.core import Runner
 
+
 class SerialRunner(Runner):
     """
     Class for serial function execution.

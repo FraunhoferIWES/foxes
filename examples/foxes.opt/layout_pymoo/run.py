@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 
 import foxes
+import foxes.variables as FV
 from foxes.opt import FarmProblem
 
 if __name__ == "__main__":
@@ -34,6 +35,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
     )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        help="The number of workers for distributed run",
+        type=int,
+        default=None,
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -44,7 +53,7 @@ if __name__ == "__main__":
     foxes.input.farm_layout.add_row(
         farm=farm,
         xy_base=np.zeros(2),
-        xy_step=np.array([500., 0.]),
+        xy_step=np.array([500.0, 0.0]),
         n_turbines=args.n_t,
         turbine_models=[ttype.name],
     )
@@ -61,9 +70,11 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame="rotor_wd",
         partial_wakes_model=args.pwakes,
-        chunks=args.chunksize,
+        chunks={FV.STATE: args.chunksize},
     )
-    algo.initialize()
 
-    runner = foxes.models.runners.DaskRunner(n_workers=2, verbosity=1)
-    
+    runner = foxes.models.runners.DaskRunner(
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        verbosity=1,
+    )

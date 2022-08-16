@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABCMeta
 
+
 class Runner(metaclass=ABCMeta):
     """
     Abstract base class for runners.

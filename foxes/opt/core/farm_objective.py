@@ -3,9 +3,10 @@ from iwopy import Objective
 
 from foxes.utils import all_subclasses
 
+
 class FarmObjective(Objective):
     """
-    Abstract base class for foxes wind farm 
+    Abstract base class for foxes wind farm
     objective functions.
 
     Parameters
@@ -30,7 +31,7 @@ class FarmObjective(Objective):
         super().__init__(problem, name, **kwargs)
         self.farm = problem.farm
         self.sel_turbines = problem.sel_turbines
-    
+
     @abstractmethod
     def required_variables(self):
         """
@@ -54,7 +55,7 @@ class FarmObjective(Objective):
         ----------
         sel_turbines : list of int
             The turbine indices
-            
+
         """
         self.sel_turbines = sel_turbines
 
@@ -66,15 +67,15 @@ class FarmObjective(Objective):
         ----------
         ax : matplotlib.pyplot.Axis
             The figure axis
-        
+
         """
         return ax
 
-    @classmethod 
+    @classmethod
     def print_models(cls):
         """
         Prints all model names.
         """
-        names = sorted([ scls.__name__ for scls in all_subclasses(cls)])
+        names = sorted([scls.__name__ for scls in all_subclasses(cls)])
         for n in names:
             print(n)

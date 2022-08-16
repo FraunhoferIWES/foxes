@@ -4,6 +4,7 @@ from dask.distributed import Client, LocalCluster
 
 from foxes.core import Runner
 
+
 class DaskRunner(Runner):
     """
     Class for function execution via dask
@@ -41,16 +42,16 @@ class DaskRunner(Runner):
     """
 
     def __init__(
-            self, 
-            scheduler=None, 
-            n_workers=None, 
-            threads_per_worker=None,
-            processes=True,
-            cluster_args=None,
-            client_args={},
-            progress_bar=False,
-            verbosity=1,
-        ):
+        self,
+        scheduler=None,
+        n_workers=None,
+        threads_per_worker=None,
+        processes=True,
+        cluster_args=None,
+        client_args={},
+        progress_bar=False,
+        verbosity=0,
+    ):
 
         self.scheduler = scheduler
         self.client_args = client_args
@@ -64,14 +65,21 @@ class DaskRunner(Runner):
                 threads_per_worker=threads_per_worker,
             )
         elif (
-            n_workers is not None or threads_per_worker is not None or processes is not None
+            n_workers is not None
+            or threads_per_worker is not None
+            or processes is not None
         ):
-            raise KeyError("Cannot handle 'n_workers', 'threads_per_worker' or 'processes' arguments if 'cluster_args' are provided")
+            raise KeyError(
+                "Cannot handle 'n_workers', 'threads_per_worker' or 'processes' arguments if 'cluster_args' are provided"
+            )
         else:
             self.cluster_args = cluster_args
-        
+
         if scheduler is None and (
-            n_workers is not None or threads_per_worker is not None or processes is not None or cluster_args is not None
+            n_workers is not None
+            or threads_per_worker is not None
+            or processes is not None
+            or cluster_args is not None
         ):
             self.scheduler = "distributed"
 
@@ -112,19 +120,22 @@ class DaskRunner(Runner):
                     self.print(cluster)
                     self.print(f"Dashboard: {client.dashboard_link}\n")
 
-                    results = func(*args, **kwargs)
+                    if self.progress_bar:
+                        with ProgressBar():
+                            results = func(*args, **kwargs)
+                    else:
+                        results = func(*args, **kwargs)
 
                     self.print("\n\nShutting down dask cluster")
 
         # serial run:
         else:
             with dask.config.set(scheduler=self.scheduler):
-                
+
                 if self.progress_bar:
                     with ProgressBar():
                         results = func(*args, **kwargs)
                 else:
                     results = func(*args, **kwargs)
-        
+
         return results
-        
