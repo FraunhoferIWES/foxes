@@ -6,7 +6,7 @@ from foxes.models.turbine_models import SetFarmVars
 from foxes.utils.runners import DefaultRunner
 import foxes.constants as FC
 
-class FarmProblem(Problem):
+class FarmOptProblem(Problem):
     """
     Abstract base class of wind farm optimization problems.
 
@@ -60,6 +60,51 @@ class FarmProblem(Problem):
         self.sel_turbines = (
             sel_turbines if sel_turbines is not None else list(range(algo.n_turbines))
         )
+    
+    def tvar(self, turbine_i, var):
+        """
+        Gets turbine variable name
+
+        Parameters
+        ----------
+        turbine_i : int
+            The turbine index
+        var : str
+            The variable name
+        
+        Returns
+        -------
+        str :
+            The turbine variable name
+
+        """
+        return f"{var}_{turbine_i:04d}"
+    
+    @property
+    def n_sel_turbines(self):
+        """
+        The numer of selected turbines
+
+        Returns
+        -------
+        int :
+            The numer of selected turbines
+
+        """
+        return len(self.sel_turbines)
+    
+    @property
+    def farm(self):
+        """
+        The wind farm
+
+        Returns
+        -------
+        foxes.core.WindFarm :
+            The wind farm
+
+        """
+        return self.algo.farm
 
     def initialize(self, verbosity=0):
         """
@@ -78,12 +123,12 @@ class FarmProblem(Problem):
                 break
         if not found:
             raise ValueError(
-                f"FarmProblem '{self.name}': Missing entry '{self.name}' among any of the turbine models"
+                f"FarmOptProblem '{self.name}': Missing entry '{self.name}' among any of the turbine models"
             )
 
         if self.name in self.algo.mbook.turbine_models:
             raise KeyError(
-                f"FarmProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
+                f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
             )
 
         super().initialize(verbosity)

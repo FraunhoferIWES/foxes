@@ -11,7 +11,7 @@ class FarmObjective(Objective):
 
     Parameters
     ----------
-    problem : foxes.opt.FarmProblem
+    problem : foxes.opt.FarmOptProblem
         The underlying optimization problem
     name : str
         The name of the objective function
