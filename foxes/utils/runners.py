@@ -1,9 +1,60 @@
+from abc import abstractmethod, ABCMeta
 import dask
 from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
 
-from foxes.core import Runner
+class Runner(metaclass=ABCMeta):
+    """
+    Abstract base class for runners.
+    """
 
+    @abstractmethod
+    def run(self, func, args=tuple(), kwargs={}):
+        """
+        Runs the given function.
+
+        Parameters
+        ----------
+        func : Function
+            The function to be run
+        args : tuple
+            The function arguments
+        kwargs : dict
+            The function keyword arguments
+
+        Returns
+        -------
+        results : Any
+            The functions return value
+
+        """
+        pass
+
+class DefaultRunner(Runner):
+    """
+    Class for default function execution.
+    """
+
+    def run(self, func, args=tuple(), kwargs={}):
+        """
+        Runs the given function.
+
+        Parameters
+        ----------
+        func : Function
+            The function to be run
+        args : tuple
+            The function arguments
+        kwargs : dict
+            The function keyword arguments
+
+        Returns
+        -------
+        results : Any
+            The functions return value
+
+        """
+        return func(*args, **kwargs)
 
 class DaskRunner(Runner):
     """

@@ -3,8 +3,8 @@ from abc import abstractmethod
 from iwopy import Problem
 
 from foxes.models.turbine_models import SetFarmVars
+from foxes.utils.runners import DefaultRunner
 import foxes.constants as FC
-
 
 class FarmProblem(Problem):
     """
@@ -14,7 +14,7 @@ class FarmProblem(Problem):
     ----------
     algo : foxes.core.Algorithm
         The algorithm
-    runner : foxes.core.Runner
+    runner : foxes.core.Runner, optional
         The runner for running the algorithm
     sel_turbines : list of int, optional
         The turbines selected for optimization,
@@ -45,7 +45,7 @@ class FarmProblem(Problem):
         self,
         name,
         algo,
-        runner,
+        runner=None,
         sel_turbines=None,
         pre_rotor=False,
         calc_farm_args={},
@@ -54,7 +54,7 @@ class FarmProblem(Problem):
         super().__init__(name, **kwargs)
 
         self.algo = algo
-        self.runner = runner
+        self.runner = runner if runner is not None else DefaultRunner()
         self.pre_rotor = pre_rotor
         self.calc_farm_args = calc_farm_args
         self.sel_turbines = (
