@@ -1,2 +1,3 @@
-from .closed_geometry_2D import ClosedGeometry2D
+from .area_geometry import AreaGeometry, InvertedAreaGeometry
 from .closed_polygon import ClosedPolygon
+from .circle import Circle

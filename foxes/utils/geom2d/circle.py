@@ -1,38 +1,31 @@
 import numpy as np
-from matplotlib.path import Path
-from matplotlib.patches import PathPatch
-from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
 
 from foxes.utils.geom2d.area_geometry import AreaGeometry, InvertedAreaGeometry
 
-class ClosedPolygon(AreaGeometry):
+class Circle(AreaGeometry):
     """
-    This class represents a closed 2D polygon.
+    This class represents the area of a circle.
 
     Parameters
     ----------
-    points : numpy.ndarray
-        The polygon points, shape: (n_points, 2)
+    centre : numpy.ndarray
+        The centre point, shape: (2,)
+    radius : float
+        The radius
 
     Attributes
     ----------
-    points : numpy.ndarray
-        The polygon points
-    poly : matplotlib.path.Path
-        The closed polygon geometry
+    centre : numpy.ndarray
+        The centre point, shape: (2,)
+    radius : float
+        The radius
 
     """
 
-    def __init__(self, points):
-
-        self.points = points
-
-        if not np.all(points[0] == points[-1]):
-            self.points = np.append(self.points, points[[0]], axis=0)
-
-        self.poly = Path(self.points, closed=True)  
-
-        self._pathp = None    
+    def __init__(self, centre, radius):
+        self.centre = centre
+        self.radius = radius
 
     def p_min(self):
         """
@@ -44,7 +37,7 @@ class ClosedPolygon(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
         
         """
-        return np.min(self.points, axis=0)
+        return self.centre - self.radius
 
     def p_max(self):
         """
@@ -56,7 +49,7 @@ class ClosedPolygon(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
         
         """
-        return np.max(self.points, axis=0)
+        return self.centre + self.radius
 
     def points_distance(self, points, return_nearest=False):
         """
@@ -80,49 +73,19 @@ class ClosedPolygon(AreaGeometry):
             
         """
 
-        dists = cdist(points, self.points[:-1])
-
-        if return_nearest:
-            mini  = np.argmin(dists, axis=1)
-            dists = np.take_along_axis(dists, mini, axis=1)
-            minp  = self.points[mini] 
-        else:
-            dists = np.min(dists, axis=1)
-
-        for pi in range(len(self.points) - 1):
-
-            pA = self.points[pi]
-            pB = self.points[pi+1]
-            n  = pB - pA
-            d  = np.linalg.norm(n)
-
-            if d > 0:
-
-                n  /= d
-                q   = points - pA[None, :]
-                x   = np.einsum('pd,d->p', q, n)
-
-                sel = (x > 0) & (x < d)
-                if np.any(sel):
-
-                    x  = x[sel]
-                    y2 = np.linalg.norm(q[sel], axis=1)**2 - x**2
-
-                    dsel       = dists[sel]
-                    dists[sel] = np.minimum(dsel, np.sqrt(y2))
-
-                    if return_nearest:
-                        mini        = np.argwhere(np.sqrt(y2) < dsel)
-                        hminp       = minp[sel]
-                        hminp[mini] = pA[None, :] + x[mini, None] * n[None, :]
-                        minp[sel]   = hminp
-                        del mini, hminp
-                    
-                    del y2, dsel
-                
-                del x, sel
+        deltas = points - self.centre[None, :]
+        magd = np.linalg.norm(deltas, axis=-1)
+        dists = np.abs(magd - self.radius)
             
         if return_nearest:
+            sel = magd > 0.
+            if np.all(sel):
+                minp = self.centre + deltas / magd * self.radius
+            else:
+                minp = np.zeros_like(points)
+                minp[sel] = deltas[sel] / magd[sel]
+                minp[~sel][:, 0] = 1
+                minp = self.centre + minp * self.radius
             return dists, minp
         else:
             return dists
@@ -142,7 +105,8 @@ class ClosedPolygon(AreaGeometry):
             True if point is inside, shape: (n_points,)
         
         """
-        return self.poly.contains_points(points)
+        magd = np.linalg.norm(points - self.centre[None, :], axis=-1)
+        return magd <= self.radius
     
     def add_to_figure(self, ax, **kwargs):
         """
@@ -154,12 +118,11 @@ class ClosedPolygon(AreaGeometry):
             The axis object
         
         """
-
-        pars = dict(facecolor='none', edgecolor='darkblue', linewidth=1)
+        pars = dict(color='darkblue', linewidth=1, fill=False)
         pars.update(kwargs)
 
-        pathpatch = PathPatch(self.poly, **pars)
-        ax.add_patch(pathpatch)
+        circle = plt.Circle(self.centre, self.radius, **pars)
+        ax.add_patch(circle)
 
     def inverse(self):
         """
@@ -171,21 +134,21 @@ class ClosedPolygon(AreaGeometry):
             The inverted geometry
 
         """
-        return InvertedClosedPolygon(self)
+        return InvertedCircle(self)
 
-class InvertedClosedPolygon(InvertedAreaGeometry):
+class InvertedCircle(InvertedAreaGeometry):
     """
-    The inverse of a closed polygon.
+    The inverse of a circle.
 
     Parameters
     ----------
-    polygon : foxes.utils.geom2d.ClosedPolygon
+    circle : foxes.utils.geom2d.Circle
         The original geometry
 
     """
 
-    def __init__(self, polygon):
-        super().__init__(polygon)
+    def __init__(self, circle):
+        super().__init__(circle)
 
     def p_min(self):
         """
