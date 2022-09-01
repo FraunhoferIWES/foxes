@@ -108,21 +108,41 @@ class Circle(AreaGeometry):
         magd = np.linalg.norm(points - self.centre[None, :], axis=-1)
         return magd <= self.radius
     
-    def add_to_figure(self, ax, **kwargs):
+    def add_to_figure(
+            self, 
+            ax, 
+            show_boundary=True, 
+            show_distance=None, 
+            pars_boundary={},
+            pars_distance={}
+        ):
         """
-        Add boundary to (x,y) figure.
+        Add image to (x,y) figure.
 
         Parameters
         ----------
         ax : matplotlib.pyplot.Axis
             The axis object
+        show_boundary : bool
+            Add the boundary line to the image
+        show_distance : str, optional
+            Add distances to image. Options:
+            all, inside, outside
+        pars_boundary : dict
+            Parameters for boundary plotting command
+        pars_distance : dict
+            Parameters for distance plotting command
         
         """
-        pars = dict(color='darkblue', linewidth=1, fill=False)
-        pars.update(kwargs)
+        if show_boundary:
+            pars = dict(color='darkblue', linewidth=1, fill=False)
+            pars.update(pars_boundary)
 
-        circle = plt.Circle(self.centre, self.radius, **pars)
-        ax.add_patch(circle)
+            circle = plt.Circle(self.centre, self.radius, **pars)
+            ax.add_patch(circle)
+
+        super().add_to_figure(ax, show_boundary, show_distance,
+            pars_boundary, pars_distance)
 
     def inverse(self):
         """
@@ -173,3 +193,28 @@ class InvertedCircle(InvertedAreaGeometry):
         
         """
         return np.array([np.inf, np.inf])
+
+if __name__ == "__main__":
+
+    centre = np.array([3.,4.])
+    radius = 2.5
+    N = 500
+
+    fig, ax = plt.subplots()
+    g = Circle(centre, radius)
+    g.add_to_figure(ax, show_distance="inside")
+    xrange = ax.get_xlim()
+    yrange = ax.get_ylim()
+    pmin = np.array([xrange[0], yrange[0]])
+    pmax = np.array([xrange[1], yrange[1]])
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = Circle(centre, radius).inverse()
+    g.add_to_figure(ax, show_distance="inside",pars_distance={"p_min": pmin, "p_max": pmax})
+    plt.show()
+    plt.close(fig)
+
+
+    

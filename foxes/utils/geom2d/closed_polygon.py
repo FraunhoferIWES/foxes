@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
 
 from foxes.utils.geom2d.area_geometry import AreaGeometry, InvertedAreaGeometry
 
@@ -144,22 +145,41 @@ class ClosedPolygon(AreaGeometry):
         """
         return self.poly.contains_points(points)
     
-    def add_to_figure(self, ax, **kwargs):
+    def add_to_figure(
+            self, 
+            ax, 
+            show_boundary=True, 
+            show_distance=None, 
+            pars_boundary={},
+            pars_distance={}
+        ):
         """
-        Add boundary to (x,y) figure.
+        Add image to (x,y) figure.
 
         Parameters
         ----------
         ax : matplotlib.pyplot.Axis
             The axis object
+        show_boundary : bool
+            Add the boundary line to the image
+        show_distance : str, optional
+            Add distances to image. Options:
+            all, inside, outside
+        pars_boundary : dict
+            Parameters for boundary plotting command
+        pars_distance : dict
+            Parameters for distance plotting command
         
-        """
+        """ 
+        if show_boundary:
+            pars = dict(facecolor='none', edgecolor='darkblue', linewidth=1)
+            pars.update(pars_boundary)
 
-        pars = dict(facecolor='none', edgecolor='darkblue', linewidth=1)
-        pars.update(kwargs)
+            pathpatch = PathPatch(self.poly, **pars)
+            ax.add_patch(pathpatch)
 
-        pathpatch = PathPatch(self.poly, **pars)
-        ax.add_patch(pathpatch)
+        super().add_to_figure(ax, show_boundary, show_distance,
+            pars_boundary, pars_distance)
 
     def inverse(self):
         """
@@ -210,3 +230,29 @@ class InvertedClosedPolygon(InvertedAreaGeometry):
         
         """
         return np.array([np.inf, np.inf])
+
+if __name__ == "__main__":
+
+    points = np.array([
+        [1.,1.],
+        [1.3,6],
+        [5.8,6.2],
+        [6.5,0.8]
+    ])
+    N = 500
+
+    fig, ax = plt.subplots()
+    g = ClosedPolygon(points)
+    g.add_to_figure(ax, show_distance="inside")
+    xrange = ax.get_xlim()
+    yrange = ax.get_ylim()
+    pmin = np.array([xrange[0], yrange[0]])
+    pmax = np.array([xrange[1], yrange[1]])
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = ClosedPolygon(points).inverse()
+    g.add_to_figure(ax, show_distance="inside",pars_distance={"p_min": pmin, "p_max": pmax})
+    plt.show()
+    plt.close(fig)
