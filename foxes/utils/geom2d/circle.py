@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from foxes.utils.geom2d.area_geometry import AreaGeometry, InvertedAreaGeometry
+from .area_geometry import AreaGeometry
 
 class Circle(AreaGeometry):
     """
@@ -67,7 +67,7 @@ class Circle(AreaGeometry):
         dist : numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray
+        p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
             
@@ -80,7 +80,7 @@ class Circle(AreaGeometry):
         if return_nearest:
             sel = magd > 0.
             if np.all(sel):
-                minp = self.centre + deltas / magd * self.radius
+                minp = self.centre + deltas / magd[:, None] * self.radius
             else:
                 minp = np.zeros_like(points)
                 minp[sel] = deltas[sel] / magd[sel]
@@ -144,56 +144,6 @@ class Circle(AreaGeometry):
         super().add_to_figure(ax, show_boundary, show_distance,
             pars_boundary, pars_distance)
 
-    def inverse(self):
-        """
-        Get the inverted geometry
-
-        Returns
-        -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
-            The inverted geometry
-
-        """
-        return InvertedCircle(self)
-
-class InvertedCircle(InvertedAreaGeometry):
-    """
-    The inverse of a circle.
-
-    Parameters
-    ----------
-    circle : foxes.utils.geom2d.Circle
-        The original geometry
-
-    """
-
-    def __init__(self, circle):
-        super().__init__(circle)
-
-    def p_min(self):
-        """
-        Returns minimal (x,y) point.
-
-        Returns
-        -------
-        p_min : numpy.ndarray
-            The minimal (x,y) point, shape = (2,)
-        
-        """
-        return np.array([-np.inf, -np.inf])
-
-    def p_max(self):
-        """
-        Returns maximal (x,y) point.
-
-        Returns
-        -------
-        p_min : numpy.ndarray
-            The maximal (x,y) point, shape = (2,)
-        
-        """
-        return np.array([np.inf, np.inf])
-
 if __name__ == "__main__":
 
     centre = np.array([3.,4.])
@@ -203,18 +153,12 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     g = Circle(centre, radius)
     g.add_to_figure(ax, show_distance="inside")
-    xrange = ax.get_xlim()
-    yrange = ax.get_ylim()
-    pmin = np.array([xrange[0], yrange[0]])
-    pmax = np.array([xrange[1], yrange[1]])
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius).inverse()
-    g.add_to_figure(ax, show_distance="inside",pars_distance={"p_min": pmin, "p_max": pmax})
+    g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
-
-
     

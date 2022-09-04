@@ -51,7 +51,7 @@ class AreaGeometry(metaclass=ABCMeta):
         dist : numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray
+        p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
             
@@ -114,15 +114,28 @@ class AreaGeometry(metaclass=ABCMeta):
                 Nx = 500
                 Ny = 500
 
-            delta = self.p_max() - self.p_min()
-            if "p_min" in  pars_distance:
-                p0 = pars_distance.pop("p_min")
-            else:
-                p0 = self.p_min() - 0.05 * delta
-            if "p_max" in  pars_distance:
-                p1 = pars_distance.pop("p_max")
-            else:
-                p1 = self.p_max() + 0.05 * delta
+            p0 = pars_distance.pop("p_min", self.p_min())
+            p1 = pars_distance.pop("p_max", self.p_max())
+            if np.isinf(p0[0]):
+                q0 = self.inverse().p_min()
+                a0 = ax.get_xlim()[0]
+                p0[0] = a0 if a0 < q0[0] else q0[0]
+            if np.isinf(p0[1]):
+                q0 = self.inverse().p_min()
+                a0 = ax.get_ylim()[0]
+                p0[1] = a0 if a0 < q0[1] else q0[1]
+            if np.isinf(p1[0]):
+                q1 = self.inverse().p_max()
+                a1 = ax.get_xlim()[1]
+                p1[0] = a1 if a1 > q1[0] else q1[0]
+            if np.isinf(p1[1]):
+                q1 = self.inverse().p_max()
+                a1 = ax.get_ylim()[1]
+                p1[1] = a1 if a1 > q1[1] else q1[1]
+
+            delta = p1 - p0
+            p0 -= 0.05 * delta
+            p1 += 0.05 * delta
 
             x = np.linspace(p0[0], p1[0], Nx)
             y = np.linspace(p0[1], p1[1], Ny)
@@ -154,7 +167,6 @@ class AreaGeometry(metaclass=ABCMeta):
         ax.set_ylabel("y")
         ax.set_aspect("equal", adjustable="box")
 
-    @abstractmethod
     def inverse(self):
         """
         Get the inverted geometry
@@ -165,21 +177,45 @@ class AreaGeometry(metaclass=ABCMeta):
             The inverted geometry
 
         """
-        pass
+        return InvertedAreaGeometry(self)
 
 class InvertedAreaGeometry(AreaGeometry):
     """
-    Abstract base class for inverted geometries.
+    Base class for inverted geometries.
 
     Parameters
     ----------
-    geometry : foxes.utils.geom2d.AreaGeometry
+    geometry : geom2d.AreaGeometry
         The original geometry
 
     """
 
     def __init__(self, geometry):
         self._geometry = geometry
+
+    def p_min(self):
+        """
+        Returns minimal (x,y) point.
+
+        Returns
+        -------
+        p_min : numpy.ndarray
+            The minimal (x,y) point, shape = (2,)
+        
+        """
+        return np.array([-np.inf, -np.inf])
+
+    def p_max(self):
+        """
+        Returns maximal (x,y) point.
+
+        Returns
+        -------
+        p_min : numpy.ndarray
+            The maximal (x,y) point, shape = (2,)
+        
+        """
+        return np.array([np.inf, np.inf])
 
     def points_distance(self, points, return_nearest=False):
         """
@@ -197,7 +233,7 @@ class InvertedAreaGeometry(AreaGeometry):
         dist : numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray
+        p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
             

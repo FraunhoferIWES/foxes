@@ -4,7 +4,7 @@ from matplotlib.patches import PathPatch
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
 
-from foxes.utils.geom2d.area_geometry import AreaGeometry, InvertedAreaGeometry
+from .area_geometry import AreaGeometry
 
 class ClosedPolygon(AreaGeometry):
     """
@@ -75,7 +75,7 @@ class ClosedPolygon(AreaGeometry):
         dist : numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray
+        p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
             
@@ -85,8 +85,9 @@ class ClosedPolygon(AreaGeometry):
 
         if return_nearest:
             mini  = np.argmin(dists, axis=1)
-            dists = np.take_along_axis(dists, mini, axis=1)
+            dists = np.take_along_axis(dists, mini[:, None], axis=1)[:, 0]
             minp  = self.points[mini] 
+            del mini
         else:
             dists = np.min(dists, axis=1)
 
@@ -181,56 +182,6 @@ class ClosedPolygon(AreaGeometry):
         super().add_to_figure(ax, show_boundary, show_distance,
             pars_boundary, pars_distance)
 
-    def inverse(self):
-        """
-        Get the inverted geometry
-
-        Returns
-        -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
-            The inverted geometry
-
-        """
-        return InvertedClosedPolygon(self)
-
-class InvertedClosedPolygon(InvertedAreaGeometry):
-    """
-    The inverse of a closed polygon.
-
-    Parameters
-    ----------
-    polygon : foxes.utils.geom2d.ClosedPolygon
-        The original geometry
-
-    """
-
-    def __init__(self, polygon):
-        super().__init__(polygon)
-
-    def p_min(self):
-        """
-        Returns minimal (x,y) point.
-
-        Returns
-        -------
-        p_min : numpy.ndarray
-            The minimal (x,y) point, shape = (2,)
-        
-        """
-        return np.array([-np.inf, -np.inf])
-
-    def p_max(self):
-        """
-        Returns maximal (x,y) point.
-
-        Returns
-        -------
-        p_min : numpy.ndarray
-            The maximal (x,y) point, shape = (2,)
-        
-        """
-        return np.array([np.inf, np.inf])
-
 if __name__ == "__main__":
 
     points = np.array([
@@ -244,15 +195,11 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     g = ClosedPolygon(points)
     g.add_to_figure(ax, show_distance="inside")
-    xrange = ax.get_xlim()
-    yrange = ax.get_ylim()
-    pmin = np.array([xrange[0], yrange[0]])
-    pmax = np.array([xrange[1], yrange[1]])
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = ClosedPolygon(points).inverse()
-    g.add_to_figure(ax, show_distance="inside",pars_distance={"p_min": pmin, "p_max": pmax})
+    g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
