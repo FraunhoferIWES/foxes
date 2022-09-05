@@ -1,6 +1,6 @@
 import numpy as np
 
-from .area_geometry import AreaGeometry
+from .area_geometry import AreaGeometry, InvertedAreaGeometry
 
 class AreaUnion(AreaGeometry):
     """
@@ -178,6 +178,87 @@ class AreaUnion(AreaGeometry):
         super().add_to_figure(ax, show_boundary=False, show_distance=show_distance,
             pars_boundary={}, pars_distance=pars_distance)
 
+    def inverse(self):
+        """
+        Get the inverted geometry
+
+        Returns
+        -------
+        inverted : foxes.utils.geom2d.InvertedAreaGeometry
+            The inverted geometry
+
+        """
+        return InvertedAreaUnion(self)
+
+class InvertedAreaUnion(InvertedAreaGeometry):
+    """
+    Inversion of a union of areas
+
+    Parameters
+    ----------
+    union : geom2d.AreaUnion
+        The original area union geometry
+
+    """
+
+    def __init__(self, union):
+        super().__init__(union)
+
+    def p_min(self):
+        """
+        Returns minimal (x,y) point.
+
+        Returns
+        -------
+        p_min : numpy.ndarray
+            The minimal (x,y) point, shape = (2,)
+        
+        """
+        if len(self._geometry.geometries) == 1:
+            return self._geometry.geometries[0].inverse().p_min()
+
+        pmi = self._geometry.p_min()
+        if not np.any(np.isinf(pmi)):
+            return np.full(2, -np.inf, dtype=np.float64)
+        else:
+            out = np.full(2, np.inf, dtype=np.float64)
+            for g in self._geometry.geometries:
+                imi = g.inverse().p_min()
+                for di in range(2):
+                    if np.isinf(pmi[di]) and not np.isinf(imi[di]):
+                        out[di] = np.minimum(out[di], imi[di])
+            for di in range(2):
+                if not np.isinf(pmi[di]):
+                    out[di] = -np.inf
+            return out
+
+    def p_max(self):
+        """
+        Returns maximal (x,y) point.
+
+        Returns
+        -------
+        p_min : numpy.ndarray
+            The maximal (x,y) point, shape = (2,)
+        
+        """
+        if len(self._geometry.geometries) == 1:
+            return self._geometry.geometries[0].inverse().p_max()
+
+        pma = self._geometry.p_max()
+        if not np.any(np.isinf(pma)):
+            return np.full(2, np.inf, dtype=np.float64)
+        else:
+            out = np.full(2, -np.inf, dtype=np.float64)
+            for g in self._geometry.geometries:
+                ima = g.inverse().p_max()
+                for di in range(2):
+                    if np.isinf(pma[di]) and not np.isinf(ima[di]):
+                        out[di] = np.maximum(out[di], ima[di])
+            for di in range(2):
+                if not np.isinf(pma[di]):
+                    out[di] = np.inf
+            return out
 
 if __name__ == "__main__":
 
@@ -216,7 +297,7 @@ if __name__ == "__main__":
     g.add_to_figure(ax, show_distance="outside")
     plt.show()
     plt.close(fig)
-    
+
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons).inverse()
     g.add_to_figure(ax, show_distance="inside")
