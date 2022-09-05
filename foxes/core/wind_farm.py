@@ -18,7 +18,7 @@ class WindFarm:
 
     """
 
-    def __init__(self, name="MyFarm", boundary=None):
+    def __init__(self, name="wind_farm", boundary=None):
         self.name = name
         self.turbines = []
         self.boundary = boundary

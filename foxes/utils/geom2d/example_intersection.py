@@ -56,3 +56,9 @@ if __name__ == "__main__":
     g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = polygons[0] - polygons[1]
+    g.add_to_figure(ax, show_distance="outside")
+    plt.show()
+    plt.close(fig)

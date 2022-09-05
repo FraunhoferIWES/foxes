@@ -176,7 +176,7 @@ if __name__ == "__main__":
     from .circle import Circle
 
     p0 = [4, 5]
-    n = [1., 0.]
+    n = [1., 0.3]
 
     centre = np.array([3.,4.])
     radius = 2.5
@@ -195,6 +195,17 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius) - HalfPlane(p0, n)
+    g.add_to_figure(ax, show_distance="inside")
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g.add_to_figure(ax, show_distance="outside")
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = g.inverse()
     g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
