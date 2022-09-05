@@ -211,10 +211,7 @@ class InvertedAreaGeometry(AreaGeometry):
             return np.full(2, -np.inf, dtype=np.float64)
         else:
             out = np.full(2, np.inf, dtype=np.float64)
-            print("HERE PMI",pmi,type(self._geometry).__name__,type(self._geometry.inverse()).__name__)
-
             imi = self._geometry.inverse().p_min()
-            quit()
             for di in range(2):
                 if np.isinf(pmi[di]) and not np.isinf(imi[di]):
                     out[di] = np.minimum(out[di], imi[di])
