@@ -199,7 +199,20 @@ if __name__ == "__main__":
     plt.close(fig)
 
     fig, ax = plt.subplots()
+    g = ClosedPolygon(points)
+    g.add_to_figure(ax, show_distance="outside")
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
     g = ClosedPolygon(points).inverse()
     g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = ClosedPolygon(points).inverse()
+    g.add_to_figure(ax, show_distance="outside")
+    plt.show()
+    plt.close(fig)
+

@@ -145,15 +145,18 @@ class AreaGeometry(metaclass=ABCMeta):
             pts[..., 1] = y[None, :]
             pts = pts.reshape(Nx*Ny, 2)
 
-            dists = self.points_distance(pts).reshape(Nx, Ny)
             if show_distance == "all":
-                pass
+                dists = self.points_distance(pts).reshape(Nx, Ny)
             elif show_distance == "inside":
-                ins = self.points_inside(pts).reshape(Nx, Ny)
-                dists[~ins] = np.nan
+                ins = self.points_inside(pts)
+                dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
+                dists[ins] = self.points_distance(pts[ins])
+                dists = dists.reshape(Nx, Ny)
             elif show_distance == "outside":
-                ins = self.points_inside(pts).reshape(Nx, Ny)
-                dists[ins] = np.nan
+                ins = self.points_inside(pts)
+                dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
+                dists[~ins] = self.points_distance(pts[~ins])
+                dists = dists.reshape(Nx, Ny)
             else:
                 raise ValueError(f"Illegal parameter 'show_distance = {show_distance}', expecting: None, all, inside, outside")
 
@@ -203,7 +206,18 @@ class InvertedAreaGeometry(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
         
         """
-        return np.array([-np.inf, -np.inf])
+        pmi = self._geometry.p_min()
+        if not np.any(np.isinf(pmi)):
+            return np.full(2, -np.inf, dtype=np.float64)
+        else:
+            out = np.full(2, np.inf, dtype=np.float64)
+            imi = self._geometry.inverse().p_min()
+            for di in range(2):
+                if np.isinf(pmi[di]) and not np.isinf(imi[di]):
+                    out[di] = np.minimum(out[di], imi[di])
+                if not np.isinf(pmi[di]):
+                    out[di] = -np.inf
+            return out
 
     def p_max(self):
         """
@@ -215,7 +229,18 @@ class InvertedAreaGeometry(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
         
         """
-        return np.array([np.inf, np.inf])
+        pma = self._geometry.p_max()
+        if not np.any(np.isinf(pma)):
+            return np.full(2, np.inf, dtype=np.float64)
+        else:
+            out = np.full(2, -np.inf, dtype=np.float64)
+            ima = self._geometry.inverse().p_max()
+            for di in range(2):
+                if np.isinf(pma[di]) and not np.isinf(ima[di]):
+                    out[di] = np.maximum(out[di], ima[di])
+                if not np.isinf(pma[di]):
+                    out[di] = np.inf
+            return out
 
     def points_distance(self, points, return_nearest=False):
         """

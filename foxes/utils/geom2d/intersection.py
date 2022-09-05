@@ -1,32 +1,26 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from .area_geometry import AreaGeometry
 
-class Circle(AreaGeometry):
+class AreaIntersection(AreaGeometry):
     """
-    This class represents the area of a circle.
+    The intersection of area geometries.
 
     Parameters
     ----------
-    centre : numpy.ndarray
-        The centre point, shape: (2,)
-    radius : float
-        The radius
+    geometries : list of geom2d.AreaGeometry
+        The geometries
 
     Attributes
     ----------
-    centre : numpy.ndarray
-        The centre point, shape: (2,)
-    radius : float
-        The radius
+    geometries : list of geom2d.AreaGeometry
+        The geometries
 
     """
 
-    def __init__(self, centre, radius):
-        self.centre = centre
-        self.radius = radius
-
+    def __init__(self, geometries):
+        self.geometries = geometries
+    
     def p_min(self):
         """
         Returns minimal (x,y) point.
@@ -37,7 +31,14 @@ class Circle(AreaGeometry):
             The minimal (x,y) point, shape = (2,)
         
         """
-        return self.centre - self.radius
+        out = None
+        for g in self.geometries:
+            pmi = g.p_min()
+            if out is None:
+                out = pmi
+            else:
+                out = np.maximum(out, pmi)
+        return out
 
     def p_max(self):
         """
@@ -49,7 +50,14 @@ class Circle(AreaGeometry):
             The maximal (x,y) point, shape = (2,)
         
         """
-        return self.centre + self.radius
+        out = None
+        for g in self.geometries:
+            pma = g.p_max()
+            if out is None:
+                out = pma
+            else:
+                out = np.minimum(out, pma)
+        return out
 
     def points_distance(self, points, return_nearest=False):
         """
@@ -72,24 +80,28 @@ class Circle(AreaGeometry):
             return_nearest is True, shape: (n_points, 2)
             
         """
+        if len(self.geometries) == 1:
+            return self.geometries[0].points_distance(points, return_nearest)
 
-        deltas = points - self.centre[None, :]
-        magd = np.linalg.norm(deltas, axis=-1)
-        dists = np.abs(magd - self.radius)
-            
+        n_pts = len(points)
+        dist = np.full(n_pts, np.inf, dtype=np.float64)
+        nerst = np.zeros((n_pts, 2), dtype=np.float64) if return_nearest else None
+        for g in self.geometries:
+
+            res = g.points_distance(points, return_nearest)
+            d = res[0] if return_nearest else res
+
+            sel = d < dist
+            if np.any(sel):
+                dist[sel] = d[sel]
+                if return_nearest:
+                    nerst[sel] = res[1][sel]
+        
         if return_nearest:
-            sel = magd > 0.
-            if np.all(sel):
-                minp = self.centre + deltas / magd[:, None] * self.radius
-            else:
-                minp = np.zeros_like(points)
-                minp[sel] = deltas[sel] / magd[sel]
-                minp[~sel][:, 0] = 1
-                minp = self.centre + minp * self.radius
-            return dists, minp
+            return dist, nerst
         else:
-            return dists
-
+            return dist
+            
     def points_inside(self, points):
         """
         Tests if points are inside the geometry.
@@ -105,9 +117,15 @@ class Circle(AreaGeometry):
             True if point is inside, shape: (n_points,)
         
         """
-        magd = np.linalg.norm(points - self.centre[None, :], axis=-1)
-        return magd <= self.radius
-    
+        if len(self.geometries) == 1:
+            return self.geometries[0].points_inside(points)
+
+        n_pts = len(points)
+        inside = np.ones(n_pts, dtype=bool)
+        for g in self.geometries:
+            inside = inside & g.points_inside(points)
+        return inside
+
     def add_to_figure(
             self, 
             ax, 
@@ -135,41 +153,60 @@ class Circle(AreaGeometry):
         
         """
         if show_boundary:
-            pars = dict(color='darkblue', linewidth=1, fill=False)
-            pars.update(pars_boundary)
+            for g in self.geometries:
+                g.add_to_figure(ax, show_boundary=True, show_distance=None,
+                    pars_boundary=pars_boundary, pars_distance={})
 
-            circle = plt.Circle(self.centre, self.radius, **pars)
-            ax.add_patch(circle)
+        super().add_to_figure(ax, show_boundary=False, show_distance=show_distance,
+            pars_boundary={}, pars_distance=pars_distance)
 
-        super().add_to_figure(ax, show_boundary, show_distance,
-            pars_boundary, pars_distance)
 
 if __name__ == "__main__":
 
-    centre = np.array([3.,4.])
-    radius = 2.5
+    import matplotlib.pyplot as plt
+    from .circle import Circle
+    from .polygon import ClosedPolygon
+
+    centres = []
+    radii = []
     N = 500
 
+    plist = [
+        np.array([
+        [1.,1.],
+        [1.3,6],
+        [5.8,6.2],
+        [6.5,0.8]]),
+        np.array([
+        [1.5,1.5],
+        [1.5,8],
+        [2.5,8],
+        [2.5,1.5]]),
+    ]
+
+    circles = [Circle(centres[i], radii[i]) for i in range(len(centres))]
+    polygons = [ClosedPolygon(plist[i]) for i in range(len(plist))]
+
     fig, ax = plt.subplots()
-    g = Circle(centre, radius)
+    g = AreaIntersection(circles + polygons)
     g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = Circle(centre, radius)
+    g = AreaIntersection(circles + polygons)
     g.add_to_figure(ax, show_distance="outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = Circle(centre, radius).inverse()
+    g = AreaIntersection(circles + polygons).inverse()
     g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g = Circle(centre, radius).inverse()
+    g = AreaIntersection(circles + polygons).inverse()
     g.add_to_figure(ax, show_distance="outside")
     plt.show()
     plt.close(fig)
