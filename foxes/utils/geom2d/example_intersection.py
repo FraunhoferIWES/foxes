@@ -1,28 +1,11 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
-from .area_geometry import AreaGeometry
-from .union import AreaUnion
-
-class AreaIntersection(AreaGeometry):
-    """
-    The intersection of area geometries.
-
-    Parameters
-    ----------
-    geometries : list of geom2d.AreaGeometry
-        The geometries
-
-    """
-
-    def __new__(cls, geometries):
-        return AreaUnion([g.inverse() for g in geometries]).inverse()
-    
+from .circle import Circle
+from .polygon import ClosedPolygon
+from .area_geometry import AreaIntersection
 
 if __name__ == "__main__":
-
-    import matplotlib.pyplot as plt
-    from .circle import Circle
-    from .polygon import ClosedPolygon
 
     centres = []
     radii = []
@@ -65,5 +48,11 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     g = AreaIntersection(circles + polygons).inverse()
     g.add_to_figure(ax, show_distance="outside")
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = polygons[0] - polygons[1]
+    g.add_to_figure(ax, show_distance="inside")
     plt.show()
     plt.close(fig)
