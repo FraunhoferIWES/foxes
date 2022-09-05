@@ -190,9 +190,9 @@ class AreaGeometry(metaclass=ABCMeta):
 
     def __sub__(self, g):
         if isinstance(g, list):
-            return AreaIntersection([self] + g)
+            return AreaIntersection([self] + g.inverse())
         else:
-            return AreaIntersection([self, g])
+            return AreaIntersection([self, g.inverse()])
 
 class InvertedAreaGeometry(AreaGeometry):
     """
@@ -221,7 +221,7 @@ class InvertedAreaGeometry(AreaGeometry):
         pmi = self._geometry.p_min()
         if not np.any(np.isinf(pmi)):
             return np.full(2, -np.inf, dtype=np.float64)
-        else:
+        elif isinstance(self._geometry, InvertedAreaGeometry):
             out = np.full(2, np.inf, dtype=np.float64)
             imi = self._geometry.inverse().p_min()
             for di in range(2):
@@ -230,6 +230,8 @@ class InvertedAreaGeometry(AreaGeometry):
                 if not np.isinf(pmi[di]):
                     out[di] = -np.inf
             return out
+        else:
+            return np.full(2, -np.inf, dtype=np.float64)
 
     def p_max(self):
         """
@@ -244,7 +246,7 @@ class InvertedAreaGeometry(AreaGeometry):
         pma = self._geometry.p_max()
         if not np.any(np.isinf(pma)):
             return np.full(2, np.inf, dtype=np.float64)
-        else:
+        elif isinstance(self._geometry, InvertedAreaGeometry):
             out = np.full(2, -np.inf, dtype=np.float64)
             ima = self._geometry.inverse().p_max()
             for di in range(2):
@@ -253,6 +255,8 @@ class InvertedAreaGeometry(AreaGeometry):
                 if not np.isinf(pma[di]):
                     out[di] = np.inf
             return out
+        else:
+            return np.full(2, np.inf, dtype=np.float64)
 
     def points_distance(self, points, return_nearest=False):
         """
