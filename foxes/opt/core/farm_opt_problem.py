@@ -61,7 +61,8 @@ class FarmOptProblem(Problem):
             sel_turbines if sel_turbines is not None else list(range(algo.n_turbines))
         )
     
-    def tvar(self, turbine_i, var):
+    @classmethod
+    def tvar(cls, turbine_i, var):
         """
         Gets turbine variable name
 

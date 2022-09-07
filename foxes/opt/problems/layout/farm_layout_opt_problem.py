@@ -17,7 +17,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
 
         """
         vrs = []
-        for ti in self.all_turbines:
+        for ti in self.sel_turbines:
             vrs += [self.tvar(ti, FV.X), self.tvar(ti, FV.Y)]
         return vrs
 

@@ -15,6 +15,8 @@ class FarmObjective(Objective):
         The underlying optimization problem
     name : str
         The name of the objective function
+    sel_turbines : list of int, optional
+        The selected turbines
     kwargs : dict, optional
         Additional parameters for `iwopy.Objective`
 
@@ -22,43 +24,29 @@ class FarmObjective(Objective):
     ----------
     farm: foxes.WindFarm
         The wind farm
-    sel_turbines: list
+    sel_turbines: list of int
         The selected turbines
 
     """
 
-    def __init__(self, problem, name, **kwargs):
+    def __init__(self, problem, name, sel_turbines=None, **kwargs):
         super().__init__(problem, name, **kwargs)
         self.farm = problem.farm
-        self.sel_turbines = problem.sel_turbines
+        self.sel_turbines = problem.sel_turbines if sel_turbines is None else sel_turbines
 
-    @abstractmethod
-    def required_variables(self):
+    @property
+    def n_sel_turbines(self):
         """
-        Returns the foxes variables that
-        are required for the calculation.
+        The numer of selected turbines
 
         Returns
         -------
-        vnames : list of str
-            The required foxes variable names
+        int :
+            The numer of selected turbines
 
         """
-        pass
-
-    def set_sel_turbines(self, sel_turbines):
-        """
-        Set the turbine selection, in case it deviates
-        from the problem's turbine selection.
-
-        Parameters
-        ----------
-        sel_turbines : list of int
-            The turbine indices
-
-        """
-        self.sel_turbines = sel_turbines
-
+        return len(self.sel_turbines)
+        
     def add_to_layout_figure(self, ax, **kwargs):
         """
         Add to a layout figure
