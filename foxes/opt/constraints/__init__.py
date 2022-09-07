@@ -1,2 +1,1 @@
-from .area_geometry import AreaGeometryConstraint
-from .farm_boundary import FarmBoundaryConstraint
+from .area_geometry import AreaGeometryConstraint, FarmBoundaryConstraint

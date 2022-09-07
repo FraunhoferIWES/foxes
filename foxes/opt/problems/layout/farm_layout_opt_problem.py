@@ -18,7 +18,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         """
         vrs = []
         for ti in self.sel_turbines:
-            vrs += [self.tvar(ti, FV.X), self.tvar(ti, FV.Y)]
+            vrs += [self.tvar(FV.X, ti), self.tvar(FV.Y, ti)]
         return vrs
 
     def initial_values_float(self):

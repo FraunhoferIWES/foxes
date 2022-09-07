@@ -61,17 +61,16 @@ class FarmOptProblem(Problem):
             sel_turbines if sel_turbines is not None else list(range(algo.n_turbines))
         )
     
-    @classmethod
-    def tvar(cls, turbine_i, var):
+    def tvar(self, var, turbine_i):
         """
         Gets turbine variable name
 
         Parameters
         ----------
-        turbine_i : int
-            The turbine index
         var : str
             The variable name
+        turbine_i : int
+            The turbine index
         
         Returns
         -------
@@ -81,6 +80,27 @@ class FarmOptProblem(Problem):
         """
         return f"{var}_{turbine_i:04d}"
     
+    def parse_tvar(self, tvr):
+        """
+        Parse foxes variable name and turbine index
+        from turbine variable
+
+        Parameters
+        ----------
+        tvr : str
+            The turbine variable name
+        
+        Returns
+        -------
+        var : str
+            The foxes variable name
+        turbine_i : int
+            The turbine index
+
+        """
+        t = tvr.split("_")
+        return t[0], int(t[1])
+
     @property
     def n_sel_turbines(self):
         """

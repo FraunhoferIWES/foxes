@@ -7,7 +7,7 @@ class AreaGeometryConstraint(FarmConstraint):
     """
     Constrains turbine positions to the inside
     of a given area geometry.
-    
+
     Parameters
     ----------
     problem : foxes.opt.FarmOptProblem
@@ -46,7 +46,7 @@ class AreaGeometryConstraint(FarmConstraint):
         vrs = []
         cns = []
         for ti in selt:
-            vrs += [problem.tvar(ti, FV.X), problem.tvar(ti, FV.Y)]
+            vrs += [problem.tvar(FV.X, ti), problem.tvar(FV.Y, ti)]
             cns.append(f"{name}_{ti:04d}")
 
         super().__init__(problem, name, sel_turbines, 
@@ -137,3 +137,25 @@ class AreaGeometryConstraint(FarmConstraint):
         dists[self.geometry.points_inside(xy)] *= -1
 
         return dists.reshape(n_pop, self.n_components())
+
+
+class FarmBoundaryConstraint(AreaGeometryConstraint):
+    """
+    Constrains turbine positions to the inside of
+    the wind farm boundary
+
+    Parameters
+    ----------
+    problem : foxes.opt.FarmOptProblem
+        The underlying optimization problem
+    name : str
+        The name of the constraint
+    kwargs : dict, optional
+        Additional parameters for `AreaGeometryConstraint`
+
+    """
+
+    def __init__(self, problem, name,**kwargs):
+        b = problem.farm.boundary
+        assert b is not None, f"Constraint '{name}': Missing wind farm boundary."
+        super().__init__(problem, name, geometry=b, **kwargs)
