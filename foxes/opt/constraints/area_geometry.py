@@ -155,7 +155,7 @@ class FarmBoundaryConstraint(AreaGeometryConstraint):
 
     """
 
-    def __init__(self, problem, name,**kwargs):
+    def __init__(self, problem, name="boundary", **kwargs):
         b = problem.farm.boundary
         assert b is not None, f"Constraint '{name}': Missing wind farm boundary."
         super().__init__(problem, name, geometry=b, **kwargs)

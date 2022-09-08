@@ -1,4 +1,4 @@
-from .core import FarmProblem, FarmObjective, FarmConstraint
+from .core import FarmOptProblem, FarmObjective, FarmConstraint
 
 from . import problems
 from . import constraints

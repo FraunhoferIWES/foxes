@@ -24,7 +24,7 @@ class Circle(AreaGeometry):
     """
 
     def __init__(self, centre, radius):
-        self.centre = centre
+        self.centre = np.array(centre, dtype=np.float64)
         self.radius = radius
 
     def p_min(self):

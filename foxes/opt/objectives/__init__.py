@@ -1,1 +1,1 @@
-from .var_objs import FarmVarObjective, MaxFarmPower
+from .farm_vars import FarmVarObjective, MaxFarmPower

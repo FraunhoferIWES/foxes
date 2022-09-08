@@ -152,6 +152,11 @@ class FarmOptProblem(Problem):
                 f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
             )
 
+        # initialize algorithm:
+        if not self.algo.initialized:
+            pars = self.calc_farm_args.get("states_init_pars", {})
+            self.algo.initialize(**pars)
+
         super().initialize(verbosity)
 
     @abstractmethod
@@ -233,13 +238,12 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-
         # create/overwrite turbine model that sets variables to opt values:
         self.algo.mbook.turbine_models[self.name] = SetFarmVars(
             pre_rotor=self.pre_rotor
         )
         model = self.algo.mbook.turbine_models[self.name]
-        for v, vals in self.opt2farm_vars_individual(vars_int, vars_float).items:
+        for v, vals in self.opt2farm_vars_individual(vars_int, vars_float).items():
             if self.all_turbines:
                 model.add_var(v, vals)
             else:
@@ -250,7 +254,9 @@ class FarmOptProblem(Problem):
                 model.add_var(v, data)
 
         # run the farm calculation:
-        return self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
+        pars = dict(verbosity=0)
+        pars.update(self.calc_farm_args)
+        return self.runner.run(self.algo.calc_farm, kwargs=pars)
 
     def apply_population(self, vars_int, vars_float):
         """

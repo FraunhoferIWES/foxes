@@ -128,6 +128,7 @@ class Downwind(Algorithm):
 
         """
         if not self.states.initialized:
+            
             self.print(f"\nInitializing states '{self.states.name}'")
             self.states.initialize(self, verbosity=self.verbosity, **states_init_pars)
             self.n_states = self.states.size()
@@ -135,7 +136,7 @@ class Downwind(Algorithm):
             self.print("States data:\n")
             self.print(self.states_data)
 
-        super().initialize()
+            super().initialize()
 
     def calc_farm(
         self,
