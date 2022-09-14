@@ -36,6 +36,8 @@ if __name__ == "__main__":
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
+    parser.add_argument("-P", "--n_pop", help="The population size", type=int, default=40)
+    parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=40)
     parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
     args = parser.parse_args()
 
@@ -80,13 +82,13 @@ if __name__ == "__main__":
         ),
         algo_pars=dict(
             type="ga",
-            pop_size=40,
+            pop_size=args.n_pop,
             seed=None,
         ),
         setup_pars=dict(),
         term_pars=dict(
             type="default",
-            n_max_gen=40,
+            n_max_gen=args.n_gen,
             ftol=1e-6,
             xtol=1e-6,
         ),
