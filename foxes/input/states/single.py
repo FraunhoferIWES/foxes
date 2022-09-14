@@ -90,7 +90,7 @@ class SingleStateStates(States):
         Returns
         -------
         weights : numpy.ndarray
-            The weights, shape: (n_states,)
+            The weights, shape: (n_states, n_turbines)
 
         """
         return np.ones((1, algo.n_turbines), dtype=FC.DTYPE)

@@ -5,6 +5,7 @@ from iwopy import Problem
 from foxes.models.turbine_models import SetFarmVars
 from foxes.utils.runners import DefaultRunner
 import foxes.constants as FC
+from .pop_states import PopStates
 
 class FarmOptProblem(Problem):
     """
@@ -152,11 +153,6 @@ class FarmOptProblem(Problem):
                 f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
             )
 
-        # initialize algorithm:
-        if not self.algo.initialized:
-            pars = self.calc_farm_args.get("states_init_pars", {})
-            self.algo.initialize(**pars)
-
         super().initialize(verbosity)
 
     @abstractmethod
@@ -184,7 +180,7 @@ class FarmOptProblem(Problem):
         pass
 
     @abstractmethod
-    def opt2farm_vars_population(self, vars_int, vars_float):
+    def opt2farm_vars_population(self, vars_int, vars_float, n_states):
         """
         Translates optimization variables to farm variables
 
@@ -196,6 +192,8 @@ class FarmOptProblem(Problem):
         vars_float : numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
+        n_states : int
+            The number of original (non-pop) states
 
         Returns
         -------
@@ -238,6 +236,10 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
+        # initialize algorithm:
+        if not self.algo.initialized:
+            self.algo.initialize() # TODO: add optional parameters
+
         # create/overwrite turbine model that sets variables to opt values:
         self.algo.mbook.turbine_models[self.name] = SetFarmVars(
             pre_rotor=self.pre_rotor
@@ -277,7 +279,39 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        return None
+        
+        # initialize algorithm:
+        n_pop = len(vars_float)
+        if not self.algo.initialized:
+            self.algo.reset_states(PopStates(self.algo.states, n_pop))
+        n_states = int(self.algo.n_states / n_pop)
+
+        # create/overwrite turbine model that sets variables to opt values:
+        self.algo.mbook.turbine_models[self.name] = SetFarmVars(
+            pre_rotor=self.pre_rotor
+        )
+        model = self.algo.mbook.turbine_models[self.name]
+        for v, vals in self.opt2farm_vars_population(vars_int, vars_float, n_states).items():
+            shp0 = list(vals.shape)
+            shp1 = [self.algo.n_states] + shp0[2:]
+            if self.all_turbines:
+                model.add_var(v, vals.reshape(shp1))
+            else:
+                data = np.zeros(
+                    (self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE
+                )
+                data[:, self.sel_turbines] = vals.reshape(shp1)
+                model.add_var(v, data)
+                del data
+
+        # run the farm calculation:
+        pars = dict(verbosity=0)
+        pars.update(self.calc_farm_args)
+        results = self.runner.run(self.algo.calc_farm, kwargs=pars)
+        results["n_pop"] = n_pop
+        results["n_org_states"] = n_states
+
+        return results
 
     def add_to_layout_figure(self, ax, **kwargs):
         """

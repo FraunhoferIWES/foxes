@@ -119,7 +119,7 @@ class ScanWS(States):
         Returns
         -------
         weights : numpy.ndarray
-            The weights, shape: (n_states,)
+            The weights, shape: (n_states, n_turbines)
 
         """
         return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=FC.DTYPE)

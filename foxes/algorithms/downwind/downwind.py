@@ -123,20 +123,35 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        **states_init_pars : dict, optional
+        states_init_pars : dict, optional
             Parameters for states initialization
 
         """
         if not self.states.initialized:
-            
             self.print(f"\nInitializing states '{self.states.name}'")
             self.states.initialize(self, verbosity=self.verbosity, **states_init_pars)
-            self.n_states = self.states.size()
-            self.states_data = self.get_models_data(self.states)
-            self.print("States data:\n")
-            self.print(self.states_data)
 
-            super().initialize()
+        self.n_states = self.states.size()
+        self.states_data = self.get_models_data(self.states)
+        self.print("States data:\n")
+        self.print(self.states_data)
+        super().initialize()
+
+    def reset_states(self, states, **states_init_pars):
+        """
+        Reset the underlying states
+        
+        Parameters
+        ----------
+        states : foxes.core.States
+            The new states
+        
+        """
+        if states is not self.states:
+            if self.initialized:
+                self.finalize(clear_mem=True)
+            self.states = states
+            self.initialize(**states_init_pars)
 
     def calc_farm(
         self,
@@ -171,7 +186,7 @@ class Downwind(Algorithm):
         clear_mem_models : bool
             Switch for clearing model memory during model
             finalization
-        **states_init_pars : dict, optional
+        states_init_pars : dict, optional
             Parameters for states initialization
 
         Returns
@@ -338,7 +353,7 @@ class Downwind(Algorithm):
         clear_mem_models : bool
             Switch for clearing model memory during model
             finalization
-        **states_init_pars : dict, optional
+        states_init_pars : dict, optional
             Parameters for states initialization
 
         Returns

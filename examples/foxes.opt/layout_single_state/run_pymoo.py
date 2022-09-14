@@ -36,17 +36,6 @@ if __name__ == "__main__":
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
-    parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
-    )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument(
-        "-n",
-        "--n_workers",
-        help="The number of workers for distributed run",
-        type=int,
-        default=None,
-    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -75,7 +64,6 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame="rotor_wd",
         partial_wakes_model=args.pwakes,
-        chunks={FV.STATE: args.chunksize},
         verbosity=0,
     )
 
@@ -87,7 +75,7 @@ if __name__ == "__main__":
     solver = Optimizer_pymoo(
         problem,
         problem_pars=dict(
-            vectorize=False,
+            vectorize=True,
         ),
         algo_pars=dict(
             type="ga",

@@ -135,7 +135,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         
         return farm_vars
 
-    def opt2farm_vars_population(self, vars_int, vars_float):
+    def opt2farm_vars_population(self, vars_int, vars_float, n_states):
         """
         Translates optimization variables to farm variables
 
@@ -147,6 +147,8 @@ class FarmLayoutOptProblem(FarmOptProblem):
         vars_float : numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
+        n_states : int
+            The number of original (non-pop) states
 
         Returns
         -------
@@ -156,7 +158,16 @@ class FarmLayoutOptProblem(FarmOptProblem):
             (n_pop, n_states, n_sel_turbines)
 
         """
-        raise NotImplementedError
+        n_pop = len(vars_float)
+        farm_vars = {
+            FV.X: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
+            FV.Y: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
+        }
+        xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
+        farm_vars[FV.X][:] = xy[:, None, :, 0]
+        farm_vars[FV.Y][:] = xy[:, None, :, 1]
+        
+        return farm_vars
 
     def finalize_individual(self, vars_int, vars_float, verbosity=1):
         """
