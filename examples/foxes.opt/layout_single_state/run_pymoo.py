@@ -36,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
+    parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     solver = Optimizer_pymoo(
         problem,
         problem_pars=dict(
-            vectorize=True,
+            vectorize=not args.no_pop,
         ),
         algo_pars=dict(
             type="ga",

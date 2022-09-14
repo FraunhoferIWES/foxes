@@ -244,4 +244,4 @@ class Algorithm(Model):
             resetting initialization flag
 
         """
-        super().finalize(self, clear_mem=clear_mem, verbostiy=self.verbosity)
+        super().finalize(self, clear_mem=clear_mem, verbosity=self.verbosity)

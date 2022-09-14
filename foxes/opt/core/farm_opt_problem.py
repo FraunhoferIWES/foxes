@@ -236,6 +236,7 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
+        print("APPLY IND",vars_float.shape)
         # initialize algorithm:
         if not self.algo.initialized:
             self.algo.initialize() # TODO: add optional parameters
@@ -329,3 +330,34 @@ class FarmOptProblem(Problem):
             ax = f.add_to_layout_figure(ax, **kwargs)
 
         return ax
+
+    def finalize_population(self, vars_int, vars_float, verbosity=0):
+        """
+        Finalization, given the final population data.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values of the final
+            generation, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values of the final
+            generation, shape: (n_pop, n_vars_float)
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        objs : np.array
+            The final objective function values, shape: (n_pop, n_components)
+        cons : np.array
+            The final constraint values, shape: (n_pop, n_constraints)
+
+        """
+        results = super().finalize_population(vars_int, vars_float, verbosity)
+        self.algo.reset_states(self.algo.states.states)
+        return results
+        
