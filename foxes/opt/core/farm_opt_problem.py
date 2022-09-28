@@ -128,7 +128,7 @@ class FarmOptProblem(Problem):
         """
         return self.algo.farm
 
-    def initialize(self, verbosity=0):
+    def initialize(self, verbosity=1):
         """
         Initialize the object.
 
@@ -236,7 +236,7 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        print("APPLY IND",vars_float.shape)
+
         # initialize algorithm:
         if not self.algo.initialized:
             self.algo.initialize() # TODO: add optional parameters
@@ -283,8 +283,12 @@ class FarmOptProblem(Problem):
         
         # initialize algorithm:
         n_pop = len(vars_float)
-        if not self.algo.initialized:
+        if not isinstance(self.algo.states, PopStates):
             self.algo.reset_states(PopStates(self.algo.states, n_pop))
+        elif self.algo.states.n_pop != n_pop:
+            ostates = self.algo.states.states
+            self.algo.reset_states(PopStates(ostates, n_pop))
+            del ostates
         n_states = int(self.algo.n_states / n_pop)
 
         # create/overwrite turbine model that sets variables to opt values:

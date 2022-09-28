@@ -64,8 +64,8 @@ class FarmLayoutOptProblem(FarmOptProblem):
 
         """
         out = np.zeros((self.n_sel_turbines, 2), dtype=FC.DTYPE)
-        for ti in self.all_turbines:
-            out[ti] = self.farm.turbines[ti].xy
+        for i, ti in enumerate(self.sel_turbines):
+            out[i] = self.farm.turbines[ti].xy
         return out.reshape(self.n_sel_turbines*2)
 
     def min_values_float(self):
@@ -196,7 +196,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         res, objs, cons = super().finalize_individual(vars_int, vars_float, verbosity)
 
         xy = vars_float.reshape(self.n_sel_turbines, 2)
-        for ti in self.sel_turbines:
-            self.farm.turbines[ti].xy = xy[ti]
+        for i, ti in enumerate(self.sel_turbines):
+            self.farm.turbines[ti].xy = xy[i]
 
         return res, objs, cons

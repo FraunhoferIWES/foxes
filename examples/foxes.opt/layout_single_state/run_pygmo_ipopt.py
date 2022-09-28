@@ -1,7 +1,8 @@
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from iwopy.interfaces.pymoo import Optimizer_pymoo
+from iwopy import DiscretizeRegGrid
+from iwopy.interfaces.pygmo import Optimizer_pygmo
 
 import foxes
 from foxes.opt.problems.layout import FarmLayoutOptProblem
@@ -12,7 +13,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=10
+        "-nt", "--n_t", help="The number of turbines", type=int, default=5
     )
     parser.add_argument(
         "-t",
@@ -36,10 +37,8 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument("-d", "--min_dist", help="Minimal turbine distance in unit D", type=float, default=None)
-    parser.add_argument("-A", "--opt_algo", help="The pymoo algorithm name", default="ga")
-    parser.add_argument("-P", "--n_pop", help="The population size", type=int, default=50)
-    parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=300)
     parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
+    parser.add_argument("-O", "--fd_order", help="Finite difference derivative order", type=int, default=1)
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -52,7 +51,7 @@ if __name__ == "__main__":
     foxes.input.farm_layout.add_row(
         farm=farm,
         xy_base=np.zeros(2),
-        xy_step=np.array([50.0, 0.0]),
+        xy_step=np.array([50.0, 5.0]),
         n_turbines=args.n_t,
         turbine_models=["layout_opt", "kTI_02", ttype.name],
     )
@@ -73,29 +72,26 @@ if __name__ == "__main__":
 
     problem = FarmLayoutOptProblem("layout_opt", algo)
     problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem))
+    problem.add_constraint(FarmBoundaryConstraint(problem, tol=0.5))
     if args.min_dist is not None:
         problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
-    problem.initialize()
-
-    solver = Optimizer_pymoo(
-        problem,
-        problem_pars=dict(
-            vectorize=not args.no_pop,
-        ),
-        algo_pars=dict(
-            type=args.opt_algo,
-            pop_size=args.n_pop,
-            seed=None,
-        ),
-        setup_pars=dict(),
-        term_pars=dict(
-            type="default",
-            n_max_gen=args.n_gen,
-            ftol=1e-6,
-            xtol=1e-6,
-        ),
+    gproblem = DiscretizeRegGrid(
+        problem, deltas=0.1, fd_order=args.fd_order, fd_bounds_order=1, tol=1e-6
     )
+    gproblem.initialize()
+    
+    solver = Optimizer_pygmo(
+        gproblem,
+        problem_pars=dict(pop=not args.no_pop),
+        algo_pars=dict(type="ipopt"),
+    )
+    """
+    solver = Optimizer_pygmo(
+        gproblem,
+        problem_pars=dict(pop=True),
+        algo_pars=dict(type="nlopt", optimizer="ccsaq", ftol_rel=0, ftol_abs=1e-4, xtol_rel=0,xtol_abs=0),
+    )
+    """
     solver.initialize()
     solver.print_info()
 

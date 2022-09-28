@@ -25,6 +25,8 @@ class FarmVarObjective(FarmObjective):
     deps : list of str
         The foxes variables on which the variable depends,
         or None for all
+    scale : float
+        The scaling factor
     kwargs : dict, optional
         Additional parameters for `FarmObjective`
 
@@ -40,6 +42,8 @@ class FarmVarObjective(FarmObjective):
     rules : dict
         Contraction rules. Key: coordinate name str, value
         is str: min, max, sum, mean
+    scale : float
+        The scaling factor
 
     """
     def __init__(
@@ -51,13 +55,28 @@ class FarmVarObjective(FarmObjective):
             contract_turbines,
             minimize,
             deps=None,
+            scale=1.,
             **kwargs
         ):
         super().__init__(problem, name, **kwargs)
         self.variable = variable
         self.minimize = minimize
         self.deps = deps
+        self.scale = scale
         self.rules = {FV.STATE: contract_states, FV.TURBINE: contract_turbines}
+
+    def initialize(self, verbosity=0):
+        """
+        Initialize the object.
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+
+        super().initialize(verbosity)
 
     def n_components(self):
         """
@@ -149,7 +168,7 @@ class FarmVarObjective(FarmObjective):
         data = problem_results[self.variable]
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
-        data = self._contract(data)
+        data = self._contract(data) / self.scale
         
         return np.array([data], dtype=np.float64)
 
@@ -181,7 +200,32 @@ class FarmVarObjective(FarmObjective):
 
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
-        return self._contract(data).to_numpy()[:, None]
+
+        return self._contract(data/self.scale).to_numpy()[:, None]
+
+    def finalize_individual(self, vars_int, vars_float, problem_results, verbosity=1):
+        """
+        Finalization, given the champion data.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The optimal integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The optimal float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_components,)
+
+        """
+        return super().finalize_individual(vars_int, vars_float, problem_results, verbosity) * self.scale
 
 class MaxFarmPower(FarmVarObjective):
     """
@@ -203,6 +247,18 @@ class MaxFarmPower(FarmVarObjective):
             name="maximize_power", 
             **kwargs
         ):
+
+        if "scale" in kwargs:
+            scale = kwargs.pop("scale")
+        else:
+            scale = 0.
+            ttypes = problem.algo.mbook.turbine_types
+            for t in problem.farm.turbines:
+                for mname in t.models:
+                    if mname in ttypes:
+                        scale += ttypes[mname].P_nominal
+                        break
+
         super().__init__(
             problem, 
             name, 
@@ -210,5 +266,6 @@ class MaxFarmPower(FarmVarObjective):
             contract_states="mean",
             contract_turbines="sum",
             minimize=False,
+            scale=scale,
             **kwargs,
         )
