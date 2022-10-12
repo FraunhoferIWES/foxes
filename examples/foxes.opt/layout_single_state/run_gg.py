@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 from iwopy import DiscretizeRegGrid
-from iwopy.interfaces.pygmo import Optimizer_pygmo
+from iwopy.optimizers import GG
 
 import foxes
 from foxes.opt.problems.layout import FarmLayoutOptProblem
@@ -72,26 +72,21 @@ if __name__ == "__main__":
 
     problem = FarmLayoutOptProblem("layout_opt", algo)
     problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem, tol=0.1))
+    problem.add_constraint(FarmBoundaryConstraint(problem, tol=0.5))
     if args.min_dist is not None:
         problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
     gproblem = DiscretizeRegGrid(
-        problem, deltas=0.001, fd_order=args.fd_order, fd_bounds_order=1, tol=1e-8
+        problem, deltas=0.01, fd_order=args.fd_order, fd_bounds_order=1, tol=1e-6
     )
     gproblem.initialize()
     
-    solver = Optimizer_pygmo(
+    solver = GG(
         gproblem,
-        problem_pars=dict(pop=not args.no_pop),
-        algo_pars=dict(type="ipopt", tol=1e-2),
+        step_max=100.0,
+        step_min=1.,
+        step_div_factor=2.,
+        vectorized=not args.no_pop,
     )
-    """
-    solver = Optimizer_pygmo(
-        gproblem,
-        problem_pars=dict(pop=True),
-        algo_pars=dict(type="nlopt", optimizer="ccsaq", ftol_rel=0, ftol_abs=1e-4, xtol_rel=0,xtol_abs=0),
-    )
-    """
     solver.initialize()
     solver.print_info()
 

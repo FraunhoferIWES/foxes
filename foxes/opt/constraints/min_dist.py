@@ -105,7 +105,7 @@ class MinDistConstraint(FarmConstraint):
                     deps[i, j] = True
         return deps.reshape(self.n_components(), 2 * len(turbs))
 
-    def calc_individual(self, vars_int, vars_float, problem_results):
+    def calc_individual(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for a single individual of the
         underlying problem.
@@ -119,11 +119,13 @@ class MinDistConstraint(FarmConstraint):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_components,)
+            The component values, shape: (n_sel_components,)
 
         """
         n_states = problem_results.dims[FV.STATE]
@@ -134,8 +136,12 @@ class MinDistConstraint(FarmConstraint):
             raise ValueError(f"Constraint '{self.name}': Require state independet XY")
         xy = xy[0]
 
-        a = np.take_along_axis(xy, self._i2t[:, 0, None], axis=0)
-        b = np.take_along_axis(xy, self._i2t[:, 1, None], axis=0)
+        s = np.s_[:] 
+        if components is not None and len(components) < self.n_components():
+            s = components
+
+        a = np.take_along_axis(xy, self._i2t[s][:, 0, None], axis=0)
+        b = np.take_along_axis(xy, self._i2t[s][:, 1, None], axis=0)
         d = np.linalg.norm(a - b, axis=-1)
 
         if self.min_dist_unit == "m":
@@ -147,13 +153,13 @@ class MinDistConstraint(FarmConstraint):
                 raise ValueError(f"Constraint '{self.name}': Require state independet D")
             D = D[0]
 
-            Da = np.take_along_axis(D, self._i2t[:, 0], axis=0)
-            Db = np.take_along_axis(D, self._i2t[:, 1], axis=0)
+            Da = np.take_along_axis(D, self._i2t[s][:, 0], axis=0)
+            Db = np.take_along_axis(D, self._i2t[s][:, 1], axis=0)
             mind = self.min_dist * np.maximum(Da, Db)
 
         return mind - d
 
-    def calc_population(self, vars_int, vars_float, problem_results):
+    def calc_population(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for all individuals of a population.
 
@@ -166,11 +172,13 @@ class MinDistConstraint(FarmConstraint):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_pop, n_components)
+            The component values, shape: (n_pop, n_sel_components)
 
         """
         n_pop = problem_results["n_pop"].values
@@ -183,8 +191,12 @@ class MinDistConstraint(FarmConstraint):
             raise ValueError(f"Constraint '{self.name}': Require state independet XY")
         xy = xy[:, 0]
 
-        a = np.take_along_axis(xy, self._i2t[None, :, 0, None], axis=1)
-        b = np.take_along_axis(xy, self._i2t[None, :, 1, None], axis=1)
+        s = np.s_[:] 
+        if components is not None and len(components) < self.n_components():
+            s = components
+
+        a = np.take_along_axis(xy, self._i2t[s][None, :, 0, None], axis=1)
+        b = np.take_along_axis(xy, self._i2t[s][None, :, 1, None], axis=1)
         d = np.linalg.norm(a - b, axis=-1)
 
         if self.min_dist_unit == "m":
@@ -196,8 +208,8 @@ class MinDistConstraint(FarmConstraint):
                 raise ValueError(f"Constraint '{self.name}': Require state independet D")
             D = D[:, 0]
 
-            Da = np.take_along_axis(D, self._i2t[None, :, 0], axis=1)
-            Db = np.take_along_axis(D, self._i2t[None, :, 1], axis=1)
+            Da = np.take_along_axis(D, self._i2t[s][None, :, 0], axis=1)
+            Db = np.take_along_axis(D, self._i2t[s][None, :, 1], axis=1)
             mind = self.min_dist * np.maximum(Da, Db)
 
         return mind - d

@@ -144,7 +144,7 @@ class FarmVarObjective(FarmObjective):
                 raise ValueError(f"Objective '{self.name}': Unknown contraction for dimension '{dim}': '{rule}'. Choose: min, max, sum, mean")
         return data
 
-    def calc_individual(self, vars_int, vars_float, problem_results):
+    def calc_individual(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for a single individual of the
         underlying problem.
@@ -158,11 +158,13 @@ class FarmVarObjective(FarmObjective):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_components,)
+            The component values, shape: (n_sel_components,)
 
         """
         data = problem_results[self.variable]
@@ -172,7 +174,7 @@ class FarmVarObjective(FarmObjective):
         
         return np.array([data], dtype=np.float64)
 
-    def calc_population(self, vars_int, vars_float, problem_results):
+    def calc_population(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for all individuals of a population.
 
@@ -185,11 +187,13 @@ class FarmVarObjective(FarmObjective):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_pop, n_components,)
+            The component values, shape: (n_pop, n_sel_components)
 
         """
         n_pop = problem_results["n_pop"].values

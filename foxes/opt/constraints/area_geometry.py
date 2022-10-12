@@ -82,7 +82,7 @@ class AreaGeometryConstraint(FarmConstraint):
         np.fill_diagonal(deps[:, :, 1], True)
         return deps.reshape(self.n_components(), self.n_components() * 2)
 
-    def calc_individual(self, vars_int, vars_float, problem_results):
+    def calc_individual(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for a single individual of the
         underlying problem.
@@ -96,21 +96,26 @@ class AreaGeometryConstraint(FarmConstraint):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_components,)
+            The component values, shape: (n_sel_components,)
 
         """
-        xy = vars_float.reshape(self.n_components(), 2)
+        s = np.s_[:] 
+        if components is not None and len(components) < self.n_components():
+            s = components
+        xy = vars_float.reshape(self.n_components(), 2)[s]
 
         dists = self.geometry.points_distance(xy)
         dists[self.geometry.points_inside(xy)] *= -1
 
         return dists
 
-    def calc_population(self, vars_int, vars_float, problem_results):
+    def calc_population(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for all individuals of a population.
 
@@ -123,20 +128,27 @@ class AreaGeometryConstraint(FarmConstraint):
         problem_results : Any
             The results of the variable application
             to the problem
+        components : list of int, optional
+            The selected components or None for all
 
         Returns
         -------
         values : np.array
-            The component values, shape: (n_pop, n_components,)
+            The component values, shape: (n_pop, n_sel_components)
 
         """
         n_pop = len(vars_float)
-        xy = vars_float.reshape(n_pop * self.n_components(), 2)
+        n_cmpnts = self.n_components()
+        s = np.s_[:] 
+        if components is not None and len(components) < self.n_components():
+            n_cmpnts = len(components)
+            s = components
+        xy = vars_float[:, s].reshape(n_pop * n_cmpnts, 2)
 
         dists = self.geometry.points_distance(xy)
         dists[self.geometry.points_inside(xy)] *= -1
 
-        return dists.reshape(n_pop, self.n_components())
+        return dists.reshape(n_pop, n_cmpnts)
 
 
 class FarmBoundaryConstraint(AreaGeometryConstraint):

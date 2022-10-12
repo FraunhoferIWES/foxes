@@ -240,6 +240,8 @@ class FarmOptProblem(Problem):
         # initialize algorithm:
         if not self.algo.initialized:
             self.algo.initialize() # TODO: add optional parameters
+        if isinstance(self.algo.states, PopStates):
+            self.algo.reset_states(self.algo.states.states)
 
         # create/overwrite turbine model that sets variables to opt values:
         self.algo.mbook.turbine_models[self.name] = SetFarmVars(
