@@ -355,7 +355,7 @@ class FieldDataNC(States):
         Returns
         -------
         weights : numpy.ndarray
-            The weights, shape: (n_states,)
+            The weights, shape: (n_states, n_turbines)
 
         """
         return self._weights

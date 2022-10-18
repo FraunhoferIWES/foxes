@@ -76,9 +76,9 @@ class Thrust2Ct(TurbineModel):
 
         T = self.get_data(self.thrust_var, fdata, st_sel)
         rho = fdata[FV.RHO][st_sel]
-        A = np.pi*(fdata[FV.D][st_sel]/2)**2
+        A = np.pi * (fdata[FV.D][st_sel] / 2) ** 2
         ws = fdata[self.WSCT][st_sel]
 
-        ct[st_sel] = 2*T/(rho*A*ws**2)
-        
+        ct[st_sel] = 2 * T / (rho * A * ws**2)
+
         return {FV.CT: ct}

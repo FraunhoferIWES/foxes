@@ -111,7 +111,6 @@ class Algorithm(Model):
                     raise ValueError(
                         f"Input {mtype} data entry '{v}': Dimension '{d}' has wrong size, expecting {sizes[d]}, got {s}"
                     )
-
         for v, c in idata["coords"].items():
             if v not in sizes:
                 raise KeyError(
@@ -244,4 +243,4 @@ class Algorithm(Model):
             resetting initialization flag
 
         """
-        super().finalize(self, clear_mem=clear_mem, verbostiy=self.verbosity)
+        super().finalize(self, clear_mem=clear_mem, verbosity=self.verbosity)
