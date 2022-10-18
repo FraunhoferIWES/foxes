@@ -13,12 +13,15 @@ class WindFarm:
         The wind farm name
     turbines : list of foxes.core.Turbine
         The wind turbines
+    boundary : foxes.utils.geom2d.AreaGeometry, optional
+        The wind farm boundary
 
     """
 
-    def __init__(self, name="MyFarm"):
+    def __init__(self, name="wind_farm", boundary=None):
         self.name = name
         self.turbines = []
+        self.boundary = boundary
 
     def add_turbine(self, turbine, verbosity=1):
         """

@@ -119,6 +119,7 @@ class FarmLayoutOutput(Output):
         ax=None,
         normalize_D=False,
         ret_im=False,
+        bargs={},
         **kwargs,
     ):
         """
@@ -145,7 +146,9 @@ class FarmLayoutOutput(Output):
             Normalize x, y wrt rotor diameter
         ret_im : bool
             Flag for returned image object
-        **kwargs : dict, optional
+        bargs : dict
+            Arguments for boundary plotting
+        kwargs : dict, optional
             Parameters forwarded to `matplotlib.pyplot.scatter`
 
         Returns
@@ -203,6 +206,9 @@ class FarmLayoutOutput(Output):
         elif annotate == 2:
             for i, t in enumerate(self.farm.turbines):
                 ax.annotate(t.name, (x[i], y[i]), size=fontsize)
+        
+        if self.farm.boundary is not None:
+            self.farm.boundary.add_to_figure(ax, **bargs)
 
         ti = (
             title

@@ -8,7 +8,7 @@ import foxes.constants as FC
 class IECTIWake(TopHatWakeModel):
     """
     The TI wake model from IEC-64100-1-2005-8 (2005):
-    
+
     source: http://orbit.dtu.dk/files/3750291/2009_31.pdf
     v2: VolLuk: corrected implementation following: IEC-64100-1-2005-8
     (Appearently an error in the document by DTU)
@@ -45,12 +45,12 @@ class IECTIWake(TopHatWakeModel):
         superposition,
         opening_angle=21.6,
         ct_max=0.9999,
-        iec_type = "2019",
+        iec_type="2019",
     ):
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
-        k = float(np.tan(np.deg2rad(opening_angle / 2.)))
-        
+        k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
+
         self.iec_type = iec_type
         setattr(self, FV.K, k)
 
@@ -174,20 +174,19 @@ class IECTIWake(TopHatWakeModel):
         D[:] = fdata[FV.D][st_sel][:, None]
         D = D[sp_sel]
 
-
         # get ws:
         ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ws[:] = fdata[FV.REWS][st_sel][:, None]
         ws = ws[sp_sel]
-        
+
         # calculate wind deficit:
         if self.iec_type == "2005":
-            cl_deltas = np.sqrt(0.9) / ( 1.5 + 0.3 * x / D * np.sqrt(ws) )
+            cl_deltas = np.sqrt(0.9) / (1.5 + 0.3 * x / D * np.sqrt(ws))
         elif self.iec_type == "2019" or self.iec_type == "Frandsen":
-            cl_deltas = 1.0 / ( 1.5 + 0.8 * x / D / np.sqrt(ct) )
+            cl_deltas = 1.0 / (1.5 + 0.8 * x / D / np.sqrt(ct))
         else:
             raise TypeError(
-                        f"Type of IEC {self.iec_type} not found. Select '2015' or '2019'/'Frandsen'."
-                    )
+                f"Type of IEC {self.iec_type} not found. Select '2015' or '2019'/'Frandsen'."
+            )
 
         return {FV.TI: cl_deltas}

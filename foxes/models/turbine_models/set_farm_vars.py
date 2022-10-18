@@ -136,7 +136,7 @@ class SetFarmVars(TurbineModel):
             hallt = np.all(hsel)
 
             if allt and hallt:
-                fdata[v] = data
+                fdata[v][:] = data
 
             else:
 
@@ -145,5 +145,5 @@ class SetFarmVars(TurbineModel):
 
                 tsel = st_sel & hsel
                 fdata[v][tsel] = data[tsel]
-
+        
         return {v: fdata[v] for v in self.vars}

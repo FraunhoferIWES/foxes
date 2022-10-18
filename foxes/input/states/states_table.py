@@ -85,6 +85,9 @@ class StatesTable(States):
         """
         super().initialize(algo, verbosity=verbosity)
 
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+
         if not isinstance(self._data, pd.DataFrame):
 
             if not Path(self._data).is_file():
@@ -101,10 +104,16 @@ class StatesTable(States):
                 print(f"States '{self.name}': Reading file {self._data}")
             rpars = dict(self.RDICT, **self.rpars)
             self._data = PandasFileHelper().read_file(self._data, **rpars)
+        
+        print("STATES INIT A",self.name, states_sel, "\n",self._data)
 
         if states_sel is not None:
+            print("HERE",states_sel)
+            raise Exception
             self._data = self._data.iloc[states_sel]
         self._N = len(self._data.index)
+
+        print("STATES INIT B",self.name, self._data)
 
         self.profiles = {}
         self.tvars = set(self.ovars)
@@ -127,31 +136,8 @@ class StatesTable(States):
         for p in self.profiles.values():
             if not p.initialized:
                 p.initialize(algo)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
+        
+        print("STATES INIT C",self.name, self._data)
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
@@ -175,6 +161,28 @@ class StatesTable(States):
                 )
         self._data = self._data[tcols]
 
+    def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
+
+        This function should specify all data
+        that depend on the loop variable (e.g. state),
+        or that are intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
         idata = super().model_input_data(algo)
 
         if self._data.index.name is not None:
@@ -182,8 +190,6 @@ class StatesTable(States):
 
         idata["coords"][self.VARS] = self.tvars
         idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), self._data.to_numpy())
-
-        del self._data
 
         return idata
 
@@ -228,7 +234,7 @@ class StatesTable(States):
         Returns
         -------
         weights : numpy.ndarray
-            The weights, shape: (n_states,)
+            The weights, shape: (n_states, n_turbines)
 
         """
         return self._weights
@@ -259,7 +265,7 @@ class StatesTable(States):
 
         """
         z = pdata[FV.POINTS][:, :, 2]
-
+        
         for i, v in enumerate(self.tvars):
             pdata[v][:] = mdata[self.DATA][:, i, None]
 
@@ -271,3 +277,24 @@ class StatesTable(States):
             pdata[v] = pres
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
+
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level
+
+        """
+        if clear_mem:
+            self._data = None
+        super().finalize(algo, results, clear_mem, verbosity)

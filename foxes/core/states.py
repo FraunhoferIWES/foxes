@@ -52,7 +52,7 @@ class States(PointDataModel):
         Returns
         -------
         weights : numpy.ndarray
-            The weights, shape: (n_states,)
+            The weights, shape: (n_states, n_turbines)
 
         """
         pass
