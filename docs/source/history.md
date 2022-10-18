@@ -46,6 +46,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Core
     - Introducing the concept of runners
+- Opt
+    - New sub package: `foxes.opt`, install by `pip install foxes[opt]`
 - Models
     - New turbine model: `Thrust2Ct`, calculates ct from thrust values
     - New turbine type: `NullType`, a turbine type with only rotor diameter and hub height data
