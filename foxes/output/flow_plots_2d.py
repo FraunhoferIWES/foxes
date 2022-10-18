@@ -273,7 +273,7 @@ class FlowPlots2D(Output):
 
         # calculate point results:
         point_results = self.algo.calc_points(
-            self.fres, points=g_pts, vars=[var], verbosity=verbosity, **kwargs
+            self.fres, points=g_pts, verbosity=verbosity, **kwargs
         )
         data = point_results[var].to_numpy()
         del point_results
@@ -327,7 +327,7 @@ class FlowPlots2D(Output):
         self,
         var,
         resolution,
-        x_direction,
+        x_direction=270,
         xmin=None,
         zmin=0.0,
         xmax=None,

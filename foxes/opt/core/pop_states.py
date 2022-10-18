@@ -48,7 +48,7 @@ class PopStates(States):
 
         """
         if not self.states.initialized:
-            self.states.initialize(algo, verbosity)
+            self.states.initialize(algo, verbosity=verbosity)
         super().initialize(algo, verbosity)
         
     def size(self):
@@ -110,7 +110,7 @@ class PopStates(States):
 
         for cname, coord in idata0["coords"].items():
             if cname != FV.STATE:
-                idata["coords"] = coord
+                idata["coords"][cname] = coord
             else:
                 self.org_inds = coord
 

@@ -50,6 +50,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
     - New turbine model: `Thrust2Ct`, calculates ct from thrust values
     - New turbine type: `NullType`, a turbine type with only rotor diameter and hub height data
     - New runners: `SimpleRunner`, `DaskRunner`. The latter features parallel runs via dask
+- Examples
+    - Introducing two sub-folders of examples: `foxes` and `foxes.opt`
+    - New example: `wind_rose`, calculation of wind rose states data
+    - New example: `layout_single_state`, wind farm layout optimization for a single wind state
+    - New example: `layout_wind_rose`, wind farm layout optimization for wind rose states
 
 **Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.5
 

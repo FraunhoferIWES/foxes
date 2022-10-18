@@ -1,10 +1,11 @@
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from iwopy import DiscretizeRegGrid
-from iwopy.optimizers import GG
+from iwopy import LocalFD
+from iwopy.interfaces.pygmo import Optimizer_pygmo
 
 import foxes
+import foxes.variables as FV
 from foxes.opt.problems.layout import FarmLayoutOptProblem
 from foxes.opt.constraints import FarmBoundaryConstraint, MinDistConstraint
 from foxes.opt.objectives import MaxFarmPower
@@ -21,6 +22,12 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
+    parser.add_argument(
+        "-s",
+        "--states",
+        help="The states input file (path or static)",
+        default="wind_rose_bremen.csv",
+    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-w",
@@ -32,8 +39,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="auto"
     )
-    parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
-    parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument("-d", "--min_dist", help="Minimal turbine distance in unit D", type=float, default=None)
@@ -55,8 +60,11 @@ if __name__ == "__main__":
         n_turbines=args.n_t,
         turbine_models=["layout_opt", "kTI_02", ttype.name],
     )
-    states = foxes.input.states.SingleStateStates(
-        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
+    states = foxes.input.states.StatesTable(
+        data_source=args.states,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2col={FV.WS: "ws", FV.WD: "wd", FV.WEIGHT: "weight"},
+        fixed_vars={FV.RHO: args.rho, FV.TI: args.ti},
     )
 
     algo = foxes.algorithms.Downwind(
@@ -72,20 +80,16 @@ if __name__ == "__main__":
 
     problem = FarmLayoutOptProblem("layout_opt", algo)
     problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem, tol=0.5))
+    problem.add_constraint(FarmBoundaryConstraint(problem, tol=1.))
     if args.min_dist is not None:
         problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
-    gproblem = DiscretizeRegGrid(
-        problem, deltas=0.01, fd_order=args.fd_order, fd_bounds_order=1, tol=1e-6
-    )
+    gproblem = LocalFD(problem, deltas=1., fd_order=args.fd_order)
     gproblem.initialize()
     
-    solver = GG(
+    solver = Optimizer_pygmo(
         gproblem,
-        step_max=100.0,
-        step_min=1.,
-        step_div_factor=2.,
-        vectorized=not args.no_pop,
+        problem_pars=dict(pop=not args.no_pop),
+        algo_pars=dict(type="ipopt", tol=1e-3),
     )
     solver.initialize()
     solver.print_info()
@@ -105,8 +109,7 @@ if __name__ == "__main__":
     plt.close(ax.get_figure())
 
     o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    g = o.gen_states_fig_horizontal("WS", resolution=10, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
-    fig = next(g)
+    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)

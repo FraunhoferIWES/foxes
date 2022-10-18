@@ -111,7 +111,6 @@ class Algorithm(Model):
                     raise ValueError(
                         f"Input {mtype} data entry '{v}': Dimension '{d}' has wrong size, expecting {sizes[d]}, got {s}"
                     )
-
         for v, c in idata["coords"].items():
             if v not in sizes:
                 raise KeyError(
