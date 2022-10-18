@@ -104,16 +104,10 @@ class StatesTable(States):
                 print(f"States '{self.name}': Reading file {self._data}")
             rpars = dict(self.RDICT, **self.rpars)
             self._data = PandasFileHelper().read_file(self._data, **rpars)
-        
-        print("STATES INIT A",self.name, states_sel, "\n",self._data)
 
         if states_sel is not None:
-            print("HERE",states_sel)
-            raise Exception
             self._data = self._data.iloc[states_sel]
         self._N = len(self._data.index)
-
-        print("STATES INIT B",self.name, self._data)
 
         self.profiles = {}
         self.tvars = set(self.ovars)
@@ -136,8 +130,6 @@ class StatesTable(States):
         for p in self.profiles.values():
             if not p.initialized:
                 p.initialize(algo)
-        
-        print("STATES INIT C",self.name, self._data)
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
