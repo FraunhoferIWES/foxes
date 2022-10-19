@@ -58,6 +58,9 @@ def run_foxes(args):
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
+    o = foxes.output.RosePlotOutput(farm_results)
+    fig = o.get_figure(16, FV.REWS, [0, 3.5, 6, 10, 15, 20])
+    foxes.utils.show_plotly_fig(fig)
 
 if __name__ == "__main__":
 
