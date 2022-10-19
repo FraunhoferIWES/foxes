@@ -24,7 +24,7 @@ class RosePlotOutput(Output):
     """
 
     def __init__(self, results):
-        TODO CHECK FOR POINT DIM
+        # TODO CHECK FOR POINT DIM
         self.results = results.to_dataframe()
 
     @classmethod
