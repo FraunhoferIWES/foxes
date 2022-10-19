@@ -5,4 +5,4 @@ Examples
         notebooks/single_row
         notebooks/timeseries
         notebooks/heterogeneous
-        
+        notebooks/layout_opt
