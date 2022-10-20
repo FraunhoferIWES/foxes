@@ -42,21 +42,29 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.4
 
-## v0.1.5-alpha
+## v0.2.0-alpha
 
 - Core
     - Introducing the concept of runners
 - Opt
-    - New sub package: `foxes.opt`, install by `pip install foxes[opt]`
+    - New sub package: `foxes.opt`, install by `pip install foxes[opt]`. This introduces the capability to run wind farm optimizations. As examples layout optimization for simple cases are given, see below.
 - Models
     - New turbine model: `Thrust2Ct`, calculates ct from thrust values
     - New turbine type: `NullType`, a turbine type with only rotor diameter and hub height data
     - New runners: `SimpleRunner`, `DaskRunner`. The latter features parallel runs via dask
+- Output
+    - New output: `WindRoseOutput`, providing a plotly figure that shows a rose-type histogram
+    - New output: `AmbientWindRoseOutput`, providing rose-type plotly figures of ambient data (no wake calculation involved)
+- Algorithms
+    - Improved `Downwind`: Now with option for ambient runs (no wakes)
+- Utils
+    - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
 - Examples
     - Introducing two sub-folders of examples: `foxes` and `foxes.opt`
     - New example: `wind_rose`, calculation of wind rose states data
     - New example: `layout_single_state`, wind farm layout optimization for a single wind state
     - New example: `layout_wind_rose`, wind farm layout optimization for wind rose states
-
-**Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.1.5
-
+- Notebooks
+    - New notebook: `layout_opt.ipynb`, demonstrating a simple layout optimization case
+    
+**Full Changelog**: https://github.com/FraunhoferIWES/foxes/commits/v0.2.0

@@ -4,6 +4,9 @@ import plotly.express as px
 
 import foxes.variables as FV
 from foxes.utils import wd2uv, uv2wd
+from foxes.algorithms import Downwind
+from foxes.core import WindFarm, Turbine
+from foxes.models import ModelBook
 from .output import Output
 
 
@@ -19,12 +22,20 @@ class RosePlotOutput(Output):
     Attributes
     ----------
     results : pandas.DataFrame
-        The alculation results (farm or points)
+        The calculation results (farm or points)
 
     """
 
     def __init__(self, results):
-        # TODO CHECK FOR POINT DIM
+
+        dims = list(results.dims.keys())
+        if dims[1] == FV.TURBINE:
+            self._rtype = FV.TURBINE
+        elif dims[1] == FV.POINT:
+            self._rtype = FV.POINT
+        else:
+            raise KeyError(f"Results dimension 1 is neither '{FV.TURBINE}' nor '{FV.POINT}': dims = {results.dims}")
+
         self.results = results.to_dataframe()
 
     @classmethod
@@ -75,7 +86,7 @@ class RosePlotOutput(Output):
             return "Yaw misalignment", f"{FV.YAWM} [deg]"
 
         if dname in FV.amb2var:
-            title, legend = cls.get_data_info(FV.Aamb2var[dname])
+            title, legend = cls.get_data_info(FV.amb2var[dname])
             return f"Ambient {title.lower()}", f"AMB_{legend}"
 
         return dname, dname
@@ -135,13 +146,13 @@ class RosePlotOutput(Output):
         data[FV.WEIGHT] *= 100
         data = data.rename(columns={FV.WEIGHT: "frequency"})
 
-
-        if turbine is None:
+        el = turbine if self._rtype == FV.TURBINE else point
+        if el is None:
             data = data.groupby(level=0).mean()
         else:
             sname = data.index.names[0]
-            grp   = data.reset_index().groupby("turbine")
-            data  = grp.get_group(turbine).set_index(sname)
+            grp   = data.reset_index().groupby(self._rtype)
+            data  = grp.get_group(el).set_index(sname)
 
         data['wd'] = uv2wd(data[['u', 'v']].to_numpy())
         data.drop(['u', 'v'], axis=1, inplace=True)
@@ -247,6 +258,7 @@ class RosePlotOutput(Output):
             var_bins,  
             wd_var=FV.AMB_WD,
             turbine=None,
+            point=None,
             cmap='Turbo', 
             title=None, 
             legend=None,
@@ -269,8 +281,13 @@ class RosePlotOutput(Output):
         wd_var : str, optional
             The wind direction variable name
         turbine : int, optional
+            Only relevant in case of farm results.
             If None, mean over all turbines.
             Else, data from a single turbine
+        point : int, optional
+            Only relevant in case of point results.
+            If None, mean over all points.
+            Else, data from a single point
         legend : str, optional
             The data legend string
         layout_dict : dict, optional
@@ -281,8 +298,41 @@ class RosePlotOutput(Output):
         """
 
         fig = self.get_figure(sectors=sectors, var=var, var_bins=var_bins, 
-                        wd_var=wd_var, turbine=turbine, cmap=cmap, 
+                        wd_var=wd_var, turbine=turbine, point=point, cmap=cmap, 
                         title=title, legend=legend, layout_dict=layout_dict, 
                         title_dict=title_dict)
 
         fig.write_image(file_name)
+
+
+class AmbientRosePlotOutput(RosePlotOutput):
+    """
+    Class for rose plot creation directly from states
+
+    Parameters
+    ----------
+    states : foxes.core.States
+        The states from which to compute the wind rose
+    point : numpy.ndarray
+        The evaluation point, shape: (3,)
+    mbook : foxes.models.ModelBook, optional
+        The model book
+
+    """
+
+    def __init__(self, states, point, mbook=None, ws_var=FV.AMB_REWS):
+
+        farm = WindFarm()
+        farm.add_turbine(Turbine(
+            xy=point[:2], H=point[2], turbine_models=["null_type"],
+            ), verbosity=0)
+
+        mbook = mbook if mbook is not None else ModelBook()
+        algo = Downwind(mbook, farm, states, wake_models=[], verbosity=0)
+
+        results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
+        
+        algo.finalize()
+        states.finalize(algo, results, clear_mem=False, verbosity=0)
+
+        super().__init__(results)

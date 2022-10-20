@@ -67,6 +67,7 @@ class ModelBook:
             )
 
         self.turbine_types = Dict(name="turbine_types")
+        self.turbine_types["null_type"] = fm.turbine_types.NullType()
         if Pct_file is not None:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 

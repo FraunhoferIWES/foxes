@@ -161,6 +161,7 @@ class Downwind(Algorithm):
         final_parameters={},
         persist=True,
         clear_mem_models=True,
+        ambient=False,
         **states_init_pars,
     ):
         """
@@ -186,6 +187,8 @@ class Downwind(Algorithm):
         clear_mem_models : bool
             Switch for clearing model memory during model
             finalization
+        ambient : bool
+            Flag for ambient instead of waked calculation
         states_init_pars : dict, optional
             Parameters for states initialization
 
@@ -263,11 +266,12 @@ class Downwind(Algorithm):
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 7) calculate wake effects:
-        mlist.models.append(dm.FarmWakesCalculation())
-        mlist.models[-1].name = "calc_wakes"
-        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
+        if not ambient:
+            mlist.models.append(dm.FarmWakesCalculation())
+            mlist.models[-1].name = "calc_wakes"
+            init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+            final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # update variables:
         self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self)
@@ -300,6 +304,10 @@ class Downwind(Algorithm):
             self, results=farm_results, parameters=final_pars, verbosity=self.verbosity
         )
 
+        if ambient:
+            dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
+            farm_results = farm_results.drop_vars(dvars)
+
         return farm_results
 
     def calc_points(
@@ -315,6 +323,7 @@ class Downwind(Algorithm):
         persist_mdata=True,
         persist_pdata=False,
         clear_mem_models=True,
+        ambient=False,
         **states_init_pars,
     ):
         """
@@ -326,7 +335,7 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
         points : numpy.ndarray
-            The points of interest, shape: (n_states, n_points)
+            The points of interest, shape: (n_states, n_points, 3)
         vars : list of str, optional
             The variables that should be kept in the output,
             or `None` for all
@@ -353,6 +362,8 @@ class Downwind(Algorithm):
         clear_mem_models : bool
             Switch for clearing model memory during model
             finalization
+        ambient : bool
+            Flag for ambient instead of waked calculation
         states_init_pars : dict, optional
             Parameters for states initialization
 
@@ -366,6 +377,8 @@ class Downwind(Algorithm):
 
         if not self.initialized:
             self.initialize(**states_init_pars)
+        if not ambient and farm_results is None:
+            raise ValueError(f"Cannot calculate point results without farm results for ambient = {ambient}")
 
         self._print_deco("calc_points", n_points=points.shape[1])
 
@@ -421,11 +434,12 @@ class Downwind(Algorithm):
         final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # 3) calc wake effects:
-        mlist.models.append(dm.PointWakesCalculation(vars, emodels, emodels_cpars))
-        mlist.models[-1].name = "calc_wakes"
-        init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
+        if not ambient:
+            mlist.models.append(dm.PointWakesCalculation(vars, emodels, emodels_cpars))
+            mlist.models[-1].name = "calc_wakes"
+            init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+            final_pars.append(final_parameters.get(mlist.models[-1].name, fdict))
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)
@@ -444,7 +458,12 @@ class Downwind(Algorithm):
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
-        sinds = farm_results.coords[FV.STATE] if len(farm_results.coords) else None
+        if FV.STATE in farm_results.coords:
+            sinds = farm_results.coords[FV.STATE]
+        elif models_data is not None and FV.STATE in models_data.coords:
+            sinds = models_data.coords[FV.STATE]
+        else:
+            sinds = None
         point_data = self.new_point_data(points, sinds)
         if persist_pdata:
             point_data = point_data.persist()
@@ -466,8 +485,8 @@ class Downwind(Algorithm):
         )
         point_results = mlist.run_calculation(
             self,
-            models_data,
-            farm_results,
+            models_data, 
+            farm_results, 
             point_data,
             out_vars=vars,
             parameters=calc_pars,
@@ -479,6 +498,10 @@ class Downwind(Algorithm):
         mlist.finalize(
             self, point_results, parameters=final_pars, verbosity=self.verbosity
         )
+
+        if ambient:
+            dvars = [v for v in point_results.data_vars.keys() if v in FV.var2amb]
+            point_results = point_results.drop_vars(dvars)
 
         return point_results
 

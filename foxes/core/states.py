@@ -93,7 +93,7 @@ class States(PointDataModel):
             )
         if weights.shape[1] != algo.n_turbines:
             raise ValueError(
-                f"States '{self.name}': Wrong size of second axis dimension '{FV.TURBINE}': Expecting {self.n_turbines}, got {weights.shape[1]}"
+                f"States '{self.name}': Wrong size of second axis dimension '{FV.TURBINE}': Expecting {algo.n_turbines}, got {weights.shape[1]}"
             )
         idata["data_vars"][FV.WEIGHT] = ((FV.STATE, FV.TURBINE), weights)
 

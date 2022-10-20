@@ -128,8 +128,7 @@ class Model(metaclass=ABCMeta):
             The verbosity level, 0 = silent
 
         """
-        if clear_mem:
-            self.__initialized = False
+        self.__initialized = False
 
     def get_data(
         self,

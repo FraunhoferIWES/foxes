@@ -119,7 +119,6 @@ class PointDataModelList(PointDataModel):
             )
 
         for mi, m in enumerate(self.models):
-            # print("PMLIST VARS BEFORE",m.name,list(fdata.keys()))
             res = m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
             pdata.update(res)
 
