@@ -62,7 +62,8 @@ class StatesTable(States):
     ):
         super().__init__()
 
-        self._data = data_source
+        self._data0 = data_source
+        self._data = None
         self.ovars = output_vars
         self.rpars = pd_read_pars
         self.var2col = var2col
@@ -88,25 +89,26 @@ class StatesTable(States):
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
 
-        if not isinstance(self._data, pd.DataFrame):
-
-            if not Path(self._data).is_file():
+        if not isinstance(self._data0, pd.DataFrame):
+            if not Path(self._data0).is_file():
                 if verbosity:
                     print(
-                        f"States '{self.name}': Reading static data '{self._data}' from context '{STATES}'"
+                        f"States '{self.name}': Reading static data '{self._data0}' from context '{STATES}'"
                     )
-                self._data = algo.dbook.get_file_path(
-                    STATES, self._data, check_raw=False
+                self._data0 = algo.dbook.get_file_path(
+                    STATES, self._data0, check_raw=False
                 )
                 if verbosity:
-                    print(f"Path: {self._data}")
+                    print(f"Path: {self._data0}")
             elif verbosity:
-                print(f"States '{self.name}': Reading file {self._data}")
+                print(f"States '{self.name}': Reading file {self._data0}")
             rpars = dict(self.RDICT, **self.rpars)
-            self._data = PandasFileHelper().read_file(self._data, **rpars)
+            self._data0 = PandasFileHelper().read_file(self._data0, **rpars)
 
         if states_sel is not None:
-            self._data = self._data.iloc[states_sel]
+            self._data = self._data0.iloc[states_sel]
+        else:
+            self._data = self._data0
         self._N = len(self._data.index)
 
         self.profiles = {}
@@ -142,17 +144,6 @@ class StatesTable(States):
         else:
             self._weights[:] = 1.0 / self._N
 
-        tcols = []
-        for v in self.tvars:
-            c = self.var2col.get(v, v)
-            if c in self._data.columns:
-                tcols.append(c)
-            elif v not in self.profiles.keys():
-                raise KeyError(
-                    f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars"
-                )
-        self._data = self._data[tcols]
-
     def model_input_data(self, algo):
         """
         The model input data, as needed for the
@@ -180,8 +171,19 @@ class StatesTable(States):
         if self._data.index.name is not None:
             idata["coords"][FV.STATE] = self._data.index.to_numpy()
 
+        tcols = []
+        for v in self.tvars:
+            c = self.var2col.get(v, v)
+            if c in self._data.columns:
+                tcols.append(c)
+            elif v not in self.profiles.keys():
+                raise KeyError(
+                    f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars"
+                )
+        data = self._data[tcols]
+
         idata["coords"][self.VARS] = self.tvars
-        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), self._data.to_numpy())
+        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
 
         return idata
 

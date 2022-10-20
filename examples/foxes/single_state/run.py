@@ -91,7 +91,7 @@ if __name__ == "__main__":
     print("\nResults data:\n", farm_results)
 
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_horizontal("WS", resolution=10)
+    g = o.gen_states_fig_horizontal(args.var, resolution=10)
     fig = next(g)
     plt.show()
     plt.close(fig)
