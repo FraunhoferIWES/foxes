@@ -7,6 +7,16 @@ from .area_geometry import AreaUnion
 
 if __name__ == "__main__":
 
+    boundary = ClosedPolygon(np.array(
+        [[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)) \
+        + ClosedPolygon(np.array(
+        [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64))
+
+    fig, ax = plt.subplots()
+    boundary.add_to_figure(ax, fill_mode="inside", show_boundary=False)
+    plt.show()
+    plt.close(fig)
+
     centres = [np.array([7.,8.])]
     radii = [0.5]
     N = 500
@@ -29,30 +39,30 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons)
-    g.add_to_figure(ax, show_distance="inside")
+    g.add_to_figure(ax, fill_mode="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons)
-    g.add_to_figure(ax, show_distance="outside")
+    g.add_to_figure(ax, fill_mode="outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons).inverse()
-    g.add_to_figure(ax, show_distance="inside")
+    g.add_to_figure(ax, fill_mode="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons).inverse()
-    g.add_to_figure(ax, show_distance="outside")
+    g.add_to_figure(ax, fill_mode="outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = polygons[0] + circles[0]
-    g.add_to_figure(ax, show_distance="inside")
+    g.add_to_figure(ax, fill_mode="inside")
     plt.show()
     plt.close(fig)

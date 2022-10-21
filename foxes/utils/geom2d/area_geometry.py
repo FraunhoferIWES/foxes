@@ -80,7 +80,7 @@ class AreaGeometry(metaclass=ABCMeta):
             self, 
             ax, 
             show_boundary=True, 
-            show_distance=None, 
+            fill_mode=None, 
             pars_boundary={},
             pars_distance={}
         ):
@@ -93,16 +93,16 @@ class AreaGeometry(metaclass=ABCMeta):
             The axis object
         show_boundary : bool
             Add the boundary line to the image
-        show_distance : str, optional
-            Add distances to image. Options:
-            all, inside, outside
+        fill_mode : str, optional
+            Fill the area. Options:
+            dist_all, dist_inside, dist_outside
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
             Parameters for distance plotting command
         
         """
-        if show_distance is not None:
+        if fill_mode is not None:
 
             if "Nx" in pars_distance or "Ny" in pars_distance:
                 Nx = pars_distance.pop("Nx")
@@ -145,20 +145,20 @@ class AreaGeometry(metaclass=ABCMeta):
             pts[..., 1] = y[None, :]
             pts = pts.reshape(Nx*Ny, 2)
 
-            if show_distance == "all":
+            if fill_mode == "all":
                 dists = self.points_distance(pts).reshape(Nx, Ny)
-            elif show_distance == "inside":
+            elif fill_mode == "inside":
                 ins = self.points_inside(pts)
                 dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
                 dists[ins] = self.points_distance(pts[ins])
                 dists = dists.reshape(Nx, Ny)
-            elif show_distance == "outside":
+            elif fill_mode == "outside":
                 ins = self.points_inside(pts)
                 dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
                 dists[~ins] = self.points_distance(pts[~ins])
                 dists = dists.reshape(Nx, Ny)
             else:
-                raise ValueError(f"Illegal parameter 'show_distance = {show_distance}', expecting: None, all, inside, outside")
+                raise ValueError(f"Illegal parameter 'fill_mode = {fill_mode}', expecting: None, all, inside, outside")
 
             pars = dict(shading="auto", cmap="magma_r", zorder=-100)
             pars.update(pars_distance)
@@ -302,7 +302,7 @@ class InvertedAreaGeometry(AreaGeometry):
             self, 
             ax, 
             show_boundary=True, 
-            show_distance=None, 
+            fill_mode=None, 
             pars_boundary={},
             pars_distance={}
         ):
@@ -315,7 +315,7 @@ class InvertedAreaGeometry(AreaGeometry):
             The axis object
         show_boundary : bool
             Add the boundary line to the image
-        show_distance : str, optional
+        fill_mode : str, optional
             Add distances to image. Options:
             all, inside, outside
         pars_boundary : dict
@@ -324,9 +324,9 @@ class InvertedAreaGeometry(AreaGeometry):
             Parameters for distance plotting command
         
         """
-        self._geometry.add_to_figure(ax, show_boundary, show_distance=None, 
+        self._geometry.add_to_figure(ax, show_boundary, fill_mode=None, 
             pars_boundary=pars_boundary, pars_distance={})
-        super().add_to_figure(ax, show_boundary, show_distance,
+        super().add_to_figure(ax, show_boundary, fill_mode,
             pars_boundary, pars_distance)
             
     def inverse(self):
@@ -487,7 +487,7 @@ class AreaUnion(AreaGeometry):
             self, 
             ax, 
             show_boundary=True, 
-            show_distance=None, 
+            fill_mode=None, 
             pars_boundary={},
             pars_distance={}
         ):
@@ -500,7 +500,7 @@ class AreaUnion(AreaGeometry):
             The axis object
         show_boundary : bool
             Add the boundary line to the image
-        show_distance : str, optional
+        fill_mode : str, optional
             Add distances to image. Options:
             all, inside, outside
         pars_boundary : dict
@@ -511,10 +511,10 @@ class AreaUnion(AreaGeometry):
         """
         if show_boundary:
             for g in self.geometries:
-                g.add_to_figure(ax, show_boundary=True, show_distance=None,
+                g.add_to_figure(ax, show_boundary=True, fill_mode=None,
                     pars_boundary=pars_boundary, pars_distance={})
 
-        super().add_to_figure(ax, show_boundary=False, show_distance=show_distance,
+        super().add_to_figure(ax, show_boundary=False, fill_mode=fill_mode,
             pars_boundary={}, pars_distance=pars_distance)
 
     def inverse(self):

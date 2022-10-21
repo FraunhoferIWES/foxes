@@ -112,7 +112,7 @@ class Circle(AreaGeometry):
             self, 
             ax, 
             show_boundary=True, 
-            show_distance=None, 
+            fill_mode=None, 
             pars_boundary={},
             pars_distance={}
         ):
@@ -125,9 +125,9 @@ class Circle(AreaGeometry):
             The axis object
         show_boundary : bool
             Add the boundary line to the image
-        show_distance : str, optional
-            Add distances to image. Options:
-            all, inside, outside
+        fill_mode : str, optional
+            Fill the area. Options:
+            dist_all, dist_inside, dist_outside
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
@@ -141,7 +141,7 @@ class Circle(AreaGeometry):
             circle = plt.Circle(self.centre, self.radius, **pars)
             ax.add_patch(circle)
 
-        super().add_to_figure(ax, show_boundary, show_distance,
+        super().add_to_figure(ax, show_boundary, fill_mode,
             pars_boundary, pars_distance)
 
 if __name__ == "__main__":
@@ -152,24 +152,24 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius)
-    g.add_to_figure(ax, show_distance="inside")
+    g.add_to_figure(ax, fill_mode="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius)
-    g.add_to_figure(ax, show_distance="outside")
+    g.add_to_figure(ax, fill_mode="outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius).inverse()
-    g.add_to_figure(ax, show_distance="inside")
+    g.add_to_figure(ax, fill_mode="inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius).inverse()
-    g.add_to_figure(ax, show_distance="outside")
+    g.add_to_figure(ax, fill_mode="outside")
     plt.show()
     plt.close(fig)
