@@ -10,10 +10,11 @@ if __name__ == "__main__":
     boundary = ClosedPolygon(np.array(
         [[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)) \
         + ClosedPolygon(np.array(
-        [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64))
+        [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)) \
+        - Circle([-100., -100.], 700)
 
     fig, ax = plt.subplots()
-    boundary.add_to_figure(ax)
+    boundary.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
     quit()

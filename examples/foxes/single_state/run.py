@@ -7,6 +7,7 @@ import foxes.variables as FV
 
 if __name__ == "__main__":
 
+    # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-nt", "--n_t", help="The number of turbines", type=int, default=5
@@ -50,23 +51,24 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args = parser.parse_args()
 
-    p0 = np.array([0.0, 0.0])
-    stp = np.array([args.dist_x, args.deltay])
-
+    # create model book:
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
+    # create states:
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
 
+    # create wind farm:
+    print("\nCreating wind farm")
     farm = foxes.WindFarm()
     if args.layout is None:
         foxes.input.farm_layout.add_row(
             farm=farm,
-            xy_base=p0,
-            xy_step=stp,
+            xy_base=np.array([0.0, 0.0]),
+            xy_step=np.array([args.dist_x, args.deltay]),
             n_turbines=args.n_t,
             turbine_models=args.tmodels + [ttype.name],
         )
@@ -75,6 +77,7 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
+    # create algorithm:
     algo = foxes.algorithms.Downwind(
         mbook,
         farm,
@@ -86,16 +89,20 @@ if __name__ == "__main__":
         chunks=None,
     )
 
+    # calculate farm results:
     farm_results = algo.calc_farm()
-
     print("\nResults data:\n", farm_results)
 
+    # Horizontal flow plot:
+    print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_horizontal(args.var, resolution=10)
     fig = next(g)
     plt.show()
     plt.close(fig)
 
+    # Vertical flow plot:
+    print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_vertical(
         args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.0)
@@ -103,8 +110,9 @@ if __name__ == "__main__":
     fig = next(g)
     plt.show()
 
+    # Print farm results data:
+    print("\nResults summary:\n")
     fr = farm_results.to_dataframe()
-    print()
     print(
         fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_P, FV.P, FV.CT]]
     )

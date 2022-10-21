@@ -7,7 +7,7 @@ from foxes.data import PCTCURVE
 import foxes.variables as FV
 
 
-class PCtSingleFiles(TurbineType):
+class PCtTwoFiles(TurbineType):
     """
     Calculate power and ct by interpolating
     from power-curve and ct-curve data files.
