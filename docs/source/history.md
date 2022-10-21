@@ -51,7 +51,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Models
     - New turbine model: `Thrust2Ct`, calculates ct from thrust values
     - New turbine type: `NullType`, a turbine type with only rotor diameter and hub height data
-    - New runners: `SimpleRunner`, `DaskRunner`. The latter features parallel runs via dask
+    - Renamed `PCtSingleFiles` into `PCtTwoFiles`
 - Output
     - New output: `WindRoseOutput`, providing a plotly figure that shows a rose-type histogram
     - New output: `AmbientWindRoseOutput`, providing rose-type plotly figures of ambient data (no wake calculation involved)
@@ -59,6 +59,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
     - Improved `Downwind`: Now with option for ambient runs (no wakes)
 - Utils
     - New utility: `show_plotly_fig`, opens a window that shows a plotly figure (instead of browser)
+    - New runners: `DefaultRunner`, `DaskRunner`. The latter features parallel runs via dask
 - Examples
     - Introducing two sub-folders of examples: `foxes` and `foxes.opt`
     - New example: `wind_rose`, calculation of wind rose states data
