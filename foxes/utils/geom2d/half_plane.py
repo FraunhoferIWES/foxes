@@ -143,7 +143,8 @@ class HalfPlane(AreaGeometry):
             Add the boundary line to the image
         fill_mode : str, optional
             Fill the area. Options:
-            dist_all, dist_inside, dist_outside
+            dist, dist_inside, dist_outside, inside_<color>,
+            outside_<color>
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
@@ -184,33 +185,33 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius) + HalfPlane(p0, n)
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = Circle(centre, radius) - HalfPlane(p0, n)
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = g.inverse()
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)

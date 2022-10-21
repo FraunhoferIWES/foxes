@@ -29,36 +29,42 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = AreaIntersection(circles + polygons)
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, show_boundary=True)
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaIntersection(circles + polygons)
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
+    plt.show()
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    g = AreaIntersection(circles + polygons)
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaIntersection(circles + polygons).inverse()
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaIntersection(circles + polygons).inverse()
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = polygons[0] - polygons[1]
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = polygons[0] - polygons[1]
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)

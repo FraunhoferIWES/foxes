@@ -13,9 +13,10 @@ if __name__ == "__main__":
         [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64))
 
     fig, ax = plt.subplots()
-    boundary.add_to_figure(ax, fill_mode="inside", show_boundary=False)
+    boundary.add_to_figure(ax)
     plt.show()
     plt.close(fig)
+    quit()
 
     centres = [np.array([7.,8.])]
     radii = [0.5]
@@ -39,30 +40,30 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons)
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons)
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons).inverse()
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = AreaUnion(circles + polygons).inverse()
-    g.add_to_figure(ax, fill_mode="outside")
+    g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
 
     fig, ax = plt.subplots()
     g = polygons[0] + circles[0]
-    g.add_to_figure(ax, fill_mode="inside")
+    g.add_to_figure(ax, fill_mode="dist_inside")
     plt.show()
     plt.close(fig)
