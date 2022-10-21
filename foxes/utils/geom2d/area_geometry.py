@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABCMeta, abstractmethod
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 class AreaGeometry(metaclass=ABCMeta):
     """
@@ -79,8 +80,8 @@ class AreaGeometry(metaclass=ABCMeta):
     def add_to_figure(
             self, 
             ax, 
-            show_boundary=True, 
-            fill_mode=None, 
+            show_boundary=False, 
+            fill_mode="inside_slategray", 
             pars_boundary={},
             pars_distance={}
         ):
@@ -95,7 +96,8 @@ class AreaGeometry(metaclass=ABCMeta):
             Add the boundary line to the image
         fill_mode : str, optional
             Fill the area. Options:
-            dist_all, dist_inside, dist_outside
+            dist, dist_inside, dist_outside, inside_<color>,
+            outside_<color>
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
@@ -145,25 +147,41 @@ class AreaGeometry(metaclass=ABCMeta):
             pts[..., 1] = y[None, :]
             pts = pts.reshape(Nx*Ny, 2)
 
-            if fill_mode == "all":
+            pars = dict(shading="auto", cmap="magma_r", zorder=-100)
+            sbar = True
+            if fill_mode == "dist":
                 dists = self.points_distance(pts).reshape(Nx, Ny)
-            elif fill_mode == "inside":
+            elif fill_mode == "dist_inside":
                 ins = self.points_inside(pts)
                 dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
                 dists[ins] = self.points_distance(pts[ins])
                 dists = dists.reshape(Nx, Ny)
-            elif fill_mode == "outside":
+            elif fill_mode[:7] == "inside_":
+                ins = self.points_inside(pts)
+                dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
+                dists[ins] = 1.
+                dists = dists.reshape(Nx, Ny)
+                pars["cmap"] = ListedColormap([fill_mode[7:]])
+                sbar = False
+            elif fill_mode == "dist_outside":
                 ins = self.points_inside(pts)
                 dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
                 dists[~ins] = self.points_distance(pts[~ins])
                 dists = dists.reshape(Nx, Ny)
+            elif fill_mode[:8] == "outside_":
+                ins = self.points_inside(pts)
+                dists = np.full(Nx*Ny, np.nan, dtype=np.float64)
+                dists[~ins] = 1
+                dists = dists.reshape(Nx, Ny)
+                pars["cmap"] = ListedColormap([fill_mode[8:]])
+                sbar = False
             else:
-                raise ValueError(f"Illegal parameter 'fill_mode = {fill_mode}', expecting: None, all, inside, outside")
+                raise ValueError(f"Illegal parameter 'fill_mode = {fill_mode}', expecting: None, dist, dist_inside, dist_outside")
 
-            pars = dict(shading="auto", cmap="magma_r", zorder=-100)
             pars.update(pars_distance)
             im = ax.pcolormesh(x, y, dists.T, **pars)
-            plt.colorbar(im, ax=ax, orientation="vertical", label="distance")
+            if sbar:
+                plt.colorbar(im, ax=ax, orientation="vertical", label="distance")
 
         ax.autoscale_view()
         ax.set_xlabel("x")
@@ -301,8 +319,8 @@ class InvertedAreaGeometry(AreaGeometry):
     def add_to_figure(
             self, 
             ax, 
-            show_boundary=True, 
-            fill_mode=None, 
+            show_boundary=False, 
+            fill_mode="inside_slategray",  
             pars_boundary={},
             pars_distance={}
         ):
@@ -316,8 +334,9 @@ class InvertedAreaGeometry(AreaGeometry):
         show_boundary : bool
             Add the boundary line to the image
         fill_mode : str, optional
-            Add distances to image. Options:
-            all, inside, outside
+            Fill the area. Options:
+            dist, dist_inside, dist_outside, inside_<color>,
+            outside_<color>
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
@@ -486,8 +505,8 @@ class AreaUnion(AreaGeometry):
     def add_to_figure(
             self, 
             ax, 
-            show_boundary=True, 
-            fill_mode=None, 
+            show_boundary=False, 
+            fill_mode="inside_slategray", 
             pars_boundary={},
             pars_distance={}
         ):
@@ -501,8 +520,9 @@ class AreaUnion(AreaGeometry):
         show_boundary : bool
             Add the boundary line to the image
         fill_mode : str, optional
-            Add distances to image. Options:
-            all, inside, outside
+            Fill the area. Options:
+            dist, dist_inside, dist_outside, inside_<color>,
+            outside_<color>
         pars_boundary : dict
             Parameters for boundary plotting command
         pars_distance : dict
