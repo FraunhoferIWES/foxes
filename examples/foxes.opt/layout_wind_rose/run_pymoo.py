@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["CrespoHernandez_quadratic", "Bastankhah_linear"],
+        default=["Bastankhah_quadratic_k002"],
         nargs="+",
     )
     parser.add_argument(
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--min_dist", help="Minimal turbine distance in unit D", type=float, default=None)
     parser.add_argument("-A", "--opt_algo", help="The pymoo algorithm name", default="ga")
     parser.add_argument("-P", "--n_pop", help="The population size", type=int, default=50)
-    parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=300)
+    parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=100)
     parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
     args = parser.parse_args()
 
@@ -51,15 +51,20 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0., 0.], 1000.)
+    boundary = \
+        foxes.utils.geom2d.ClosedPolygon(np.array(
+        [[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)) \
+        + foxes.utils.geom2d.ClosedPolygon(np.array(
+        [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)) \
+        - foxes.utils.geom2d.Circle([-100., -100.], 700)
 
     farm = foxes.WindFarm(boundary=boundary)
     foxes.input.farm_layout.add_row(
         farm=farm,
         xy_base=np.zeros(2),
-        xy_step=np.array([50.0, 0.0]),
+        xy_step=np.array([50.0, 50.0]),
         n_turbines=args.n_t,
-        turbine_models=["layout_opt", "kTI_02", ttype.name],
+        turbine_models=["layout_opt", ttype.name],
     )
     states = foxes.input.states.StatesTable(
         data_source=args.states,
@@ -86,6 +91,7 @@ if __name__ == "__main__":
         problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
     problem.initialize()
 
+    
     solver = Optimizer_pymoo(
         problem,
         problem_pars=dict(
@@ -126,3 +132,41 @@ if __name__ == "__main__":
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)
+    
+
+
+    """
+    from iwopy import LocalFD
+    from iwopy.optimizers import GG
+    gproblem = LocalFD(problem, deltas=1., fd_order=1)
+    gproblem.initialize()
+
+    solver = GG(
+        gproblem,
+        step_max=100.0,
+        step_min=1.,
+        vectorized=not args.no_pop,
+    )
+    solver.initialize()
+    solver.print_info()
+
+    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+    plt.show()
+    plt.close(ax.get_figure())
+
+    results = solver.solve()
+    solver.finalize(results)
+
+    print()
+    print(results)
+
+    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+    plt.show()
+    plt.close(ax.get_figure())
+
+    o = foxes.output.FlowPlots2D(algo, results.problem_results)
+    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
+    farm.boundary.add_to_figure(fig.axes[0])
+    plt.show()
+    plt.close(fig)
+    """
