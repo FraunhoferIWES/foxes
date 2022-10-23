@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core.states import States
+from foxes.core import States, Data
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -23,9 +23,6 @@ class PopStates(States):
         The original states
     n_pop : int
         The population size
-    org_inds : array_like
-        The original states indices, if specified
-        in model_input_data
 
     """
 
@@ -33,7 +30,6 @@ class PopStates(States):
         super().__init__()
         self.states = states
         self.n_pop = n_pop
-        self.org_inds = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -50,6 +46,9 @@ class PopStates(States):
         if not self.states.initialized:
             self.states.initialize(algo, verbosity=verbosity)
         super().initialize(algo, verbosity)
+
+        self.STATE0 = self.var(FV.STATE + "0")
+        self.SMAP = self.var("SMAP")
         
     def size(self):
         """
@@ -112,18 +111,16 @@ class PopStates(States):
             if cname != FV.STATE:
                 idata["coords"][cname] = coord
             else:
-                self.org_inds = coord
+                idata["coords"][self.STATE0] = coord
 
         for dname, (dims0, data0) in idata0["data_vars"].items():
-            if dims0[0] == FV.STATE:
-                shp0 = list(data0.shape)
-                shp1 = [self.n_pop] + shp0
-                shp2 = [self.size()] + shp0[1:]
-                idata["data_vars"][dname] = np.zeros(shp1, dtype=FC.DTYPE)
-                idata["data_vars"][dname][:] = data0[None, :]
-                idata["data_vars"][dname] = (dims0, idata["data_vars"][dname].reshape(shp2))
-            else:
-                idata["data_vars"][dname] = (dims0, data0)
+            hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
+            idata["data_vars"][dname] = (hdims, data0)
+        
+        smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
+        smap[:] = np.arange(self.states.size())[None, :]
+        smap = smap.reshape(self.size())
+        idata["data_vars"][self.SMAP] = ((FV.STATE,), smap)
 
         return idata
 
@@ -169,7 +166,28 @@ class PopStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        return self.states.calculate(algo, mdata, fdata, pdata)
+
+        hdata = {}
+        hdims = {}
+        smap = mdata[self.SMAP]
+        for dname, data in mdata.items():
+            dms = mdata.dims[dname]
+            if dname == self.SMAP or dname == self.STATE0:
+                pass
+            elif dms[0] == self.STATE0:
+                hdata[dname] = data[smap]
+                hdims[dname] = tuple([FV.STATE] + list(dms)[1:])
+            elif self.STATE0 in dms:
+                raise ValueError(f"States '{self.name}': Found states variable not at dimension 0 for mdata entry '{dname}': {dms}")
+            else:
+                hdata[dname] = data
+                hdims[dname] = dms
+        hmdata = Data(hdata, hdims, mdata.loop_dims)
+        print("POP STATES HMDATA",hmdata.dims)
+
+        res = self.states.calculate(algo, hmdata, fdata, pdata)
+        print("RES",[(v,d.shape) for v,d in res.items()])
+        return res
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """

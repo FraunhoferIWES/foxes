@@ -360,8 +360,10 @@ class RotorModel(FarmDataModel):
 
         if store_rpoints:
             mdata[FV.RPOINTS] = rpoints
+            mdata.dims[FV.RPOINTS] = (FV.STATE, FV.TURBINE, FV.RPOINT, FV.XYH)
         if store_rweights:
             mdata[FV.RWEIGHTS] = weights
+            mdata.dims[FV.RWEIGHTS] = (FV.RPOINT,)
 
         svars = algo.states.output_point_vars(algo)
         points = rpoints.reshape(n_states, n_points, 3)
