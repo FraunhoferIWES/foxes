@@ -136,7 +136,7 @@ if __name__ == "__main__":
     plt.close(ax.get_figure())
 
     o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
+    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-100, xmax=1100, ymin=-350, ymax=1600)
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)
@@ -144,16 +144,16 @@ if __name__ == "__main__":
     
 
 
-    """
     from iwopy import LocalFD
     from iwopy.optimizers import GG
-    gproblem = LocalFD(problem, deltas=1., fd_order=1)
+    gproblem = LocalFD(problem, deltas=100., fd_order=2)
     gproblem.initialize()
 
     solver = GG(
         gproblem,
         step_max=100.0,
-        step_min=1.,
+        step_min=0.01,
+        step_div_factor=10.,
         vectorized=not args.no_pop,
     )
     solver.initialize()
@@ -174,8 +174,8 @@ if __name__ == "__main__":
     plt.close(ax.get_figure())
 
     o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
+    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-100, xmax=1100, ymin=-350, ymax=1600)
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)
-    """
+
