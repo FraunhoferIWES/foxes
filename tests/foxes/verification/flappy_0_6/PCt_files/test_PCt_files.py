@@ -24,7 +24,7 @@ class Test:
         ck = {FV.STATE: c}
 
         mbook = foxes.models.ModelBook()
-        ttype = foxes.models.turbine_types.PCtSingleFiles(
+        ttype = foxes.models.turbine_types.PCtTwoFiles(
             data_source_P=tPfile,
             data_source_ct=tCtfile,
             col_ws_P_file="ws",

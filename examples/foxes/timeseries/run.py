@@ -1,12 +1,10 @@
 import time
 import argparse
-import dask
-from dask.diagnostics import ProgressBar
 import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-from dask.distributed import Client, LocalCluster
+from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
@@ -47,8 +45,7 @@ def run_foxes(args):
 
     time0 = time.time()
 
-    with ProgressBar():
-        farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
 
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
@@ -123,22 +120,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # parallel run:
-    if args.scheduler == "distributed" or args.n_workers is not None:
-
-        print("Launching dask cluster..")
-        with LocalCluster(
+    with DaskRunner(
+            scheduler=args.scheduler, 
             n_workers=args.n_workers,
-            processes=True,
             threads_per_worker=args.threads_per_worker,
-        ) as cluster, Client(cluster) as client:
-
-            print(cluster)
-            print(f"Dashboard: {client.dashboard_link}\n")
-            run_foxes(args)
-            print("\n\nShutting down dask cluster")
-
-    # serial run:
-    else:
-        with dask.config.set(scheduler=args.scheduler):
-            run_foxes(args)
+        ) as runner:
+        
+        runner.run(run_foxes, args=(args,))

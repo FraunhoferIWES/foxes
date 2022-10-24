@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABCMeta
+from copy import deepcopy
 import dask
 from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
@@ -29,6 +30,10 @@ class Runner(metaclass=ABCMeta):
 
         """
         return self._initialized
+    
+    def __enter__(self):
+        self.initialize()
+        return self
 
     @abstractmethod
     def run(self, func, args=tuple(), kwargs={}):
@@ -57,6 +62,10 @@ class Runner(metaclass=ABCMeta):
         Finalize the runner
         """
         self._initialized = False
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.finalize()
+
 
 class DefaultRunner(Runner):
     """
@@ -128,8 +137,8 @@ class DaskRunner(Runner):
         processes=True,
         cluster_args=None,
         client_args={},
-        progress_bar=False,
-        verbosity=0,
+        progress_bar=True,
+        verbosity=1,
     ):
         super().__init__()
 
@@ -147,10 +156,9 @@ class DaskRunner(Runner):
         elif (
             n_workers is not None
             or threads_per_worker is not None
-            or processes is not None
         ):
             raise KeyError(
-                "Cannot handle 'n_workers', 'threads_per_worker' or 'processes' arguments if 'cluster_args' are provided"
+                "Cannot handle 'n_workers', 'threads_per_worker' arguments if 'cluster_args' are provided"
             )
         else:
             self.cluster_args = cluster_args
@@ -158,7 +166,6 @@ class DaskRunner(Runner):
         if scheduler is None and (
             n_workers is not None
             or threads_per_worker is not None
-            or processes is not None
             or cluster_args is not None
         ):
             self.scheduler = "distributed"
@@ -177,6 +184,10 @@ class DaskRunner(Runner):
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
         
+        else:
+            self._config0 = deepcopy(dask.config.config)
+            dask.config.config["scheduler"] = self.scheduler
+
         super().initialize()
 
     def print(self, *args, **kwargs):
@@ -223,4 +234,7 @@ class DaskRunner(Runner):
             self._client.close()
             self._cluster.close()
         
+        else:
+            dask.config.config["scheduler"] = self._config0
+
         super().finalize()

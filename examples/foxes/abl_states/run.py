@@ -1,12 +1,9 @@
 import time
 import argparse
-import dask
-from dask.diagnostics import ProgressBar
-from distributed import LocalCluster
 
 import foxes
 import foxes.variables as FV
-from dask.distributed import Client
+from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
@@ -48,8 +45,7 @@ def run_foxes(args):
 
     time0 = time.time()
 
-    with ProgressBar():
-        farm_results = algo.calc_farm()
+    farm_results = algo.calc_farm()
 
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
@@ -86,10 +82,6 @@ if __name__ == "__main__":
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
     parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
-    )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
@@ -99,6 +91,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
+    parser.add_argument(
+        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
+    )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-n",
         "--n_workers",
@@ -118,22 +114,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # parallel run:
-    if args.scheduler == "distributed" or args.n_workers is not None:
-
-        print("Launching dask cluster..")
-        with LocalCluster(
+    with DaskRunner(
+            scheduler=args.scheduler, 
             n_workers=args.n_workers,
-            processes=True,
             threads_per_worker=args.threads_per_worker,
-        ) as cluster, Client(cluster) as client:
+        ) as runner:
 
-            print(cluster)
-            print(f"Dashboard: {client.dashboard_link}\n")
-            run_foxes(args)
-            print("\n\nShutting down dask cluster")
-
-    # serial run:
-    else:
-        with dask.config.set(scheduler=args.scheduler):
-            run_foxes(args)
+        runner.run(run_foxes, args=(args,))
