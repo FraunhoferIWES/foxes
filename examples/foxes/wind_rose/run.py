@@ -89,10 +89,6 @@ if __name__ == "__main__":
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
     parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
-    )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
@@ -102,6 +98,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
+    parser.add_argument(
+        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
+    )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-n",
         "--n_workers",

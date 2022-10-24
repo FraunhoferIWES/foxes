@@ -55,7 +55,7 @@ class FarmOptProblem(Problem):
         super().__init__(name, **kwargs)
 
         self.algo = algo
-        self.runner = runner if runner is not None else DefaultRunner()
+        self.runner = runner
         self.pre_rotor = pre_rotor
         self.calc_farm_args = calc_farm_args
         self.sel_turbines = (
@@ -152,6 +152,12 @@ class FarmOptProblem(Problem):
             raise KeyError(
                 f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
             )
+
+        if self.runner is None:
+            self.runner = DefaultRunner()
+            self.runner.initialize()
+        elif not self.runner.initialized:
+            raise ValueError(f"FarmOptProblem '{self.name}': Runner not initialized.")
 
         super().initialize(verbosity)
 

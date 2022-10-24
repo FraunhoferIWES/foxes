@@ -84,14 +84,21 @@ if __name__ == "__main__":
         verbosity=0,
     )
 
-    problem = FarmLayoutOptProblem("layout_opt", algo)
+    runner = foxes.utils.runners.DaskRunner(
+        scheduler="distributed",
+        n_workers=None,
+        threads_per_worker=None,
+        verbosity=1,
+    )
+    runner.initialize()
+
+    problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
     problem.add_objective(MaxFarmPower(problem))
     problem.add_constraint(FarmBoundaryConstraint(problem))
     if args.min_dist is not None:
         problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
     problem.initialize()
 
-    
     solver = Optimizer_pymoo(
         problem,
         problem_pars=dict(
@@ -119,6 +126,7 @@ if __name__ == "__main__":
 
     results = solver.solve()
     solver.finalize(results)
+    runner.finalize()
 
     print()
     print(results)
@@ -132,6 +140,7 @@ if __name__ == "__main__":
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)
+
     
 
 
