@@ -1,5 +1,5 @@
 
-.. image:: ../../Logo_FOXES_IWES.svg
+.. image:: ../../Logo_FOXES_white.svg
     :align: center
 
 Welcome to FOXES

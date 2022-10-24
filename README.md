@@ -1,7 +1,7 @@
 # foxes
 ## Farm Optimization and eXtended yield Evaluation Software
 
-![](Logo_FOXES_IWES.svg)
+![](Logo_FOXES_white.svg)
 
 ## Overview
 The software `foxes` is a modular wind farm simulation and wake modelling toolbox which is based on engineering wake models. It has many applications, for example
