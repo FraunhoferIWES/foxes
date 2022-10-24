@@ -114,8 +114,9 @@ class PopStates(States):
                 idata["coords"][self.STATE0] = coord
 
         for dname, (dims0, data0) in idata0["data_vars"].items():
-            hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
-            idata["data_vars"][dname] = (hdims, data0)
+            if dname != FV.WEIGHT:
+                hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
+                idata["data_vars"][dname] = (hdims, data0)
         
         smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
         smap[:] = np.arange(self.states.size())[None, :]
@@ -183,11 +184,8 @@ class PopStates(States):
                 hdata[dname] = data
                 hdims[dname] = dms
         hmdata = Data(hdata, hdims, mdata.loop_dims)
-        print("POP STATES HMDATA",hmdata.dims)
 
-        res = self.states.calculate(algo, hmdata, fdata, pdata)
-        print("RES",[(v,d.shape) for v,d in res.items()])
-        return res
+        return self.states.calculate(algo, hmdata, fdata, pdata)
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """
