@@ -1,13 +1,11 @@
 import numpy as np
 import time
 import argparse
-import dask
-from dask.diagnostics import ProgressBar
 import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-from dask.distributed import Client, LocalCluster
+from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
@@ -52,8 +50,7 @@ def run_foxes(args):
 
     time0 = time.time()
 
-    with ProgressBar():
-        farm_results = algo.calc_farm()
+    farm_results = algo.calc_farm()
 
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
@@ -75,10 +72,9 @@ def run_foxes(args):
 
         time0 = time.time()
 
-        with ProgressBar():
-            point_results = algo.calc_points(
-                farm_results, points, vars_to_amb=[FV.WS, FV.TI]
-            )
+        point_results = algo.calc_points(
+            farm_results, points, vars_to_amb=[FV.WS, FV.TI]
+        )
 
         time1 = time.time()
         print("\nCalc time =", time1 - time0, "\n")
@@ -126,6 +122,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
     )
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument(
+        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+    )
+    parser.add_argument(
+        "-cl", "--calc_cline", help="Calculate centreline", action="store_true"
+    )
+    parser.add_argument(
+        "-cm", "--calc_mean", help="Calculate states mean", action="store_true"
+    )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
     )
@@ -144,37 +150,15 @@ if __name__ == "__main__":
         type=int,
         default=None,
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
-    parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
-    )
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
-    parser.add_argument(
-        "-cl", "--calc_cline", help="Calculate centreline", action="store_true"
-    )
-    parser.add_argument(
-        "-cm", "--calc_mean", help="Calculate states mean", action="store_true"
-    )
     args = parser.parse_args()
 
-    # parallel run:
-    if args.scheduler == "distributed" or args.n_workers is not None:
-
-        print("Launching dask cluster..")
-        with LocalCluster(
+    with DaskRunner(
+            scheduler=args.scheduler, 
             n_workers=args.n_workers,
-            processes=True,
             threads_per_worker=args.threads_per_worker,
-        ) as cluster, Client(cluster) as client:
-
-            print(cluster)
-            print(f"Dashboard: {client.dashboard_link}\n")
-            run_foxes(args)
-            print("\n\nShutting down dask cluster")
-
-    # serial run:
-    else:
-        with dask.config.set(scheduler=args.scheduler):
-            run_foxes(args)
+        ) as runner:
+        
+        runner.run(run_foxes, args=(args,))
