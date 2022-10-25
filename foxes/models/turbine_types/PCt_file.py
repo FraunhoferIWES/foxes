@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
@@ -96,6 +97,7 @@ class PCtFile(TurbineType):
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
+        self._data = None
 
     def output_farm_vars(self, algo):
         """
@@ -129,16 +131,26 @@ class PCtFile(TurbineType):
             The verbosity level
 
         """
-        if isinstance(self.source, pd.DataFrame):
-            data = self.source
-        else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
-            data = PandasFileHelper.read_file(fpath, **self.rpars)
+        if self._data is None:
+            if isinstance(self.source, pd.DataFrame):
+                self._data = self.source
+            else:
+                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
+                if verbosity > 0:
+                    if not Path(self.source).is_file():
+                        print(
+                            f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
+                        )
+                        print(f"Path: {fpath}")
+                    else:
+                        print(f"Turbine type '{self.name}': Reading file", self.source)
+                self._data = PandasFileHelper.read_file(fpath, **self.rpars)
 
-        data = data.set_index(self.col_ws).sort_index()
-        self.data_ws = data.index.to_numpy()
-        self.data_P = data[self.col_P].to_numpy()
-        self.data_ct = data[self.col_ct].to_numpy()
+            self._data = self._data.set_index(self.col_ws).sort_index()
+            self.data_ws = self._data.index.to_numpy()
+            self.data_P = self._data[self.col_P].to_numpy()
+            self.data_ct = self._data[self.col_ct].to_numpy()
+
         super().initialize(algo, st_sel, verbosity=verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
@@ -228,5 +240,5 @@ class PCtFile(TurbineType):
 
         """
         if clear_mem:
-            del self.data_ws, self.data_P, self.data_ct
+            del self._data, self.data_ws, self.data_P, self.data_ct
         super().finalize(algo, results, clear_mem, verbosity=verbosity)
