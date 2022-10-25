@@ -83,7 +83,7 @@ class AreaGeometry(metaclass=ABCMeta):
             show_boundary=False, 
             fill_mode="inside_slategray", 
             pars_boundary={},
-            pars_distance={}
+            pars_distance={},
         ):
         """
         Add image to (x,y) figure.

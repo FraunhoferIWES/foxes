@@ -61,7 +61,7 @@ if __name__ == "__main__":
     farm = foxes.WindFarm(boundary=boundary)
     foxes.input.farm_layout.add_row(
         farm=farm,
-        xy_base=np.zeros(2),
+        xy_base=np.array([500.0, 500.0]),
         xy_step=np.array([50.0, 50.0]),
         n_turbines=args.n_t,
         turbine_models=["layout_opt", ttype.name],
@@ -84,98 +84,61 @@ if __name__ == "__main__":
         verbosity=0,
     )
 
-    runner = foxes.utils.runners.DaskRunner(
+    with foxes.utils.runners.DaskRunner(
         scheduler="distributed",
         n_workers=None,
         threads_per_worker=None,
+        progress_bar=False,
         verbosity=1,
-    )
-    runner.initialize()
+    ) as runner:
 
-    problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
-    problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem))
-    if args.min_dist is not None:
-        problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
-    problem.initialize()
+        problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
+        problem.add_objective(MaxFarmPower(problem))
+        problem.add_constraint(FarmBoundaryConstraint(problem))
+        if args.min_dist is not None:
+            problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
+        problem.initialize()
 
-    solver = Optimizer_pymoo(
-        problem,
-        problem_pars=dict(
-            vectorize=not args.no_pop,
-        ),
-        algo_pars=dict(
-            type=args.opt_algo,
-            pop_size=args.n_pop,
-            seed=None,
-        ),
-        setup_pars=dict(),
-        term_pars=dict(
-            type="default",
-            n_max_gen=args.n_gen,
-            ftol=1e-6,
-            xtol=1e-6,
-        ),
-    )
-    solver.initialize()
-    solver.print_info()
+        solver = Optimizer_pymoo(
+            problem,
+            problem_pars=dict(
+                vectorize=not args.no_pop,
+            ),
+            algo_pars=dict(
+                type=args.opt_algo,
+                pop_size=args.n_pop,
+                seed=None,
+            ),
+            setup_pars=dict(),
+            term_pars=dict(
+                type="default",
+                n_max_gen=args.n_gen,
+                ftol=1e-6,
+                xtol=1e-6,
+            ),
+        )
+        solver.initialize()
+        solver.print_info()
 
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
 
-    results = solver.solve()
-    solver.finalize(results)
-    runner.finalize()
+        results = solver.solve()
+        solver.finalize(results)
 
-    print()
-    print(results)
+        print()
+        print(results)
 
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
 
-    o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-100, xmax=1100, ymin=-350, ymax=1600)
-    farm.boundary.add_to_figure(fig.axes[0])
-    plt.show()
-    plt.close(fig)
-
-    
-
-
-    from iwopy import LocalFD
-    from iwopy.optimizers import GG
-    gproblem = LocalFD(problem, deltas=100., fd_order=2)
-    gproblem.initialize()
-
-    solver = GG(
-        gproblem,
-        step_max=100.0,
-        step_min=0.01,
-        step_div_factor=10.,
-        vectorized=not args.no_pop,
-    )
-    solver.initialize()
-    solver.print_info()
-
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
-
-    results = solver.solve()
-    solver.finalize(results)
-
-    print()
-    print(results)
-
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
-
-    o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-100, xmax=1100, ymin=-350, ymax=1600)
-    farm.boundary.add_to_figure(fig.axes[0])
-    plt.show()
-    plt.close(fig)
-
+        o = foxes.output.FlowPlots2D(algo, results.problem_results)
+        p_min = np.array([-100., -350.]) 
+        p_max = np.array([1100., 1600.])
+        fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=p_min[0], xmax=p_max[0], ymin=p_min[1], ymax=p_max[1])
+        dpars = dict(alpha=0.6, zorder=10, p_min=np.array([-100., -350.]), p_max=np.array([1100., 1600.]))
+        farm.boundary.add_to_figure(fig.axes[0], fill_mode="outside_white", pars_distance=dpars)
+        plt.show()
+        plt.close(fig)
