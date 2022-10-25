@@ -108,7 +108,7 @@ class ClosedPolygon(AreaGeometry):
                 if np.any(sel):
 
                     x  = x[sel]
-                    y2 = np.linalg.norm(q[sel], axis=1)**2 - x**2
+                    y2 = np.maximum(np.linalg.norm(q[sel], axis=1)**2 - x**2, 0.)
 
                     dsel       = dists[sel]
                     dists[sel] = np.minimum(dsel, np.sqrt(y2))
