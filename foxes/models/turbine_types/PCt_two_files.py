@@ -110,6 +110,11 @@ class PCtTwoFiles(TurbineType):
         self.rpars_P = pd_file_read_pars_P
         self.rpars_ct = pd_file_read_pars_ct
 
+        self._data_P = None
+        self._data_ct = None
+        self._data_ws_P = None
+        self._data_ws_ct = None
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -143,25 +148,29 @@ class PCtTwoFiles(TurbineType):
 
         """
         # read power-curve
-        if isinstance(self.source_P, pd.DataFrame):
-            data_P = self.source_P
-        else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
-            data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
+        if self._data_P is None:
+            if isinstance(self.source_P, pd.DataFrame):
+                self._data_P = self.source_P
+            else:
+                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
+                self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
+
+            self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
+            self._data_ws_P = self._data_P.index.to_numpy()
+            self._data_P = self._data_P[self.col_P].to_numpy()
 
         # read ct-curve
-        if isinstance(self.source_ct, pd.DataFrame):
-            data_ct = self.source_ct
-        else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
-            data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
+        if self._data_ct is None:
+            if isinstance(self.source_ct, pd.DataFrame):
+                self._data_ct = self.source_ct
+            else:
+                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
+                self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
 
-        data_P = data_P.set_index(self.col_ws_P_file).sort_index()
-        data_ct = data_ct.set_index(self.col_ws_ct_file).sort_index()
-        self.data_ws_P = data_P.index.to_numpy()
-        self.data_ws_ct = data_ct.index.to_numpy()
-        self.data_P = data_P[self.col_P].to_numpy()
-        self.data_ct = data_ct[self.col_ct].to_numpy()
+            self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
+            self._data_ws_ct = self._data_ct.index.to_numpy()
+            self._data_ct = self._data_ct[self.col_ct].to_numpy()
+
         super().initialize(algo, st_sel, verbosity=verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
@@ -220,12 +229,11 @@ class PCtTwoFiles(TurbineType):
             FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
             FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP])),
         }
-
         out[FV.P][st_sel] = np.interp(
-            rews3, self.data_ws_P, self.data_P, left=0.0, right=0.0
+            rews3, self._data_ws_P, self._data_P, left=0.0, right=0.0
         )
         out[FV.CT][st_sel] = np.interp(
-            rews2, self.data_ws_ct, self.data_ct, left=0.0, right=0.0
+            rews2, self._data_ws_ct, self._data_ct, left=0.0, right=0.0
         )
 
         return out
@@ -251,5 +259,6 @@ class PCtTwoFiles(TurbineType):
 
         """
         if clear_mem:
-            del self.data_ws_P, self.data_ws_ct, self.data_P, self.data_ct
+            del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct
+
         super().finalize(algo, results, clear_mem, verbosity=verbosity)

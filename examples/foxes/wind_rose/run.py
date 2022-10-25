@@ -1,5 +1,6 @@
 import time
 import argparse
+import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
@@ -9,6 +10,8 @@ from foxes.utils.runners import DaskRunner
 def run_foxes(args):
 
     cks = None if args.nodask else {FV.STATE: args.chunksize}
+    if args.calc_mean:
+        cks[FV.POINT] = 4000
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
@@ -35,6 +38,11 @@ def run_foxes(args):
         turbine_models=[ttype.name, "kTI_02"] + args.tmodels,
     )
 
+    if args.show_layout:
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
+
     algo = foxes.algorithms.Downwind(
         mbook,
         farm,
@@ -57,6 +65,12 @@ def run_foxes(args):
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
+
+    if args.calc_mean:
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        fig = o.get_mean_fig_horizontal(FV.WS, resolution=30)
+        plt.show()
+
 
 if __name__ == "__main__":
 
@@ -92,6 +106,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
+    )
+    parser.add_argument(
+        "-sl",
+        "--show_layout",
+        help="Flag for showing layout figure",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-cm", "--calc_mean", help="Calculate states mean", action="store_true"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000

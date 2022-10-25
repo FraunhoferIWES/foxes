@@ -45,6 +45,21 @@ if __name__ == "__main__":
     parser.add_argument("-P", "--n_pop", help="The population size", type=int, default=50)
     parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=100)
     parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        help="The number of workers for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-tw",
+        "--threads_per_worker",
+        help="The number of threads per worker for distributed run",
+        type=int,
+        default=None,
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -85,9 +100,9 @@ if __name__ == "__main__":
     )
 
     with foxes.utils.runners.DaskRunner(
-        scheduler="distributed",
-        n_workers=None,
-        threads_per_worker=None,
+        scheduler=args.scheduler, 
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
         progress_bar=False,
         verbosity=1,
     ) as runner:
