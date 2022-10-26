@@ -46,3 +46,8 @@ Contents:
         :maxdepth: 2
 
         history
+
+    .. toctree::
+        :maxdepth: 2
+        
+        acknowledgements
