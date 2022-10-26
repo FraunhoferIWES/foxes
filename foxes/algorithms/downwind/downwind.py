@@ -140,12 +140,12 @@ class Downwind(Algorithm):
     def reset_states(self, states, **states_init_pars):
         """
         Reset the underlying states
-        
+
         Parameters
         ----------
         states : foxes.core.States
             The new states
-        
+
         """
         if states is not self.states:
             if self.initialized:
@@ -378,7 +378,9 @@ class Downwind(Algorithm):
         if not self.initialized:
             self.initialize(**states_init_pars)
         if not ambient and farm_results is None:
-            raise ValueError(f"Cannot calculate point results without farm results for ambient = {ambient}")
+            raise ValueError(
+                f"Cannot calculate point results without farm results for ambient = {ambient}"
+            )
 
         self._print_deco("calc_points", n_points=points.shape[1])
 
@@ -485,8 +487,8 @@ class Downwind(Algorithm):
         )
         point_results = mlist.run_calculation(
             self,
-            models_data, 
-            farm_results, 
+            models_data,
+            farm_results,
             point_data,
             out_vars=vars,
             parameters=calc_pars,

@@ -259,7 +259,7 @@ class StatesTable(States):
 
         """
         z = pdata[FV.POINTS][:, :, 2]
-        
+
         for i, v in enumerate(self.tvars):
             pdata[v][:] = mdata[self.DATA][:, i, None]
 

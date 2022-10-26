@@ -4,6 +4,7 @@ from foxes.core import States, Data
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class PopStates(States):
     """
     Helper class for vectorized opt population
@@ -16,7 +17,7 @@ class PopStates(States):
         The original states
     n_pop : int
         The population size
-    
+
     Attributes
     ----------
     states : foxes.core.States
@@ -49,7 +50,7 @@ class PopStates(States):
 
         self.STATE0 = self.var(FV.STATE + "0")
         self.SMAP = self.var("SMAP")
-        
+
     def size(self):
         """
         The total number of states.
@@ -77,7 +78,9 @@ class PopStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        weights = np.zeros((self.n_pop, self.states.size(), algo.n_turbines), dtype=FC.DTYPE)
+        weights = np.zeros(
+            (self.n_pop, self.states.size(), algo.n_turbines), dtype=FC.DTYPE
+        )
         weights[:] = self.states.weights(algo)[None, :, :] / self.n_pop
         return weights.reshape(self.size(), algo.n_turbines)
 
@@ -117,7 +120,7 @@ class PopStates(States):
             if dname != FV.WEIGHT:
                 hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
                 idata["data_vars"][dname] = (hdims, data0)
-        
+
         smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
         smap[:] = np.arange(self.states.size())[None, :]
         smap = smap.reshape(self.size())
@@ -179,7 +182,9 @@ class PopStates(States):
                 hdata[dname] = data[smap]
                 hdims[dname] = tuple([FV.STATE] + list(dms)[1:])
             elif self.STATE0 in dms:
-                raise ValueError(f"States '{self.name}': Found states variable not at dimension 0 for mdata entry '{dname}': {dms}")
+                raise ValueError(
+                    f"States '{self.name}': Found states variable not at dimension 0 for mdata entry '{dname}': {dms}"
+                )
             else:
                 hdata[dname] = data
                 hdims[dname] = dms

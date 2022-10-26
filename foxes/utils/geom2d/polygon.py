@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from .area_geometry import AreaGeometry
 
+
 class ClosedPolygon(AreaGeometry):
     """
     This class represents a closed 2D polygon.
@@ -31,9 +32,9 @@ class ClosedPolygon(AreaGeometry):
         if not np.all(points[0] == points[-1]):
             self.points = np.append(self.points, points[[0]], axis=0)
 
-        self.poly = Path(self.points, closed=True)  
+        self.poly = Path(self.points, closed=True)
 
-        self._pathp = None    
+        self._pathp = None
 
     def p_min(self):
         """
@@ -43,7 +44,7 @@ class ClosedPolygon(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The minimal (x,y) point, shape = (2,)
-        
+
         """
         return np.min(self.points, axis=0)
 
@@ -55,7 +56,7 @@ class ClosedPolygon(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The maximal (x,y) point, shape = (2,)
-        
+
         """
         return np.max(self.points, axis=0)
 
@@ -69,7 +70,7 @@ class ClosedPolygon(AreaGeometry):
             The probe points, shape (n_points, 2)
         return_nearest : bool
             Flag for return of the nearest point on bundary
-        
+
         Returns
         -------
         dist : numpy.ndarray
@@ -78,15 +79,15 @@ class ClosedPolygon(AreaGeometry):
         p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
-            
+
         """
 
         dists = cdist(points, self.points[:-1])
 
         if return_nearest:
-            mini  = np.argmin(dists, axis=1)
+            mini = np.argmin(dists, axis=1)
             dists = np.take_along_axis(dists, mini[:, None], axis=1)[:, 0]
-            minp  = self.points[mini] 
+            minp = self.points[mini]
             del mini
         else:
             dists = np.min(dists, axis=1)
@@ -94,36 +95,36 @@ class ClosedPolygon(AreaGeometry):
         for pi in range(len(self.points) - 1):
 
             pA = self.points[pi]
-            pB = self.points[pi+1]
-            n  = pB - pA
-            d  = np.linalg.norm(n)
+            pB = self.points[pi + 1]
+            n = pB - pA
+            d = np.linalg.norm(n)
 
             if d > 0:
 
-                n  /= d
-                q   = points - pA[None, :]
-                x   = np.einsum('pd,d->p', q, n)
+                n /= d
+                q = points - pA[None, :]
+                x = np.einsum("pd,d->p", q, n)
 
                 sel = (x > 0) & (x < d)
                 if np.any(sel):
 
-                    x  = x[sel]
-                    y2 = np.maximum(np.linalg.norm(q[sel], axis=1)**2 - x**2, 0.)
+                    x = x[sel]
+                    y2 = np.maximum(np.linalg.norm(q[sel], axis=1) ** 2 - x**2, 0.0)
 
-                    dsel       = dists[sel]
+                    dsel = dists[sel]
                     dists[sel] = np.minimum(dsel, np.sqrt(y2))
 
                     if return_nearest:
-                        mini        = np.argwhere(np.sqrt(y2) < dsel)
-                        hminp       = minp[sel]
+                        mini = np.argwhere(np.sqrt(y2) < dsel)
+                        hminp = minp[sel]
                         hminp[mini] = pA[None, :] + x[mini, None] * n[None, :]
-                        minp[sel]   = hminp
+                        minp[sel] = hminp
                         del mini, hminp
-                    
+
                     del y2, dsel
-                
+
                 del x, sel
-            
+
         if return_nearest:
             return dists, minp
         else:
@@ -137,23 +138,18 @@ class ClosedPolygon(AreaGeometry):
         ----------
         points : numpy.ndarray
             The probe points, shape (n_points, 2)
-        
+
         Returns
         -------
         inside : numpy.ndarray
             True if point is inside, shape: (n_points,)
-        
+
         """
         return self.poly.contains_points(points)
-    
+
     def add_to_figure(
-            self, 
-            ax, 
-            show_boundary=True, 
-            fill_mode=None, 
-            pars_boundary={},
-            pars_distance={}
-        ):
+        self, ax, show_boundary=True, fill_mode=None, pars_boundary={}, pars_distance={}
+    ):
         """
         Add image to (x,y) figure.
 
@@ -171,26 +167,23 @@ class ClosedPolygon(AreaGeometry):
             Parameters for boundary plotting command
         pars_distance : dict
             Parameters for distance plotting command
-        
-        """ 
+
+        """
         if show_boundary:
-            pars = dict(facecolor='none', edgecolor='darkblue', linewidth=1)
+            pars = dict(facecolor="none", edgecolor="darkblue", linewidth=1)
             pars.update(pars_boundary)
 
             pathpatch = PathPatch(self.poly, **pars)
             ax.add_patch(pathpatch)
 
-        super().add_to_figure(ax, show_boundary, fill_mode,
-            pars_boundary, pars_distance)
+        super().add_to_figure(
+            ax, show_boundary, fill_mode, pars_boundary, pars_distance
+        )
+
 
 if __name__ == "__main__":
 
-    points = np.array([
-        [1.,1.],
-        [1.3,6],
-        [5.8,6.2],
-        [6.5,0.8]
-    ])
+    points = np.array([[1.0, 1.0], [1.3, 6], [5.8, 6.2], [6.5, 0.8]])
     N = 500
 
     fig, ax = plt.subplots()
@@ -216,4 +209,3 @@ if __name__ == "__main__":
     g.add_to_figure(ax, fill_mode="dist_outside")
     plt.show()
     plt.close(fig)
-

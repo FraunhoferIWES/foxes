@@ -206,7 +206,7 @@ class FarmLayoutOutput(Output):
         elif annotate == 2:
             for i, t in enumerate(self.farm.turbines):
                 ax.annotate(t.name, (x[i], y[i]), size=fontsize)
-        
+
         if self.farm.boundary is not None:
             self.farm.boundary.add_to_figure(ax, **bargs)
 

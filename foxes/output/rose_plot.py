@@ -34,7 +34,9 @@ class RosePlotOutput(Output):
         elif dims[1] == FV.POINT:
             self._rtype = FV.POINT
         else:
-            raise KeyError(f"Results dimension 1 is neither '{FV.TURBINE}' nor '{FV.POINT}': dims = {results.dims}")
+            raise KeyError(
+                f"Results dimension 1 is neither '{FV.TURBINE}' nor '{FV.POINT}': dims = {results.dims}"
+            )
 
         self.results = results.to_dataframe()
 
@@ -92,15 +94,15 @@ class RosePlotOutput(Output):
         return dname, dname
 
     def get_data(
-            self,
-            sectors, 
-            var, 
-            var_bins, 
-            wd_var=FV.AMB_WD,
-            turbine=None,
-            point=None,
-            legend=None
-        ):
+        self,
+        sectors,
+        var,
+        var_bins,
+        wd_var=FV.AMB_WD,
+        turbine=None,
+        point=None,
+        legend=None,
+    ):
         """
         Get pandas DataFrame with wind rose data.
 
@@ -132,16 +134,16 @@ class RosePlotOutput(Output):
 
         """
 
-        dwd = 360. / sectors
-        wds = np.arange(0., 360., dwd)
-        wdb = np.arange(-dwd/2, 360., dwd)
+        dwd = 360.0 / sectors
+        wds = np.arange(0.0, 360.0, dwd)
+        wdb = np.arange(-dwd / 2, 360.0, dwd)
         lgd = legend if legend is not None else var
 
-        data      = self.results[[wd_var, FV.WEIGHT]].copy()
+        data = self.results[[wd_var, FV.WEIGHT]].copy()
         data[lgd] = self.results[var]
-        uv        = wd2uv(data[wd_var].to_numpy())
-        data['u'] = uv[:, 0]
-        data['v'] = uv[:, 1]
+        uv = wd2uv(data[wd_var].to_numpy())
+        data["u"] = uv[:, 0]
+        data["v"] = uv[:, 1]
 
         data[FV.WEIGHT] *= 100
         data = data.rename(columns={FV.WEIGHT: "frequency"})
@@ -151,38 +153,38 @@ class RosePlotOutput(Output):
             data = data.groupby(level=0).mean()
         else:
             sname = data.index.names[0]
-            grp   = data.reset_index().groupby(self._rtype)
-            data  = grp.get_group(el).set_index(sname)
+            grp = data.reset_index().groupby(self._rtype)
+            data = grp.get_group(el).set_index(sname)
 
-        data['wd'] = uv2wd(data[['u', 'v']].to_numpy())
-        data.drop(['u', 'v'], axis=1, inplace=True)
-        data.loc[data['wd'] > 360. - dwd/2, 'wd'] -= 360.
+        data["wd"] = uv2wd(data[["u", "v"]].to_numpy())
+        data.drop(["u", "v"], axis=1, inplace=True)
+        data.loc[data["wd"] > 360.0 - dwd / 2, "wd"] -= 360.0
 
-        data[wd_var] = pd.cut(data['wd'], wdb, labels=wds)
-        data[lgd]    = pd.cut(data[lgd], var_bins, right=False, include_lowest=True)
+        data[wd_var] = pd.cut(data["wd"], wdb, labels=wds)
+        data[lgd] = pd.cut(data[lgd], var_bins, right=False, include_lowest=True)
 
-        grp  = data[[wd_var, lgd, 'frequency']].groupby([wd_var, lgd])
+        grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd])
         data = grp.sum().reset_index()
 
         return data
 
     def get_figure(
-            self, 
-            sectors, 
-            var,
-            var_bins,  
-            wd_var=FV.AMB_WD,
-            turbine=None,
-            point=None,
-            cmap='Turbo', 
-            title=None, 
-            legend=None,
-            layout_dict={},
-            title_dict={}
-        ):
+        self,
+        sectors,
+        var,
+        var_bins,
+        wd_var=FV.AMB_WD,
+        turbine=None,
+        point=None,
+        cmap="Turbo",
+        title=None,
+        legend=None,
+        layout_dict={},
+        title_dict={},
+    ):
         """
         Creates px figure object
-        
+
         Parameters
         ----------
         sectors : int
@@ -214,60 +216,60 @@ class RosePlotOutput(Output):
             The rose plot figure
 
         """
-        
+
         if title is None or legend is None:
             ttl, lg = self.get_data_info(var)
         if title is not None:
             ttl = title
         if legend is not None:
             lg = legend
-        
-        wrdata = self.get_data(sectors=sectors, var=var, var_bins=var_bins,
-                                wd_var=wd_var, turbine=turbine, point=point, legend=lg)
+
+        wrdata = self.get_data(
+            sectors=sectors,
+            var=var,
+            var_bins=var_bins,
+            wd_var=wd_var,
+            turbine=turbine,
+            point=point,
+            legend=lg,
+        )
 
         cols = px.colors.sequential.__dict__.keys()
-        cols = [ c for c in cols if isinstance(px.colors.sequential.__dict__[c], list) ]
+        cols = [c for c in cols if isinstance(px.colors.sequential.__dict__[c], list)]
         cmap = px.colors.sequential.__dict__[cols[cols.index(cmap)]]
 
-        fig = px.bar_polar(wrdata, r="frequency", theta=wd_var,
-                            color=lg, color_discrete_sequence=cmap)
-
-        tdict = dict(
-            xanchor='center',
-            yanchor='top',
-            x=0.5, y=0.97
+        fig = px.bar_polar(
+            wrdata, r="frequency", theta=wd_var, color=lg, color_discrete_sequence=cmap
         )
+
+        tdict = dict(xanchor="center", yanchor="top", x=0.5, y=0.97)
         tdict.update(title_dict)
 
-        ldict = dict(
-            width=500, 
-            height=400,
-            margin=dict(l=50, r=50, t=50, b=50)
-        )
+        ldict = dict(width=500, height=400, margin=dict(l=50, r=50, t=50, b=50))
         ldict.update(layout_dict)
 
-        fig = fig.update_layout(title={'text': ttl, **tdict}, **ldict)
-        
+        fig = fig.update_layout(title={"text": ttl, **tdict}, **ldict)
+
         return fig
 
     def write_figure(
-            self, 
-            file_name,
-            sectors, 
-            var,
-            var_bins,  
-            wd_var=FV.AMB_WD,
-            turbine=None,
-            point=None,
-            cmap='Turbo', 
-            title=None, 
-            legend=None,
-            layout_dict={},
-            title_dict={}
-        ):
+        self,
+        file_name,
+        sectors,
+        var,
+        var_bins,
+        wd_var=FV.AMB_WD,
+        turbine=None,
+        point=None,
+        cmap="Turbo",
+        title=None,
+        legend=None,
+        layout_dict={},
+        title_dict={},
+    ):
         """
         Write rose plot to file
-        
+
         Parameters
         ----------
         file_name : str
@@ -294,13 +296,22 @@ class RosePlotOutput(Output):
             Optional parameters for the px figure layout
         title_dict : dict, optional
             Optional parameters for the px title layout
-        
+
         """
 
-        fig = self.get_figure(sectors=sectors, var=var, var_bins=var_bins, 
-                        wd_var=wd_var, turbine=turbine, point=point, cmap=cmap, 
-                        title=title, legend=legend, layout_dict=layout_dict, 
-                        title_dict=title_dict)
+        fig = self.get_figure(
+            sectors=sectors,
+            var=var,
+            var_bins=var_bins,
+            wd_var=wd_var,
+            turbine=turbine,
+            point=point,
+            cmap=cmap,
+            title=title,
+            legend=legend,
+            layout_dict=layout_dict,
+            title_dict=title_dict,
+        )
 
         fig.write_image(file_name)
 
@@ -323,15 +334,20 @@ class AmbientRosePlotOutput(RosePlotOutput):
     def __init__(self, states, point, mbook=None, ws_var=FV.AMB_REWS):
 
         farm = WindFarm()
-        farm.add_turbine(Turbine(
-            xy=point[:2], H=point[2], turbine_models=["null_type"],
-            ), verbosity=0)
+        farm.add_turbine(
+            Turbine(
+                xy=point[:2],
+                H=point[2],
+                turbine_models=["null_type"],
+            ),
+            verbosity=0,
+        )
 
         mbook = mbook if mbook is not None else ModelBook()
         algo = Downwind(mbook, farm, states, wake_models=[], verbosity=0)
 
         results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
-        
+
         algo.finalize()
         states.finalize(algo, results, clear_mem=False, verbosity=0)
 

@@ -24,10 +24,10 @@ def run_foxes(args):
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
     )
 
-    o = foxes.output.AmbientRosePlotOutput(states, point=[0., 0., 100.])
+    o = foxes.output.AmbientRosePlotOutput(states, point=[0.0, 0.0, 100.0])
     fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
     foxes.utils.show_plotly_fig(fig)
-    
+
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
         farm,
@@ -140,9 +140,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     with DaskRunner(
-            scheduler=args.scheduler, 
-            n_workers=args.n_workers,
-            threads_per_worker=args.threads_per_worker,
-        ) as runner:
-        
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
+    ) as runner:
+
         runner.run(run_foxes, args=(args,))

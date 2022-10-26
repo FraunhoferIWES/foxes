@@ -3,9 +3,10 @@ import numpy as np
 from foxes.opt.core.farm_constraint import FarmConstraint
 import foxes.variables as FV
 
+
 class MinDistConstraint(FarmConstraint):
     """
-    Turbines must keep at least a minimal 
+    Turbines must keep at least a minimal
     spatial distance.
 
     Parameters
@@ -37,14 +38,14 @@ class MinDistConstraint(FarmConstraint):
     """
 
     def __init__(
-            self,
-            problem, 
-            min_dist,
-            min_dist_unit="m",
-            name="dist", 
-            sel_turbines=None, 
-            **kwargs,
-        ):
+        self,
+        problem,
+        min_dist,
+        min_dist_unit="m",
+        name="dist",
+        sel_turbines=None,
+        **kwargs,
+    ):
         self.min_dist = min_dist
         self.min_dist_unit = min_dist_unit
 
@@ -57,8 +58,8 @@ class MinDistConstraint(FarmConstraint):
 
     def initialize(self, verbosity=0):
         N = self.farm.n_turbines
-        self._i2t = [] # i --> (ti, tj)
-        self._t2i = np.full([N, N], -1) # (ti, tj) --> i
+        self._i2t = []  # i --> (ti, tj)
+        self._t2i = np.full([N, N], -1)  # (ti, tj) --> i
         i = 0
         for ti in self.sel_turbines:
             for tj in range(N):
@@ -131,12 +132,15 @@ class MinDistConstraint(FarmConstraint):
         n_states = problem_results.dims[FV.STATE]
         n_turbines = problem_results.dims[FV.TURBINE]
 
-        xy = np.stack([problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()], axis=-1)
+        xy = np.stack(
+            [problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()],
+            axis=-1,
+        )
         if not np.all(np.abs(np.min(xy, axis=0) - np.max(xy, axis=0)) < 1e-13):
             raise ValueError(f"Constraint '{self.name}': Require state independet XY")
         xy = xy[0]
 
-        s = np.s_[:] 
+        s = np.s_[:]
         if components is not None and len(components) < self.n_components():
             s = components
 
@@ -150,7 +154,9 @@ class MinDistConstraint(FarmConstraint):
         elif self.min_dist_unit == "D":
             D = problem_results[FV.D].to_numpy()
             if not np.all(np.abs(np.min(D, axis=0) - np.max(D, axis=0)) < 1e-13):
-                raise ValueError(f"Constraint '{self.name}': Require state independet D")
+                raise ValueError(
+                    f"Constraint '{self.name}': Require state independet D"
+                )
             D = D[0]
 
             Da = np.take_along_axis(D, self._i2t[s][:, 0], axis=0)
@@ -185,13 +191,16 @@ class MinDistConstraint(FarmConstraint):
         n_states = problem_results["n_org_states"].values
         n_turbines = problem_results.dims[FV.TURBINE]
 
-        xy = np.stack([problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()], axis=-1)
+        xy = np.stack(
+            [problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()],
+            axis=-1,
+        )
         xy = xy.reshape(n_pop, n_states, n_turbines, 2)
         if not np.all(np.abs(np.min(xy, axis=1) - np.max(xy, axis=1)) < 1e-13):
             raise ValueError(f"Constraint '{self.name}': Require state independet XY")
         xy = xy[:, 0]
 
-        s = np.s_[:] 
+        s = np.s_[:]
         if components is not None and len(components) < self.n_components():
             s = components
 
@@ -205,7 +214,9 @@ class MinDistConstraint(FarmConstraint):
         elif self.min_dist_unit == "D":
             D = problem_results[FV.D].to_numpy().reshape(n_pop, n_states, n_turbines)
             if not np.all(np.abs(np.min(D, axis=1) - np.max(D, axis=1)) < 1e-13):
-                raise ValueError(f"Constraint '{self.name}': Require state independet D")
+                raise ValueError(
+                    f"Constraint '{self.name}': Require state independet D"
+                )
             D = D[:, 0]
 
             Da = np.take_along_axis(D, self._i2t[s][None, :, 0], axis=1)

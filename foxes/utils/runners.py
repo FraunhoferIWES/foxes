@@ -4,6 +4,7 @@ import dask
 from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
 
+
 class Runner(metaclass=ABCMeta):
     """
     Abstract base class for runners.
@@ -17,7 +18,7 @@ class Runner(metaclass=ABCMeta):
         Initialize the runner
         """
         self._initialized = True
-    
+
     @property
     def initialized(self):
         """
@@ -30,7 +31,7 @@ class Runner(metaclass=ABCMeta):
 
         """
         return self._initialized
-    
+
     def __enter__(self):
         self.initialize()
         return self
@@ -62,7 +63,7 @@ class Runner(metaclass=ABCMeta):
         Finalize the runner
         """
         self._initialized = False
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.finalize()
 
@@ -92,6 +93,7 @@ class DefaultRunner(Runner):
 
         """
         return func(*args, **kwargs)
+
 
 class DaskRunner(Runner):
     """
@@ -153,10 +155,7 @@ class DaskRunner(Runner):
                 processes=processes,
                 threads_per_worker=threads_per_worker,
             )
-        elif (
-            n_workers is not None
-            or threads_per_worker is not None
-        ):
+        elif n_workers is not None or threads_per_worker is not None:
             raise KeyError(
                 "Cannot handle 'n_workers', 'threads_per_worker' arguments if 'cluster_args' are provided"
             )
@@ -183,7 +182,7 @@ class DaskRunner(Runner):
 
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
-        
+
         else:
             self._config0 = deepcopy(dask.config.config)
             dask.config.config["scheduler"] = self.scheduler
@@ -233,7 +232,7 @@ class DaskRunner(Runner):
             self.print("\n\nShutting down dask cluster")
             self._client.close()
             self._cluster.close()
-        
+
         else:
             dask.config.config["scheduler"] = self._config0
 

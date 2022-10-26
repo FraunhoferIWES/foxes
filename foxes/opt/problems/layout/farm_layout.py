@@ -4,6 +4,7 @@ from foxes.opt.core import FarmOptProblem
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class FarmLayoutOptProblem(FarmOptProblem):
     """
     The turbine positioning optimization problem
@@ -24,7 +25,6 @@ class FarmLayoutOptProblem(FarmOptProblem):
 
     """
 
-
     def __init__(
         self,
         name,
@@ -34,10 +34,16 @@ class FarmLayoutOptProblem(FarmOptProblem):
         calc_farm_args={},
         **kwargs,
     ):
-        super().__init__(name, algo, runner, pre_rotor=True, 
-            sel_turbines=sel_turbines, calc_farm_args=calc_farm_args, 
-            **kwargs)
-        
+        super().__init__(
+            name,
+            algo,
+            runner,
+            pre_rotor=True,
+            sel_turbines=sel_turbines,
+            calc_farm_args=calc_farm_args,
+            **kwargs,
+        )
+
     def var_names_float(self):
         """
         The names of float variables.
@@ -66,7 +72,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         out = np.zeros((self.n_sel_turbines, 2), dtype=FC.DTYPE)
         for i, ti in enumerate(self.sel_turbines):
             out[i] = self.farm.turbines[ti].xy
-        return out.reshape(self.n_sel_turbines*2)
+        return out.reshape(self.n_sel_turbines * 2)
 
     def min_values_float(self):
         """
@@ -132,7 +138,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         xy = vars_float.reshape(self.n_sel_turbines, 2)
         farm_vars[FV.X][:] = xy[None, :, 0]
         farm_vars[FV.Y][:] = xy[None, :, 1]
-        
+
         return farm_vars
 
     def opt2farm_vars_population(self, vars_int, vars_float, n_states):
@@ -166,7 +172,7 @@ class FarmLayoutOptProblem(FarmOptProblem):
         xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
         farm_vars[FV.X][:] = xy[:, None, :, 0]
         farm_vars[FV.Y][:] = xy[:, None, :, 1]
-        
+
         return farm_vars
 
     def finalize_individual(self, vars_int, vars_float, verbosity=1):

@@ -7,6 +7,7 @@ from foxes.utils.runners import DefaultRunner
 import foxes.constants as FC
 from .pop_states import PopStates
 
+
 class FarmOptProblem(Problem):
     """
     Abstract base class of wind farm optimization problems.
@@ -61,7 +62,7 @@ class FarmOptProblem(Problem):
         self.sel_turbines = (
             sel_turbines if sel_turbines is not None else list(range(algo.n_turbines))
         )
-    
+
     def tvar(self, var, turbine_i):
         """
         Gets turbine variable name
@@ -72,7 +73,7 @@ class FarmOptProblem(Problem):
             The variable name
         turbine_i : int
             The turbine index
-        
+
         Returns
         -------
         str :
@@ -80,7 +81,7 @@ class FarmOptProblem(Problem):
 
         """
         return f"{var}_{turbine_i:04d}"
-    
+
     def parse_tvar(self, tvr):
         """
         Parse foxes variable name and turbine index
@@ -90,7 +91,7 @@ class FarmOptProblem(Problem):
         ----------
         tvr : str
             The turbine variable name
-        
+
         Returns
         -------
         var : str
@@ -114,7 +115,7 @@ class FarmOptProblem(Problem):
 
         """
         return len(self.sel_turbines)
-    
+
     @property
     def farm(self):
         """
@@ -245,7 +246,7 @@ class FarmOptProblem(Problem):
 
         # initialize algorithm:
         if not self.algo.initialized:
-            self.algo.initialize() # TODO: add optional parameters
+            self.algo.initialize()  # TODO: add optional parameters
         if isinstance(self.algo.states, PopStates):
             self.algo.reset_states(self.algo.states.states)
 
@@ -288,7 +289,7 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        
+
         # initialize algorithm:
         n_pop = len(vars_float)
         if not isinstance(self.algo.states, PopStates):
@@ -304,7 +305,9 @@ class FarmOptProblem(Problem):
             pre_rotor=self.pre_rotor
         )
         model = self.algo.mbook.turbine_models[self.name]
-        for v, vals in self.opt2farm_vars_population(vars_int, vars_float, n_states).items():
+        for v, vals in self.opt2farm_vars_population(
+            vars_int, vars_float, n_states
+        ).items():
             shp0 = list(vals.shape)
             shp1 = [self.algo.n_states] + shp0[2:]
             if self.all_turbines:
@@ -372,4 +375,3 @@ class FarmOptProblem(Problem):
         results = super().finalize_population(vars_int, vars_float, verbosity)
         self.algo.reset_states(self.algo.states.states)
         return results
-        

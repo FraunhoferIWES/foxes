@@ -4,6 +4,7 @@ import xarray as xr
 from foxes.opt.core.farm_objective import FarmObjective
 from foxes import variables as FV
 
+
 class FarmVarObjective(FarmObjective):
     """
     Objectives based on farm variables.
@@ -46,18 +47,19 @@ class FarmVarObjective(FarmObjective):
         The scaling factor
 
     """
+
     def __init__(
-            self, 
-            problem, 
-            name, 
-            variable,
-            contract_states,
-            contract_turbines,
-            minimize,
-            deps=None,
-            scale=1.,
-            **kwargs
-        ):
+        self,
+        problem,
+        name,
+        variable,
+        contract_states,
+        contract_turbines,
+        minimize,
+        deps=None,
+        scale=1.0,
+        **kwargs,
+    ):
         super().__init__(problem, name, **kwargs)
         self.variable = variable
         self.minimize = minimize
@@ -124,7 +126,7 @@ class FarmVarObjective(FarmObjective):
             v, ti = self.problem.parse_tvar(tvr)
             if v in self.deps and ti in self.sel_turbines:
                 out[0, i] = True
-        
+
         return out
 
     def _contract(self, data):
@@ -141,7 +143,9 @@ class FarmVarObjective(FarmObjective):
             elif rule == "mean":
                 data = data.mean(dim=dim)
             else:
-                raise ValueError(f"Objective '{self.name}': Unknown contraction for dimension '{dim}': '{rule}'. Choose: min, max, sum, mean")
+                raise ValueError(
+                    f"Objective '{self.name}': Unknown contraction for dimension '{dim}': '{rule}'. Choose: min, max, sum, mean"
+                )
         return data
 
     def calc_individual(self, vars_int, vars_float, problem_results, components=None):
@@ -171,7 +175,7 @@ class FarmVarObjective(FarmObjective):
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
-        
+
         return np.array([data], dtype=np.float64)
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
@@ -199,13 +203,17 @@ class FarmVarObjective(FarmObjective):
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
         n_turbines = problem_results.dims[FV.TURBINE]
-        data = problem_results[self.variable].to_numpy().reshape(n_pop, n_states, n_turbines)
+        data = (
+            problem_results[self.variable]
+            .to_numpy()
+            .reshape(n_pop, n_states, n_turbines)
+        )
         data = xr.DataArray(data, dims=(FV.POP, FV.STATE, FV.TURBINE))
 
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
 
-        return self._contract(data/self.scale).to_numpy()[:, None]
+        return self._contract(data / self.scale).to_numpy()[:, None]
 
     def finalize_individual(self, vars_int, vars_float, problem_results, verbosity=1):
         """
@@ -229,7 +237,13 @@ class FarmVarObjective(FarmObjective):
             The component values, shape: (n_components,)
 
         """
-        return super().finalize_individual(vars_int, vars_float, problem_results, verbosity) * self.scale
+        return (
+            super().finalize_individual(
+                vars_int, vars_float, problem_results, verbosity
+            )
+            * self.scale
+        )
+
 
 class MaxFarmPower(FarmVarObjective):
     """
@@ -245,17 +259,13 @@ class MaxFarmPower(FarmVarObjective):
         Additional parameters for `FarmVarObjective`
 
     """
-    def __init__(
-            self, 
-            problem, 
-            name="maximize_power", 
-            **kwargs
-        ):
+
+    def __init__(self, problem, name="maximize_power", **kwargs):
 
         if "scale" in kwargs:
             scale = kwargs.pop("scale")
         else:
-            scale = 0.
+            scale = 0.0
             ttypes = problem.algo.mbook.turbine_types
             for t in problem.farm.turbines:
                 for mname in t.models:
@@ -264,8 +274,8 @@ class MaxFarmPower(FarmVarObjective):
                         break
 
         super().__init__(
-            problem, 
-            name, 
+            problem,
+            name,
             variable=FV.P,
             contract_states="mean",
             contract_turbines="sum",

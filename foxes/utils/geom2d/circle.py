@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from .area_geometry import AreaGeometry
 
+
 class Circle(AreaGeometry):
     """
     This class represents the area of a circle.
@@ -35,7 +36,7 @@ class Circle(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The minimal (x,y) point, shape = (2,)
-        
+
         """
         return self.centre - self.radius
 
@@ -47,7 +48,7 @@ class Circle(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The maximal (x,y) point, shape = (2,)
-        
+
         """
         return self.centre + self.radius
 
@@ -61,7 +62,7 @@ class Circle(AreaGeometry):
             The probe points, shape (n_points, 2)
         return_nearest : bool
             Flag for return of the nearest point on bundary
-        
+
         Returns
         -------
         dist : numpy.ndarray
@@ -70,15 +71,15 @@ class Circle(AreaGeometry):
         p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
-            
+
         """
 
         deltas = points - self.centre[None, :]
         magd = np.linalg.norm(deltas, axis=-1)
         dists = np.abs(magd - self.radius)
-            
+
         if return_nearest:
-            sel = magd > 0.
+            sel = magd > 0.0
             if np.all(sel):
                 minp = self.centre + deltas / magd[:, None] * self.radius
             else:
@@ -98,24 +99,19 @@ class Circle(AreaGeometry):
         ----------
         points : numpy.ndarray
             The probe points, shape (n_points, 2)
-        
+
         Returns
         -------
         inside : numpy.ndarray
             True if point is inside, shape: (n_points,)
-        
+
         """
         magd = np.linalg.norm(points - self.centre[None, :], axis=-1)
         return magd <= self.radius
-    
+
     def add_to_figure(
-            self, 
-            ax, 
-            show_boundary=True, 
-            fill_mode=None, 
-            pars_boundary={},
-            pars_distance={}
-        ):
+        self, ax, show_boundary=True, fill_mode=None, pars_boundary={}, pars_distance={}
+    ):
         """
         Add image to (x,y) figure.
 
@@ -133,21 +129,23 @@ class Circle(AreaGeometry):
             Parameters for boundary plotting command
         pars_distance : dict
             Parameters for distance plotting command
-        
+
         """
         if show_boundary:
-            pars = dict(color='darkblue', linewidth=1, fill=False)
+            pars = dict(color="darkblue", linewidth=1, fill=False)
             pars.update(pars_boundary)
 
             circle = plt.Circle(self.centre, self.radius, **pars)
             ax.add_patch(circle)
 
-        super().add_to_figure(ax, show_boundary, fill_mode,
-            pars_boundary, pars_distance)
+        super().add_to_figure(
+            ax, show_boundary, fill_mode, pars_boundary, pars_distance
+        )
+
 
 if __name__ == "__main__":
 
-    centre = np.array([3.,4.])
+    centre = np.array([3.0, 4.0])
     radius = 2.5
     N = 500
 

@@ -76,7 +76,7 @@ class PCtFile(TurbineType):
         var_ws_ct=FV.REWS2,
         var_ws_P=FV.REWS3,
         pd_file_read_pars={},
-        **parameters
+        **parameters,
     ):
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)
