@@ -2,7 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are: 
+The supported Python versions are:
 
 - `Python 3.7`
 - `Python 3.8`
