@@ -11,6 +11,11 @@ Welcome to FOXES
 by Fraunhofer IWES. It can be used for wind farm planning, post-construction
 analysis and wind farm optimization.
 
+The calculation is fully vectorized and its fast performance is owed to `dask <https://www.dask.org/>`_.
+Also the parallelization on local or remote clusters is enabled via `dask`. The wind farm
+optimization capabilities invoke the `iwopy <https://github.com/FraunhoferIWES/iwopy>`_
+package which as well supports vectorization.
+
 **Quick Start**::
 
     pip install foxes

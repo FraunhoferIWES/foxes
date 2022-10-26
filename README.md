@@ -13,7 +13,9 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 - Wake model studies, comparison and validation,
 - Wind farm simulations invoking complex model chains.
 
-The currently implemented wake models implicitly assume time scales of 10 minutes or longer, or statistical input data like wind roses or other distributions.
+The calculation is fully vectorized and its fast performance is owed to [dask](https://www.dask.org/). Also the parallelization on local or remote clusters is enabled via `dask`. The wind farm
+optimization capabilities invoke the [iwopy](https://github.com/FraunhoferIWES/iwopy) package which
+as well supports vectorization.
 
 `foxes` is build upon many years of experience with wake model code development at IWES, starting with the C++ based in-house code _flapFOAM_ (2011-2019) and the Python based direct predecessor _flappy_ (2019-2022).
 
