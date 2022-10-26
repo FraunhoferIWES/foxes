@@ -152,7 +152,9 @@ class PCtTwoFiles(TurbineType):
             if isinstance(self.source_P, pd.DataFrame):
                 self._data_P = self.source_P
             else:
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_P, check_raw=True
+                )
                 self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
 
             self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
@@ -164,7 +166,9 @@ class PCtTwoFiles(TurbineType):
             if isinstance(self.source_ct, pd.DataFrame):
                 self._data_ct = self.source_ct
             else:
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_ct, check_raw=True
+                )
                 self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
 
             self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()

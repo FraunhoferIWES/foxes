@@ -41,16 +41,30 @@ if __name__ == "__main__":
     )
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
-    parser.add_argument("-d", "--min_dist", help="Minimal turbine distance in unit D", type=float, default=None)
-    parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
-    parser.add_argument("-O", "--fd_order", help="Finite difference derivative order", type=int, default=1)
+    parser.add_argument(
+        "-d",
+        "--min_dist",
+        help="Minimal turbine distance in unit D",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
+    )
+    parser.add_argument(
+        "-O",
+        "--fd_order",
+        help="Finite difference derivative order",
+        type=int,
+        default=1,
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0., 0.], 1000.)
+    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0)
 
     farm = foxes.WindFarm(boundary=boundary)
     foxes.input.farm_layout.add_row(
@@ -80,12 +94,14 @@ if __name__ == "__main__":
 
     problem = FarmLayoutOptProblem("layout_opt", algo)
     problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem, tol=1.))
+    problem.add_constraint(FarmBoundaryConstraint(problem, tol=1.0))
     if args.min_dist is not None:
-        problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
-    gproblem = LocalFD(problem, deltas=1., fd_order=args.fd_order)
+        problem.add_constraint(
+            MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D")
+        )
+    gproblem = LocalFD(problem, deltas=1.0, fd_order=args.fd_order)
     gproblem.initialize()
-    
+
     solver = Optimizer_pygmo(
         gproblem,
         problem_pars=dict(pop=not args.no_pop),
@@ -109,7 +125,9 @@ if __name__ == "__main__":
     plt.close(ax.get_figure())
 
     o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100)
+    fig = o.get_mean_fig_horizontal(
+        "WS", resolution=20, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100
+    )
     farm.boundary.add_to_figure(fig.axes[0])
     plt.show()
     plt.close(fig)

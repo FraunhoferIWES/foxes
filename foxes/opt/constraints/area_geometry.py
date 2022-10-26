@@ -3,6 +3,7 @@ import numpy as np
 from foxes.opt.core.farm_constraint import FarmConstraint
 import foxes.variables as FV
 
+
 class AreaGeometryConstraint(FarmConstraint):
     """
     Constrains turbine positions to the inside
@@ -33,13 +34,13 @@ class AreaGeometryConstraint(FarmConstraint):
     """
 
     def __init__(
-            self,
-            problem, 
-            name, 
-            geometry, 
-            sel_turbines=None, 
-            **kwargs,
-        ):
+        self,
+        problem,
+        name,
+        geometry,
+        sel_turbines=None,
+        **kwargs,
+    ):
         self.geometry = geometry
 
         selt = problem.sel_turbines if sel_turbines is None else sel_turbines
@@ -49,9 +50,10 @@ class AreaGeometryConstraint(FarmConstraint):
             vrs += [problem.tvar(FV.X, ti), problem.tvar(FV.Y, ti)]
             cns.append(f"{name}_{ti:04d}")
 
-        super().__init__(problem, name, sel_turbines, 
-            vnames_float=vrs, cnames=cns, **kwargs)
-        
+        super().__init__(
+            problem, name, sel_turbines, vnames_float=vrs, cnames=cns, **kwargs
+        )
+
     def n_components(self):
         """
         Returns the number of components of the
@@ -105,7 +107,7 @@ class AreaGeometryConstraint(FarmConstraint):
             The component values, shape: (n_sel_components,)
 
         """
-        s = np.s_[:] 
+        s = np.s_[:]
         if components is not None and len(components) < self.n_components():
             s = components
         xy = vars_float.reshape(self.n_components(), 2)[s]
@@ -139,7 +141,7 @@ class AreaGeometryConstraint(FarmConstraint):
         """
         n_pop = len(vars_float)
         n_cmpnts = self.n_components()
-        s = np.s_[:] 
+        s = np.s_[:]
         if components is not None and len(components) < self.n_components():
             n_cmpnts = len(components)
             s = components

@@ -7,6 +7,7 @@ import foxes
 import foxes.variables as FV
 from foxes.utils.runners import DaskRunner
 
+
 def run_foxes(args):
 
     cks = (
@@ -129,9 +130,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     with DaskRunner(
-            scheduler=args.scheduler, 
-            n_workers=args.n_workers,
-            threads_per_worker=args.threads_per_worker,
-        ) as runner:
-        
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
+    ) as runner:
+
         runner.run(run_foxes, args=(args,))

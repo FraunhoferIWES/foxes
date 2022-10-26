@@ -40,11 +40,25 @@ if __name__ == "__main__":
     )
     parser.add_argument("--ti", help="The TI value", type=float, default=0.04)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
-    parser.add_argument("-d", "--min_dist", help="Minimal turbine distance in unit D", type=float, default=None)
-    parser.add_argument("-A", "--opt_algo", help="The pymoo algorithm name", default="ga")
-    parser.add_argument("-P", "--n_pop", help="The population size", type=int, default=50)
-    parser.add_argument("-G", "--n_gen", help="The nmber of generations", type=int, default=100)
-    parser.add_argument("-nop", "--no_pop", help="Switch off vectorization", action="store_true")
+    parser.add_argument(
+        "-d",
+        "--min_dist",
+        help="Minimal turbine distance in unit D",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="ga"
+    )
+    parser.add_argument(
+        "-P", "--n_pop", help="The population size", type=int, default=50
+    )
+    parser.add_argument(
+        "-G", "--n_gen", help="The nmber of generations", type=int, default=100
+    )
+    parser.add_argument(
+        "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
+    )
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-n",
@@ -66,12 +80,15 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = \
-        foxes.utils.geom2d.ClosedPolygon(np.array(
-        [[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)) \
-        + foxes.utils.geom2d.ClosedPolygon(np.array(
-        [[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)) \
-        - foxes.utils.geom2d.Circle([-100., -100.], 700)
+    boundary = (
+        foxes.utils.geom2d.ClosedPolygon(
+            np.array([[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)
+        )
+        + foxes.utils.geom2d.ClosedPolygon(
+            np.array([[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)
+        )
+        - foxes.utils.geom2d.Circle([-100.0, -100.0], 700)
+    )
 
     farm = foxes.WindFarm(boundary=boundary)
     foxes.input.farm_layout.add_row(
@@ -100,7 +117,7 @@ if __name__ == "__main__":
     )
 
     with foxes.utils.runners.DaskRunner(
-        scheduler=args.scheduler, 
+        scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
         progress_bar=False,
@@ -111,7 +128,9 @@ if __name__ == "__main__":
         problem.add_objective(MaxFarmPower(problem))
         problem.add_constraint(FarmBoundaryConstraint(problem))
         if args.min_dist is not None:
-            problem.add_constraint(MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D"))
+            problem.add_constraint(
+                MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D")
+            )
         problem.initialize()
 
         solver = Optimizer_pymoo(
@@ -150,10 +169,24 @@ if __name__ == "__main__":
         plt.close(ax.get_figure())
 
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
-        p_min = np.array([-100., -350.]) 
-        p_max = np.array([1100., 1600.])
-        fig = o.get_mean_fig_horizontal("WS", resolution=20, xmin=p_min[0], xmax=p_max[0], ymin=p_min[1], ymax=p_max[1])
-        dpars = dict(alpha=0.6, zorder=10, p_min=np.array([-100., -350.]), p_max=np.array([1100., 1600.]))
-        farm.boundary.add_to_figure(fig.axes[0], fill_mode="outside_white", pars_distance=dpars)
+        p_min = np.array([-100.0, -350.0])
+        p_max = np.array([1100.0, 1600.0])
+        fig = o.get_mean_fig_horizontal(
+            "WS",
+            resolution=20,
+            xmin=p_min[0],
+            xmax=p_max[0],
+            ymin=p_min[1],
+            ymax=p_max[1],
+        )
+        dpars = dict(
+            alpha=0.6,
+            zorder=10,
+            p_min=np.array([-100.0, -350.0]),
+            p_max=np.array([1100.0, 1600.0]),
+        )
+        farm.boundary.add_to_figure(
+            fig.axes[0], fill_mode="outside_white", pars_distance=dpars
+        )
         plt.show()
         plt.close(fig)

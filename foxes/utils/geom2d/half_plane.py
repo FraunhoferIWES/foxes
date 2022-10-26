@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from .area_geometry import AreaGeometry
 
+
 class HalfPlane(AreaGeometry):
     """
     This class represents a half plane in 2d.
@@ -39,15 +40,15 @@ class HalfPlane(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The minimal (x,y) point, shape = (2,)
-        
+
         """
-        if np.linalg.norm(self.n - np.array([1,0])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
             return np.array([self.centre[0], -np.inf], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([-1,0])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
             return np.array([-np.inf, -np.inf], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([0,1])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
             return np.array([-np.inf, self.centre[1]], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([0,-1])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
             return np.array([-np.inf, -np.inf], dtype=np.float64)
 
         return np.array([-np.inf, -np.inf], dtype=np.float64)
@@ -60,15 +61,15 @@ class HalfPlane(AreaGeometry):
         -------
         p_min : numpy.ndarray
             The maximal (x,y) point, shape = (2,)
-        
+
         """
-        if np.linalg.norm(self.n - np.array([1,0])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([1, 0])) < 1e-13:
             return np.array([np.inf, np.inf], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([-1,0])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([-1, 0])) < 1e-13:
             return np.array([self.centre[0], np.inf], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([0,1])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([0, 1])) < 1e-13:
             return np.array([np.inf, np.inf], dtype=np.float64)
-        if np.linalg.norm(self.n - np.array([0,-1])) < 1e-13:
+        if np.linalg.norm(self.n - np.array([0, -1])) < 1e-13:
             return np.array([np.inf, self.centre[1]], dtype=np.float64)
 
         return np.array([np.inf, np.inf], dtype=np.float64)
@@ -83,7 +84,7 @@ class HalfPlane(AreaGeometry):
             The probe points, shape (n_points, 2)
         return_nearest : bool
             Flag for return of the nearest point on bundary
-        
+
         Returns
         -------
         dist : numpy.ndarray
@@ -92,14 +93,14 @@ class HalfPlane(AreaGeometry):
         p_nearest : numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
-            
+
         """
 
         deltas = points - self.centre[None, :]
-        x = np.einsum('pd,d->p', deltas, self.n)
-            
+        x = np.einsum("pd,d->p", deltas, self.n)
+
         if return_nearest:
-            y = np.einsum('pd,d->p', deltas, self.m)
+            y = np.einsum("pd,d->p", deltas, self.m)
             nerst = self.centre[None, :] + y[:, None] * self.m[None, :]
             return np.abs(x), nerst
         else:
@@ -113,25 +114,20 @@ class HalfPlane(AreaGeometry):
         ----------
         points : numpy.ndarray
             The probe points, shape (n_points, 2)
-        
+
         Returns
         -------
         inside : numpy.ndarray
             True if point is inside, shape: (n_points,)
-        
+
         """
         deltas = points - self.centre[None, :]
-        x = np.einsum('pd,d->p', deltas, self.n)
-        return x >= 0.
-    
+        x = np.einsum("pd,d->p", deltas, self.n)
+        return x >= 0.0
+
     def add_to_figure(
-            self, 
-            ax, 
-            show_boundary=True, 
-            fill_mode=None, 
-            pars_boundary={},
-            pars_distance={}
-        ):
+        self, ax, show_boundary=True, fill_mode=None, pars_boundary={}, pars_distance={}
+    ):
         """
         Add image to (x,y) figure.
 
@@ -149,16 +145,17 @@ class HalfPlane(AreaGeometry):
             Parameters for boundary plotting command
         pars_distance : dict
             Parameters for distance plotting command
-        
+
         """
         if show_boundary:
-            pars = dict(color='darkblue', linewidth=1)
+            pars = dict(color="darkblue", linewidth=1)
             pars.update(pars_boundary)
 
             ax.axline(tuple(self.centre), tuple(self.centre + self.m), **pars)
 
-        super().add_to_figure(ax, show_boundary, fill_mode,
-            pars_boundary, pars_distance)
+        super().add_to_figure(
+            ax, show_boundary, fill_mode, pars_boundary, pars_distance
+        )
 
     def inverse(self):
         """
@@ -172,14 +169,15 @@ class HalfPlane(AreaGeometry):
         """
         return HalfPlane(self.centre, -self.n)
 
+
 if __name__ == "__main__":
 
     from .circle import Circle
 
     p0 = [4, 5]
-    n = [1., 0.3]
+    n = [1.0, 0.3]
 
-    centre = np.array([3.,4.])
+    centre = np.array([3.0, 4.0])
     radius = 2.5
     N = 500
 

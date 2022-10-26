@@ -32,7 +32,9 @@ class FarmConstraint(Constraint):
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
         super().__init__(problem, name, **kwargs)
         self.farm = problem.farm
-        self.sel_turbines = problem.sel_turbines if sel_turbines is None else sel_turbines
+        self.sel_turbines = (
+            problem.sel_turbines if sel_turbines is None else sel_turbines
+        )
 
     @property
     def n_sel_turbines(self):
@@ -46,7 +48,7 @@ class FarmConstraint(Constraint):
 
         """
         return len(self.sel_turbines)
-        
+
     def add_to_layout_figure(self, ax, **kwargs):
         """
         Add to a layout figure
