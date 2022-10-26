@@ -1,5 +1,5 @@
 
-.. image:: ../../Logo_FOXES_white.svg
+.. image:: ../../Logo_FOXES.svg
     :align: center
 
 Welcome to FOXES
@@ -8,8 +8,12 @@ Welcome to FOXES
 *Farm Optimization and eXtended yield Evaluation Software*
 
 *FOXES* is a modular wind farm and wake modelling code written in Python 
-by Fraunhofer IWES. It can be used for wind farm planning, post-construction
-analysis and wind farm optimization.
+by Fraunhofer IWES. It has many applications, for example
+
+* Wind farm optimization, e.g. layout optimization or wake steering,
+* Wind farm post-construction analysis,
+* Wake model studies, comparison and validation,
+* Wind farm simulations invoking complex model chains.
 
 The calculation is fully vectorized and its fast performance is owed to `dask <https://www.dask.org/>`_.
 Also the parallelization on local or remote clusters is enabled via `dask`. The wind farm

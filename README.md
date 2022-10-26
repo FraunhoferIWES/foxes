@@ -1,8 +1,6 @@
-# foxes
+# Welcome to foxes
 
-## Farm Optimization and eXtended yield Evaluation Software
-
-![FOXES Logo](Logo_FOXES_white.svg)
+![FOXES Logo](Logo_FOXES.svg)
 
 ## Overview
 
