@@ -164,29 +164,19 @@ if __name__ == "__main__":
         print()
         print(results)
 
-        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-        plt.show()
-        plt.close(ax.get_figure())
+        fig, axs = plt.subplots(1, 2, figsize=(12, 8))
+
+        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
 
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
         p_min = np.array([-100.0, -350.0])
         p_max = np.array([1100.0, 1600.0])
-        fig = o.get_mean_fig_horizontal(
-            "WS",
-            resolution=20,
-            xmin=p_min[0],
-            xmax=p_max[0],
-            ymin=p_min[1],
-            ymax=p_max[1],
-        )
-        dpars = dict(
-            alpha=0.6,
-            zorder=10,
-            p_min=np.array([-100.0, -350.0]),
-            p_max=np.array([1100.0, 1600.0]),
-        )
+        fig = o.get_mean_fig_horizontal("WS", resolution=20, fig=fig, ax=axs[1],
+            xmin=p_min[0], xmax=p_max[0], ymin=p_min[1], ymax=p_max[1])
+        dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)
         farm.boundary.add_to_figure(
-            fig.axes[0], fill_mode="outside_white", pars_distance=dpars
+            axs[1], fill_mode="outside_white", pars_distance=dpars
         )
+
         plt.show()
         plt.close(fig)
