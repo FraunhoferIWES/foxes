@@ -5,7 +5,6 @@ from iwopy import LocalFD
 from iwopy.optimizers import GG
 
 import foxes
-import foxes.variables as FV
 from foxes.opt.problems.layout import FarmLayoutOptProblem
 from foxes.opt.constraints import FarmBoundaryConstraint, MinDistConstraint
 from foxes.opt.objectives import MaxFarmPower
@@ -22,12 +21,6 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument(
-        "-s",
-        "--states",
-        help="The states input file (path or static)",
-        default="wind_rose_bremen.csv",
-    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-w",
@@ -39,7 +32,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="auto"
     )
-    parser.add_argument("--ti", help="The TI value", type=float, default=0.04)
+    parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
+    parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
+    parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
         "-d",
@@ -49,7 +44,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="ga"
     )
     parser.add_argument(
         "-O",
@@ -57,6 +52,9 @@ if __name__ == "__main__":
         help="Finite difference derivative order",
         type=int,
         default=1,
+    )
+    parser.add_argument(
+        "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
     )
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
@@ -79,30 +77,18 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = (
-        foxes.utils.geom2d.ClosedPolygon(
-            np.array([[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)
-        )
-        + foxes.utils.geom2d.ClosedPolygon(
-            np.array([[500, 0], [500, 1500], [1000, 1500], [1000, 0]], dtype=np.float64)
-        )
-        - foxes.utils.geom2d.Circle([-100.0, -100.0], 700)
-    )
+    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0)
 
     farm = foxes.WindFarm(boundary=boundary)
     foxes.input.farm_layout.add_row(
         farm=farm,
-        xy_base=np.array([500.0, 500.0]),
-        xy_step=np.array([50.0, 50.0]),
+        xy_base=np.zeros(2),
+        xy_step=np.array([50.0, 0.0]),
         n_turbines=args.n_t,
-        turbine_models=["layout_opt", ttype.name],
+        turbine_models=["layout_opt", "kTI_02", ttype.name],
     )
-    
-    states = foxes.input.states.StatesTable(
-        data_source=args.states,
-        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "ws", FV.WD: "wd", FV.WEIGHT: "weight"},
-        fixed_vars={FV.RHO: args.rho, FV.TI: args.ti},
+    states = foxes.input.states.SingleStateStates(
+        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
 
     algo = foxes.algorithms.Downwind(
@@ -124,7 +110,7 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
+        problem = FarmLayoutOptProblem("layout_opt", algo)
         problem.add_objective(MaxFarmPower(problem))
         problem.add_constraint(FarmBoundaryConstraint(problem))
         if args.min_dist is not None:
@@ -159,8 +145,8 @@ if __name__ == "__main__":
         foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
 
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
-        p_min = np.array([-100.0, -350.0])
-        p_max = np.array([1100.0, 1600.0])
+        p_min = np.array([-1100.0, -1100.0])
+        p_max = np.array([1100.0, 1100.0])
         fig = o.get_mean_fig_horizontal("WS", resolution=20, fig=fig, ax=axs[1],
             xmin=p_min[0], xmax=p_max[0], ymin=p_min[1], ymax=p_max[1])
         dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)

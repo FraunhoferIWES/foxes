@@ -25,7 +25,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["CrespoHernandez_quadratic", "Bastankhah_linear"],
+        default=["Bastankhah_linear_k002"],
         nargs="+",
     )
     parser.add_argument(
@@ -53,6 +53,21 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
+    )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        help="The number of workers for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-tw",
+        "--threads_per_worker",
+        help="The number of threads per worker for distributed run",
+        type=int,
+        default=None,
     )
     args = parser.parse_args()
 
@@ -85,55 +100,67 @@ if __name__ == "__main__":
         verbosity=0,
     )
 
-    problem = FarmLayoutOptProblem("layout_opt", algo)
-    problem.add_objective(MaxFarmPower(problem))
-    problem.add_constraint(FarmBoundaryConstraint(problem))
-    if args.min_dist is not None:
-        problem.add_constraint(
-            MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D")
+    with foxes.utils.runners.DaskRunner(
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
+        progress_bar=False,
+        verbosity=1,
+    ) as runner:
+
+        problem = FarmLayoutOptProblem("layout_opt", algo)
+        problem.add_objective(MaxFarmPower(problem))
+        problem.add_constraint(FarmBoundaryConstraint(problem))
+        if args.min_dist is not None:
+            problem.add_constraint(
+                MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D")
+            )
+        problem.initialize()
+
+        solver = Optimizer_pymoo(
+            problem,
+            problem_pars=dict(
+                vectorize=not args.no_pop,
+            ),
+            algo_pars=dict(
+                type=args.opt_algo,
+                pop_size=args.n_pop,
+                seed=None,
+            ),
+            setup_pars=dict(),
+            term_pars=dict(
+                type="default",
+                n_max_gen=args.n_gen,
+                ftol=1e-6,
+                xtol=1e-6,
+            ),
         )
-    problem.initialize()
+        solver.initialize()
+        solver.print_info()
 
-    solver = Optimizer_pymoo(
-        problem,
-        problem_pars=dict(
-            vectorize=not args.no_pop,
-        ),
-        algo_pars=dict(
-            type=args.opt_algo,
-            pop_size=args.n_pop,
-            seed=None,
-        ),
-        setup_pars=dict(),
-        term_pars=dict(
-            type="default",
-            n_max_gen=args.n_gen,
-            ftol=1e-6,
-            xtol=1e-6,
-        ),
-    )
-    solver.initialize()
-    solver.print_info()
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
 
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+        results = solver.solve()
+        solver.finalize(results)
 
-    results = solver.solve()
-    solver.finalize(results)
+        print()
+        print(results)
 
-    print()
-    print(results)
+        fig, axs = plt.subplots(1, 2, figsize=(12, 8))
 
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
 
-    o = foxes.output.FlowPlots2D(algo, results.problem_results)
-    g = o.gen_states_fig_horizontal(
-        "WS", resolution=10, xmin=-1100, xmax=1100, ymin=-1100, ymax=1100
-    )
-    fig = next(g)
-    farm.boundary.add_to_figure(fig.axes[0])
-    plt.show()
-    plt.close(fig)
+        o = foxes.output.FlowPlots2D(algo, results.problem_results)
+        p_min = np.array([-1100.0, -1100.0])
+        p_max = np.array([1100.0, 1100.0])
+        fig = o.get_mean_fig_horizontal("WS", resolution=20, fig=fig, ax=axs[1],
+            xmin=p_min[0], xmax=p_max[0], ymin=p_min[1], ymax=p_max[1])
+        dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)
+        farm.boundary.add_to_figure(
+            axs[1], fill_mode="outside_white", pars_distance=dpars
+        )
+
+        plt.show()
+        plt.close(fig)
