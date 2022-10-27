@@ -8,6 +8,7 @@ import foxes.variables as FV
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
+
 def test():
 
     print(thisdir)
@@ -62,9 +63,7 @@ def test():
 
     data = algo.calc_farm()
 
-    df = data.to_dataframe()[
-        [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-    ]
+    df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
     df = df.reset_index()
 
     print()
@@ -81,10 +80,7 @@ def test():
 
     # neglecting ws < 5 and ws > 20
     sel_ws = (
-        (fdata[FV.WS] > 5)
-        & (fdata[FV.WS] < 20)
-        & (df["REWS"] > 5)
-        & (df["REWS"] < 20)
+        (fdata[FV.WS] > 5) & (fdata[FV.WS] < 20) & (df["REWS"] > 5) & (df["REWS"] < 20)
     )
 
     # calculating difference
