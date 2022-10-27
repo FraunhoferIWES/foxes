@@ -208,7 +208,9 @@ class FarmLayoutOutput(Output):
                 ax.annotate(t.name, (x[i], y[i]), size=fontsize)
 
         if self.farm.boundary is not None:
-            self.farm.boundary.add_to_figure(ax, **bargs)
+            hbargs = {"fill_mode": "inside_lightgray"}
+            hbargs.update(bargs)
+            self.farm.boundary.add_to_figure(ax, **hbargs)
 
         ti = (
             title

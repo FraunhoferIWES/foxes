@@ -98,6 +98,7 @@ if __name__ == "__main__":
         n_turbines=args.n_t,
         turbine_models=["layout_opt", ttype.name],
     )
+    
     states = foxes.input.states.StatesTable(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
