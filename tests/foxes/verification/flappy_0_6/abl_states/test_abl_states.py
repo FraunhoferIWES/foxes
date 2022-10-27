@@ -8,6 +8,7 @@ import foxes.variables as FV
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
+
 def test():
 
     c = 2000
@@ -57,9 +58,7 @@ def test():
 
     data = algo.calc_farm()
 
-    df = data.to_dataframe()[
-        [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-    ]
+    df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
     print()
     print("TRESULTS\n")

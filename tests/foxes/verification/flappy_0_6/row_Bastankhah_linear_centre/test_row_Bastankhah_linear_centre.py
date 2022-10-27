@@ -9,6 +9,7 @@ import foxes.variables as FV
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
+
 def test():
 
     n_s = 99

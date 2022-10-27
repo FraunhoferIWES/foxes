@@ -7,8 +7,8 @@ import foxes
 import foxes.variables as FV
 
 
-
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
+
 
 def test():
 
