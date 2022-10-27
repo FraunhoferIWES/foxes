@@ -4,6 +4,5 @@ xarray
 dask[distributed]
 scipy
 netcdf4
-iwopy
 plotly
 kaleido
