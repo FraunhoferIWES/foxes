@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import Turbine
+import foxes.constants as FC
 
 
 def add_grid(
@@ -40,6 +41,9 @@ def add_grid(
 
     inds = list(np.ndindex(*steps))
     n_turbines = len(inds)
+
+    xy_base = np.array(xy_base, dtype=FC.DTYPE)
+    step_vectors = np.array(step_vectors, dtype=FC.DTYPE)
 
     for i in range(n_turbines):
         xi, yi = inds[i]
