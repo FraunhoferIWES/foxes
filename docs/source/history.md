@@ -69,3 +69,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New notebook: `layout_opt.ipynb`, demonstrating a simple layout optimization case
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.0)
+
+## v0.2.1-alpha
+
+- Output:
+  - New Output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
