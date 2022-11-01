@@ -55,6 +55,11 @@ def run_foxes(args):
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
+    o = foxes.output.FarmResultsEval(farm_results)
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+
 
 if __name__ == "__main__":
 

@@ -95,6 +95,11 @@ def run_foxes(args):
         fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
         plt.show()
 
+    o = foxes.output.FarmResultsEval(farm_results)
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+    
 
 if __name__ == "__main__":
 
