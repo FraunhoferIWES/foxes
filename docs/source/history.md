@@ -74,5 +74,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - New Output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
+  - New Output: `ResultsWriter`, writes farm results or pandas data to csv file
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
