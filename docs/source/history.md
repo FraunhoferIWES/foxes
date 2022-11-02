@@ -72,9 +72,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.1-alpha
 
+- Input:
+  - New input: `MultiHeightStates` and `MultiHeightTimeseries`, for input data at several height levels, e.g. WRF results at one point
 - Output:
-  - New Output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
-  - New Output: `ResultsWriter`, writes farm results or pandas data to csv file
+  - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
+  - New output: `ResultsWriter`, writes farm results or pandas data to csv file
   - Renaming: `AmbientRosePlotOutput` is now called `StatesRosePlotOutput`
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
