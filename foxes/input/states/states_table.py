@@ -71,7 +71,7 @@ class StatesTable(States):
         self._data0 = data_source
         self._data = None
         
-    def initialize(self, algo, states_sel=None, verbosity=1):
+    def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
         """
         Initializes the model.
 
@@ -81,6 +81,8 @@ class StatesTable(States):
             The calculation algorithm
         states_sel : slice or range or list of int, optional
             States subset selection
+        states_loc : list, optional
+            State index selection via pandas loc function
         verbosity : int
             The verbosity level
 
@@ -108,6 +110,8 @@ class StatesTable(States):
 
         if states_sel is not None:
             self._data = self._data0.iloc[states_sel]
+        elif states_loc is not None:
+            self._data = self._data0.loc[states_loc]
         else:
             self._data = self._data0
         self._N = len(self._data.index)
