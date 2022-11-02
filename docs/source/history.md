@@ -78,5 +78,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
   - New output: `ResultsWriter`, writes farm results or pandas data to csv file
   - Renaming: `AmbientRosePlotOutput` is now called `StatesRosePlotOutput`
+- Notebooks:
+  - New notebook: `multi_height.ipynb`, demonstrating the usage of multi-height wind input data
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
