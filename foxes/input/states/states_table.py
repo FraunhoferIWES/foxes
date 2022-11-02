@@ -70,6 +70,9 @@ class StatesTable(States):
 
         self._data0 = data_source
         self._data = None
+        self._weights = None
+        self._N = None
+        self._tvars = None
 
     def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
         """
@@ -117,7 +120,7 @@ class StatesTable(States):
         self._N = len(self._data.index)
 
         self.profiles = {}
-        self.tvars = set(self.ovars)
+        self._tvars = set(self.ovars)
         for v, d in self.profdicts.items():
             if isinstance(d, str):
                 self.profiles[v] = VerticalProfile.new(d)
@@ -130,9 +133,9 @@ class StatesTable(States):
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
-            self.tvars.update(self.profiles[v].input_vars())
-        self.tvars -= set(self.fixed_vars.keys())
-        self.tvars = list(self.tvars)
+            self._tvars.update(self.profiles[v].input_vars())
+        self._tvars -= set(self.fixed_vars.keys())
+        self._tvars = list(self._tvars)
 
         for p in self.profiles.values():
             if not p.initialized:
@@ -177,7 +180,7 @@ class StatesTable(States):
             idata["coords"][FV.STATE] = self._data.index.to_numpy()
 
         tcols = []
-        for v in self.tvars:
+        for v in self._tvars:
             c = self.var2col.get(v, v)
             if c in self._data.columns:
                 tcols.append(c)
@@ -187,7 +190,7 @@ class StatesTable(States):
                 )
         data = self._data[tcols]
 
-        idata["coords"][self.VARS] = self.tvars
+        idata["coords"][self.VARS] = self._tvars
         idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
 
         return idata
@@ -265,7 +268,7 @@ class StatesTable(States):
         """
         z = pdata[FV.POINTS][:, :, 2]
 
-        for i, v in enumerate(self.tvars):
+        for i, v in enumerate(self._tvars):
             pdata[v][:] = mdata[self.DATA][:, i, None]
 
         for v, f in self.fixed_vars.items():
@@ -294,8 +297,10 @@ class StatesTable(States):
             The verbosity level
 
         """
-        if clear_mem:
-            self._data = None
+        self._data = None
+        self._weights = None
+        self._N = None
+        self._tvars = None
         super().finalize(algo, results, clear_mem, verbosity)
 
 
