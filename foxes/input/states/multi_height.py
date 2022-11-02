@@ -83,6 +83,7 @@ class MultiHeightStates(States):
         self._cmap = None
         self._solo = None
         self._weights = None
+        self._N = None
     
     def _find_cols(self, v, cols):
         """
@@ -316,6 +317,31 @@ class MultiHeightStates(States):
                 results[v] = ires[:, vrs.index(v)]
         
         return results
+
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level
+
+        """
+        self._data = None
+        self._cmap = None
+        self._solo = None
+        self._weights = None
+        self._N = None
+
+        super().finalize(algo, results, clear_mem, verbosity)
 
 class MultiHeightTimeseries(MultiHeightStates):
     """
