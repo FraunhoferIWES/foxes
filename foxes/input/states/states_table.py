@@ -70,7 +70,7 @@ class StatesTable(States):
 
         self._data0 = data_source
         self._data = None
-        
+
     def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
         """
         Initializes the model.
@@ -298,8 +298,10 @@ class StatesTable(States):
             self._data = None
         super().finalize(algo, results, clear_mem, verbosity)
 
+
 class Timeseries(StatesTable):
     """
     Timeseries states data.
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}

@@ -16,7 +16,7 @@ class MultiHeightStates(States):
 
     The input data is taken from a csv file or
     pandas data frame with columns. The format
-    of the data columns is as in the following 
+    of the data columns is as in the following
     example for wind speed at heights 50, 60, 100 m:
 
     WS-50, WS-60, WS-100, ...
@@ -84,7 +84,7 @@ class MultiHeightStates(States):
         self._solo = None
         self._weights = None
         self._N = None
-    
+
     def _find_cols(self, v, cols):
         """
         Helper function for searching height columns
@@ -103,7 +103,9 @@ class MultiHeightStates(States):
                 if oc in cols:
                     cls.append(oc)
                 else:
-                    raise KeyError(f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns. Maybe make use of var2col?")
+                    raise KeyError(
+                        f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns. Maybe make use of var2col?"
+                    )
             return cls
 
     def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
@@ -158,7 +160,7 @@ class MultiHeightStates(States):
             )
         else:
             self._weights[:] = 1.0 / self._N
-        
+
         cols = []
         self._cmap = {}
         self._solo = {}
@@ -204,18 +206,21 @@ class MultiHeightStates(States):
         idata["coords"][self.H] = self.heights
         idata["coords"][self.VARS] = list(self._cmap.keys())
 
-        self._cmap=None
+        self._cmap = None
 
         n_hts = len(self.heights)
-        n_vrs = int(len(self._data.columns)/n_hts)
+        n_vrs = int(len(self._data.columns) / n_hts)
         dims = (FV.STATE, self.VARS, self.H)
-        idata["data_vars"][self.DATA] = (dims, self._data.to_numpy().reshape(self._N, n_vrs, n_hts))
+        idata["data_vars"][self.DATA] = (
+            dims,
+            self._data.to_numpy().reshape(self._N, n_vrs, n_hts),
+        )
 
         self._data = None
 
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = ((FV.STATE,), d)
-        
+
         self._solo = list(self._solo.keys())
 
         return idata
@@ -296,14 +301,14 @@ class MultiHeightStates(States):
         n_h = len(h)
 
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
-        np.fill_diagonal(coeffs, 1.)
+        np.fill_diagonal(coeffs, 1.0)
         ipars = dict(assume_sorted=True, bounds_error=True)
         ipars.update(self.ipars)
         intp = interp1d(h, coeffs, axis=0, **ipars)
         ires = intp(z)
         del coeffs, intp
-  
-        ires = np.einsum('svh,sph->svp', mdata[self.DATA], ires)
+
+        ires = np.einsum("svh,sph->svp", mdata[self.DATA], ires)
 
         results = {}
         vrs = list(mdata[self.VARS])
@@ -315,7 +320,7 @@ class MultiHeightStates(States):
                 results[v][:] = mdata[self.var(v)][:, None]
             else:
                 results[v] = ires[:, vrs.index(v)]
-        
+
         return results
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
@@ -343,8 +348,10 @@ class MultiHeightStates(States):
 
         super().finalize(algo, results, clear_mem, verbosity)
 
+
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}

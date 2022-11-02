@@ -25,8 +25,7 @@ def run_foxes(args):
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
-        farm, args.layout, turbine_models=args.tmodels + [ttype.name],
-        H=170.
+        farm, args.layout, turbine_models=args.tmodels + [ttype.name], H=170.0
     )
 
     if args.show_layout:
@@ -61,7 +60,7 @@ def run_foxes(args):
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
-    
+
 
 if __name__ == "__main__":
 

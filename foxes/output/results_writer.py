@@ -18,6 +18,7 @@ class ResultsWriter(Output):
         The farm results
 
     """
+
     def __init__(self, farm_results=None, data=None):
 
         if farm_results is not None and data is None:
@@ -25,15 +26,17 @@ class ResultsWriter(Output):
         elif farm_results is None and data is not None:
             self.data = data
         else:
-            raise KeyError(f"ResultsWriter: Either give 'farm_results' or 'data' arguments")
-    
+            raise KeyError(
+                f"ResultsWriter: Either give 'farm_results' or 'data' arguments"
+            )
+
     def write_csv(
-            self, 
-            file_path, 
-            variables=None, 
-            verbosity=1,
-            **kwargs,
-        ):
+        self,
+        file_path,
+        variables=None,
+        verbosity=1,
+        **kwargs,
+    ):
         """
         Writes a csv file
 
@@ -54,18 +57,20 @@ class ResultsWriter(Output):
         """
         if verbosity:
             print(f"ResultsWriter: Writing file '{file_path}'")
-        
+
         if variables is None:
             data = self.data
         elif isinstance(variables, dict):
-            inds = {s: variables.pop(s) for s in self.data.index.names if s in variables}
+            inds = {
+                s: variables.pop(s) for s in self.data.index.names if s in variables
+            }
             data = self.data
             if len(variables):
                 data = data[list(variables.keys())].rename(variables, axis=1)
             if len(inds):
                 for s, ns in inds.items():
                     l = self.data.index.names.index(s)
-                    data = data.rename_axis(index={s:ns})
+                    data = data.rename_axis(index={s: ns})
         else:
             data = self.data[list(variables)]
 
