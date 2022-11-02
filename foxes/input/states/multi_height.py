@@ -206,8 +206,6 @@ class MultiHeightStates(States):
         idata["coords"][self.H] = self.heights
         idata["coords"][self.VARS] = list(self._cmap.keys())
 
-        self._cmap = None
-
         n_hts = len(self.heights)
         n_vrs = int(len(self._data.columns) / n_hts)
         dims = (FV.STATE, self.VARS, self.H)
@@ -216,12 +214,8 @@ class MultiHeightStates(States):
             self._data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
 
-        self._data = None
-
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = ((FV.STATE,), d)
-
-        self._solo = list(self._solo.keys())
 
         return idata
 
@@ -316,7 +310,7 @@ class MultiHeightStates(States):
             results[v] = pdata[v]
             if v in self.fixed_vars:
                 results[v][:] = self.fixed_vars[v]
-            elif v in self._solo:
+            elif v in self._solo.keys():
                 results[v][:] = mdata[self.var(v)][:, None]
             else:
                 results[v] = ires[:, vrs.index(v)]

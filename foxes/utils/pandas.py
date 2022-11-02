@@ -68,7 +68,6 @@ class PandasFileHelper:
             The data
 
         """
-
         fname = str(file_path)
         L = len(fname)
         f = None
