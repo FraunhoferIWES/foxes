@@ -289,11 +289,15 @@ class FarmResultsEval(Output):
         return cdata[v]
 
     def calc_turbine_yield(self, hours=24*365, power_factor=1, ambient=False):
-        """
-        Calculates yield over states per turbine.
+        """ Calculates turbine yield based on power averaged over all states
 
         Args:
+            hours (int, optional): _description_. Defaults to 24*365.
+            power_factor (int, optional): _description_. Defaults to 1.
             ambient (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            pandas.Dataframe: a dataframe containing yield, P75 and P90 per turbine
         """
         if ambient:
             vars='AMB_P'
@@ -305,7 +309,9 @@ class FarmResultsEval(Output):
         YLD =  pdata * hours * power_factor
         
         # compute standard deviation
-        std_data = self.calc_states_std(vars)
+        #std_data = self.calc_states_std(vars)
+        vdata = self.results[vars].to_dataframe()
+        std_data = vdata.groupby(['turbine']).std()
 
         # compute P75 and P90
         P75 = YLD * (1.0 - 0.675 * std_data/pdata)
@@ -315,3 +321,10 @@ class FarmResultsEval(Output):
         ydata.columns = ['YLD', 'P75', 'P90']
         return ydata
         
+    def calc_farm_yield(self, hours=24*365, power_factor=1, ambient=False):
+
+        # calculate yield per turbine
+        ydata = self.calc_turbine_yield(self, hours, power_factor, ambient)
+
+        # calculate yield per farm
+        return ydata.sum()
