@@ -1,17 +1,25 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from scipy.interpolate import interp1d
 
-from foxes.core import States, VerticalProfile
+from foxes.core import States
 from foxes.utils import PandasFileHelper
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class StatesTable(States):
+class MultiHeightStates(States):
     """
-    States from a `pandas.DataFrame` or a pandas readable file.
+    States with multiple heights data per entry.
+
+    The input data is taken from a csv file or
+    pandas data frame with columns. The format
+    of the data columns is as in the following 
+    example for wind speed at heights 50, 60, 100 m:
+
+    WS-50, WS-60, WS-100, ...
 
     Parameters
     ----------
@@ -19,29 +27,29 @@ class StatesTable(States):
         Either path to a file or data
     output_vars : list of str
         The output variables
+    heights : list of float
+        The heights at which to search data
     var2col : dict, optional
         Mapping from variable names to data column names
     fixed_vars : dict, optional
         Fixed uniform variable values, instead of
         reading from data
-    profiles : dict, optional
-        Key: output variable name str, Value: str or dict
-        or `foxes.core.VerticalProfile`
     pd_read_pars : dict, optional
         pandas file reading parameters
+    ipars : dict, optional
+        Parameters for scipy.interpolate.interp1d
 
     Attributes
     ----------
     ovars : list of str
         The output variables
+    heights : list of float
+        The heights at which to search data
     var2col : dict, optional
         Mapping from variable names to data column names
     fixed_vars : dict, optional
         Fixed uniform variable values, instead of
         reading from data
-    profdicts : dict, optional
-        Key: output variable name str, Value: str or dict
-        or `foxes.core.VerticalProfile`
     pd_read_pars : dict, optional
         pandas file reading parameters
     RDICT : dict
@@ -55,22 +63,49 @@ class StatesTable(States):
         self,
         data_source,
         output_vars,
+        heights,
         var2col={},
         fixed_vars={},
-        profiles={},
         pd_read_pars={},
+        ipars={},
     ):
         super().__init__()
 
         self.ovars = output_vars
+        self.heights = np.array(heights, dtype=FC.DTYPE)
         self.rpars = pd_read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
-        self.profdicts = profiles
+        self.ipars = ipars
 
         self._data0 = data_source
         self._data = None
-        
+        self._cmap = None
+        self._solo = None
+        self._weights = None
+        self._N = None
+    
+    def _find_cols(self, v, cols):
+        """
+        Helper function for searching height columns
+        """
+        c0 = self.var2col.get(v, v)
+        if v in self.fixed_vars:
+            return []
+        elif c0 in cols:
+            return [c0]
+        else:
+            cls = []
+            for h in self.heights:
+                hh = int(h) if int(h) == h else h
+                c = f"{c0}-{hh}"
+                oc = self.var2col.get(c, c)
+                if oc in cols:
+                    cls.append(oc)
+                else:
+                    raise KeyError(f"Missing: '{v}' in fixed_vars, or '{c0}' or '{oc}' in columns. Maybe make use of var2col?")
+            return cls
+
     def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
         """
         Initializes the model.
@@ -88,9 +123,6 @@ class StatesTable(States):
 
         """
         super().initialize(algo, verbosity=verbosity)
-
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
 
         if not isinstance(self._data0, pd.DataFrame):
             if not Path(self._data0).is_file():
@@ -116,28 +148,6 @@ class StatesTable(States):
             self._data = self._data0
         self._N = len(self._data.index)
 
-        self.profiles = {}
-        self.tvars = set(self.ovars)
-        for v, d in self.profdicts.items():
-            if isinstance(d, str):
-                self.profiles[v] = VerticalProfile.new(d)
-            elif isinstance(d, VerticalProfile):
-                self.profiles[v] = d
-            elif isinstance(d, dict):
-                t = d.pop("type")
-                self.profiles[v] = VerticalProfile.new(t, **d)
-            else:
-                raise TypeError(
-                    f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
-                )
-            self.tvars.update(self.profiles[v].input_vars())
-        self.tvars -= set(self.fixed_vars.keys())
-        self.tvars = list(self.tvars)
-
-        for p in self.profiles.values():
-            if not p.initialized:
-                p.initialize(algo)
-
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
         if col_w in self._data:
@@ -148,6 +158,22 @@ class StatesTable(States):
             )
         else:
             self._weights[:] = 1.0 / self._N
+        
+        cols = []
+        self._cmap = {}
+        self._solo = {}
+        for v in self.ovars:
+            vcols = self._find_cols(v, self._data.columns)
+            if len(vcols) == 1:
+                self._solo[v] = self._data[vcols[0]].to_numpy()
+            elif len(vcols) > 1:
+                self._cmap[v] = (len(cols), len(cols) + len(vcols))
+                cols += vcols
+        self._data = self._data[cols]
+
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
 
     def model_input_data(self, algo):
         """
@@ -175,20 +201,22 @@ class StatesTable(States):
 
         if self._data.index.name is not None:
             idata["coords"][FV.STATE] = self._data.index.to_numpy()
+        idata["coords"][self.H] = self.heights
+        idata["coords"][self.VARS] = list(self._cmap.keys())
 
-        tcols = []
-        for v in self.tvars:
-            c = self.var2col.get(v, v)
-            if c in self._data.columns:
-                tcols.append(c)
-            elif v not in self.profiles.keys():
-                raise KeyError(
-                    f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars"
-                )
-        data = self._data[tcols]
+        self._cmap=None
 
-        idata["coords"][self.VARS] = self.tvars
-        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
+        n_hts = len(self.heights)
+        n_vrs = int(len(self._data.columns)/n_hts)
+        dims = (FV.STATE, self.VARS, self.H)
+        idata["data_vars"][self.DATA] = (dims, self._data.to_numpy().reshape(self._N, n_vrs, n_hts))
+
+        self._data = None
+
+        for v, d in self._solo.items():
+            idata["data_vars"][self.var(v)] = ((FV.STATE,), d)
+        
+        self._solo = list(self._solo.keys())
 
         return idata
 
@@ -263,19 +291,32 @@ class StatesTable(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+        h = mdata[self.H]
         z = pdata[FV.POINTS][:, :, 2]
+        n_h = len(h)
 
-        for i, v in enumerate(self.tvars):
-            pdata[v][:] = mdata[self.DATA][:, i, None]
+        coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
+        np.fill_diagonal(coeffs, 1.)
+        ipars = dict(assume_sorted=True, bounds_error=True)
+        ipars.update(self.ipars)
+        intp = interp1d(h, coeffs, axis=0, **ipars)
+        ires = intp(z)
+        del coeffs, intp
+  
+        ires = np.einsum('svh,sph->svp', mdata[self.DATA], ires)
 
-        for v, f in self.fixed_vars.items():
-            pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE)
-
-        for v, p in self.profiles.items():
-            pres = p.calculate(pdata, z)
-            pdata[v] = pres
-
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        results = {}
+        vrs = list(mdata[self.VARS])
+        for v in self.ovars:
+            results[v] = pdata[v]
+            if v in self.fixed_vars:
+                results[v][:] = self.fixed_vars[v]
+            elif v in self._solo:
+                results[v][:] = mdata[self.var(v)][:, None]
+            else:
+                results[v] = ires[:, vrs.index(v)]
+        
+        return results
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
         """
@@ -294,12 +335,16 @@ class StatesTable(States):
             The verbosity level
 
         """
-        if clear_mem:
-            self._data = None
+        self._data = None
+        self._cmap = None
+        self._solo = None
+        self._weights = None
+        self._N = None
+
         super().finalize(algo, results, clear_mem, verbosity)
 
-class Timeseries(StatesTable):
+class MultiHeightTimeseries(MultiHeightStates):
     """
-    Timeseries states data.
+    Multi-height timeseries states data.
     """
     RDICT = {"index_col": 0, "parse_dates": [0]}

@@ -316,7 +316,7 @@ class RosePlotOutput(Output):
         fig.write_image(file_name)
 
 
-class AmbientRosePlotOutput(RosePlotOutput):
+class StatesRosePlotOutput(RosePlotOutput):
     """
     Class for rose plot creation directly from states
 

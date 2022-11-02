@@ -24,7 +24,7 @@ def run_foxes(args):
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
     )
 
-    o = foxes.output.AmbientRosePlotOutput(states, point=[0.0, 0.0, 100.0])
+    o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
     fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
     foxes.utils.show_plotly_fig(fig)
 

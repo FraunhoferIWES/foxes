@@ -116,3 +116,8 @@ if __name__ == "__main__":
     print(
         fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_P, FV.P, FV.CT]]
     )
+
+    o = foxes.output.FarmResultsEval(farm_results)
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
