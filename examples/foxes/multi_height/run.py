@@ -84,7 +84,7 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="grid9")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
