@@ -82,3 +82,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New notebook: `multi_height.ipynb`, demonstrating the usage of multi-height wind input data
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
+
+## v0.2.2-alpha
+
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.2)
