@@ -57,6 +57,8 @@ class FarmResultsEval(Output):
                 rdata[v] = np.min(vdata, axis=0)
             elif op == "max":
                 rdata[v] = np.max(vdata, axis=0)
+            elif op == "std":
+                rdata[v] = np.std(vdata, axis=0)
             else:
                 raise KeyError(f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max")
 
@@ -184,6 +186,19 @@ class FarmResultsEval(Output):
         """
         return self.reduce_states({v: "sum" for v in vars})
 
+    def calc_states_std(self, vars):
+        """
+        Calculates the standard deviation wrt states.
+
+        Args:
+            vars (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+
+        return self.reduce_states({v: "std" for v in vars})
+
     def calc_turbine_mean(self, vars):
         """
         Calculates the mean wrt turbines.
@@ -272,3 +287,31 @@ class FarmResultsEval(Output):
         v = FV.P if not ambient else FV.AMB_P
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
+
+    def calc_turbine_yield(self, hours=24*365, power_factor=1, ambient=False):
+        """
+        Calculates yield over states per turbine.
+
+        Args:
+            ambient (bool, optional): _description_. Defaults to False.
+        """
+        if ambient:
+            vars='AMB_P'
+        else: vars = 'P'
+        # get power per turbine
+        pdata = self.calc_states_mean(vars)
+        
+        # compute yield
+        YLD =  pdata * hours * power_factor
+        
+        # compute standard deviation
+        std_data = self.calc_states_std(vars)
+
+        # compute P75 and P90
+        P75 = YLD * (1.0 - 0.675 * std_data/pdata)
+        P90 = YLD * (1.0 - 1.282 * std_data/pdata)
+    
+        ydata = pd.concat([YLD, P75, P90], axis=1)
+        ydata.columns = ['YLD', 'P75', 'P90']
+        return ydata
+        
