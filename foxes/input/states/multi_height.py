@@ -8,6 +8,7 @@ from foxes.utils import PandasFileHelper
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
+from foxes.utils import wd2uv, uv2wd
 
 
 class MultiHeightStates(States):
@@ -293,6 +294,7 @@ class MultiHeightStates(States):
         h = mdata[self.H]
         z = pdata[FV.POINTS][:, :, 2]
         n_h = len(h)
+        vrs = list(mdata[self.VARS])
 
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
         np.fill_diagonal(coeffs, 1.0)
@@ -302,13 +304,31 @@ class MultiHeightStates(States):
         ires = intp(z)
         del coeffs, intp
 
+        has_wd = FV.WD in vrs
+        if has_wd:
+            i_wd = vrs.index(FV.WD)
+            if FV.WS in vrs:
+                i_ws = vrs.index(FV.WS)
+                uvh = wd2uv(mdata[self.DATA][:, i_wd], mdata[self.DATA][:, i_ws], axis=-1)
+            elif FV.WS in self.fixed_vars:
+                uvh = wd2uv(mdata[self.DATA][:, i_wd], self.fixed_vars[FV.WS], axis=-1)
+            elif self.var(FV.WS) in mdata:
+                uvh = wd2uv(mdata[self.DATA][:, i_wd], mdata[self.var(FV.WS)][:, None], axis=-1)
+            else:
+                raise KeyError(f"States '{self.name}': Found variable '{FV.WD}', but missing variable '{FV.WS}'")
+            uv = np.einsum("shd,sph->spd", uvh, ires)
+            del uvh
+
         ires = np.einsum("svh,sph->svp", mdata[self.DATA], ires)
 
         results = {}
-        vrs = list(mdata[self.VARS])
         for v in self.ovars:
             results[v] = pdata[v]
-            if v in self.fixed_vars:
+            if has_wd and v == FV.WD:
+                results[v] = uv2wd(uv, axis=-1)
+            elif has_wd and v == FV.WS:
+                results[v] = np.linalg.norm(uv, axis=-1)
+            elif v in self.fixed_vars:
                 results[v][:] = self.fixed_vars[v]
             elif v in self._solo.keys():
                 results[v][:] = mdata[self.var(v)][:, None]
