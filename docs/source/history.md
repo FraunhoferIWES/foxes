@@ -89,3 +89,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Bug fixed in `MultiHeightStates` for wind veer cases
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.2)
+
+## v0.2.3-alpha
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
