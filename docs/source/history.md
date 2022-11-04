@@ -92,4 +92,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.3-alpha
 
+- Documentation
+  - Adding forgotten `foxes.opt` to API
+
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)

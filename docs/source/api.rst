@@ -13,5 +13,6 @@ API
         foxes.input
         foxes.models
         foxes.output
+        foxes.opt
         foxes.utils
         foxes.variables
