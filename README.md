@@ -132,7 +132,7 @@ print(farm_results)
 
 ## Contributing
 
-1. Fork it.
+1. Fork _foxes_ on _github_.
 2. Create a branch (`git checkout -b new_branch`)
 3. Commit your changes (`git commit -am "your awesome message"`)
 4. Push to the branch (`git push origin new_branch`)
