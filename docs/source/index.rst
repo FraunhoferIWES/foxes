@@ -56,8 +56,18 @@ Contents:
 
         history
 
+Contributing
+============
+
+#. Fork *foxes* on *github*.
+#. Create a branch (`git checkout -b new_branch`)
+#. Commit your changes (`git commit -am "your awesome message"`)
+#. Push to the branch (`git push origin new_branch`)
+#. Create a pull request
+
 Acknowledgements
 ================
+
 The development of *foxes* and its predecessors *flapFOAM* and *flappy* (internal - non public) 
 has been supported through multiple publicly funded research projects. We acknowledge in particular 
 the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the p
