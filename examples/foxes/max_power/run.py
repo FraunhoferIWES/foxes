@@ -1,5 +1,6 @@
 import time
 import argparse
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import foxes
@@ -11,20 +12,29 @@ def run_foxes(args):
 
     cks = None if args.nodask else {FV.STATE: args.chunksize}
 
+    print("\nReading file", args.pmax_file)
+    cols = [f"Pmax_{i}" for i in range(args.n_t)]
+    Pmax_data = pd.read_csv(args.pmax_file, usecols=cols).to_numpy()
+
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
+    mbook.turbine_models["set_Pmax"] = foxes.models.turbine_models.SetFarmVars()
+    mbook.turbine_models["set_Pmax"].add_var(FV.MAX_P, Pmax_data)
+    models = args.tmodels + ["set_Pmax", ttype.name, "max_P"]
 
     states = foxes.input.states.Timeseries(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        fixed_vars={FV.RHO: 1.225},
     )
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_from_file(
-        farm, args.layout, turbine_models=args.tmodels + [ttype.name]
+    foxes.input.farm_layout.add_row(
+        farm=farm,
+        xy_base=[0.0, 0.0],
+        xy_step=[args.deltax, args.deltay],
+        n_turbines=args.n_t,
+        turbine_models=models,
     )
 
     if args.show_layout:
@@ -53,7 +63,7 @@ def run_foxes(args):
     print(farm_results, "\n")
 
     fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
 
     o = foxes.output.FarmResultsEval(farm_results)
     P0 = o.calc_mean_farm_power(ambient=True)
@@ -65,16 +75,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-l",
-        "--layout",
-        help="The wind farm layout file (path or static)",
-        default="test_farm_67.csv",
+        "-nt", "--n_t", help="The number of turbines", type=int, default=5
     )
     parser.add_argument(
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="timeseries_8000.csv.gz",
+        default="timeseries_3000.csv.gz",
     )
     parser.add_argument(
         "-t",
@@ -82,9 +89,18 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
+    parser.add_argument(
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
+    )
+    parser.add_argument(
+        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
+    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+    )
+    parser.add_argument(
+        "-f", "--pmax_file", help="The max_P csv file", default="power_mask_3000.csv.gz"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000

@@ -112,13 +112,14 @@ class MaxPower(TurbineModel):
         max_P = fdata[FV.MAX_P]
         rated_P = self._P_rated[None, :]
         P = fdata[FV.P]
-        ws = fdata[FV.WS]
+        ws = fdata[self.var_ws_P]
         ct = fdata[FV.CT]
         rho = fdata[FV.RHO]
         r = fdata[FV.D] / 2
 
         # select power entries for which this is active:
         sel = ( 
+                ~np.isnan(max_P) &
                 ( (max_P < rated_P) & (P > max_P) ) |
                 ( (max_P > rated_P) & (P > rated_P - 1e-6) )
             )

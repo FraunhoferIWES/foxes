@@ -80,6 +80,7 @@ class ModelBook:
             kTI_amb_02=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.2),
             kTI_amb_04=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4),
             thrust2ct=fm.turbine_models.Thrust2Ct(),
+            max_P=fm.turbine_models.MaxPower(),
         )
 
         self.farm_models = Dict(

@@ -23,7 +23,10 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
-        "-d", "--dist_x", help="The turbine distance in x", type=float, default=500.0
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
+    )
+    parser.add_argument(
+        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
     )
     parser.add_argument(
         "-t",
@@ -45,9 +48,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
-    parser.add_argument(
-        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
-    )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args = parser.parse_args()
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         foxes.input.farm_layout.add_row(
             farm=farm,
             xy_base=np.array([0.0, 0.0]),
-            xy_step=np.array([args.dist_x, args.deltay]),
+            xy_step=np.array([args.deltax, args.deltay]),
             n_turbines=args.n_t,
             turbine_models=args.tmodels + [ttype.name],
         )

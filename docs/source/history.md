@@ -96,6 +96,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New model `MaxPower`: Derates or boosts a turbine
 - Utils
   - New: `cubic_roots`, solve a cubic equation
+- Examples
+  - New: `max_power`, demonstrating derating and boost
 - Documentation
   - Adding forgotten `foxes.opt` to API
 
