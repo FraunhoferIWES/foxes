@@ -66,3 +66,5 @@ Z0 = "z0"
 MOL = "MOL"
 
 POP = "pop"
+
+MAX_P = "MAXP"

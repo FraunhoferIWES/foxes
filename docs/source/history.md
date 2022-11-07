@@ -92,6 +92,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.3-alpha
 
+- Turbine models
+  - New model `MaxPower`: Derates or boosts a turbine
+- Utils
+  - New: `cubic_roots`, solve a cubic equation
 - Documentation
   - Adding forgotten `foxes.opt` to API
 
