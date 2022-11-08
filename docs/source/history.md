@@ -94,10 +94,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Turbine models
   - New model `MaxPower`: Derates or boosts a turbine
-- Utils
-  - New: `cubic_roots`, solve a cubic equation
 - Examples
-  - New: `max_power`, demonstrating derating and boost
+  - New: `power_mask`, demonstrates derating and boost
+- Utils
+  - New: `cubic_roots`, solves a cubic equation
+- Output
+  - New: `StateTurbineMap`, creates heat maps for state-turbine data
 - Documentation
   - Adding forgotten `foxes.opt` to API
 
