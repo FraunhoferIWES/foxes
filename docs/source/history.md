@@ -93,7 +93,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 ## v0.2.3-alpha
 
 - Turbine models
-  - New model `MaxPower`: Derates or boosts a turbine
+  - New model `PowerMask`: Derates or boosts a turbine
 - Examples
   - New: `power_mask`, demonstrates derating and boost
 - Utils

@@ -21,7 +21,7 @@ def run_foxes(args):
     mbook.turbine_types[ttype.name] = ttype
     mbook.turbine_models["set_Pmax"] = foxes.models.turbine_models.SetFarmVars()
     mbook.turbine_models["set_Pmax"].add_var(FV.MAX_P, Pmax_data)
-    models = args.tmodels + ["set_Pmax", ttype.name, "max_P"]
+    models = args.tmodels + ["set_Pmax", ttype.name, "PMask"]
 
     states = foxes.input.states.StatesTable(
         data_source=args.states,
@@ -74,7 +74,7 @@ def run_foxes(args):
 
     algo.finalize(clear_mem=True)
     models.remove("set_Pmax")
-    models.remove("max_P")
+    models.remove("PMask")
     
     farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
 

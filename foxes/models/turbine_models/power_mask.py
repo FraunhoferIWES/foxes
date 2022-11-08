@@ -5,7 +5,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils import cubic_roots
 
-class MaxPower(TurbineModel):
+class PowerMask(TurbineModel):
     """
     Invokes a maximal power value.
 
