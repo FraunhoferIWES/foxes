@@ -1,5 +1,5 @@
-import time
 import argparse
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -23,9 +23,10 @@ def run_foxes(args):
     mbook.turbine_models["set_Pmax"].add_var(FV.MAX_P, Pmax_data)
     models = args.tmodels + ["set_Pmax", ttype.name, "max_P"]
 
-    states = foxes.input.states.Timeseries(
+    states = foxes.input.states.StatesTable(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        fixed_vars={FV.WD: 270., FV.TI: 0.05, FV.RHO: 1.225},
     )
 
     farm = foxes.WindFarm()
@@ -51,16 +52,12 @@ def run_foxes(args):
         wake_frame="rotor_wd",
         partial_wakes_model=args.pwakes,
         chunks=cks,
+        verbosity=0,
     )
 
-    time0 = time.time()
+    # run calculation with power mask:
 
     farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
-
-    time1 = time.time()
-    print("\nCalc time =", time1 - time0, "\n")
-
-    print(farm_results, "\n")
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
@@ -70,6 +67,47 @@ def run_foxes(args):
     P = o.calc_mean_farm_power()
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
 
+    o1 = foxes.output.StateTurbineMap(farm_results)
+
+
+    # run calculation without power mask:
+
+    algo.finalize(clear_mem=True)
+    models.remove("set_Pmax")
+    models.remove("max_P")
+    
+    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+
+    fr = farm_results.to_dataframe()
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+    o = foxes.output.FarmResultsEval(farm_results)
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+
+    o0 = foxes.output.StateTurbineMap(farm_results)
+
+    # show power:
+    fig, axs = plt.subplots(1,3,figsize=(15,5))
+    o0.plot_map(FV.P, ax=axs[0], edgecolor="white", title="Power, no power mask",
+        cmap="YlOrRd", vmin=0, vmax=np.nanmax(Pmax_data))
+    o1.plot_map(FV.MAX_P, ax=axs[1], edgecolor="white", cmap="YlOrRd", 
+        title="Power mask", vmin=0, vmax=np.nanmax(Pmax_data))
+    o1.plot_map(FV.P, ax=axs[2], edgecolor="white", cmap="YlOrRd", 
+        title="Power, with power mask", vmin=0, vmax=np.nanmax(Pmax_data))
+    plt.show()
+    plt.close(fig)
+
+    # show ct:
+    fig, axs = plt.subplots(1,3,figsize=(15,5))
+    o0.plot_map(FV.CT, ax=axs[0], edgecolor="white", title="ct, no power mask",
+        cmap="YlGn", vmin=0, vmax=1.)
+    o1.plot_map(FV.MAX_P, ax=axs[1], edgecolor="white", cmap="YlOrRd", 
+        title="Power mask", vmin=0, vmax=np.nanmax(Pmax_data))
+    o1.plot_map(FV.CT, ax=axs[2], edgecolor="white", cmap="YlGn", 
+        title="ct, with power mask", vmin=0, vmax=1.)
+    plt.show()
 
 if __name__ == "__main__":
 
@@ -81,7 +119,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="timeseries_3000.csv.gz",
+        default="states.csv",
     )
     parser.add_argument(
         "-t",
@@ -100,7 +138,7 @@ if __name__ == "__main__":
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
     parser.add_argument(
-        "-f", "--pmax_file", help="The max_P csv file", default="power_mask_3000.csv.gz"
+        "-f", "--pmax_file", help="The max_P csv file", default="power_mask.csv"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000

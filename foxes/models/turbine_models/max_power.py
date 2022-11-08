@@ -119,9 +119,10 @@ class MaxPower(TurbineModel):
 
         # select power entries for which this is active:
         sel = ( 
-                ~np.isnan(max_P) &
+                ~np.isnan(max_P) & (
                 ( (max_P < rated_P) & (P > max_P) ) |
                 ( (max_P > rated_P) & (P > rated_P - 1e-6) )
+                )
             )
         if np.any(sel):
 
@@ -132,6 +133,7 @@ class MaxPower(TurbineModel):
             r = r[sel]
             P = P[sel]
             ct = ct[sel]
+            ct[ct > 1.] = 1.
             
             # calculate power efficiency e of turbine
             # e is the ratio of the cp derived from the power curve
