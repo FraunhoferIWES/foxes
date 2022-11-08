@@ -119,25 +119,25 @@ class StatesTable(States):
             self._data = self._data0
         self._N = len(self._data.index)
 
-        self.profiles = {}
+        self._profiles = {}
         self._tvars = set(self.ovars)
         for v, d in self.profdicts.items():
             if isinstance(d, str):
-                self.profiles[v] = VerticalProfile.new(d)
+                self._profiles[v] = VerticalProfile.new(d)
             elif isinstance(d, VerticalProfile):
-                self.profiles[v] = d
+                self._profiles[v] = d
             elif isinstance(d, dict):
                 t = d.pop("type")
-                self.profiles[v] = VerticalProfile.new(t, **d)
+                self._profiles[v] = VerticalProfile.new(t, **d)
             else:
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
-            self._tvars.update(self.profiles[v].input_vars())
+            self._tvars.update(self._profiles[v].input_vars())
         self._tvars -= set(self.fixed_vars.keys())
         self._tvars = list(self._tvars)
 
-        for p in self.profiles.values():
+        for p in self._profiles.values():
             if not p.initialized:
                 p.initialize(algo)
 
@@ -184,7 +184,7 @@ class StatesTable(States):
             c = self.var2col.get(v, v)
             if c in self._data.columns:
                 tcols.append(c)
-            elif v not in self.profiles.keys():
+            elif v not in self._profiles.keys():
                 raise KeyError(
                     f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars"
                 )
@@ -274,7 +274,7 @@ class StatesTable(States):
         for v, f in self.fixed_vars.items():
             pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE)
 
-        for v, p in self.profiles.items():
+        for v, p in self._profiles.items():
             pres = p.calculate(pdata, z)
             pdata[v] = pres
 

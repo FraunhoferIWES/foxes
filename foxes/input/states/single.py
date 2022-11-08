@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import States
+from foxes.core import States, VerticalProfile
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -19,6 +19,11 @@ class SingleStateStates(States):
         The TI value
     rho : float, optional
         The air density
+    profiles : dict, optional
+        Key: output variable name str, Value: str or dict
+        or `foxes.core.VerticalProfile`
+    profdata : dict, optional
+        Additional data for profiles
 
     Attributes
     ----------
@@ -30,15 +35,55 @@ class SingleStateStates(States):
         The TI value
     rho : float
         The air density
+    profdicts : dict
+        Key: output variable name str, Value: str or dict
+        or `foxes.core.VerticalProfile`
+    profdata : dict,
+        Additional data for profiles
 
     """
 
-    def __init__(self, ws, wd, ti=None, rho=None):
+    def __init__(
+            self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
         super().__init__()
         self.ws = ws
         self.wd = wd
         self.ti = ti
         self.rho = rho
+        self.profdicts = profiles
+        self.profdata = profdata
+
+    def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        states_sel : slice or range or list of int, optional
+            States subset selection
+        states_loc : list, optional
+            State index selection via pandas loc function
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
+
+        self._profiles = {}
+        for v, d in self.profdicts.items():
+            if isinstance(d, str):
+                self._profiles[v] = VerticalProfile.new(d)
+            elif isinstance(d, VerticalProfile):
+                self._profiles[v] = d
+            elif isinstance(d, dict):
+                t = d.pop("type")
+                self._profiles[v] = VerticalProfile.new(t, **d)
+            else:
+                raise TypeError(
+                    f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
+                )
 
     def size(self):
         """
@@ -120,6 +165,7 @@ class SingleStateStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+
         if self.ws is not None:
             pdata[FV.WS] = np.full(
                 (pdata.n_states, pdata.n_points), self.ws, dtype=FC.DTYPE
@@ -136,5 +182,14 @@ class SingleStateStates(States):
             pdata[FV.RHO] = np.full(
                 (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
             )
+
+        z = pdata[FV.POINTS][:, :, 2]
+        if len(self._profiles):
+            z = pdata[FV.POINTS][:, :, 2]
+            for k, v in self.profdata.items():
+                pdata[k] = v
+            for v, p in self._profiles.items():
+                pres = p.calculate(pdata, z)
+                pdata[v] = pres
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
