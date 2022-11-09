@@ -148,6 +148,11 @@ class DataBook:
         errors : bool
             Flag for raising KeyError, otherwise return None,
             if context of file_name not found
+        
+        Returns
+        -------
+        path : pathlib.Path
+            The path
 
         """
 
