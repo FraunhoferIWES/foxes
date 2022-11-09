@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from .output import Output
 import foxes.variables as FV
@@ -288,8 +289,8 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_turbine_yield(self, hours=24*365, power_factor=1, ambient=False):
-        """ Calculates turbine yield based on power averaged over all states
+    def calc_yield(self, hours=24*365, power_factor=1, ambient=False):
+        """ Calculates yield based on power over all states
 
         Args:
             hours (int, optional): _description_. Defaults to 24*365.
@@ -302,29 +303,42 @@ class FarmResultsEval(Output):
         if ambient:
             vars='AMB_P'
         else: vars = 'P'
-        # get power per turbine
-        pdata = self.calc_states_mean(vars)
-        
-        # compute yield
-        YLD =  pdata * hours * power_factor
-        
-        # compute standard deviation
-        #std_data = self.calc_states_std(vars)
+
+        # get results data for the vars variable (by state and turbine)
         vdata = self.results[vars].to_dataframe()
-        std_data = vdata.groupby(['turbine']).std()
-
-        # compute P75 and P90
-        P75 = YLD * (1.0 - 0.675 * std_data/pdata)
-        P90 = YLD * (1.0 - 1.282 * std_data/pdata)
-    
-        ydata = pd.concat([YLD, P75, P90], axis=1)
-        ydata.columns = ['YLD', 'P75', 'P90']
-        return ydata
         
-    def calc_farm_yield(self, hours=24*365, power_factor=1, ambient=False):
+        # compute yield per turbine (average power over states * hours * power_factor)
+        YLD = vdata[vars].groupby(['turbine']).mean() * hours * power_factor
+        
+        # P75 and P90 based on mean yield per turbine
+        UNCERT = YLD.std() / YLD.mean()
+        P75 = YLD.mean() * (1.0 - (0.675 * UNCERT))
+        P90 = YLD.mean() * (1.0 - (1.282 * UNCERT))
+        print(f"\nMean yield per turbine is {YLD}")
+        print(f"\nP75 is {P75}")
+        print(f"\nP90 is {P90}")
+        print("\nTotal farm yield is", YLD.sum())
 
-        # calculate yield per turbine
-        ydata = self.calc_turbine_yield(self, hours, power_factor, ambient)
+        # histogram
+        plt.hist(YLD, bins=15)
+        plt.axvline(YLD.mean(), c="orange")
+        plt.axvline(P75, c="red", linestyle="dotted")
+        plt.axvline(P90, c="red", linestyle="dotted")
+        plt.text(20.1, 8, "P90")
+        plt.text(20.8, 8, "P75")
+        plt.xlabel("Yield per turbine")
+        plt.show()
+        #plt.savefig("Hist.png") # sort of normally distributed...!
 
-        # calculate yield per farm
-        return ydata.sum()
+        print()
+
+        # hist for turbine 0
+        turb_0 = vdata.query("turbine == 0") * hours * power_factor
+        plt.hist(turb_0['P'])
+        plt.show()
+        #plt.savefig("Hist_turbine_0.png") # not normally distributed so P75 and P90 for each turbine would be meaningless
+
+        ydata = pd.DataFrame({'YLD_per_turbine': [YLD.mean()],
+        'P75': [P75],
+        'P90': [P90]})
+        return ydata

@@ -58,9 +58,7 @@ def run_foxes(args):
     o = foxes.output.FarmResultsEval(farm_results)
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    Y = o.calc_turbine_yield()
-    print("\nYield data per turbine:")
-    print(Y)
+    Y = o.calc_yield(hours=24*365, power_factor=0.000001, ambient=False) # results will be in GWh per year
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
     
 
