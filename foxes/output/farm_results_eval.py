@@ -289,16 +289,17 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_yield(self, hours=24*365, power_factor=1, ambient=False):
-        """ Calculates yield based on power over all states
+    def calc_turbine_yield(self, hours=24*365, power_factor=1, ambient=False):
+        """
+        Calculates yield, P75 and P90 per turbine
 
         Args:
-            hours (int, optional): _description_. Defaults to 24*365.
+            hours (_type_, optional): _description_. Defaults to 24*365.
             power_factor (int, optional): _description_. Defaults to 1.
             ambient (bool, optional): _description_. Defaults to False.
 
         Returns:
-            pandas.Dataframe: a dataframe containing yield, P75 and P90 per turbine
+            pandas.DataFrame: The results per turbine
         """
         if ambient:
             vars='AMB_P'
@@ -310,35 +311,45 @@ class FarmResultsEval(Output):
         # compute yield per turbine (average power over states * hours * power_factor)
         YLD = vdata[vars].groupby(['turbine']).mean() * hours * power_factor
         
-        # P75 and P90 based on mean yield per turbine
-        UNCERT = YLD.std() / YLD.mean()
-        P75 = YLD.mean() * (1.0 - (0.675 * UNCERT))
-        P90 = YLD.mean() * (1.0 - (1.282 * UNCERT))
-        print(f"\nMean yield per turbine is {YLD}")
-        print(f"\nP75 is {P75}")
-        print(f"\nP90 is {P90}")
-        print("\nTotal farm yield is", YLD.sum())
-
-        # histogram
-        plt.hist(YLD, bins=15)
-        plt.axvline(YLD.mean(), c="orange")
-        plt.axvline(P75, c="red", linestyle="dotted")
-        plt.axvline(P90, c="red", linestyle="dotted")
-        plt.text(20.1, 8, "P90")
-        plt.text(20.8, 8, "P75")
-        plt.xlabel("Yield per turbine")
-        plt.show()
-        #plt.savefig("Hist.png") # sort of normally distributed...!
-
-        print()
-
-        # hist for turbine 0
-        turb_0 = vdata.query("turbine == 0") * hours * power_factor
-        plt.hist(turb_0['P'])
-        plt.show()
-        #plt.savefig("Hist_turbine_0.png") # not normally distributed so P75 and P90 for each turbine would be meaningless
-
-        ydata = pd.DataFrame({'YLD_per_turbine': [YLD.mean()],
-        'P75': [P75],
-        'P90': [P90]})
+        # uncertainty in power 
+        UNCERT = 0.08 # an estimate...do we have uncertainty in wind or power data available.....?
+        P75 = YLD * (1.0 - (0.675 * UNCERT))
+        P90 = YLD * (1.0 - (1.282 * UNCERT))
+        
+        ydata = pd.DataFrame({'YLD': YLD,
+        'P75': P75,
+        'P90': P90})
+        
         return ydata
+
+    def calc_farm_yield(self, hours=24*365, power_factor=1, ambient=False):
+        """
+        Calculates yield, P75 and P90 for the farm
+
+        Args:
+            hours (_type_, optional): _description_. Defaults to 24*365.
+            power_factor (int, optional): _description_. Defaults to 1.
+            ambient (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            list: farm yield, P75 and P90
+        """
+        if ambient:
+            vars='AMB_P'
+        else: vars = 'P'
+
+        # get yield per turbine
+        YLD = self.calc_turbine_yield(hours, power_factor, ambient)['YLD']
+        farm_yield = YLD.sum()
+        
+        # calc absolute errors in yield
+        UNCERT = 0.08 # an estimate!
+        ABS_ERR = YLD * UNCERT
+        TOTAL_ABS_ERR = np.sqrt(np.sum(ABS_ERR**2, axis=0)) # sum abs error in quadrature to get error in farm yield
+        TOTAL_UNCERT = TOTAL_ABS_ERR / farm_yield
+
+        # P75 and P90
+        P75 = farm_yield * (1.0 - (0.675 * TOTAL_UNCERT))
+        P90 = farm_yield * (1.0 - (1.282 * TOTAL_UNCERT))
+                
+        return [farm_yield, P75, P90]

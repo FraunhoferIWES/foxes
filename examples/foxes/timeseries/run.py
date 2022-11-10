@@ -58,8 +58,19 @@ def run_foxes(args):
     o = foxes.output.FarmResultsEval(farm_results)
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    Y = o.calc_yield(hours=24*365, power_factor=0.000001, ambient=False) # results will be in GWh per year
+
+    # yield calculations
+    Y_turbine = o.calc_turbine_yield(hours=24*365, power_factor=0.000001, ambient=False) # results will be in GWh per year
+    print(f"\n Yield per turbine [GWh]:")
+    print(Y_turbine)
+    farm_yield, P75, P90 = o.calc_farm_yield(hours=24*365, power_factor=0.000001, ambient=False) # results will be in GWh per year)
+
+    print(f"\nFarm yield: {farm_yield:.1f} GWh")
+    print(f"\nFarm P75: {P75:.1f} GWh")
+    print(f"\nFarm P90: {P90:.1f} GWh")
+
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+    print()
     
 
 if __name__ == "__main__":
