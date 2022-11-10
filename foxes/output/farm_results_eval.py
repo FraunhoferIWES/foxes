@@ -334,10 +334,6 @@ class FarmResultsEval(Output):
         Returns:
             list: farm yield, P75 and P90
         """
-        if ambient:
-            vars='AMB_P'
-        else: vars = 'P'
-
         # get yield per turbine
         YLD = self.calc_turbine_yield(hours, power_factor, ambient)['YLD']
         farm_yield = YLD.sum()
