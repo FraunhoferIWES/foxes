@@ -289,7 +289,7 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_turbine_yield(self, hours=24*365, power_factor=1, ambient=False):
+    def calc_turbine_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
         """
         Calculates yield, P75 and P90 per turbine
 
@@ -312,9 +312,8 @@ class FarmResultsEval(Output):
         YLD = vdata[vars].groupby(['turbine']).mean() * hours * power_factor
         
         # uncertainty in power 
-        UNCERT = 0.08 # an estimate...do we have uncertainty in wind or power data available.....?
-        P75 = YLD * (1.0 - (0.675 * UNCERT))
-        P90 = YLD * (1.0 - (1.282 * UNCERT))
+        P75 = YLD * (1.0 - (0.675 * power_uncert))
+        P90 = YLD * (1.0 - (1.282 * power_uncert))
         
         ydata = pd.DataFrame({'YLD': YLD,
         'P75': P75,
@@ -322,7 +321,7 @@ class FarmResultsEval(Output):
         
         return ydata
 
-    def calc_farm_yield(self, hours=24*365, power_factor=1, ambient=False):
+    def calc_farm_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
         """
         Calculates yield, P75 and P90 for the farm
 
@@ -335,12 +334,12 @@ class FarmResultsEval(Output):
             list: farm yield, P75 and P90
         """
         # get yield per turbine
-        YLD = self.calc_turbine_yield(hours, power_factor, ambient)['YLD']
+        df = self.calc_turbine_yield(hours, power_factor, power_uncert, ambient)
+        YLD = df['YLD']
         farm_yield = YLD.sum()
         
         # calc absolute errors in yield
-        UNCERT = 0.08 # an estimate!
-        ABS_ERR = YLD * UNCERT
+        ABS_ERR = YLD * power_uncert
         TOTAL_ABS_ERR = np.sqrt(np.sum(ABS_ERR**2, axis=0)) # sum abs error in quadrature to get error in farm yield
         TOTAL_UNCERT = TOTAL_ABS_ERR / farm_yield
 
