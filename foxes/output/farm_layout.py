@@ -2,6 +2,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import foxes.constants as FC
 import foxes.variables as FV
@@ -111,6 +112,7 @@ class FarmLayoutOutput(Output):
 
     def get_figure(
         self,
+        color_by=None,
         fontsize=8,
         figsize=None,
         annotate=1,
@@ -127,6 +129,10 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
+        color_by : str, optional
+            Set scatter color by variable results.
+            Use "mean_REWS" etc for means, also
+            min, max, sum. All wrt states
         fontsize : int, optional
             Size of the turbine numbers
         figsize : tuple, optional
@@ -198,6 +204,20 @@ class FarmLayoutOutput(Output):
         kw = {"c": "orange"}
         kw.update(**kwargs)
 
+        if color_by is not None:
+            if self.fres is None:
+                raise ValueError(f"Missing farm_results for color_by '{color_by}'")
+            if color_by[:5] == "mean_":
+                kw["c"] = np.einsum('st,st->t', self.fres[color_by[5:]], self.fres[FV.WEIGHT])
+            elif color_by[:4] == "sum_":
+                kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
+            elif color_by[:4] == "min_":
+                kw["c"] = np.min(self.fres[color_by[4:]], axis=0)
+            elif color_by[:4] == "max_":
+                kw["c"] = np.max(self.fres[color_by[4:]], axis=0)
+            else:
+                raise KeyError(f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable")
+
         im = ax.scatter(x, y, **kw)
 
         if annotate == 1:
@@ -231,6 +251,11 @@ class FarmLayoutOutput(Output):
             ax.set_aspect("equal", adjustable="box")
 
         ax.autoscale_view(tight=True)
+
+        if color_by is not None:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            fig.colorbar(im, cax=cax)
 
         if ret_im:
             return ax, im

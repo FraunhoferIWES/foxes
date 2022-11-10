@@ -102,6 +102,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `cubic_roots`, solves a cubic equation
 - Output
   - New: `StateTurbineMap`, creates heat maps for state-turbine data
+  - Improved: `FarmLayoutOutput` now supports scatter color by variable
 - Documentation
   - Adding forgotten `foxes.opt` to API
 
