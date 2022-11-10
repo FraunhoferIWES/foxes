@@ -76,6 +76,7 @@ class ModelBook:
             kTI=fm.turbine_models.kTI(),
             kTI_02=fm.turbine_models.kTI(kTI=0.2),
             kTI_04=fm.turbine_models.kTI(kTI=0.4),
+            kTI_05=fm.turbine_models.kTI(kTI=0.5),
             kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
             kTI_amb_02=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.2),
             kTI_amb_04=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4),
