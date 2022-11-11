@@ -59,6 +59,8 @@ def run_foxes(args):
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
 
+    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+    
     # yield calculations (currently using default of 8% error in power value)
     Y_turbine = o.calc_turbine_yield() # results will be in GWh per year
     print(f"\n Yield per turbine [GWh]:")
@@ -70,10 +72,6 @@ def run_foxes(args):
     print(f"Farm wake losses: {farm_yield_AMB - farm_yield:.1f} GWh")
     print(f"Farm P75: {P75:.1f} GWh")
     print(f"Farm P90: {P90:.1f} GWh")
-    
-
-    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
-    print()
     
 
 if __name__ == "__main__":

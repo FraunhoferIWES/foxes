@@ -334,8 +334,7 @@ class FarmResultsEval(Output):
             list: farm yield, P75 and P90
         """
         # get yield per turbine
-        df = self.calc_turbine_yield(hours, power_factor, power_uncert, ambient)
-        YLD = df['YLD']
+        YLD = self.calc_turbine_yield(hours, power_factor, power_uncert, ambient)['YLD']
         farm_yield = YLD.sum()
         
         # calc absolute errors in yield
