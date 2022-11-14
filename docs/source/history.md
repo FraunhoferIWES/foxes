@@ -105,5 +105,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `FarmLayoutOutput` now supports scatter color by variable
 - Documentation
   - Adding forgotten `foxes.opt` to API
+- Notebooks:
+  - Now including results as colored layout plots
+  - New notebook: `wind_rose.ipynb`
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
