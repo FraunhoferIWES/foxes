@@ -19,7 +19,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
-    parser.add_argument("--w_e", help="The wind speed error", type=float, default=0.04)
+    parser.add_argument("--we", help="The wind speed error", type=float, default=0.04)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
