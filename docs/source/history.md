@@ -107,6 +107,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Adding forgotten `foxes.opt` to API
 - Notebooks:
   - Now including results as colored layout plots
-  - New notebook: `wind_rose.ipynb`
+  - New notebook: `wind_rose.ipynb`, demonstrating how to calculate wind roses
+  - New notebook: `power_mask.ipynb`, showing derating and boost via a power mask
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
