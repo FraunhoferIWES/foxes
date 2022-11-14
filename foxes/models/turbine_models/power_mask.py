@@ -5,6 +5,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils import cubic_roots
 
+
 class PowerMask(TurbineModel):
     """
     Invokes a maximal power value.
@@ -14,7 +15,7 @@ class PowerMask(TurbineModel):
     For higher values, a boost is introduced.
 
     The model updates the P and CT variables,
-    so it is wise to use it after calling the 
+    so it is wise to use it after calling the
     turbine type model.
 
     Parameters
@@ -23,7 +24,7 @@ class PowerMask(TurbineModel):
         The wind speed variable for power lookup
     factor_P : float
         The power unit factor, e.g. 1000 for kW
-    
+
     Attributes
     ----------
     var_ws_P : str
@@ -33,11 +34,7 @@ class PowerMask(TurbineModel):
 
     """
 
-    def __init__(
-            self, 
-            var_ws_P=FV.REWS3, 
-            factor_P=1.e3
-        ):
+    def __init__(self, var_ws_P=FV.REWS3, factor_P=1.0e3):
         super().__init__()
 
         self.var_ws_P = var_ws_P
@@ -76,10 +73,60 @@ class PowerMask(TurbineModel):
 
         """
         self._P_rated = np.array(
-            [t.P_nominal for t in algo.farm_controller.turbine_types],
-            dtype=FC.DTYPE)
+            [t.P_nominal for t in algo.farm_controller.turbine_types], dtype=FC.DTYPE
+        )
 
         super().initialize(algo, st_sel, verbosity)
+
+    @classmethod
+    def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=1e-3):
+
+        # select power entries for which this is active:
+        P = data[FV.P]
+        sel = ~np.isnan(max_P) & (
+            ((max_P < rated_P) & (P > max_P))
+            | ((max_P > rated_P) & (P > rated_P - P_lim))
+        )
+        if np.any(sel):
+
+            # apply selection:
+            max_P = max_P[sel]
+            ws = data[var_ws][sel]
+            rho = data[FV.RHO][sel]
+            r = data[FV.D][sel] / 2
+            P = P[sel]
+            ct = data[FV.CT][sel]
+            ct[ct > 1.0] = 1.0
+
+            # calculate power efficiency e of turbine
+            # e is the ratio of the cp derived from the power curve
+            # and the theoretical cp from the turbine induction
+            cp = P / (0.5 * ws**3 * rho * np.pi * r**2) * factor_P
+            a = 0.5 * (1 - np.sqrt(1 - ct))
+            cp_a = 4 * a**3 - 8 * a**2 + 4 * a
+            e = cp / cp_a
+            del cp, a, cp_a, ct, P
+
+            # calculating new cp for changed power
+            cp = max_P / (0.5 * ws**3 * rho * np.pi * r**2) * factor_P
+
+            # find roots:
+            N = len(cp)
+            a3 = np.full(N, 4.0, dtype=FC.DTYPE)
+            a2 = np.full(N, -8.0, dtype=FC.DTYPE)
+            a1 = np.full(N, 4.0, dtype=FC.DTYPE)
+            a0 = -cp / e
+            rts = cubic_roots(a0, a1, a2, a3)
+            rts[np.isnan(rts)] = np.inf
+            rts[rts <= 0.0] = np.inf
+            a = np.min(rts, axis=1)
+            del a0, a1, a2, a3, rts
+
+            # set results:
+            P = data[FV.P]
+            ct = data[FV.CT]
+            P[sel] = max_P
+            ct[sel] = 4 * a * (1 - a)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -111,58 +158,8 @@ class PowerMask(TurbineModel):
         # prepare:
         max_P = fdata[FV.MAX_P]
         rated_P = self._P_rated[None, :]
-        P = fdata[FV.P]
-        ws = fdata[self.var_ws_P]
-        ct = fdata[FV.CT]
-        rho = fdata[FV.RHO]
-        r = fdata[FV.D] / 2
 
-        # select power entries for which this is active:
-        sel = ( 
-                ~np.isnan(max_P) & (
-                ( (max_P < rated_P) & (P > max_P) ) |
-                ( (max_P > rated_P) & (P > rated_P - 1e-6) )
-                )
-            )
-        if np.any(sel):
+        # calculate:
+        self.update_P_ct(fdata, max_P, rated_P, self.factor_P, var_ws=self.var_ws_P)
 
-            # apply selection:
-            max_P = max_P[sel]
-            ws = ws[sel]
-            rho = rho[sel]
-            r = r[sel]
-            P = P[sel]
-            ct = ct[sel]
-            ct[ct > 1.] = 1.
-            
-            # calculate power efficiency e of turbine
-            # e is the ratio of the cp derived from the power curve
-            # and the theoretical cp from the turbine induction
-            cp   = P / ( 0.5 * ws**3 * rho * np.pi * r**2 ) * self.factor_P
-            a    = 0.5 * ( 1 - np.sqrt( 1 - ct ))
-            cp_a = 4*a**3 - 8*a**2 + 4*a
-            e    = cp/cp_a
-            del cp, a, cp_a, ct, P
-
-            # calculating new cp for changed power
-            cp = max_P / ( 0.5 * ws**3 * rho * np.pi * r**2 ) * self.factor_P
-
-            # find roots:
-            N = len(cp)
-            a3 = np.full(N, 4., dtype=FC.DTYPE) 
-            a2 = np.full(N, -8., dtype=FC.DTYPE) 
-            a1 = np.full(N, 4., dtype=FC.DTYPE) 
-            a0 = -cp/e
-            rts = cubic_roots(a0, a1, a2, a3)
-            rts[np.isnan(rts)] = np.inf
-            rts[rts <= 0.] = np.inf
-            a = np.min(rts, axis=1)
-            del a0, a1, a2, a3, rts
-
-            # set results:
-            P = fdata[FV.P]
-            ct = fdata[FV.CT]
-            P[sel] = max_P
-            ct[sel] = 4 * a * ( 1 - a ) 
-
-        return {FV.P: P, FV.CT: ct}
+        return {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}

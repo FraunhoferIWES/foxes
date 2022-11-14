@@ -1,4 +1,5 @@
-import numpy as np 
+import numpy as np
+
 
 def cubic_roots(a0, a1, a2, a3=None):
     """
@@ -38,47 +39,47 @@ def cubic_roots(a0, a1, a2, a3=None):
     out = np.full([N, 3], np.nan)
 
     # Calculate the normalized form x^3 + a2 * x^2 + a1 * x + a0 = 0
-    b_a  = a2 if a3 is None else a2 / a3 
+    b_a = a2 if a3 is None else a2 / a3
     b_a2 = b_a * b_a
-    c_a  = a1 if a3 is None else a1 / a3 
-    d_a  = a0 if a3 is None else a0 / a3
+    c_a = a1 if a3 is None else a1 / a3
+    d_a = a0 if a3 is None else a0 / a3
 
     # Solve the cubic equation
-    Q     = (3 * c_a - b_a2) / 9
-    R     = (9 * b_a * c_a - 27 * d_a - 2 * b_a * b_a2) / 54
-    Q3    = Q * Q * Q
-    D     = Q3 + R * R
-    b_a_3 = (1. / 3.) * b_a
+    Q = (3 * c_a - b_a2) / 9
+    R = (9 * b_a * c_a - 27 * d_a - 2 * b_a * b_a2) / 54
+    Q3 = Q * Q * Q
+    D = Q3 + R * R
+    b_a_3 = (1.0 / 3.0) * b_a
 
-    sel = Q == 0.
+    sel = Q == 0.0
     if np.any(sel):
 
         o = out[sel, 0]
 
-        sel2 = R == 0.
+        sel2 = R == 0.0
         if np.any(sel2):
-            o[sel2] = - b_a_3[sel][sel2]
+            o[sel2] = -b_a_3[sel][sel2]
 
         if np.any(~sel2):
             o[~sel2] = np.pow(2 * R[sel][~sel2], 1 / 3.0) - b_a_3[sel][~sel2]
-        
+
         out[sel, 0] = o
 
-    sel = D <= 0.
+    sel = D <= 0.0
     if np.any(sel):
 
         # Three real roots
-        theta  = np.arccos(R[sel] / np.sqrt(-Q3[sel]))
+        theta = np.arccos(R[sel] / np.sqrt(-Q3[sel]))
         sqrt_Q = np.sqrt(-Q[sel])
 
-        out[sel, 0] = 2 * sqrt_Q * np.cos(theta             / 3.0) - b_a_3[sel]
-        out[sel, 1] = 2 * sqrt_Q * np.cos((theta + 2 * np.pi)/ 3.0) - b_a_3[sel]
-        out[sel, 2] = 2 * sqrt_Q * np.cos((theta + 4 * np.pi)/ 3.0) - b_a_3[sel]
+        out[sel, 0] = 2 * sqrt_Q * np.cos(theta / 3.0) - b_a_3[sel]
+        out[sel, 1] = 2 * sqrt_Q * np.cos((theta + 2 * np.pi) / 3.0) - b_a_3[sel]
+        out[sel, 2] = 2 * sqrt_Q * np.cos((theta + 4 * np.pi) / 3.0) - b_a_3[sel]
 
-    return out 
+    return out
 
 
-def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.e-12):
+def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
     """
     Test the cubic roots results
 
@@ -112,26 +113,26 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.e-12):
 
         for x in rts:
 
-            f  = c0 + c1*x + c2*x**2 + c3*x**3
+            f = c0 + c1 * x + c2 * x**2 + c3 * x**3
             ok = np.abs(f) <= tol
 
             print(f"  root x = {x}: f(x) = {f}     {'OK' if ok else 'FAILED'}")
 
             if not ok:
                 raise Exception("NOT OK!")
-        
+
         if len(rts) == 0:
             print("  no real roots.")
-            
 
-if __name__ == '__main__':
 
-    N  = 100
-    a0 = np.random.uniform(-10.,10.,N)
-    a1 = np.random.uniform(-10.,10.,N)
-    a2 = np.random.uniform(-10.,10.,N)
-    a3 = np.random.uniform(1.,10.,N)
+if __name__ == "__main__":
 
-    roots = cubic_roots(a0,a1,a2,a3)
+    N = 100
+    a0 = np.random.uniform(-10.0, 10.0, N)
+    a1 = np.random.uniform(-10.0, 10.0, N)
+    a2 = np.random.uniform(-10.0, 10.0, N)
+    a3 = np.random.uniform(1.0, 10.0, N)
 
-    test_cubic_roots(roots,a0, a1,a2,a3)
+    roots = cubic_roots(a0, a1, a2, a3)
+
+    test_cubic_roots(roots, a0, a1, a2, a3)

@@ -43,8 +43,7 @@ class SingleStateStates(States):
 
     """
 
-    def __init__(
-            self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
+    def __init__(self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
         super().__init__()
         self.ws = ws
         self.wd = wd

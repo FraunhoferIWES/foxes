@@ -208,7 +208,9 @@ class FarmLayoutOutput(Output):
             if self.fres is None:
                 raise ValueError(f"Missing farm_results for color_by '{color_by}'")
             if color_by[:5] == "mean_":
-                kw["c"] = np.einsum('st,st->t', self.fres[color_by[5:]], self.fres[FV.WEIGHT])
+                kw["c"] = np.einsum(
+                    "st,st->t", self.fres[color_by[5:]], self.fres[FV.WEIGHT]
+                )
             elif color_by[:4] == "sum_":
                 kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
             elif color_by[:4] == "min_":
@@ -216,7 +218,9 @@ class FarmLayoutOutput(Output):
             elif color_by[:4] == "max_":
                 kw["c"] = np.max(self.fres[color_by[4:]], axis=0)
             else:
-                raise KeyError(f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable")
+                raise KeyError(
+                    f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable"
+                )
 
         im = ax.scatter(x, y, **kw)
 

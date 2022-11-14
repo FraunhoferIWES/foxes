@@ -309,13 +309,19 @@ class MultiHeightStates(States):
             i_wd = vrs.index(FV.WD)
             if FV.WS in vrs:
                 i_ws = vrs.index(FV.WS)
-                uvh = wd2uv(mdata[self.DATA][:, i_wd], mdata[self.DATA][:, i_ws], axis=-1)
+                uvh = wd2uv(
+                    mdata[self.DATA][:, i_wd], mdata[self.DATA][:, i_ws], axis=-1
+                )
             elif FV.WS in self.fixed_vars:
                 uvh = wd2uv(mdata[self.DATA][:, i_wd], self.fixed_vars[FV.WS], axis=-1)
             elif self.var(FV.WS) in mdata:
-                uvh = wd2uv(mdata[self.DATA][:, i_wd], mdata[self.var(FV.WS)][:, None], axis=-1)
+                uvh = wd2uv(
+                    mdata[self.DATA][:, i_wd], mdata[self.var(FV.WS)][:, None], axis=-1
+                )
             else:
-                raise KeyError(f"States '{self.name}': Found variable '{FV.WD}', but missing variable '{FV.WS}'")
+                raise KeyError(
+                    f"States '{self.name}': Found variable '{FV.WD}', but missing variable '{FV.WS}'"
+                )
             uv = np.einsum("shd,sph->spd", uvh, ires)
             del uvh
 

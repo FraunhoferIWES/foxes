@@ -24,15 +24,15 @@ class StateTurbineMap(Output):
 
     def __init__(self, farm_results):
         self.results = farm_results
-    
+
     def plot_map(
-            self,
-            variable,
-            title=None,
-            ax=None,
-            figsize=None,
-            **kwargs,
-        ):
+        self,
+        variable,
+        title=None,
+        ax=None,
+        figsize=None,
+        **kwargs,
+    ):
         """
         Plot the heat map for the selected variable.
 
@@ -66,7 +66,7 @@ class StateTurbineMap(Output):
         ds = states[-1] - states[-2]
         states = np.append(states, states[-1] + ds)
         turbines = np.arange(len(turbines) + 1)
-  
+
         y, x = np.meshgrid(states, turbines)
         z = self.results[variable].to_numpy()
 
@@ -75,11 +75,11 @@ class StateTurbineMap(Output):
 
         c = ax.pcolormesh(x, y, z.T, **prgs)
 
-        ax.set_xticks(turbines[:-1]+0.5)
+        ax.set_xticks(turbines[:-1] + 0.5)
         ax.set_xticklabels(turbines[:-1])
         yt = ax.get_yticks()
         ytl = ax.get_yticklabels()
-        ax.set_yticks(yt[:-1]+0.5*(yt[-1] - yt[-2]))
+        ax.set_yticks(yt[:-1] + 0.5 * (yt[-1] - yt[-2]))
         ax.set_yticklabels(ytl[:-1])
         fig.colorbar(c, ax=ax)
 
