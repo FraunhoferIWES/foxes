@@ -318,7 +318,7 @@ class FarmResultsEval(Output):
         ydata = pd.DataFrame({'YLD': YLD,
         'P75': P75,
         'P90': P90})
-        
+
         return ydata
 
     def calc_farm_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
