@@ -26,7 +26,7 @@ def run_foxes(args):
     states = foxes.input.states.StatesTable(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        fixed_vars={FV.WD: 270., FV.TI: 0.05, FV.RHO: 1.225},
+        fixed_vars={FV.WD: 270.0, FV.TI: 0.05, FV.RHO: 1.225},
     )
 
     farm = foxes.WindFarm()
@@ -69,13 +69,12 @@ def run_foxes(args):
 
     o1 = foxes.output.StateTurbineMap(farm_results)
 
-
     # run calculation without power mask:
 
     algo.finalize(clear_mem=True)
     models.remove("set_Pmax")
     models.remove("PMask")
-    
+
     farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
 
     fr = farm_results.to_dataframe()
@@ -89,25 +88,68 @@ def run_foxes(args):
     o0 = foxes.output.StateTurbineMap(farm_results)
 
     # show power:
-    fig, axs = plt.subplots(1,3,figsize=(15,5))
-    o0.plot_map(FV.P, ax=axs[0], edgecolor="white", title="Power, no power mask",
-        cmap="YlOrRd", vmin=0, vmax=np.nanmax(Pmax_data))
-    o1.plot_map(FV.MAX_P, ax=axs[1], edgecolor="white", cmap="YlOrRd", 
-        title="Power mask", vmin=0, vmax=np.nanmax(Pmax_data))
-    o1.plot_map(FV.P, ax=axs[2], edgecolor="white", cmap="YlOrRd", 
-        title="Power, with power mask", vmin=0, vmax=np.nanmax(Pmax_data))
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    o0.plot_map(
+        FV.P,
+        ax=axs[0],
+        edgecolor="white",
+        title="Power, no power mask",
+        cmap="YlOrRd",
+        vmin=0,
+        vmax=np.nanmax(Pmax_data),
+    )
+    o1.plot_map(
+        FV.MAX_P,
+        ax=axs[1],
+        edgecolor="white",
+        cmap="YlOrRd",
+        title="Power mask",
+        vmin=0,
+        vmax=np.nanmax(Pmax_data),
+    )
+    o1.plot_map(
+        FV.P,
+        ax=axs[2],
+        edgecolor="white",
+        cmap="YlOrRd",
+        title="Power, with power mask",
+        vmin=0,
+        vmax=np.nanmax(Pmax_data),
+    )
     plt.show()
     plt.close(fig)
 
     # show ct:
-    fig, axs = plt.subplots(1,3,figsize=(15,5))
-    o0.plot_map(FV.CT, ax=axs[0], edgecolor="white", title="ct, no power mask",
-        cmap="YlGn", vmin=0, vmax=1.)
-    o1.plot_map(FV.MAX_P, ax=axs[1], edgecolor="white", cmap="YlOrRd", 
-        title="Power mask", vmin=0, vmax=np.nanmax(Pmax_data))
-    o1.plot_map(FV.CT, ax=axs[2], edgecolor="white", cmap="YlGn", 
-        title="ct, with power mask", vmin=0, vmax=1.)
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    o0.plot_map(
+        FV.CT,
+        ax=axs[0],
+        edgecolor="white",
+        title="ct, no power mask",
+        cmap="YlGn",
+        vmin=0,
+        vmax=1.0,
+    )
+    o1.plot_map(
+        FV.MAX_P,
+        ax=axs[1],
+        edgecolor="white",
+        cmap="YlOrRd",
+        title="Power mask",
+        vmin=0,
+        vmax=np.nanmax(Pmax_data),
+    )
+    o1.plot_map(
+        FV.CT,
+        ax=axs[2],
+        edgecolor="white",
+        cmap="YlGn",
+        title="ct, with power mask",
+        vmin=0,
+        vmax=1.0,
+    )
     plt.show()
+
 
 if __name__ == "__main__":
 
