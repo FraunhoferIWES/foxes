@@ -132,9 +132,10 @@ class TurbineTypeCurves(Output):
 
         if P_max is not None:
 
-            self.mbook.turbine_models["set_Pmax"] = SetFarmVars()
-            self.mbook.turbine_models["set_Pmax"].add_var(FV.MAX_P, P_max)
-            models += ["set_Pmax", "PMask"]
+            sname = f"__{type(self).__name__}_set_Pmax"
+            self.mbook.turbine_models[sname] = SetFarmVars()
+            self.mbook.turbine_models[sname].add_var(FV.MAX_P, P_max)
+            models += [sname, "PMask"]
 
             farm = WindFarm()
             farm.add_turbine(
@@ -145,6 +146,8 @@ class TurbineTypeCurves(Output):
             algo = Downwind(self.mbook, farm, states, wake_models=[], verbosity=0)
 
             results1 = algo.calc_farm()
+
+            del self.mbook.turbine_models[sname]
 
         for i, v in enumerate(vars):
 

@@ -112,3 +112,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New notebook: `power_mask.ipynb`, showing derating and boost via a power mask
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
+
+## v0.2.4-alpha
+
+- Bug fixes
+  - Hotfix for bug in `TurbineTypeCurves` output
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.4)
