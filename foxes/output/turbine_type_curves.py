@@ -117,12 +117,12 @@ class TurbineTypeCurves(Output):
         states = StatesTable(
             sdata,
             output_vars={FV.WS, FV.WD, FV.TI, FV.RHO},
-            fixed_vars={FV.WD: 270.0, FV.TI: ti, FV.RHO: rho}
+            fixed_vars={FV.WD: 270.0, FV.TI: ti, FV.RHO: rho},
         )
 
         farm = WindFarm()
         farm.add_turbine(
-            Turbine(xy=[0., 0.], turbine_models=models),
+            Turbine(xy=[0.0, 0.0], turbine_models=models),
             verbosity=0,
         )
 
@@ -138,7 +138,7 @@ class TurbineTypeCurves(Output):
 
             farm = WindFarm()
             farm.add_turbine(
-                Turbine(xy=[0., 0.], turbine_models=models),
+                Turbine(xy=[0.0, 0.0], turbine_models=models),
                 verbosity=0,
             )
 

@@ -25,13 +25,13 @@ def run_foxes(args):
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 4))
     o = foxes.output.TurbineTypeCurves(mbook)
-    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=3000.)
+    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=3000.0)
     plt.show()
     plt.close(fig)
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 4))
     o = foxes.output.TurbineTypeCurves(mbook)
-    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=6000.)
+    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=6000.0)
     plt.show()
     plt.close(fig)
 
