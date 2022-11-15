@@ -79,7 +79,7 @@ class PowerMask(TurbineModel):
         super().initialize(algo, st_sel, verbosity)
 
     @classmethod
-    def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=1e-3):
+    def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=100):
 
         # select power entries for which this is active:
         P = data[FV.P]

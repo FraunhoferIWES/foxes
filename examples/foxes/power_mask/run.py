@@ -23,6 +23,18 @@ def run_foxes(args):
     mbook.turbine_models["set_Pmax"].add_var(FV.MAX_P, Pmax_data)
     models = args.tmodels + ["set_Pmax", ttype.name, "PMask"]
 
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+    o = foxes.output.TurbineTypeCurves(mbook)
+    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=3000.)
+    plt.show()
+    plt.close(fig)
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+    o = foxes.output.TurbineTypeCurves(mbook)
+    o.plot_curves(ttype.name, [FV.P, FV.CT], axs=axs, P_max=6000.)
+    plt.show()
+    plt.close(fig)
+
     states = foxes.input.states.StatesTable(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
