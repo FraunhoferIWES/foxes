@@ -130,6 +130,15 @@ farm_results = algo.calc_farm()
 print(farm_results)
 ```
 
+## Contributing
+
+1. Fork _foxes_ on _github_.
+2. Create a branch (`git checkout -b new_branch`)
+3. Commit your changes (`git commit -am "your awesome message"`)
+4. Push to the branch (`git push origin new_branch`)
+5. Create a pull request
+
+
 ## Acknowledgements
 
 The development of _foxes_ and its predecessors _flapFOAM_ and _flappy_ (internal - non public) has been supported through multiple publicly funded research projects. We acknowledge in particular the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects _Smart Wind Farms_ (grant no. 0325851B), _GW-Wakes_ (0325397B) and _X-Wakes_ (03EE3008A) as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework of the project _H2Digital_ (03SF0635).

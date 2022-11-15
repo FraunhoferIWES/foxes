@@ -74,7 +74,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="timeseries.csv.gz",
+        default="timeseries_8000.csv.gz",
     )
     parser.add_argument(
         "-t",

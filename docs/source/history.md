@@ -89,3 +89,26 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Bug fixed in `MultiHeightStates` for wind veer cases
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.2)
+
+## v0.2.3-alpha
+
+- Input states
+  - Improved: `SingleStateStates` now supports profiles
+- Turbine models
+  - New model `PowerMask`: Derates or boosts a turbine
+- Examples
+  - New: `power_mask`, demonstrates derating and boost
+- Utils
+  - New: `cubic_roots`, solves a cubic equation
+- Output
+  - New: `StateTurbineMap`, creates heat maps for state-turbine data
+  - New: `TurbineTypeCurves`, creates power and thrust curve plots
+  - Improved: `FarmLayoutOutput` now supports scatter color by variable
+- Documentation
+  - Adding forgotten `foxes.opt` to API
+- Notebooks:
+  - Now including results as colored layout plots
+  - New notebook: `wind_rose.ipynb`, demonstrating how to calculate wind roses
+  - New notebook: `power_mask.ipynb`, showing derating and boost via a power mask
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)

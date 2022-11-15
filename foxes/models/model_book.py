@@ -76,10 +76,12 @@ class ModelBook:
             kTI=fm.turbine_models.kTI(),
             kTI_02=fm.turbine_models.kTI(kTI=0.2),
             kTI_04=fm.turbine_models.kTI(kTI=0.4),
+            kTI_05=fm.turbine_models.kTI(kTI=0.5),
             kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
             kTI_amb_02=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.2),
             kTI_amb_04=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4),
             thrust2ct=fm.turbine_models.Thrust2Ct(),
+            PMask=fm.turbine_models.PowerMask(),
         )
 
         self.farm_models = Dict(
@@ -156,8 +158,17 @@ class ModelBook:
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
                 superposition=s
             )
+            self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
+                k=0.02, superposition=s
+            )
+            self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
+                k=0.04, superposition=s
+            )
             self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
                 k=0.07, superposition=s
+            )
+            self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
+                k=0.075, superposition=s
             )
 
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
