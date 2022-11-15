@@ -119,3 +119,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Hotfix for bug in `TurbineTypeCurves` output
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.4)
+
+## v0.2.5-alpha
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
