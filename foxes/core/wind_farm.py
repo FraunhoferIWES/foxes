@@ -57,3 +57,16 @@ class WindFarm:
 
         """
         return len(self.turbines)
+    
+    @property
+    def turbine_names(self):
+        """
+        The list of names of all turbines
+
+        Returns
+        -------
+        names : list of str
+            The names of all turbines
+
+        """
+        return [t.name for t in self.turbines]

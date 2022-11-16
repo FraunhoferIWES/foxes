@@ -43,8 +43,8 @@ class PCtTwoFiles(TurbineType):
         Parameters for pandas power file reading
     pd_file_read_pars_ct:  dict, optional
         Parameters for pandas ct file reading
-    **parameters : dict, optional
-        Parameters for pandas file reading
+    paramerers : dict, optional
+        Additional parameters for TurbineType class
 
     Attributes
     ----------
