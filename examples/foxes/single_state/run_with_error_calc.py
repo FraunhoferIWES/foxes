@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import argparse
 import matplotlib.pyplot as plt
 
@@ -19,6 +20,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
+    parser.add_argument("--we", help="The wind speed error", type=float, default=0.04)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
@@ -61,6 +63,15 @@ if __name__ == "__main__":
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
 
+    # create lower and upper bound states for a given error in wind
+    states_lower = foxes.input.states.SingleStateStates(
+        ws=args.ws-(args.we*args.ws), wd=args.wd, ti=args.ti, rho=args.rho
+    )
+
+    states_upper = foxes.input.states.SingleStateStates(
+        ws=args.ws+(args.we*args.ws), wd=args.wd, ti=args.ti, rho=args.rho
+    )
+
     # create wind farm:
     print("\nCreating wind farm")
     farm = foxes.WindFarm()
@@ -88,8 +99,34 @@ if __name__ == "__main__":
         partial_wakes_model=args.pwakes,
         chunks=None,
     )
+    # lower bound algo:
+    algo_lower = foxes.algorithms.Downwind(
+        mbook,
+        farm,
+        states=states_lower,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame="rotor_wd",
+        partial_wakes_model=args.pwakes,
+        chunks=None,
+    )
+
+    # upper bound algo:
+    algo_upper = foxes.algorithms.Downwind(
+        mbook,
+        farm,
+        states=states_upper,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame="rotor_wd",
+        partial_wakes_model=args.pwakes,
+        chunks=None,
+    )
+
     # calculate farm results:
     farm_results = algo.calc_farm()
+    farm_results_lower = algo_lower.calc_farm()
+    farm_results_upper = algo_upper.calc_farm()
     print("\nResults data:\n", farm_results)
 
     # Horizontal flow plot:
@@ -110,26 +147,46 @@ if __name__ == "__main__":
     plt.show()
 
     # Print farm results data:
-    print("\nResults summary:\n")
     fr = farm_results.to_dataframe()
+    print("\nResults summary:\n")
     print(
         fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_P, FV.P, FV.CT]]
     )
+    fr_lower = farm_results_lower.to_dataframe()
+    fr_upper = farm_results_upper.to_dataframe()
+        
+    # print results for power at lower, ws and upper
+    print("\nWind speed and power at lower bound:")
+    print(fr_lower[[FV.REWS, FV.P]])
+    print("\nWind speed and power at upper bound:")
+    print(fr_upper[[FV.REWS, FV.P]])
 
-    # compute outputs
-    o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power: {P/1000:.3f} MW, Efficiency = {P/P0*100:.2f} %")
+    # create df of error data
+    fr_with_bounds = fr[[FV.REWS, FV.P]].copy()
+    fr_with_bounds['P_lower'] = fr_lower[[FV.P]]
+    fr_with_bounds['P_upper'] = fr_upper[[FV.P]]
+    fr_with_bounds['Abs_error'] = (fr_with_bounds['P_upper'] - fr_with_bounds['P_lower'])/2
+    fr_with_bounds['Rel_error'] = fr_with_bounds['Abs_error']/fr_with_bounds['P']
+    print("\nUpper and lower bounds on power:")
+    print(fr_with_bounds)
 
-    # yield calculations 
-    Y_turbine = o.calc_turbine_yield() # results will be in GWh per year
-    print(f"\n Yield per turbine [GWh]:")
-    print(Y_turbine)
-    farm_yield, P75, P90 = o.calc_farm_yield() # results will be in GWh per year
-    farm_yield_AMB, P75_AMB, P90_AMB = o.calc_farm_yield(ambient=True)
+    # set hours and power factors
+    hours_factor = 24 * 365 
+    power_factor = 1e-6
 
-    print(f"\nFarm yield: {farm_yield:.1f} GWh")
-    print(f"Farm wake losses: {farm_yield_AMB - farm_yield:.1f} GWh")
-    print(f"Farm P75: {P75:.1f} GWh")
-    print(f"Farm P90: {P90:.1f} GWh")
+    # compute yield and its error
+    YLD = fr_with_bounds.P.sum() * hours_factor
+    print(f"\nAnnual yield is {YLD*power_factor:.2f} GWh")
+    YLD_error_abs = np.sqrt(np.sum((fr_with_bounds['Abs_error'] * hours_factor)**2)) # sum errors in quadrature
+    YLD_error_rel = YLD_error_abs/YLD
+    print(f"Absolute error of yield is {YLD_error_abs*power_factor:.2f} GWh")
+    print(f"Relative error of yield is {YLD_error_rel*100:.1f} %")
+
+    # P75 and P90
+    P75 = YLD * (1.0 - (0.675 * YLD_error_rel))
+    P90 = YLD * (1.0 - (1.282 * YLD_error_rel))
+    print(f"P75 is {P75 * power_factor:.2f} GWh")
+    print(f"P90 is {P90* power_factor:.2f} GWh")
+    print()
+
+   
