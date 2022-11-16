@@ -289,37 +289,39 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_turbine_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
-        """
-        Calculates yield, P75 and P90 per turbine
+    def calc_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
 
-        Args:
-            hours (_type_, optional): _description_. Defaults to 24*365.
-            power_factor (int, optional): _description_. Defaults to 1.
-            ambient (bool, optional): _description_. Defaults to False.
-
-        Returns:
-            pandas.DataFrame: The results per turbine
-        """
         if ambient:
-            vars='AMB_P'
-        else: vars = 'P'
+            var_in= FV.AMB_P
+            var_out = FV.AMB_YLD
+        else: 
+            var_in = FV.P
+            var_out = FV.YLD
 
         # get results data for the vars variable (by state and turbine)
-        vdata = self.results[vars].to_dataframe()
+        vdata = self.results[var_in]
         
-        # compute yield per turbine (average power over states * hours * power_factor)
-        YLD = vdata[vars].groupby(['turbine']).mean() * hours * power_factor
+        # compute yield per turbine (default will give GWh)
+        YLD = vdata * hours * power_factor
         
-        # uncertainty in power 
-        P75 = YLD * (1.0 - (0.675 * power_uncert))
-        P90 = YLD * (1.0 - (1.282 * power_uncert))
+        # add to farm results
+        self.results[var_out] = YLD
+        print()
+        if ambient:
+            print("Ambient yield data added to farm results")
+        else: print("Yield data added to farm results")
         
-        ydata = pd.DataFrame({'YLD': YLD,
-        'P75': P75,
-        'P90': P90})
 
-        return ydata
+        
+        # # uncertainty in power 
+        # P75 = YLD * (1.0 - (0.675 * power_uncert))
+        # P90 = YLD * (1.0 - (1.282 * power_uncert))
+        
+        # ydata = pd.DataFrame({'YLD': YLD,
+        # 'P75': P75,
+        # 'P90': P90})
+
+        # return ydata
 
     def calc_farm_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
         """

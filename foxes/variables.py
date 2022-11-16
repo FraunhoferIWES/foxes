@@ -48,6 +48,9 @@ AMB_REWS = "AMB_REWS"
 AMB_REWS2 = "AMB_REWS2"
 AMB_REWS3 = "AMB_REWS3"
 
+YLD = "YLD"
+AMB_YLD = "AMB_YLD"
+
 var2amb = {
     v: f"AMB_{v}" for v in [WS, WD, TI, RHO, YAW, YAWM, P, CT, T, REWS, REWS2, REWS3]
 }
