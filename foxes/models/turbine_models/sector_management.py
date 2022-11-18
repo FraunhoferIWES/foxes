@@ -41,16 +41,16 @@ class SectorManagement(TurbineModel):
     """
 
     def __init__(
-            self, 
-            data_source,
-            range_vars,
-            target_vars,
-            col_tinds=None,
-            col_tnames=None,
-            colmap={},
-            var_periods={FV.WD: 360., FV.AMB_WD: 360.},
-            pd_file_read_pars={},
-        ):
+        self,
+        data_source,
+        range_vars,
+        target_vars,
+        col_tinds=None,
+        col_tnames=None,
+        colmap={},
+        var_periods={FV.WD: 360.0, FV.AMB_WD: 360.0},
+        pd_file_read_pars={},
+    ):
         super().__init__()
 
         self.source = data_source
@@ -98,7 +98,9 @@ class SectorManagement(TurbineModel):
                 data[FV.TURBINE] = inds
                 self._col_i = FV.TURBINE
             else:
-                raise KeyError(f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'")
+                raise KeyError(
+                    f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
+                )
             self._trbs = data[self._col_i].to_numpy()
             n_trbs = len(self._trbs)
 
@@ -108,12 +110,16 @@ class SectorManagement(TurbineModel):
                 col_vmin = f"{v}_min"
                 col_vmin = self._colmap.get(col_vmin, col_vmin)
                 if col_vmin not in data.columns:
-                    raise KeyError(f"{self.name}: Missing column '{col_vmin}', maybe add it to 'colmap'?")
+                    raise KeyError(
+                        f"{self.name}: Missing column '{col_vmin}', maybe add it to 'colmap'?"
+                    )
 
                 col_vmax = f"{v}_max"
                 col_vmax = self._colmap.get(col_vmax, col_vmax)
                 if col_vmax not in data.columns:
-                    raise KeyError(f"{self.name}: Missing column '{col_vmax}', maybe add it to 'colmap'?")
+                    raise KeyError(
+                        f"{self.name}: Missing column '{col_vmax}', maybe add it to 'colmap'?"
+                    )
 
                 self._rcols += [col_vmin, col_vmax]
 
@@ -121,7 +127,9 @@ class SectorManagement(TurbineModel):
             for v in self._tvars:
                 col = self._colmap.get(v, v)
                 if col not in data.columns:
-                    raise KeyError(f"{self.name}: Missing column '{col}', maybe add it to 'colmap'?")
+                    raise KeyError(
+                        f"{self.name}: Missing column '{col}', maybe add it to 'colmap'?"
+                    )
                 self._tcols.append(col)
 
             n_rvars = len(self._rvars)
@@ -180,7 +188,9 @@ class SectorManagement(TurbineModel):
 
         # prepare:
         n_trbs = len(self._trbs)
-        if n_trbs == fdata.n_turbines and np.all(self._trbs == np.arange(fdata.n_turbines)):
+        if n_trbs == fdata.n_turbines and np.all(
+            self._trbs == np.arange(fdata.n_turbines)
+        ):
             tsel = np.s_[:]
         else:
             tsel = self._trbs
@@ -195,11 +205,21 @@ class SectorManagement(TurbineModel):
                 ma = self._rdata[:, vi, 1]
                 sel = ma < mi
                 if np.any(sel):
-                    rsel[:, sel] = rsel[:, sel] & ( (d[:, sel] >= mi[sel]) | (d[:, sel] < ma[sel]) ) 
+                    rsel[:, sel] = rsel[:, sel] & (
+                        (d[:, sel] >= mi[sel]) | (d[:, sel] < ma[sel])
+                    )
                 if np.any(~sel):
-                    rsel[:, ~sel] = rsel[:, ~sel] & (d[:, ~sel] >= mi[~sel]) & (d[:, ~sel] < ma[~sel])
+                    rsel[:, ~sel] = (
+                        rsel[:, ~sel]
+                        & (d[:, ~sel] >= mi[~sel])
+                        & (d[:, ~sel] < ma[~sel])
+                    )
             else:
-                rsel = rsel & (d >= self._rdata[None, :, vi, 0]) & (d < self._rdata[None, :, vi, 1]) 
+                rsel = (
+                    rsel
+                    & (d >= self._rdata[None, :, vi, 0])
+                    & (d < self._rdata[None, :, vi, 1])
+                )
 
         # set target data:
         if np.any(rsel):

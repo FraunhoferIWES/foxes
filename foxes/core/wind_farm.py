@@ -57,7 +57,7 @@ class WindFarm:
 
         """
         return len(self.turbines)
-    
+
     @property
     def turbine_names(self):
         """

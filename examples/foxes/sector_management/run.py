@@ -39,8 +39,8 @@ def run_foxes(args):
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(
         farm=farm,
-        xy_base=[0., 0.],
-        xy_step=[600., 0.],
+        xy_base=[0.0, 0.0],
+        xy_step=[600.0, 0.0],
         n_turbines=2,
         turbine_models=args.tmodels + [ttype.name, "sector_rules", "PMask"],
     )
@@ -75,12 +75,25 @@ def run_foxes(args):
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]])
 
     o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(16, FV.P, [100, 1000, 2000, 4000, 5001, 7000], turbine=0, title="Power turbine 0")
+    fig = o.get_figure(
+        16,
+        FV.P,
+        [100, 1000, 2000, 4000, 5001, 7000],
+        turbine=0,
+        title="Power turbine 0",
+    )
     foxes.utils.show_plotly_fig(fig)
 
     o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(16, FV.P, [100, 1000, 2000, 4000, 5001, 7000], turbine=1, title="Power turbine 1")
+    fig = o.get_figure(
+        16,
+        FV.P,
+        [100, 1000, 2000, 4000, 5001, 7000],
+        turbine=1,
+        title="Power turbine 1",
+    )
     foxes.utils.show_plotly_fig(fig)
+
 
 if __name__ == "__main__":
 
