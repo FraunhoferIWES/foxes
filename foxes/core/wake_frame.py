@@ -1,7 +1,6 @@
 from abc import abstractmethod
 
 from .model import Model
-import foxes.variables as FV
 
 
 class WakeFrame(Model):
