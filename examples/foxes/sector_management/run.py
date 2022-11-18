@@ -1,7 +1,6 @@
 import time
 import argparse
 import matplotlib.pyplot as plt
-from plotly.subplots import make_subplots
 
 import foxes
 import foxes.variables as FV
