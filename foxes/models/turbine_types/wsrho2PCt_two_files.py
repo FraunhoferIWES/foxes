@@ -1,16 +1,26 @@
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interpn
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
+import foxes.constants as FC
 
 
-class PCtTwoFiles(TurbineType):
+class WsRho2PCtTwoFiles(TurbineType):
     """
-    Calculate power and ct by interpolating
-    from power curve and ct curve data files.
+    Calculate air density dependent power
+    and ct values, as given by two individual
+    files.
+
+    The structure of each file is:
+    ws,1.225,0.950,0.975,...,1.275
+
+    The first column represents wind speed in m/s
+    and the subsequent columns are air density values
+    (not neccessarily in order).
 
     Parameters
     ----------
@@ -18,17 +28,6 @@ class PCtTwoFiles(TurbineType):
         The file path for the power curve, static name, or data
     data_source_ct : str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    col_ws_P_file : str
-        The wind speed column in the file of the power curve
-    col_ws_ct_file : str
-        The wind speed column in the file of the ct curve
-    col_P : str
-        The power column
-    col_ct : str
-        The ct column
-    rho: float, optional
-        The air densitiy for which the data is valid
-        or None for no correction
     flag_yawm: bool
         Flag for yaw misalignment consideration
     p_ct: float
@@ -43,6 +42,10 @@ class PCtTwoFiles(TurbineType):
         Parameters for pandas power file reading
     pd_file_read_pars_ct:  dict
         Parameters for pandas ct file reading
+    interpn_pars_P : dict, optional
+        Parameters for scipy.interpolate.interpn()
+    interpn_pars_ct : dict, optional
+        Parameters for scipy.interpolate.interpn()
     parameters : dict, optional
         Additional parameters for TurbineType class
 
@@ -52,15 +55,6 @@ class PCtTwoFiles(TurbineType):
         The file path for the power curve, static name, or data
     source_ct : str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    col_ws : str
-        The wind speed column
-    col_P : str
-        The power column
-    col_ct : str
-        The ct column
-    rho: float
-        The air densitiy for which the data is valid
-        or None for no correction
     flag_yawm: bool
         Flag for yaw misalignment consideration
     WSCT : str
@@ -71,6 +65,10 @@ class PCtTwoFiles(TurbineType):
         Parameters for pandas power file reading
     rpars_ct : dict, optional
         Parameters for pandas ct file reading
+    ipars_P : dict, optional
+        Parameters for scipy.interpolate.interpn()
+    ipars_ct : dict, optional
+        Parameters for scipy.interpolate.interpn()
 
     """
 
@@ -78,11 +76,6 @@ class PCtTwoFiles(TurbineType):
         self,
         data_source_P,
         data_source_ct,
-        col_ws_P_file="ws",
-        col_ws_ct_file="ws",
-        col_P="P",
-        col_ct="ct",
-        rho=None,
         flag_yawm=False,
         p_ct=1.0,
         p_P=1.88,
@@ -90,13 +83,24 @@ class PCtTwoFiles(TurbineType):
         var_ws_P=FV.REWS3,
         pd_file_read_pars_P={},
         pd_file_read_pars_ct={},
+        interpn_pars_P=None,
+        interpn_pars_ct=None,
         **parameters
     ):
-
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(data_source_ct, pd.DataFrame):
             pars = parse_Pct_file_name(data_source_P)
             pars_ct = parse_Pct_file_name(data_source_ct)
-
+            name = pars["name"]
+            name_ct = pars_ct["name"]
+            i = 0
+            while len(name) > i and len(name_ct) > i and name[i] == name_ct[i]:
+                i += 1
+            if i > 0 and name[i-1] == "-":
+                i -= 1
+            if i < 1:
+                raise ValueError(f"Turbine type name not deducible. From P file: '{name}', from CT file: '{name_ct}'")
+            pars["name"] = name[:i]
+            pars_ct["name"] = name[:i]
             if pars != pars_ct:
                 raise ValueError(f"File name parsing failed. File '{data_source_P}' gave '{pars}', file '{data_source_ct}' gave '{pars_ct}'")
             pars.update(parameters)
@@ -106,11 +110,6 @@ class PCtTwoFiles(TurbineType):
 
         self.source_P = data_source_P
         self.source_ct = data_source_ct
-        self.col_ws_P_file = col_ws_P_file
-        self.col_ws_ct_file = col_ws_ct_file
-        self.col_P = col_P
-        self.col_ct = col_ct
-        self.rho = rho
         self.flag_yawm = flag_yawm
         self.p_ct = p_ct
         self.p_P = p_P
@@ -118,11 +117,20 @@ class PCtTwoFiles(TurbineType):
         self.WSP = var_ws_P
         self.rpars_P = pd_file_read_pars_P
         self.rpars_ct = pd_file_read_pars_ct
+        self.ipars_P = interpn_pars_P
+        self.ipars_ct = interpn_pars_ct
 
-        self._data_P = None
-        self._data_ct = None
-        self._data_ws_P = None
-        self._data_ws_ct = None
+        if self.ipars_P is None:
+            self.ipars_P = dict(
+                method='linear', bounds_error=True, fill_value=0.0
+            )
+        if self.ipars_ct is None:
+            self.ipars_ct = dict(
+                method='linear', bounds_error=True, fill_value=0.0
+            )
+
+        self._P = None
+        self._ct = None
 
     def output_farm_vars(self, algo):
         """
@@ -156,35 +164,61 @@ class PCtTwoFiles(TurbineType):
             The verbosity level
 
         """
-        # read power curve
-        if self._data_P is None:
+        # read power curve:
+        if self._P is None:
             if isinstance(self.source_P, pd.DataFrame):
-                self._data_P = self.source_P
+                data = self.source_P
             else:
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_P, check_raw=True
                 )
-                self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
+                pars = {"index_col": 0}
+                pars.update(self.rpars_P)
+                data = PandasFileHelper.read_file(fpath, **pars)
 
-            self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
-            self._data_ws_P = self._data_P.index.to_numpy()
-            self._data_P = self._data_P[self.col_P].to_numpy()
+            data.sort_index(inplace=True)
+            data.columns = data.columns.astype(FC.DTYPE)
+            self._ws_P = data.index.to_numpy(FC.DTYPE)
+            self._rho_P = np.sort(data.columns.to_numpy())
+            self._P = data[self._rho_P].to_numpy(FC.DTYPE)
 
-        # read ct curve
-        if self._data_ct is None:
+        # read ct curve:
+        if self._ct is None:
+
             if isinstance(self.source_ct, pd.DataFrame):
-                self._data_ct = self.source_ct
+                data = self.source_ct
             else:
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=True
                 )
-                self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
+                pars = {"index_col": 0}
+                pars.update(self.rpars_ct)
+                data = PandasFileHelper.read_file(fpath, **pars)
 
-            self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
-            self._data_ws_ct = self._data_ct.index.to_numpy()
-            self._data_ct = self._data_ct[self.col_ct].to_numpy()
+            data.sort_index(inplace=True)
+            data.columns = data.columns.astype(FC.DTYPE)
+            self._ws_ct = data.index.to_numpy(FC.DTYPE)
+            self._rho_ct = np.sort(data.columns.to_numpy())
+            self._ct = data[self._rho_ct].to_numpy(FC.DTYPE)
 
         super().initialize(algo, st_sel, verbosity=verbosity)
+
+    def _bounds_info(self, target, qts):
+        """ Helper function for printing bounds info """
+
+        print(f"\nBOUNDS INFO FOR TARGET {target}")
+        WS = self.WSP if target == FV.P else self.WSCT
+        ws = self._ws_P if target == FV.P else self._ws_ct
+        rho = self._rho_P if target == FV.P else self._rho_ct
+        print(f"  {WS}: min = {np.min(ws):.4f}, max = {np.max(ws):.4f}")
+        print(f"  {FV.RHO}: min = {np.min(rho):.4f}, max = {np.max(rho):.4f}")
+
+        print(f"DATA INFO FOR TARGET {target}")
+        ws = qts[:, 0]
+        rho = qts[:, 1]
+        print(f"  {WS}: min = {np.min(ws):.4f}, max = {np.max(ws):.4f}")
+        print(f"  {FV.RHO}: min = {np.min(rho):.4f}, max = {np.max(rho):.4f}")
+        print()
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -212,19 +246,9 @@ class PCtTwoFiles(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        rews2 = fdata[self.WSCT][st_sel]
-        rews3 = fdata[self.WSP][st_sel]
-
-        # apply air density correction:
-        if self.rho is not None:
-
-            # correct wind speed by air density, such
-            # that in the partial load region the
-            # correct value is reconstructed:
-            rho = fdata[FV.RHO][st_sel]
-            rews2 *= (self.rho / rho) ** 0.5
-            rews3 *= (self.rho / rho) ** (1.0 / 3.0)
-            del rho
+        # prepare:
+        n_sel = np.sum(st_sel)
+        qts = np.zeros((n_sel, 2), dtype=FC.DTYPE) # ws, ct
 
         # in yawed case, calc yaw corrected wind speed:
         if self.flag_yawm:
@@ -234,22 +258,31 @@ class PCtTwoFiles(TurbineType):
             # and smoothly deals with full load region:
             yawm = fdata[FV.YAWM][st_sel]
             cosm = np.cos(yawm / 180 * np.pi)
-            rews2 *= (cosm**self.p_ct) ** 0.5
-            rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
-            del yawm, cosm
+            #rews2 *= (cosm**self.p_ct) ** 0.5
+            #rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
 
-        out = {
-            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSP])),
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSCT])),
-        }
-        out[FV.P][st_sel] = np.interp(
-            rews3, self._data_ws_P, self._data_P, left=0.0, right=0.0
-        )
-        out[FV.CT][st_sel] = np.interp(
-            rews2, self._data_ws_ct, self._data_ct, left=0.0, right=0.0
+        # interpolate P:
+        qts[:, 0] = fdata[self.WSP][st_sel]
+        qts[:, 1] = fdata[FV.RHO][st_sel]
+        if self.flag_yawm:
+            qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
+        try:
+            fdata[FV.P][st_sel] = interpn(
+                (self._ws_P, self._rho_P), self._P, qts, **self.ipars_P
+            )
+        except ValueError as e:
+            self._bounds_info(FV.P, qts)
+            raise e
+
+        # interpolate ct:
+        qts[:, 0] = fdata[self.WSCT][st_sel]
+        if self.flag_yawm:
+            qts[:, 0] *= (cosm**self.p_ct) ** 0.5
+        fdata[FV.CT][st_sel] = interpn(
+            (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
         )
 
-        return out
+        return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
     def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
         """
@@ -272,6 +305,8 @@ class PCtTwoFiles(TurbineType):
 
         """
         if clear_mem:
-            del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct
+            del self._ws_P, self._rho_P, self._ws_ct, self._rho_ct
+            self._P = None
+            self._ct = None
 
         super().finalize(algo, results, clear_mem, verbosity=verbosity)

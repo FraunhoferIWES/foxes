@@ -30,7 +30,9 @@ def parse_Pct_file_name(file_name):
             )
             return pars
 
-    pieces = sname.split("-")[1:]
+    pieces = sname.split("-")
+    pars["name"] = pieces[0]
+    pieces = pieces[1:]
     for p in pieces:
 
         if p[-1] == "W":
@@ -42,12 +44,13 @@ def parse_Pct_file_name(file_name):
                 pars["P_nominal"] = 1.0e6 * float(p[:-2].replace("d", "."))
             else:
                 pars["P_nominal"] = 1.0e-3 * float(p[:-1].replace("d", "."))
+            pars["name"] += "-" + p
 
         elif p[0] == "D":
             pars["D"] = float(p[1:].replace("d", "."))
         elif p[0] == "H":
             pars["H"] = float(p[1:].replace("d", "."))
         else:
-            warnings.warn(f"Failed to parse piece '{p}' of '{sname}'")
+            pars["name"] += "-" + p
 
     return pars
