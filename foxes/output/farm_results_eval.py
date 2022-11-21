@@ -289,7 +289,7 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
+    def calc_yield(self, timestep=10, power_factor=0.000001, power_uncert=0.08, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P
@@ -300,9 +300,9 @@ class FarmResultsEval(Output):
 
         # get results data for the vars variable (by state and turbine)
         vdata = self.results[var_in]
-        
+    
         # compute yield per turbine (default will give GWh)
-        YLD = vdata * hours * power_factor
+        YLD = vdata * timestep / 60 # yield per hour
         
         # add to farm results
         self.results[var_out] = YLD
@@ -311,7 +311,15 @@ class FarmResultsEval(Output):
             print("Ambient yield data added to farm results")
         else: print("Yield data added to farm results")
         
+    def calc_turbine_yield(self, ambient=False):
 
+        if ambient:
+            vars = [FV.AMB_YLD]
+        else: 
+            vars = [FV.YLD]
+
+        # reduce the states 
+        tdata = self.calc_states_mean(vars)
         
         # # uncertainty in power 
         # P75 = YLD * (1.0 - (0.675 * power_uncert))

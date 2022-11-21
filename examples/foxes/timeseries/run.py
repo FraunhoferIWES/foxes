@@ -61,17 +61,40 @@ def run_foxes(args):
 
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
     
-    # yield calculations (currently using default of 8% error in power value)
-    Y_turbine = o.calc_turbine_yield() # results will be in GWh per year
-    print(f"\n Yield per turbine [GWh]:")
-    print(Y_turbine)
-    farm_yield, P75, P90 = o.calc_farm_yield() # results will be in GWh per year
-    farm_yield_AMB, P75_AMB, P90_AMB = o.calc_farm_yield(ambient=True)
+    # add yield results by state and turbine
+    o.calc_yield(timestep=args.timestep)
+    o.calc_yield(ambient=True)
+    print("Yield results by state and turbine:")
+    print(farm_results.YLD.to_dataframe())
+    print()
 
-    print(f"\nFarm yield: {farm_yield:.1f} GWh")
-    print(f"Farm wake losses: {farm_yield_AMB - farm_yield:.1f} GWh")
-    print(f"Farm P75: {P75:.1f} GWh")
-    print(f"Farm P90: {P90:.1f} GWh")
+    o.calc_turbine_yield()
+    
+
+    # add efficiency to farm results
+    #o.calc_efficiency()
+
+    # # calc yield per turbine
+    # o.calc_yield() # results will be in GWh per year by default
+    # o.calc_yield(ambient=True)
+
+    # # add capacity to turbine results
+    # o.calc_cap_factor(P_nom = ttype.P_nominal, ambient=False)
+    # o.calc_cap_factor(P_nom = ttype.P_nominal, ambient=True)
+    # print()
+
+
+
+
+    
+    # get yield and percentiles for farm
+    # farm_yield, P75, P90 = o.calc_percentiles() # using defaults gives result in GWh per year
+    # AMB_farm_yield, AMB_P75, AMB_P90 = o.calc_percentiles(ambient=True)
+    # print(f"\nAnnual yield of farm is {farm_yield:.2f} GWh")
+
+
+
+    print()
     
 
 if __name__ == "__main__":
@@ -136,7 +159,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument(
+        "-ts",
+        "--timestep",
+        help="The timestep of the input timeseries or data in minutes",
+        default = 60*24*365 # default is one year
+    )
     args = parser.parse_args()
+
+    # set timestep for debugging
+    args.timestep = 30
 
     with DaskRunner(
         scheduler=args.scheduler,

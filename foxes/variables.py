@@ -29,6 +29,10 @@ YAWM = "YAWM"
 P = "P"
 CT = "CT"
 T = "T"
+YLD = "YLD"
+EFF = "EFF"
+CAP = "CAP"
+
 
 REWS = "REWS"
 REWS2 = "REWS2"
@@ -43,13 +47,15 @@ AMB_YAWM = "AMB_YAWM"
 AMB_P = "AMB_P"
 AMB_CT = "AMB_CT"
 AMB_T = "AMB_T"
+AMB_YLD = "AMB_YLD"
+AMB_CAP = "AMB_CAP"
 
 AMB_REWS = "AMB_REWS"
 AMB_REWS2 = "AMB_REWS2"
 AMB_REWS3 = "AMB_REWS3"
 
-YLD = "YLD"
-AMB_YLD = "AMB_YLD"
+
+
 
 var2amb = {
     v: f"AMB_{v}" for v in [WS, WD, TI, RHO, YAW, YAWM, P, CT, T, REWS, REWS2, REWS3]
