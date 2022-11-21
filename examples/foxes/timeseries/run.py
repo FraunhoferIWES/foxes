@@ -61,38 +61,36 @@ def run_foxes(args):
 
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
     
+    # get timestep for yield and capacity calculations
+    ts = o.calc_timestep(states) # in hours
+
     # add yield results by state and turbine
-    o.calc_yield(timestep=args.timestep)
-    o.calc_yield(ambient=True)
+    o.calc_yield(timestep=ts)
+    o.calc_yield(timestep=ts, ambient=True)
     print("Yield results by state and turbine:")
     print(farm_results.YLD.to_dataframe())
     print()
 
-    o.calc_turbine_yield()
+    turbine_yield = o.calc_turbine_yield()
+    print("Yield values by turbine:")
+    print(turbine_yield) # in GWh
+    print()
+
+    turbine_yield_ann = o.calc_turbine_yield(annual=True)
+    print("Annual yield values by turbine:")
+    print(turbine_yield_ann) # in GWh
+    print()
     
+    # calculate farm yield, P75 and P90
+    farm_yield, P75, P90 = o.calc_farm_yield()
+    print(f"Farm yield is {farm_yield:.2f} GWh")
+    print(f"Farm P75 is {P75:.2f} GWh")
+    print(f"Farm P90 is {P90:.2f} GWh")
 
     # add efficiency to farm results
-    #o.calc_efficiency()
-
-    # # calc yield per turbine
-    # o.calc_yield() # results will be in GWh per year by default
-    # o.calc_yield(ambient=True)
-
-    # # add capacity to turbine results
-    # o.calc_cap_factor(P_nom = ttype.P_nominal, ambient=False)
-    # o.calc_cap_factor(P_nom = ttype.P_nominal, ambient=True)
-    # print()
-
-
-
-
+    o.calc_efficiency()
     
-    # get yield and percentiles for farm
-    # farm_yield, P75, P90 = o.calc_percentiles() # using defaults gives result in GWh per year
-    # AMB_farm_yield, AMB_P75, AMB_P90 = o.calc_percentiles(ambient=True)
-    # print(f"\nAnnual yield of farm is {farm_yield:.2f} GWh")
-
-
+    print(farm_results.EFF.to_dataframe())
 
     print()
     

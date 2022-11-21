@@ -289,7 +289,16 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_yield(self, timestep=10, power_factor=0.000001, power_uncert=0.08, ambient=False):
+    def calc_timestep(self, states):
+        if str(states) == 'Timeseries':
+            # get timestep from timeseries data
+            timestep_delta = self.results.state[1] - self.results.state[0]
+            timestep_seconds = int(timestep_delta.astype(int)/1e9)
+            timestep_hours = timestep_seconds / 3600
+            return timestep_hours
+
+
+    def calc_yield(self, timestep, power_factor=0.000001, power_uncert=0.08, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P
@@ -300,18 +309,17 @@ class FarmResultsEval(Output):
 
         # get results data for the vars variable (by state and turbine)
         vdata = self.results[var_in]
-    
-        # compute yield per turbine (default will give GWh)
-        YLD = vdata * timestep / 60 # yield per hour
+
+        # compute yield per turbine (default is MWh)
+        YLD = vdata * timestep
         
         # add to farm results
         self.results[var_out] = YLD
-        print()
         if ambient:
             print("Ambient yield data added to farm results")
         else: print("Yield data added to farm results")
         
-    def calc_turbine_yield(self, ambient=False):
+    def calc_turbine_yield(self, power_factor=1e-6, annual=False, ambient=False):
 
         if ambient:
             vars = [FV.AMB_YLD]
@@ -319,41 +327,44 @@ class FarmResultsEval(Output):
             vars = [FV.YLD]
 
         # reduce the states 
-        tdata = self.calc_states_mean(vars)
+        tdata = self.calc_states_sum(vars) # for the duration of the timeseries
+
+        if annual:
+            # convert to annual values
+            duration = self.results.state[-1] - self.results.state[0]
+            duration_seconds = int(duration.astype(int)/1e9)
+            duration_hours = duration_seconds / 3600
+            tdata = tdata* 24*365 / duration_hours
         
-        # # uncertainty in power 
-        # P75 = YLD * (1.0 - (0.675 * power_uncert))
-        # P90 = YLD * (1.0 - (1.282 * power_uncert))
-        
-        # ydata = pd.DataFrame({'YLD': YLD,
-        # 'P75': P75,
-        # 'P90': P90})
+        return tdata * power_factor 
 
-        # return ydata
 
-    def calc_farm_yield(self, hours=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
-        """
-        Calculates yield, P75 and P90 for the farm
+    def calc_farm_yield(self, power_factor=1e-6, power_uncert=0.08, annual=False, ambient=False):
 
-        Args:
-            hours (_type_, optional): _description_. Defaults to 24*365.
-            power_factor (int, optional): _description_. Defaults to 1.
-            ambient (bool, optional): _description_. Defaults to False.
+        if ambient:
+            vars = [FV.AMB_YLD]
+        else: 
+            vars = [FV.YLD]
 
-        Returns:
-            list: farm yield, P75 and P90
-        """
-        # get yield per turbine
-        YLD = self.calc_turbine_yield(hours, power_factor, power_uncert, ambient)['YLD']
-        farm_yield = YLD.sum()
-        
-        # calc absolute errors in yield
-        ABS_ERR = YLD * power_uncert
-        TOTAL_ABS_ERR = np.sqrt(np.sum(ABS_ERR**2, axis=0)) # sum abs error in quadrature to get error in farm yield
-        TOTAL_UNCERT = TOTAL_ABS_ERR / farm_yield
+        # reduce the states and turbines by summing
+        print()
+        farm_yield = self.calc_farm_sum(vars)['YLD'] * power_factor# for the duration of the timeseries
+
+        if annual:
+            # convert to annual values
+            duration = self.results.state[-1] - self.results.state[0]
+            duration_seconds = int(duration.astype(int)/1e9)
+            duration_hours = duration_seconds / 3600
+            farm_yield = farm_yield* 24*365 / duration_hours
 
         # P75 and P90
-        P75 = farm_yield * (1.0 - (0.675 * TOTAL_UNCERT))
-        P90 = farm_yield * (1.0 - (1.282 * TOTAL_UNCERT))
+        P75 = farm_yield * (1.0 - (0.675 * power_uncert))
+        P90 = farm_yield * (1.0 - (1.282 * power_uncert))
                 
-        return [farm_yield, P75, P90]
+        return farm_yield, P75, P90
+
+    def calc_efficiency(self):
+        P = self.results[FV.P]
+        P0 = self.results[FV.AMB_P]
+        self.results[FV.EFF] = P / P0 # add to farm results
+        print('Efficiency added to farm results')
