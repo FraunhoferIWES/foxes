@@ -15,8 +15,8 @@ def test():
 
     c = 2000
     cfile = thisdir / "flappy" / "results.csv.gz"
-    tPfile = thisdir / "NREL-5MW-D126-H90_P.csv"
-    tCtfile = thisdir / "NREL-5MW-D126-H90_Ct.csv"
+    tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
+    tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
 

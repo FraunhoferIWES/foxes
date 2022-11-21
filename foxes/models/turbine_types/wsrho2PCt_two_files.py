@@ -263,9 +263,13 @@ class WsRho2PCtTwoFiles(TurbineType):
         qts[:, 0] = fdata[self.WSCT][st_sel]
         if self.flag_yawm:
             qts[:, 0] *= (cosm**self.p_ct) ** 0.5
-        fdata[FV.CT][st_sel] = interpn(
-            (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
-        )
+        try:
+            fdata[FV.CT][st_sel] = interpn(
+                (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
+            )
+        except ValueError as e:
+            self._bounds_info(FV.CT, qts)
+            raise e
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
