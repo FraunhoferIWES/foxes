@@ -4,7 +4,7 @@ import warnings
 
 def parse_Pct_file_name(file_name):
     """
-    Parse file name data
+    Parse basic turbine data from file name
 
     Expected format: `[name]-[...]MW-D[...]-H[...].csv`
 
@@ -54,3 +54,40 @@ def parse_Pct_file_name(file_name):
             pars["name"] += "-" + p
 
     return pars
+
+def parse_Pct_two_files(file_name_A, file_name_B):
+    """
+    Parse basic turbine data from file names
+
+    Expected format: `[name]-[...]MW-D[...]-H[...].csv`
+
+    Parameters
+    ----------
+    file_name_A : str or pathlib.Path
+        Path to the first file
+    file_name_B : str or pathlib.Path
+        Path to the second file
+
+    Returns
+    -------
+    parsed_data : dict
+        dict with data parsed from file name
+
+    """
+    pars_A = parse_Pct_file_name(file_name_A)
+    pars_B = parse_Pct_file_name(file_name_B)
+    name = pars_A["name"]
+    name_ct = pars_B["name"]
+    i = 0
+    while len(name) > i and len(name_ct) > i and name[i] == name_ct[i]:
+        i += 1
+    if i > 0 and name[i-1] == "-":
+        i -= 1
+    if i < 1:
+        raise ValueError(f"Turbine type name not deducible. From file A: '{name}', from file B: '{name_ct}'")
+    pars_A["name"] = name[:i]
+    pars_B["name"] = name[:i]
+    if pars_A != pars_B:
+        raise ValueError(f"Data parsing from file names failed. File '{file_name_A}' gave '{pars_A}', file '{file_name_B}' gave '{pars_B}'")
+    
+    return pars_A

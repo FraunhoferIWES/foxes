@@ -3,7 +3,7 @@ import pandas as pd
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
-from foxes.data import PCTCURVE, parse_Pct_file_name
+from foxes.data import PCTCURVE, parse_Pct_two_files
 import foxes.variables as FV
 
 
@@ -94,12 +94,7 @@ class PCtTwoFiles(TurbineType):
     ):
 
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(data_source_ct, pd.DataFrame):
-            pars = parse_Pct_file_name(data_source_P)
-            pars_ct = parse_Pct_file_name(data_source_ct)
-
-            if pars != pars_ct:
-                raise ValueError(f"File name parsing failed. File '{data_source_P}' gave '{pars}', file '{data_source_ct}' gave '{pars_ct}'")
-            pars.update(parameters)
+            pars = parse_Pct_two_files(data_source_P, data_source_ct)
         else:
             pars = parameters
         super().__init__(**pars)

@@ -4,7 +4,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
-from foxes.data import PCTCURVE, parse_Pct_file_name
+from foxes.data import PCTCURVE, parse_Pct_two_files
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -88,22 +88,7 @@ class WsRho2PCtTwoFiles(TurbineType):
         **parameters
     ):
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(data_source_ct, pd.DataFrame):
-            pars = parse_Pct_file_name(data_source_P)
-            pars_ct = parse_Pct_file_name(data_source_ct)
-            name = pars["name"]
-            name_ct = pars_ct["name"]
-            i = 0
-            while len(name) > i and len(name_ct) > i and name[i] == name_ct[i]:
-                i += 1
-            if i > 0 and name[i-1] == "-":
-                i -= 1
-            if i < 1:
-                raise ValueError(f"Turbine type name not deducible. From P file: '{name}', from CT file: '{name_ct}'")
-            pars["name"] = name[:i]
-            pars_ct["name"] = name[:i]
-            if pars != pars_ct:
-                raise ValueError(f"File name parsing failed. File '{data_source_P}' gave '{pars}', file '{data_source_ct}' gave '{pars_ct}'")
-            pars.update(parameters)
+            pars = parse_Pct_two_files(data_source_P, data_source_ct)
         else:
             pars = parameters
         super().__init__(**pars)
