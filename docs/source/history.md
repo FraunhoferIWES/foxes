@@ -128,5 +128,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `SectorManagement`, sets variables by range rules on other variables
 - Examples:
   - New: `sector_management`, demonstrates how to model wind sector management
+- Notebooks:
+  - New: `sector_man.ipynb`, demonstrates how to model wind sector management
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)

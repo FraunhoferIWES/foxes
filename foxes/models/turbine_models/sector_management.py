@@ -93,7 +93,7 @@ class SectorManagement(TurbineModel):
             if self._col_i is not None and self._col_t is None:
                 data.reset_index(inplace=True)
             elif self._col_i is None and self._col_t is not None:
-                tnames = algo.farm.turbine_names()
+                tnames = algo.farm.turbine_names
                 inds = [tnames.index(name) for name in data[self._col_t]]
                 data[FV.TURBINE] = inds
                 self._col_i = FV.TURBINE

@@ -17,7 +17,7 @@ def run_foxes(args):
 
     mbook.turbine_models["sector_rules"] = foxes.models.turbine_models.SectorManagement(
         data_source=args.sector_file,
-        col_tinds="turbine",
+        col_tnames="tname",
         range_vars=[FV.WD, FV.REWS],
         target_vars=[FV.MAX_P],
         colmap={"REWS_min": "WS_min", "REWS_max": "WS_max"},
