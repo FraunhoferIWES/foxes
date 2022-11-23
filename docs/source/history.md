@@ -128,6 +128,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `WsRho2PCtTwoFiles`, air density dependent power and ct curves
 - Turbine models:
   - New: `SectorManagement`, sets variables by range rules on other variables
+- Point models:
+  - New: `SetUniformData`, set uniform variables (optionally state dependent)
 - Examples:
   - New: `sector_management`, demonstrates how to model wind sector management
 - Notebooks:

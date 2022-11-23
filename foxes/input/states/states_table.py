@@ -19,30 +19,30 @@ class StatesTable(States):
         Either path to a file or data
     output_vars : list of str
         The output variables
-    var2col : dict, optional
+    var2col : dict
         Mapping from variable names to data column names
-    fixed_vars : dict, optional
+    fixed_vars : dict
         Fixed uniform variable values, instead of
         reading from data
-    profiles : dict, optional
+    profiles : dict
         Key: output variable name str, Value: str or dict
         or `foxes.core.VerticalProfile`
-    pd_read_pars : dict, optional
+    pd_read_pars : dict
         pandas file reading parameters
 
     Attributes
     ----------
     ovars : list of str
         The output variables
-    var2col : dict, optional
+    var2col : dict
         Mapping from variable names to data column names
-    fixed_vars : dict, optional
+    fixed_vars : dict
         Fixed uniform variable values, instead of
         reading from data
-    profdicts : dict, optional
+    profdicts : dict
         Key: output variable name str, Value: str or dict
         or `foxes.core.VerticalProfile`
-    pd_read_pars : dict, optional
+    rpars : dict
         pandas file reading parameters
     RDICT : dict
         Default pandas file reading parameters
