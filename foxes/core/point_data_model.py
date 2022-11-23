@@ -86,7 +86,7 @@ class PointDataModel(DataCalcModel):
             out_vars=out_vars,
             loop_dims=[FV.STATE, FV.POINT],
             out_core_vars=[FV.VARS],
-            **calc_pars
+            **calc_pars,
         )
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
@@ -140,7 +140,7 @@ class PointDataModelList(PointDataModel):
     def __init__(self, models=[]):
         super().__init__()
         self.models = models
-    
+
     def append(self, model):
         """
         Add a model to the list

@@ -101,7 +101,7 @@ class FarmDataModel(DataCalcModel):
             out_vars=out_vars,
             loop_dims=[FV.STATE],
             out_core_vars=[FV.TURBINE, FV.VARS],
-            **calc_pars
+            **calc_pars,
         )
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):

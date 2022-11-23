@@ -93,7 +93,9 @@ class PCtTwoFiles(TurbineType):
         **parameters
     ):
 
-        if not isinstance(data_source_P, pd.DataFrame) or not isinstance(data_source_ct, pd.DataFrame):
+        if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
+            data_source_ct, pd.DataFrame
+        ):
             pars = parse_Pct_two_files(data_source_P, data_source_ct)
         else:
             pars = parameters

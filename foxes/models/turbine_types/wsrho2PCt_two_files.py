@@ -85,9 +85,11 @@ class WsRho2PCtTwoFiles(TurbineType):
         pd_file_read_pars_ct={},
         interpn_pars_P=None,
         interpn_pars_ct=None,
-        **parameters
+        **parameters,
     ):
-        if not isinstance(data_source_P, pd.DataFrame) or not isinstance(data_source_ct, pd.DataFrame):
+        if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
+            data_source_ct, pd.DataFrame
+        ):
             pars = parse_Pct_two_files(data_source_P, data_source_ct)
         else:
             pars = parameters
@@ -106,13 +108,9 @@ class WsRho2PCtTwoFiles(TurbineType):
         self.ipars_ct = interpn_pars_ct
 
         if self.ipars_P is None:
-            self.ipars_P = dict(
-                method='linear', bounds_error=True, fill_value=0.0
-            )
+            self.ipars_P = dict(method="linear", bounds_error=True, fill_value=0.0)
         if self.ipars_ct is None:
-            self.ipars_ct = dict(
-                method='linear', bounds_error=True, fill_value=0.0
-            )
+            self.ipars_ct = dict(method="linear", bounds_error=True, fill_value=0.0)
 
         self._P = None
         self._ct = None
@@ -189,7 +187,7 @@ class WsRho2PCtTwoFiles(TurbineType):
         super().initialize(algo, st_sel, verbosity=verbosity)
 
     def _bounds_info(self, target, qts):
-        """ Helper function for printing bounds info """
+        """Helper function for printing bounds info"""
 
         print(f"\nBOUNDS INFO FOR TARGET {target}")
         WS = self.WSP if target == FV.P else self.WSCT
@@ -233,7 +231,7 @@ class WsRho2PCtTwoFiles(TurbineType):
         """
         # prepare:
         n_sel = np.sum(st_sel)
-        qts = np.zeros((n_sel, 2), dtype=FC.DTYPE) # ws, ct
+        qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, ct
 
         # in yawed case, calc yaw corrected wind speed:
         if self.flag_yawm:
@@ -243,8 +241,8 @@ class WsRho2PCtTwoFiles(TurbineType):
             # and smoothly deals with full load region:
             yawm = fdata[FV.YAWM][st_sel]
             cosm = np.cos(yawm / 180 * np.pi)
-            #rews2 *= (cosm**self.p_ct) ** 0.5
-            #rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
+            # rews2 *= (cosm**self.p_ct) ** 0.5
+            # rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
 
         # interpolate P:
         qts[:, 0] = fdata[self.WSP][st_sel]

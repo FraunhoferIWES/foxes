@@ -1,10 +1,10 @@
-import numpy as np
 import pandas as pd
 
 from foxes.core.point_data_model import PointDataModel
 from foxes.utils import PandasFileHelper
 import foxes.constants as FC
 import foxes.variables as FV
+
 
 class SetUniformData(PointDataModel):
     """
@@ -37,12 +37,12 @@ class SetUniformData(PointDataModel):
     """
 
     def __init__(
-            self, 
-            data_source, 
-            output_vars,
-            var2col={},
-            pd_read_pars={},
-        ):
+        self,
+        data_source,
+        output_vars,
+        var2col={},
+        pd_read_pars={},
+    ):
         self.data_source = data_source
         self.ovars = output_vars
 
@@ -63,9 +63,9 @@ class SetUniformData(PointDataModel):
         """
         if self._data is None:
             if isinstance(self.data_source, pd.DataFrame):
-                self._data = self.data_source[[
-                    self.var2col.get(v, v) for v in self.ovars
-                ]].to_numpy(FC.DTYPE)
+                self._data = self.data_source[
+                    [self.var2col.get(v, v) for v in self.ovars]
+                ].to_numpy(FC.DTYPE)
             elif isinstance(self.data_source, dict):
                 pass
             else:
@@ -74,9 +74,9 @@ class SetUniformData(PointDataModel):
                 rpars = dict(index_col=0)
                 rpars.update(self._rpars)
                 self._data = PandasFileHelper().read_file(self.data_source, **rpars)
-                self._data = self._data[[
-                    self.var2col.get(v, v) for v in self.ovars
-                ]].to_numpy(FC.DTYPE)
+                self._data = self._data[
+                    [self.var2col.get(v, v) for v in self.ovars]
+                ].to_numpy(FC.DTYPE)
 
         super().initialize(algo, verbosity)
 
@@ -159,7 +159,7 @@ class SetUniformData(PointDataModel):
                 pdata[v][:] = mdata[v][None, self.ovars.index(v)]
             else:
                 pdata[v][:] = self.data_source[v]
-        
+
         return {v: pdata[v] for v in self.ovars}
 
     def finalize(self, algo, results, clear_mem=False, verbosity=0):
@@ -182,4 +182,3 @@ class SetUniformData(PointDataModel):
         if clear_mem:
             self._data = None
         super().finalize(algo, results, clear_mem, verbosity)
-        

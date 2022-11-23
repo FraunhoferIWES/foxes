@@ -579,7 +579,7 @@ class AreaUnion(AreaGeometry):
             return AreaUnion(self.geometries + g.geometries)
         else:
             return AreaUnion(self.geometries + [g])
-            
+
 
 class InvertedAreaUnion(InvertedAreaGeometry):
     """

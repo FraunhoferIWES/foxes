@@ -121,7 +121,9 @@ class States(PointDataModel):
             return ExtendedStates(self, s)
         elif isinstance(s, ExtendedStates):
             if s.states is not self:
-                raise ValueError(f"Cannot add extended states, since not based on same states")
+                raise ValueError(
+                    f"Cannot add extended states, since not based on same states"
+                )
             return ExtendedStates(self, s.pmodels.models[1:])
         else:
             return ExtendedStates(self, [s])
@@ -315,7 +317,9 @@ class ExtendedStates(States):
             return ExtendedStates(self.states, models + m)
         elif isinstance(m, ExtendedStates):
             if m.states is not self.states:
-                raise ValueError(f"Cannot add extended states, since not based on same states")
+                raise ValueError(
+                    f"Cannot add extended states, since not based on same states"
+                )
             return ExtendedStates(self.states, models + m.pmodels.models[1:])
         else:
             return ExtendedStates(self.states, models + [m])
