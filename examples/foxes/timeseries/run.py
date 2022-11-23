@@ -61,15 +61,12 @@ def run_foxes(args):
 
     print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
     
-    # get timestep for yield and capacity calculations
-    ts = o.calc_timestep(states) # in hours
+    # get timestep and duration of timeseries for yield and capacity calculations
+    ts= o.calc_times(states) # in hours
 
     # add yield results by state and turbine
     o.calc_yield(timestep=ts)
     o.calc_yield(timestep=ts, ambient=True)
-    print("Yield results by state and turbine:")
-    print(farm_results.YLD.to_dataframe())
-    print()
 
     turbine_yield = o.calc_turbine_yield()
     print("Yield values by turbine:")
@@ -77,23 +74,33 @@ def run_foxes(args):
     print()
 
     turbine_yield_ann = o.calc_turbine_yield(annual=True)
-    print("Annual yield values by turbine:")
+    print("\nAnnual yield values by turbine:")
     print(turbine_yield_ann) # in GWh
     print()
+
+    # add capacity to farm results
+    o.calc_capacity(P_nom=ttype.P_nominal, timestep=ts)
+    o.calc_capacity(P_nom=ttype.P_nominal, timestep=ts, ambient=True)
     
     # calculate farm yield, P75 and P90
     farm_yield, P75, P90 = o.calc_farm_yield()
-    print(f"Farm yield is {farm_yield:.2f} GWh")
+    print(f"\nFarm yield is {farm_yield:.2f} GWh")
     print(f"Farm P75 is {P75:.2f} GWh")
     print(f"Farm P90 is {P90:.2f} GWh")
 
     # add efficiency to farm results
     o.calc_efficiency()
-    
-    print(farm_results.EFF.to_dataframe())
 
+    # efficiency by turbine
+    turbine_eff = o.calc_states_mean([FV.EFF]) ## all results are NaN due some zero AMB_P values
+    print("Efficiency by turbine:")
+    print(turbine_eff) 
+
+    farm_df = farm_results.to_dataframe()
+    df = farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP, FV.YLD, FV.AMB_YLD]]
+    print(df)
     print()
-    
+
 
 if __name__ == "__main__":
 
