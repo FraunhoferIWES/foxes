@@ -297,8 +297,7 @@ class FarmResultsEval(Output):
             timestep_hours = timestep_seconds / 3600
             return timestep_hours
 
-
-    def calc_yield(self, timestep=1, power_factor=0.000001, power_uncert=0.08, ambient=False):
+    def calc_yield(self, timestep=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P

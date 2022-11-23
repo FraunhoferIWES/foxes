@@ -122,9 +122,10 @@ if __name__ == "__main__":
     P = o.calc_mean_farm_power()
     print(f"\nFarm power: {P/1000:.3f} MW, Efficiency = {P/P0*100:.2f} %")
 
-    # add yield outputs to farm results
-    o.calc_yield() # results will be in GWh per year by default
+    # add annual yield outputs to farm results
+    o.calc_yield() # results will be in GWh per year (default timestep is 8760hrs)
     o.calc_yield(ambient=True)
     fr = farm_results.to_dataframe()
     print("\nYield data from farm results:")
     print(fr[[FV.YLD, FV.AMB_YLD]])
+    print()
