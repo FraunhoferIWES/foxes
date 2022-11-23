@@ -123,9 +123,17 @@ if __name__ == "__main__":
     print(f"\nFarm power: {P/1000:.3f} MW, Efficiency = {P/P0*100:.2f} %")
 
     # add annual yield outputs to farm results
-    o.calc_yield() # results will be in GWh per year (default timestep is 8760hrs)
+    o.calc_yield() # results will be in Wh per year (default timestep is 8760hrs)
     o.calc_yield(ambient=True)
-    fr = farm_results.to_dataframe()
-    print("\nYield data from farm results:")
-    print(fr[[FV.YLD, FV.AMB_YLD]])
+
+    # add capacity to farm results
+    o.calc_capacity(P_nom=ttype.P_nominal)
+    o.calc_capacity(P_nom=ttype.P_nominal, ambient=True)
+
+    # add efficiency to farm results
+    o.calc_efficiency()
+
+    farm_df = farm_results.to_dataframe()
+    print("\nAdded farm results data:")
+    print(farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP, FV.YLD, FV.AMB_YLD]])
     print()

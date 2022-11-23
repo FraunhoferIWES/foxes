@@ -297,7 +297,7 @@ class FarmResultsEval(Output):
             timestep_hours = timestep_seconds / 3600
             return timestep_hours
 
-    def calc_yield(self, timestep=24*365, power_factor=0.000001, power_uncert=0.08, ambient=False):
+    def calc_yield(self, timestep=24*365, power_uncert=0.08, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P
@@ -318,7 +318,7 @@ class FarmResultsEval(Output):
             print("Ambient yield data added to farm results")
         else: print("Yield data added to farm results")
         
-    def calc_turbine_yield(self, power_factor=1e-6, annual=False, ambient=False):
+    def calc_turbine_yield(self, annual=False, ambient=False):
 
         if ambient:
             vars = [FV.AMB_YLD]
@@ -335,9 +335,9 @@ class FarmResultsEval(Output):
             duration_hours = duration_seconds / 3600
             tdata = tdata* 24*365 / duration_hours
         
-        return tdata * power_factor 
+        return tdata
 
-    def calc_capacity(self, P_nom, timestep=1, annual=False, ambient=False):
+    def calc_capacity(self, P_nom, annual=False, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P

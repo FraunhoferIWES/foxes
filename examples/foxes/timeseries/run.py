@@ -74,13 +74,13 @@ def run_foxes(args):
     print()
 
     turbine_yield_ann = o.calc_turbine_yield(annual=True)
-    print("\nAnnual yield values by turbine:")
-    print(turbine_yield_ann) # in GWh
+    print("\nAnnual yield values by turbine [GWh]:")
+    print(turbine_yield_ann * 1e-6) # in GWh
     print()
 
     # add capacity to farm results
-    o.calc_capacity(P_nom=ttype.P_nominal, timestep=ts)
-    o.calc_capacity(P_nom=ttype.P_nominal, timestep=ts, ambient=True)
+    o.calc_capacity(P_nom=ttype.P_nominal)
+    o.calc_capacity(P_nom=ttype.P_nominal, ambient=True)
     
     # calculate farm yield, P75 and P90
     farm_yield, P75, P90 = o.calc_farm_yield()
@@ -97,8 +97,8 @@ def run_foxes(args):
     print(turbine_eff) 
 
     farm_df = farm_results.to_dataframe()
-    df = farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP, FV.YLD, FV.AMB_YLD]]
-    print(df)
+    print("\nFarm results data:")
+    print(farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP, FV.YLD, FV.AMB_YLD]])
     print()
 
 
