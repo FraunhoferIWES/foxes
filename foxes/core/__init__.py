@@ -1,13 +1,11 @@
 from .data import Data
 from .model import Model
 from .data_calc_model import DataCalcModel
-from .states import States
+from .states import States, ExtendedStates
 from .wind_farm import WindFarm
 from .algorithm import Algorithm
-from .farm_data_model import FarmDataModel
-from .point_data_model import PointDataModel
-from .point_data_model_list import PointDataModelList
-from .farm_data_model_list import FarmDataModelList
+from .farm_data_model import FarmDataModel, FarmDataModelList
+from .point_data_model import PointDataModel, PointDataModelList
 from .rotor_model import RotorModel
 from .farm_model import FarmModel
 from .turbine_model import TurbineModel

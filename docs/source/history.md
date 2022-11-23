@@ -122,6 +122,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.5-alpha
 
+- Core:
+  - New: `ExtendedStates`, allows for adding point data models to states
 - Turbine types:
   - New: `WsRho2PCtTwoFiles`, air density dependent power and ct curves
 - Turbine models:

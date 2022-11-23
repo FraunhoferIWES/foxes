@@ -1,6 +1,6 @@
 import numpy as np
 
-from .farm_data_model_list import FarmDataModelList
+from .farm_data_model import FarmDataModelList
 from .farm_data_model import FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
