@@ -1,6 +1,7 @@
 import time
 import argparse
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import foxes
 import foxes.variables as FV
@@ -56,51 +57,54 @@ def run_foxes(args):
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-
-    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
     
-    # get timestep and duration of timeseries for yield and capacity calculations
-    ts= o.calc_times(states) # in hours
+    # add capacity to farm results
+    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types] 
+    o.calc_capacity(P_nom=P_nominal)
+    o.calc_capacity(P_nom=P_nominal, ambient=True)
+    
+    # add efficiency to farm results
+    o.calc_efficiency()
 
-    # add yield results by state and turbine
-    o.calc_yield(timestep=ts)
-    o.calc_yield(timestep=ts, ambient=True)
+    # # efficiency by turbine
+    # turbine_eff = o.calc_states_mean([FV.EFF]) ## all results are NaN due some zero AMB_P values
+    # print("Efficiency by turbine:")
+    # print(turbine_eff) 
 
-    turbine_yield = o.calc_turbine_yield()
-    print("Yield values by turbine:")
-    print(turbine_yield) # in GWh
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:")
+    print(farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP]])
     print()
 
+    # results by turbine 
+    turbine_results = o.reduce_states({FV.P: "mean",
+    FV.AMB_P: "mean",
+    FV.CAP: "mean",
+    FV.AMB_CAP: "mean",
+    FV.EFF: "mean"
+    })
+    print("\nResults by turbine")
+    print(turbine_results)
+
+    # yield calculations
+    turbine_yield = o.calc_turbine_yield()
+    print("\nYield values by turbine [GWh]:")
+    print(turbine_yield * 1e-6) # in GWh
     turbine_yield_ann = o.calc_turbine_yield(annual=True)
     print("\nAnnual yield values by turbine [GWh]:")
     print(turbine_yield_ann * 1e-6) # in GWh
     print()
 
-    # add capacity to farm results
-    o.calc_capacity(P_nom=ttype.P_nominal)
-    o.calc_capacity(P_nom=ttype.P_nominal, ambient=True)
-    
     # calculate farm yield, P75 and P90
-    farm_yield, P75, P90 = o.calc_farm_yield()
-    print(f"\nFarm yield is {farm_yield:.2f} GWh")
-    print(f"Farm P75 is {P75:.2f} GWh")
-    print(f"Farm P90 is {P90:.2f} GWh")
+    farm_yield, P75, P90 = o.calc_farm_yield(yield_data=turbine_yield)
+    print(f"\nFarm yield is {farm_yield*1e-6:.2f} GWh")
+    print(f"Farm P75 is {P75*1e-6:.2f} GWh")
+    print(f"Farm P90 is {P90*1e-6:.2f} GWh")
 
-    # add efficiency to farm results
-    o.calc_efficiency()
-
-    # efficiency by turbine
-    turbine_eff = o.calc_states_mean([FV.EFF]) ## all results are NaN due some zero AMB_P values
-    print("Efficiency by turbine:")
-    print(turbine_eff) 
-
-    farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:")
-    print(farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP, FV.YLD, FV.AMB_YLD]])
-    print()
-
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"Farm power: {P/1000:.1f} MW")
+    print(f"Farm ambient power: {P0/1000:.1f} MW")
 
 if __name__ == "__main__":
 

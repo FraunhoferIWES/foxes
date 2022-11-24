@@ -289,15 +289,7 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_times(self, states):
-        if str(states) == 'Timeseries':
-            # get timestep from timeseries data
-            timestep_delta = self.results.state[1] - self.results.state[0]
-            timestep_seconds = int(timestep_delta.astype(int)/1e9)
-            timestep_hours = timestep_seconds / 3600
-            return timestep_hours
-
-    def calc_yield(self, timestep=24*365, power_uncert=0.08, ambient=False):
+    def calc_turbine_yield(self, annual=False, ambient=False):
 
         if ambient:
             var_in= FV.AMB_P
@@ -306,36 +298,18 @@ class FarmResultsEval(Output):
             var_in = FV.P
             var_out = FV.YLD
 
-        # get results data for the vars variable (by state and turbine)
-        vdata = self.results[var_in]
-
-        # compute yield per turbine (default is MWh)
-        YLD = vdata * timestep
-        
-        # add to farm results
-        self.results[var_out] = YLD
-        if ambient:
-            print("Ambient yield data added to farm results")
-        else: print("Yield data added to farm results")
-        
-    def calc_turbine_yield(self, annual=False, ambient=False):
-
-        if ambient:
-            vars = [FV.AMB_YLD]
-        else: 
-            vars = [FV.YLD]
-
-        # reduce the states 
-        tdata = self.calc_states_sum(vars) # for the duration of the timeseries
+        duration = self.results.state[-1] - self.results.state[0]
+        duration_seconds = int(duration.astype(int)/1e9)
+        duration_hours = duration_seconds / 3600
+        # compute yield per turbine
+        YLD = self.calc_states_mean(var_in) * duration_hours
 
         if annual:
             # convert to annual values
-            duration = self.results.state[-1] - self.results.state[0]
-            duration_seconds = int(duration.astype(int)/1e9)
-            duration_hours = duration_seconds / 3600
-            tdata = tdata* 24*365 / duration_hours
+            YLD = YLD * 24*365 / duration_hours
         
-        return tdata
+        YLD.rename(columns={var_in: var_out}, inplace=True)
+        return YLD
 
     def calc_capacity(self, P_nom, annual=False, ambient=False):
 
@@ -353,34 +327,19 @@ class FarmResultsEval(Output):
 
         # add to farm results
         self.results[var_out] = CAP
-        print("Capacity added to farm results")
-
-    def calc_farm_yield(self, power_factor=1e-6, power_uncert=0.08, annual=False, ambient=False):
-
         if ambient:
-            vars = [FV.AMB_YLD]
-        else: 
-            vars = [FV.YLD]
+            print("Ambient capacity added to farm results")
+        else:
+            print("Capacity added to farm results")
 
-        # reduce the states and turbines by summing
-        print()
-        farm_yield = self.calc_farm_sum(vars)['YLD'] * power_factor # for the duration of the timeseries
-
-        if annual:
-            # convert to annual values
-            duration = self.results.state[-1] - self.results.state[0]
-            duration_seconds = int(duration.astype(int)/1e9)
-            duration_hours = duration_seconds / 3600
-            farm_yield = farm_yield* 24*365 / duration_hours
-
-        # P75 and P90
+    def calc_farm_yield(self, yield_data, power_uncert=0.08):
+        farm_yield = yield_data.sum()
         P75 = farm_yield * (1.0 - (0.675 * power_uncert))
         P90 = farm_yield * (1.0 - (1.282 * power_uncert))
-                
-        return farm_yield, P75, P90
+        return farm_yield['YLD'], P75['YLD'], P90['YLD']
 
     def calc_efficiency(self):
         P = self.results[FV.P]
-        P0 = self.results[FV.AMB_P]
+        P0 = self.results[FV.AMB_P] + 1e-14
         self.results[FV.EFF] = P / P0 # add to farm results
         print('Efficiency added to farm results')
