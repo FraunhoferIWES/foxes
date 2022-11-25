@@ -286,7 +286,7 @@ class WsRho2PCtTwoFiles(TurbineType):
             
             # run interpolation:
             try:
-                fdata[FV.CT][st_sel] = interpn(
+                fdata[FV.CT][st_sel_ct] = interpn(
                     (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
                 )
             except ValueError as e:
