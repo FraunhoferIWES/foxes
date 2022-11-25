@@ -124,6 +124,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Core:
   - New: `ExtendedStates`, allows for adding point data models to states
+- Input:
+  - Improved: `FieldDataNC`, now with support for spatially uniform variables
 - Turbine types:
   - New: `WsRho2PCtTwoFiles`, air density dependent power and ct curves
 - Turbine models:
