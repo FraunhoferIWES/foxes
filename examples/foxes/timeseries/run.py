@@ -51,38 +51,57 @@ def run_foxes(args):
     print("\nCalc time =", time1 - time0, "\n")
 
     o = foxes.output.FarmResultsEval(farm_results)
-    
+
     # add capacity to farm results
-    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types] 
+    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types]
     o.calc_capacity(P_nom=P_nominal)
     o.calc_capacity(P_nom=P_nominal, ambient=True)
-    
+
     # add efficiency to farm results
     o.calc_efficiency()
 
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:")
-    print(farm_df[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI,
-    FV.P, FV.AMB_P, FV.CT, FV.EFF, FV.CAP, FV.AMB_CAP]])
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.P,
+                FV.AMB_P,
+                FV.CT,
+                FV.EFF,
+                FV.CAP,
+                FV.AMB_CAP,
+            ]
+        ]
+    )
     print()
 
-    # results by turbine 
-    turbine_results = o.reduce_states({FV.P: "mean",
-    FV.AMB_P: "mean",
-    FV.CAP: "mean",
-    FV.AMB_CAP: "mean",
-    FV.EFF: "mean"
-    })
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.P: "mean",
+            FV.AMB_P: "mean",
+            FV.CAP: "mean",
+            FV.AMB_CAP: "mean",
+            FV.EFF: "mean",
+        }
+    )
     print("\nResults by turbine")
     print(turbine_results)
 
     # yield calculations
     turbine_yield = o.calc_turbine_yield()
     print("\nYield values by turbine [GWh]:")
-    print(turbine_yield * 1e-6) # in GWh
+    print(turbine_yield * 1e-6)  # in GWh
     turbine_yield_ann = o.calc_turbine_yield(annual=True)
     print("\nAnnual yield values by turbine [GWh]:")
-    print(turbine_yield_ann * 1e-6) # in GWh
+    print(turbine_yield_ann * 1e-6)  # in GWh
     print()
 
     # calculate annual farm yield, P75 and P90
@@ -96,6 +115,7 @@ def run_foxes(args):
     P = o.calc_mean_farm_power()
     print(f"Farm power: {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
+
 
 if __name__ == "__main__":
 
@@ -163,7 +183,7 @@ if __name__ == "__main__":
         "-ts",
         "--timestep",
         help="The timestep of the input timeseries or data in minutes",
-        default = 60*24*365 # default is one year
+        default=60 * 24 * 365,  # default is one year
     )
     args = parser.parse_args()
 

@@ -109,37 +109,56 @@ if __name__ == "__main__":
     fig = next(g)
     plt.show()
 
-  # add capacity to farm results
+    # add capacity to farm results
     o = foxes.output.FarmResultsEval(farm_results)
-    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types] 
+    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types]
     o.calc_capacity(P_nom=P_nominal)
     o.calc_capacity(P_nom=P_nominal, ambient=True)
-    
+
     # add efficiency to farm results
     o.calc_efficiency()
 
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:")
-    print(farm_df[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI,
-    FV.P, FV.AMB_P, FV.CT, FV.EFF, FV.CAP, FV.AMB_CAP]])
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.P,
+                FV.AMB_P,
+                FV.CT,
+                FV.EFF,
+                FV.CAP,
+                FV.AMB_CAP,
+            ]
+        ]
+    )
     print()
 
-    # results by turbine 
-    turbine_results = o.reduce_states({FV.P: "mean",
-    FV.AMB_P: "mean",
-    FV.CAP: "mean",
-    FV.AMB_CAP: "mean",
-    FV.EFF: "mean"
-    })
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.P: "mean",
+            FV.AMB_P: "mean",
+            FV.CAP: "mean",
+            FV.AMB_CAP: "mean",
+            FV.EFF: "mean",
+        }
+    )
     print("\nResults by turbine")
     print(turbine_results)
 
     # yield results
-    turbine_yield = turbine_results['P'] *24*365 *1e-6
+    turbine_yield = turbine_results["P"] * 24 * 365 * 1e-6
     print(f"\nAnnual yield [GWh] per turbine is:")
     print(turbine_yield)
     print(f"\nAnnual farm yield is {turbine_yield.sum():.2f} [GWh].")
-    
+
     # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()

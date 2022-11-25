@@ -24,9 +24,10 @@ class FarmResultsEval(Output):
         The farm results
 
     """
+
     def __init__(self, farm_results):
         self.results = farm_results
-    
+
     def reduce_states(self, vars_op):
         """
         Reduces the states dimension by some operation
@@ -36,8 +37,8 @@ class FarmResultsEval(Output):
         vars_op : dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
-            are: sum, mean, min, max. 
-        
+            are: sum, mean, min, max.
+
         Returns
         -------
         data : pandas.DataFrame
@@ -51,7 +52,7 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum('st,st->t', vdata, weights)
+                rdata[v] = np.einsum("st,st->t", vdata, weights)
             elif op == "sum":
                 rdata[v] = np.sum(vdata, axis=0)
             elif op == "min":
@@ -61,13 +62,15 @@ class FarmResultsEval(Output):
             elif op == "std":
                 rdata[v] = np.std(vdata, axis=0)
             else:
-                raise KeyError(f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max")
+                raise KeyError(
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                )
 
         data = pd.DataFrame(index=range(n_turbines), data=rdata)
         data.index.name = FV.TURBINE
-        
+
         return data
-    
+
     def reduce_turbines(self, vars_op):
         """
         Reduces the turbine dimension by some operation
@@ -77,8 +80,8 @@ class FarmResultsEval(Output):
         vars_op : dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
-            are: sum, mean, min, max. 
-        
+            are: sum, mean, min, max.
+
         Returns
         -------
         data : pandas.DataFrame
@@ -92,7 +95,7 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum('st,st->s', vdata, weights)
+                rdata[v] = np.einsum("st,st->s", vdata, weights)
             elif op == "sum":
                 rdata[v] = np.sum(vdata, axis=1)
             elif op == "min":
@@ -100,11 +103,13 @@ class FarmResultsEval(Output):
             elif op == "max":
                 rdata[v] = np.max(vdata, axis=1)
             else:
-                raise KeyError(f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max")
+                raise KeyError(
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                )
 
         data = pd.DataFrame(index=states, data=rdata)
         data.index.name = FV.STATE
-        
+
         return data
 
     def reduce_all(self, states_op, turbines_op):
@@ -114,15 +119,15 @@ class FarmResultsEval(Output):
         Parameters
         ----------
         states_op : dict
-            The states contraction operations. 
-            Key: str, the variable name. Value: 
-            str, the operation, choices are: 
-            sum, mean, min, max. 
+            The states contraction operations.
+            Key: str, the variable name. Value:
+            str, the operation, choices are:
+            sum, mean, min, max.
         turbines_op : dict
-            The turbines contraction operations. 
-            Key: str, the variable name. Value: 
-            str, the operation, choices are: 
-            sum, mean, min, max. 
+            The turbines contraction operations.
+            Key: str, the variable name. Value:
+            str, the operation, choices are:
+            sum, mean, min, max.
 
         Returns
         -------
@@ -139,9 +144,9 @@ class FarmResultsEval(Output):
             if op == "mean":
                 if states_op[v] == "mean":
                     vdata = self.results[v].to_numpy()
-                    rdata[v] = np.einsum('st,st->', vdata, weights)
+                    rdata[v] = np.einsum("st,st->", vdata, weights)
                 else:
-                    rdata[v] = np.einsum('st,st->', vdata[None, :], weights)
+                    rdata[v] = np.einsum("st,st->", vdata[None, :], weights)
             elif op == "sum":
                 rdata[v] = np.sum(vdata)
             elif op == "min":
@@ -149,8 +154,10 @@ class FarmResultsEval(Output):
             elif op == "max":
                 rdata[v] = np.max(vdata)
             else:
-                raise KeyError(f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max")
-        
+                raise KeyError(
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                )
+
         return rdata
 
     def calc_states_mean(self, vars):
@@ -290,33 +297,55 @@ class FarmResultsEval(Output):
         return cdata[v]
 
     def calc_turbine_yield(self, annual=False, ambient=False):
+        """
+        Calculates the yield per turbine for a timeseries input
 
+        Parameters
+        ----------
+        annual : bool, optional
+            Flag for returing annual results, by default False
+        ambient : bool, optional
+            Flag for ambient power, by default False
+
+        Returns
+        -------
+        pandas.DataFrame
+            A dataframe of yield values by turbine
+        """
         if ambient:
-            var_in= FV.AMB_P
+            var_in = FV.AMB_P
             var_out = FV.AMB_YLD
-        else: 
+        else:
             var_in = FV.P
             var_out = FV.YLD
 
         duration = self.results.state[-1] - self.results.state[0]
-        duration_seconds = int(duration.astype(int)/1e9)
+        duration_seconds = int(duration.astype(int) / 1e9)
         duration_hours = duration_seconds / 3600
         # compute yield per turbine
         YLD = self.calc_states_mean(var_in) * duration_hours
 
         if annual:
             # convert to annual values
-            YLD = YLD * 24*365 / duration_hours
+            YLD = YLD * 24 * 365 / duration_hours
 
         YLD.rename(columns={var_in: var_out}, inplace=True)
         return YLD
 
-    def calc_capacity(self, P_nom, annual=False, ambient=False):
+    def calc_capacity(self, P_nom, ambient=False):
+        """Adds capacity to the farm results
 
+        Parameters
+        ----------
+        P_nom : list
+            Nominal power values for each turbine
+        ambient : bool, optional
+            Flag for calculating ambient capacity, by default False
+        """
         if ambient:
-            var_in= FV.AMB_P
+            var_in = FV.AMB_P
             var_out = FV.AMB_CAP
-        else: 
+        else:
             var_in = FV.P
             var_out = FV.CAP
 
@@ -333,14 +362,32 @@ class FarmResultsEval(Output):
             print("Capacity added to farm results")
 
     def calc_farm_yield(self, yield_data, power_uncert=0.08):
-        
+        """
+        Calculates yield at the farm level
+
+        Parameters
+        ----------
+        yield_data : pandas.DataFrame
+            Yield values by turbine
+        power_uncert : float, optional
+            Uncertainty in the power value, by default 0.08
+
+        Returns
+        -------
+        numpy.float64
+            Farm yield, P75 and P90 values
+
+        """
         farm_yield = yield_data.sum()
         P75 = farm_yield * (1.0 - (0.675 * power_uncert))
         P90 = farm_yield * (1.0 - (1.282 * power_uncert))
-        return farm_yield['YLD'], P75['YLD'], P90['YLD']
+        return farm_yield["YLD"], P75["YLD"], P90["YLD"]
 
     def calc_efficiency(self):
+        """
+        Adds effciency to the farm results
+        """
         P = self.results[FV.P]
         P0 = self.results[FV.AMB_P] + 1e-14
-        self.results[FV.EFF] = P / P0 # add to farm results
-        print('Efficiency added to farm results')
+        self.results[FV.EFF] = P / P0  # add to farm results
+        print("Efficiency added to farm results")
