@@ -229,45 +229,69 @@ class WsRho2PCtTwoFiles(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        # prepare:
-        n_sel = np.sum(st_sel)
-        qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, ct
 
-        # in yawed case, calc yaw corrected wind speed:
-        if self.flag_yawm:
+        # calculate P:
+        st_sel_P = st_sel & (fdata[self.WSP] >= self._ws_P[0]) & (fdata[self.WSP] <= self._ws_P[-1])
+        st_sel_P0 = st_sel & ~st_sel_P
+        if np.any(st_sel_P0):
+            fdata[FV.P][st_sel_P0] = 0
+        if np.any(st_sel_P):
 
-            # calculate corrected wind speed wsc,
-            # gives ws**3 * cos**p_P in partial load region
-            # and smoothly deals with full load region:
-            yawm = fdata[FV.YAWM][st_sel]
-            cosm = np.cos(yawm / 180 * np.pi)
-            # rews2 *= (cosm**self.p_ct) ** 0.5
-            # rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
+            # prepare interpolation:
+            n_sel = np.sum(st_sel_P)
+            qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
+            qts[:, 0] = fdata[self.WSP][st_sel_P]
+            qts[:, 1] = fdata[FV.RHO][st_sel_P]
 
-        # interpolate P:
-        qts[:, 0] = fdata[self.WSP][st_sel]
-        qts[:, 1] = fdata[FV.RHO][st_sel]
-        if self.flag_yawm:
-            qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
-        try:
-            fdata[FV.P][st_sel] = interpn(
-                (self._ws_P, self._rho_P), self._P, qts, **self.ipars_P
-            )
-        except ValueError as e:
-            self._bounds_info(FV.P, qts)
-            raise e
+            # apply yaw corrections:
+            if self.flag_yawm:
+                # calculate corrected wind speed wsc,
+                # gives ws**3 * cos**p_P in partial load region
+                # and smoothly deals with full load region:
+                yawm = fdata[FV.YAWM][st_sel_P]
+                cosm = np.cos(yawm / 180 * np.pi)
+                qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
+            
+            # run interpolation:
+            try:
+                fdata[FV.P][st_sel_P] = interpn(
+                    (self._ws_P, self._rho_P), self._P, qts, **self.ipars_P
+                )
+            except ValueError as e:
+                self._bounds_info(FV.P, qts)
+                raise e
+        del st_sel_P, st_sel_P0
 
-        # interpolate ct:
-        qts[:, 0] = fdata[self.WSCT][st_sel]
-        if self.flag_yawm:
-            qts[:, 0] *= (cosm**self.p_ct) ** 0.5
-        try:
-            fdata[FV.CT][st_sel] = interpn(
-                (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
-            )
-        except ValueError as e:
-            self._bounds_info(FV.CT, qts)
-            raise e
+        # calculate ct:
+        st_sel_ct = st_sel & (fdata[self.WSCT] >= self._ws_P[0]) & (fdata[self.WSCT] <= self._ws_P[-1])
+        st_sel_ct0 = st_sel & ~st_sel_ct
+        if np.any(st_sel_ct0):
+            fdata[FV.CT][st_sel_ct0] = 0
+        if np.any(st_sel_ct):
+
+            # prepare interpolation:
+            n_sel = np.sum(st_sel_ct)
+            qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
+            qts[:, 0] = fdata[self.WSP][st_sel_ct]
+            qts[:, 1] = fdata[FV.RHO][st_sel_ct]
+
+            # apply yaw corrections:
+            if self.flag_yawm:
+                # calculate corrected wind speed wsc,
+                # gives ws**3 * cos**p_P in partial load region
+                # and smoothly deals with full load region:
+                yawm = fdata[FV.YAWM][st_sel_ct]
+                cosm = np.cos(yawm / 180 * np.pi)
+                qts[:, 0] *= (cosm**self.p_ct) ** 0.5
+            
+            # run interpolation:
+            try:
+                fdata[FV.CT][st_sel] = interpn(
+                    (self._ws_ct, self._rho_ct), self._ct, qts, **self.ipars_ct
+                )
+            except ValueError as e:
+                self._bounds_info(FV.CT, qts)
+                raise e
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
