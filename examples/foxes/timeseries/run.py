@@ -1,7 +1,6 @@
 import time
 import argparse
 import matplotlib.pyplot as plt
-import pandas as pd
 
 import foxes
 import foxes.variables as FV
@@ -51,11 +50,6 @@ def run_foxes(args):
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
 
-    print(farm_results, "\n")
-
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
-
     o = foxes.output.FarmResultsEval(farm_results)
     
     # add capacity to farm results
@@ -66,14 +60,10 @@ def run_foxes(args):
     # add efficiency to farm results
     o.calc_efficiency()
 
-    # # efficiency by turbine
-    # turbine_eff = o.calc_states_mean([FV.EFF]) ## all results are NaN due some zero AMB_P values
-    # print("Efficiency by turbine:")
-    # print(turbine_eff) 
-
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:")
-    print(farm_df[[FV.P, FV.AMB_P, FV.EFF, FV.CAP, FV.AMB_CAP]])
+    print(farm_df[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI,
+    FV.P, FV.AMB_P, FV.CT, FV.EFF, FV.CAP, FV.AMB_CAP]])
     print()
 
     # results by turbine 
@@ -95,11 +85,12 @@ def run_foxes(args):
     print(turbine_yield_ann * 1e-6) # in GWh
     print()
 
-    # calculate farm yield, P75 and P90
-    farm_yield, P75, P90 = o.calc_farm_yield(yield_data=turbine_yield)
-    print(f"\nFarm yield is {farm_yield*1e-6:.2f} GWh")
-    print(f"Farm P75 is {P75*1e-6:.2f} GWh")
-    print(f"Farm P90 is {P90*1e-6:.2f} GWh")
+    # calculate annual farm yield, P75 and P90
+    print("\nFarm results:")
+    farm_yield, P75, P90 = o.calc_farm_yield(yield_data=turbine_yield_ann)
+    print(f"Annual farm yield is {farm_yield*1e-6:.2f} GWh")
+    print(f"Annual farm P75 is {P75*1e-6:.2f} GWh")
+    print(f"Annual farm P90 is {P90*1e-6:.2f} GWh")
 
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()

@@ -307,7 +307,7 @@ class FarmResultsEval(Output):
         if annual:
             # convert to annual values
             YLD = YLD * 24*365 / duration_hours
-        
+
         YLD.rename(columns={var_in: var_out}, inplace=True)
         return YLD
 
@@ -333,6 +333,7 @@ class FarmResultsEval(Output):
             print("Capacity added to farm results")
 
     def calc_farm_yield(self, yield_data, power_uncert=0.08):
+        
         farm_yield = yield_data.sum()
         P75 = farm_yield * (1.0 - (0.675 * power_uncert))
         P90 = farm_yield * (1.0 - (1.282 * power_uncert))
