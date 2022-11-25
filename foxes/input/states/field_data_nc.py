@@ -160,11 +160,13 @@ class FieldDataNC(States):
             if ds[ncv].dims == cor_shyx:
                 data[..., self._dkys[v]] = ds[ncv][:]
             else:
-                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].values, 2, 3)
+                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 2, 3)
         for v in vars_sh:
-            data[..., self._dkys[v]] = ds[ncv][:, :, None, None]
+            ncv = self.var2ncvar[v]
+            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]
         for v in vars_s:
-            data[..., self._dkys[v]] = ds[ncv][:, None, None, None] 
+            ncv = self.var2ncvar[v]
+            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None] 
 
         if FV.WD in self.fixed_vars:
             data[..., self._dkys[FV.WD]] = np.full(
