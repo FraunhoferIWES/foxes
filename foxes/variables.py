@@ -33,7 +33,6 @@ YLD = "YLD"
 EFF = "EFF"
 CAP = "CAP"
 
-
 REWS = "REWS"
 REWS2 = "REWS2"
 REWS3 = "REWS3"
@@ -54,9 +53,8 @@ AMB_REWS = "AMB_REWS"
 AMB_REWS2 = "AMB_REWS2"
 AMB_REWS3 = "AMB_REWS3"
 
-
 var2amb = {
-    v: f"AMB_{v}" for v in [WS, WD, TI, RHO, YAW, YAWM, P, CT, T, REWS, REWS2, REWS3]
+    v: f"AMB_{v}" for v in [WS, WD, TI, RHO, YAW, YAWM, P, CT, T, REWS, REWS2, REWS3, YLD, CAP,]
 }
 amb2var = {a: v for v, a in var2amb.items()}
 

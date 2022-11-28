@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from .output import Output
 import foxes.variables as FV
@@ -175,6 +174,8 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
+        if isinstance(vars, str):
+            return self.reduce_states({vars: "mean"})
         return self.reduce_states({v: "mean" for v in vars})
 
     def calc_states_sum(self, vars):
@@ -296,9 +297,15 @@ class FarmResultsEval(Output):
         cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
         return cdata[v]
 
-    def calc_turbine_yield(self, annual=False, ambient=False):
+    def calc_turbine_yield(
+            self, 
+            annual=False, 
+            ambient=False, 
+            hours=None, 
+            P_unit_W=1e3,
+        ):
         """
-        Calculates the yield per turbine for a timeseries input
+        Calculates the yield per turbine
 
         Parameters
         ----------
@@ -306,11 +313,16 @@ class FarmResultsEval(Output):
             Flag for returing annual results, by default False
         ambient : bool, optional
             Flag for ambient power, by default False
+        hours : int, optional
+            The duration time in hours, if not timeseries states
+        P_unit_W : float
+            The power unit in Watts, 1000 for kW
 
         Returns
         -------
         pandas.DataFrame
-            A dataframe of yield values by turbine
+            A dataframe of yield values by turbine in GWh
+
         """
         if ambient:
             var_in = FV.AMB_P
@@ -319,28 +331,41 @@ class FarmResultsEval(Output):
             var_in = FV.P
             var_out = FV.YLD
 
-        duration = self.results.state[-1] - self.results.state[0]
-        duration_seconds = int(duration.astype(int) / 1e9)
-        duration_hours = duration_seconds / 3600
         # compute yield per turbine
-        YLD = self.calc_states_mean(var_in) * duration_hours
+        if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
+            if hours is not None:
+                raise KeyError("Unexpected parameter 'hours' for timeseries data")
+            duration = self.results[FV.STATE][-1] - self.results[FV.STATE][0]
+            duration_seconds = int(duration.astype(int) / 1e9)
+            duration_hours = duration_seconds / 3600
+        elif hours is None and annual == True:
+            duration_hours = 8760
+        elif hours is None:
+            raise ValueError(f"Expecting parameter 'hours' for non-timeseries data, or 'annual=True'")
+        else:
+            duration_hours = hours
+        yld = self.calc_states_mean(var_in) * duration_hours * P_unit_W / 1e9
 
         if annual:
             # convert to annual values
-            YLD = YLD * 24 * 365 / duration_hours
+            yld *= 8760 / duration_hours
 
-        YLD.rename(columns={var_in: var_out}, inplace=True)
-        return YLD
+        yld.rename(columns={var_in: var_out}, inplace=True)
+        return yld
 
-    def calc_capacity(self, P_nom, ambient=False):
-        """Adds capacity to the farm results
+    def add_capacity(self, algo=None, P_nom=None, ambient=False):
+        """
+        Adds capacity to the farm results
 
         Parameters
         ----------
-        P_nom : list
-            Nominal power values for each turbine
+        algo : foxes.core.Algorithm, optional
+            The algorithm, for nominal power calculation
+        P_nom : list of float, optional
+            Nominal power values for each turbine, if algo not given
         ambient : bool, optional
             Flag for calculating ambient capacity, by default False
+
         """
         if ambient:
             var_in = FV.AMB_P
@@ -352,30 +377,40 @@ class FarmResultsEval(Output):
         # get results data for the vars variable (by state and turbine)
         vdata = self.results[var_in]
 
-        CAP = vdata / P_nom
+        if algo is not None and P_nom is None:
+            P_nom = [t.P_nominal for t in algo.farm_controller.turbine_types]
+        elif algo is None and P_nom is not None:
+            pass
+        else:
+            raise KeyError("Expecting either 'algo' or 'P_nom'")
+        cap = vdata / P_nom
 
         # add to farm results
-        self.results[var_out] = CAP
+        self.results[var_out] = cap
         if ambient:
             print("Ambient capacity added to farm results")
         else:
             print("Capacity added to farm results")
 
-    def calc_farm_yield(self, yield_data, power_uncert=0.08):
+    def calc_farm_yield(self, yield_data, power_uncert):
         """
-        Calculates yield at the farm level
+        Calculates yield, P75 and P90 at the farm level
 
         Parameters
         ----------
         yield_data : pandas.DataFrame
             Yield values by turbine
-        power_uncert : float, optional
-            Uncertainty in the power value, by default 0.08
+        power_uncert : float
+            Uncertainty in the power value
 
         Returns
         -------
-        numpy.float64
+        farm_yield : float
             Farm yield, P75 and P90 values
+        P75 : float
+            The P75 value
+        P90 : float
+            The P90 value
 
         """
         farm_yield = yield_data.sum()
@@ -383,7 +418,7 @@ class FarmResultsEval(Output):
         P90 = farm_yield * (1.0 - (1.282 * power_uncert))
         return farm_yield["YLD"], P75["YLD"], P90["YLD"]
 
-    def calc_efficiency(self):
+    def add_efficiency(self):
         """
         Adds effciency to the farm results
         """
@@ -391,3 +426,17 @@ class FarmResultsEval(Output):
         P0 = self.results[FV.AMB_P] + 1e-14
         self.results[FV.EFF] = P / P0  # add to farm results
         print("Efficiency added to farm results")
+
+    def calc_farm_efficiency(self):
+        """
+        Calculates farm efficiency
+
+        Returns
+        -------
+        eff : float
+            The farm efficiency
+
+        """
+        P = self.calc_mean_farm_power()
+        P0 = self.calc_mean_farm_power(ambient=True) + 1e-14
+        return P/P0
