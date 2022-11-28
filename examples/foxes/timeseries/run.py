@@ -53,15 +53,14 @@ def run_foxes(args):
     o = foxes.output.FarmResultsEval(farm_results)
 
     # add capacity to farm results
-    P_nominal = [t.P_nominal for t in algo.farm_controller.turbine_types]
-    o.calc_capacity(P_nom=P_nominal)
-    o.calc_capacity(P_nom=P_nominal, ambient=True)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
 
     # add efficiency to farm results
-    o.calc_efficiency()
+    o.add_efficiency()
 
     farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:")
+    print("\nFarm results data:\n")
     print(
         farm_df[
             [
@@ -71,12 +70,12 @@ def run_foxes(args):
                 FV.REWS,
                 FV.AMB_TI,
                 FV.TI,
-                FV.P,
                 FV.AMB_P,
+                FV.P,
                 FV.CT,
                 FV.EFF,
-                FV.CAP,
                 FV.AMB_CAP,
+                FV.CAP,
             ]
         ]
     )
@@ -85,38 +84,26 @@ def run_foxes(args):
     # results by turbine
     turbine_results = o.reduce_states(
         {
-            FV.P: "mean",
-            FV.AMB_P: "mean",
-            FV.CAP: "mean",
             FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
+            FV.AMB_P: "mean",
+            FV.P: "mean",
             FV.EFF: "mean",
         }
     )
-    print("\nResults by turbine")
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
+    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
+    print("\nResults by turbine:\n")
     print(turbine_results)
 
-    # yield calculations
-    turbine_yield = o.calc_turbine_yield()
-    print("\nYield values by turbine [GWh]:")
-    print(turbine_yield * 1e-6)  # in GWh
-    turbine_yield_ann = o.calc_turbine_yield(annual=True)
-    print("\nAnnual yield values by turbine [GWh]:")
-    print(turbine_yield_ann * 1e-6)  # in GWh
-    print()
-
-    # calculate annual farm yield, P75 and P90
-    print("\nFarm results:")
-    farm_yield, P75, P90 = o.calc_farm_yield(yield_data=turbine_yield_ann)
-    print(f"Annual farm yield is {farm_yield*1e-6:.2f} GWh")
-    print(f"Annual farm P75 is {P75*1e-6:.2f} GWh")
-    print(f"Annual farm P90 is {P90*1e-6:.2f} GWh")
-
+    # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"Farm power: {P/1000:.1f} MW")
+    print(f"\nFarm power        : {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
-
-
+    print(f"Farm efficiency   : {o.calc_farm_efficiency():.2f}")
+    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
+    
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()

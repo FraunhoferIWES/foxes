@@ -420,7 +420,7 @@ class FarmResultsEval(Output):
 
     def add_efficiency(self):
         """
-        Adds effciency to the farm results
+        Adds efficiency to the farm results
         """
         P = self.results[FV.P]
         P0 = self.results[FV.AMB_P] + 1e-14

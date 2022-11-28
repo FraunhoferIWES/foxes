@@ -56,10 +56,59 @@ def run_foxes(args):
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.FarmResultsEval(farm_results)
+    
+    # add capacity to farm results
+    o = foxes.output.FarmResultsEval(farm_results)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
+
+    # add efficiency to farm results
+    o.add_efficiency()
+
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:\n")
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+                FV.CT,
+                FV.EFF,
+                FV.AMB_CAP,
+                FV.CAP,
+            ]
+        ]
+    )
+    print()
+
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
+            FV.AMB_P: "mean",
+            FV.P: "mean",
+            FV.EFF: "mean",
+        }
+    )
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
+    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
+    print("\nResults by turbine:\n")
+    print(turbine_results)
+
+    # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
-
+    print(f"\nFarm power        : {P/1000:.1f} MW")
+    print(f"Farm ambient power: {P0/1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency():.2f}")
+    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
 if __name__ == "__main__":
 
