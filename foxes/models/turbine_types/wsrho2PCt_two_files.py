@@ -251,6 +251,7 @@ class WsRho2PCtTwoFiles(TurbineType):
                 yawm = fdata[FV.YAWM][st_sel_P]
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
+                del yawm, cosm
             
             # run interpolation:
             try:
@@ -283,6 +284,7 @@ class WsRho2PCtTwoFiles(TurbineType):
                 yawm = fdata[FV.YAWM][st_sel_ct]
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_ct) ** 0.5
+                del yawm, cosm
             
             # run interpolation:
             try:
