@@ -51,14 +51,11 @@ def run_foxes(args):
     print("\nCalc time =", time1 - time0, "\n")
 
     o = foxes.output.FarmResultsEval(farm_results)
-
-    # add capacity to farm results
     o.add_capacity(algo)
     o.add_capacity(algo, ambient=True)
-
-    # add efficiency to farm results
     o.add_efficiency()
 
+    # state-turbine results
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:\n")
     print(
@@ -72,10 +69,7 @@ def run_foxes(args):
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
-                FV.CT,
                 FV.EFF,
-                FV.AMB_CAP,
-                FV.CAP,
             ]
         ]
     )
@@ -84,10 +78,10 @@ def run_foxes(args):
     # results by turbine
     turbine_results = o.reduce_states(
         {
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
             FV.AMB_P: "mean",
             FV.P: "mean",
+            FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
             FV.EFF: "mean",
         }
     )
@@ -103,7 +97,8 @@ def run_foxes(args):
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency():.2f}")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
-    
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()

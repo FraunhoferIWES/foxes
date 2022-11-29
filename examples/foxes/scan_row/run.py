@@ -57,14 +57,12 @@ def run_foxes(args):
 
     print("\nFarm results:\n", farm_results)
 
-     # add capacity to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
     o.add_capacity(algo, ambient=True)
-
-    # add efficiency to farm results
     o.add_efficiency()
 
+    # state-turbine results
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:\n")
     print(
@@ -78,10 +76,7 @@ def run_foxes(args):
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
-                FV.CT,
                 FV.EFF,
-                FV.AMB_CAP,
-                FV.CAP,
             ]
         ]
     )
@@ -90,10 +85,10 @@ def run_foxes(args):
     # results by turbine
     turbine_results = o.reduce_states(
         {
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
             FV.AMB_P: "mean",
             FV.P: "mean",
+            FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
             FV.EFF: "mean",
         }
     )
@@ -145,6 +140,7 @@ def run_foxes(args):
         o = foxes.output.FlowPlots2D(algo, farm_results)
         fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
         plt.show()
+
 
 if __name__ == "__main__":
 

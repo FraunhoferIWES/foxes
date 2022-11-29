@@ -51,17 +51,17 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args = parser.parse_args()
 
-    # create model book:
+    # create model book
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    # create states:
+    # create states
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
 
-    # create wind farm:
+    # create wind farm
     print("\nCreating wind farm")
     farm = foxes.WindFarm()
     if args.layout is None:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
-    # create algorithm:
+    # create algorithm
     algo = foxes.algorithms.Downwind(
         mbook,
         farm,
@@ -88,11 +88,12 @@ if __name__ == "__main__":
         partial_wakes_model=args.pwakes,
         chunks=None,
     )
-    # calculate farm results:
+
+    # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
 
-    # Horizontal flow plot:
+    # horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_horizontal(args.var, resolution=10)
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-    # Vertical flow plot:
+    # vertical flow plot
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_vertical(
@@ -109,14 +110,13 @@ if __name__ == "__main__":
     fig = next(g)
     plt.show()
 
-    # add capacity to farm results
+    # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
     o.add_capacity(algo, ambient=True)
-
-    # add efficiency to farm results
     o.add_efficiency()
 
+    # state-turbine results
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:\n")
     print(
@@ -132,8 +132,6 @@ if __name__ == "__main__":
                 FV.P,
                 FV.CT,
                 FV.EFF,
-                FV.AMB_CAP,
-                FV.CAP,
             ]
         ]
     )
@@ -142,10 +140,10 @@ if __name__ == "__main__":
     # results by turbine
     turbine_results = o.reduce_states(
         {
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
             FV.AMB_P: "mean",
             FV.P: "mean",
+            FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
             FV.EFF: "mean",
         }
     )

@@ -298,12 +298,12 @@ class FarmResultsEval(Output):
         return cdata[v]
 
     def calc_turbine_yield(
-            self, 
-            annual=False, 
-            ambient=False, 
-            hours=None, 
-            P_unit_W=1e3,
-        ):
+        self,
+        annual=False,
+        ambient=False,
+        hours=None,
+        P_unit_W=1e3,
+    ):
         """
         Calculates the yield per turbine
 
@@ -341,7 +341,9 @@ class FarmResultsEval(Output):
         elif hours is None and annual == True:
             duration_hours = 8760
         elif hours is None:
-            raise ValueError(f"Expecting parameter 'hours' for non-timeseries data, or 'annual=True'")
+            raise ValueError(
+                f"Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
+            )
         else:
             duration_hours = hours
         yld = self.calc_states_mean(var_in) * duration_hours * P_unit_W / 1e9
@@ -383,10 +385,9 @@ class FarmResultsEval(Output):
             pass
         else:
             raise KeyError("Expecting either 'algo' or 'P_nom'")
-        cap = vdata / P_nom
 
         # add to farm results
-        self.results[var_out] = cap
+        self.results[var_out] = vdata / P_nom
         if ambient:
             print("Ambient capacity added to farm results")
         else:
@@ -439,4 +440,4 @@ class FarmResultsEval(Output):
         """
         P = self.calc_mean_farm_power()
         P0 = self.calc_mean_farm_power(ambient=True) + 1e-14
-        return P/P0
+        return P / P0
