@@ -135,19 +135,38 @@ class FieldDataNC(States):
         n_h = len(h)
         n_sts = ds.sizes[self.states_coord]
 
-        data = np.zeros((n_sts, n_h, n_y, n_x, self._n_dvars), dtype=FC.DTYPE)
-        cor_xy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
-        cor_yx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
-
+        cor_shxy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
+        cor_shyx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
+        cor_sh = (self.states_coord, self.h_coord)
+        cor_s = (self.states_coord,)
+        vars_shyx = []
+        vars_sh = []
+        vars_s = []
         for v, ncv in self.var2ncvar.items():
-            if ds[ncv].dims == cor_yx:
-                data[..., self._dkys[v]] = ds[ncv][:]
-            elif ds[ncv].dims == cor_xy:
-                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].values, 2, 3)
+            if ds[ncv].dims == cor_shyx or ds[ncv].dims == cor_shxy:
+                vars_shyx.append(v)
+            elif ds[ncv].dims == cor_sh:
+                vars_sh.append(v)
+            elif ds[ncv].dims == cor_s:
+                vars_s.append(v)
             else:
                 raise ValueError(
-                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_xy} or {cor_yx}"
+                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_shxy}, {cor_shyx}, {cor_sh} or {cor_s}"
                 )
+
+        data = np.zeros((n_sts, n_h, n_y, n_x, len(self.var2ncvar)), dtype=FC.DTYPE)
+        for v in vars_shyx:
+            ncv = self.var2ncvar[v]
+            if ds[ncv].dims == cor_shyx:
+                data[..., self._dkys[v]] = ds[ncv][:]
+            else:
+                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 2, 3)
+        for v in vars_sh:
+            ncv = self.var2ncvar[v]
+            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]
+        for v in vars_s:
+            ncv = self.var2ncvar[v]
+            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None]
 
         if FV.WD in self.fixed_vars:
             data[..., self._dkys[FV.WD]] = np.full(

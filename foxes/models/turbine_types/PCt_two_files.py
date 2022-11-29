@@ -3,25 +3,25 @@ import pandas as pd
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
-from foxes.data import PCTCURVE
+from foxes.data import PCTCURVE, parse_Pct_two_files
 import foxes.variables as FV
 
 
 class PCtTwoFiles(TurbineType):
     """
     Calculate power and ct by interpolating
-    from power-curve and ct-curve data files.
+    from power curve and ct curve data files.
 
     Parameters
     ----------
     data_source_P : str or pandas.DataFrame
-        The file path for the power-curve, static name, or data
+        The file path for the power curve, static name, or data
     data_source_ct : str or pandas.DataFrame
-        The file path for the ct-curve, static name, or data
+        The file path for the ct curve, static name, or data
     col_ws_P_file : str
-        The wind speed column in the file of the power-curve
+        The wind speed column in the file of the power curve
     col_ws_ct_file : str
-        The wind speed column in the file of the ct-curve
+        The wind speed column in the file of the ct curve
     col_P : str
         The power column
     col_ct : str
@@ -39,19 +39,19 @@ class PCtTwoFiles(TurbineType):
         The wind speed variable for ct lookup
     var_ws_P : str
         The wind speed variable for power lookup
-    pd_file_read_pars_P:  dict, optional
+    pd_file_read_pars_P:  dict
         Parameters for pandas power file reading
-    pd_file_read_pars_ct:  dict, optional
+    pd_file_read_pars_ct:  dict
         Parameters for pandas ct file reading
-    **parameters : dict, optional
-        Parameters for pandas file reading
+    parameters : dict, optional
+        Additional parameters for TurbineType class
 
     Attributes
     ----------
     source_P : str or pandas.DataFrame
-        The file path for the power-curve, static name, or data
+        The file path for the power curve, static name, or data
     source_ct : str or pandas.DataFrame
-        The file path for the ct-curve, static name, or data
+        The file path for the ct curve, static name, or data
     col_ws : str
         The wind speed column
     col_P : str
@@ -92,7 +92,13 @@ class PCtTwoFiles(TurbineType):
         pd_file_read_pars_ct={},
         **parameters
     ):
-        pars = parameters  # no parsing because two files are given
+
+        if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
+            data_source_ct, pd.DataFrame
+        ):
+            pars = parse_Pct_two_files(data_source_P, data_source_ct)
+        else:
+            pars = parameters
         super().__init__(**pars)
 
         self.source_P = data_source_P
@@ -147,7 +153,7 @@ class PCtTwoFiles(TurbineType):
             The verbosity level
 
         """
-        # read power-curve
+        # read power curve
         if self._data_P is None:
             if isinstance(self.source_P, pd.DataFrame):
                 self._data_P = self.source_P
@@ -161,7 +167,7 @@ class PCtTwoFiles(TurbineType):
             self._data_ws_P = self._data_P.index.to_numpy()
             self._data_P = self._data_P[self.col_P].to_numpy()
 
-        # read ct-curve
+        # read ct curve
         if self._data_ct is None:
             if isinstance(self.source_ct, pd.DataFrame):
                 self._data_ct = self.source_ct
@@ -230,8 +236,8 @@ class PCtTwoFiles(TurbineType):
             del yawm, cosm
 
         out = {
-            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP])),
+            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSP])),
+            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSCT])),
         }
         out[FV.P][st_sel] = np.interp(
             rews3, self._data_ws_P, self._data_P, left=0.0, right=0.0

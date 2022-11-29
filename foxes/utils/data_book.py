@@ -180,3 +180,20 @@ class DataBook:
             raise KeyError(
                 f"File '{file_name}' not found in context '{context}'. Available: {sorted(list(cdata.keys()))}"
             )
+
+    def toc(self, context):
+        """
+        Get list of contents
+
+        Parameters
+        ----------
+        context : str
+            The context
+
+        Returns
+        -------
+        keys : list of str
+            The data keys
+
+        """
+        return sorted(list(self.dbase[context].keys()))

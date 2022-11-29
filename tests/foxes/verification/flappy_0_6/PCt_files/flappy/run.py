@@ -25,8 +25,8 @@ if __name__ == "__main__":
     p0 = np.array([0.0, 0.0])
     stp = np.array([500.0, 0.0])
     ofile = Path(args.ofile)
-    tPfile = "../NREL-5MW-D126-H90_P.csv"
-    tCtfile = "../NREL-5MW-D126-H90_Ct.csv"
+    tPfile = "../NREL-5MW-D126-H90-P.csv"
+    tCtfile = "../NREL-5MW-D126-H90-Ct.csv"
     sfile = "../states.csv.gz"
     lfile = "../test_farm.csv"
 

@@ -93,7 +93,7 @@ def add_from_csv(
                 xy=txy,
                 H=H if col_H not in data.columns else data.loc[i, col_H],
                 D=D if col_D not in data.columns else data.loc[i, col_D],
-                turbine_models=tmodels,
+                turbine_models=hmodels,
                 **turbine_parameters,
             ),
             verbosity=verbosity,

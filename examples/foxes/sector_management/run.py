@@ -10,12 +10,18 @@ from foxes.utils.runners import DaskRunner
 def run_foxes(args):
 
     cks = None if args.nodask else {FV.STATE: args.chunksize}
-    if args.calc_mean:
-        cks[FV.POINT] = 4000
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
+
+    mbook.turbine_models["sector_rules"] = foxes.models.turbine_models.SectorManagement(
+        data_source=args.sector_file,
+        col_tnames="tname",
+        range_vars=[FV.WD, FV.REWS],
+        target_vars=[FV.MAX_P],
+        colmap={"REWS_min": "WS_min", "REWS_max": "WS_max"},
+    )
 
     states = foxes.input.states.StatesTable(
         data_source=args.states,
@@ -24,24 +30,24 @@ def run_foxes(args):
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
     )
 
+    """
     o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
     fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
     foxes.utils.show_plotly_fig(fig)
+    """
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_from_file(
-        farm,
-        args.layout,
-        col_x="x",
-        col_y="y",
-        col_H="H",
-        turbine_models=[ttype.name, "kTI_02"] + args.tmodels,
+    foxes.input.farm_layout.add_row(
+        farm=farm,
+        xy_base=[0.0, 0.0],
+        xy_step=[600.0, 0.0],
+        n_turbines=2,
+        turbine_models=args.tmodels + [ttype.name, "sector_rules", "PMask"],
     )
 
-    if args.show_layout:
-        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-        plt.show()
-        plt.close(ax.get_figure())
+    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+    plt.show()
+    plt.close(ax.get_figure())
 
     algo = foxes.algorithms.Downwind(
         mbook,
@@ -64,20 +70,29 @@ def run_foxes(args):
     print(farm_results)
 
     fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
+    sel = fr[FV.MAX_P].dropna().index
+    fr = fr.loc[sel]
+    print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]])
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+    o = foxes.output.RosePlotOutput(farm_results)
+    fig = o.get_figure(
+        16,
+        FV.P,
+        [100, 1000, 2000, 4000, 5001, 7000],
+        turbine=0,
+        title="Power turbine 0",
+    )
+    foxes.utils.show_plotly_fig(fig)
 
-    if args.calc_mean:
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        fig = o.get_mean_fig_horizontal(FV.WS, resolution=30)
-        plt.show()
+    o = foxes.output.RosePlotOutput(farm_results)
+    fig = o.get_figure(
+        16,
+        FV.P,
+        [100, 1000, 2000, 4000, 5001, 7000],
+        turbine=1,
+        title="Power turbine 1",
+    )
+    foxes.utils.show_plotly_fig(fig)
 
 
 if __name__ == "__main__":
@@ -101,6 +116,12 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
+    parser.add_argument(
+        "-sm",
+        "--sector_file",
+        help="The sector management file",
+        default="sector_rules.csv",
+    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
@@ -109,20 +130,11 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["CrespoHernandez_quadratic", "Bastankhah_linear"],
+        default=["Bastankhah_linear_k002"],
         nargs="+",
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
-    )
-    parser.add_argument(
-        "-sl",
-        "--show_layout",
-        help="Flag for showing layout figure",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-cm", "--calc_mean", help="Calculate states mean", action="store_true"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000

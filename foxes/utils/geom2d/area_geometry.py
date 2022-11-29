@@ -206,6 +206,8 @@ class AreaGeometry(metaclass=ABCMeta):
     def __add__(self, g):
         if isinstance(g, list):
             return AreaUnion([self] + g)
+        elif isinstance(g, AreaUnion):
+            return AreaUnion([self] + g.geometries)
         else:
             return AreaUnion([self, g])
 
@@ -569,6 +571,14 @@ class AreaUnion(AreaGeometry):
 
         """
         return InvertedAreaUnion(self)
+
+    def __add__(self, g):
+        if isinstance(g, list):
+            return AreaUnion(self.geometries + g)
+        elif isinstance(g, AreaUnion):
+            return AreaUnion(self.geometries + g.geometries)
+        else:
+            return AreaUnion(self.geometries + [g])
 
 
 class InvertedAreaUnion(InvertedAreaGeometry):
