@@ -118,7 +118,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The states input file (path or static)",
-        default="states.csv.gz",
+        default="abl_states_6000.csv.gz",
     )
     parser.add_argument(
         "-t",

@@ -136,5 +136,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `sector_management`, demonstrates how to model wind sector management
 - Notebooks:
   - New: `sector_man.ipynb`, demonstrates how to model wind sector management
+  - New: `data.ipynb`, lists and shows the static data
+- Bug fixes:
+  - Fix for bug with option `col_models` in farm layout from csv
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)

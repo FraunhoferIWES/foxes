@@ -54,6 +54,11 @@ Contents:
     .. toctree::
         :maxdepth: 2
 
+        notebooks/data
+
+    .. toctree::
+        :maxdepth: 2
+
         history
 
 Contributing
