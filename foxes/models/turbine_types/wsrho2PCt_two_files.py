@@ -231,7 +231,11 @@ class WsRho2PCtTwoFiles(TurbineType):
         """
 
         # calculate P:
-        st_sel_P = st_sel & (fdata[self.WSP] >= self._ws_P[0]) & (fdata[self.WSP] <= self._ws_P[-1])
+        st_sel_P = (
+            st_sel
+            & (fdata[self.WSP] >= self._ws_P[0])
+            & (fdata[self.WSP] <= self._ws_P[-1])
+        )
         st_sel_P0 = st_sel & ~st_sel_P
         if np.any(st_sel_P0):
             fdata[FV.P][st_sel_P0] = 0
@@ -252,7 +256,7 @@ class WsRho2PCtTwoFiles(TurbineType):
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
                 del yawm, cosm
-            
+
             # run interpolation:
             try:
                 fdata[FV.P][st_sel_P] = interpn(
@@ -264,7 +268,11 @@ class WsRho2PCtTwoFiles(TurbineType):
         del st_sel_P, st_sel_P0
 
         # calculate ct:
-        st_sel_ct = st_sel & (fdata[self.WSCT] >= self._ws_P[0]) & (fdata[self.WSCT] <= self._ws_P[-1])
+        st_sel_ct = (
+            st_sel
+            & (fdata[self.WSCT] >= self._ws_P[0])
+            & (fdata[self.WSCT] <= self._ws_P[-1])
+        )
         st_sel_ct0 = st_sel & ~st_sel_ct
         if np.any(st_sel_ct0):
             fdata[FV.CT][st_sel_ct0] = 0
@@ -285,7 +293,7 @@ class WsRho2PCtTwoFiles(TurbineType):
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_ct) ** 0.5
                 del yawm, cosm
-            
+
             # run interpolation:
             try:
                 fdata[FV.CT][st_sel_ct] = interpn(

@@ -153,7 +153,7 @@ class FieldDataNC(States):
                 raise ValueError(
                     f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_shxy}, {cor_shyx}, {cor_sh} or {cor_s}"
                 )
-        
+
         data = np.zeros((n_sts, n_h, n_y, n_x, len(self.var2ncvar)), dtype=FC.DTYPE)
         for v in vars_shyx:
             ncv = self.var2ncvar[v]
@@ -166,7 +166,7 @@ class FieldDataNC(States):
             data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]
         for v in vars_s:
             ncv = self.var2ncvar[v]
-            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None] 
+            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None]
 
         if FV.WD in self.fixed_vars:
             data[..., self._dkys[FV.WD]] = np.full(
