@@ -141,3 +141,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug with option `col_models` in farm layout from csv
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
+
+## v0.2.6-alpha
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
+
