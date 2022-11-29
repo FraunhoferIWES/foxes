@@ -428,7 +428,7 @@ class FarmResultsEval(Output):
             P75 = farm_yield * (1.0 - (0.675 * power_uncert))
             P90 = farm_yield * (1.0 - (1.282 * power_uncert))
             return farm_yield["YLD"], P75["YLD"], P90["YLD"]
-        
+
         return farm_yield["YLD"]
 
     def add_efficiency(self):
