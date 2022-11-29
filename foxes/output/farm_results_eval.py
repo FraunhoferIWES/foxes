@@ -393,31 +393,43 @@ class FarmResultsEval(Output):
         else:
             print("Capacity added to farm results")
 
-    def calc_farm_yield(self, yield_data, power_uncert):
+    def calc_farm_yield(self, turbine_yield=None, power_uncert=None, **kwargs):
         """
         Calculates yield, P75 and P90 at the farm level
 
         Parameters
         ----------
-        yield_data : pandas.DataFrame
+        turbine_yield : pandas.DataFrame, optional
             Yield values by turbine
-        power_uncert : float
-            Uncertainty in the power value
+        power_uncert : float, optional
+            Uncertainty in the power value. Triggers
+            P75 and P90 outputs
+        kwargs : dict, optional
+            Parameters for calc_turbine_yield(). Apply if
+            turbine_yield is not given
 
         Returns
         -------
         farm_yield : float
-            Farm yield, P75 and P90 values
-        P75 : float
-            The P75 value
-        P90 : float
-            The P90 value
+            Farm yield result, same unit as turbine yield
+        P75 : float, optional
+            The P75 value, same unit as turbine yield
+        P90 : float, optional
+            The P90 value, same unit as turbine yield
 
         """
-        farm_yield = yield_data.sum()
-        P75 = farm_yield * (1.0 - (0.675 * power_uncert))
-        P90 = farm_yield * (1.0 - (1.282 * power_uncert))
-        return farm_yield["YLD"], P75["YLD"], P90["YLD"]
+        if turbine_yield is None:
+            yargs = dict(annual=True)
+            yargs.update(kwargs)
+            turbine_yield = self.calc_turbine_yield(**yargs)
+        farm_yield = turbine_yield.sum()
+
+        if power_uncert is not None:
+            P75 = farm_yield * (1.0 - (0.675 * power_uncert))
+            P90 = farm_yield * (1.0 - (1.282 * power_uncert))
+            return farm_yield["YLD"], P75["YLD"], P90["YLD"]
+        
+        return farm_yield["YLD"]
 
     def add_efficiency(self):
         """

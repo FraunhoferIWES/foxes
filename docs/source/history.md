@@ -75,7 +75,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Input:
   - New input: `MultiHeightStates` and `MultiHeightTimeseries`, for input data at several height levels, e.g. WRF results at one point
 - Output:
-  - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
+  - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm. Also calculates capacity, efficiency, yield, P75, P90.
   - New output: `ResultsWriter`, writes farm results or pandas data to csv file
   - Renaming: `AmbientRosePlotOutput` is now called `StatesRosePlotOutput`
 - Notebooks:

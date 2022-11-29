@@ -66,6 +66,14 @@ def run_foxes(args):
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
 
+    o = foxes.output.FarmResultsEval(farm_results)
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power        : {P/1000:.1f} MW")
+    print(f"Farm ambient power: {P0/1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+
     if args.calc_mean:
         o = foxes.output.FlowPlots2D(algo, farm_results)
         fig = o.get_mean_fig_horizontal(FV.WS, resolution=30)
