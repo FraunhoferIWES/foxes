@@ -75,7 +75,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Input:
   - New input: `MultiHeightStates` and `MultiHeightTimeseries`, for input data at several height levels, e.g. WRF results at one point
 - Output:
-  - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm
+  - New output: `FarmResultsEval`, calculates sum, mean, min, max over states or turbines for the whole wind farm. Also calculates capacity, efficiency, yield, P75, P90.
   - New output: `ResultsWriter`, writes farm results or pandas data to csv file
   - Renaming: `AmbientRosePlotOutput` is now called `StatesRosePlotOutput`
 - Notebooks:
@@ -136,5 +136,13 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `sector_management`, demonstrates how to model wind sector management
 - Notebooks:
   - New: `sector_man.ipynb`, demonstrates how to model wind sector management
+  - New: `data.ipynb`, lists and shows the static data
+- Bug fixes:
+  - Fix for bug with option `col_models` in farm layout from csv
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
+
+## v0.2.6-alpha
+
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
+

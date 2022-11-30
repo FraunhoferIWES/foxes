@@ -51,17 +51,17 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args = parser.parse_args()
 
-    # create model book:
+    # create model book
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    # create states:
+    # create states
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
 
-    # create wind farm:
+    # create wind farm
     print("\nCreating wind farm")
     farm = foxes.WindFarm()
     if args.layout is None:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
-    # create algorithm:
+    # create algorithm
     algo = foxes.algorithms.Downwind(
         mbook,
         farm,
@@ -89,11 +89,11 @@ if __name__ == "__main__":
         chunks=None,
     )
 
-    # calculate farm results:
+    # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
 
-    # Horizontal flow plot:
+    # horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_horizontal(args.var, resolution=10)
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-    # Vertical flow plot:
+    # vertical flow plot
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_vertical(
@@ -110,14 +110,52 @@ if __name__ == "__main__":
     fig = next(g)
     plt.show()
 
-    # Print farm results data:
-    print("\nResults summary:\n")
-    fr = farm_results.to_dataframe()
-    print(
-        fr[[FV.X, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_TI, FV.TI, FV.AMB_P, FV.P, FV.CT]]
-    )
-
+    # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
+    o.add_efficiency()
+
+    # state-turbine results
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:\n")
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+                FV.CT,
+                FV.EFF,
+            ]
+        ]
+    )
+    print()
+
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.AMB_P: "mean",
+            FV.P: "mean",
+            FV.AMB_CAP: "mean",
+            FV.CAP: "mean",
+            FV.EFF: "mean",
+        }
+    )
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
+    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
+    print("\nResults by turbine:\n")
+    print(turbine_results)
+
+    # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+    print(f"\nFarm power        : {P/1000:.1f} MW")
+    print(f"Farm ambient power: {P0/1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
