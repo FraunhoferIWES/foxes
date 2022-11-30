@@ -208,7 +208,37 @@ class PointDataModelList(PointDataModel):
 
         super().initialize(algo)
 
-    def calculate(self, algo, mdata, fdata, pdata, parameters=[]):
+    def model_input_data(self, algo):
+        """
+        The model input data, as needed for the
+        calculation.
+
+        This function should specify all data
+        that depend on the loop variable (e.g. state),
+        or that are intended to be shared between chunks.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        idata = super().model_input_data(algo)
+        for m in self.models:
+            hidata = m.model_input_data(algo)
+            idata["coords"].update(hidata["coords"])
+            idata["data_vars"].update(hidata["data_vars"])
+
+        return idata
+        
+    def calculate(self, algo, mdata, fdata, pdata, parameters=None):
         """ "
         The main model calculation.
 

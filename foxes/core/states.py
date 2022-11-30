@@ -150,6 +150,7 @@ class ExtendedStates(States):
     """
 
     def __init__(self, states, point_models=[]):
+        super().__init__()
         self.states = states
         self.pmodels = PointDataModelList(models=[states] + point_models)
 
@@ -165,7 +166,6 @@ class ExtendedStates(States):
         """
         self.pmodels.append(model)
 
-    @abstractmethod
     def size(self):
         """
         The total number of states.
@@ -190,7 +190,6 @@ class ExtendedStates(States):
         """
         return self.states.index()
 
-    @abstractmethod
     def weights(self, algo):
         """
         The statistical weights of all states.
@@ -220,8 +219,9 @@ class ExtendedStates(States):
             The verbosity level
 
         """
-        self.pmodels.initialize(algo, verbosity)
-        super().initialize(algo, verbosity)
+        if not self.pmodels.initialized:
+            self.pmodels.initialize(algo, verbosity=verbosity)
+        super().initialize(algo, verbosity=verbosity)
 
     def model_input_data(self, algo):
         """
@@ -262,7 +262,7 @@ class ExtendedStates(States):
             The output variable names
 
         """
-        return self.pmodels.output_point_vars(algo)
+        return self.states.output_point_vars(algo)
 
     def calculate(self, algo, mdata, fdata, pdata):
         """ "
