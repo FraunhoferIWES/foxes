@@ -3,6 +3,7 @@ import pandas as pd
 
 from .output import Output
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class FarmResultsEval(Output):
@@ -380,14 +381,16 @@ class FarmResultsEval(Output):
         vdata = self.results[var_in]
 
         if algo is not None and P_nom is None:
-            P_nom = [t.P_nominal for t in algo.farm_controller.turbine_types]
+            P_nom = np.array([
+                t.P_nominal for t in algo.farm_controller.turbine_types
+                ], dtype=FC.DTYPE)
         elif algo is None and P_nom is not None:
-            pass
+            P_nom = np.array(P_nom, dtype=FC.DTYPE)
         else:
             raise KeyError("Expecting either 'algo' or 'P_nom'")
 
         # add to farm results
-        self.results[var_out] = vdata / P_nom
+        self.results[var_out] = vdata / P_nom[None, :]
         if ambient:
             print("Ambient capacity added to farm results")
         else:
