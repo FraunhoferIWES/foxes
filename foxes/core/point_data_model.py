@@ -237,7 +237,7 @@ class PointDataModelList(PointDataModel):
             idata["data_vars"].update(hidata["data_vars"])
 
         return idata
-        
+
     def calculate(self, algo, mdata, fdata, pdata, parameters=None):
         """ "
         The main model calculation.

@@ -381,9 +381,10 @@ class FarmResultsEval(Output):
         vdata = self.results[var_in]
 
         if algo is not None and P_nom is None:
-            P_nom = np.array([
-                t.P_nominal for t in algo.farm_controller.turbine_types
-                ], dtype=FC.DTYPE)
+            P_nom = np.array(
+                [t.P_nominal for t in algo.farm_controller.turbine_types],
+                dtype=FC.DTYPE,
+            )
         elif algo is None and P_nom is not None:
             P_nom = np.array(P_nom, dtype=FC.DTYPE)
         else:
