@@ -14,6 +14,9 @@ class GridRotor(RotorModel):
     n: int
         The number of points along one direction,
         maximal number of points is N = n * n
+    calc_vars : list of str
+        The variables that are calculated by the model
+        (Their ambients are added automatically)
     reduce: bool
         Flag for reduction to points actually representing
         an area with overlap with the circe, recalculating

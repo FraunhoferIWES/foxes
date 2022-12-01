@@ -4,7 +4,6 @@ import pandas as pd
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class SectorManagement(TurbineModel):
@@ -30,7 +29,7 @@ class SectorManagement(TurbineModel):
         column names
     var_periods : dict
         Periods for periodic variables
-    pd_file_read_pars : dict, optional
+    pd_file_read_pars : dict
         Parameters for pandas file reading
 
     Attributes

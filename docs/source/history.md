@@ -144,6 +144,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.6-alpha
 
+- Turbine models:
+  - New: `TableFactors`, multiplies variables with data from a two dimensional table
 - Bug fixes:
   - Fix for bug with `ExtendedStates`, now it is actually working
 
