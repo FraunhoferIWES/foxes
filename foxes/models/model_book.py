@@ -125,6 +125,10 @@ class ModelBook:
             linear=fm.wake_superpositions.LinearSuperposition(
                 scalings=f"source_turbine_{FV.REWS}"
             ),
+            linear_lim=fm.wake_superpositions.LinearSuperposition(
+                scalings=f"source_turbine_{FV.REWS}",
+                lim_low={FV.WS: 1e-4},
+            ),
             linear_amb=fm.wake_superpositions.LinearSuperposition(
                 scalings=f"source_turbine_{FV.AMB_REWS}"
             ),
@@ -152,7 +156,15 @@ class ModelBook:
         )
 
         self.wake_models = Dict(name="wake_models")
-        slist = ["linear", "linear_amb", "quadratic", "quadratic_amb", "max", "max_amb"]
+        slist = [
+            "linear", 
+            "linear_lim",
+            "linear_amb", 
+            "quadratic", 
+            "quadratic_amb", 
+            "max", 
+            "max_amb",
+        ]
         for s in slist:
 
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
@@ -190,6 +202,9 @@ class ModelBook:
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=s)
+            self.wake_models[
+                f"CrespoHernandez_ambti_{s[3:]}"
+            ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=s, use_ambti=True)
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}_k002"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=s)

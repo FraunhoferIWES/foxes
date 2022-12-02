@@ -146,8 +146,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
+  - Generalized: `kTI`, now includes optional offset `kb`
 - Point models:
   - New: `TKE2TI`, calculates turbulence intensity from TKE
+- Wake superposition models:
+  - Improved: `LinearSuperposition`, now includes options for lower/higher limits of total wake deltas
 - Bug fixes:
   - Fix for bug with `ExtendedStates`, now it is actually working
 

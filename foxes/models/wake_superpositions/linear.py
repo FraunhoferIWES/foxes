@@ -19,17 +19,32 @@ class LinearSuperposition(WakeSuperposition):
         - `source_turbine`: Scale by source turbine value of variable
         - `source_turbine_amb`: Scale by source turbine ambient value of variable
         - `source_turbine_<var>`: Scale by source turbine value of variable <var>
+    lim_low : dict, optional
+        Lower limits of the final wake deltas. Key: variable str,
+        value: float
+    lim_high : dict, optional
+        Higher limits of the final wake deltas. Key: variable str,
+        value: float
 
     Attributes
     ----------
     scalings : dict or number or str
         The scaling rules
+    lim_low : dict
+        Lower limits of the final wake deltas. Key: variable str,
+        value: float
+    lim_high : dict
+        Higher limits of the final wake deltas. Key: variable str,
+        value: float
 
     """
 
-    def __init__(self, scalings):
+    def __init__(self, scalings, lim_low=None, lim_high=None):
         super().__init__()
+
         self.scalings = scalings
+        self.lim_low = lim_low
+        self.lim_high = lim_high
 
     def calc_wakes_plus_wake(
         self,
@@ -160,4 +175,9 @@ class LinearSuperposition(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        return wake_delta
+        w = wake_delta
+        if self.lim_low is not None and variable in self.lim_low:
+            w = np.maximum(w, self.lim_low[variable] - amb_results)
+        if self.lim_high is not None and variable in self.lim_high:
+            w = np.minimum(w, self.lim_high[variable] - amb_results)
+        return w
