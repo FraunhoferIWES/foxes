@@ -317,8 +317,6 @@ class FieldDataNC(States):
             idata["coords"][self.VARS] = self._v
             idata["data_vars"][self.DATA] = self._data
 
-            del self._h, self._y, self._x, self._v, self._data
-
         return idata
 
     def size(self):
@@ -494,3 +492,26 @@ class FieldDataNC(States):
                     )
 
         return out
+
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level
+
+        """
+        if clear_mem:
+            del self._h, self._y, self._x, self._v, self._data
+
+        super().finalize(algo, results, clear_mem, verbosity)
+        
