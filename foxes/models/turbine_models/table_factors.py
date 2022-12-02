@@ -146,7 +146,14 @@ class TableFactors(TurbineModel):
         qts[:, 0] = fdata[self.row_var][st_sel]
         qts[:, 1] = fdata[self.col_var][st_sel]
 
-        factors = interpn((self._rvals, self._cvals), self._data, qts, **self._ipars)
+        try:
+            factors = interpn((self._rvals, self._cvals), self._data, qts, **self._ipars)
+        except ValueError as e:
+            print(f"\nDATA        : ({self.row_var}, {self.col_var})")
+            print(f"DATA BOUNDS : ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})")
+            print(f"VALUE BOUNDS: ({np.min(qts[:, 0]):.4f}, {np.min(qts[:, 1]):.4f}) -- ({np.max(qts[:, 0]):.4f}, {np.max(qts[:, 1]):.4f})\n")
+            raise e
+
         for v in self.output_farm_vars(algo):
             fdata[v][st_sel] *= factors
 
