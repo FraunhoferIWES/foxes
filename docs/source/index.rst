@@ -20,10 +20,6 @@ Also the parallelization on local or remote clusters is enabled via `dask`. The 
 optimization capabilities invoke the `iwopy <https://github.com/FraunhoferIWES/iwopy>`_
 package which as well supports vectorization.
 
-**Quick Start**::
-
-    pip install foxes
-
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes
 
@@ -68,7 +64,7 @@ Contributing
 #. Create a branch (`git checkout -b new_branch`)
 #. Commit your changes (`git commit -am "your awesome message"`)
 #. Push to the branch (`git push origin new_branch`)
-#. Create a pull request
+#. Create a pull request `here <https://github.com/FraunhoferIWES/foxes/pulls>`_
 
 Acknowledgements
 ================

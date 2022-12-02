@@ -1,8 +1,0 @@
-matplotlib
-numpy
-xarray
-dask[distributed]
-scipy
-netcdf4
-plotly
-kaleido
