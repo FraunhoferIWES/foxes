@@ -157,8 +157,4 @@ class TableFactors(TurbineModel):
         for v in self.output_farm_vars(algo):
             fdata[v][st_sel] *= factors
 
-            sel = factors < 1
-            if np.any(sel):
-                print("TFACTORS", np.sum(sel), n_sel, ":", np.min(factors[sel]), np.mean(factors[sel]), np.max(factors[sel]))
-
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
