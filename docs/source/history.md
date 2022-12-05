@@ -153,6 +153,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `LinearSuperposition`, now includes options for lower/higher limits of total wake deltas
 - Bug fixes:
   - Fix for bug with `ExtendedStates`, now it is actually working
+  - Fix for bug with wake width in `CrespoHernandezTIWake`
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
 
