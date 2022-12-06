@@ -33,5 +33,6 @@ before_script:
 test:
   script:
     - pip install .[test]
+    - pwd
     - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - pytest tests
