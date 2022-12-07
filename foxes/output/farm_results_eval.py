@@ -336,7 +336,10 @@ class FarmResultsEval(Output):
         if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
-            duration = self.results[FV.STATE][-1] - self.results[FV.STATE][0]
+            n_states = len(self.results[FV.STATE])
+            n_valid = np.sum(np.any(self.results[FV.WEIGHT].to_numpy()>0, axis=1))
+            delta_t = (self.results[FV.STATE][-1] - self.results[FV.STATE][0]) / (n_states - 1)
+            duration = delta_t * n_valid
             duration_seconds = int(duration.astype(int) / 1e9)
             duration_hours = duration_seconds / 3600
         elif hours is None and annual == True:
@@ -356,7 +359,7 @@ class FarmResultsEval(Output):
         yld.rename(columns={var_in: var_out}, inplace=True)
         return yld
 
-    def add_capacity(self, algo=None, P_nom=None, ambient=False):
+    def add_capacity(self, algo=None, P_nom=None, ambient=False, verbosity=1):
         """
         Adds capacity to the farm results
 
@@ -368,6 +371,8 @@ class FarmResultsEval(Output):
             Nominal power values for each turbine, if algo not given
         ambient : bool, optional
             Flag for calculating ambient capacity, by default False
+        verbosity : int
+            The verbosity level, 0 = silent
 
         """
         if ambient:
@@ -392,10 +397,11 @@ class FarmResultsEval(Output):
 
         # add to farm results
         self.results[var_out] = vdata / P_nom[None, :]
-        if ambient:
-            print("Ambient capacity added to farm results")
-        else:
-            print("Capacity added to farm results")
+        if verbosity > 0:
+            if ambient:
+                print("Ambient capacity added to farm results")
+            else:
+                print("Capacity added to farm results")
 
     def calc_farm_yield(self, turbine_yield=None, power_uncert=None, **kwargs):
         """
@@ -435,14 +441,21 @@ class FarmResultsEval(Output):
 
         return farm_yield["YLD"]
 
-    def add_efficiency(self):
+    def add_efficiency(self, verbosity=1):
         """
         Adds efficiency to the farm results
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
         """
         P = self.results[FV.P]
         P0 = self.results[FV.AMB_P] + 1e-14
         self.results[FV.EFF] = P / P0  # add to farm results
-        print("Efficiency added to farm results")
+        if verbosity:
+            print("Efficiency added to farm results")
 
     def calc_farm_efficiency(self):
         """

@@ -144,6 +144,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.6-alpha
 
+- Input:
+  - Improved: `StatesTable` and `Timeseries` now have option for treating NaN values (by zero weights)
 - Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
   - Generalized: `kTI`, now includes optional offset `kb`

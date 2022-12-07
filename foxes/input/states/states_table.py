@@ -29,6 +29,11 @@ class StatesTable(States):
         or `foxes.core.VerticalProfile`
     pd_read_pars : dict
         pandas file reading parameters
+    treat_nans : bool
+        Set weights to zero for states that have nan data
+    replace_nans : dict, optional
+        Values with which to replace nan data, or 'auto' for
+        default values
 
     Attributes
     ----------
@@ -46,6 +51,10 @@ class StatesTable(States):
         pandas file reading parameters
     RDICT : dict
         Default pandas file reading parameters
+    treat_nans : bool
+        Set weights to zero for states that have nan data
+    replace_nans : dict
+        Values with which to replace nan data
 
     """
 
@@ -59,6 +68,8 @@ class StatesTable(States):
         fixed_vars={},
         profiles={},
         pd_read_pars={},
+        treat_nans=False,
+        replace_nans="auto",
     ):
         super().__init__()
 
@@ -67,6 +78,20 @@ class StatesTable(States):
         self.var2col = var2col
         self.fixed_vars = fixed_vars
         self.profdicts = profiles
+        self.treat_nans = treat_nans
+
+        if isinstance(replace_nans, str):
+            if replace_nans == "auto":
+                self.replace_nans = {
+                    FV.WS: 1e-10,
+                    FV.WD: 0.0,
+                    FV.TI: 0.05,
+                    FV.RHO: 1.225,
+                }
+            else:
+                raise ValueError(f"{self.name}: Unexpected parameter 'replace_nans={replace_nans}'. Choices: None, dict or 'auto'")
+        else:
+            self.replace_nans = replace_nans
 
         self._data0 = data_source
         self._data = None
@@ -151,6 +176,24 @@ class StatesTable(States):
             )
         else:
             self._weights[:] = 1.0 / self._N
+            self._data[col_w] = self._weights[:, 0]
+        
+        if self.treat_nans or self.replace_nans is not None:
+            nas = self._data.isna().to_numpy()
+            if np.any(nas):
+                sel = np.any(nas, axis=tuple(range(1, len(nas.shape))))
+
+                if self.treat_nans:
+                    self._weights[:] = 1.0 / np.sum(~sel)
+                    self._weights[sel] = 0.
+                    self._data[col_w] = self._weights[:, 0]
+
+                if self.replace_nans is not None:
+                    slc = self._data.index.to_numpy()[sel]
+                    for v in self._tvars:
+                        c = self.var2col.get(v, v)
+                        if c in self._data.columns and v in self.replace_nans:
+                            self._data.loc[slc, c] = self.replace_nans[v]
 
     def model_input_data(self, algo):
         """
@@ -297,10 +340,12 @@ class StatesTable(States):
             The verbosity level
 
         """
-        self._data = None
-        self._weights = None
-        self._N = None
-        self._tvars = None
+        if clear_mem:
+            self._data = None
+            self._weights = None
+            self._N = None
+            self._tvars = None
+            
         super().finalize(algo, results, clear_mem, verbosity)
 
 
