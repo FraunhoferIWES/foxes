@@ -122,7 +122,7 @@ class FieldDataNC(States):
         self._inds = None
         self._N = None
 
-    def _get_data(self, ds):
+    def _get_data(self, ds, verbosity):
         """
         Helper function for data extraction
         """
@@ -172,10 +172,17 @@ class FieldDataNC(States):
             data[..., self._dkys[FV.WD]] = np.full(
                 (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
             )
+        
+        if verbosity > 0:
+            print(f"\n{self.name}: Data ranges")
+            for v, i in self._dkys.items(): 
+                d = data[...,i]
+                nn = np.sum(np.isnan(d))
+                print(f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)")
 
         return data
 
-    def _read_nc(self, algo, pattern):
+    def _read_nc(self, algo, pattern, verbosity):
 
         with xr.open_mfdataset(
             pattern,
@@ -233,7 +240,7 @@ class FieldDataNC(States):
                 self._v = list(self._dkys.keys())
 
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
-                data = self._get_data(ds)
+                data = self._get_data(ds, verbosity)
                 self._data = (coos, data)
 
     def initialize(self, algo, verbosity=0):
@@ -271,7 +278,7 @@ class FieldDataNC(States):
         if verbosity:
             print(f"States '{self.name}': Reading files {self.file_pattern}")
         try:
-            self._read_nc(algo, self.file_pattern)
+            self._read_nc(algo, self.file_pattern, verbosity)
         except OSError:
             if verbosity:
                 print(
@@ -280,7 +287,7 @@ class FieldDataNC(States):
             fpath = algo.dbook.get_file_path(STATES, self.file_pattern, check_raw=False)
             if verbosity:
                 print(f"Path: {fpath}")
-            self._read_nc(algo, fpath)
+            self._read_nc(algo, fpath, verbosity)
 
         super().initialize(algo)
 
@@ -435,7 +442,7 @@ class FieldDataNC(States):
             x = ds[self.x_coord].values
             y = ds[self.y_coord].values
             h = ds[self.h_coord].values
-            data = self._get_data(ds)
+            data = self._get_data(ds, verbosity=0)
             del ds
 
         # translate WS, WD into U, V:
