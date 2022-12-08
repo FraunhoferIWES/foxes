@@ -27,6 +27,60 @@ class FarmResultsEval(Output):
 
     def __init__(self, farm_results):
         self.results = farm_results
+    
+    def weinsum(self, rhs, *vars):
+        """
+        Calculates Einstein sum, adding weights
+        as last argument to the given fields.
+
+        It's all about treating NaN values.
+
+        Parameters
+        ----------
+        rhs : str
+            The right-hand side of the einsum expression.
+            Convention: 's' for states, 't' for turbines
+        vars : tuple of str or np.ndarray
+            The variables mentioned in the expression,
+            but without the obligatory weights that will
+            be added at the end
+        
+        Returns
+        -------
+        result : np.ndarray
+            The results array
+
+        """
+        nas = None
+        fields = []
+        for v in vars:
+            if isinstance(v, str):
+                fields.append(self.results[v].to_numpy())
+            else:
+                fields.append(v)
+            if nas is None:
+                nas = np.zeros_like(fields[-1], dtype=bool)
+            nas = nas | np.isnan(fields[-1])
+
+        inds = ["st" for v in fields] + ["st"]
+        expr = ",".join(inds) + "->" + rhs
+        
+        if np.any(nas):
+
+            sel = ~np.any(nas, axis=1)
+            fields = [f[sel] for f in fields]
+
+            weights0 = self.results[FV.WEIGHT].to_numpy()
+            w0 = np.sum(weights0, axis=0)[None, :]
+            weights = weights0[sel]
+            w1 = np.sum(weights, axis=0)[None, :]
+            weights *= w0/w1
+            fields.append(weights)
+
+        else:
+            fields.append(self.results[FV.WEIGHT].to_numpy())
+        
+        return np.einsum(expr, *fields)
 
     def reduce_states(self, vars_op):
         """
@@ -45,21 +99,23 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
-        n_turbines = weights.shape[1]
+        n_turbines = self.results.dims[FV.TURBINE]
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum("st,st->t", vdata, weights)
+                rdata[v] = self.weinsum("t", v)
             elif op == "sum":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=0)
             elif op == "min":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=0)
             elif op == "max":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=0)
             elif op == "std":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.std(vdata, axis=0)
             else:
                 raise KeyError(
@@ -88,19 +144,20 @@ class FarmResultsEval(Output):
             The results per state
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
         states = self.results.coords[FV.STATE].to_numpy()
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum("st,st->s", vdata, weights)
+                rdata[v] = self.weinsum("s", v)
             elif op == "sum":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=1)
             elif op == "min":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=1)
             elif op == "max":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=1)
             else:
                 raise KeyError(
@@ -135,7 +192,6 @@ class FarmResultsEval(Output):
             The fully contracted results
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
         sdata = self.reduce_states(states_op)
 
         rdata = {}
@@ -143,15 +199,18 @@ class FarmResultsEval(Output):
             vdata = sdata[v].to_numpy()
             if op == "mean":
                 if states_op[v] == "mean":
-                    vdata = self.results[v].to_numpy()
-                    rdata[v] = np.einsum("st,st->", vdata, weights)
+                    rdata[v] = self.weinsum("", v)
                 else:
-                    rdata[v] = np.einsum("st,st->", vdata[None, :], weights)
+                    vdata = sdata[v].to_numpy()
+                    rdata[v] = self.weinsum("", vdata[None, :])
             elif op == "sum":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.sum(vdata)
             elif op == "min":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.min(vdata)
             elif op == "max":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.max(vdata)
             else:
                 raise KeyError(
