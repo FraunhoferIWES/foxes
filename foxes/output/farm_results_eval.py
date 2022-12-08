@@ -395,12 +395,17 @@ class FarmResultsEval(Output):
         if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
-            n_states = len(self.results[FV.STATE])
-            n_valid = np.sum(np.any(self.results[FV.WEIGHT].to_numpy()>0, axis=1))
-            delta_t = (self.results[FV.STATE][-1] - self.results[FV.STATE][0]) / (n_states - 1)
-            duration = delta_t * n_valid
+            times = self.results[FV.STATE].to_numpy()
+            n_times = len(times)
+            #sel = np.any(times>0, axis=1)
+            #n_valid = np.sum(sel)
+            delta_t = times[1] - times[0]
+            duration = delta_t * n_times #n_valid
+            if times[0] + duration - delta_t != times[-1]:
+                raise ValueError(f"Inhomogeneous time step detected in timeseries")
             duration_seconds = int(duration.astype(int) / 1e9)
             duration_hours = duration_seconds / 3600
+            print("HOURS",duration_hours)
         elif hours is None and annual == True:
             duration_hours = 8760
         elif hours is None:
