@@ -127,9 +127,9 @@ class FieldDataNC(States):
         Helper function for data extraction
         """
 
-        x = ds[self.x_coord].values
-        y = ds[self.y_coord].values
-        h = ds[self.h_coord].values
+        x = ds[self.x_coord].to_numpy()
+        y = ds[self.y_coord].to_numpy()
+        h = ds[self.h_coord].to_numpy()
         n_x = len(x)
         n_y = len(y)
         n_h = len(h)
@@ -200,7 +200,7 @@ class FieldDataNC(States):
                         f"States '{self.name}': Missing coordinate '{c}' in data"
                     )
 
-            self._inds = ds[self.states_coord].values
+            self._inds = ds[self.states_coord].to_numpy()
             if self.time_format is not None:
                 self._inds = pd.to_datetime(
                     self._inds, format=self.time_format
@@ -208,7 +208,7 @@ class FieldDataNC(States):
             self._N = len(self._inds)
 
             if self.weight_ncvar is not None:
-                self._weights = ds[self.weight_ncvar].values
+                self._weights = ds[self.weight_ncvar].to_numpy()
             else:
                 self._weights = np.full(
                     (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
@@ -234,9 +234,9 @@ class FieldDataNC(States):
                 self.VARS = self.var("vars")
                 self.DATA = self.var("data")
 
-                self._h = ds[self.h_coord].values
-                self._y = ds[self.y_coord].values
-                self._x = ds[self.x_coord].values
+                self._h = ds[self.h_coord].to_numpy()
+                self._y = ds[self.y_coord].to_numpy()
+                self._x = ds[self.x_coord].to_numpy()
                 self._v = list(self._dkys.keys())
 
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
@@ -439,9 +439,9 @@ class FieldDataNC(States):
                 .load()
             )
 
-            x = ds[self.x_coord].values
-            y = ds[self.y_coord].values
-            h = ds[self.h_coord].values
+            x = ds[self.x_coord].to_numpy()
+            y = ds[self.y_coord].to_numpy()
+            h = ds[self.h_coord].to_numpy()
             data = self._get_data(ds, verbosity=0)
             del ds
 

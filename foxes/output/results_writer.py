@@ -52,7 +52,7 @@ class ResultsWriter(Output):
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
-            Additional parameters for Output.write
+            Additional parameters for Output.write()
 
         """
         if verbosity:
@@ -69,7 +69,6 @@ class ResultsWriter(Output):
                 data = data[list(variables.keys())].rename(variables, axis=1)
             if len(inds):
                 for s, ns in inds.items():
-                    l = self.data.index.names.index(s)
                     data = data.rename_axis(index={s: ns})
         else:
             data = self.data[list(variables)]

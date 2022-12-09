@@ -362,6 +362,7 @@ class FarmResultsEval(Output):
         annual=False,
         ambient=False,
         hours=None,
+        delta_t=None,
         P_unit_W=1e3,
     ):
         """
@@ -375,6 +376,9 @@ class FarmResultsEval(Output):
             Flag for ambient power, by default False
         hours : int, optional
             The duration time in hours, if not timeseries states
+        delta_t : np.datetime64, optional
+            The time delta step in case of time series data, 
+            by default automatically determined
         P_unit_W : float
             The power unit in Watts, 1000 for kW
 
@@ -396,16 +400,11 @@ class FarmResultsEval(Output):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
             times = self.results[FV.STATE].to_numpy()
-            n_times = len(times)
-            #sel = np.any(times>0, axis=1)
-            #n_valid = np.sum(sel)
-            delta_t = times[1] - times[0]
-            duration = delta_t * n_times #n_valid
-            if times[0] + duration - delta_t != times[-1]:
-                raise ValueError(f"Inhomogeneous time step detected in timeseries")
+            if delta_t is None:
+                delta_t = times[-1] - times[-2]
+            duration = times[-1] - times[0] + delta_t
             duration_seconds = int(duration.astype(int) / 1e9)
             duration_hours = duration_seconds / 3600
-            print("HOURS",duration_hours)
         elif hours is None and annual == True:
             duration_hours = 8760
         elif hours is None:
