@@ -46,9 +46,9 @@ class PandasFileHelper:
     DEFAULT_FORMAT_DICT = {
         FV.WD: "{:.3f}", FV.AMB_WD: "{:.3f}",
         FV.WS: "{:.4f}", FV.AMB_WS: "{:.4f}",
-        FV.REWS: "{:.4f}", FV.AMB_WS: "{:.4f}",
-        FV.REWS2: "{:.4f}", FV.AMB_WS: "{:.4f}",
-        FV.REWS3: "{:.4f}", FV.AMB_WS: "{:.4f}",
+        FV.REWS: "{:.4f}", FV.AMB_REWS: "{:.4f}",
+        FV.REWS2: "{:.4f}", FV.AMB_REWS2: "{:.4f}",
+        FV.REWS3: "{:.4f}", FV.AMB_REWS3: "{:.4f}",
         FV.TI: "{:.6f}", FV.AMB_TI: "{:.6f}",
         FV.RHO: "{:.5f}", FV.AMB_RHO: "{:.5f}",
         FV.P: "{:.3f}", FV.AMB_P: "{:.3f}",
