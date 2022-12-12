@@ -3,6 +3,7 @@ from foxes.core import PointDataModel, PointDataModelList
 import foxes.algorithms.downwind.models as dm
 import foxes.models as fm
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class Downwind(Algorithm):
@@ -296,6 +297,9 @@ class Downwind(Algorithm):
         farm_results = mlist.run_calculation(
             self, models_data, out_vars=self.farm_vars, parameters=calc_pars
         )
+        farm_results[FV.TNAME] = ((FV.TURBINE,), self.farm.turbine_names)
+        if FV.ORDER in farm_results:
+            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
         del models_data
 
         # finalize models:

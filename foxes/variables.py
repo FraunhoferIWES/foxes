@@ -1,6 +1,7 @@
 FARM = "farm"
 STATE = "state"
 TURBINE = "turbine"
+TNAME = "tname"
 POINT = "point"
 POINTS = "points"
 RPOINT = "rotor_point"

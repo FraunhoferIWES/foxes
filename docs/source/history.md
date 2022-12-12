@@ -146,6 +146,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - Improved: `FarmResultsEval` can now handle NaN data in Einstein sums
+  - Improved: `ResultsWriter` can now also write turbine names 
 - Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
   - Generalized: `kTI`, now includes optional offset `kb`
