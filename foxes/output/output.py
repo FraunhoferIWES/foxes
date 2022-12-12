@@ -31,7 +31,6 @@ class Output:
             {FV.P: '{:.4f}'}. Note that the keys are flappy variables
 
         """
-
         fdict = {}
         for c in data.columns:
             v = format_col2var.get(c, c)
