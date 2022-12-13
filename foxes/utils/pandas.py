@@ -57,7 +57,6 @@ class PandasFileHelper:
         FV.YLD: "{:.3f}", FV.AMB_YLD: "{:.3f}",
         FV.CAP: "{:.5f}", FV.AMB_CAP: "{:.5f}",
         FV.EFF: "{:.5f}",
-        FV.WEIGHT: "{:.10e}",
     }
 
     DATA_FILE_FORMATS = list(DEFAULT_READING_PARAMETERS.keys())
@@ -127,7 +126,7 @@ class PandasFileHelper:
 
         """
 
-        fdict = cls.DEFAULT_FORMAT_DICT
+        fdict = deepcopy(cls.DEFAULT_FORMAT_DICT)
         fdict.update(format_dict)
 
         out = pd.DataFrame(index=data.index)
