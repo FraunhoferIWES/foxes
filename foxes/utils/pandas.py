@@ -53,6 +53,7 @@ class PandasFileHelper:
         FV.RHO: "{:.5f}", FV.AMB_RHO: "{:.5f}",
         FV.P: "{:.3f}", FV.AMB_P: "{:.3f}",
         FV.CT: "{:.6f}", FV.AMB_CT: "{:.6f}",
+        FV.T: "{:.3f}", FV.AMB_T: "{:.3f}",
         FV.YLD: "{:.3f}", FV.AMB_YLD: "{:.3f}",
         FV.CAP: "{:.5f}", FV.AMB_CAP: "{:.5f}",
         FV.EFF: "{:.5f}",
