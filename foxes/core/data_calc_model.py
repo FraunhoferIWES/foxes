@@ -82,7 +82,7 @@ class DataCalcModel(Model):
             data.append(Data(hdata, hdims, loop_dims))
 
             del hdata, hdims, v2l, v2e
-
+        
         # deduce output shape:
         oshape = []
         for li, l in enumerate(out_dims):

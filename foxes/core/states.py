@@ -37,7 +37,7 @@ class States(PointDataModel):
             The index labels of states, or None for default integers
 
         """
-        pass
+        return list(range(self.size()))
 
     @abstractmethod
     def weights(self, algo):

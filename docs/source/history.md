@@ -149,14 +149,28 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `ResultsWriter` can now also write turbine names 
 - Turbine models:
   - New: `TableFactors`, multiplies variables with data from a two dimensional table
+  - New: `YAW2YAWM`, calculates yaw deltas from absolute yaw and wind direction
+  - New `YAWM2YAW`, calculates absolute yaw from yaw deltas and wind direction
   - Generalized: `kTI`, now includes optional offset `kb`
+- Turbine types:
+  - Changed: Now yaw correction of `P` and `CT` switched on by default
 - Point models:
   - New: `TKE2TI`, calculates turbulence intensity from TKE
+- Wake models:
+  - New: `PorteAgel`, calculates wakes based on the Bastankhah PorteAgel 2016 wake model
+- Wake frames:
+  - New: `YawedWake`, bends wakes in yawed conditions
 - Wake superposition models:
   - Improved: `LinearSuperposition`, now includes options for lower/higher limits of total wake deltas
+- Examples:
+  - New: `compare_wakes`, compares wake models along horizontal lines
+  - New: `yawed_wake`, demonstrates wake bending by yawing a rotor
+- Notebooks:
+ - New: `yawed_wake.ipynb`, demonstrates wake bending by yawing a rotor
 - Bug fixes:
   - Fix for bug with `ExtendedStates`, now it is actually working
   - Fix for bug with wake width in `CrespoHernandezTIWake`
+  - Fix for bug with YAW and WD when using the `YAWM2YAW` turbine model
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
 

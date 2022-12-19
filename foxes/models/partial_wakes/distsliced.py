@@ -297,5 +297,6 @@ class PartialDistSlicedWake(PartialWakesModel):
             The verbosity level
 
         """
-        self.grotor.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
+        if self.grotor is not None:
+            self.grotor.finalize(algo, results=None, clear_mem=clear_mem, verbosity=verbosity)
         super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

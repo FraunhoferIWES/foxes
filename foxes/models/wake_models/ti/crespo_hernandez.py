@@ -99,7 +99,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={getattr(self, FV.K)}, sp={self.superp[FV.TI]})"
+        s += f"(k={getattr(self, FV.K)}, sp={self.superpositions[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
