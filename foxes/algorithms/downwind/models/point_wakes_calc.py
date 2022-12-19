@@ -2,18 +2,17 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
-
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
 
     Parameters
     ----------
-    point_vars : list of str
+    point_vars : list of str, optional
         The variables of interest
-    emodels : foxes.core.PointDataModelList
+    emodels : foxes.core.PointDataModelList, optional
         The extra evaluation models
-    emodels_cpars : list of dict
+    emodels_cpars : list of dict, optional
         The calculation parameters for extra models
 
     Attributes
@@ -27,7 +26,7 @@ class PointWakesCalculation(PointDataModel):
 
     """
 
-    def __init__(self, point_vars, emodels, emodels_cpars):
+    def __init__(self, point_vars=None, emodels=None, emodels_cpars=None):
         super().__init__()
         self.pvars = point_vars
         self.emodels = emodels
@@ -101,6 +100,7 @@ class PointWakesCalculation(PointDataModel):
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]
 
-        self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
+        if self.emodels is not None:
+            self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}

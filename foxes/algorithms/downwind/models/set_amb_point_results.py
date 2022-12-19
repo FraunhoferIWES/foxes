@@ -8,7 +8,7 @@ class SetAmbPointResults(PointDataModel):
 
     Parameters
     ----------
-    point_vars : list of str
+    point_vars : list of str, optional
         The point variables to be treated
     vars_to_amb : list of str, optional
         The variables to be copied to output
@@ -22,16 +22,14 @@ class SetAmbPointResults(PointDataModel):
 
     """
 
-    def __init__(self, point_vars, vars_to_amb=None):
+    def __init__(self, point_vars=None, vars_to_amb=None):
         super().__init__()
-        self.pvars = point_vars
-        self.vars = vars_to_amb
+        self._pvars = point_vars
+        self._vars = vars_to_amb
 
     def output_point_vars(self, algo):
-        if self.pvars is None:
-            self.pvars = algo.states.output_point_vars(algo)
-        if self.vars is None:
-            self.vars = [v for v in self.pvars if v in FV.var2amb]
+        self.pvars = algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
+        self.vars = [v for v in self.pvars if v in FV.var2amb] if self._vars is None else self._vars
         for v in algo.states.output_point_vars(algo):
             if v not in self.vars and v in FV.var2amb:
                 self.vars.append(v)

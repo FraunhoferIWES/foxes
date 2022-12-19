@@ -15,6 +15,8 @@ class Streamlines(WakeFrame):
     ----------
     step : float
         The streamline step size in m
+    ix_vars : list of str
+        The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
 
@@ -22,15 +24,20 @@ class Streamlines(WakeFrame):
     ----------
     step : float
         The streamline step size in m
+    ix_vars : list of str
+        The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
 
     """
 
-    def __init__(self, step, n_delstor=100):
+    def __init__(self, step, ix_vars=[], n_delstor=100):
         super().__init__()
         self.step = step
+        self.ix_vars = ix_vars
         self.n_delstor = n_delstor
+
+        self._pwake_calcu = None
 
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
@@ -63,10 +70,26 @@ class Streamlines(WakeFrame):
         n_turbines = mdata.n_turbines
         n_points = points.shape[1]
         n_spts = mdata[self.CNTR]
+        n_ix = len(self.ix_vars)
+        n_cols = 7 + n_ix
         data = mdata[self.DATA]
         spts = data[..., :3]
         sn = data[..., 3:6]
         slen = data[..., 6]
+        ixd = data[..., 7:] if n_ix > 0 else None
+
+        # split intergrated vars into amb and wake:
+        if n_ix > 0:
+            need_wakes = False
+            for v in self.ix_vars:
+                if v in FV.var2amb:
+                    need_wakes = True
+                    break
+            if self._pwake_calcu is None and need_wakes > 0:
+                self._pwake_calcu = algo.point_wake_calc_class()()
+                self._pwake_calcu.initialize(algo, verbosity=0)
+                self._pwake_2amb = algo.set_amb_point_res_class()()
+                self._pwake_2amb.initialize(algo, verbosity=0)
 
         # find minimal distances to existing streamline points:
         # n_states, n_turbines, n_points, n_spts
@@ -90,7 +113,7 @@ class Streamlines(WakeFrame):
                 data = np.append(
                     data,
                     np.full(
-                        (n_states, n_turbines, self.n_delstor, 7),
+                        (n_states, n_turbines, self.n_delstor, n_cols),
                         np.nan,
                         dtype=FC.DTYPE,
                     ),
@@ -101,6 +124,7 @@ class Streamlines(WakeFrame):
                 spts = data[..., :3]
                 sn = data[..., 3:6]
                 slen = data[..., 6]
+                ixd = data[..., 7:] if n_ix > 0 else None
 
             # calculate next point:
             p0 = spts[:, :, n_spts - 1]
@@ -122,10 +146,25 @@ class Streamlines(WakeFrame):
             )
             pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
             pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
-            data[:, :, n_spts, 3:5] = wd2uv(
-                algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
-            )
             data[:, :, n_spts, 5] = 0.0
+            if n_ix == 0:
+                data[:, :, n_spts, 3:5] = wd2uv(
+                    algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
+                )
+            else:
+                res = algo.states.calculate(algo, mdata, fdata, pdata)
+
+                if need_wakes:
+                    pdata.update(res)
+                    res = self._pwake_calcu.calculate(algo, mdata, fdata, pdata)
+                    pdata.update(res)
+                    res = self._pwake_2amb.calculate(algo, mdata, fdata, pdata)
+
+                data[:, :, n_spts, 3:5] = wd2uv(res[FV.WD])
+                for i, v in enumerate(self.ix_vars):
+                    ixd[:, :, n_spts, i] = ixd[:, :, n_spts-1, i] + self.step * res[v]
+                
+                del res
             del pdims, svars, pdata
 
             # evaluate distance:
@@ -173,18 +212,19 @@ class Streamlines(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
+        n_ix = len(self.ix_vars)
+        n_cols = 7 + n_ix
 
         # x, y, z, u, v, w, len
         mdata[self.DATA] = np.full(
-            (n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE
+            (n_states, n_turbines, self.n_delstor, n_cols), np.nan, dtype=FC.DTYPE
         )
         mdata[self.CNTR] = 1
 
         # set streamline start point data (rotor centre):
         mdata[self.DATA][:, :, 0, :3] = fdata[FV.TXYH]
         mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
-        mdata[self.DATA][:, :, 0, 5] = 0.0
-        mdata[self.DATA][:, :, 0, 6] = 0.0
+        mdata[self.DATA][:, :, 0, 5:] = 0.0
 
     def calc_order(self, algo, mdata, fdata):
         """ "

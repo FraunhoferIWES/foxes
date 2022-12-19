@@ -84,6 +84,32 @@ class Downwind(Algorithm):
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
+    @classmethod
+    def point_wake_calc_class(self):
+        """
+        The point wake calculation model class
+
+        Returns
+        -------
+        class :
+            The point wake calculation model class
+
+        """
+        return dm.point_wakes_calc.PointWakesCalculation
+
+    @classmethod
+    def set_amb_point_res_class(self):
+        """
+        The set ambient results model class
+
+        Returns
+        -------
+        class :
+            The set ambient results model class
+
+        """
+        return dm.set_amb_point_results.SetAmbPointResults
+
     def _print_deco(self, func_name, n_points=None):
         """
         Helper function for printing model names
