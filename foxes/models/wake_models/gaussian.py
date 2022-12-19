@@ -60,7 +60,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The x values, shape: (n_states, n_points)
         r : numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            (n_states, n_points, n_r_per_x)
 
         Returns
         -------

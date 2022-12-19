@@ -67,7 +67,7 @@ class TurbineModel(FarmDataModel):
         algo : foxes.core.Algorithm
             The calculation algorithm
         results : xarray.Dataset
-            The calculation results
+            The farm calculation results
         st_sel : numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)

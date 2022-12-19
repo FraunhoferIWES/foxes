@@ -28,8 +28,6 @@ class WsRho2PCtTwoFiles(TurbineType):
         The file path for the power curve, static name, or data
     data_source_ct : str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    flag_yawm: bool
-        Flag for yaw misalignment consideration
     p_ct: float
         The exponent for yaw dependency of ct
     p_P: float
@@ -55,8 +53,6 @@ class WsRho2PCtTwoFiles(TurbineType):
         The file path for the power curve, static name, or data
     source_ct : str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    flag_yawm: bool
-        Flag for yaw misalignment consideration
     WSCT : str
         The wind speed variable for ct lookup
     WSP : str
@@ -76,7 +72,6 @@ class WsRho2PCtTwoFiles(TurbineType):
         self,
         data_source_P,
         data_source_ct,
-        flag_yawm=False,
         p_ct=1.0,
         p_P=1.88,
         var_ws_ct=FV.REWS2,
@@ -97,7 +92,6 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         self.source_P = data_source_P
         self.source_ct = data_source_ct
-        self.flag_yawm = flag_yawm
         self.p_ct = p_ct
         self.p_P = p_P
         self.WSCT = var_ws_ct
@@ -248,11 +242,14 @@ class WsRho2PCtTwoFiles(TurbineType):
             qts[:, 1] = fdata[FV.RHO][st_sel_P]
 
             # apply yaw corrections:
-            if self.flag_yawm:
+            if FV.YAWM in fdata and self.p_P is not None:
+
                 # calculate corrected wind speed wsc,
                 # gives ws**3 * cos**p_P in partial load region
                 # and smoothly deals with full load region:
                 yawm = fdata[FV.YAWM][st_sel_P]
+                if np.any(np.isnan(yawm)):
+                                raise ValueError(f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?")
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
                 del yawm, cosm
@@ -285,11 +282,14 @@ class WsRho2PCtTwoFiles(TurbineType):
             qts[:, 1] = fdata[FV.RHO][st_sel_ct]
 
             # apply yaw corrections:
-            if self.flag_yawm:
+            if FV.YAWM in fdata and self.p_ct is not None:
+
                 # calculate corrected wind speed wsc,
                 # gives ws**3 * cos**p_P in partial load region
                 # and smoothly deals with full load region:
                 yawm = fdata[FV.YAWM][st_sel_ct]
+                if np.any(np.isnan(yawm)):
+                                raise ValueError(f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?")
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_ct) ** 0.5
                 del yawm, cosm

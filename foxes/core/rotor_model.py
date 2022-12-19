@@ -163,7 +163,7 @@ class RotorModel(FarmDataModel):
         Helper function for results setting
         """
         if stsel is None:
-            fdata[v] = res
+            fdata[v] = res.copy()
         elif res.shape[1] == 1:
             fdata[v][stsel] = res[:, 0]
         else:
@@ -263,7 +263,7 @@ class RotorModel(FarmDataModel):
         ):
 
             if stsel is None:
-                yaw = fdata[FV.YAW]
+                yaw = fdata[FV.YAW].copy()
             else:
                 yaw = fdata[FV.YAW][stsel][:, None]
             nax = wd2uv(yaw, axis=-1)
