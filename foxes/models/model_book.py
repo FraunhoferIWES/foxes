@@ -124,7 +124,7 @@ class ModelBook:
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
             yawed=fm.wake_frames.YawedWakes(),
-            streamlines_100=fm.wake_frames.Streamlines(step=100),
+            streamlines_100=fm.wake_frames.Streamlines(step=100, ix_vars=[FV.TI]),
             streamlines_100_yawed=fm.wake_frames.YawedWakes(
                 base_frame=fm.wake_frames.Streamlines(step=100))
         )

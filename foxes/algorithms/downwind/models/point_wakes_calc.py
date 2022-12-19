@@ -28,9 +28,24 @@ class PointWakesCalculation(PointDataModel):
 
     def __init__(self, point_vars=None, emodels=None, emodels_cpars=None):
         super().__init__()
-        self.pvars = point_vars
+        self._pvars = point_vars
         self.emodels = emodels
         self.emodels_cpars = emodels_cpars
+
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        super().initialize(algo, verbosity=verbosity)
+        self.pvars = algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
 
     def output_point_vars(self, algo):
         """
@@ -47,8 +62,6 @@ class PointWakesCalculation(PointDataModel):
             The output variable names
 
         """
-        if self.pvars is None:
-            self.pvars = algo.states.output_point_vars(algo)
         return self.pvars
 
     def calculate(self, algo, mdata, fdata, pdata):

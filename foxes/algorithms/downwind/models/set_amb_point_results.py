@@ -27,9 +27,12 @@ class SetAmbPointResults(PointDataModel):
         self._pvars = point_vars
         self._vars = vars_to_amb
 
-    def output_point_vars(self, algo):
+    def initialize(self, algo, verbosity=0):
+        super().initialize(algo, verbosity=verbosity)
         self.pvars = algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
         self.vars = [v for v in self.pvars if v in FV.var2amb] if self._vars is None else self._vars
+        
+    def output_point_vars(self, algo):
         for v in algo.states.output_point_vars(algo):
             if v not in self.vars and v in FV.var2amb:
                 self.vars.append(v)

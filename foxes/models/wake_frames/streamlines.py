@@ -37,7 +37,7 @@ class Streamlines(WakeFrame):
         self.ix_vars = ix_vars
         self.n_delstor = n_delstor
 
-        self._pwake_calcu = None
+        self.__locked = False
 
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
@@ -70,7 +70,7 @@ class Streamlines(WakeFrame):
         n_turbines = mdata.n_turbines
         n_points = points.shape[1]
         n_spts = mdata[self.CNTR]
-        n_ix = len(self.ix_vars)
+        n_ix = len(self.ix_vars) 
         n_cols = 7 + n_ix
         data = mdata[self.DATA]
         spts = data[..., :3]
@@ -85,11 +85,11 @@ class Streamlines(WakeFrame):
                 if v in FV.var2amb:
                     need_wakes = True
                     break
-            if self._pwake_calcu is None and need_wakes > 0:
-                self._pwake_calcu = algo.point_wake_calc_class()()
-                self._pwake_calcu.initialize(algo, verbosity=0)
-                self._pwake_2amb = algo.set_amb_point_res_class()()
-                self._pwake_2amb.initialize(algo, verbosity=0)
+            if need_wakes > 0:
+                pwake_calcu = algo.PointWakesCalculation()
+                pwake_calcu.initialize(algo, verbosity=0)
+            pwake_v2a = algo.SetAmbPointResults()
+            pwake_v2a.initialize(algo, verbosity=0)
 
         # find minimal distances to existing streamline points:
         # n_states, n_turbines, n_points, n_spts
@@ -147,22 +147,27 @@ class Streamlines(WakeFrame):
             pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
             pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
             data[:, :, n_spts, 5] = 0.0
-            if n_ix == 0:
+            if n_ix == 0 or self.__locked:
                 data[:, :, n_spts, 3:5] = wd2uv(
                     algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
                 )
             else:
                 res = algo.states.calculate(algo, mdata, fdata, pdata)
+                pdata.update(res)
 
                 if need_wakes:
+                    self.__locked = True
+                    res = pwake_calcu.calculate(algo, mdata, fdata, pdata)
                     pdata.update(res)
-                    res = self._pwake_calcu.calculate(algo, mdata, fdata, pdata)
-                    pdata.update(res)
-                    res = self._pwake_2amb.calculate(algo, mdata, fdata, pdata)
+                    self.__locked = False
+                    quit()
 
-                data[:, :, n_spts, 3:5] = wd2uv(res[FV.WD])
+                res = pwake_v2a.calculate(algo, mdata, fdata, pdata)
+                pdata.update(res)
+
+                data[:, :, n_spts, 3:5] = wd2uv(pdata[FV.AMB_WD])
                 for i, v in enumerate(self.ix_vars):
-                    ixd[:, :, n_spts, i] = ixd[:, :, n_spts-1, i] + self.step * res[v]
+                    ixd[:, :, n_spts, i] = ixd[:, :, n_spts-1, i] + self.step * pdata[v]
                 
                 del res
             del pdims, svars, pdata
