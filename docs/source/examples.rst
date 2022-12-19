@@ -9,4 +9,5 @@ Examples
         notebooks/sector_man
         notebooks/heterogeneous
         notebooks/power_mask
+        notebooks/yawed_wake
         notebooks/layout_opt
