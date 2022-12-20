@@ -37,8 +37,6 @@ class Streamlines(WakeFrame):
         self.ix_vars = ix_vars
         self.n_delstor = n_delstor
 
-        self.__locked = False
-
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
 
@@ -70,26 +68,10 @@ class Streamlines(WakeFrame):
         n_turbines = mdata.n_turbines
         n_points = points.shape[1]
         n_spts = mdata[self.CNTR]
-        n_ix = len(self.ix_vars) 
-        n_cols = 7 + n_ix
         data = mdata[self.DATA]
         spts = data[..., :3]
         sn = data[..., 3:6]
         slen = data[..., 6]
-        ixd = data[..., 7:] if n_ix > 0 else None
-
-        # split intergrated vars into amb and wake:
-        if n_ix > 0:
-            need_wakes = False
-            for v in self.ix_vars:
-                if v in FV.var2amb:
-                    need_wakes = True
-                    break
-            if need_wakes > 0:
-                pwake_calcu = algo.PointWakesCalculation()
-                pwake_calcu.initialize(algo, verbosity=0)
-            pwake_v2a = algo.SetAmbPointResults()
-            pwake_v2a.initialize(algo, verbosity=0)
 
         # find minimal distances to existing streamline points:
         # n_states, n_turbines, n_points, n_spts
@@ -113,7 +95,7 @@ class Streamlines(WakeFrame):
                 data = np.append(
                     data,
                     np.full(
-                        (n_states, n_turbines, self.n_delstor, n_cols),
+                        (n_states, n_turbines, self.n_delstor, 7),
                         np.nan,
                         dtype=FC.DTYPE,
                     ),
@@ -124,7 +106,6 @@ class Streamlines(WakeFrame):
                 spts = data[..., :3]
                 sn = data[..., 3:6]
                 slen = data[..., 6]
-                ixd = data[..., 7:] if n_ix > 0 else None
 
             # calculate next point:
             p0 = spts[:, :, n_spts - 1]
@@ -147,29 +128,9 @@ class Streamlines(WakeFrame):
             pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
             pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
             data[:, :, n_spts, 5] = 0.0
-            if n_ix == 0 or self.__locked:
-                data[:, :, n_spts, 3:5] = wd2uv(
-                    algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
-                )
-            else:
-                res = algo.states.calculate(algo, mdata, fdata, pdata)
-                pdata.update(res)
-
-                if need_wakes:
-                    self.__locked = True
-                    res = pwake_calcu.calculate(algo, mdata, fdata, pdata)
-                    pdata.update(res)
-                    self.__locked = False
-                    quit()
-
-                res = pwake_v2a.calculate(algo, mdata, fdata, pdata)
-                pdata.update(res)
-
-                data[:, :, n_spts, 3:5] = wd2uv(pdata[FV.AMB_WD])
-                for i, v in enumerate(self.ix_vars):
-                    ixd[:, :, n_spts, i] = ixd[:, :, n_spts-1, i] + self.step * pdata[v]
-                
-                del res
+            data[:, :, n_spts, 3:5] = wd2uv(
+                algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
+            )
             del pdims, svars, pdata
 
             # evaluate distance:
@@ -217,12 +178,10 @@ class Streamlines(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        n_ix = len(self.ix_vars)
-        n_cols = 7 + n_ix
 
         # x, y, z, u, v, w, len
         mdata[self.DATA] = np.full(
-            (n_states, n_turbines, self.n_delstor, n_cols), np.nan, dtype=FC.DTYPE
+            (n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE
         )
         mdata[self.CNTR] = 1
 
@@ -313,5 +272,10 @@ class Streamlines(WakeFrame):
             mdata[self.PRES] = {
                 pid: self._calc_coos(algo, mdata, fdata, points, tcase=False)
             }
+        
+        # calc integrals:
+        n_ix = len(self.ix_vars)
+        if n_ix:
+            qts = mdata[self.DATA][...]
 
         return mdata[self.PRES][pid][stsel]
