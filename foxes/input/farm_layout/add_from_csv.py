@@ -88,9 +88,13 @@ def add_from_csv(
         else:
             tid = None
 
-        hmodels = [] if cols_models_pre is None else data.loc[i, cols_models_pre].tolist()
+        hmodels = (
+            [] if cols_models_pre is None else data.loc[i, cols_models_pre].tolist()
+        )
         hmodels += tmodels
-        hmodels += [] if cols_models_post is None else data.loc[i, cols_models_post].tolist()
+        hmodels += (
+            [] if cols_models_post is None else data.loc[i, cols_models_post].tolist()
+        )
 
         farm.add_turbine(
             Turbine(

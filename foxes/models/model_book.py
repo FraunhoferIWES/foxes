@@ -126,7 +126,8 @@ class ModelBook:
             yawed=fm.wake_frames.YawedWakes(),
             streamlines_100=fm.wake_frames.Streamlines(step=100),
             streamlines_100_yawed=fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines(step=100))
+                base_frame=fm.wake_frames.Streamlines(step=100)
+            ),
         )
 
         self.wake_superpositions = Dict(
@@ -166,12 +167,12 @@ class ModelBook:
 
         self.wake_models = Dict(name="wake_models")
         slist = [
-            "linear", 
+            "linear",
             "linear_lim",
-            "linear_amb", 
-            "quadratic", 
-            "quadratic_amb", 
-            "max", 
+            "linear_amb",
+            "quadratic",
+            "quadratic_amb",
+            "max",
             "max_amb",
         ]
         for s in slist:
@@ -295,9 +296,23 @@ class ModelBook:
             if isinstance(ms, Dict):
                 for m in ms.values():
                     if isinstance(m, TurbineModel) or isinstance(m, FarmController):
-                        st_sel = np.ones((results.dims[FV.STATE], results.dims[FV.TURBINE]), dtype=bool)
-                        m.finalize(algo, results=results, st_sel=st_sel, clear_mem=clear_mem, verbosity=verbosity)
+                        st_sel = np.ones(
+                            (results.dims[FV.STATE], results.dims[FV.TURBINE]),
+                            dtype=bool,
+                        )
+                        m.finalize(
+                            algo,
+                            results=results,
+                            st_sel=st_sel,
+                            clear_mem=clear_mem,
+                            verbosity=verbosity,
+                        )
                     elif isinstance(m, RotorModel) or isinstance(m, FarmModel):
-                        m.finalize(algo, results=results, clear_mem=clear_mem, verbosity=verbosity)
+                        m.finalize(
+                            algo,
+                            results=results,
+                            clear_mem=clear_mem,
+                            verbosity=verbosity,
+                        )
                     else:
                         m.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

@@ -9,8 +9,12 @@ if __name__ == "__main__":
 
     # define arguments and options:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-y", "--yawm", help="YAWM angle of first turbine", default=30., type=float)
-    parser.add_argument("-y2", "--yawm2", help="YAWM angle of second turbine", default=0., type=float)
+    parser.add_argument(
+        "-y", "--yawm", help="YAWM angle of first turbine", default=30.0, type=float
+    )
+    parser.add_argument(
+        "-y2", "--yawm2", help="YAWM angle of second turbine", default=0.0, type=float
+    )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
@@ -49,7 +53,7 @@ if __name__ == "__main__":
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-    
+
     # set turbines in yaw
     yawm = np.array([[args.yawm, args.yawm2]])
     mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars()

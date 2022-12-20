@@ -272,20 +272,26 @@ class RotorModel(FarmDataModel):
             for v in self.calc_vars:
 
                 if v == FV.REWS:
-                    rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.)
+                    rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
                     self._set_res(fdata, v, rews, stsel)
                     del rews
                     vdone.append(v)
 
                 elif v == FV.REWS2:
 
-                    # For highly inhomogeneous wind fields 
+                    # For highly inhomogeneous wind fields
                     # and multiple rotor points some of the uv
                     # vectors may have negative projections onto the
                     # turbine axis direction:
                     if uvp.shape[2] > 1:
-                        rews2 = np.sqrt(np.maximum(
-                            np.einsum("stp,p->st", np.sign(wsp) * wsp**2, weights), 0.))
+                        rews2 = np.sqrt(
+                            np.maximum(
+                                np.einsum(
+                                    "stp,p->st", np.sign(wsp) * wsp**2, weights
+                                ),
+                                0.0,
+                            )
+                        )
                     else:
                         rews2 = np.sqrt(np.einsum("stp,p->st", wsp**2, weights))
                     self._set_res(fdata, v, rews2, stsel)
@@ -294,16 +300,18 @@ class RotorModel(FarmDataModel):
 
                 elif v == FV.REWS3:
 
-                    # For highly inhomogeneous wind fields 
+                    # For highly inhomogeneous wind fields
                     # and multiple rotor points some of the uv
                     # vectors may have negative projections onto the
                     # turbine axis direction:
                     if uvp.shape[2] > 1:
                         rews3 = np.maximum(
-                            np.einsum("stp,p->st", wsp**3, weights), 
-                            0.) ** (1.0 / 3.0)
+                            np.einsum("stp,p->st", wsp**3, weights), 0.0
+                        ) ** (1.0 / 3.0)
                     else:
-                        rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (1.0 / 3.0)
+                        rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (
+                            1.0 / 3.0
+                        )
                     self._set_res(fdata, v, rews3, stsel)
                     del rews3
                     vdone.append(v)

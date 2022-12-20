@@ -303,7 +303,7 @@ class StatesTable(States):
             self._weights = None
             self._N = None
             self._tvars = None
-            
+
         super().finalize(algo, results, clear_mem, verbosity)
 
 

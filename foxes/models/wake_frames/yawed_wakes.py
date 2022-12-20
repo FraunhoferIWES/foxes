@@ -6,6 +6,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_wd import RotorWD
 
+
 class YawedWakes(WakeFrame):
     """
     Bend the wakes for yawed turbines.
@@ -43,20 +44,20 @@ class YawedWakes(WakeFrame):
     """
 
     def __init__(
-            self, 
-            k=None, 
-            ct_max=0.9999, 
-            alpha=0.58, 
-            beta=0.07, 
-            base_frame=RotorWD(),
-        ):
+        self,
+        k=None,
+        ct_max=0.9999,
+        alpha=0.58,
+        beta=0.07,
+        base_frame=RotorWD(),
+    ):
         super().__init__()
 
         self.base_frame = base_frame
         self.model = PorteAgelModel(ct_max, alpha, beta)
 
         setattr(self, FV.K, k)
-        setattr(self, FV.YAWM, 0.) 
+        setattr(self, FV.YAWM, 0.0)
 
     def initialize(self, algo, verbosity=0):
         """
@@ -151,15 +152,16 @@ class YawedWakes(WakeFrame):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get unyawed results:
-        xyz = self.base_frame.get_wake_coos(algo, mdata, fdata, 
-                    states_source_turbine, points)
+        xyz = self.base_frame.get_wake_coos(
+            algo, mdata, fdata, states_source_turbine, points
+        )
         x = xyz[:, :, 0]
         y = xyz[:, :, 1]
 
         # get gamma:
         gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm")[st_sel][:, None]
-        gamma *= np.pi/180
+        gamma *= np.pi / 180
 
         # get k:
         k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -197,10 +199,10 @@ class YawedWakes(WakeFrame):
 
                 # set deflection:
                 ydef[far] = delta
-        
+
             # apply deflection:
             y[sp_sel] -= ydef
-        
+
         return xyz
 
     def finalize(self, algo, clear_mem=False, verbosity=0):

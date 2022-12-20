@@ -172,13 +172,15 @@ class FieldDataNC(States):
             data[..., self._dkys[FV.WD]] = np.full(
                 (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
             )
-        
+
         if verbosity > 0:
             print(f"\n{self.name}: Data ranges")
-            for v, i in self._dkys.items(): 
-                d = data[...,i]
+            for v, i in self._dkys.items():
+                d = data[..., i]
                 nn = np.sum(np.isnan(d))
-                print(f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)")
+                print(
+                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)"
+                )
 
         return data
 
@@ -521,4 +523,3 @@ class FieldDataNC(States):
             del self._h, self._y, self._x, self._v, self._data
 
         super().finalize(algo, results, clear_mem, verbosity)
-        

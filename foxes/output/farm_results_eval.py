@@ -27,7 +27,7 @@ class FarmResultsEval(Output):
 
     def __init__(self, farm_results):
         self.results = farm_results
-    
+
     def weinsum(self, rhs, *vars):
         """
         Calculates Einstein sum, adding weights
@@ -44,7 +44,7 @@ class FarmResultsEval(Output):
             The variables mentioned in the expression,
             but without the obligatory weights that will
             be added at the end
-        
+
         Returns
         -------
         result : np.ndarray
@@ -64,7 +64,7 @@ class FarmResultsEval(Output):
 
         inds = ["st" for v in fields] + ["st"]
         expr = ",".join(inds) + "->" + rhs
-        
+
         if np.any(nas):
 
             sel = ~np.any(nas, axis=1)
@@ -74,12 +74,12 @@ class FarmResultsEval(Output):
             w0 = np.sum(weights0, axis=0)[None, :]
             weights = weights0[sel]
             w1 = np.sum(weights, axis=0)[None, :]
-            weights *= w0/w1
+            weights *= w0 / w1
             fields.append(weights)
 
         else:
             fields.append(self.results[FV.WEIGHT].to_numpy())
-        
+
         return np.einsum(expr, *fields)
 
     def reduce_states(self, vars_op):
@@ -377,7 +377,7 @@ class FarmResultsEval(Output):
         hours : int, optional
             The duration time in hours, if not timeseries states
         delta_t : np.datetime64, optional
-            The time delta step in case of time series data, 
+            The time delta step in case of time series data,
             by default automatically determined
         P_unit_W : float
             The power unit in Watts, 1000 for kW
