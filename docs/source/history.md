@@ -171,6 +171,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug with `ExtendedStates`, now it is actually working
   - Fix for bug with wake width in `CrespoHernandezTIWake`
   - Fix for bug with YAW and WD when using the `YAWM2YAW` turbine model
+  - Fix for bug in `TurbOPark` wake model, double counting constant offset in sigma
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
 
