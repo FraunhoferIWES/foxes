@@ -205,6 +205,9 @@ class ModelBook:
             self.wake_models[f"TurbOPark_{s}"] = fm.wake_models.wind.TurbOParkWake(
                 superposition=s
             )
+            self.wake_models[f"TurbOParkIX_{s}"] = fm.wake_models.wind.TurbOParkWakeIX(
+                superposition=s
+            )
             self.wake_models[f"TurbOPark_{s}_k004"] = fm.wake_models.wind.TurbOParkWake(
                 k=0.04, superposition=s
             )

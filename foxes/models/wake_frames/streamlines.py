@@ -285,7 +285,6 @@ class Streamlines(WakeFrame):
         n_points = n_spts - 1
         vrs = [FV.amb2var.get(v, v) for v in vars]
         points = data[:, 1:, :3]
-        print("HERE CALC INTEGRAL",self.name,vars,n_states, n_spts)
         
         # run ambient calculation:
         pdata = {FV.POINTS: points}
@@ -327,6 +326,6 @@ class Streamlines(WakeFrame):
             for i in range(n_points):
                 results[:, i+1, vi] = results[:, i, vi] + pdata[v][:, i] * self.step 
         
-
+        return data[:, :, :3], results
 
         
