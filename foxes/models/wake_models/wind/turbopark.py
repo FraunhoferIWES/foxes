@@ -179,11 +179,6 @@ class TurbOParkWake(GaussianWakeModel):
                 k,
                 sbeta,
                 sblim,
-                mult1,
-                term1,
-                term2,
-                term3,
-                term4,
                 alpha,
                 beta,
                 epsilon,
@@ -204,6 +199,5 @@ class TurbOParkWake(GaussianWakeModel):
             n_sp = np.sum(sp_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
-            sigma_old = np.zeros(n_sp, dtype=FC.DTYPE)
 
         return {FV.WS: (ampld, sigma)}, sp_sel
