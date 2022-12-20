@@ -206,10 +206,4 @@ class TurbOParkWake(GaussianWakeModel):
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma_old = np.zeros(n_sp, dtype=FC.DTYPE)
 
-        ################
-        print("#######################")
-        print("Amplitude is", ampld)
-        print("Sigma is", sigma)
-        print("Sigma_old is", sigma_old)
-        print("#######################")
         return {FV.WS: (ampld, sigma)}, sp_sel
