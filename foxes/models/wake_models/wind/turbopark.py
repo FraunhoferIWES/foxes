@@ -161,15 +161,18 @@ class TurbOParkWake(GaussianWakeModel):
             alpha = self.c1 * AMB_TI
             beta = self.c2 * AMB_TI / np.sqrt(ct)
 
-            mult1 = k * AMB_TI / beta
-            term1 = np.sqrt((alpha + beta * x / D) ** 2 + 1)
-            term2 = np.sqrt(1 + alpha**2)
-            term3 = (term1 + 1) * alpha
-            term4 = (term2 + 1) * (alpha + beta * x / D)
-
-            sigma = epsilon * D  # for x = 0
-
-            sigma += D * mult1 * (term1 - term2 - np.log(term3 / term4))
+            # calculate sigma (eqn 4)
+            sigma = D * (
+                epsilon
+                + (k * AMB_TI / beta)
+                * (
+                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
+                    - np.sqrt(1 + alpha**2)
+                    - np.log((np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1) * alpha)
+                    / (np.sqrt(1 + alpha**2) + 1)
+                    * (alpha + beta * x / D)
+                )
+            )
 
             del (
                 x,
@@ -186,7 +189,7 @@ class TurbOParkWake(GaussianWakeModel):
                 epsilon,
             )
 
-            # calculate amplitude, same as in Bastankha model:
+            # calculate amplitude, same as in Bastankha model (eqn 7)
             if self.sbeta_factor < 0.25:
                 radicant = 1.0 - ct / (8 * (sigma / D) ** 2)
                 reals = radicant >= 0
@@ -201,5 +204,12 @@ class TurbOParkWake(GaussianWakeModel):
             n_sp = np.sum(sp_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
+            sigma_old = np.zeros(n_sp, dtype=FC.DTYPE)
 
+        ################
+        print("#######################")
+        print("Amplitude is", ampld)
+        print("Sigma is", sigma)
+        print("Sigma_old is", sigma_old)
+        print("#######################")
         return {FV.WS: (ampld, sigma)}, sp_sel
