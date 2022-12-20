@@ -169,7 +169,7 @@ class TurbOParkWake(GaussianWakeModel):
 
             sigma = epsilon * D  # for x = 0
 
-            sigma += sigma + D * mult1 * (term1 - term2 - np.log(term3 / term4))
+            sigma += D * mult1 * (term1 - term2 - np.log(term3 / term4))
 
             del (
                 x,
