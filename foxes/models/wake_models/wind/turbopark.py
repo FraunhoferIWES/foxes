@@ -124,6 +124,9 @@ class TurbOParkWake(GaussianWakeModel):
         n_points = x.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
 
+        print("HERE TURBOPARK")
+        algo.wake_frame.calc_integral(algo, mdata, fdata, [FV.TI], states_source_turbine)
+
         # get ct:
         ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         ct[:] = self.get_data(FV.CT, fdata)[st_sel][:, None]

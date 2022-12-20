@@ -94,19 +94,27 @@ class PointWakesCalculation(PointDataModel):
         points = pdata[FV.POINTS]
 
         wdeltas = {}
+        wmodels = []
         for w in algo.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata.n_points, wdeltas)
+            hdeltas = {}
+            w.init_wake_deltas(algo, mdata, fdata, pdata.n_points, hdeltas)
+            print("HERE",self.pvars, list(hdeltas.keys()), len(set(self.pvars).intersection(hdeltas.keys())))
+            if len(set(self.pvars).intersection(hdeltas.keys())):
+                wdeltas.update(hdeltas)
+                wmodels.append(w)
+            del hdeltas
+        print("HERE", wmodels)
 
         for oi in range(n_order):
 
             o = torder[:, oi]
             wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, o, points)
 
-            for w in algo.wake_models:
+            for w in wmodels:
                 w.contribute_to_wake_deltas(algo, mdata, fdata, o, wcoos, wdeltas)
 
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
-        for w in algo.wake_models:
+        for w in wmodels:
             w.finalize_wake_deltas(algo, mdata, fdata, amb_res, wdeltas)
 
         for v in self.pvars:
@@ -116,4 +124,4 @@ class PointWakesCalculation(PointDataModel):
         if self.emodels is not None:
             self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: pdata[v] for v in self.pvars}

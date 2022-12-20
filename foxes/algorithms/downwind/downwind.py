@@ -47,6 +47,9 @@ class Downwind(Algorithm):
 
     """
 
+    PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
+    SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
+    
     def __init__(
         self,
         mbook,
@@ -83,9 +86,6 @@ class Downwind(Algorithm):
 
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
-
-    PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
-    SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
 
     def _print_deco(self, func_name, n_points=None):
         """

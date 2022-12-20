@@ -272,10 +272,61 @@ class Streamlines(WakeFrame):
             mdata[self.PRES] = {
                 pid: self._calc_coos(algo, mdata, fdata, points, tcase=False)
             }
-        
-        # calc integrals:
-        n_ix = len(self.ix_vars)
-        if n_ix:
-            qts = mdata[self.DATA][...]
 
         return mdata[self.PRES][pid][stsel]
+
+    def calc_integral(self, algo, mdata, fdata, vars, states_source_turbine):
+
+        # prepare:
+        n_states = mdata.n_states
+        data = mdata[self.DATA][range(n_states), states_source_turbine]
+        n_vars = len(vars)
+        n_spts = data.shape[1]
+        n_points = n_spts - 1
+        vrs = [FV.amb2var.get(v, v) for v in vars]
+        points = data[:, 1:, :3]
+        print("HERE CALC INTEGRAL",self.name,vars,n_states, n_spts)
+        
+        # run ambient calculation:
+        pdata = {FV.POINTS: points}
+        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata.update(
+            {
+                v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+                for v in vrs
+            }
+        )
+        pdims.update({v: (FV.STATE, FV.POINT) for v in vrs})
+        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        res = algo.states.calculate(algo, mdata, fdata, pdata)
+        pdata.update(res)
+        amb2var = algo.SetAmbPointResults()
+        amb2var.initialize(algo, verbosity=0)
+        res = amb2var.calculate(algo, mdata, fdata, pdata)
+        pdata.update(res)
+        del pdims, res, amb2var
+
+        # find out if all vars ambient:
+        ambient = True
+        for v in vars:
+            if v not in FV.amb2var:
+                ambient = False
+                break
+
+        # calc wakes:
+        if not ambient:
+            wcalc = algo.PointWakesCalculation(vrs)
+            wcalc.initialize(algo, verbosity=0)
+            res = wcalc.calculate(algo, mdata, fdata, pdata)
+            pdata.update(res)
+            del wcalc, res
+        
+        # set results:
+        results = np.zeros((n_states, n_spts, n_vars), dtype=FC.DTYPE)
+        for vi, v in enumerate(vars):
+            for i in range(n_points):
+                results[:, i+1, vi] = results[:, i, vi] + pdata[v][:, i] * self.step 
+        
+
+
+        
