@@ -54,4 +54,4 @@ class TKE2TI(PointDataModel):
         tke = pdata[FV.TKE]
         ws = pdata[FV.WS]
 
-        return {FV.TI: np.sqrt( 1.5 * tke ) / ws}
+        return {FV.TI: np.sqrt(1.5 * tke) / ws}

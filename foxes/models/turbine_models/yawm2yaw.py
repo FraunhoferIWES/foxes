@@ -7,7 +7,7 @@ from foxes.utils import delta_wd
 
 class YAWM2YAW(TurbineModel):
     """
-    Calculates absolute yaw (i.e. YAWM) from delta 
+    Calculates absolute yaw (i.e. YAWM) from delta
     yaw (i.e. YAWM)
     """
 
@@ -58,6 +58,6 @@ class YAWM2YAW(TurbineModel):
         wd = self.get_data(FV.WD, fdata, st_sel)
 
         yaw = fdata[FV.YAW]
-        yaw[st_sel] = np.mod(wd + yawm, 360.)
+        yaw[st_sel] = np.mod(wd + yawm, 360.0)
 
         return {FV.YAW: yaw}

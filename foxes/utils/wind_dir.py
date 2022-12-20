@@ -105,6 +105,7 @@ def wdvec2wd(wdvec, axis=-1):
     """
     return uv2wd(-wdvec, axis)
 
+
 def delta_wd(wd_a, wd_b):
     """
     Calculates wd_b - wd_a.
@@ -117,17 +118,17 @@ def delta_wd(wd_a, wd_b):
     wd_b : numpy.ndarray
         Array of wind directions.
         Shape: same as wd_a
-    
+
     Returns
     -------
     numpy.ndarray :
         Array of wind direction deltas.
         Shape: same as wd_a, wd_b
-    
+
     """
     out = wd_b - wd_a
 
-    out[out < -180.] += 360.
-    out[out >  180.] -= 360.
+    out[out < -180.0] += 360.0
+    out[out > 180.0] -= 360.0
 
     return out
