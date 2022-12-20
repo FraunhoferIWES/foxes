@@ -67,8 +67,6 @@ class ScanWS(States):
         idata = super().model_input_data(algo)
         idata["data_vars"][self.WS] = ((FV.STATE,), self._wsl)
 
-        del self._wsl
-
         return idata
 
     def size(self):
@@ -165,3 +163,25 @@ class ScanWS(States):
             )
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
+
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level
+
+        """
+        if clear_mem:
+            del self._wsl
+
+        super().finalize(algo, results, clear_mem, verbosity)

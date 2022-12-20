@@ -52,7 +52,7 @@ class BastankhahWake(GaussianWakeModel):
 
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superp[FV.WS]})"
+        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):

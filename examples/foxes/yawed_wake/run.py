@@ -10,20 +10,17 @@ if __name__ == "__main__":
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=5
+        "-y", "--yawm", help="YAWM angle of first turbine", default=30.0, type=float
     )
     parser.add_argument(
-        "-l",
-        "--layout",
-        help="The wind farm layout file (path or static)",
-        default=None,
+        "-y2", "--yawm2", help="YAWM angle of second turbine", default=0.0, type=float
     )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
-        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=1500.0
     )
     parser.add_argument(
         "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
@@ -38,16 +35,16 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_quadratic", "CrespoHernandez_max"],
+        default=["PorteAgel_linear", "CrespoHernandez_max"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes model", default="auto"
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
+    parser.add_argument("-f", "--frame", help="The wake frame", default="yawed")
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     args = parser.parse_args()
@@ -57,6 +54,11 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
+    # set turbines in yaw
+    yawm = np.array([[args.yawm, args.yawm2]])
+    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars()
+    mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+
     # create states
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
@@ -65,18 +67,13 @@ if __name__ == "__main__":
     # create wind farm
     print("\nCreating wind farm")
     farm = foxes.WindFarm()
-    if args.layout is None:
-        foxes.input.farm_layout.add_row(
-            farm=farm,
-            xy_base=np.array([0.0, 0.0]),
-            xy_step=np.array([args.deltax, args.deltay]),
-            n_turbines=args.n_t,
-            turbine_models=args.tmodels + [ttype.name],
-        )
-    else:
-        foxes.input.farm_layout.add_from_file(
-            farm, args.layout, turbine_models=args.tmodels + [ttype.name]
-        )
+    foxes.input.farm_layout.add_row(
+        farm=farm,
+        xy_base=np.array([0.0, 0.0]),
+        xy_step=np.array([args.deltax, args.deltay]),
+        n_turbines=2,
+        turbine_models=args.tmodels + ["set_yawm", "yawm2yaw", ttype.name],
+    )
 
     # create algorithm
     algo = foxes.algorithms.Downwind(
@@ -97,19 +94,10 @@ if __name__ == "__main__":
     # horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_horizontal(args.var, resolution=10)
+    g = o.gen_states_fig_horizontal(args.var, resolution=10, xmin=-100, xmax=3000)
     fig = next(g)
     plt.show()
     plt.close(fig)
-
-    # vertical flow plot
-    print("\nVertical flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_vertical(
-        args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.0)
-    )
-    fig = next(g)
-    plt.show()
 
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
@@ -124,15 +112,15 @@ if __name__ == "__main__":
         farm_df[
             [
                 FV.X,
-                FV.WD,
                 FV.AMB_REWS,
                 FV.REWS,
                 FV.AMB_TI,
                 FV.TI,
                 FV.AMB_P,
                 FV.P,
-                FV.CT,
-                FV.EFF,
+                FV.WD,
+                FV.YAW,
+                FV.YAWM,
             ]
         ]
     )

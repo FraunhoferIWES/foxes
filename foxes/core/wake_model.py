@@ -55,6 +55,9 @@ class WakeModel(Model):
         states_source_turbine : numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
+        wake_coos : numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
         wake_deltas : dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the

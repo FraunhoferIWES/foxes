@@ -44,9 +44,32 @@ class PandasFileHelper:
     }
 
     DEFAULT_FORMAT_DICT = {
-        str(FV.__dict__[v]): "{:.4f}" for v in FV.__dict__.keys() if v[0] != "_"
+        FV.WD: "{:.3f}",
+        FV.AMB_WD: "{:.3f}",
+        FV.WS: "{:.4f}",
+        FV.AMB_WS: "{:.4f}",
+        FV.REWS: "{:.4f}",
+        FV.AMB_REWS: "{:.4f}",
+        FV.REWS2: "{:.4f}",
+        FV.AMB_REWS2: "{:.4f}",
+        FV.REWS3: "{:.4f}",
+        FV.AMB_REWS3: "{:.4f}",
+        FV.TI: "{:.6f}",
+        FV.AMB_TI: "{:.6f}",
+        FV.RHO: "{:.5f}",
+        FV.AMB_RHO: "{:.5f}",
+        FV.P: "{:.3f}",
+        FV.AMB_P: "{:.3f}",
+        FV.CT: "{:.6f}",
+        FV.AMB_CT: "{:.6f}",
+        FV.T: "{:.3f}",
+        FV.AMB_T: "{:.3f}",
+        FV.YLD: "{:.3f}",
+        FV.AMB_YLD: "{:.3f}",
+        FV.CAP: "{:.5f}",
+        FV.AMB_CAP: "{:.5f}",
+        FV.EFF: "{:.5f}",
     }
-    DEFAULT_FORMAT_DICT["weight"] = "{:.10e}"
 
     DATA_FILE_FORMATS = list(DEFAULT_READING_PARAMETERS.keys())
 
@@ -115,12 +138,12 @@ class PandasFileHelper:
 
         """
 
-        fdict = cls.DEFAULT_FORMAT_DICT
+        fdict = deepcopy(cls.DEFAULT_FORMAT_DICT)
         fdict.update(format_dict)
 
         out = pd.DataFrame(index=data.index)
         for c in data.columns:
-            if c in fdict:
+            if c in fdict.keys():
                 out[c] = data[c].map(
                     lambda x: fdict[c].format(x) if not pd.isna(x) else x
                 )

@@ -99,7 +99,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={getattr(self, FV.K)}, sp={self.superp[FV.TI]})"
+        s += f"(k={getattr(self, FV.K)}, sp={self.superpositions[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -174,7 +174,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))
         sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
         sbeta[sbeta > sblim] = sblim
-        radius = 4 * (k * x + self.sbeta_factor * sbeta * D)
+        radius = 2 * (k * x + self.sbeta_factor * sbeta * D)
 
         return radius
 

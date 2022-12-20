@@ -1,6 +1,9 @@
+import numpy as np
+
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict
+from foxes.core import TurbineModel, RotorModel, FarmModel, FarmController
 
 
 class ModelBook:
@@ -80,8 +83,11 @@ class ModelBook:
             kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
             kTI_amb_02=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.2),
             kTI_amb_04=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4),
+            kTI_amb_05=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.5),
             thrust2ct=fm.turbine_models.Thrust2Ct(),
             PMask=fm.turbine_models.PowerMask(),
+            yaw2yawm=fm.turbine_models.YAW2YAWM(),
+            yawm2yaw=fm.turbine_models.YAWM2YAW(),
         )
 
         self.farm_models = Dict(
@@ -117,13 +123,21 @@ class ModelBook:
         self.wake_frames = Dict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
+            yawed=fm.wake_frames.YawedWakes(),
             streamlines_100=fm.wake_frames.Streamlines(step=100),
+            streamlines_100_yawed=fm.wake_frames.YawedWakes(
+                base_frame=fm.wake_frames.Streamlines(step=100)
+            ),
         )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
             linear=fm.wake_superpositions.LinearSuperposition(
                 scalings=f"source_turbine_{FV.REWS}"
+            ),
+            linear_lim=fm.wake_superpositions.LinearSuperposition(
+                scalings=f"source_turbine_{FV.REWS}",
+                lim_low={FV.WS: 1e-4},
             ),
             linear_amb=fm.wake_superpositions.LinearSuperposition(
                 scalings=f"source_turbine_{FV.AMB_REWS}"
@@ -152,7 +166,15 @@ class ModelBook:
         )
 
         self.wake_models = Dict(name="wake_models")
-        slist = ["linear", "linear_amb", "quadratic", "quadratic_amb", "max", "max_amb"]
+        slist = [
+            "linear",
+            "linear_lim",
+            "linear_amb",
+            "quadratic",
+            "quadratic_amb",
+            "max",
+            "max_amb",
+        ]
         for s in slist:
 
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
@@ -170,7 +192,9 @@ class ModelBook:
             self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
                 k=0.075, superposition=s
             )
-
+            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s
+            )
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
                 superposition=s
             )
@@ -190,6 +214,9 @@ class ModelBook:
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=s)
+            self.wake_models[
+                f"CrespoHernandez_ambti_{s[3:]}"
+            ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=s, use_ambti=True)
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}_k002"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=s)
@@ -247,3 +274,45 @@ class ModelBook:
                 else:
                     print("(none)")
                 print()
+
+    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        results : xarray.Dataset
+            The farm calculation results
+        clear_mem : bool
+            Flag for deleting model data and
+            resetting initialization flag
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+        for ms in self.sources.values():
+            if isinstance(ms, Dict):
+                for m in ms.values():
+                    if isinstance(m, TurbineModel) or isinstance(m, FarmController):
+                        st_sel = np.ones(
+                            (results.dims[FV.STATE], results.dims[FV.TURBINE]),
+                            dtype=bool,
+                        )
+                        m.finalize(
+                            algo,
+                            results=results,
+                            st_sel=st_sel,
+                            clear_mem=clear_mem,
+                            verbosity=verbosity,
+                        )
+                    elif isinstance(m, RotorModel) or isinstance(m, FarmModel):
+                        m.finalize(
+                            algo,
+                            results=results,
+                            clear_mem=clear_mem,
+                            verbosity=verbosity,
+                        )
+                    else:
+                        m.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)

@@ -63,7 +63,8 @@ class WakeFrame(Model):
         Returns
         -------
         wake_coos : numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
 
         """
         pass

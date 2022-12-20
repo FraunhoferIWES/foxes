@@ -21,6 +21,10 @@ class DistSlicedWakeModel(WakeModel):
 
     Attributes
     ----------
+    superpositions : dict
+        The superpositions. Key: variable name str,
+        value: The wake superposition model name,
+        will be looked up in model book
     superp : dict
         The superposition dict, key: variable name str,
         value: `foxes.core.WakeSuperposition`
@@ -29,7 +33,7 @@ class DistSlicedWakeModel(WakeModel):
 
     def __init__(self, superpositions):
         super().__init__()
-        self.superp = superpositions
+        self.superpositions = superpositions
 
     def initialize(self, algo, verbosity=0):
         """
@@ -46,9 +50,9 @@ class DistSlicedWakeModel(WakeModel):
         super().initialize(algo, verbosity=verbosity)
 
         self.superp = {
-            v: algo.mbook.wake_superpositions[s] for v, s in self.superp.items()
+            v: algo.mbook.wake_superpositions[s] for v, s in self.superpositions.items()
         }
-        for v, s in self.superp.items():
+        for s in self.superp.values():
             if not s.initialized:
                 s.initialize(algo, verbosity=verbosity)
 
@@ -106,6 +110,9 @@ class DistSlicedWakeModel(WakeModel):
         states_source_turbine : numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
+        wake_coos : numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
         wake_deltas : dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the

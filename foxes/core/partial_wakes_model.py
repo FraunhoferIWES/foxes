@@ -31,8 +31,8 @@ class PartialWakesModel(Model):
     def __init__(self, wake_models=None, wake_frame=None):
         super().__init__()
 
-        self.wake_models = wake_models
-        self.wake_frame = wake_frame
+        self._wmodels = wake_models
+        self._wframe = wake_frame
 
     def initialize(self, algo, verbosity=0):
         """
@@ -46,15 +46,15 @@ class PartialWakesModel(Model):
             The verbosity level
 
         """
-        if self.wake_models is None:
-            self.wake_models = algo.wake_models
-        if self.wake_frame is None:
-            self.wake_frame = algo.wake_frame
+        self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
+        self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
 
         if not self.wake_frame.initialized:
             self.wake_frame.initialize(algo, verbosity=verbosity)
         for w in self.wake_models:
             if not w.initialized:
+                if verbosity > 0:
+                    print(f"Partial wakes '{self.name}': Initializing '{w.name}'")
                 w.initialize(algo, verbosity=verbosity)
 
         super().initialize(algo, verbosity=verbosity)

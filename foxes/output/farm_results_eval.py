@@ -3,6 +3,7 @@ import pandas as pd
 
 from .output import Output
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class FarmResultsEval(Output):
@@ -27,6 +28,60 @@ class FarmResultsEval(Output):
     def __init__(self, farm_results):
         self.results = farm_results
 
+    def weinsum(self, rhs, *vars):
+        """
+        Calculates Einstein sum, adding weights
+        as last argument to the given fields.
+
+        It's all about treating NaN values.
+
+        Parameters
+        ----------
+        rhs : str
+            The right-hand side of the einsum expression.
+            Convention: 's' for states, 't' for turbines
+        vars : tuple of str or np.ndarray
+            The variables mentioned in the expression,
+            but without the obligatory weights that will
+            be added at the end
+
+        Returns
+        -------
+        result : np.ndarray
+            The results array
+
+        """
+        nas = None
+        fields = []
+        for v in vars:
+            if isinstance(v, str):
+                fields.append(self.results[v].to_numpy())
+            else:
+                fields.append(v)
+            if nas is None:
+                nas = np.zeros_like(fields[-1], dtype=bool)
+            nas = nas | np.isnan(fields[-1])
+
+        inds = ["st" for v in fields] + ["st"]
+        expr = ",".join(inds) + "->" + rhs
+
+        if np.any(nas):
+
+            sel = ~np.any(nas, axis=1)
+            fields = [f[sel] for f in fields]
+
+            weights0 = self.results[FV.WEIGHT].to_numpy()
+            w0 = np.sum(weights0, axis=0)[None, :]
+            weights = weights0[sel]
+            w1 = np.sum(weights, axis=0)[None, :]
+            weights *= w0 / w1
+            fields.append(weights)
+
+        else:
+            fields.append(self.results[FV.WEIGHT].to_numpy())
+
+        return np.einsum(expr, *fields)
+
     def reduce_states(self, vars_op):
         """
         Reduces the states dimension by some operation
@@ -44,21 +99,23 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
-        n_turbines = weights.shape[1]
+        n_turbines = self.results.dims[FV.TURBINE]
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum("st,st->t", vdata, weights)
+                rdata[v] = self.weinsum("t", v)
             elif op == "sum":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=0)
             elif op == "min":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=0)
             elif op == "max":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=0)
             elif op == "std":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.std(vdata, axis=0)
             else:
                 raise KeyError(
@@ -87,19 +144,20 @@ class FarmResultsEval(Output):
             The results per state
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
         states = self.results.coords[FV.STATE].to_numpy()
 
         rdata = {}
         for v, op in vars_op.items():
-            vdata = self.results[v].to_numpy()
             if op == "mean":
-                rdata[v] = np.einsum("st,st->s", vdata, weights)
+                rdata[v] = self.weinsum("s", v)
             elif op == "sum":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=1)
             elif op == "min":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=1)
             elif op == "max":
+                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=1)
             else:
                 raise KeyError(
@@ -134,7 +192,6 @@ class FarmResultsEval(Output):
             The fully contracted results
 
         """
-        weights = self.results[FV.WEIGHT].to_numpy()
         sdata = self.reduce_states(states_op)
 
         rdata = {}
@@ -142,15 +199,18 @@ class FarmResultsEval(Output):
             vdata = sdata[v].to_numpy()
             if op == "mean":
                 if states_op[v] == "mean":
-                    vdata = self.results[v].to_numpy()
-                    rdata[v] = np.einsum("st,st->", vdata, weights)
+                    rdata[v] = self.weinsum("", v)
                 else:
-                    rdata[v] = np.einsum("st,st->", vdata[None, :], weights)
+                    vdata = sdata[v].to_numpy()
+                    rdata[v] = self.weinsum("", vdata[None, :])
             elif op == "sum":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.sum(vdata)
             elif op == "min":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.min(vdata)
             elif op == "max":
+                vdata = sdata[v].to_numpy()
                 rdata[v] = np.max(vdata)
             else:
                 raise KeyError(
@@ -302,6 +362,7 @@ class FarmResultsEval(Output):
         annual=False,
         ambient=False,
         hours=None,
+        delta_t=None,
         P_unit_W=1e3,
     ):
         """
@@ -315,6 +376,9 @@ class FarmResultsEval(Output):
             Flag for ambient power, by default False
         hours : int, optional
             The duration time in hours, if not timeseries states
+        delta_t : np.datetime64, optional
+            The time delta step in case of time series data,
+            by default automatically determined
         P_unit_W : float
             The power unit in Watts, 1000 for kW
 
@@ -335,7 +399,10 @@ class FarmResultsEval(Output):
         if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
-            duration = self.results[FV.STATE][-1] - self.results[FV.STATE][0]
+            times = self.results[FV.STATE].to_numpy()
+            if delta_t is None:
+                delta_t = times[-1] - times[-2]
+            duration = times[-1] - times[0] + delta_t
             duration_seconds = int(duration.astype(int) / 1e9)
             duration_hours = duration_seconds / 3600
         elif hours is None and annual == True:
@@ -355,7 +422,7 @@ class FarmResultsEval(Output):
         yld.rename(columns={var_in: var_out}, inplace=True)
         return yld
 
-    def add_capacity(self, algo=None, P_nom=None, ambient=False):
+    def add_capacity(self, algo=None, P_nom=None, ambient=False, verbosity=1):
         """
         Adds capacity to the farm results
 
@@ -367,6 +434,8 @@ class FarmResultsEval(Output):
             Nominal power values for each turbine, if algo not given
         ambient : bool, optional
             Flag for calculating ambient capacity, by default False
+        verbosity : int
+            The verbosity level, 0 = silent
 
         """
         if ambient:
@@ -380,18 +449,22 @@ class FarmResultsEval(Output):
         vdata = self.results[var_in]
 
         if algo is not None and P_nom is None:
-            P_nom = [t.P_nominal for t in algo.farm_controller.turbine_types]
+            P_nom = np.array(
+                [t.P_nominal for t in algo.farm_controller.turbine_types],
+                dtype=FC.DTYPE,
+            )
         elif algo is None and P_nom is not None:
-            pass
+            P_nom = np.array(P_nom, dtype=FC.DTYPE)
         else:
             raise KeyError("Expecting either 'algo' or 'P_nom'")
 
         # add to farm results
-        self.results[var_out] = vdata / P_nom
-        if ambient:
-            print("Ambient capacity added to farm results")
-        else:
-            print("Capacity added to farm results")
+        self.results[var_out] = vdata / P_nom[None, :]
+        if verbosity > 0:
+            if ambient:
+                print("Ambient capacity added to farm results")
+            else:
+                print("Capacity added to farm results")
 
     def calc_farm_yield(self, turbine_yield=None, power_uncert=None, **kwargs):
         """
@@ -431,14 +504,21 @@ class FarmResultsEval(Output):
 
         return farm_yield["YLD"]
 
-    def add_efficiency(self):
+    def add_efficiency(self, verbosity=1):
         """
         Adds efficiency to the farm results
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
         """
         P = self.results[FV.P]
         P0 = self.results[FV.AMB_P] + 1e-14
         self.results[FV.EFF] = P / P0  # add to farm results
-        print("Efficiency added to farm results")
+        if verbosity:
+            print("Efficiency added to farm results")
 
     def calc_farm_efficiency(self):
         """

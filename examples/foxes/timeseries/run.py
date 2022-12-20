@@ -55,6 +55,9 @@ def run_foxes(args):
     o.add_capacity(algo, ambient=True)
     o.add_efficiency()
 
+    print("\nFarm results:\n")
+    print(farm_results)
+
     # state-turbine results
     farm_df = farm_results.to_dataframe()
     print("\nFarm results data:\n")

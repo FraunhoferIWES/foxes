@@ -1,4 +1,4 @@
-from .wind_dir import wd2uv, wd2wdvec, wdvec2wd, uv2wd
+from .wind_dir import wd2uv, wd2wdvec, wdvec2wd, uv2wd, delta_wd
 from .pandas import PandasFileHelper
 from .helpers import all_subclasses
 from .dict import Dict

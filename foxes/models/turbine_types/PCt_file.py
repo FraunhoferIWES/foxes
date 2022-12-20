@@ -26,8 +26,6 @@ class PCtFile(TurbineType):
     rho: float, optional
         The air densitiy for which the data is valid
         or None for no correction
-    flag_yawm: bool
-        Flag for yaw misalignment consideration
     p_ct: float
         The exponent for yaw dependency of ct
     p_P: float
@@ -54,8 +52,6 @@ class PCtFile(TurbineType):
     rho: float
         The air densitiy for which the data is valid
         or None for no correction
-    flag_yawm: bool
-        Flag for yaw misalignment consideration
     WSCT : str
         The wind speed variable for ct lookup
     WSP : str
@@ -72,7 +68,6 @@ class PCtFile(TurbineType):
         col_P="P",
         col_ct="ct",
         rho=None,
-        flag_yawm=False,
         p_ct=1.0,
         p_P=1.88,
         var_ws_ct=FV.REWS2,
@@ -93,7 +88,6 @@ class PCtFile(TurbineType):
         self.col_P = col_P
         self.col_ct = col_ct
         self.rho = rho
-        self.flag_yawm = flag_yawm
         self.p_ct = p_ct
         self.p_P = p_P
         self.WSCT = var_ws_ct
@@ -196,15 +190,21 @@ class PCtFile(TurbineType):
             del rho
 
         # in yawed case, calc yaw corrected wind speed:
-        if self.flag_yawm:
+        if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
 
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:
             yawm = fdata[FV.YAWM][st_sel]
+            if np.any(np.isnan(yawm)):
+                raise ValueError(
+                    f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
+                )
             cosm = np.cos(yawm / 180 * np.pi)
-            rews2 *= (cosm**self.p_ct) ** 0.5
-            rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
+            if self.p_ct is not None:
+                rews2 *= (cosm**self.p_ct) ** 0.5
+            if self.p_P is not None:
+                rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
             del yawm, cosm
 
         out = {
@@ -242,5 +242,6 @@ class PCtFile(TurbineType):
 
         """
         if clear_mem:
-            del self._data, self.data_ws, self.data_P, self.data_ct
+            del self.data_ws, self.data_P, self.data_ct
+            self._data = None
         super().finalize(algo, results, clear_mem, verbosity=verbosity)

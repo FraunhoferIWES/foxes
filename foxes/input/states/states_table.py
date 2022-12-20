@@ -151,6 +151,7 @@ class StatesTable(States):
             )
         else:
             self._weights[:] = 1.0 / self._N
+            self._data[col_w] = self._weights[:, 0]
 
     def model_input_data(self, algo):
         """
@@ -297,10 +298,12 @@ class StatesTable(States):
             The verbosity level
 
         """
-        self._data = None
-        self._weights = None
-        self._N = None
-        self._tvars = None
+        if clear_mem:
+            self._data = None
+            self._weights = None
+            self._N = None
+            self._tvars = None
+
         super().finalize(algo, results, clear_mem, verbosity)
 
 

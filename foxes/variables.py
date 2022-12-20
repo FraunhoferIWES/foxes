@@ -1,6 +1,7 @@
 FARM = "farm"
 STATE = "state"
 TURBINE = "turbine"
+TNAME = "tname"
 POINT = "point"
 POINTS = "points"
 RPOINT = "rotor_point"
@@ -77,6 +78,7 @@ amb2var = {a: v for v, a in var2amb.items()}
 AMB_RPOINT_RESULTS = "amb_rpoint_res"
 
 K = "k"
+KB = "kb"
 KY = "ky"
 KZ = "kz"
 KTI = "kTI"

@@ -15,6 +15,9 @@ class kTI(TurbineModel):
     kTI : float, optional
         Uniform value for `kTI`. If not given it
         will be searched in farm data
+    kb : float, optional
+        Uniform value for `kb`. If not given it
+        will be searched in farm data, and zero by default
     ti_var : str
         The `TI` variable name
     ti_val : float, optional
@@ -23,12 +26,13 @@ class kTI(TurbineModel):
 
     """
 
-    def __init__(self, kTI=None, ti_var=FV.TI, ti_val=None):
+    def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None):
         super().__init__()
 
         self.ti_var = ti_var
-        setattr(self, FV.KTI, kTI)
         setattr(self, ti_var, ti_val)
+        setattr(self, FV.KTI, kTI)
+        setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
         return super().__repr__() + f"(kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
@@ -77,12 +81,13 @@ class kTI(TurbineModel):
 
         """
         kTI = self.get_data(FV.KTI, fdata, st_sel)
+        kb = self.get_data(FV.KB, fdata, st_sel)
         ti = self.get_data(self.ti_var, fdata, st_sel)
 
         k = fdata.get(
             FV.K, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
         )
 
-        k[st_sel] = kTI * ti
+        k[st_sel] = kTI * ti + kb
 
         return {FV.K: k}

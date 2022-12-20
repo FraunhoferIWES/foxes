@@ -13,7 +13,8 @@ def add_from_csv(
     col_H=None,
     col_D=None,
     col_id=None,
-    cols_models=None,
+    cols_models_pre=None,
+    cols_models_post=None,
     turbine_base_name="T",
     turbine_ids=None,
     turbine_base_name_count_shift=False,
@@ -45,8 +46,12 @@ def add_from_csv(
         The rotor diameter column
     col_id : str, optional
         The id column
-    cols_models : list of str, optional
-        The turbine model columns
+    cols_models_pre : list of str, optional
+        The turbine model columns, entered before
+        turbine_models
+    cols_models_post : list of str, optional
+        The turbine model columns, entered after
+        turbine_models
     turbine_base_name : str, optional
         The turbine base name, only used
         if col_name is None
@@ -83,8 +88,13 @@ def add_from_csv(
         else:
             tid = None
 
-        hmodels = [] if cols_models is None else data.loc[i, cols_models].tolist()
+        hmodels = (
+            [] if cols_models_pre is None else data.loc[i, cols_models_pre].tolist()
+        )
         hmodels += tmodels
+        hmodels += (
+            [] if cols_models_post is None else data.loc[i, cols_models_post].tolist()
+        )
 
         farm.add_turbine(
             Turbine(

@@ -1,4 +1,5 @@
 from .output import Output
+import foxes.variables as FV
 
 
 class ResultsWriter(Output):
@@ -22,7 +23,11 @@ class ResultsWriter(Output):
     def __init__(self, farm_results=None, data=None):
 
         if farm_results is not None and data is None:
-            self.data = farm_results.to_dataframe()
+            self.data = farm_results.to_dataframe().reset_index()
+            self.data[FV.TNAME] = farm_results[FV.TNAME].to_numpy()[
+                self.data[FV.TURBINE]
+            ]
+            self.data.set_index([FV.STATE, FV.TURBINE], inplace=True)
         elif farm_results is None and data is not None:
             self.data = data
         else:
@@ -34,6 +39,7 @@ class ResultsWriter(Output):
         self,
         file_path,
         variables=None,
+        turbine_names=False,
         verbosity=1,
         **kwargs,
     ):
@@ -49,10 +55,12 @@ class ResultsWriter(Output):
             the keys are the foxes variables and the values
             the column names. If None, then all data will be
             written.
+        turbine_names : bool
+            Use turbine names instead of turbine indices
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
-            Additional parameters for Output.write
+            Additional parameters for Output.write()
 
         """
         if verbosity:
@@ -69,9 +77,11 @@ class ResultsWriter(Output):
                 data = data[list(variables.keys())].rename(variables, axis=1)
             if len(inds):
                 for s, ns in inds.items():
-                    l = self.data.index.names.index(s)
                     data = data.rename_axis(index={s: ns})
         else:
             data = self.data[list(variables)]
+
+        if turbine_names:
+            data = data.reset_index().set_index([FV.STATE, FV.TNAME])
 
         super().write(file_path, data, **kwargs)
