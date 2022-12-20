@@ -85,7 +85,7 @@ class PCtTwoFiles(TurbineType):
         var_ws_P=FV.REWS3,
         pd_file_read_pars_P={},
         pd_file_read_pars_ct={},
-        **parameters
+        **parameters,
     ):
 
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
@@ -225,7 +225,9 @@ class PCtTwoFiles(TurbineType):
             # and smoothly deals with full load region:
             yawm = fdata[FV.YAWM][st_sel]
             if np.any(np.isnan(yawm)):
-                raise ValueError(f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?")
+                raise ValueError(
+                    f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
+                )
             cosm = np.cos(yawm / 180 * np.pi)
             if self.p_ct is not None:
                 rews2 *= (cosm**self.p_ct) ** 0.5

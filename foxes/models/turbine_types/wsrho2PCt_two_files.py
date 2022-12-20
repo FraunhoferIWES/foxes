@@ -249,7 +249,9 @@ class WsRho2PCtTwoFiles(TurbineType):
                 # and smoothly deals with full load region:
                 yawm = fdata[FV.YAWM][st_sel_P]
                 if np.any(np.isnan(yawm)):
-                                raise ValueError(f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?")
+                    raise ValueError(
+                        f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
+                    )
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_P) ** (1.0 / 3.0)
                 del yawm, cosm
@@ -289,7 +291,9 @@ class WsRho2PCtTwoFiles(TurbineType):
                 # and smoothly deals with full load region:
                 yawm = fdata[FV.YAWM][st_sel_ct]
                 if np.any(np.isnan(yawm)):
-                                raise ValueError(f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?")
+                    raise ValueError(
+                        f"{self.name}: Found NaN values for variable '{FV.YAWM}'. Maybe change order in turbine_models?"
+                    )
                 cosm = np.cos(yawm / 180 * np.pi)
                 qts[:, 0] *= (cosm**self.p_ct) ** 0.5
                 del yawm, cosm

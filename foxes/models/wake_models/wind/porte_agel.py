@@ -4,6 +4,7 @@ from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class PorteAgelModel:
     """
     Common calculations for the wake model and the wake
@@ -20,7 +21,7 @@ class PorteAgelModel:
         model parameter used to determine onset of far wake region
     beta : float
         model parameter used to determine onset of far wake region
-    
+
     Attributes
     ----------
     ct_max : float
@@ -54,7 +55,7 @@ class PorteAgelModel:
         self.ct_max = ct_max
         self.alpha = alpha
         self.beta = beta
-    
+
     @property
     def pars(self):
         """
@@ -67,16 +68,16 @@ class PorteAgelModel:
 
         """
         return dict(alpha=self.alpha, beta=self.beta, ct_max=self.ct_max)
-    
+
     def calc_data(
-            self, 
-            mdata,
-            fdata, 
-            states_source_turbine,
-            x,
-            gamma,
-            k,
-        ):
+        self,
+        mdata,
+        fdata,
+        states_source_turbine,
+        x,
+        gamma,
+        k,
+    ):
         """
         Calculate common model data, store it in mdata.
 
@@ -105,8 +106,8 @@ class PorteAgelModel:
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FV.STATE][0], 
-            states_source_turbine[0], 
+            mdata[FV.STATE][0],
+            states_source_turbine[0],
             x.shape,
         )
 
@@ -142,27 +143,27 @@ class PorteAgelModel:
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
-            theta = 0.3*gamma/cosg * (
-                1 - np.sqrt(1 - ct*cosg)
-            )
+            theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
 
             # calculate x0, Eq. (7.3):
             alpha = self.alpha
             beta = self.beta
             sqomct = np.sqrt(1 - ct)
-            x0 = D * ( cosg * (1 + sqomct ) ) / (
-                np.sqrt(2) * ( 4*alpha*ti + 2*beta*(1 - sqomct))
+            x0 = (
+                D
+                * (cosg * (1 + sqomct))
+                / (np.sqrt(2) * (4 * alpha * ti + 2 * beta * (1 - sqomct)))
             )
             out[self.X0] = x0
 
             # calcuate sigma, Eq. (7.2):
-            sigma_y0 = D*cosg/np.sqrt(8)
-            simga_z0 = D/np.sqrt(8)
-            sigma_y = k*(x-x0) + sigma_y0
-            sigma_z = k*(x-x0) + simga_z0
+            sigma_y0 = D * cosg / np.sqrt(8)
+            simga_z0 = D / np.sqrt(8)
+            sigma_y = k * (x - x0) + sigma_y0
+            sigma_z = k * (x - x0) + simga_z0
 
             # calc near wake data:
-            near = (x < x0)
+            near = x < x0
             out[self.NEAR] = near
             if np.any(near):
 
@@ -170,22 +171,22 @@ class PorteAgelModel:
                 wsn = ws[near]
                 ctn = ct[near]
                 cosgn = cosg[near]
-                
+
                 # initial velocity deficits, Eq. (6.4):
-                uR = 0.5*ctn*cosgn/(1 - np.sqrt(1 - ctn*cosgn))
+                uR = 0.5 * ctn * cosgn / (1 - np.sqrt(1 - ctn * cosgn))
 
                 # constant potential core value, Eq. (6.7):
-                u0 = np.sqrt(1-ctn)
+                u0 = np.sqrt(1 - ctn)
 
                 # compute potential core shape, for later, Eq. (6.13):
                 d = x[near] / x0[near]
-                r_pc_0 = 0.5 * D[near] * np.sqrt(uR/u0) # radius at x=0
-                r_pc = r_pc_0 - d*r_pc_0 # potential core radius
+                r_pc_0 = 0.5 * D[near] * np.sqrt(uR / u0)  # radius at x=0
+                r_pc = r_pc_0 - d * r_pc_0  # potential core radius
 
                 # memorize near wake data:
                 out[self.R_PC] = r_pc
-                out[self.R_PC_S] = d*sigma_y0[near]
-                out[self.DELTA_NEAR] = theta[near]*x[near]
+                out[self.R_PC_S] = d * sigma_y0[near]
+                out[self.DELTA_NEAR] = theta[near] * x[near]
                 out[self.AMPL_NEAR] = u0 - 1
 
                 # cleanup:
@@ -209,29 +210,32 @@ class PorteAgelModel:
 
                 # calculate delta, Eq. (7.4):
                 sqct = np.sqrt(ct)
-                sqsd = np.sqrt(8*sigma_y*sigma_z/(cosg*D**2))
-                delta = theta*x0  + (
-                    D*theta/14.7*np.sqrt(cosg/(ct*k**2)) *(
-                        2.9 + 1.3*sqomct - ct
-                    ) * np.log(
-                        ((1.6 + sqct)*(1.6*sqsd - sqct)) /
-                        ((1.6 - sqct)*(1.6*sqsd + sqct))
+                sqsd = np.sqrt(8 * sigma_y * sigma_z / (cosg * D**2))
+                delta = theta * x0 + (
+                    D
+                    * theta
+                    / 14.7
+                    * np.sqrt(cosg / (ct * k**2))
+                    * (2.9 + 1.3 * sqomct - ct)
+                    * np.log(
+                        ((1.6 + sqct) * (1.6 * sqsd - sqct))
+                        / ((1.6 - sqct) * (1.6 * sqsd + sqct))
                     )
-                ) 
+                )
 
                 # calculate amplitude, Eq. (7.1):
-                ampl = np.sqrt(1 - ct*cosg*D**2/(8*sigma_y*sigma_z)) - 1
-                
+                ampl = np.sqrt(1 - ct * cosg * D**2 / (8 * sigma_y * sigma_z)) - 1
+
                 # memorize far wake data:
                 out[self.AMPL_FAR] = ampl
                 out[self.DELTA_FAR] = delta
                 out[self.SIGMA_Y_FAR] = sigma_y
                 out[self.SIGMA_Z_FAR] = sigma_z
-        
+
         # update mdata:
         out[self.SP_SEL] = sp_sel
         mdata[self.MDATA_KEY] = out
-    
+
     def has_data(self, mdata, states_source_turbine, x):
         """
         Check if data exists
@@ -245,7 +249,7 @@ class PorteAgelModel:
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The x values, shape: (n_states, n_points)
-        
+
         Returns
         -------
         check : bool
@@ -253,8 +257,8 @@ class PorteAgelModel:
 
         """
         check = (
-            mdata[FV.STATE][0], 
-            states_source_turbine[0], 
+            mdata[FV.STATE][0],
+            states_source_turbine[0],
             x.shape,
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
@@ -284,13 +288,14 @@ class PorteAgelModel:
         """
         del mdata[self.MDATA_KEY]
 
+
 class PorteAgelWake(DistSlicedWakeModel):
     """
     The Bastankhah PorteAgel wake model
 
     Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
 
-    
+
     Parameters
     ----------
     superposition : dict
@@ -327,7 +332,7 @@ class PorteAgelWake(DistSlicedWakeModel):
         self.model = PorteAgelModel(ct_max, alpha, beta)
 
         setattr(self, FV.K, k)
-        setattr(self, FV.YAWM, 0.) 
+        setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
         s = super().__repr__()
@@ -403,7 +408,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             # get gamma:
             gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm")[st_sel][:, None]
-            gamma *= np.pi/180
+            gamma *= np.pi / 180
 
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -440,7 +445,7 @@ class PorteAgelWake(DistSlicedWakeModel):
                 r = r[sel_oc]
                 r_pc = r_pc[sel_oc[0]]
                 s = s[sel_oc[0]]
-                rfactor[sel_oc] = np.exp(-0.5*((r-r_pc)/s)**2)
+                rfactor[sel_oc] = np.exp(-0.5 * ((r - r_pc) / s) ** 2)
 
                 # set deficit, Eq. (6.13):
                 wdeltas[FV.WS][near] = ampl[:, None] * rfactor
@@ -453,15 +458,19 @@ class PorteAgelWake(DistSlicedWakeModel):
 
                 # collect data:
                 ampl = self.model.get_data(PorteAgelModel.AMPL_FAR, mdata)[:, None]
-                sigma_y = self.model.get_data(PorteAgelModel.SIGMA_Y_FAR, mdata)[:, None]
-                sigma_z = self.model.get_data(PorteAgelModel.SIGMA_Z_FAR, mdata)[:, None]
+                sigma_y = self.model.get_data(PorteAgelModel.SIGMA_Y_FAR, mdata)[
+                    :, None
+                ]
+                sigma_z = self.model.get_data(PorteAgelModel.SIGMA_Z_FAR, mdata)[
+                    :, None
+                ]
 
                 # set deficit, Eq. (7.1):
                 y = yz[..., 0]
                 z = yz[..., 1]
                 wdeltas[FV.WS][far] = ampl * (
-                    np.exp(-0.5*(y/sigma_y)**2) *
-                    np.exp(-0.5*(z/sigma_z)**2)
+                    np.exp(-0.5 * (y / sigma_y) ** 2)
+                    * np.exp(-0.5 * (z / sigma_z) ** 2)
                 )
 
         return wdeltas, sp_sel

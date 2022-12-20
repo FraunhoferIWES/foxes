@@ -46,14 +46,14 @@ class TableFactors(TurbineModel):
     """
 
     def __init__(
-            self, 
-            data_source,
-            row_var,
-            col_var,
-            output_vars,
-            pd_file_read_pars={},
-            **ipars,
-        ):
+        self,
+        data_source,
+        row_var,
+        col_var,
+        output_vars,
+        pd_file_read_pars={},
+        **ipars,
+    ):
         super().__init__()
 
         self.data_source = data_source
@@ -114,7 +114,7 @@ class TableFactors(TurbineModel):
             self._data = self._data.to_numpy(FC.DTYPE)
 
         super().initialize(algo, st_sel, verbosity)
-        
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.
@@ -147,11 +147,17 @@ class TableFactors(TurbineModel):
         qts[:, 1] = fdata[self.col_var][st_sel]
 
         try:
-            factors = interpn((self._rvals, self._cvals), self._data, qts, **self._ipars)
+            factors = interpn(
+                (self._rvals, self._cvals), self._data, qts, **self._ipars
+            )
         except ValueError as e:
             print(f"\nDATA        : ({self.row_var}, {self.col_var})")
-            print(f"DATA BOUNDS : ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})")
-            print(f"VALUE BOUNDS: ({np.min(qts[:, 0]):.4f}, {np.min(qts[:, 1]):.4f}) -- ({np.max(qts[:, 0]):.4f}, {np.max(qts[:, 1]):.4f})\n")
+            print(
+                f"DATA BOUNDS : ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})"
+            )
+            print(
+                f"VALUE BOUNDS: ({np.min(qts[:, 0]):.4f}, {np.min(qts[:, 1]):.4f}) -- ({np.max(qts[:, 0]):.4f}, {np.max(qts[:, 1]):.4f})\n"
+            )
             raise e
 
         for v in self.output_farm_vars(algo):
