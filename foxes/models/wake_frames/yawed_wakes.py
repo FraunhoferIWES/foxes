@@ -160,7 +160,7 @@ class YawedWakes(WakeFrame):
 
         # get gamma:
         gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm")[st_sel][:, None]
+        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
         gamma *= np.pi / 180
 
         # get k:
