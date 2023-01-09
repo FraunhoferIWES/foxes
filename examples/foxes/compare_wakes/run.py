@@ -190,7 +190,7 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
