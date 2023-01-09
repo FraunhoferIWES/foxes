@@ -136,7 +136,7 @@ class Model(metaclass=ABCMeta):
         data,
         st_sel=None,
         upcast=None,
-        data_prio=True,
+        data_prio=False,
         accept_none=False,
     ):
         """
@@ -170,15 +170,15 @@ class Model(metaclass=ABCMeta):
             if s == "self":
                 try:
                     out = getattr(self, variable)
-                    break
                 except AttributeError:
                     pass
             else:
                 try:
                     out = data[variable]
-                    break
                 except KeyError:
                     pass
+            if out is not None:
+                break
 
         if out is None:
             raise KeyError(

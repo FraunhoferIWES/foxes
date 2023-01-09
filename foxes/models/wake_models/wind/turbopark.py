@@ -331,7 +331,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         if np.any(sp_sel):
 
             # apply selection:
-            x = x[sp_sel]
+            #x = x[sp_sel]
             ct = ct[sp_sel]
 
             # get D:
@@ -346,8 +346,10 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # get TI by integratiion along centre line:
             print("HERE TURBOPARK")
-            spts, ti_ix = algo.wake_frame.calc_integral(algo, mdata, fdata, [FV.TI], states_source_turbine)
-            print("TI_IX",ti_ix.shape, spts.shape, x.shape)
+            ti_ix = algo.wake_frame.calc_centreline_integral(algo, mdata, fdata, 
+                                states_source_turbine, [FV.AMB_TI,FV.TI], x, 10)
+            print(ti_ix)
+            print("TI_IX",ti_ix.shape, x.shape)
             quit()
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))

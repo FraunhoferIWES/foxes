@@ -57,6 +57,81 @@ class Streamlines(WakeFrame):
         self.PRES = self.var("PRES")
         super().initialize(algo, verbosity)
 
+    def _init_data(self, mdata, fdata):
+
+        # prepare:
+        n_states = mdata.n_states
+        n_turbines = mdata.n_turbines
+
+        # x, y, z, u, v, w, len
+        mdata[self.DATA] = np.full(
+            (n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE
+        )
+        mdata[self.CNTR] = 1
+
+        # set streamline start point data (rotor centre):
+        mdata[self.DATA][:, :, 0, :3] = fdata[FV.TXYH]
+        mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
+        mdata[self.DATA][:, :, 0, 5:] = 0.0
+
+    def _add_next_point(self, algo, mdata, fdata):
+        """
+        Helper function, adds next point to streamlines.
+        """
+
+        # prepare:
+        n_states = mdata.n_states
+        n_turbines = mdata.n_turbines
+        n_spts = mdata[self.CNTR]
+        data = mdata[self.DATA]
+        spts = data[..., :3]
+        sn = data[..., 3:6]
+        slen = data[..., 6]
+
+        # ensure storage size:
+        if n_spts == data.shape[2]:
+            data = np.append(
+                data,
+                np.full(
+                    (n_states, n_turbines, self.n_delstor, 7),
+                    np.nan,
+                    dtype=FC.DTYPE,
+                ),
+                axis=2,
+            )
+
+            mdata[self.DATA] = data
+            spts = data[..., :3]
+            sn = data[..., 3:6]
+            slen = data[..., 6]
+
+        # calculate next point:
+        p0 = spts[:, :, n_spts - 1]
+        n0 = sn[:, :, n_spts - 1]
+        spts[:, :, n_spts] = p0 + self.step * n0
+        slen[:, :, n_spts] = slen[:, :, n_spts - 1] + self.step
+        newpts = spts[:, :, n_spts]
+        del p0, n0
+
+        # calculate next tangential vector:
+        svars = algo.states.output_point_vars(algo)
+        pdata = {FV.POINTS: newpts}
+        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata.update(
+            {
+                v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                for v in svars
+            }
+        )
+        pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
+        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        data[:, :, n_spts, 5] = 0.0
+        data[:, :, n_spts, 3:5] = wd2uv(
+            algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
+        )
+
+        return newpts
+
     def _calc_coos(self, algo, mdata, fdata, points, tcase=False):
         """
         Helper function, calculates streamline coordinates
@@ -84,54 +159,14 @@ class Streamlines(WakeFrame):
         inds = np.argmin(dists, axis=3)
         dists = np.take_along_axis(dists, inds[:, :, :, None], axis=3)[..., 0]
 
-        # add streamline points, as many as needed:
+        # calc streamline points, as many as needed:
         done = inds < n_spts - 1
         while not np.all(done):
 
             # print("CALC STREAMLINES, TODO", np.sum(~done))
 
-            # ensure storage size:
-            if n_spts == data.shape[2]:
-                data = np.append(
-                    data,
-                    np.full(
-                        (n_states, n_turbines, self.n_delstor, 7),
-                        np.nan,
-                        dtype=FC.DTYPE,
-                    ),
-                    axis=2,
-                )
-
-                mdata[self.DATA] = data
-                spts = data[..., :3]
-                sn = data[..., 3:6]
-                slen = data[..., 6]
-
-            # calculate next point:
-            p0 = spts[:, :, n_spts - 1]
-            n0 = sn[:, :, n_spts - 1]
-            spts[:, :, n_spts] = p0 + self.step * n0
-            slen[:, :, n_spts] = slen[:, :, n_spts - 1] + self.step
-            newpts = spts[:, :, n_spts]
-            del p0, n0
-
-            # calculate next tangential vector:
-            svars = algo.states.output_point_vars(algo)
-            pdata = {FV.POINTS: newpts}
-            pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
-            pdata.update(
-                {
-                    v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-                    for v in svars
-                }
-            )
-            pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-            pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
-            data[:, :, n_spts, 5] = 0.0
-            data[:, :, n_spts, 3:5] = wd2uv(
-                algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
-            )
-            del pdims, svars, pdata
+            # add next streamline point:
+            newpts = self._add_next_point(algo, mdata, fdata)
 
             # evaluate distance:
             d = np.linalg.norm(points[:, None] - newpts[:, :, None], axis=-1)
@@ -173,22 +208,14 @@ class Streamlines(WakeFrame):
 
         return coos
 
-    def _init_data(self, mdata, fdata):
-
-        # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
-
-        # x, y, z, u, v, w, len
-        mdata[self.DATA] = np.full(
-            (n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE
-        )
-        mdata[self.CNTR] = 1
-
-        # set streamline start point data (rotor centre):
-        mdata[self.DATA][:, :, 0, :3] = fdata[FV.TXYH]
-        mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
-        mdata[self.DATA][:, :, 0, 5:] = 0.0
+    def _ensure_min_length(self, algo, mdata, fdata, length):
+        """
+        Helper function, ensures minimal length of streamlines
+        """
+        data = mdata[self.DATA]
+        slen = data[..., 6]
+        while np.min(slen) < length:
+            self._add_next_point(algo, mdata, fdata)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -275,17 +302,44 @@ class Streamlines(WakeFrame):
 
         return mdata[self.PRES][pid][stsel]
 
-    def calc_integral(self, algo, mdata, fdata, vars, states_source_turbine):
+    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+        """
+        Gets the points along the centreline for given
+        values of x.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        x : numpy.ndarray
+            The wake frame x coordinates, shape: (n_states, n_points)
+        
+        Returns
+        -------
+        points : numpy.ndarray
+            The centreline points, shape: (n_states, n_points, 3)
+
+        """
 
         # prepare:
         n_states = mdata.n_states
         data = mdata[self.DATA][range(n_states), states_source_turbine]
-        n_vars = len(vars)
         n_spts = data.shape[1]
         n_points = n_spts - 1
-        vrs = [FV.amb2var.get(v, v) for v in vars]
         points = data[:, 1:, :3]
         
+        # calculate long enough streamlines:
+        xmax = np.max(x)
+        self.ensure_min_length(self, algo, mdata, fdata, xmax)
+
+
         # run ambient calculation:
         pdata = {FV.POINTS: points}
         pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
@@ -328,4 +382,49 @@ class Streamlines(WakeFrame):
         
         return data[:, :, :3], results
 
-        
+    def calc_centreline_integral(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            states_source_turbine,
+            variables,
+            x,
+            dx,
+            **ipars,
+        ):
+        """
+        Integrates variables along the centreline.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        variables : list of str
+            The variables to be integrated
+        x : numpy.ndarray
+            The wake frame x coordinates of the upper integral bounds, 
+            shape: (n_states, n_points)
+        dx : float
+            The step size of the integral
+        ipars : dict, optional
+            Additional interpolation parameters
+
+        Returns
+        -------
+        results : numpy.ndarray
+            The integration results, shape: (n_states, n_points, n_vars)
+
+        """
+        if dx != self.step:
+            raise ValueError(f"Wake frame '{self.name}': Integral step size dx = {dx} does not match streamline step size {self.step}")
+
+        return super().calc_centreline_integral(algo, mdata, fdata, states_source_turbine,
+                                                variables, x, dx, **ipars)
