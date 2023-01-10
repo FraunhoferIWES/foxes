@@ -179,7 +179,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_linear", "PorteAgel_linear"],
+        default=["Bastankhah_linear_k004", "PorteAgel_linear_k004"],
         nargs="+",
     )
     parser.add_argument(

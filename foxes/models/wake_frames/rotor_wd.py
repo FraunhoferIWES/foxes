@@ -130,7 +130,7 @@ class RotorWD(WakeFrame):
         stsel = (np.arange(n_states), states_source_turbine)
 
         wd = fdata[self.var_wd][stsel]
-        n = np.append(wd2uv(wd, axis=-1), np.ones_like(wd)[:, None], axis=-1)
+        n = np.append(wd2uv(wd, axis=-1), np.zeros_like(wd)[:, None], axis=-1)
 
         xyz = fdata[FV.TXYH][stsel]
         return xyz[:, None, :] + x[:, :, None] * n[:, None, :]

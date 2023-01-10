@@ -137,7 +137,8 @@ class BastankhahWake(GaussianWakeModel):
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
             k = k[sp_sel]
-
+            print(f"WAKE {self.name} k")
+            print(k)
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
             sblim = 1 / (np.sqrt(8) * self.sbeta_factor)

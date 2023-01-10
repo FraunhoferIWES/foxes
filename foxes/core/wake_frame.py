@@ -147,7 +147,7 @@ class WakeFrame(Model):
         n_vars = len(vrs)
 
         # calc evaluation points:
-        xmin = 0.
+        xmin = np.min(x)
         xmax = np.max(x)
         n_steps = int((xmax - xmin)/dx + 0.5)
         n_ix = n_steps + 1

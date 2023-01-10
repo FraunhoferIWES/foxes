@@ -146,11 +146,13 @@ class TurbOParkWake(GaussianWakeModel):
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
             k = k[sp_sel]
+            print(f"WAKE {self.name} k")
+            print(k)
 
             # get TI:
-            AMB_TI = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            AMB_TI[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
-            AMB_TI = AMB_TI[sp_sel]
+            ati = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            ati[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
+            ati = ati[sp_sel]
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
@@ -158,13 +160,13 @@ class TurbOParkWake(GaussianWakeModel):
             sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
-            alpha = self.c1 * AMB_TI
-            beta = self.c2 * AMB_TI / np.sqrt(ct)
+            alpha = self.c1 * ati
+            beta = self.c2 * ati / np.sqrt(ct)
 
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
-                + (k * AMB_TI / beta)
+                + (k/beta)
                 * (
                     np.sqrt((alpha + beta * x / D) ** 2 + 1)
                     - np.sqrt(1 + alpha**2)
@@ -214,51 +216,61 @@ class TurbOParkWakeIX(GaussianWakeModel):
         The superpositions. Key: variable name str,
         value: The wake superposition model name,
         will be looked up in model book
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
+    dx : float
+        The step size of the integral
+    A : float, optional
+        The wake growth parameter A.
     sbeta_factor : float
         Factor multiplying sbeta
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-    c1 : float
-        Factor from Frandsen turbulence model
-    c2 : float
-        Factor from Frandsen turbulence model
+    ti_var :  str
+        The TI variable
+    ipars : dict, optional
+        Additional parameters for centreline integration
+
 
     Attributes
     ----------
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
+    dx : float
+        The step size of the integral
+    A : float
+        The wake growth parameter A.
     sbeta_factor : float
         Factor multiplying sbeta
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-    c1 : float
-        Factor from Frandsen turbulence model
-    c2 : float
-        Factor from Frandsen turbulence model
+    ti_var :  str
+        The TI variable
+    ipars : dict
+        Additional parameters for centreline integration
 
     """
 
     def __init__(
-        self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
+        self, 
+        superposition, 
+        dx,
+        A, 
+        sbeta_factor=0.25, 
+        ct_max=0.9999, 
+        ti_var=FV.TI,
+        **ipars,
     ):
         super().__init__(superpositions={FV.WS: superposition})
 
+        self.dx = dx
+        self.A = A
         self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
-        self.c1 = c1
-        self.c2 = c2
-
-        setattr(self, FV.K, k)
+        self.ti_var = ti_var
+        self.ipars = ipars
 
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -339,47 +351,24 @@ class TurbOParkWakeIX(GaussianWakeModel):
             D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
             D = D[sp_sel]
 
-            # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
-            k = k[sp_sel]
-
             # get TI by integratiion along centre line:
-            print("HERE TURBOPARK")
             ti_ix = algo.wake_frame.calc_centreline_integral(algo, mdata, fdata, 
-                                states_source_turbine, [FV.AMB_TI,FV.TI], x, 10)
-            print(ti_ix)
-            print("TI_IX",ti_ix.shape, x.shape)
-            quit()
+                                states_source_turbine, [self.ti_var], x, 
+                                dx=self.dx, **self.ipars)[:, :, 0]
+
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
             sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
             sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
-            alpha = self.c1 * AMB_TI
-            beta = self.c2 * AMB_TI / np.sqrt(ct)
-
-            # calculate sigma (eqn 4)
-            sigma = D * (
-                epsilon
-                + (k * AMB_TI / beta)
-                * (
-                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
-                    - np.sqrt(1 + alpha**2)
-                    - np.log((np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1) * alpha)
-                    / (np.sqrt(1 + alpha**2) + 1)
-                    * (alpha + beta * x / D)
-                )
-            )
+            # calculate sigma (eqn 1, plus epsilon from eqn 4 for x = 0)
+            sigma = D * epsilon + self.A * ti_ix[sp_sel]
 
             del (
                 x,
-                k,
                 sbeta,
                 sblim,
-                alpha,
-                beta,
                 epsilon,
             )
 
