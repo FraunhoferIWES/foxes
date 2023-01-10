@@ -223,8 +223,8 @@ class ModelBook:
                 k=0.04, superposition=s
             )
             
-            self.wake_models[f"TurbOParkIX_{s}_A04_dx10"] = fm.wake_models.wind.TurbOParkWakeIX(
-                A=0.4, superposition=s, dx=10.0
+            self.wake_models[f"TurbOParkIX_{s}_A004_dx10"] = fm.wake_models.wind.TurbOParkWakeIX(
+                A=0.04, superposition=s, dx=10.0
             )
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
