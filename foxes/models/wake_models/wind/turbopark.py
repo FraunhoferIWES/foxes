@@ -166,7 +166,7 @@ class TurbOParkWake(GaussianWakeModel):
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
-                + (k*ati/beta)
+                + k*ati/beta
                 * (
                     np.sqrt((alpha + beta * x / D) ** 2 + 1)
                     - np.sqrt(1 + alpha**2)
