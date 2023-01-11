@@ -17,9 +17,8 @@ class TurbOParkWake(GaussianWakeModel):
         The superpositions. Key: variable name str,
         value: The wake superposition model name,
         will be looked up in model book
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
+    A : float
+        The wake growth parameter A.
     sbeta_factor : float
         Factor multiplying sbeta
     ct_max : float
@@ -32,9 +31,8 @@ class TurbOParkWake(GaussianWakeModel):
 
     Attributes
     ----------
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
+    A : float
+        The wake growth parameter A.
     sbeta_factor : float
         Factor multiplying sbeta
     ct_max : float
@@ -48,20 +46,19 @@ class TurbOParkWake(GaussianWakeModel):
     """
 
     def __init__(
-        self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
+        self, superposition, A, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
     ):
         super().__init__(superpositions={FV.WS: superposition})
 
+        self.A = A
         self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
 
-        setattr(self, FV.K, k)
-
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"(A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -142,13 +139,6 @@ class TurbOParkWake(GaussianWakeModel):
             D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
             D = D[sp_sel]
 
-            # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
-            k = k[sp_sel]
-            print(f"WAKE {self.name} k")
-            print(k)
-
             # get TI:
             ati = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ati[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
@@ -166,7 +156,7 @@ class TurbOParkWake(GaussianWakeModel):
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
-                + k*ati/beta
+                + self.A*ati/beta
                 * (
                     np.sqrt((alpha + beta * x / D) ** 2 + 1)
                     - np.sqrt(1 + alpha**2)
@@ -178,7 +168,6 @@ class TurbOParkWake(GaussianWakeModel):
 
             del (
                 x,
-                k,
                 sbeta,
                 sblim,
                 alpha,

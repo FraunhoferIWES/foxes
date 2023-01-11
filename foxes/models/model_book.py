@@ -213,19 +213,21 @@ class ModelBook:
                 superposition=s, k=0.04
             )
 
-            self.wake_models[f"TurbOPark_{s}"] = fm.wake_models.wind.TurbOParkWake(
-                superposition=s
+            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.02, superposition=s
             )
-            self.wake_models[f"TurbOPark_{s}_k002"] = fm.wake_models.wind.TurbOParkWake(
-                k=0.02, superposition=s
-            )
-            self.wake_models[f"TurbOPark_{s}_k004"] = fm.wake_models.wind.TurbOParkWake(
-                k=0.04, superposition=s
+            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.04, superposition=s
             )
 
-            self.wake_models[f"TurbOParkIX_{s}_A04_dx10"] = fm.wake_models.wind.TurbOParkWakeIX(
-                A=0.4, superposition=s, dx=10.0
-            )
+            As = [0.02, 0.04, 0.2, 0.4]
+            dxs = [1., 5., 10., 50., 100.]
+            for A in As:
+                for dx in dxs:
+                    a = str(A).replace(".", "")
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{int(dx)}"] = fm.wake_models.wind.TurbOParkWakeIX(
+                        A=A, superposition=s, dx=dx
+                    )
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:

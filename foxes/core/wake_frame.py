@@ -147,7 +147,7 @@ class WakeFrame(Model):
         n_vars = len(vrs)
 
         # calc evaluation points:
-        xmin = np.min(x)
+        xmin = 0.
         xmax = np.max(x)
         n_steps = int((xmax - xmin)/dx + 0.5)
         n_ix = n_steps + 1
@@ -201,6 +201,7 @@ class WakeFrame(Model):
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
         qts = qts.reshape(n_states*n_points, 2)
-        results = interpn((np.arange(n_states), xs), iresults, qts, **ipars)
+        results = interpn((np.arange(n_states), xs), iresults, qts, bounds_error=False, 
+                            fill_value=0., **ipars)
 
         return results.reshape(n_states, n_points, n_vars)
