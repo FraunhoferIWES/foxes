@@ -20,6 +20,9 @@ class Streamlines(WakeFrame):
         The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
+    cl_ipars : dict
+        Interpolation parameters for centre line
+        point interpolation
 
     Attributes
     ----------
@@ -29,14 +32,18 @@ class Streamlines(WakeFrame):
         The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
+    cl_ipars : dict
+        Interpolation parameters for centre line
+        point interpolation
 
     """
 
-    def __init__(self, step, ix_vars=[], n_delstor=100):
+    def __init__(self, step, ix_vars=[], n_delstor=100, cl_ipars={}):
         super().__init__()
         self.step = step
         self.ix_vars = ix_vars
         self.n_delstor = n_delstor
+        self.cl_ipars = cl_ipars
 
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
@@ -346,7 +353,8 @@ class Streamlines(WakeFrame):
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
         qts = qts.reshape(n_states*n_points, 2)
-        results = interpn((np.arange(n_states), xs), spts, qts, bounds_error=False, 
-                            fill_value=0.)
+        ipars = dict(bounds_error=False, fill_value=0.)
+        ipars.update(self.cl_ipars)
+        results = interpn((np.arange(n_states), xs), spts, qts, **ipars)
 
         return results.reshape(n_states, n_points, 3)
