@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interpn
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
@@ -213,9 +214,11 @@ class Streamlines(WakeFrame):
         Helper function, ensures minimal length of streamlines
         """
         data = mdata[self.DATA]
-        slen = data[..., 6]
+        slen = data[:, :, mdata[self.CNTR]-1, 6]
         while np.min(slen) < length:
             self._add_next_point(algo, mdata, fdata)
+            mdata[self.CNTR] += 1
+            slen = data[:, :, mdata[self.CNTR]-1, 6]
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -327,104 +330,23 @@ class Streamlines(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-
-        # prepare:
-        n_states = mdata.n_states
-        data = mdata[self.DATA][range(n_states), states_source_turbine]
-        n_spts = data.shape[1]
-        n_points = n_spts - 1
-        points = data[:, 1:, :3]
-        
         # calculate long enough streamlines:
         xmax = np.max(x)
-        self.ensure_min_length(self, algo, mdata, fdata, xmax)
+        self._ensure_min_length(algo, mdata, fdata, xmax)
 
+        # get streamline points:
+        n_states, n_points = x.shape
+        data = mdata[self.DATA][range(n_states), states_source_turbine]
+        spts = data[:, :, :3]
+        n_spts = spts.shape[1]
+        xs = self.step * np.arange(n_spts)
 
-        # run ambient calculation:
-        pdata = {FV.POINTS: points}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
-        pdata.update(
-            {
-                v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
-                for v in vrs
-            }
-        )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in vrs})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
-        amb2var = algo.SetAmbPointResults()
-        amb2var.initialize(algo, verbosity=0)
-        res = amb2var.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
-        del pdims, res, amb2var
+        # interpolate to x of interest:
+        qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        qts[:, :, 0] = np.arange(n_states)[:, None]
+        qts[:, :, 1] = x
+        qts = qts.reshape(n_states*n_points, 2)
+        results = interpn((np.arange(n_states), xs), spts, qts, bounds_error=False, 
+                            fill_value=0.)
 
-        # find out if all vars ambient:
-        ambient = True
-        for v in vars:
-            if v not in FV.amb2var:
-                ambient = False
-                break
-
-        # calc wakes:
-        if not ambient:
-            wcalc = algo.PointWakesCalculation(vrs)
-            wcalc.initialize(algo, verbosity=0)
-            res = wcalc.calculate(algo, mdata, fdata, pdata)
-            pdata.update(res)
-            del wcalc, res
-        
-        # set results:
-        results = np.zeros((n_states, n_spts, n_vars), dtype=FC.DTYPE)
-        for vi, v in enumerate(vars):
-            for i in range(n_points):
-                results[:, i+1, vi] = results[:, i, vi] + pdata[v][:, i] * self.step 
-        
-        return data[:, :, :3], results
-
-    def calc_centreline_integral(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            states_source_turbine,
-            variables,
-            x,
-            dx,
-            **ipars,
-        ):
-        """
-        Integrates variables along the centreline.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        mdata : foxes.core.Data
-            The model data
-        fdata : foxes.core.Data
-            The farm data
-        states_source_turbine : numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        variables : list of str
-            The variables to be integrated
-        x : numpy.ndarray
-            The wake frame x coordinates of the upper integral bounds, 
-            shape: (n_states, n_points)
-        dx : float
-            The step size of the integral
-        ipars : dict, optional
-            Additional interpolation parameters
-
-        Returns
-        -------
-        results : numpy.ndarray
-            The integration results, shape: (n_states, n_points, n_vars)
-
-        """
-        if dx != self.step:
-            raise ValueError(f"Wake frame '{self.name}': Integral step size dx = {dx} does not match streamline step size {self.step}")
-
-        return super().calc_centreline_integral(algo, mdata, fdata, states_source_turbine,
-                                                variables, x, dx, **ipars)
+        return results.reshape(n_states, n_points, 3)
