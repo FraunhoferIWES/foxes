@@ -47,6 +47,9 @@ class Downwind(Algorithm):
 
     """
 
+    PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
+    SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
+    
     def __init__(
         self,
         mbook,

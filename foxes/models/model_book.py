@@ -124,7 +124,7 @@ class ModelBook:
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
             yawed=fm.wake_frames.YawedWakes(),
-            streamlines_100=fm.wake_frames.Streamlines(step=100),
+            streamlines_100=fm.wake_frames.Streamlines(step=100, ix_vars=[FV.TI]),
             streamlines_100_yawed=fm.wake_frames.YawedWakes(
                 base_frame=fm.wake_frames.Streamlines(step=100)
             ),
@@ -192,22 +192,43 @@ class ModelBook:
             self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
                 k=0.075, superposition=s
             )
-            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
-                superposition=s
-            )
+
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
                 superposition=s
             )
-            self.wake_models[
-                f"Bastankhah_{s}_k002"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s)
-
-            self.wake_models[f"TurbOPark_{s}"] = fm.wake_models.wind.TurbOParkWake(
-                superposition=s
+            self.wake_models[f"Bastankhah_{s}_k002"] = fm.wake_models.wind.BastankhahWake(
+                k=0.02, superposition=s
             )
-            self.wake_models[f"TurbOPark_{s}_k004"] = fm.wake_models.wind.TurbOParkWake(
+            self.wake_models[f"Bastankhah_{s}_k004"] = fm.wake_models.wind.BastankhahWake(
                 k=0.04, superposition=s
             )
+
+            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s
+            )
+            self.wake_models[f"PorteAgel_{s}_k002"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s, k=0.02
+            )
+            self.wake_models[f"PorteAgel_{s}_k004"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s, k=0.04
+            )
+
+            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.02, superposition=s
+            )
+            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.04, superposition=s
+            )
+
+            As = [0.02, 0.04]
+            dxs = [0.01, 1., 5., 10., 50., 100.]
+            for A in As:
+                for dx in dxs:
+                    a = str(A).replace(".", "")
+                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = fm.wake_models.wind.TurbOParkWakeIX(
+                        A=A, superposition=s, dx=dx
+                    )
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:

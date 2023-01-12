@@ -7,13 +7,9 @@ import foxes.variables as FV
 from foxes.utils.runners import DaskRunner
 
 
-def calc(farm, states, wakes, points, args):
+def calc(mbook, farm, states, wakes, points, args):
 
     cks = None if args.nodask else {FV.STATE: args.chunksize}
-
-    mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
-    mbook.turbine_types[ttype.name] = ttype
 
     algo = foxes.algorithms.Downwind(
         mbook,
@@ -30,6 +26,8 @@ def calc(farm, states, wakes, points, args):
     farm_results = algo.calc_farm()
     point_results = algo.calc_points(farm_results, points[None, :])
 
+    mbook.finalize(algo, farm_results, clear_mem=True, verbosity=0)
+
     return point_results[args.var].to_numpy()
 
 
@@ -41,6 +39,12 @@ def run_foxes(args):
     D = ttype.D
     H = ttype.H
 
+    models = args.tmodels + [ttype.name]
+    if args.ct is not None:
+        mbook.turbine_models["set_ct"] = foxes.models.turbine_models.SetFarmVars()
+        mbook.turbine_models["set_ct"].add_var(FV.CT, args.ct)
+        models.append("set_ct")
+
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
@@ -49,7 +53,7 @@ def run_foxes(args):
     farm.add_turbine(
         foxes.Turbine(
             xy=np.array([0.0, 0.0]),
-            turbine_models=args.tmodels + [ttype.name],
+            turbine_models=models,
         )
     )
 
@@ -81,7 +85,7 @@ def run_foxes(args):
         wakes = [wake] + args.ewakes
         print("Calculating:", wakes)
 
-        results = calc(farm, states, wakes, points, args).reshape(nd, ny)
+        results = calc(mbook, farm, states, wakes, points, args).reshape(nd, ny)
 
         for di, d in enumerate(args.dists_D):
 
@@ -121,7 +125,7 @@ def run_foxes(args):
         wakes = [wake] + args.ewakes
         print("Calculating:", wakes)
 
-        results = calc(farm, states, wakes, points, args)
+        results = calc(mbook, farm, states, wakes, points, args)
 
         ax.plot(xlist / D, results[0], label=wake)
 
@@ -169,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.05)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
+    parser.add_argument("--ct", help="Set CT by hand", default=None, type=float)
     parser.add_argument(
         "-t",
         "--turbine_file",
@@ -179,7 +184,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_linear", "PorteAgel_linear"],
+        default=["Bastankhah_linear_k004", "PorteAgel_linear_k004"],
         nargs="+",
     )
     parser.add_argument(
@@ -190,11 +195,11 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
+        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
