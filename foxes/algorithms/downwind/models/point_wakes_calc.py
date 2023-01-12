@@ -98,12 +98,10 @@ class PointWakesCalculation(PointDataModel):
         for w in algo.wake_models:
             hdeltas = {}
             w.init_wake_deltas(algo, mdata, fdata, pdata.n_points, hdeltas)
-            print("HERE",self.pvars, list(hdeltas.keys()), len(set(self.pvars).intersection(hdeltas.keys())))
             if len(set(self.pvars).intersection(hdeltas.keys())):
                 wdeltas.update(hdeltas)
                 wmodels.append(w)
             del hdeltas
-        print("HERE", wmodels)
 
         for oi in range(n_order):
 

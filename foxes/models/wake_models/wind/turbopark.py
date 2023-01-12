@@ -152,26 +152,18 @@ class TurbOParkWake(GaussianWakeModel):
 
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct)
-            print("\nTPARK")
-            print(x[:3])
-            print(epsilon[:3])
-            print((D*ati/beta*(
-                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
-                    - np.sqrt(1 + alpha**2)
-                    - np.log((np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1) * alpha)
-                    / (np.sqrt(1 + alpha**2) + 1)
-                    * (alpha + beta * x / D)
-                ))[:3])
+
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
                 + self.A*ati/beta
                 * (
-                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
+                    np.sqrt((alpha + beta*x/D)**2 + 1)
                     - np.sqrt(1 + alpha**2)
-                    - np.log((np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1) * alpha)
-                    / (np.sqrt(1 + alpha**2) + 1)
-                    * (alpha + beta * x / D)
+                    - np.log(
+                        (np.sqrt((alpha + beta*x/D)**2 + 1) + 1)*alpha
+                        / ((np.sqrt(1 + alpha**2) + 1) * (alpha + beta * x / D))
+                    )
                 )
             )
 
