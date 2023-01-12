@@ -153,7 +153,7 @@ class WakeFrame(Model):
         if xmin + n_steps*dx < xmax:
             n_steps += 1
         n_ix = n_steps + 1
-        xs = np.linspace(xmin, xmax, n_ix)
+        xs = np.arange(xmin, xmin+n_ix*dx, dx)
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
         pts = self.get_centreline_points(algo, mdata, fdata, states_source_turbine, xpts)
