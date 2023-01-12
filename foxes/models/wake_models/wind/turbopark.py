@@ -123,7 +123,7 @@ class TurbOParkWake(GaussianWakeModel):
 
         # get ct:
         ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = self.get_data(FV.CT, fdata)[st_sel][:, None]
+        ct[:] = fdata[FV.CT][st_sel][:, None]
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -136,23 +136,32 @@ class TurbOParkWake(GaussianWakeModel):
 
             # get D:
             D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
+            D[:] = fdata[FV.D][st_sel][:, None]
             D = D[sp_sel]
 
             # get TI:
             ati = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            ati[:] = self.get_data(FV.AMB_TI, fdata)[st_sel][:, None]
+            ati[:] = fdata[FV.AMB_TI][st_sel][:, None]
             ati = ati[sp_sel]
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            sbeta[sbeta > sblim] = sblim
+            #sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            #sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct)
-
+            print("\nTPARK")
+            print(x[:3])
+            print(epsilon[:3])
+            print((D*ati/beta*(
+                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
+                    - np.sqrt(1 + alpha**2)
+                    - np.log((np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1) * alpha)
+                    / (np.sqrt(1 + alpha**2) + 1)
+                    * (alpha + beta * x / D)
+                ))[:3])
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
@@ -169,7 +178,7 @@ class TurbOParkWake(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                sblim,
+                #sblim,
                 alpha,
                 beta,
                 epsilon,
@@ -324,7 +333,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         # get ct:
         ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = self.get_data(FV.CT, fdata)[st_sel][:, None]
+        ct[:] = fdata[FV.CT][st_sel][:, None]
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -337,19 +346,19 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # get D:
             D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
+            D[:] = fdata[FV.D][st_sel][:, None]
             D = D[sp_sel]
+
+            # calculate sigma:
+            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            #sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            #sbeta[sbeta > sblim] = sblim
+            epsilon = self.sbeta_factor * sbeta
 
             # get TI by integratiion along centre line:
             ti_ix = algo.wake_frame.calc_centreline_integral(algo, mdata, fdata, 
                                 states_source_turbine, [self.ti_var], x, 
                                 dx=self.dx, **self.ipars)[:, :, 0]
-
-            # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            sbeta[sbeta > sblim] = sblim
-            epsilon = self.sbeta_factor * sbeta
 
             # calculate sigma (eqn 1, plus epsilon from eqn 4 for x = 0)
             sigma = D * epsilon + self.A * ti_ix[sp_sel]
@@ -357,7 +366,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                sblim,
+                #sblim,
                 epsilon,
             )
 

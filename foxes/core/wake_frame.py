@@ -149,7 +149,9 @@ class WakeFrame(Model):
         # calc evaluation points:
         xmin = 0.
         xmax = np.max(x)
-        n_steps = int((xmax - xmin)/dx + 0.5)
+        n_steps = int((xmax - xmin)/dx)
+        if xmin + n_steps*dx < xmax:
+            n_steps += 1
         n_ix = n_steps + 1
         xs = np.linspace(xmin, xmax, n_ix)
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)

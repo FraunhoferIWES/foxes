@@ -220,12 +220,13 @@ class ModelBook:
                 A=0.04, superposition=s
             )
 
-            As = [0.02, 0.04, 0.2, 0.4]
-            dxs = [1., 5., 10., 50., 100.]
+            As = [0.02, 0.04]
+            dxs = [0.01, 1., 5., 10., 50., 100.]
             for A in As:
                 for dx in dxs:
                     a = str(A).replace(".", "")
-                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{int(dx)}"] = fm.wake_models.wind.TurbOParkWakeIX(
+                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = fm.wake_models.wind.TurbOParkWakeIX(
                         A=A, superposition=s, dx=dx
                     )
 
