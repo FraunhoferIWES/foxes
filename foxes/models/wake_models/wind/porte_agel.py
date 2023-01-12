@@ -413,8 +413,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
-            print(f"WAKE {self.name} k")
-            print(k)
+
             # run calculation:
             self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
 
