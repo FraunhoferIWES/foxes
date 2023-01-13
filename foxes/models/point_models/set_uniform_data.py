@@ -45,7 +45,8 @@ class SetUniformData(PointDataModel):
     ):
         self.data_source = data_source
         self.ovars = output_vars
-
+        self.var2col = var2col
+        
         self._rpars = pd_read_pars
         self._data = None
 

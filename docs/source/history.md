@@ -177,6 +177,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.7-alpha
 
+- Algorithms:
+  - New: `Iterative`, iterative wind farm calculation until convergence has been reached
 - Wake models:
   - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
 - Bug fixes:

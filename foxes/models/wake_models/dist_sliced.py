@@ -126,6 +126,7 @@ class DistSlicedWakeModel(WakeModel):
         wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
             algo, mdata, fdata, states_source_turbine, x, yz
         )
+
         for v, hdel in wdeltas.items():
 
             try:

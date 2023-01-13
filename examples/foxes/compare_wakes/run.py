@@ -147,7 +147,7 @@ if __name__ == "__main__":
         help="turbine distances in units of D",
         type=float,
         nargs="+",
-        default=[2.0, 6.0, 10.0],
+        default=[2.0, 5.0, 8.0, 12.0, 15.0, 20.0],
     )
     parser.add_argument(
         "-y",
