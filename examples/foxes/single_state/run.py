@@ -50,6 +50,7 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
     args = parser.parse_args()
 
     # create model book
@@ -79,7 +80,8 @@ if __name__ == "__main__":
         )
 
     # create algorithm
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
         mbook,
         farm,
         states=states,
@@ -93,7 +95,8 @@ if __name__ == "__main__":
     # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
-
+    
+    """
     # horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
@@ -110,6 +113,7 @@ if __name__ == "__main__":
     )
     fig = next(g)
     plt.show()
+    """
 
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)

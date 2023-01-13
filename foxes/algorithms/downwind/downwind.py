@@ -47,6 +47,7 @@ class Downwind(Algorithm):
 
     """
 
+    FarmWakesCalculation = dm.FarmWakesCalculation
     PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
     SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
     
@@ -157,59 +158,18 @@ class Downwind(Algorithm):
             self.states = states
             self.initialize(**states_init_pars)
 
-    def calc_farm(
-        self,
-        vars_to_amb=None,
-        init_parameters={},
-        calc_parameters={},
-        final_parameters={},
-        persist=True,
-        clear_mem_models=True,
-        ambient=False,
-        **states_init_pars,
-    ):
+    def _collect_farm_models(
+            self,
+            vars_to_amb,
+            init_parameters,
+            calc_parameters,
+            final_parameters,
+            clear_mem_models,
+            ambient,
+        ):
         """
-        Calculate farm data.
-
-        Parameters
-        ----------
-        vars_to_amb : list of str, optional
-            Variables for which ambient variables should
-            be stored. None means all.
-        init_parameters : dict
-            Parameters for model initialization.
-            Key: model name str, value: parameter dict
-        calc_parameters : dict
-            Parameters for model calculation.
-            Key: model name str, value: parameter dict
-        final_parameters : dict
-            Parameters for model finalization.
-            Key: model name str, value: parameter dict
-        persist : bool
-            Switch for forcing dask to load all model data
-            into memory
-        clear_mem_models : bool
-            Switch for clearing model memory during model
-            finalization
-        ambient : bool
-            Flag for ambient instead of waked calculation
-        states_init_pars : dict, optional
-            Parameters for states initialization
-
-        Returns
-        -------
-        farm_results : xarray.Dataset
-            The farm results. The calculated variables have
-            dimensions (state, turbine)
-
+        Helper function that creates model list
         """
-
-        if not self.initialized:
-            self.initialize(**states_init_pars)
-
-        # welcome:
-        self._print_deco("calc_farm")
-
         # prepare:
         init_pars = []
         calc_pars = []
@@ -271,7 +231,7 @@ class Downwind(Algorithm):
 
         # 7) calculate wake effects:
         if not ambient:
-            mlist.models.append(dm.FarmWakesCalculation())
+            mlist.models.append(self.FarmWakesCalculation())
             mlist.models[-1].name = "calc_wakes"
             init_pars.append(init_parameters.get(mlist.models[-1].name, {}))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
@@ -279,6 +239,66 @@ class Downwind(Algorithm):
 
         # update variables:
         self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self)
+
+        return mlist, init_pars, calc_pars, final_pars 
+
+    def calc_farm(
+        self,
+        vars_to_amb=None,
+        init_parameters={},
+        calc_parameters={},
+        final_parameters={},
+        persist=True,
+        clear_mem_models=True,
+        ambient=False,
+        **states_init_pars,
+    ):
+        """
+        Calculate farm data.
+
+        Parameters
+        ----------
+        vars_to_amb : list of str, optional
+            Variables for which ambient variables should
+            be stored. None means all.
+        init_parameters : dict
+            Parameters for model initialization.
+            Key: model name str, value: parameter dict
+        calc_parameters : dict
+            Parameters for model calculation.
+            Key: model name str, value: parameter dict
+        final_parameters : dict
+            Parameters for model finalization.
+            Key: model name str, value: parameter dict
+        persist : bool
+            Switch for forcing dask to load all model data
+            into memory
+        clear_mem_models : bool
+            Switch for clearing model memory during model
+            finalization
+        ambient : bool
+            Flag for ambient instead of waked calculation
+        states_init_pars : dict, optional
+            Parameters for states initialization
+
+        Returns
+        -------
+        farm_results : xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+
+        """
+
+        if not self.initialized:
+            self.initialize(**states_init_pars)
+
+        # welcome:
+        self._print_deco("calc_farm")
+
+        # collect models:
+        mlist, init_pars, calc_pars, final_pars = self._collect_farm_models(
+            vars_to_amb, init_parameters, calc_parameters, 
+            final_parameters, clear_mem_models, ambient)
 
         # initialize models:
         mlist.initialize(self, parameters=init_pars, verbosity=self.verbosity)

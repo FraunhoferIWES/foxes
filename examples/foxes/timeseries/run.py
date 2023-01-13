@@ -32,13 +32,14 @@ def run_foxes(args):
         plt.show()
         plt.close(ax.get_figure())
 
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
         mbook,
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
-        wake_frame="rotor_wd",
+        wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
     )
@@ -138,6 +139,7 @@ if __name__ == "__main__":
         default=["Jensen_linear_k007"],
         nargs="+",
     )
+    parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
@@ -170,6 +172,7 @@ if __name__ == "__main__":
         help="The timestep of the input timeseries or data in minutes",
         default=60 * 24 * 365,  # default is one year
     )
+    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
     args = parser.parse_args()
 
     # set timestep for debugging

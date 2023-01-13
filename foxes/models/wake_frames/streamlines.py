@@ -16,8 +16,6 @@ class Streamlines(WakeFrame):
     ----------
     step : float
         The streamline step size in m
-    ix_vars : list of str
-        The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
     cl_ipars : dict
@@ -28,8 +26,6 @@ class Streamlines(WakeFrame):
     ----------
     step : float
         The streamline step size in m
-    ix_vars : list of str
-        The variables to be integrated along x
     n_delstor : int
         The streamline point storage increase
     cl_ipars : dict
@@ -38,10 +34,9 @@ class Streamlines(WakeFrame):
 
     """
 
-    def __init__(self, step, ix_vars=[], n_delstor=100, cl_ipars={}):
+    def __init__(self, step, n_delstor=100, cl_ipars={}):
         super().__init__()
         self.step = step
-        self.ix_vars = ix_vars
         self.n_delstor = n_delstor
         self.cl_ipars = cl_ipars
 

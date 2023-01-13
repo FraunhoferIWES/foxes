@@ -3,7 +3,7 @@ import numpy as np
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict
-from foxes.core import TurbineModel, RotorModel, FarmModel, FarmController
+from foxes.core import TurbineModel, RotorModel, FarmModel, PointDataModel, FarmController
 
 
 class ModelBook:
@@ -59,6 +59,7 @@ class ModelBook:
     def __init__(self, Pct_file=None):
 
         self.point_models = Dict(name="point_models")
+        self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = Dict(name="rotor_models")
         rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
@@ -123,12 +124,20 @@ class ModelBook:
         self.wake_frames = Dict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
+            rotor_wd_farmo=fm.wake_frames.FarmOrder(),
             yawed=fm.wake_frames.YawedWakes(),
-            streamlines_100=fm.wake_frames.Streamlines(step=100, ix_vars=[FV.TI]),
-            streamlines_100_yawed=fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines(step=100)
-            ),
         )
+        stps = [1., 5., 10., 50., 100., 500.]
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(step=s)
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
+                base_frame=fm.wake_frames.Streamlines(step=s)
+            )
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
+                base_frame=fm.wake_frames.Streamlines(step=s)
+            )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
@@ -328,7 +337,7 @@ class ModelBook:
                             clear_mem=clear_mem,
                             verbosity=verbosity,
                         )
-                    elif isinstance(m, RotorModel) or isinstance(m, FarmModel):
+                    elif isinstance(m, RotorModel) or isinstance(m, FarmModel) or isinstance(m, PointDataModel):
                         m.finalize(
                             algo,
                             results=results,
