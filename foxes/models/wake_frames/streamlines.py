@@ -85,14 +85,11 @@ class Streamlines(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        n_spts = mdata[self.CNTR]
+        n_spts = int(mdata[self.CNTR])
         data = mdata[self.DATA]
-        spts = data[..., :3]
-        sn = data[..., 3:6]
-        slen = data[..., 6]
 
         # ensure storage size:
-        if n_spts == data.shape[2]:
+        while n_spts >= data.shape[2]:
             data = np.append(
                 data,
                 np.full(
@@ -102,11 +99,12 @@ class Streamlines(WakeFrame):
                 ),
                 axis=2,
             )
-
             mdata[self.DATA] = data
-            spts = data[..., :3]
-            sn = data[..., 3:6]
-            slen = data[..., 6]
+        
+        # data aliases:
+        spts = data[..., :3]
+        sn = data[..., 3:6]
+        slen = data[..., 6]
 
         # calculate next point:
         p0 = spts[:, :, n_spts - 1]
@@ -132,8 +130,9 @@ class Streamlines(WakeFrame):
         data[:, :, n_spts, 3:5] = wd2uv(
             algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
         )
+        mdata[self.CNTR] += 1
 
-        return newpts
+        return newpts, data, mdata[self.CNTR]
 
     def _calc_coos(self, algo, mdata, fdata, points, tcase=False):
         """
@@ -145,7 +144,7 @@ class Streamlines(WakeFrame):
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
         n_points = points.shape[1]
-        n_spts = mdata[self.CNTR]
+        n_spts = int(mdata[self.CNTR])
         data = mdata[self.DATA]
         spts = data[..., :3]
         sn = data[..., 3:6]
@@ -169,7 +168,7 @@ class Streamlines(WakeFrame):
             # print("CALC STREAMLINES, TODO", np.sum(~done))
 
             # add next streamline point:
-            newpts = self._add_next_point(algo, mdata, fdata)
+            newpts, data, n_spts = self._add_next_point(algo, mdata, fdata)
 
             # evaluate distance:
             d = np.linalg.norm(points[:, None] - newpts[:, :, None], axis=-1)
@@ -179,12 +178,11 @@ class Streamlines(WakeFrame):
             sel = d < dists
             if np.any(sel):
                 dists[sel] = d[sel]
-                inds[sel] = n_spts
+                inds[sel] = n_spts - 1
 
             # rotation:
-            mdata[self.CNTR] += 1
-            n_spts = mdata[self.CNTR]
             done = inds < n_spts - 1
+            del newpts
 
         # shrink to size:
         mdata[self.DATA] = data[:, :, :n_spts]
@@ -218,9 +216,8 @@ class Streamlines(WakeFrame):
         data = mdata[self.DATA]
         slen = data[:, :, mdata[self.CNTR]-1, 6]
         while np.min(slen) < length:
-            self._add_next_point(algo, mdata, fdata)
-            mdata[self.CNTR] += 1
-            slen = data[:, :, mdata[self.CNTR]-1, 6]
+            __, data, n_spts = self._add_next_point(algo, mdata, fdata)
+            slen = data[:, :, n_spts-1, 6]
 
     def calc_order(self, algo, mdata, fdata):
         """ "

@@ -183,5 +183,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
 - Bug fixes:
   - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong 
+  - Fix for bug with long streamlines
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.7)
