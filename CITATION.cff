@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: Farm Optimization and eXtended yield Evaluation Software
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jonas
+    family-names: Schmidt
+    email: jonas.schmidt@iwes.fraunhofer.de
+    affiliation: Fraunhofer IWES
+repository-code: 'https://github.com/FraunhoferIWES/foxes'
+url: 'https://fraunhoferiwes.github.io/foxes.docs/index.html'
+abstract: >-
+  The software FOXES is a modular wind farm simulation and
+  wake modelling toolbox which is based on engineering wake
+  models.
+keywords:
+  - Wind farms
+  - Wake modelling
+  - Wind farm optimization
+license: MIT
