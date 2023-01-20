@@ -181,6 +181,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New: `Iterative`, iterative wind farm calculation until convergence has been reached
 - Wake models:
   - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
+- Wake frames:
+  - Improved: All yawed wake frames now also support centreline data integration
 - Bug fixes:
   - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong 
   - Fix for bug with long streamlines

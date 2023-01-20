@@ -122,41 +122,14 @@ class YawedWakes(WakeFrame):
         """
         return self.base_frame.model_input_data(algo)
 
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def _update_y(self, mdata, fdata, states_source_turbine, x, y):
         """
-        Calculate wake coordinates.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        mdata : foxes.core.Data
-            The model data
-        fdata : foxes.core.Data
-            The farm data
-        states_source_turbine : numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
-
-        Returns
-        -------
-        wake_coos : numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
-
+        Helper function for y deflection
         """
         # prepare:
         n_states = mdata.n_states
-        n_points = points.shape[1]
+        n_points = x.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
-
-        # get unyawed results:
-        xyz = self.base_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
-        )
-        x = xyz[:, :, 0]
-        y = xyz[:, :, 1]
 
         # get gamma:
         gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -203,7 +176,87 @@ class YawedWakes(WakeFrame):
             # apply deflection:
             y[sp_sel] -= ydef
 
+    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+        """
+        Calculate wake coordinates.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        points : numpy.ndarray
+            The evaluation points, shape: (n_states, n_points, 3)
+
+        Returns
+        -------
+        wake_coos : numpy.ndarray
+            The wake coordinates, shape: (n_states, n_points, 3)
+
+        """
+        # get unyawed results:
+        xyz = self.base_frame.get_wake_coos(
+            algo, mdata, fdata, states_source_turbine, points
+        )
+        x = xyz[:, :, 0]
+        y = xyz[:, :, 1]
+
+        # apply deflection:
+        self._update_y(mdata, fdata, states_source_turbine, x, y)
+
         return xyz
+
+    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+        """
+        Gets the points along the centreline for given
+        values of x.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        x : numpy.ndarray
+            The wake frame x coordinates, shape: (n_states, n_points)
+        
+        Returns
+        -------
+        points : numpy.ndarray
+            The centreline points, shape: (n_states, n_points, 3)
+
+        """
+        points = self.base_frame.get_centreline_points(algo, mdata, fdata, 
+                    states_source_turbine, x)
+
+        nx = np.zeros_like(points)
+        nx[:, 0] = points[:, 1] - points[:, 0]
+        nx[:, -1] = points[:, -1] - points[:, -2]
+        nx[:, 1:-1] = 0.5*(points[:, 1:-1] - points[:, :-2]) + 0.5*(points[:, 2:] - points[:, 1:-1])
+        nx /= np.linalg.norm(nx, axis=-1)[:, :, None]
+
+        nz = np.zeros_like(nx)
+        nz[:, :, 2] = 1
+        ny = np.cross(nz, nx, axis=-1)
+        del nx, nz
+
+        y = np.zeros_like(x)
+        self._update_y(mdata, fdata, states_source_turbine, x, y)
+
+        points += y[:, :, None] * ny
+        
+        return points
 
     def finalize(self, algo, clear_mem=False, verbosity=0):
         """

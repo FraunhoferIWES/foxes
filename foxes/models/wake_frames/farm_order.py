@@ -1,6 +1,5 @@
 import numpy as np
 
-import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_wd import RotorWD
 from foxes.core import WakeFrame
