@@ -17,8 +17,8 @@ class FieldDataNC(States):
 
     Parameters
     ----------
-    file_pattern : str
-        The file search pattern, should end with
+    data_source : str or xarray.Dataset
+        The data or the file search pattern, should end with
         suffix '.nc'. One or many files.
     output_vars : list of str
         The output variables
@@ -50,10 +50,9 @@ class FieldDataNC(States):
 
     Attributes
     ----------
-    file_pattern : str
-        The file search pattern, should end with
-        suffix '.nc'. One or many files, in the later case
-        use pattern 'some/path/*.nc'
+    data_source : str or xarray.Dataset
+        The data or the file search pattern, should end with
+        suffix '.nc'. One or many files.
     ovars : list of str
         The output variables
     var2ncvar : dict
@@ -86,7 +85,7 @@ class FieldDataNC(States):
 
     def __init__(
         self,
-        file_pattern,
+        data_source,
         output_vars,
         var2ncvar={},
         fixed_vars={},
@@ -102,7 +101,7 @@ class FieldDataNC(States):
     ):
         super().__init__()
 
-        self.file_pattern = file_pattern
+        self.data_source = data_source
         self.states_coord = states_coord
         self.ovars = output_vars
         self.fixed_vars = fixed_vars
@@ -186,15 +185,7 @@ class FieldDataNC(States):
 
     def _read_nc(self, algo, pattern, verbosity):
 
-        with xr.open_mfdataset(
-            pattern,
-            parallel=True,
-            concat_dim=self.states_coord,
-            combine="nested",
-            data_vars="minimal",
-            coords="minimal",
-            compat="override",
-        ) as ds:
+        def extract_data(ds):
 
             for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
                 if not c in ds:
@@ -226,7 +217,7 @@ class FieldDataNC(States):
                 elif v not in self.fixed_vars:
                     raise ValueError(
                         f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                    )
+                    )  
 
             if self.pre_load:
 
@@ -244,6 +235,20 @@ class FieldDataNC(States):
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
                 data = self._get_data(ds, verbosity)
                 self._data = (coos, data)
+
+        if isinstance(self.data_source, xr.Dataset):
+            extract_data(self.data_source)
+        else:
+            with xr.open_mfdataset(
+                pattern,
+                parallel=True,
+                concat_dim=self.states_coord,
+                combine="nested",
+                data_vars="minimal",
+                coords="minimal",
+                compat="override",
+            ) as ds:
+                extract_data(ds)
 
     def initialize(self, algo, verbosity=0):
         """
@@ -277,19 +282,22 @@ class FieldDataNC(States):
         self._n_dvars = len(self._dkys)
         self._weights = None
 
-        if verbosity:
-            print(f"States '{self.name}': Reading files {self.file_pattern}")
-        try:
-            self._read_nc(algo, self.file_pattern, verbosity)
-        except OSError:
-            if verbosity:
-                print(
-                    f"States '{self.name}': Reading static data '{self.file_pattern}' from context '{STATES}'"
-                )
-            fpath = algo.dbook.get_file_path(STATES, self.file_pattern, check_raw=False)
-            if verbosity:
-                print(f"Path: {fpath}")
+        if isinstance(self.data_source, xr.Dataset):
             self._read_nc(algo, fpath, verbosity)
+        else:
+            if verbosity:
+                print(f"States '{self.name}': Reading files {self.data_source}")
+            try:
+                self._read_nc(algo, self.data_source, verbosity)
+            except OSError:
+                if verbosity:
+                    print(
+                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                    )
+                fpath = algo.dbook.get_file_path(STATES, self.data_source, check_raw=False)
+                if verbosity:
+                    print(f"Path: {fpath}")
+                self._read_nc(algo, fpath, verbosity)
 
         super().initialize(algo)
 
@@ -429,7 +437,7 @@ class FieldDataNC(States):
             s = slice(i0, i0 + n_states)
             ds = (
                 xr.open_mfdataset(
-                    self.file_pattern,
+                    self.data_source,
                     parallel=False,
                     concat_dim=self.states_coord,
                     combine="nested",

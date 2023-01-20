@@ -179,6 +179,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Algorithms:
   - New: `Iterative`, iterative wind farm calculation until convergence has been reached
+- Input:
+  - Improved: `FieldDataNC` now accepts xarray Dataset or file pattern str as input
 - Wake models:
   - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
 - Wake frames:

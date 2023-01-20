@@ -21,7 +21,7 @@ def run_foxes(args):
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.FieldDataNC(
-        file_pattern=args.file_pattern,
+        args.file_pattern,
         states_coord="state",
         x_coord="x",
         y_coord="y",
