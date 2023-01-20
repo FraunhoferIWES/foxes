@@ -96,11 +96,16 @@ def run_foxes(args):
                 yi = di % ncols
                 ax = axs[xi, yi]
 
-            ax.plot(ylist / D, results[di], label=wake)
+            if args.deficit:
+                dfz = (args.ws - results[di])/args.ws
+                ax.plot(ylist / D, dfz, label=wake)
+                ax.set_ylabel("WS deficit")
+            else:
+                ax.plot(ylist / D, results[di], label=wake)
+                ax.set_ylabel(args.var)
 
             ax.set_title(f"x = {d} D")
             ax.set_xlabel("y/D")
-            ax.set_ylabel(args.var)
             ax.grid()
 
     ax.legend(loc="best")
@@ -127,11 +132,16 @@ def run_foxes(args):
 
         results = calc(mbook, farm, states, wakes, points, args)
 
-        ax.plot(xlist / D, results[0], label=wake)
+        if args.deficit:
+            dfz = (args.ws - results[0])/args.ws
+            ax.plot(xlist / D, dfz, label=wake)
+            ax.set_ylabel("WS deficit")
+        else:
+            ax.plot(xlist / D, results[0], label=wake)
+            ax.set_ylabel(args.var)
 
         ax.set_title(f"y = 0")
         ax.set_xlabel("x/D")
-        ax.set_ylabel(args.var)
         ax.legend(loc="best")
         ax.grid()
 
@@ -201,6 +211,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
+    parser.add_argument("-dfz", "--deficit", help="Plot the wind deficit instead of wind speed", action="store_true")
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
     )
