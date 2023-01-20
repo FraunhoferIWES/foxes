@@ -283,7 +283,7 @@ class FieldDataNC(States):
         self._weights = None
 
         if isinstance(self.data_source, xr.Dataset):
-            self._read_nc(algo, fpath, verbosity)
+            self._read_nc(algo, None, verbosity)
         else:
             if verbosity:
                 print(f"States '{self.name}': Reading files {self.data_source}")
