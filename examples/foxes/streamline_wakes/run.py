@@ -68,7 +68,7 @@ def run_foxes(args):
     print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    for fig in o.gen_states_fig_horizontal(
+    for fig in o.gen_states_fig_xy(
         FV.WS,
         resolution=10,
         figsize=(8, 8),

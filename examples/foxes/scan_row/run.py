@@ -138,7 +138,7 @@ def run_foxes(args):
 
     if args.calc_mean:
         o = foxes.output.FlowPlots2D(algo, farm_results)
-        fig = o.get_mean_fig_horizontal(FV.WS, resolution=10)
+        fig = o.get_mean_fig_xy(FV.WS, resolution=10)
         plt.show()
 
 
