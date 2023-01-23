@@ -95,7 +95,7 @@ if __name__ == "__main__":
     # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
-
+    
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_yz(
+    g = o.gen_states_fig_xz(
         args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
     )
     fig = next(g)
