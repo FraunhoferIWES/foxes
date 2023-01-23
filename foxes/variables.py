@@ -87,6 +87,7 @@ KTIZ = "kTIz"
 
 Z0 = "z0"
 MOL = "MOL"
+SHEAR = "shear"
 
 POP = "pop"
 
