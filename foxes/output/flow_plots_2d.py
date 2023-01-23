@@ -57,6 +57,7 @@ class FlowPlots2D(Output):
         vlabel,
         ret_state,
         ret_im,
+        invert_axis=None,
         quiv=None,
     ):
         """
@@ -101,6 +102,12 @@ class FlowPlots2D(Output):
         hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
 
+        
+        if invert_axis == 'x':
+            hax.invert_xaxis()
+        elif invert_axis == 'y':
+            hax.invert_yaxis()
+
         if add_bar:
             divider = make_axes_locatable(hax)
             cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -121,7 +128,7 @@ class FlowPlots2D(Output):
 
         return out
 
-    def get_mean_fig_horizontal(
+    def get_mean_fig_xy(
         self,
         var,
         resolution,
@@ -153,7 +160,7 @@ class FlowPlots2D(Output):
         **kwargs,
     ):
         """
-        Generates 2D farm flow figure in a plane.
+        Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
@@ -296,6 +303,9 @@ class FlowPlots2D(Output):
         if normalize_xy is not None:
             x_pos /= normalize_xy
             y_pos /= normalize_xy
+    
+        if title is None:
+            title = f"States mean, z =  {int(np.round(z_pos))} m"
 
         # create plot:
         out = self._get_fig(
@@ -326,7 +336,7 @@ class FlowPlots2D(Output):
 
         return out
 
-    def get_mean_fig_vertical(
+    def get_mean_fig_xz(
         self,
         var,
         resolution,
@@ -360,7 +370,7 @@ class FlowPlots2D(Output):
         **kwargs,
     ):
         """
-        Generates 2D farm flow figure in a plane.
+        Generates 2D farm flow figure in a vertical xz-plane.
 
         Parameters
         ----------
@@ -440,7 +450,7 @@ class FlowPlots2D(Output):
         # prepare:
         n_states = self.algo.n_states
         n_turbines = self.algo.n_turbines
-        n_x = np.append(wd2wdvec(x_direction), [0.0], axis=0)
+        n_x = np.append(wd2wdvec(x_direction-180), [0.0], axis=0)
         n_z = np.array([0.0, 0.0, 1.0])
         n_y = np.cross(n_z, n_x)
 
@@ -525,7 +535,7 @@ class FlowPlots2D(Output):
             z_pos /= normalize_z
 
         if title is None:
-            title = f"States mean, x direction {x_direction}°"
+            title = f"States mean, x direction {x_direction}°, y =  {int(np.round(y_pos))} m"
 
         # create plot:
         out = self._get_fig(
@@ -556,7 +566,235 @@ class FlowPlots2D(Output):
 
         return out
 
-    def gen_states_fig_horizontal(
+    def get_mean_fig_yz(
+        self,
+        var,
+        resolution,
+        x_direction=270,
+        ymin=None,
+        zmin=0.0,
+        ymax=None,
+        zmax=None,
+        ylabel="x [m]",
+        zlabel="z [m]",
+        x=None,
+        yspace=500.0,
+        zspace=500.0,
+        levels=None,
+        var_min=None,
+        var_max=None,
+        figsize=None,
+        normalize_y=None,
+        normalize_z=None,
+        normalize_var=None,
+        title=None,
+        vlabel=None,
+        fig=None,
+        ax=None,
+        add_bar=True,
+        cmap=None,
+        weight_turbine=0,
+        verbosity=1,
+        ret_state=False,
+        ret_im=False,
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a vertical yz-plane.
+
+        Parameters
+        ----------
+        var : str
+            The variable name
+        resolution : float
+            The resolution in m
+        x_direction : float
+            The direction of the x axis, 0 = north
+        ymin : float
+            The min y coordinate, or None for automatic
+        zmin : float
+            The min z coordinate
+        ymax : float
+            The max y coordinate, or None for automatic
+        zmax : float
+            The max z coordinate, or None for automatic
+        ylabel : str
+            The y axis label
+        zlabel : str
+            The z axis label
+        x : float
+            The x coordinate of the plane
+        yspace : float
+            The extra space in y direction, before and after wind farm
+        zspace : float
+            The extra space in z direction, below and above wind farm
+        levels : int
+            The number of levels for the contourf plot, or None for pure image
+        var_min : float
+            Minimum variable value
+        var_max : float
+            Maximum variable value
+        figsize : tuple
+            The figsize for plt.Figure
+        normalize_y : float, optional
+            Divide y by this value
+        normalize_z : float, optional
+            Divide z by this value
+        normalize_var : float, optional
+            Divide the variable by this value
+        title : str, optional
+            The title
+        vlabel : str, optional
+            The variable label
+        fig : plt.Figure, optional
+            The figure object
+        ax : plt.Axes, optional
+            The figure axes
+        add_bar : bool, optional
+            Add a color bar
+        cmap : str, optional
+            The colormap
+        weight_turbine : int, optional
+            Index of the turbine from which to take the weight
+        verbosity : int, optional
+            The verbosity level
+        ret_state : bool, optional
+            Flag for state index return
+        ret_im : bool, optional
+            Flag for image return
+        kwargs : dict, optional
+            Parameters forwarded to the algorithm's calc_points
+            function.
+
+        Yields
+        ------
+        fig : matplotlib.Figure
+            The figure object
+        si : int, optional
+            The state index
+        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+            The image object
+
+        """
+
+        # prepare:
+        n_states = self.algo.n_states
+        n_turbines = self.algo.n_turbines
+        n_x = np.append(wd2wdvec(x_direction-180), [0.0], axis=0)
+        n_z = np.array([0.0, 0.0, 1.0])
+        n_y = np.cross(n_z, n_x)
+
+        # project to axes:
+        xyz = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
+        xyz[:, :, 0] = self.fres[FV.X]
+        xyz[:, :, 1] = self.fres[FV.Y]
+        xyz[:, :, 2] = self.fres[FV.H]
+        xx = np.einsum("std,d->st", xyz, n_x)
+        yy = np.einsum("std,d->st", xyz, n_y)
+        zz = np.einsum("std,d->st", xyz, n_z)
+        del xyz
+
+        # get base rectangle:
+        y_min = ymin if ymin is not None else np.min(yy) - yspace
+        z_min = zmin if zmin is not None else np.minimum(np.min(zz) - zspace, 0.0)
+        x_min = x if x is not None else np.min(xx)
+        y_max = ymax if ymax is not None else np.max(yy) + yspace
+        z_max = zmax if zmax is not None else np.max(zz) + zspace
+        x_max = x if x is not None else np.max(xx)
+        del xx, yy, zz
+
+        y_pos, y_res = np.linspace(
+            y_min,
+            y_max,
+            num=int((y_max - y_min) / resolution) + 1,
+            endpoint=True,
+            retstep=True,
+            dtype=None,
+        )
+        z_pos, z_res = np.linspace(
+            z_min,
+            z_max,
+            num=int((z_max - z_min) / resolution) + 1,
+            endpoint=True,
+            retstep=True,
+            dtype=None,
+        )
+        N_y, N_z = len(y_pos), len(z_pos)
+        n_pts = len(y_pos) * len(z_pos)
+        x_pos = 0.5 * (x_min + x_max)
+        g_pts = np.zeros((n_states, N_y, N_z, 3), dtype=FC.DTYPE)
+        g_pts[:] += x_pos * n_x[None, None, None, :]
+        g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
+        g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
+        g_pts = g_pts.reshape(n_states, n_pts, 3)
+
+        if verbosity > 0:
+            print("\nFlowPlots2D plot grid:")
+            print("Min XYZ  =", x_min, y_min, z_min)
+            print("Max XYZ  =", x_max, y_max, z_max)
+            print("Pos X    =", x_pos)
+            print("Res YZ   =", y_res, z_res)
+            print("Dim YZ   =", N_y, N_z)
+            print("Grid pts =", n_pts)
+
+        # calculate point results:
+        point_results = self.algo.calc_points(
+            self.fres, points=g_pts, verbosity=verbosity, **kwargs
+        )
+        data = point_results[var].to_numpy()
+        del point_results
+
+        # take mean over states:
+        weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
+        data = np.einsum("s,sp->p", weights, data)
+
+        # find data min max:
+        vmin = var_min if var_min is not None else np.min(data)
+        vmax = var_max if var_max is not None else np.max(data)
+        if normalize_var is not None:
+            vmin /= normalize_var
+            vmax /= normalize_var
+
+        # normalize x and z:
+        if normalize_y is not None:
+            y_pos /= normalize_y
+        if normalize_z is not None:
+            z_pos /= normalize_z
+
+        if title is None:
+            title = f"States mean, x direction {x_direction}°, x =  {int(np.round(x_pos))} m"
+
+        # create plot:
+        out = self._get_fig(
+            var,
+            fig,
+            figsize,
+            ax,
+            data,
+            None,
+            None,
+            N_y,
+            N_z,
+            normalize_var,
+            levels,
+            y_pos,
+            z_pos,
+            vmin,
+            vmax,
+            cmap,
+            ylabel,
+            zlabel,
+            title,
+            add_bar,
+            vlabel,
+            ret_state,
+            ret_im,
+            invert_axis='x',
+        )
+
+        return out
+
+    def gen_states_fig_xy(
         self,
         var,
         resolution,
@@ -589,7 +827,7 @@ class FlowPlots2D(Output):
         **kwargs,
     ):
         """
-        Generates 2D farm flow figure in a plane.
+        Generates 2D farm flow figure in a horizontal xy-plane.
 
         Parameters
         ----------
@@ -744,6 +982,9 @@ class FlowPlots2D(Output):
         # loop over states:
         for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
 
+            ttl = f"State {s}" if title is None else title
+            ttl += f", z =  {int(np.round(z_pos))} m"
+
             out = self._get_fig(
                 var,
                 fig,
@@ -763,7 +1004,7 @@ class FlowPlots2D(Output):
                 cmap,
                 xlabel,
                 ylabel,
-                title,
+                ttl,
                 add_bar,
                 vlabel,
                 ret_state,
@@ -773,11 +1014,11 @@ class FlowPlots2D(Output):
 
             yield out
 
-    def gen_states_fig_vertical(
+    def gen_states_fig_xz(
         self,
         var,
         resolution,
-        x_direction,
+        x_direction=270.,
         xmin=None,
         zmin=0.0,
         xmax=None,
@@ -808,7 +1049,7 @@ class FlowPlots2D(Output):
         **kwargs,
     ):
         """
-        Generates 2D farm flow figure in a plane.
+        Generates 2D farm flow figure in a vertical xz-plane.
 
         Parameters
         ----------
@@ -890,7 +1131,7 @@ class FlowPlots2D(Output):
         # prepare:
         n_states = self.algo.n_states
         n_turbines = self.algo.n_turbines
-        n_x = np.append(wd2wdvec(x_direction), [0.0], axis=0)
+        n_x = np.append(wd2wdvec(x_direction-180), [0.0], axis=0)
         n_z = np.array([0.0, 0.0, 1.0])
         n_y = np.cross(n_z, n_x)
 
@@ -984,7 +1225,8 @@ class FlowPlots2D(Output):
         for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
 
             ttl = f"State {s}" if title is None else title
-            ttl += f", x direction {x_direction}°"
+            ttl += f", x direction = {x_direction}°"
+            ttl += f", y =  {int(np.round(y_pos))} m"
 
             out = self._get_fig(
                 var,
@@ -1011,6 +1253,247 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
+            )
+
+            yield out
+
+    def gen_states_fig_yz(
+        self,
+        var,
+        resolution,
+        x_direction=270.,
+        ymin=None,
+        zmin=0.0,
+        ymax=None,
+        zmax=None,
+        ylabel="y [m]",
+        zlabel="z [m]",
+        x=None,
+        yspace=500.0,
+        zspace=500.0,
+        levels=None,
+        var_min=None,
+        var_max=None,
+        figsize=None,
+        normalize_y=None,
+        normalize_z=None,
+        normalize_var=None,
+        title=None,
+        vlabel=None,
+        fig=None,
+        ax=None,
+        add_bar=True,
+        cmap=None,
+        quiver_n=None,
+        quiver_pars={},
+        verbosity=1,
+        ret_state=False,
+        ret_im=False,
+        **kwargs,
+    ):
+        """
+        Generates 2D farm flow figure in a plane.
+
+        Parameters
+        ----------
+        var : str
+            The variable name
+        resolution : float
+            The resolution in m
+        x_direction : float
+            The direction of the x axis, 0 = north
+        ymin : float
+            The min y coordinate, or None for automatic
+        zmin : float
+            The min z coordinate
+        ymax : float
+            The max y coordinate, or None for automatic
+        zmax : float
+            The max z coordinate, or None for automatic
+        ylabel : str
+            The y axis label
+        zlabel : str
+            The z axis label
+        x : float
+            The x coordinate of the plane
+        yspace : float
+            The extra space in y direction, left and right of wind farm
+        zspace : float
+            The extra space in z direction, below and above wind farm
+        levels : int
+            The number of levels for the contourf plot, or None for pure image
+        var_min : float
+            Minimum variable value
+        var_max : float
+            Maximum variable value
+        figsize : tuple
+            The figsize for plt.Figure
+        normalize_y : float, optional
+            Divide y by this value
+        normalize_z : float, optional
+            Divide z by this value
+        normalize_var : float, optional
+            Divide the variable by this value
+        title : str, optional
+            The title
+        vlabel : str, optional
+            The variable label
+        fig : plt.Figure, optional
+            The figure object
+        ax : plt.Axes, optional
+            The figure axes
+        add_bar : bool, optional
+            Add a color bar
+        cmap : str, optional
+            The colormap
+        quiver_n : int, optional
+            Place a vector at ech `n`th point
+        quiver_pars : dict, optional
+            Parameters for plt.quiver
+        verbosity : int, optional
+            The verbosity level
+        ret_state : bool, optional
+            Flag for state index return
+        ret_im : bool, optional
+            Flag for image return
+        kwargs : dict, optional
+            Parameters forwarded to the algorithm's calc_points
+            function.
+
+        Yields
+        ------
+        fig : matplotlib.Figure
+            The figure object
+        si : int, optional
+            The state index
+        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+            The image object
+
+        """
+
+        # prepare:
+        n_states = self.algo.n_states
+        n_turbines = self.algo.n_turbines
+        n_x = np.append(wd2wdvec(x_direction-180), [0.0], axis=0) ## -180 to get [1,0,0]
+        n_z = np.array([0.0, 0.0, 1.0])
+        n_y = np.cross(n_z, n_x)
+
+        # project to axes:
+        xyz = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
+        xyz[:, :, 0] = self.fres[FV.X]
+        xyz[:, :, 1] = self.fres[FV.Y]
+        xyz[:, :, 2] = self.fres[FV.H]
+        xx = np.einsum("std,d->st", xyz, n_x)
+        yy = np.einsum("std,d->st", xyz, n_y)
+        zz = np.einsum("std,d->st", xyz, n_z)
+        del xyz
+
+        # get base rectangle:
+        y_min = ymin if ymin is not None else np.min(yy) - yspace
+        z_min = zmin if zmin is not None else np.minimum(np.min(zz) - zspace, 10.0)
+        x_min = x if x is not None else np.min(xx)
+        y_max = ymax if ymax is not None else np.max(yy) + yspace
+        z_max = ymax if ymax is not None else np.max(zz) + zspace
+        x_max = x if x is not None else np.max(xx)
+        del xx, yy, zz
+
+        y_pos, y_res = np.linspace(
+            y_min,
+            y_max,
+            num=int((y_max - y_min) / resolution) + 1,
+            endpoint=True,
+            retstep=True,
+            dtype=None,
+        )
+        z_pos, z_res = np.linspace(
+            z_min,
+            z_max,
+            num=int((z_max - z_min) / resolution) + 1,
+            endpoint=True,
+            retstep=True,
+            dtype=None,
+        )
+        N_y, N_z = len(y_pos), len(z_pos)
+        n_pts = len(y_pos) * len(z_pos)
+        x_pos = 0.5 * (x_min + x_max)
+        g_pts = np.zeros((n_states, N_y, N_z, 3), dtype=FC.DTYPE)
+        g_pts[:] += x_pos * n_x[None, None, None, :]
+        g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
+        g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
+        g_pts = g_pts.reshape(n_states, n_pts, 3)
+
+        if verbosity > 0:
+            print("\nFlowPlots2D plot grid:")
+            print("Min XYZ  =", x_min, y_min, z_min)
+            print("Max XYZ  =", x_max, y_max, z_max)
+            print("Pos X    =", x_pos)
+            print("Res YZ   =", y_res, z_res)
+            print("Dim YZ   =", N_y, N_z)
+            print("Grid pts =", n_pts)
+
+        # calculate point results:
+        point_results = self.algo.calc_points(
+            self.fres, points=g_pts, verbosity=verbosity, **kwargs
+        )
+        data = point_results[var].values
+        quiv = (
+            None
+            if quiver_n is None
+            else (
+                quiver_n,
+                quiver_pars,
+                point_results[FV.WD].values,
+                point_results[FV.WS].values,
+            )
+        )
+        del point_results
+
+        # find data min max:
+        vmin = var_min if var_min is not None else np.min(data)
+        vmax = var_max if var_max is not None else np.max(data)
+        if normalize_var is not None:
+            vmin /= normalize_var
+            vmax /= normalize_var
+
+        # normalize x and z:
+        if normalize_y is not None:
+            y_pos /= normalize_y
+        if normalize_z is not None:
+            z_pos /= normalize_z
+
+        # loop over states:
+        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
+
+            ttl = f"State {s}" if title is None else title
+            ttl += f", x direction = {x_direction}°"
+            ttl += f", x =  {int(np.round(x_pos))} m"
+
+            out = self._get_fig(
+                var,
+                fig,
+                figsize,
+                ax,
+                data,
+                si,
+                s,
+                N_y,
+                N_z,
+                normalize_var,
+                levels,
+                y_pos,
+                z_pos,
+                vmin,
+                vmax,
+                cmap,
+                ylabel,
+                zlabel,
+                ttl,
+                add_bar,
+                vlabel,
+                ret_state,
+                ret_im,
+                invert_axis='x',
+                quiv=None,
             )
 
             yield out
