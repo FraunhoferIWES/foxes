@@ -58,20 +58,33 @@ class PartialDistSlicedWake(PartialWakesModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
 
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
-        if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo, verbosity=verbosity)
+        if self.grotor is None:
+            self.grotor = self.rotor_model
 
         for w in self.wake_models:
             if not isinstance(w, DistSlicedWakeModel):
@@ -79,14 +92,13 @@ class PartialDistSlicedWake(PartialWakesModel):
                     f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not an DistSlicedWakeModel"
                 )
 
-        if self.grotor is None:
-            self.grotor = self.rotor_model
-        else:
-            self.grotor.name = f"{self.name}_grotor"
-            self.grotor.initialize(algo, verbosity=verbosity)
-
         self.YZ = self.var("YZ")
         self.W = self.var(FV.WEIGHT)
+
+        algo.update_idata([self.rotor_model, self.grotor], 
+            idata=idata, verbosity=verbosity)
+        
+        return idata
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -282,7 +294,7 @@ class PartialDistSlicedWake(PartialWakesModel):
             algo, mdata, fdata, wres, np.array([1.0]), states_turbine=states_turbine
         )
 
-    def finalize(self, algo, verbosity=0, clear_mem=False):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -290,15 +302,12 @@ class PartialDistSlicedWake(PartialWakesModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        if self.grotor is not None:
-            self.grotor.finalize(
-                algo, results=None, clear_mem=clear_mem, verbosity=verbosity
-            )
-        super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
+        if self.rotor_model.initialized:
+            self.rotor_model.finalize(algo, verbosity)
+        if self.grotor is not None and self.grotor.initialized:
+            self.grotor.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

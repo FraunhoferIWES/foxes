@@ -40,19 +40,22 @@ class ScanWS(States):
         self.ti = ti
         self.rho = rho
 
-    def model_input_data(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
-        The model input data, as needed for the
-        calculation.
+        Initializes the model.
 
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -62,9 +65,10 @@ class ScanWS(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.WS = f"{self.name}_ws"
+        self.WS = self.var(FV.WS)
 
-        idata = super().model_input_data(algo)
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
         idata["data_vars"][self.WS] = ((FV.STATE,), self._wsl)
 
         return idata
@@ -163,25 +167,3 @@ class ScanWS(States):
             )
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
-
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        if clear_mem:
-            del self._wsl
-
-        super().finalize(algo, results, clear_mem, verbosity)

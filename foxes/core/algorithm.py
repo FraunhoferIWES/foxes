@@ -3,6 +3,7 @@ import xarray as xr
 
 from .model import Model
 from foxes.data import StaticData
+from foxes.utils import Dict
 import foxes.variables as FV
 
 
@@ -54,6 +55,10 @@ class Algorithm(Model):
         self.n_states = None
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
+
+        self._idata = None
+        
+        self.clear_store()
 
     def print(self, *args, **kwargs):
         """
@@ -146,16 +151,12 @@ class Algorithm(Model):
         """
         Initializes the algorithm.
         """
-        super().initialize(self, verbosity=self.verbosity)
+        self._idata = super().initialize(self, self.verbosity)
 
-    def model_input_data(self, algo):
+    @property
+    def idata(self):
         """
-        The algorithm input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
+        The current idata object.
 
         Returns
         -------
@@ -165,18 +166,89 @@ class Algorithm(Model):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        raise NotImplementedError(
-            f"Algorithm '{self.name}': model_input_data called, illegally"
-        )
+        return self._idata
+    
+    @property
+    def store(self):
+        """
+        The idata storage, under model name.
 
-    def get_models_data(self, models):
+        Returns
+        -------
+        Dict :
+            The stored model idata. keys: model names
+
+        """
+        return self._store
+
+    def clear_store(self):
+        """
+        Clear the idata storage
+        """
+        self._store = Dict()
+
+    def update_idata(self, models, idata=None, store=False, verbosity=None):
+        """
+        Update and return idata object.
+
+        Parameters
+        ----------
+        models : foxes.core.Model or list of foxes.core.Model
+            The models to initialize
+        idata : dict, optional
+            The idata dictionary to be updated,
+            or the algorithms' idata object
+        store : bool or list of str
+            Store the model idata also under model name(s)
+        verbosity : int, optional
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+            
+        """
+        if idata is None and not self.initialized:
+            raise ValueError(f"Algorithm '{self.name}': update_idata called before initialization")
+        
+        idata = self._idata if idata is None else idata
+        verbosity = self.verbosity if verbosity is None else verbosity
+
+        if not isinstance(models, list) and not isinstance(models, tuple):
+            models = [models]
+
+        for m in models:
+
+            if not m.initialized:
+                self.print(f"Initializing model '{m.name}'")
+                hidata = m.initialize(self, verbosity)
+                idata["coords"].update(hidata["coords"])
+                idata["data_vars"].update(hidata["data_vars"])
+                if (isinstance(store, bool) and store) or (
+                    not isinstance(store, bool) and m.name in store):
+                    self._store[m.name] = hidata
+                    
+            elif m.name in self._store:
+                hidata = self._store[m.name]
+                idata["coords"].update(hidata["coords"])
+                idata["data_vars"].update(hidata["data_vars"]) 
+        
+        return idata
+
+    def get_models_data(self, idata=None):
         """
         Creates xarray from model input data.
 
         Parameters
         ----------
-        models : array_like of foxes.core.Model
-            The models whose data to collect
+        idata : dict, optional
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`.
+            Take algorithm's idata object by default.
 
         Returns
         -------
@@ -184,15 +256,9 @@ class Algorithm(Model):
             The model input data
 
         """
-        if not isinstance(models, tuple) and not isinstance(models, list):
-            models = [models]
-
-        idata = {"coords": {}, "data_vars": {}}
-        for m in models:
-            hidata = m.model_input_data(self)
-            idata["coords"].update(hidata["coords"])
-            idata["data_vars"].update(hidata["data_vars"])
-
+        if idata is None and not self.initialized:
+            raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
+        idata = self._idata if idata is None else idata
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)
 
@@ -232,15 +298,18 @@ class Algorithm(Model):
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
 
-    def finalize(self, clear_mem=False):
+    def finalize(self, clear_store=True):
         """
         Finalizes the algorithm.
 
         Parameters
         ----------
-        clear_mem : bool
-            Flag for deleting algorithm data and
-            resetting initialization flag
+        clear_store : bool
+            Clear the storage memory
 
         """
-        super().finalize(self, clear_mem=clear_mem, verbosity=self.verbosity)
+        self.mbook.finalize(self, self.verbosity)
+        self._idata = None
+        if clear_store:
+            self.clear_store()
+        super().finalize(self, self.verbosity)

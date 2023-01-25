@@ -48,7 +48,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
-    "sphinxcontrib.email",
     "nbsphinx",
     "sphinx.ext.doctest",
     "m2r2",

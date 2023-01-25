@@ -48,52 +48,23 @@ class SetUniformData(PointDataModel):
         self.var2col = var2col
         
         self._rpars = pd_read_pars
-        self._data = None
 
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
-
-        """
-        if self._data is None:
-            if isinstance(self.data_source, pd.DataFrame):
-                self._data = self.data_source[
-                    [self.var2col.get(v, v) for v in self.ovars]
-                ].to_numpy(FC.DTYPE)
-            elif isinstance(self.data_source, dict):
-                pass
-            else:
-                if verbosity:
-                    print(f"States '{self.name}': Reading file {self.data_source}")
-                rpars = dict(index_col=0)
-                rpars.update(self._rpars)
-                self._data = PandasFileHelper().read_file(self.data_source, **rpars)
-                self._data = self._data[
-                    [self.var2col.get(v, v) for v in self.ovars]
-                ].to_numpy(FC.DTYPE)
-
-        super().initialize(algo, verbosity)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -103,13 +74,28 @@ class SetUniformData(PointDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().model_input_data(algo)
+        self.VARS = self.var("VARS")
+        self.DATA = self.var("DATA")
 
-        if self._data is not None:
-            self.VARS = self.var("VARS")
-            self.DATA = self.var("DATA")
-            idata["coords"][self.VARS] = self.ovars
-            idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), self._data)
+        if isinstance(self.data_source, pd.DataFrame):
+            data = self.data_source[
+                [self.var2col.get(v, v) for v in self.ovars]
+            ].to_numpy(FC.DTYPE)
+        elif isinstance(self.data_source, dict):
+            pass
+        else:
+            if verbosity:
+                print(f"States '{self.name}': Reading file {self.data_source}")
+            rpars = dict(index_col=0)
+            rpars.update(self._rpars)
+            data = PandasFileHelper().read_file(self.data_source, **rpars)
+            data = data[
+                [self.var2col.get(v, v) for v in self.ovars]
+            ].to_numpy(FC.DTYPE)
+
+        idata = super().initialize(algo, verbosity)
+        idata["coords"][self.VARS] = self.ovars
+        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data)
 
         return idata
 
@@ -162,24 +148,3 @@ class SetUniformData(PointDataModel):
                 pdata[v][:] = self.data_source[v]
 
         return {v: pdata[v] for v in self.ovars}
-
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        if clear_mem:
-            self._data = None
-        super().finalize(algo, results, clear_mem, verbosity)

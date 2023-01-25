@@ -2,7 +2,6 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.variables as FV
-from foxes.utils import delta_wd
 
 
 class YAWM2YAW(TurbineModel):

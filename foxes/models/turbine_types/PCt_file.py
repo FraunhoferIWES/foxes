@@ -93,7 +93,6 @@ class PCtFile(TurbineType):
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
-        self._data = None
 
     def output_farm_vars(self, algo):
         """
@@ -112,42 +111,51 @@ class PCtFile(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, st_sel, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if self._data is None:
-            if isinstance(self.source, pd.DataFrame):
-                self._data = self.source
-            else:
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
-                if verbosity > 0:
-                    if not Path(self.source).is_file():
-                        print(
-                            f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
-                        )
-                        print(f"Path: {fpath}")
-                    else:
-                        print(f"Turbine type '{self.name}': Reading file", self.source)
-                self._data = PandasFileHelper.read_file(fpath, **self.rpars)
+        if isinstance(self.source, pd.DataFrame):
+            data = self.source
+        else:
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
+            if verbosity > 0:
+                if not Path(self.source).is_file():
+                    print(
+                        f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
+                    )
+                    print(f"Path: {fpath}")
+                else:
+                    print(f"Turbine type '{self.name}': Reading file", self.source)
+            data = PandasFileHelper.read_file(fpath, **self.rpars)
 
-            self._data = self._data.set_index(self.col_ws).sort_index()
-            self.data_ws = self._data.index.to_numpy()
-            self.data_P = self._data[self.col_P].to_numpy()
-            self.data_ct = self._data[self.col_ct].to_numpy()
+        data = data.set_index(self.col_ws).sort_index()
+        self.data_ws = data.index.to_numpy()
+        self.data_P = data[self.col_P].to_numpy()
+        self.data_ct = data[self.col_ct].to_numpy()
 
-        super().initialize(algo, st_sel, verbosity=verbosity)
+        return super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -221,7 +229,7 @@ class PCtFile(TurbineType):
 
         return out
 
-    def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -229,19 +237,9 @@ class PCtFile(TurbineType):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        if clear_mem:
-            del self.data_ws, self.data_P, self.data_ct
-            self._data = None
-        super().finalize(algo, results, clear_mem, verbosity=verbosity)
+        del self.data_ws, self.data_P, self.data_ct
+        super().finalize(algo, verbosity)

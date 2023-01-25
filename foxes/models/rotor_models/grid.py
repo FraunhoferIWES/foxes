@@ -54,12 +54,25 @@ class GridRotor(RotorModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
             The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         N = self.n * self.n
@@ -102,7 +115,7 @@ class GridRotor(RotorModel):
             self.dpoints[:, 2] = y.reshape(N)
             self.weights = np.ones(N, dtype=FC.DTYPE) / N
 
-        super().initialize(algo, verbosity=verbosity)
+        return super().initialize(algo, verbosity)
 
     def n_rotor_points(self):
         """

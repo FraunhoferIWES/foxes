@@ -305,7 +305,7 @@ class ModelBook:
                     print("(none)")
                 print()
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -313,11 +313,6 @@ class ModelBook:
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The farm calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level, 0 = silent
 
@@ -325,24 +320,5 @@ class ModelBook:
         for ms in self.sources.values():
             if isinstance(ms, Dict):
                 for m in ms.values():
-                    if isinstance(m, TurbineModel) or isinstance(m, FarmController):
-                        st_sel = np.ones(
-                            (results.dims[FV.STATE], results.dims[FV.TURBINE]),
-                            dtype=bool,
-                        )
-                        m.finalize(
-                            algo,
-                            results=results,
-                            st_sel=st_sel,
-                            clear_mem=clear_mem,
-                            verbosity=verbosity,
-                        )
-                    elif isinstance(m, RotorModel) or isinstance(m, FarmModel) or isinstance(m, PointDataModel):
-                        m.finalize(
-                            algo,
-                            results=results,
-                            clear_mem=clear_mem,
-                            verbosity=verbosity,
-                        )
-                    else:
-                        m.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
+                    if m.initialized:
+                        m.finalize(algo, verbosity)

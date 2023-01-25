@@ -227,17 +227,19 @@ class FieldDataNC(States):
                 self.VARS = self.var("vars")
                 self.DATA = self.var("data")
 
-                self._h = ds[self.h_coord].to_numpy()
-                self._y = ds[self.y_coord].to_numpy()
-                self._x = ds[self.x_coord].to_numpy()
-                self._v = list(self._dkys.keys())
+                h = ds[self.h_coord].to_numpy()
+                y = ds[self.y_coord].to_numpy()
+                x = ds[self.x_coord].to_numpy()
+                v = list(self._dkys.keys())
 
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
                 data = self._get_data(ds, verbosity)
-                self._data = (coos, data)
+                data = (coos, data)
+
+                return h, y, x, v, data
 
         if isinstance(self.data_source, xr.Dataset):
-            extract_data(self.data_source)
+            return extract_data(self.data_source)
         else:
             with xr.open_mfdataset(
                 pattern,
@@ -248,11 +250,18 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                extract_data(ds)
+                out = extract_data(ds)
+            return out
 
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
@@ -261,8 +270,14 @@ class FieldDataNC(States):
         verbosity : int
             The verbosity level, 0 = silent
 
-        """
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
+        """
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars
         ):
@@ -283,12 +298,12 @@ class FieldDataNC(States):
         self._weights = None
 
         if isinstance(self.data_source, xr.Dataset):
-            self._read_nc(algo, None, verbosity)
+            r = self._read_nc(algo, None, verbosity)
         else:
             if verbosity:
                 print(f"States '{self.name}': Reading files {self.data_source}")
             try:
-                self._read_nc(algo, self.data_source, verbosity)
+                r = self._read_nc(algo, self.data_source, verbosity)
             except OSError:
                 if verbosity:
                     print(
@@ -297,43 +312,21 @@ class FieldDataNC(States):
                 fpath = algo.dbook.get_file_path(STATES, self.data_source, check_raw=False)
                 if verbosity:
                     print(f"Path: {fpath}")
-                self._read_nc(algo, fpath, verbosity)
+                r = self._read_nc(algo, fpath, verbosity)
 
-        super().initialize(algo)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        idata = super().model_input_data(algo)
-        idata["coords"][FV.STATE] = self._inds
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
 
         if self.pre_load:
 
-            idata["coords"][self.H] = self._h
-            idata["coords"][self.Y] = self._y
-            idata["coords"][self.X] = self._x
-            idata["coords"][self.VARS] = self._v
-            idata["data_vars"][self.DATA] = self._data
+            h, y, x, v, data = r
 
+            idata["coords"][self.H] = h
+            idata["coords"][self.Y] = y
+            idata["coords"][self.X] = x
+            idata["coords"][self.VARS] = v
+            idata["data_vars"][self.DATA] = data
+        
         return idata
 
     def size(self):
@@ -509,25 +502,3 @@ class FieldDataNC(States):
                     )
 
         return out
-
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        if clear_mem:
-            del self._h, self._y, self._x, self._v, self._data
-
-        super().finalize(algo, results, clear_mem, verbosity)

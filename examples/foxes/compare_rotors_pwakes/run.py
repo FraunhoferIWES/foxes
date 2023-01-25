@@ -194,7 +194,7 @@ if __name__ == "__main__":
         "-p",
         "--pwakes",
         help="The partial wakes model(s)",
-        default=["distsliced4", "axiwake5", "rotor_points"],
+        default=["distsliced9", "axiwake6", "rotor_points"],
         nargs="+",
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)

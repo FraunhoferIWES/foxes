@@ -62,7 +62,7 @@ def run_foxes(args):
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
 
-    print(farm_results)
+    print(farm_results, "\n")
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])

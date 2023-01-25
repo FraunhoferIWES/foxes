@@ -26,7 +26,7 @@ def calc(mbook, farm, states, wakes, points, args):
     farm_results = algo.calc_farm()
     point_results = algo.calc_points(farm_results, points[None, :])
 
-    mbook.finalize(algo, farm_results, clear_mem=True, verbosity=0)
+    mbook.finalize(algo, verbosity=0)
 
     return point_results[args.var].to_numpy()
 
