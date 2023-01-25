@@ -33,30 +33,18 @@ class FarmOrder(WakeFrame):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
-
-        """
-        self.base_frame.initialize(algo, verbosity)
-        super().initialize(algo, verbosity)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -66,7 +54,10 @@ class FarmOrder(WakeFrame):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        return self.base_frame.model_input_data(algo)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.base_frame, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -148,7 +139,7 @@ class FarmOrder(WakeFrame):
         """
         return self.base_frame.get_centreline_points(algo, mdata, fdata, states_source_turbine, x)
         
-    def finalize(self, algo, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -156,12 +147,10 @@ class FarmOrder(WakeFrame):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level, 0 = silent
 
         """
-        self.base_frame.finalize(algo, clear_mem, verbosity)
-        super().finalize(algo, clear_mem, verbosity)
+        if self.base_frame.initialized:
+            self.base_frame.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

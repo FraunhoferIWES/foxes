@@ -25,20 +25,33 @@ class RotorPoints(PartialWakesModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if not algo.rotor_model.initialized:
-            algo.rotor_model.initialize(algo, verbosity=verbosity)
-
         self.WPOINTS = self.var("WPOINTS")
 
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(algo.rotor_model, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def get_wake_points(self, algo, mdata, fdata):
         """

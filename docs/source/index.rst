@@ -23,8 +23,7 @@ package which as well supports vectorization.
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes
 
-Contact (please report code issues under the github link above):
-    :email:`Jonas Schmidt <jonas.schmidt@iwes.fraunhofer.de>`
+Please report code issues under the github link above.
     
 License:
     MIT_

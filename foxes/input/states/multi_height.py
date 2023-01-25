@@ -37,11 +37,17 @@ class MultiHeightStates(States):
         reading from data
     pd_read_pars : dict, optional
         pandas file reading parameters
+    states_sel : slice or range or list of int, optional
+        States subset selection
+    states_loc : list, optional
+        State index selection via pandas loc function
     ipars : dict, optional
         Parameters for scipy.interpolate.interp1d
 
     Attributes
     ----------
+    data_source : str or pandas.DataFrame
+        Either path to a file or data
     ovars : list of str
         The output variables
     heights : list of float
@@ -53,6 +59,10 @@ class MultiHeightStates(States):
         reading from data
     pd_read_pars : dict, optional
         pandas file reading parameters
+    states_sel : slice or range or list of int
+        States subset selection
+    states_loc : list
+        State index selection via pandas loc function
     RDICT : dict
         Default pandas file reading parameters
 
@@ -68,23 +78,49 @@ class MultiHeightStates(States):
         var2col={},
         fixed_vars={},
         pd_read_pars={},
+        states_sel=None,
+        states_loc=None,
         ipars={},
     ):
         super().__init__()
 
+        self.data_source = data_source
         self.ovars = output_vars
         self.heights = np.array(heights, dtype=FC.DTYPE)
         self.rpars = pd_read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
         self.ipars = ipars
+        self.states_sel = states_sel
+        self.states_loc = states_loc
 
-        self._data0 = data_source
-        self._data = None
         self._cmap = None
         self._solo = None
         self._weights = None
         self._N = None
+
+    def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
+        """
+        Reset the states, optionally select states
+
+        Parameters
+        ----------
+        states_sel : slice or range or list of int, optional
+            States subset selection
+        states_loc : list, optional
+            State index selection via pandas loc function
+        verbosity : int
+            The verbosity level, 0 = silent
+            
+        """
+        if self.initialized:
+            if algo is None:
+                raise KeyError(f"{self.name}: Missing algo for reset")
+            elif algo.states is not self:
+                raise ValueError(f"{self.states}: algo.states differs from self")
+            self.finalize(algo, verbosity)
+        self.states_sel = states_sel
+        self.states_loc = states_loc
 
     def _find_cols(self, v, cols):
         """
@@ -109,88 +145,22 @@ class MultiHeightStates(States):
                     )
             return cls
 
-    def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        states_sel : slice or range or list of int, optional
-            States subset selection
-        states_loc : list, optional
-            State index selection via pandas loc function
         verbosity : int
-            The verbosity level
-
-        """
-        super().initialize(algo, verbosity=verbosity)
-
-        if not isinstance(self._data0, pd.DataFrame):
-            if not Path(self._data0).is_file():
-                if verbosity:
-                    print(
-                        f"States '{self.name}': Reading static data '{self._data0}' from context '{STATES}'"
-                    )
-                self._data0 = algo.dbook.get_file_path(
-                    STATES, self._data0, check_raw=False
-                )
-                if verbosity:
-                    print(f"Path: {self._data0}")
-            elif verbosity:
-                print(f"States '{self.name}': Reading file {self._data0}")
-            rpars = dict(self.RDICT, **self.rpars)
-            self._data0 = PandasFileHelper().read_file(self._data0, **rpars)
-
-        if states_sel is not None:
-            self._data = self._data0.iloc[states_sel]
-        elif states_loc is not None:
-            self._data = self._data0.loc[states_loc]
-        else:
-            self._data = self._data0
-        self._N = len(self._data.index)
-
-        col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
-        if col_w in self._data:
-            self._weights[:] = self._data[col_w].to_numpy()[:, None]
-        elif FV.WEIGHT in self.var2col:
-            raise KeyError(
-                f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {self._data.columns}"
-            )
-        else:
-            self._weights[:] = 1.0 / self._N
-
-        cols = []
-        self._cmap = {}
-        self._solo = {}
-        for v in self.ovars:
-            vcols = self._find_cols(v, self._data.columns)
-            if len(vcols) == 1:
-                self._solo[v] = self._data[vcols[0]].to_numpy()
-            elif len(vcols) > 1:
-                self._cmap[v] = (len(cols), len(cols) + len(vcols))
-                cols += vcols
-        self._data = self._data[cols]
-
-        self.H = self.var(FV.H)
-        self.VARS = self.var("vars")
-        self.DATA = self.var("data")
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -200,19 +170,75 @@ class MultiHeightStates(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().model_input_data(algo)
+        if not isinstance(self.data_source, pd.DataFrame):
+            if not Path(self.data_source).is_file():
+                if verbosity:
+                    print(
+                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                    )
+                self.data_source = algo.dbook.get_file_path(
+                    STATES, self.data_source, check_raw=False
+                )
+                if verbosity:
+                    print(f"Path: {self.data_source}")
+            elif verbosity:
+                print(f"States '{self.name}': Reading file {self.data_source}")
+            rpars = dict(self.RDICT, **self.rpars)
+            data = PandasFileHelper().read_file(self.data_source, **rpars)
+            isorg = False
+        else:
+            isorg = True
 
-        if self._data.index.name is not None:
-            idata["coords"][FV.STATE] = self._data.index.to_numpy()
+        if self.states_sel is not None:
+            data = data.iloc[self.states_sel]
+        elif self.states_loc is not None:
+            data = data.loc[self.states_loc]
+        else:
+            data = data
+        self._N = len(data.index)
+
+        col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
+        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        if col_w in data:
+            self._weights[:] = data[col_w].to_numpy()[:, None]
+        elif FV.WEIGHT in self.var2col:
+            raise KeyError(
+                f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
+            )
+        else:
+            self._weights[:] = 1.0 / self._N
+            if isorg:
+                data = data.copy()
+            data[col_w] = self._weights[:, 0]
+
+        cols = []
+        self._cmap = {}
+        self._solo = {}
+        for v in self.ovars:
+            vcols = self._find_cols(v, data.columns)
+            if len(vcols) == 1:
+                self._solo[v] = data[vcols[0]].to_numpy()
+            elif len(vcols) > 1:
+                self._cmap[v] = (len(cols), len(cols) + len(vcols))
+                cols += vcols
+        data = data[cols]
+
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
+
         idata["coords"][self.H] = self.heights
         idata["coords"][self.VARS] = list(self._cmap.keys())
 
         n_hts = len(self.heights)
-        n_vrs = int(len(self._data.columns) / n_hts)
+        n_vrs = int(len(data.columns) / n_hts)
         dims = (FV.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
-            self._data.to_numpy().reshape(self._N, n_vrs, n_hts),
+            data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
 
         for v, d in self._solo.items():
@@ -343,7 +369,7 @@ class MultiHeightStates(States):
 
         return results
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -351,22 +377,15 @@ class MultiHeightStates(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        self._data = None
         self._cmap = None
         self._solo = None
         self._weights = None
         self._N = None
-
-        super().finalize(algo, results, clear_mem, verbosity)
+        super().finalize(algo, verbosity)
 
 
 class MultiHeightTimeseries(MultiHeightStates):

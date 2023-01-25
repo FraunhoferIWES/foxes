@@ -177,6 +177,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.2.7-alpha
 
+- Core:
+  - Models now with simplified structure, reduces memory load during calculations
 - Algorithms:
   - New: `Iterative`, iterative wind farm calculation until convergence has been reached
 - Input:

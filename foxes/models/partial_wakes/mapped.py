@@ -67,15 +67,28 @@ class Mapped(PartialWakesModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
 
         pws = {}
         for w in self.wake_models:
@@ -107,9 +120,10 @@ class Mapped(PartialWakesModel):
                     f"Partial wakes '{self.name}': Applying {pname} to {[w.name for w in pars['wake_models']]}"
                 )
             self._pwakes.append(PartialWakesModel.new(pname, **pars))
+        
+        algo.update_idata(self._pwakes, idata=idata, verbosity=verbosity)
 
-        for pwake in self._pwakes:
-            pwake.initialize(algo, verbosity=verbosity)
+        return idata
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -193,3 +207,18 @@ class Mapped(PartialWakesModel):
             pw.evaluate_results(
                 algo, mdata, fdata, wake_deltas[pwi], states_turbine, update_amb_res
             )
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        self._pwakes = None
+        super().finalize(algo, verbosity)

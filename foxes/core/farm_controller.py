@@ -231,47 +231,22 @@ class FarmController(FarmDataModel):
 
         return pars
 
-    def initialize(self, algo, st_sel=None, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool, optional
-            Selection of states and turbines, shape:
-            (n_states, n_turbines). None for all.
         verbosity : int
-            The verbosity level, 0 means silent
-
-        """
-        if self.turbine_model_names is None:
-            self.collect_models(algo)
-
-        super().initialize(algo, verbosity=verbosity)
-
-        for s in [self.pre_rotor_models, self.post_rotor_models]:
-            pars = self.__get_pars(
-                algo, s.models, "init", st_sel=st_sel, from_data=False
-            )
-            if not s.initialized:
-                s.initialize(algo, parameters=pars, verbosity=verbosity)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function is automatically called during
-        initialization. It should specify all data
-        that is either state or point dependent, or
-        intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -281,20 +256,20 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if self.turbine_model_names is None:
-            self.collect_models(algo)
+        idata = super().initialize(algo)
 
-        idata = super().model_input_data(algo)
+        if verbosity > 0:
+            print(f"{self.name}': Initializing")
+
+        self.collect_models(algo)
+        algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
+            idata=idata, verbosity=verbosity)
+
         idata["coords"][FV.TMODELS] = self.turbine_model_names
         idata["data_vars"][FV.TMODEL_SELS] = (
             (FV.STATE, FV.TURBINE, FV.TMODELS),
             self.turbine_model_sels,
         )
-
-        for s in [self.pre_rotor_models, self.post_rotor_models]:
-            jdata = s.model_input_data(algo)
-            idata["coords"].update(jdata["coords"])
-            idata["data_vars"].update(jdata["data_vars"])
 
         return idata
 
@@ -357,7 +332,7 @@ class FarmController(FarmDataModel):
         self.turbine_model_sels = mdata[FV.TMODEL_SELS]
         return res
 
-    def finalize(self, algo, results, st_sel=None, verbosity=0, clear_mem=False):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -365,29 +340,17 @@ class FarmController(FarmDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        st_sel : numpy.ndarray of bool, optional
-            Selection of states and turbines, shape:
-            (n_states, n_turbines). None for all.
         verbosity : int
             The verbosity level, 0 means silent
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
 
         """
+        self.turbine_model_names = None
+        self.turbine_model_sels = None
+        self.pre_rotor_models = None
+        self.post_rotor_models = None
+
         for s in [self.pre_rotor_models, self.post_rotor_models]:
             if s is not None and s.initialized:
-                pars = self.__get_pars(
-                    algo, s.models, "final", st_sel=st_sel, from_data=False
-                )
-                s.finalize(
-                    algo,
-                    results=results,
-                    parameters=pars,
-                    verbosity=verbosity,
-                    clear_mem=clear_mem,
-                )
+                s.finalize(algo, verbosity)
 
-        super().finalize(algo, results, clear_mem=clear_mem)
+        super().finalize(algo, verbosity)

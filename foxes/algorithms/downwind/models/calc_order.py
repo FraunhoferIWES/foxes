@@ -12,20 +12,31 @@ class CalcOrder(FarmDataModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if not algo.wake_frame.initialized:
-            if verbosity:
-                print(
-                    f"{self.name}, linked model '{algo.wake_frame.name}': Initializing"
-                )
-            algo.wake_frame.initialize(algo, verbosity)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(algo.wake_frame, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def output_farm_vars(self, algo):
         """

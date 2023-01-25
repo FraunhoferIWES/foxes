@@ -52,24 +52,31 @@ class SingleStateStates(States):
         self.profdicts = profiles
         self.profdata = profdata
 
-    def initialize(self, algo, states_sel=None, states_loc=None, verbosity=1):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        states_sel : slice or range or list of int, optional
-            States subset selection
-        states_loc : list, optional
-            State index selection via pandas loc function
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity=verbosity)
-
         self._profiles = {}
         for v, d in self.profdicts.items():
             if isinstance(d, str):
@@ -83,6 +90,11 @@ class SingleStateStates(States):
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
+
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
+
+        return idata
 
     def size(self):
         """

@@ -348,7 +348,4 @@ class StatesRosePlotOutput(RosePlotOutput):
 
         results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
 
-        algo.finalize()
-        states.finalize(algo, results, clear_mem=False, verbosity=0)
-
         super().__init__(results)

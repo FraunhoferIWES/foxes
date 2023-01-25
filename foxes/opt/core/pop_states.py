@@ -36,20 +36,63 @@ class PopStates(States):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if not self.states.initialized:
-            self.states.initialize(algo, verbosity=verbosity)
-        super().initialize(algo, verbosity)
-
         self.STATE0 = self.var(FV.STATE + "0")
         self.SMAP = self.var("SMAP")
+
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
+
+        if not self.states.name in algo.store:
+            raise KeyError(f"States idata '{self.states.name}' not found in algo store")
+        else:
+            idata0 = algo.store[self.states.name]
+
+        for cname, coord in idata0["coords"].items():
+            if cname != FV.STATE:
+                idata["coords"][cname] = coord
+            else:
+                idata["coords"][self.STATE0] = coord
+
+        for dname, (dims0, data0) in idata0["data_vars"].items():
+            if dname != FV.WEIGHT:
+                hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
+                idata["data_vars"][dname] = (hdims, data0)
+
+        smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
+        smap[:] = np.arange(self.states.size())[None, :]
+        smap = smap.reshape(self.size())
+        idata["data_vars"][self.SMAP] = ((FV.STATE,), smap)
+
+        found = False
+        for dname, (dims0, data0) in idata["data_vars"].items():
+            if self.STATE0 in dims0:
+                found = True
+                break
+        if not found:
+            del idata["coords"][self.STATE0]
+
+        return idata
 
     def size(self):
         """
@@ -83,50 +126,6 @@ class PopStates(States):
         )
         weights[:] = self.states.weights(algo)[None, :, :] / self.n_pop
         return weights.reshape(self.size(), algo.n_turbines)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function is automatically called during
-        initialization. It should specify all data
-        that is either state or point dependent, or
-        intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        idata0 = self.states.model_input_data(algo)
-        idata = super().model_input_data(algo)
-
-        for cname, coord in idata0["coords"].items():
-            if cname != FV.STATE:
-                idata["coords"][cname] = coord
-            else:
-                idata["coords"][self.STATE0] = coord
-
-        for dname, (dims0, data0) in idata0["data_vars"].items():
-            if dname != FV.WEIGHT:
-                hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
-                idata["data_vars"][dname] = (hdims, data0)
-
-        smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
-        smap[:] = np.arange(self.states.size())[None, :]
-        smap = smap.reshape(self.size())
-        idata["data_vars"][self.SMAP] = ((FV.STATE,), smap)
-
-        return idata
 
     def output_point_vars(self, algo):
         """
@@ -192,7 +191,7 @@ class PopStates(States):
 
         return self.states.calculate(algo, hmdata, fdata, pdata)
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -200,14 +199,10 @@ class PopStates(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        self.states.finalize(algo, results, clear_mem, verbosity)
-        super().finalize(algo, results, clear_mem, verbosity)
+        if self.states.initialized:
+            self.states.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

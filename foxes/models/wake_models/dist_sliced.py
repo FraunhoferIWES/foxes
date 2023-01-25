@@ -39,22 +39,36 @@ class DistSlicedWakeModel(WakeModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity=verbosity)
-
         self.superp = {
             v: algo.mbook.wake_superpositions[s] for v, s in self.superpositions.items()
         }
-        for s in self.superp.values():
-            if not s.initialized:
-                s.initialize(algo, verbosity=verbosity)
+
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(list(self.superp.values()),
+            idata=idata, verbosity=verbosity)
+        
+        return idata
 
     @abstractmethod
     def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
@@ -176,3 +190,20 @@ class DistSlicedWakeModel(WakeModel):
             wake_deltas[v] = s.calc_final_wake_delta(
                 algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
             )
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+        for s in self.superp.values():
+            s.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)
+        
