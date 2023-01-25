@@ -168,6 +168,9 @@ class DataCalcModel(Model):
             The calculation results
 
         """
+        # check:
+        if not self.initialized:
+            raise ValueError(f"DataCalcModel '{self.name}': run_calculation called for uninitialized model")
 
         # prepare:
         loopd = set(loop_dims)

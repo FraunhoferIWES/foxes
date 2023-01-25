@@ -51,26 +51,41 @@ class PartialAxiwake(PartialWakesModel):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
 
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
-        if not self.rotor_model.initialized:
-            self.rotor_model.initialize(algo, verbosity=verbosity)
+
+        algo.update_idata(self.rotor_model, idata=idata, verbosity=verbosity)
 
         for w in self.wake_models:
             if not isinstance(w, AxisymmetricWakeModel):
                 raise TypeError(
                     f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not an AxisymmetricWakeModel"
                 )
+        
+        return idata
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -284,3 +299,19 @@ class PartialAxiwake(PartialWakesModel):
         self.rotor_model.eval_rpoint_results(
             algo, mdata, fdata, wres, weights, states_turbine=states_turbine
         )
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level
+
+        """
+        if self.rotor_model.initialized:
+            self.rotor_model.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

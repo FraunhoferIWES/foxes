@@ -57,31 +57,23 @@ class States(PointDataModel):
         """
         pass
 
-    def model_input_data(self, algo):
+    def _update_idata(self, algo, idata):
         """
-        The model input data, as needed for the
-        calculation.
+        Add basic states data to idata.
 
-        This function is automatically called during
-        initialization. It should specify all data
-        that is either state or point dependent, or
-        intended to be shared between chunks.
+        This function should be called within initialize,
+        after loading the data.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-
-        Returns
-        -------
         idata : dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = {"coords": {}, "data_vars": {}}
-
         sinds = self.index()
         if sinds is not None:
             idata["coords"][FV.STATE] = sinds
@@ -211,31 +203,18 @@ class ExtendedStates(States):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
-
-        """
-        if not self.pmodels.initialized:
-            self.pmodels.initialize(algo, verbosity=verbosity)
-        super().initialize(algo, verbosity=verbosity)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -245,7 +224,10 @@ class ExtendedStates(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        return self.pmodels.model_input_data(algo)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.pmodels, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def output_point_vars(self, algo):
         """
@@ -291,7 +273,7 @@ class ExtendedStates(States):
         """
         return self.pmodels.calculate(algo, mdata, fdata, pdata)
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -299,17 +281,12 @@ class ExtendedStates(States):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        self.pmodels.finalize(algo, results, clear_mem, verbosity)
-        super().finalize(algo, results, clear_mem, verbosity)
+        self.pmodels.finalize(algo,  verbosity)
+        super().finalize(algo, verbosity)
 
     def __add__(self, m):
         models = self.pmodels.models[1:]

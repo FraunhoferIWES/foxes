@@ -126,59 +126,66 @@ class WsRho2PCtTwoFiles(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, st_sel, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         # read power curve:
-        if self._P is None:
-            if isinstance(self.source_P, pd.DataFrame):
-                data = self.source_P
-            else:
-                fpath = algo.dbook.get_file_path(
-                    PCTCURVE, self.source_P, check_raw=True
-                )
-                pars = {"index_col": 0}
-                pars.update(self.rpars_P)
-                data = PandasFileHelper.read_file(fpath, **pars)
+        if isinstance(self.source_P, pd.DataFrame):
+            data = self.source_P
+        else:
+            fpath = algo.dbook.get_file_path(
+                PCTCURVE, self.source_P, check_raw=True
+            )
+            pars = {"index_col": 0}
+            pars.update(self.rpars_P)
+            data = PandasFileHelper.read_file(fpath, **pars)
 
-            data.sort_index(inplace=True)
-            data.columns = data.columns.astype(FC.DTYPE)
-            self._ws_P = data.index.to_numpy(FC.DTYPE)
-            self._rho_P = np.sort(data.columns.to_numpy())
-            self._P = data[self._rho_P].to_numpy(FC.DTYPE)
+        data.sort_index(inplace=True)
+        data.columns = data.columns.astype(FC.DTYPE)
+        self._ws_P = data.index.to_numpy(FC.DTYPE)
+        self._rho_P = np.sort(data.columns.to_numpy())
+        self._P = data[self._rho_P].to_numpy(FC.DTYPE)
 
         # read ct curve:
-        if self._ct is None:
+        if isinstance(self.source_ct, pd.DataFrame):
+            data = self.source_ct
+        else:
+            fpath = algo.dbook.get_file_path(
+                PCTCURVE, self.source_ct, check_raw=True
+            )
+            pars = {"index_col": 0}
+            pars.update(self.rpars_ct)
+            data = PandasFileHelper.read_file(fpath, **pars)
 
-            if isinstance(self.source_ct, pd.DataFrame):
-                data = self.source_ct
-            else:
-                fpath = algo.dbook.get_file_path(
-                    PCTCURVE, self.source_ct, check_raw=True
-                )
-                pars = {"index_col": 0}
-                pars.update(self.rpars_ct)
-                data = PandasFileHelper.read_file(fpath, **pars)
+        data.sort_index(inplace=True)
+        data.columns = data.columns.astype(FC.DTYPE)
+        self._ws_ct = data.index.to_numpy(FC.DTYPE)
+        self._rho_ct = np.sort(data.columns.to_numpy())
+        self._ct = data[self._rho_ct].to_numpy(FC.DTYPE)
 
-            data.sort_index(inplace=True)
-            data.columns = data.columns.astype(FC.DTYPE)
-            self._ws_ct = data.index.to_numpy(FC.DTYPE)
-            self._rho_ct = np.sort(data.columns.to_numpy())
-            self._ct = data[self._rho_ct].to_numpy(FC.DTYPE)
-
-        super().initialize(algo, st_sel, verbosity=verbosity)
+        return super().initialize(algo, verbosity)
 
     def _bounds_info(self, target, qts):
         """Helper function for printing bounds info"""
@@ -309,7 +316,7 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
 
-    def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -317,21 +324,11 @@ class WsRho2PCtTwoFiles(TurbineType):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        if clear_mem:
-            del self._ws_P, self._rho_P, self._ws_ct, self._rho_ct
-            self._P = None
-            self._ct = None
-
-        super().finalize(algo, results, clear_mem, verbosity=verbosity)
+        del self._ws_P, self._rho_P, self._ws_ct, self._rho_ct
+        self._P = None
+        self._ct = None
+        super().finalize(algo, verbosity)

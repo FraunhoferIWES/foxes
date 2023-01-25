@@ -83,37 +83,45 @@ class TableFactors(TurbineModel):
         """
         return self.ovars
 
-    def initialize(self, algo, st_sel, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if self._data is None:
+        if isinstance(self.data_source, pd.DataFrame):
+            self._data = self.data_source
+        else:
+            if verbosity > 0:
+                print(f"{self.name}: Reading file {self.data_source}")
+            rpars = dict(index_col=0)
+            rpars.update(self._rpars)
+            self._data = PandasFileHelper.read_file(self.data_source, **rpars)
 
-            if isinstance(self.data_source, pd.DataFrame):
-                self._data = self.data_source
-            else:
-                if verbosity > 0:
-                    print(f"{self.name}: Reading file {self.data_source}")
-                rpars = dict(index_col=0)
-                rpars.update(self._rpars)
-                self._data = PandasFileHelper.read_file(self.data_source, **rpars)
+        self._rvals = self._data.index.to_numpy(FC.DTYPE)
+        self._cvals = self._data.columns.to_numpy(FC.DTYPE)
+        self._data = self._data.to_numpy(FC.DTYPE)
 
-            self._rvals = self._data.index.to_numpy(FC.DTYPE)
-            self._cvals = self._data.columns.to_numpy(FC.DTYPE)
-            self._data = self._data.to_numpy(FC.DTYPE)
-
-        super().initialize(algo, st_sel, verbosity)
+        return super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "

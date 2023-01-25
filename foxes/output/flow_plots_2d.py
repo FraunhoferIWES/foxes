@@ -154,7 +154,7 @@ class FlowPlots2D(Output):
         add_bar=True,
         cmap=None,
         weight_turbine=0,
-        verbosity=1,
+        verbosity=0,
         ret_state=False,
         ret_im=False,
         **kwargs,
@@ -279,9 +279,12 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        if averb is not None:
+            self.algo.verbosity = averb
         data = point_results[var].to_numpy()
         del point_results
 
@@ -361,7 +364,7 @@ class FlowPlots2D(Output):
         add_bar=True,
         cmap=None,
         weight_turbine=0,
-        verbosity=1,
+        verbosity=0,
         ret_state=False,
         ret_im=False,
         **kwargs,
@@ -505,9 +508,12 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        if averb is not None:
+            self.algo.verbosity = averb
         data = point_results[var].to_numpy()
         del point_results
 
@@ -815,7 +821,7 @@ class FlowPlots2D(Output):
         cmap=None,
         quiver_n=None,
         quiver_pars={},
-        verbosity=1,
+        verbosity=0,
         ret_state=False,
         ret_im=False,
         **kwargs,
@@ -942,9 +948,12 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        if averb is not None:
+            self.algo.verbosity = averb
         data = point_results[var].values
         quiv = (
             None
@@ -1034,7 +1043,7 @@ class FlowPlots2D(Output):
         cmap=None,
         quiver_n=None,
         quiver_pars={},
-        verbosity=1,
+        verbosity=0,
         ret_state=False,
         ret_im=False,
         **kwargs,
@@ -1180,9 +1189,12 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        if averb is not None:
+            self.algo.verbosity = averb
         data = point_results[var].values
         quiv = (
             None

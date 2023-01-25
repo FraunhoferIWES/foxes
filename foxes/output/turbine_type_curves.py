@@ -1,3 +1,4 @@
+from tabnanny import verbose
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -127,6 +128,7 @@ class TurbineTypeCurves(Output):
         )
 
         algo = Downwind(self.mbook, farm, states, wake_models=[], verbosity=0)
+        self.mbook.finalize(algo, verbosity=0)
 
         results = algo.calc_farm()
 
