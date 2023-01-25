@@ -99,6 +99,14 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
+    # vertical flow plot
+    print("\nVertical flow figure output:")
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_yz(args.var, resolution=10, x=750, ymin=-200,ymax=200,zmax=300)
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)

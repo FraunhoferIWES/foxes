@@ -57,8 +57,8 @@ class FlowPlots2D(Output):
         vlabel,
         ret_state,
         ret_im,
-        invert_axis=None,
         quiv=None,
+        invert_axis=None,
     ):
         """
         Helper function for image creation
@@ -1393,7 +1393,7 @@ class FlowPlots2D(Output):
         z_min = zmin if zmin is not None else np.minimum(np.min(zz) - zspace, 10.0)
         x_min = x if x is not None else np.min(xx)
         y_max = ymax if ymax is not None else np.max(yy) + yspace
-        z_max = ymax if ymax is not None else np.max(zz) + zspace
+        z_max = zmax if zmax is not None else np.max(zz) + zspace
         x_max = x if x is not None else np.max(xx)
         del xx, yy, zz
 
@@ -1432,9 +1432,17 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
+        # point_results = self.algo.calc_points(
+        #     self.fres, points=g_pts, verbosity=verbosity, **kwargs
+        # )
+        # data = point_results[var].values
+
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        if averb is not None:
+            self.algo.verbosity = averb
         data = point_results[var].values
         quiv = (
             None
@@ -1492,8 +1500,8 @@ class FlowPlots2D(Output):
                 vlabel,
                 ret_state,
                 ret_im,
-                invert_axis='x',
                 quiv=None,
+                invert_axis='x',
             )
 
             yield out

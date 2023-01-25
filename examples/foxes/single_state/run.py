@@ -109,7 +109,7 @@ if __name__ == "__main__":
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xz(
-        args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.0)
+        args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
     )
     fig = next(g)
     plt.show()
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xz(
-        args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.0)
+        args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
     )
     fig = next(g)
     plt.show()
