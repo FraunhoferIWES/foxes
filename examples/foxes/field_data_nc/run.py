@@ -62,7 +62,7 @@ def run_foxes(args):
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    fig = o.get_mean_fig_xy(FV.WS, resolution=10)
+    o.get_mean_fig_xy(FV.WS, resolution=10)
     plt.show()
 
 

@@ -1431,7 +1431,6 @@ class FlowPlots2D(Output):
             print("Dim YZ   =", N_y, N_z)
             print("Grid pts =", n_pts)
 
-        # calculate point results:
         averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
         if averb is not None:
             self.algo.verbosity = verbosity
