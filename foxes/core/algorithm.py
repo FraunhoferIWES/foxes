@@ -2,6 +2,9 @@ import numpy as np
 import xarray as xr
 
 from .model import Model
+from .farm_data_model import FarmDataModelList
+from .point_data_model import PointDataModelList
+from .farm_controller import FarmController
 from foxes.data import StaticData
 from foxes.utils import Dict
 import foxes.variables as FV
@@ -26,6 +29,10 @@ class Algorithm(Model):
         e.g. `{"state": 1000}` for chunks of 1000 states
     verbosity : int
         The verbosity level, 0 means silent
+    dbook : foxes.DataBook, optional
+        The data book, or None for default
+    keep_models : list of str
+        Keep these models data in memory and do not finalize them
 
     Parameters
     ----------
@@ -38,13 +45,14 @@ class Algorithm(Model):
         e.g. `{"state": 1000}` for chunks of 1000 states
     verbosity : int
         The verbosity level, 0 means silent
-    dbook : foxes.DataBook, optional
+    dbook : foxes.DataBook
         The data book, or None for default
-
+    keep_models : list of str
+        Keep these models data in memory and do not finalize them
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None):
+    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=[]):
         super().__init__()
 
         self.name = type(self).__name__
@@ -55,10 +63,9 @@ class Algorithm(Model):
         self.n_states = None
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
+        self.keep_models = keep_models
 
-        self._idata = None
-        
-        self.clear_store()
+        self._idata_mem = Dict()
 
     def print(self, *args, **kwargs):
         """
@@ -151,70 +158,26 @@ class Algorithm(Model):
         """
         Initializes the algorithm.
         """
-        self._idata = super().initialize(self, self.verbosity)
+        self._idata_mem[self.name] = super().initialize(self, self.verbosity)
 
-    @property
-    def idata(self):
+    def update_idata(self, models, idata=None, verbosity=None):
         """
-        The current idata object.
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        return self._idata
-    
-    @property
-    def store(self):
-        """
-        The idata storage, under model name.
-
-        Returns
-        -------
-        Dict :
-            The stored model idata. keys: model names
-
-        """
-        return self._store
-
-    def clear_store(self):
-        """
-        Clear the idata storage
-        """
-        self._store = Dict()
-
-    def update_idata(self, models, idata=None, store=False, verbosity=None):
-        """
-        Update and return idata object.
+        Add to idata memory, optionally update and return idata object.
 
         Parameters
         ----------
         models : foxes.core.Model or list of foxes.core.Model
             The models to initialize
         idata : dict, optional
-            The idata dictionary to be updated,
-            or the algorithms' idata object
-        store : bool or list of str
-            Store the model idata also under model name(s)
+            The idata dictionary to be updated, else only add
+            to idata memory
         verbosity : int, optional
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
             
         """
         if idata is None and not self.initialized:
             raise ValueError(f"Algorithm '{self.name}': update_idata called before initialization")
         
-        idata = self._idata if idata is None else idata
         verbosity = self.verbosity if verbosity is None else verbosity
 
         if not isinstance(models, list) and not isinstance(models, tuple):
@@ -222,21 +185,33 @@ class Algorithm(Model):
 
         for m in models:
 
-            if not m.initialized:
+            if m.initialized:
+                try:
+                    hidata = self._idata_mem[m.name]
+                except KeyError:
+                    raise KeyError(f"Model '{m.name}' initialized but not found in idata memory")
+
+            else:
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
+                self._idata_mem[m.name] = hidata
+
+            if idata is not None:
                 idata["coords"].update(hidata["coords"])
                 idata["data_vars"].update(hidata["data_vars"])
-                if (isinstance(store, bool) and store) or (
-                    not isinstance(store, bool) and m.name in store):
-                    self._store[m.name] = hidata
-                    
-            elif m.name in self._store:
-                hidata = self._store[m.name]
-                idata["coords"].update(hidata["coords"])
-                idata["data_vars"].update(hidata["data_vars"]) 
-        
-        return idata
+
+    @property
+    def idata_mem(self):
+        """
+        The current idata memory
+
+        Returns
+        -------
+        dict :
+            Keys: model name, value: idata dict
+
+        """
+        return self._idata_mem
 
     def get_models_data(self, idata=None):
         """
@@ -256,9 +231,19 @@ class Algorithm(Model):
             The model input data
 
         """
-        if idata is None and not self.initialized:
-            raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
-        idata = self._idata if idata is None else idata
+        if idata is None:
+            if not self.initialized:
+                raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
+            idata = self._idata_mem.pop(self.name)
+            mnames = list(self._idata_mem.keys())
+            for mname in mnames:
+                if mname in self.keep_models:
+                    hidata = self._idata_mem.get(mname)
+                else:
+                    hidata = self._idata_mem.pop(mname)
+                idata["coords"].update(hidata["coords"])
+                idata["data_vars"].update(hidata["data_vars"])
+
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)
 
@@ -298,18 +283,59 @@ class Algorithm(Model):
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
 
-    def finalize(self, clear_store=True):
+    def finalize_model(self, model, verbosity=None):
+        """
+        Call the finalization routine of the model,
+        if not to be kept.
+
+        Parameters
+        ----------
+        model : foxes.core.Model
+            The model to be finalized, if not in the
+            keep_models list
+        verbosity : int, optional
+            The verbosity level, 0 = silent
+
+        """
+        verbosity = self.verbosity if verbosity is None else verbosity
+  
+        pr = False
+        if isinstance(model, FarmController):
+            if verbosity > 1:
+                print(f"Finalizing model '{model.name}'")
+                print(f"-- {model.name}: Starting finalization -- ")
+                pr = True
+            self.finalize_model(model.pre_rotor_models, verbosity)
+            self.finalize_model(model.post_rotor_models, verbosity)
+        elif isinstance(model, FarmDataModelList) or isinstance(model, PointDataModelList):
+            if verbosity > 1:
+                print(f"Finalizing model '{model.name}'")
+                print(f"-- {model.name}: Starting finalization -- ")
+                pr = True
+            for m in model.models:
+                self.finalize_model(m, verbosity)
+
+        if model.initialized and model.name not in self.keep_models:
+            if not pr and verbosity > 0:
+                print(f"Finalizing model '{model.name}'")
+            model.finalize(self, verbosity)
+            if model.name in self._idata_mem:
+                del self._idata_mem[model.name]
+        
+        if pr:
+            print(f"-- {model.name}: Finished finalization -- ")
+
+    def finalize(self, clear_mem=False):
         """
         Finalizes the algorithm.
 
         Parameters
         ----------
-        clear_store : bool
-            Clear the storage memory
+        clear_mem : bool
+            Clear idata memory, including keep_models entries
 
         """
-        self.mbook.finalize(self, self.verbosity)
-        self._idata = None
-        if clear_store:
-            self.clear_store()
-        super().finalize(self, self.verbosity)
+        if clear_mem:
+            self._idata_mem = Dict()
+        if self.initialized:
+            super().finalize(self, self.verbosity)

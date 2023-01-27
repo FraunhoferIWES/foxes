@@ -194,11 +194,14 @@ class FarmDataModelList(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if verbosity > 0:
-            print(f"{self.name}': Initializing")
+        if verbosity > 1:
+            print(f"-- {self.name}: Starting initialization -- ")
 
-        idata = super().initialize(algo)
+        idata = super().initialize(algo, verbosity)
         algo.update_idata(self.models, idata=idata, verbosity=verbosity)
+
+        if verbosity > 1:
+            print(f"-- {self.name}: Finished initialization -- ")
 
         return idata
 
@@ -257,13 +260,8 @@ class FarmDataModelList(FarmDataModel):
             The verbosity level, 0 means silent
 
         """
-        if verbosity > 0:
-            print(f"{self.name}': Finalizing")
-
         for m in self.models:
             if m.initialized:
-                if verbosity > 0:
-                    print(f"{self.name}, sub-model '{m.name}': Finalizing")
-                m.finalize(algo, verbosity)
+                algo.finalize_model(m, verbosity)
 
         super().finalize(algo, verbosity)

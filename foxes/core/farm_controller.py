@@ -216,8 +216,6 @@ class FarmController(FarmDataModel):
         if from_data:
             s = mdata[FV.TMODEL_SELS]
         else:
-            if self.turbine_model_names is None:
-                self.collect_models(algo)
             s = self.turbine_model_sels
         if st_sel is not None:
             s = s & st_sel[:, :, None]
@@ -256,12 +254,13 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().initialize(algo)
+        if verbosity > 1:
+            print(f"-- {self.name}: Starting initialization -- ")
 
-        if verbosity > 0:
-            print(f"{self.name}': Initializing")
+        idata = super().initialize(algo, verbosity)
 
         self.collect_models(algo)
+
         algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
             idata=idata, verbosity=verbosity)
 
@@ -270,6 +269,9 @@ class FarmController(FarmDataModel):
             (FV.STATE, FV.TURBINE, FV.TMODELS),
             self.turbine_model_sels,
         )
+
+        if verbosity > 1:
+            print(f"-- {self.name}: Finished initialization -- ")
 
         return idata
 
@@ -288,8 +290,6 @@ class FarmController(FarmDataModel):
             The output variable names
 
         """
-        if self.turbine_model_names is None:
-            self.collect_models(algo)
         return list(
             dict.fromkeys(
                 self.pre_rotor_models.output_farm_vars(algo)
@@ -344,13 +344,11 @@ class FarmController(FarmDataModel):
             The verbosity level, 0 means silent
 
         """
-        self.turbine_model_names = None
-        self.turbine_model_sels = None
-        self.pre_rotor_models = None
-        self.post_rotor_models = None
-
         for s in [self.pre_rotor_models, self.post_rotor_models]:
             if s is not None and s.initialized:
-                s.finalize(algo, verbosity)
+                algo.finalize_model(s, verbosity)
+
+        self.turbine_model_names = None
+        self.turbine_model_sels = None
 
         super().finalize(algo, verbosity)

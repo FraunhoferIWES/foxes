@@ -42,9 +42,11 @@ class Downwind(Algorithm):
         e.g. `{"state": 1000}` for chunks of 1000 states
     dbook : foxes.DataBook, optional
         The data book, or None for default
+    keep_models : list of str
+        Keep these models data in memory and do not finalize them
     verbosity : int
         The verbosity level, 0 means silent
-    
+
     Attributes
     ----------
     states : foxes.core.States
@@ -80,9 +82,10 @@ class Downwind(Algorithm):
         farm_controller="basic_ctrl",
         chunks={FV.STATE: 1000},
         dbook=None,
+        keep_models=[],
         verbosity=1,
     ):
-        super().__init__(mbook, farm, chunks, verbosity, dbook)
+        super().__init__(mbook, farm, chunks, verbosity, dbook, keep_models)
 
         self.states = states
         self.n_states = None
@@ -130,7 +133,6 @@ class Downwind(Algorithm):
             self.print(f"    {i}) {w}")
         self.print(deco)
         self.print(f"  turbine models:")
-        self.farm_controller.collect_models(self)
         for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
             self.print(f"    {i}) {m} [pre-rotor]")
         for i, m in enumerate(self.farm_controller.post_rotor_models.models):
@@ -140,28 +142,14 @@ class Downwind(Algorithm):
         self.print(deco)
         self.print()
 
-    def initialize(self, store=[]):
+    def initialize(self):
         """
-        Initializes the algorithm.
-
-        Parameters
-        ----------
-        store : bool or list of str
-            Optionally store idata of these models
-            under the model names, or store all
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-            
+        Initializes the algorithm.          
         """
         self.print(f"\nInitializing algorithm '{self.name}'")
         super().initialize()           
 
-        self.update_idata(self.states, store=store)
+        self.update_idata(self.states)
         self.n_states = self.states.size()
 
         mdls = [
@@ -170,8 +158,8 @@ class Downwind(Algorithm):
             self.wake_frame,
             self.partial_wakes_model,
         ] + self.wake_models
-        
-        self.update_idata(mdls, store=store)
+
+        self.update_idata(mdls)
 
     def _collect_farm_models(
             self,
@@ -499,17 +487,15 @@ class Downwind(Algorithm):
 
         return point_results
 
-    def finalize(self, clear_store=True, keep=[]):
+    def finalize(self, clear_mem=False):
         """
         Finalizes the algorithm.
 
         Parameters
         ----------
-        clear_store : bool
-            Clear the storage memory
-        keep : list of str
-            Do not finalize these models
-            
+        clear_mem : bool
+            Clear idata memory, including keep_models entries
+
         """
         mdls = [
             self.states,
@@ -520,8 +506,6 @@ class Downwind(Algorithm):
         ] + self.wake_models
         
         for m in mdls:
-            if m.initialized and m.name not in keep:
-                self.print(f"Finalizing model '{m.name}'")
-                m.finalize(self, self.verbosity)
+            self.finalize_model(m)
 
-        super().finalize(clear_store)
+        super().finalize(clear_mem)

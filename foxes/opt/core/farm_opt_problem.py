@@ -5,6 +5,7 @@ from iwopy import Problem
 from foxes.models.turbine_models import SetFarmVars
 from foxes.utils.runners import DefaultRunner
 import foxes.constants as FC
+import foxes.variables as FV
 from .pop_states import PopStates
 
 
@@ -167,8 +168,23 @@ class FarmOptProblem(Problem):
         self.algo.mbook.turbine_models[self.name] = SetFarmVars(
             pre_rotor=self.pre_rotor
         )
+        self.algo.initialize()
         self._org_states_name = self.algo.states.name
-        self.algo.initialize(store=[self._org_states_name])
+        self._org_n_states = self.algo.n_states
+
+        # keep models that do not contain state related data,
+        # and always the original states:
+        self.algo.keep_models.append(self._org_states_name)
+        for mname, idata in self.algo.idata_mem.items():
+            if mname not in [self._org_states_name, self.name]:
+                keep = True
+                for d in idata["data_vars"].values():
+                    if FV.STATE in d[0]:
+                        keep = False
+                        break
+                if keep:
+                    self.algo.keep_models.append(mname)
+        self.algo.finalize()
 
         self._count = 0
 
@@ -256,7 +272,7 @@ class FarmOptProblem(Problem):
         """
         if states is not self.algo.states:
             if self.algo.initialized:
-                self.algo.finalize(clear_store=False, keep=[self._org_states_name])
+                self.algo.finalize()
             self.algo.states = states
 
     def apply_individual(self, vars_int, vars_float):
@@ -277,33 +293,29 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        # perpare model:
+        # prepare:
         model = self.algo.mbook.turbine_models[self.name]
-        model.reset()
+        n_states = self._org_n_states
         
         # initialize algorithm:
-        self.algo.mbook.turbine_models[self.name].reset()
         if isinstance(self.algo.states, PopStates):
             self._reset_states(self.algo.states.states)
-        if not self.algo.initialized:
-            self.algo.initialize()
+            self.algo.n_states = n_states
 
         # create/overwrite turbine model that sets variables to opt values:
-        if model.initialized:
-            model.finalize(self.algo, self.algo.verbosity)
+        model.reset()
         for v, vals in self.opt2farm_vars_individual(vars_int, vars_float).items():
             if self.all_turbines:
                 model.add_var(v, vals)
             else:
                 data = np.zeros(
-                    (self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE
+                    (n_states, self.algo.n_turbines), dtype=FC.DTYPE
                 )
                 data[:, self.sel_turbines] = vals
                 model.add_var(v, data)
-        self.algo.update_idata(model)
 
         # run the farm calculation:
-        pars = dict(finalize=False)
+        pars = dict(finalize=True)
         pars.update(self.calc_farm_args)
 
         self._count += 1
@@ -329,43 +341,39 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        # perpare model:
+        # prepare:
         model = self.algo.mbook.turbine_models[self.name]
-        model.reset()
-        
-        # initialize algorithm:
         n_pop = len(vars_float)
+        n_states = self._org_n_states
+        n_pstates = n_states * n_pop
+
+        # set pop states:
         if not isinstance(self.algo.states, PopStates):
             self._reset_states(PopStates(self.algo.states, n_pop))
         elif self.algo.states.n_pop != n_pop:
             ostates = self.algo.states.states
             self._reset_states(PopStates(ostates, n_pop))
             del ostates
-        if not self.algo.initialized:
-            self.algo.initialize()
-        n_states = int(self.algo.n_states / n_pop)
 
         # create/overwrite turbine model that sets variables to opt values:
-        if model.initialized:
-            model.finalize(self.algo, self.algo.verbosity)
+        model.reset()
         for v, vals in self.opt2farm_vars_population(
             vars_int, vars_float, n_states
         ).items():
             shp0 = list(vals.shape)
-            shp1 = [self.algo.n_states] + shp0[2:]
+            shp1 = [n_pstates] + shp0[2:]
             if self.all_turbines:
                 model.add_var(v, vals.reshape(shp1))
             else:
                 data = np.zeros(
-                    (self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE
+                    (n_pstates, self.algo.n_turbines), dtype=FC.DTYPE
                 )
                 data[:, self.sel_turbines] = vals.reshape(shp1)
                 model.add_var(v, data)
                 del data
-        self.algo.update_idata(model)
 
         # run the farm calculation:
-        pars = dict(finalize=False)
+        pars = dict(finalize=True)
         pars.update(self.calc_farm_args)
         results = self.runner.run(self.algo.calc_farm, kwargs=pars)
         results["n_pop"] = n_pop
@@ -391,61 +399,3 @@ class FarmOptProblem(Problem):
             ax = f.add_to_layout_figure(ax, **kwargs)
 
         return ax
-
-    def finalize_individual(self, vars_int, vars_float, verbosity=0):
-        """
-        Finalization, given the final population data.
-
-        Parameters
-        ----------
-        vars_int : np.array
-            The integer variable values of the final
-            generation, shape: (n_vars_int,)
-        vars_float : np.array
-            The float variable values of the final
-            generation, shape: (n_vars_float,)
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        problem_results : Any
-            The results of the variable application
-            to the problem
-        objs : np.array
-            The final objective function values, shape: (n_components,)
-        cons : np.array
-            The final constraint values, shape: (n_constraints,)
-
-        """
-        results = super().finalize_individual(vars_int, vars_float, verbosity)
-        return results
-    
-    def finalize_population(self, vars_int, vars_float, verbosity=0):
-        """
-        Finalization, given the final population data.
-
-        Parameters
-        ----------
-        vars_int : np.array
-            The integer variable values of the final
-            generation, shape: (n_pop, n_vars_int)
-        vars_float : np.array
-            The float variable values of the final
-            generation, shape: (n_pop, n_vars_float)
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        problem_results : Any
-            The results of the variable application
-            to the problem
-        objs : np.array
-            The final objective function values, shape: (n_pop, n_components)
-        cons : np.array
-            The final constraint values, shape: (n_pop, n_constraints)
-
-        """
-        results = super().finalize_population(vars_int, vars_float, verbosity)
-        return results

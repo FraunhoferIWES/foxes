@@ -63,10 +63,10 @@ class PopStates(States):
         idata = super().initialize(algo, verbosity)
         self._update_idata(algo, idata)
 
-        if not self.states.name in algo.store:
-            raise KeyError(f"States idata '{self.states.name}' not found in algo store")
+        if not self.states.name in algo._idata_mem:
+            raise KeyError(f"States idata '{self.states.name}' not found in algo idata memory")
         else:
-            idata0 = algo.store[self.states.name]
+            idata0 = algo._idata_mem[self.states.name]
 
         for cname, coord in idata0["coords"].items():
             if cname != FV.STATE:
@@ -190,19 +190,3 @@ class PopStates(States):
         hmdata = Data(hdata, hdims, mdata.loop_dims)
 
         return self.states.calculate(algo, hmdata, fdata, pdata)
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        verbosity : int
-            The verbosity level
-
-        """
-        if self.states.initialized:
-            self.states.finalize(algo, verbosity)
-        super().finalize(algo, verbosity)
