@@ -65,81 +65,89 @@ class SectorManagement(TurbineModel):
         self._rdata = None
         self._tdata = None
 
-    def initialize(self, algo, st_sel, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if self._rdata is None or self._tdata is None:
+        if isinstance(self.source, pd.DataFrame):
+            data = self.source
+        else:
+            if verbosity > 0:
+                print(f"{self.name}: Reading file {self.source}")
+            data = PandasFileHelper.read_file(self.source, **self._rpars)
 
-            if isinstance(self.source, pd.DataFrame):
-                data = self.source
-            else:
-                if verbosity > 0:
-                    print(f"{self.name}: Reading file {self.source}")
-                data = PandasFileHelper.read_file(self.source, **self._rpars)
+        if self._col_i is not None and self._col_t is None:
+            data.reset_index(inplace=True)
+        elif self._col_i is None and self._col_t is not None:
+            tnames = algo.farm.turbine_names
+            inds = [tnames.index(name) for name in data[self._col_t]]
+            data[FV.TURBINE] = inds
+            self._col_i = FV.TURBINE
+        else:
+            raise KeyError(
+                f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
+            )
+        self._trbs = data[self._col_i].to_numpy()
+        n_trbs = len(self._trbs)
 
-            if self._col_i is not None and self._col_t is None:
-                data.reset_index(inplace=True)
-            elif self._col_i is None and self._col_t is not None:
-                tnames = algo.farm.turbine_names
-                inds = [tnames.index(name) for name in data[self._col_t]]
-                data[FV.TURBINE] = inds
-                self._col_i = FV.TURBINE
-            else:
+        self._rcols = []
+        for v in self._rvars:
+
+            col_vmin = f"{v}_min"
+            col_vmin = self._colmap.get(col_vmin, col_vmin)
+            if col_vmin not in data.columns:
                 raise KeyError(
-                    f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
+                    f"{self.name}: Missing column '{col_vmin}', maybe add it to 'colmap'?"
                 )
-            self._trbs = data[self._col_i].to_numpy()
-            n_trbs = len(self._trbs)
 
-            self._rcols = []
-            for v in self._rvars:
+            col_vmax = f"{v}_max"
+            col_vmax = self._colmap.get(col_vmax, col_vmax)
+            if col_vmax not in data.columns:
+                raise KeyError(
+                    f"{self.name}: Missing column '{col_vmax}', maybe add it to 'colmap'?"
+                )
 
-                col_vmin = f"{v}_min"
-                col_vmin = self._colmap.get(col_vmin, col_vmin)
-                if col_vmin not in data.columns:
-                    raise KeyError(
-                        f"{self.name}: Missing column '{col_vmin}', maybe add it to 'colmap'?"
-                    )
+            self._rcols += [col_vmin, col_vmax]
 
-                col_vmax = f"{v}_max"
-                col_vmax = self._colmap.get(col_vmax, col_vmax)
-                if col_vmax not in data.columns:
-                    raise KeyError(
-                        f"{self.name}: Missing column '{col_vmax}', maybe add it to 'colmap'?"
-                    )
+        self._tcols = []
+        for v in self._tvars:
+            col = self._colmap.get(v, v)
+            if col not in data.columns:
+                raise KeyError(
+                    f"{self.name}: Missing column '{col}', maybe add it to 'colmap'?"
+                )
+            self._tcols.append(col)
 
-                self._rcols += [col_vmin, col_vmax]
+        n_rvars = len(self._rvars)
+        self._rdata = data[self._rcols].to_numpy().reshape(n_trbs, n_rvars, 2)
+        self._tdata = data[self._tcols].to_numpy()
 
-            self._tcols = []
-            for v in self._tvars:
-                col = self._colmap.get(v, v)
-                if col not in data.columns:
-                    raise KeyError(
-                        f"{self.name}: Missing column '{col}', maybe add it to 'colmap'?"
-                    )
-                self._tcols.append(col)
+        for vi, v in enumerate(self._rvars):
+            if v in self._perds:
+                self._rdata[:, vi] = np.mod(self._rdata[:, vi], self._perds[v])
 
-            n_rvars = len(self._rvars)
-            self._rdata = data[self._rcols].to_numpy().reshape(n_trbs, n_rvars, 2)
-            self._tdata = data[self._tcols].to_numpy()
-
-            for vi, v in enumerate(self._rvars):
-                if v in self._perds:
-                    self._rdata[:, vi] = np.mod(self._rdata[:, vi], self._perds[v])
-
-        super().initialize(algo, st_sel, verbosity)
+        return super().initialize(algo, verbosity)
 
     def output_farm_vars(self, algo):
         """

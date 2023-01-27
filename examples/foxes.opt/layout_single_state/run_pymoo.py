@@ -155,7 +155,7 @@ if __name__ == "__main__":
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
         p_min = np.array([-1100.0, -1100.0])
         p_max = np.array([1100.0, 1100.0])
-        fig = o.get_mean_fig_horizontal(
+        fig = o.get_mean_fig_xy(
             "WS",
             resolution=20,
             fig=fig,

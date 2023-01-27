@@ -132,50 +132,58 @@ class PCtTwoFiles(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, st_sel, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        # read power curve
-        if self._data_P is None:
-            if isinstance(self.source_P, pd.DataFrame):
-                self._data_P = self.source_P
-            else:
-                fpath = algo.dbook.get_file_path(
-                    PCTCURVE, self.source_P, check_raw=True
-                )
-                self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
+        # read power curve:
+        if isinstance(self.source_P, pd.DataFrame):
+            self._data_P = self.source_P
+        else:
+            fpath = algo.dbook.get_file_path(
+                PCTCURVE, self.source_P, check_raw=True
+            )
+            self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
 
-            self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
-            self._data_ws_P = self._data_P.index.to_numpy()
-            self._data_P = self._data_P[self.col_P].to_numpy()
+        self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
+        self._data_ws_P = self._data_P.index.to_numpy()
+        self._data_P = self._data_P[self.col_P].to_numpy()
 
-        # read ct curve
-        if self._data_ct is None:
-            if isinstance(self.source_ct, pd.DataFrame):
-                self._data_ct = self.source_ct
-            else:
-                fpath = algo.dbook.get_file_path(
-                    PCTCURVE, self.source_ct, check_raw=True
-                )
-                self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
+        # read ct curve:
+        if isinstance(self.source_ct, pd.DataFrame):
+            self._data_ct = self.source_ct
+        else:
+            fpath = algo.dbook.get_file_path(
+                PCTCURVE, self.source_ct, check_raw=True
+            )
+            self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
 
-            self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
-            self._data_ws_ct = self._data_ct.index.to_numpy()
-            self._data_ct = self._data_ct[self.col_ct].to_numpy()
+        self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
+        self._data_ws_ct = self._data_ct.index.to_numpy()
+        self._data_ct = self._data_ct[self.col_ct].to_numpy()
 
-        super().initialize(algo, st_sel, verbosity=verbosity)
+        return super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -248,7 +256,7 @@ class PCtTwoFiles(TurbineType):
 
         return out
 
-    def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -256,19 +264,9 @@ class PCtTwoFiles(TurbineType):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
 
         """
-        if clear_mem:
-            del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct
-
-        super().finalize(algo, results, clear_mem, verbosity=verbosity)
+        del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct
+        super().finalize(algo, verbosity)

@@ -21,7 +21,7 @@ def run_foxes(args):
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.FieldDataNC(
-        file_pattern=args.file_pattern,
+        args.file_pattern,
         states_coord="state",
         x_coord="x",
         y_coord="y",
@@ -62,13 +62,13 @@ def run_foxes(args):
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
 
-    print(farm_results)
+    print(farm_results, "\n")
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    for fig in o.gen_states_fig_horizontal(
+    for fig in o.gen_states_fig_xy(
         FV.WS,
         resolution=10,
         figsize=(8, 8),

@@ -120,7 +120,7 @@ class IECTIWake(TopHatWakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get k:
-        k = self.get_data(FV.K, fdata, st_sel)
+        k = self.get_data(FV.K, fdata, st_sel, data_prio=False)
         if isinstance(k, np.ndarray):
             k = k[:, None]
 

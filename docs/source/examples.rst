@@ -1,6 +1,7 @@
 Examples
 --------
     .. toctree::
+        notebooks/overview
         notebooks/model_book
         notebooks/single_row
         notebooks/timeseries

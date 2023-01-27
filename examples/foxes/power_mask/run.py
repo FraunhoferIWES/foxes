@@ -86,7 +86,7 @@ def run_foxes(args):
 
     # run calculation without power mask:
 
-    algo.finalize(clear_mem=True)
+    mbook.finalize(algo)
     models.remove("set_Pmax")
     models.remove("PMask")
 

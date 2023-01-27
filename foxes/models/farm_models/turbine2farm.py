@@ -28,26 +28,35 @@ class Turbine2FarmModel(FarmModel):
     def __repr__(self):
         return f"{type(self).__name__}({self.turbine_model})"
 
-    def initialize(self, algo, verbosity=0, **parameters):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
-        **parameters : dict, optional
-            Init parameters forwarded to the turbine model
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if not self.turbine_model.initialized:
-            s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-            self.turbine_model.initialize(
-                algo, st_sel=s, verbosity=verbosity, **parameters
-            )
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.turbine_model, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def output_farm_vars(self, algo):
         """
@@ -94,7 +103,7 @@ class Turbine2FarmModel(FarmModel):
         s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
         return self.turbine_model.calculate(algo, mdata, fdata, st_sel=s, **parameters)
 
-    def finalize(self, algo, results, verbosity=0, **parameters):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -102,18 +111,10 @@ class Turbine2FarmModel(FarmModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level
-        **parameters : dict, optional
-            Init parameters forwarded to the turbine model
 
         """
-        s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
-        self.turbine_model.finalize(
-            algo, results, st_sel=s, verbosity=verbosity, **parameters
-        )
+        if self.turbine_model.initialized:
+            self.turbine_model.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

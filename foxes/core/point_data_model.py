@@ -89,25 +89,6 @@ class PointDataModel(DataCalcModel):
             **calc_pars,
         )
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        super().finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
-
     def __add__(self, m):
         if isinstance(m, list):
             return PointDataModelList([self] + m)
@@ -173,54 +154,22 @@ class PointDataModelList(PointDataModel):
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def initialize(self, algo, parameters=None, verbosity=0):
+    def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        parameters : list of dict, optional
-            A list of parameter dicts, one for each model
         verbosity : int
-            The verbosity level, 0 means silent
-
-        """
-        if parameters is None:
-            parameters = [{}] * len(self.models)
-        elif not isinstance(parameters, list):
-            raise ValueError(
-                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
-            )
-        elif len(parameters) != len(self.models):
-            raise ValueError(
-                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
-            )
-
-        for mi, m in enumerate(self.models):
-            if not m.initialized:
-                if verbosity > 0:
-                    print(f"{self.name}, sub-model '{m.name}': Initializing")
-                m.initialize(algo, **parameters[mi])
-            elif verbosity > 0:
-                print(f"{self.name}, sub-model '{m.name}'")
-
-        super().initialize(algo)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -230,11 +179,14 @@ class PointDataModelList(PointDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().model_input_data(algo)
-        for m in self.models:
-            hidata = m.model_input_data(algo)
-            idata["coords"].update(hidata["coords"])
-            idata["data_vars"].update(hidata["data_vars"])
+        if verbosity > 1:
+            print(f"-- {self.name}: Starting initialization -- ")
+
+        idata = super().initialize(algo)
+        algo.update_idata(self.models, idata=idata, verbosity=verbosity)
+
+        if verbosity > 1:
+            print(f"-- {self.name}: Finished initialization -- ")
 
         return idata
 
@@ -282,7 +234,7 @@ class PointDataModelList(PointDataModel):
 
         return {v: pdata[v] for v in self.output_point_vars(algo)}
 
-    def finalize(self, algo, results, parameters=[], verbosity=0, clear_mem=False):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -290,32 +242,12 @@ class PointDataModelList(PointDataModel):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        parameters : list of dict, optional
-            A list of parameter dicts, one for each model
         verbosity : int
             The verbosity level, 0 means silent
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
 
         """
-        if parameters is None:
-            parameters = [{}] * len(self.models)
-        elif not isinstance(parameters, list):
-            raise ValueError(
-                f"{self.name}: Wrong parameters type, expecting list, got {type(parameters).__name__}"
-            )
-        elif len(parameters) != len(self.models):
-            raise ValueError(
-                f"{self.name}: Wrong parameters length, expecting list with {len(self.models)} entries, got {len(parameters)}"
-            )
+        for m in self.models:
+            if m.initialized:
+                algo.finalize_model(m, verbosity)
 
-        for mi, m in enumerate(self.models):
-            if verbosity > 0:
-                print(f"{self.name}, sub-model '{m.name}': Finalizing")
-            m.finalize(algo, results, **parameters[mi])
-
-        self.models = None
-        super().finalize(algo, results, clear_mem)
+        super().finalize(algo, verbosity)

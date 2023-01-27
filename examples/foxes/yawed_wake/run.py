@@ -94,7 +94,15 @@ if __name__ == "__main__":
     # horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_horizontal(args.var, resolution=10, xmin=-100, xmax=3000)
+    g = o.gen_states_fig_xy(args.var, resolution=10, xmin=-100, xmax=3000)
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
+    # vertical flow plot
+    print("\nVertical flow figure output:")
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_yz(args.var, resolution=10, x=750, ymin=-200,ymax=200,zmax=300)
     fig = next(g)
     plt.show()
     plt.close(fig)

@@ -95,3 +95,7 @@ def test():
             print(f"CASE {(rotor, pwake, lim)}:", chk.max())
 
             assert (chk < lim).all()
+
+if __name__ == "__main__":
+    test()
+    

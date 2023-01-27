@@ -63,16 +63,31 @@ class YawedWakes(WakeFrame):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.base_frame.initialize(algo, verbosity)
-        super().initialize(algo, verbosity)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.base_frame, idata=idata, verbosity=verbosity)
+
+        return idata
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -98,69 +113,18 @@ class YawedWakes(WakeFrame):
         """
         return self.base_frame.calc_order(algo, mdata, fdata)
 
-    def model_input_data(self, algo):
+    def _update_y(self, mdata, fdata, states_source_turbine, x, y):
         """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        return self.base_frame.model_input_data(algo)
-
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
-        """
-        Calculate wake coordinates.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        mdata : foxes.core.Data
-            The model data
-        fdata : foxes.core.Data
-            The farm data
-        states_source_turbine : numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
-
-        Returns
-        -------
-        wake_coos : numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
-
+        Helper function for y deflection
         """
         # prepare:
         n_states = mdata.n_states
-        n_points = points.shape[1]
+        n_points = x.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
-
-        # get unyawed results:
-        xyz = self.base_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
-        )
-        x = xyz[:, :, 0]
-        y = xyz[:, :, 1]
 
         # get gamma:
         gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm")[st_sel][:, None]
+        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
         gamma *= np.pi / 180
 
         # get k:
@@ -203,9 +167,89 @@ class YawedWakes(WakeFrame):
             # apply deflection:
             y[sp_sel] -= ydef
 
+    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+        """
+        Calculate wake coordinates.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        points : numpy.ndarray
+            The evaluation points, shape: (n_states, n_points, 3)
+
+        Returns
+        -------
+        wake_coos : numpy.ndarray
+            The wake coordinates, shape: (n_states, n_points, 3)
+
+        """
+        # get unyawed results:
+        xyz = self.base_frame.get_wake_coos(
+            algo, mdata, fdata, states_source_turbine, points
+        )
+        x = xyz[:, :, 0]
+        y = xyz[:, :, 1]
+
+        # apply deflection:
+        self._update_y(mdata, fdata, states_source_turbine, x, y)
+
         return xyz
 
-    def finalize(self, algo, clear_mem=False, verbosity=0):
+    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+        """
+        Gets the points along the centreline for given
+        values of x.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        x : numpy.ndarray
+            The wake frame x coordinates, shape: (n_states, n_points)
+        
+        Returns
+        -------
+        points : numpy.ndarray
+            The centreline points, shape: (n_states, n_points, 3)
+
+        """
+        points = self.base_frame.get_centreline_points(algo, mdata, fdata, 
+                    states_source_turbine, x)
+
+        nx = np.zeros_like(points)
+        nx[:, 0] = points[:, 1] - points[:, 0]
+        nx[:, -1] = points[:, -1] - points[:, -2]
+        nx[:, 1:-1] = 0.5*(points[:, 1:-1] - points[:, :-2]) + 0.5*(points[:, 2:] - points[:, 1:-1])
+        nx /= np.linalg.norm(nx, axis=-1)[:, :, None]
+
+        nz = np.zeros_like(nx)
+        nz[:, :, 2] = 1
+        ny = np.cross(nz, nx, axis=-1)
+        del nx, nz
+
+        y = np.zeros_like(x)
+        self._update_y(mdata, fdata, states_source_turbine, x, y)
+
+        points += y[:, :, None] * ny
+        
+        return points
+
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -213,12 +257,10 @@ class YawedWakes(WakeFrame):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level, 0 = silent
 
         """
-        self.base_frame.finalize(algo, clear_mem, verbosity)
-        super().finalize(algo, clear_mem, verbosity)
+        if self.base_frame.initialized:
+            self.base_frame.finalize(algo, verbosity)
+        super().finalize(algo, verbosity)

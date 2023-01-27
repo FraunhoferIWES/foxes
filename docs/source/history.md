@@ -8,7 +8,7 @@ So far not many models have been transferred from the Fraunhofer IWES in-house p
 
 Enjoy - we are awaiting comments and issues, thanks for testing.
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.1.0)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.0](https://github.com/FraunhoferIWES/foxes/commits/v0.1.0)
 
 ## v0.1.1-alpha
 
@@ -17,19 +17,19 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Tests now via *pytest* instead of *unittest*
 - Introducing github workflow for automatic testing
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.1.1)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.1](https://github.com/FraunhoferIWES/foxes/commits/v0.1.1)
 
 ## v0.1.2-alpha
 
 - Adding support for Python 3.9, 3.10
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.1.2)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.2](https://github.com/FraunhoferIWES/foxes/commits/v0.1.2)
 
 ## v0.1.3-alpha
 
-- Adding docu: [](https://fraunhoferiwes.github.io/foxes.docs/index.html)
+- Adding docu: [https://fraunhoferiwes.github.io/foxes.docs/index.html](https://fraunhoferiwes.github.io/foxes.docs/index.html)
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.1.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.3](https://github.com/FraunhoferIWES/foxes/commits/v0.1.3)
 
 ## v0.1.4-alpha
 
@@ -40,7 +40,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New turbine type added: `PCtSingleFiles`, reads power and thrust curves from two separate files
   - New turbulence intensity wake model added: `IECTI2019`/`Frandsen` and `IECTI2005`
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.1.4)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.1.4](https://github.com/FraunhoferIWES/foxes/commits/v0.1.4)
 
 ## v0.2.0-alpha
 
@@ -68,7 +68,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Notebooks
   - New notebook: `layout_opt.ipynb`, demonstrating a simple layout optimization case
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.0)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.0](https://github.com/FraunhoferIWES/foxes/commits/v0.2.0)
 
 ## v0.2.1-alpha
 
@@ -81,14 +81,14 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Notebooks:
   - New notebook: `multi_height.ipynb`, demonstrating the usage of multi-height wind input data
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.1](https://github.com/FraunhoferIWES/foxes/commits/v0.2.1)
 
 ## v0.2.2-alpha
 
 - Bug fixes
   - Bug fixed in `MultiHeightStates` for wind veer cases
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.2)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.2](https://github.com/FraunhoferIWES/foxes/commits/v0.2.2)
 
 ## v0.2.3-alpha
 
@@ -111,14 +111,14 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New notebook: `wind_rose.ipynb`, demonstrating how to calculate wind roses
   - New notebook: `power_mask.ipynb`, showing derating and boost via a power mask
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.3](https://github.com/FraunhoferIWES/foxes/commits/v0.2.3)
 
 ## v0.2.4-alpha
 
 - Bug fixes
   - Hotfix for bug in `TurbineTypeCurves` output
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.4)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.4](https://github.com/FraunhoferIWES/foxes/commits/v0.2.4)
 
 ## v0.2.5-alpha
 
@@ -140,7 +140,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Bug fixes:
   - Fix for bug with option `col_models` in farm layout from csv
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.5](https://github.com/FraunhoferIWES/foxes/commits/v0.2.5)
 
 ## v0.2.6-alpha
 
@@ -173,5 +173,27 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug with YAW and WD when using the `YAWM2YAW` turbine model
   - Fix for bug in `TurbOPark` wake model, double counting constant offset in sigma
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.2.6](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
 
+## v0.3.0-alpha
+
+- Core:
+  - Models now with simplified structure, reduces memory load during calculations
+- Algorithms:
+  - New: `Iterative`, iterative wind farm calculation until convergence has been reached
+- Input:
+  - Improved: `FieldDataNC` now accepts xarray Dataset or file pattern str as input
+  - New: `ShearedProfile`, Vertical WS profile can be determined with shear exponent
+- Output:
+  - Improved: `FlowPlots2D` replacing horizontal/vertical --> xy, xz, yz, more intuitive
+- Wake models:
+  - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
+- Wake frames:
+  - Improved: All yawed wake frames now also support centreline data integration
+- Notebooks:
+  - New: `overview.ipynb`, summarizes the setup steps
+- Bug fixes:
+  - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong 
+  - Fix for bug with long streamlines
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.0](https://github.com/FraunhoferIWES/foxes/commits/v0.3.0)

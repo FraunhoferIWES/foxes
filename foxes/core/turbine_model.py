@@ -12,23 +12,6 @@ class TurbineModel(FarmDataModel):
 
     """
 
-    def initialize(self, algo, st_sel, verbosity=0):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
-        verbosity : int
-            The verbosity level
-
-        """
-        super().initialize(algo, verbosity=verbosity)
-
     @abstractmethod
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -57,25 +40,3 @@ class TurbineModel(FarmDataModel):
 
         """
         pass
-
-    def finalize(self, algo, results, st_sel, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The farm calculation results
-        st_sel : numpy.ndarray of bool
-            The state-turbine selection,
-            shape: (n_states, n_turbines)
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        super().finalize(algo, results, clear_mem, verbosity)

@@ -50,6 +50,7 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
     args = parser.parse_args()
 
     # create model book
@@ -79,7 +80,8 @@ if __name__ == "__main__":
         )
 
     # create algorithm
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
         mbook,
         farm,
         states=states,
@@ -93,24 +95,7 @@ if __name__ == "__main__":
     # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
-
-    # horizontal flow plot
-    print("\nHorizontal flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_horizontal(args.var, resolution=10)
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
-
-    # vertical flow plot
-    print("\nVertical flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_vertical(
-        args.var, resolution=10, x_direction=np.mod(args.wd + 180, 360.0)
-    )
-    fig = next(g)
-    plt.show()
-
+    
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
@@ -160,3 +145,18 @@ if __name__ == "__main__":
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
+
+    # horizontal flow plot
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xy(args.var, resolution=10)
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
+    # vertical flow plot
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xz(
+        args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
+    )
+    fig = next(g)
+    plt.show()

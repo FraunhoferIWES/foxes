@@ -38,26 +38,34 @@ class PartialWakesModel(Model):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
         self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
 
-        if not self.wake_frame.initialized:
-            self.wake_frame.initialize(algo, verbosity=verbosity)
-        for w in self.wake_models:
-            if not w.initialized:
-                if verbosity > 0:
-                    print(f"Partial wakes '{self.name}': Initializing '{w.name}'")
-                w.initialize(algo, verbosity=verbosity)
-
-        super().initialize(algo, verbosity=verbosity)
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.wake_models, idata=idata, verbosity=verbosity)
+        
+        return idata
 
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):

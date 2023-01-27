@@ -17,8 +17,8 @@ class FieldDataNC(States):
 
     Parameters
     ----------
-    file_pattern : str
-        The file search pattern, should end with
+    data_source : str or xarray.Dataset
+        The data or the file search pattern, should end with
         suffix '.nc'. One or many files.
     output_vars : list of str
         The output variables
@@ -50,10 +50,9 @@ class FieldDataNC(States):
 
     Attributes
     ----------
-    file_pattern : str
-        The file search pattern, should end with
-        suffix '.nc'. One or many files, in the later case
-        use pattern 'some/path/*.nc'
+    data_source : str or xarray.Dataset
+        The data or the file search pattern, should end with
+        suffix '.nc'. One or many files.
     ovars : list of str
         The output variables
     var2ncvar : dict
@@ -86,7 +85,7 @@ class FieldDataNC(States):
 
     def __init__(
         self,
-        file_pattern,
+        data_source,
         output_vars,
         var2ncvar={},
         fixed_vars={},
@@ -102,7 +101,7 @@ class FieldDataNC(States):
     ):
         super().__init__()
 
-        self.file_pattern = file_pattern
+        self.data_source = data_source
         self.states_coord = states_coord
         self.ovars = output_vars
         self.fixed_vars = fixed_vars
@@ -186,15 +185,7 @@ class FieldDataNC(States):
 
     def _read_nc(self, algo, pattern, verbosity):
 
-        with xr.open_mfdataset(
-            pattern,
-            parallel=True,
-            concat_dim=self.states_coord,
-            combine="nested",
-            data_vars="minimal",
-            coords="minimal",
-            compat="override",
-        ) as ds:
+        def extract_data(ds):
 
             for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
                 if not c in ds:
@@ -226,7 +217,7 @@ class FieldDataNC(States):
                 elif v not in self.fixed_vars:
                     raise ValueError(
                         f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                    )
+                    )  
 
             if self.pre_load:
 
@@ -236,18 +227,41 @@ class FieldDataNC(States):
                 self.VARS = self.var("vars")
                 self.DATA = self.var("data")
 
-                self._h = ds[self.h_coord].to_numpy()
-                self._y = ds[self.y_coord].to_numpy()
-                self._x = ds[self.x_coord].to_numpy()
-                self._v = list(self._dkys.keys())
+                h = ds[self.h_coord].to_numpy()
+                y = ds[self.y_coord].to_numpy()
+                x = ds[self.x_coord].to_numpy()
+                v = list(self._dkys.keys())
 
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
                 data = self._get_data(ds, verbosity)
-                self._data = (coos, data)
+                data = (coos, data)
+
+                return h, y, x, v, data
+
+        if isinstance(self.data_source, xr.Dataset):
+            return extract_data(self.data_source)
+        else:
+            with xr.open_mfdataset(
+                pattern,
+                parallel=True,
+                concat_dim=self.states_coord,
+                combine="nested",
+                data_vars="minimal",
+                coords="minimal",
+                compat="override",
+            ) as ds:
+                out = extract_data(ds)
+            return out
 
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
@@ -256,8 +270,14 @@ class FieldDataNC(States):
         verbosity : int
             The verbosity level, 0 = silent
 
-        """
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
+        """
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars
         ):
@@ -277,55 +297,36 @@ class FieldDataNC(States):
         self._n_dvars = len(self._dkys)
         self._weights = None
 
-        if verbosity:
-            print(f"States '{self.name}': Reading files {self.file_pattern}")
-        try:
-            self._read_nc(algo, self.file_pattern, verbosity)
-        except OSError:
+        if isinstance(self.data_source, xr.Dataset):
+            r = self._read_nc(algo, None, verbosity)
+        else:
             if verbosity:
-                print(
-                    f"States '{self.name}': Reading static data '{self.file_pattern}' from context '{STATES}'"
-                )
-            fpath = algo.dbook.get_file_path(STATES, self.file_pattern, check_raw=False)
-            if verbosity:
-                print(f"Path: {fpath}")
-            self._read_nc(algo, fpath, verbosity)
+                print(f"States '{self.name}': Reading files {self.data_source}")
+            try:
+                r = self._read_nc(algo, self.data_source, verbosity)
+            except OSError:
+                if verbosity:
+                    print(
+                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                    )
+                fpath = algo.dbook.get_file_path(STATES, self.data_source, check_raw=False)
+                if verbosity:
+                    print(f"Path: {fpath}")
+                r = self._read_nc(algo, fpath, verbosity)
 
-        super().initialize(algo)
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        idata : dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        idata = super().model_input_data(algo)
-        idata["coords"][FV.STATE] = self._inds
+        idata = super().initialize(algo, verbosity)
+        self._update_idata(algo, idata)
 
         if self.pre_load:
 
-            idata["coords"][self.H] = self._h
-            idata["coords"][self.Y] = self._y
-            idata["coords"][self.X] = self._x
-            idata["coords"][self.VARS] = self._v
-            idata["data_vars"][self.DATA] = self._data
+            h, y, x, v, data = r
 
+            idata["coords"][self.H] = h
+            idata["coords"][self.Y] = y
+            idata["coords"][self.X] = x
+            idata["coords"][self.VARS] = v
+            idata["data_vars"][self.DATA] = data
+        
         return idata
 
     def size(self):
@@ -429,7 +430,7 @@ class FieldDataNC(States):
             s = slice(i0, i0 + n_states)
             ds = (
                 xr.open_mfdataset(
-                    self.file_pattern,
+                    self.data_source,
                     parallel=False,
                     concat_dim=self.states_coord,
                     combine="nested",
@@ -501,25 +502,3 @@ class FieldDataNC(States):
                     )
 
         return out
-
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        results : xarray.Dataset
-            The calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
-        verbosity : int
-            The verbosity level
-
-        """
-        if clear_mem:
-            del self._h, self._y, self._x, self._v, self._data
-
-        super().finalize(algo, results, clear_mem, verbosity)

@@ -79,29 +79,18 @@ class Model(metaclass=ABCMeta):
         """
         Initializes the model.
 
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
         verbosity : int
-            The verbosity level
-
-        """
-        self.__initialized = True
-
-    def model_input_data(self, algo):
-        """
-        The model input data, as needed for the
-        calculation.
-
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -111,9 +100,12 @@ class Model(metaclass=ABCMeta):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+        if self.initialized:
+            raise ValueError(f"Model '{self.name}': initialize called for already initialized object")
+        self.__initialized = True
         return {"coords": {}, "data_vars": {}}
 
-    def finalize(self, algo, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -121,13 +113,12 @@ class Model(metaclass=ABCMeta):
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level, 0 = silent
 
         """
+        if not self.initialized:
+            raise ValueError(f"Model '{self.name}': Finalization called for uninitialized object")
         self.__initialized = False
 
     def get_data(
@@ -136,7 +127,7 @@ class Model(metaclass=ABCMeta):
         data,
         st_sel=None,
         upcast=None,
-        data_prio=True,
+        data_prio=False,
         accept_none=False,
     ):
         """
@@ -170,15 +161,15 @@ class Model(metaclass=ABCMeta):
             if s == "self":
                 try:
                     out = getattr(self, variable)
-                    break
                 except AttributeError:
                     pass
             else:
                 try:
                     out = data[variable]
-                    break
                 except KeyError:
                     pass
+            if out is not None:
+                break
 
         if out is None:
             raise KeyError(

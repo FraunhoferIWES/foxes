@@ -3,7 +3,7 @@ import numpy as np
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict
-from foxes.core import TurbineModel, RotorModel, FarmModel, FarmController
+from foxes.core import TurbineModel, RotorModel, FarmModel, PointDataModel, FarmController
 
 
 class ModelBook:
@@ -59,6 +59,7 @@ class ModelBook:
     def __init__(self, Pct_file=None):
 
         self.point_models = Dict(name="point_models")
+        self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = Dict(name="rotor_models")
         rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
@@ -71,6 +72,10 @@ class ModelBook:
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
+        self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile("NREL-5MW-D126-H90.csv")
+        self.turbine_types["DTU10MW"] = fm.turbine_types.PCtFile("DTU-10MW-D178d3-H119.csv")
+        self.turbine_types["IEA15MW"] = fm.turbine_types.PCtFile("IEA-15MW-D240-H150.csv")
+        self.turbine_types["IWT7.5MW"] = fm.turbine_types.PCtFile("IWT-7d5MW-D164-H100.csv")
         if Pct_file is not None:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
@@ -123,12 +128,20 @@ class ModelBook:
         self.wake_frames = Dict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
+            rotor_wd_farmo=fm.wake_frames.FarmOrder(),
             yawed=fm.wake_frames.YawedWakes(),
-            streamlines_100=fm.wake_frames.Streamlines(step=100),
-            streamlines_100_yawed=fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines(step=100)
-            ),
         )
+        stps = [1., 5., 10., 50., 100., 500.]
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(step=s)
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
+                base_frame=fm.wake_frames.Streamlines(step=s)
+            )
+        for s in stps:
+            self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
+                base_frame=fm.wake_frames.Streamlines(step=s)
+            )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
@@ -192,22 +205,43 @@ class ModelBook:
             self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
                 k=0.075, superposition=s
             )
-            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
-                superposition=s
-            )
+
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
                 superposition=s
             )
-            self.wake_models[
-                f"Bastankhah_{s}_k002"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s)
-
-            self.wake_models[f"TurbOPark_{s}"] = fm.wake_models.wind.TurbOParkWake(
-                superposition=s
+            self.wake_models[f"Bastankhah_{s}_k002"] = fm.wake_models.wind.BastankhahWake(
+                k=0.02, superposition=s
             )
-            self.wake_models[f"TurbOPark_{s}_k004"] = fm.wake_models.wind.TurbOParkWake(
+            self.wake_models[f"Bastankhah_{s}_k004"] = fm.wake_models.wind.BastankhahWake(
                 k=0.04, superposition=s
             )
+
+            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s
+            )
+            self.wake_models[f"PorteAgel_{s}_k002"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s, k=0.02
+            )
+            self.wake_models[f"PorteAgel_{s}_k004"] = fm.wake_models.wind.PorteAgelWake(
+                superposition=s, k=0.04
+            )
+
+            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.02, superposition=s
+            )
+            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.04, superposition=s
+            )
+
+            As = [0.02, 0.04]
+            dxs = [0.01, 1., 5., 10., 50., 100.]
+            for A in As:
+                for dx in dxs:
+                    a = str(A).replace(".", "")
+                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = fm.wake_models.wind.TurbOParkWakeIX(
+                        A=A, superposition=s, dx=dx
+                    )
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:
@@ -275,7 +309,7 @@ class ModelBook:
                     print("(none)")
                 print()
 
-    def finalize(self, algo, results, clear_mem=False, verbosity=0):
+    def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
 
@@ -283,11 +317,6 @@ class ModelBook:
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
-        results : xarray.Dataset
-            The farm calculation results
-        clear_mem : bool
-            Flag for deleting model data and
-            resetting initialization flag
         verbosity : int
             The verbosity level, 0 = silent
 
@@ -295,24 +324,5 @@ class ModelBook:
         for ms in self.sources.values():
             if isinstance(ms, Dict):
                 for m in ms.values():
-                    if isinstance(m, TurbineModel) or isinstance(m, FarmController):
-                        st_sel = np.ones(
-                            (results.dims[FV.STATE], results.dims[FV.TURBINE]),
-                            dtype=bool,
-                        )
-                        m.finalize(
-                            algo,
-                            results=results,
-                            st_sel=st_sel,
-                            clear_mem=clear_mem,
-                            verbosity=verbosity,
-                        )
-                    elif isinstance(m, RotorModel) or isinstance(m, FarmModel):
-                        m.finalize(
-                            algo,
-                            results=results,
-                            clear_mem=clear_mem,
-                            verbosity=verbosity,
-                        )
-                    else:
-                        m.finalize(algo, clear_mem=clear_mem, verbosity=verbosity)
+                    if m.initialized:
+                        m.finalize(algo, verbosity)

@@ -24,9 +24,7 @@ class SetFarmVars(TurbineModel):
 
     def __init__(self, pre_rotor=False):
         super().__init__(pre_rotor=pre_rotor)
-
-        self.vars = []
-        self._vdata = []
+        self.reset()
 
     def add_var(self, var, data):
         """
@@ -42,6 +40,13 @@ class SetFarmVars(TurbineModel):
         """
         self.vars.append(var)
         self._vdata.append(data)
+
+    def reset(self):
+        """
+        Remove all variables.
+        """
+        self.vars = []
+        self._vdata = []
 
     def output_farm_vars(self, algo):
         """
@@ -60,19 +65,22 @@ class SetFarmVars(TurbineModel):
         """
         return self.vars
 
-    def model_input_data(self, algo):
+    def initialize(self, algo, verbosity=0):
         """
-        The model input data, as needed for the
-        calculation.
+        Initializes the model.
 
-        This function should specify all data
-        that depend on the loop variable (e.g. state),
-        or that are intended to be shared between chunks.
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
 
         Parameters
         ----------
         algo : foxes.core.Algorithm
             The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -82,8 +90,7 @@ class SetFarmVars(TurbineModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-
-        idata = super().model_input_data(algo)
+        idata = super().initialize(algo, verbosity)
 
         for i, v in enumerate(self.vars):
 
