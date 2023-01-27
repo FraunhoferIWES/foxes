@@ -175,7 +175,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.6)
 
-## v0.2.7-alpha
+## v0.3.0-alpha
 
 - Core:
   - Models now with simplified structure, reduces memory load during calculations
@@ -191,4 +191,4 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug in `TurbOPark` wake model: Brackets in Eq. (4) were wrong 
   - Fix for bug with long streamlines
 
-**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.2.7)
+**Full Changelog**: [](https://github.com/FraunhoferIWES/foxes/commits/v0.3.0)
