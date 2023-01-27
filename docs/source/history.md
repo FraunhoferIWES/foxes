@@ -197,3 +197,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug with long streamlines
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.0](https://github.com/FraunhoferIWES/foxes/commits/v0.3.0)
+
+## v0.3.1-alpha
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
