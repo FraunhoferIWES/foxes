@@ -72,6 +72,10 @@ class ModelBook:
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
+        self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile("NREL-5MW-D126-H90.csv")
+        self.turbine_types["DTU10MW"] = fm.turbine_types.PCtFile("DTU-10MW-D178d3-H119.csv")
+        self.turbine_types["IEA15MW"] = fm.turbine_types.PCtFile("IEA-15MW-D240-H150.csv")
+        self.turbine_types["IWT7.5MW"] = fm.turbine_types.PCtFile("IWT-7d5MW-D164-H100.csv")
         if Pct_file is not None:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
