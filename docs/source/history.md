@@ -185,7 +185,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `FieldDataNC` now accepts xarray Dataset or file pattern str as input
   - New: `ShearedProfile`, Vertical WS profile can be determined with shear exponent
 - Output:
-  - Improved: `FlowPlots2D` horizontal/vertical --> xy, xz, yz 
+  - Improved: `FlowPlots2D` replacing horizontal/vertical --> xy, xz, yz, more intuitive
 - Wake models:
   - New: `TurbOParkIX`, integrates wake corrected TI along centreline for wake width sigma.
 - Wake frames:
