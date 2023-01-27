@@ -52,19 +52,15 @@ class Iterative(Downwind):
     def _collect_farm_models(
             self,
             vars_to_amb,
-            init_parameters,
             calc_parameters,
-            final_parameters,
-            clear_mem_models,
             ambient,
         ):
         """
         Helper function that creates model list
         """
         # get models from Downwind algorithm:
-        mlist, init_pars, calc_pars, final_pars = super()._collect_farm_models(
-            vars_to_amb, init_parameters, calc_parameters, 
-            final_parameters, clear_mem_models, ambient)
+        mlist, calc_pars = super()._collect_farm_models(
+            vars_to_amb, calc_parameters, ambient)
 
         # wrap the models into a loop:
         mlist = LoopRunner(self.conv, mlist.models, max_its=self.max_its, 
@@ -73,4 +69,4 @@ class Iterative(Downwind):
         # flag only the last model as wake relevant:
         mlist.model_wflag[-1] = True 
 
-        return mlist, init_pars, calc_pars, final_pars
+        return mlist, calc_pars
