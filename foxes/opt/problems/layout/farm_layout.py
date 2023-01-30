@@ -11,6 +11,8 @@ class FarmLayoutOptProblem(FarmOptProblem):
 
     Parameters
     ----------
+    name : str
+        The problem's name
     algo : foxes.core.Algorithm
         The algorithm
     runner : foxes.core.Runner, optional
