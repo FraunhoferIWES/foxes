@@ -206,7 +206,7 @@ class FarmDataModelList(FarmDataModel):
         return idata
 
     def calculate(self, algo, mdata, fdata, parameters=[]):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

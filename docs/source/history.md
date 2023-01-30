@@ -200,6 +200,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.1-alpha
 
-
+- Wake frames:
+  - Improved: `Streamlines` now with maximal length option
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
