@@ -72,7 +72,9 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0)
+    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0) \
+        + foxes.utils.geom2d.ClosedPolygon(np.array(
+    [[0, 0], [0, 1600], [1000, 1800], [900, -200]], dtype=np.float64)) 
 
     farm = foxes.WindFarm(boundary=boundary)
     farm.add_turbine(foxes.Turbine(
@@ -148,7 +150,7 @@ if __name__ == "__main__":
 
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
         p_min = np.array([-1100.0, -1100.0])
-        p_max = np.array([1100.0, 1100.0])
+        p_max = np.array([1100.0, 2000.0])
         fig = o.get_mean_fig_xy(
             "WS",
             resolution=20,
