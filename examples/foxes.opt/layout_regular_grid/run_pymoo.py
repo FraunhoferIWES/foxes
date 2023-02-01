@@ -12,9 +12,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The maximal number of turbines per row", type=int, default=10
-    )
-    parser.add_argument(
         "-t",
         "--turbine_file",
         help="The P-ct-curve csv file (path or static)",
@@ -40,10 +37,10 @@ if __name__ == "__main__":
         "--min_dist",
         help="Minimal turbine distance in m",
         type=float,
-        default=800.0,
+        default=500.0,
     )
     parser.add_argument(
-        "-A", "--opt_algo", help="The pymoo algorithm name", default="MixedVariableGA"
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="GA"
     )
     parser.add_argument(
         "-P", "--n_pop", help="The population size", type=int, default=50
@@ -109,7 +106,6 @@ if __name__ == "__main__":
         problem = RegularLayoutOptProblem(
             "layout_opt", 
             algo, min_spacing=args.min_dist,
-            n_row_max=args.n_t,
             runner=runner
         )
         problem.add_objective(MaxFarmPower(problem))
