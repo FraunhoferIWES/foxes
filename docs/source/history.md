@@ -204,5 +204,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `FieldDataNC` now supports states subset selection
 - Wake frames:
   - Improved: `Streamlines` now with maximal length option
+- Turbine models:
+  - New: `Calculator`, simple variable calculation via user function
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)

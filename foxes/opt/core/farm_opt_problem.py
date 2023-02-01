@@ -157,9 +157,7 @@ class FarmOptProblem(Problem):
                 f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
             )
 
-        self.algo.mbook.turbine_models[self.name] = SetFarmVars(
-            pre_rotor=self.pre_rotor
-        )
+        self.algo.mbook.turbine_models[self.name] = SetFarmVars(pre_rotor=self.pre_rotor)
 
     def _update_keep_models(self, drop_vars, verbosity=1):
         """
@@ -306,7 +304,7 @@ class FarmOptProblem(Problem):
                 self.algo.finalize()
             self.algo.states = states
 
-    def _update_farm(self, vars_int, vars_float):
+    def _update_farm_individual(self, vars_int, vars_float):
         """
         Update basic wind farm data during optimization,
         for example the number of turbines
@@ -368,7 +366,7 @@ class FarmOptProblem(Problem):
 
         """
         # prepare:
-        self._update_farm(vars_int, vars_float)
+        self._update_farm_individual(vars_int, vars_float)
         n_states = self._org_n_states
         
         # reset states, if needed:
@@ -386,6 +384,21 @@ class FarmOptProblem(Problem):
         self._count += 1
 
         return self.runner.run(self.algo.calc_farm, kwargs=pars)
+
+    def _update_farm_population(self, vars_int, vars_float):
+        """
+        Update basic wind farm data during optimization,
+        for example the number of turbines
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+
+        """
+        pass
 
     def _update_models_population(self, vars_int, vars_float):
         """
@@ -442,7 +455,7 @@ class FarmOptProblem(Problem):
 
         """
         # prepare:
-        self._update_farm(vars_int, vars_float)
+        self._update_farm_population(vars_int, vars_float)
         n_pop = len(vars_float)
         n_states = self._org_n_states
 

@@ -1,6 +1,8 @@
 import numpy as np
+from copy import deepcopy
 
 from foxes.opt.core import FarmOptProblem
+from foxes.models.turbine_models import Calculator
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils import wd2uv
@@ -76,10 +78,35 @@ class RegularLayoutOptProblem(FarmOptProblem):
 
         b = self.farm.boundary
         assert b is not None, f"Problem '{name}': Missing wind farm boundary."
-        pmax = b.pmax()
+        pmax = b.p_max()
         pmin = b.p_min()
         self._xy0 = pmin
         self._xy_span = pmax - pmin
+
+        self._turbine = deepcopy(self.farm.turbines[0])
+        self._mname = self.name + "_calc"
+
+    def _init_mbook(self, verbosity=1):
+        """
+        Initialize the model book
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+        super()._init_mbook(verbosity)
+
+        self.algo.mbook.turbine_models[self._mname] = Calculator(
+            in_vars=[self.VALID, FV.P, FV.CT],
+            out_vars=[self.VALID, FV.P, FV.CT],
+            func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
+            pre_rotor=False)
+        
+        for t in self.algo.farm.turbines:
+            if self._mname not in t.models:
+                t.models.append(self._mname)
 
     def _update_keep_models(self, drop_vars, verbosity=1):
         """
@@ -222,7 +249,7 @@ class RegularLayoutOptProblem(FarmOptProblem):
                 self._xy_span[1] + self.min_spacing,
                 360.]
 
-    def _update_farm(self, vars_int, vars_float):
+    def _update_farm_individual(self, vars_int, vars_float):
         """
         Update basic wind farm data during optimization,
         for example the number of turbines
@@ -237,8 +264,7 @@ class RegularLayoutOptProblem(FarmOptProblem):
         """
         n = np.product(vars_int)
         if self.farm.n_turbines < n:
-            t = self.farm.turbines[-1]
-            self.farm.turbines += (n - self.farm.n_turbines) * t
+            self.farm.turbines += (n - self.farm.n_turbines) * self._turbine
         elif self.farm.n_turbines > n:
             self.farm.turbines = self.farm.turbines[:n]
 
@@ -286,10 +312,29 @@ class RegularLayoutOptProblem(FarmOptProblem):
         farm_vars = {
             FV.X: pts[:, :, 0],
             FV.Y: pts[:, :, 1],
-            self.VALID: valid.reshape(n_states, nx*ny)
+            self.VALID: np.astype(valid.reshape(n_states, nx*ny), FC.DTYPE)
         }
 
         return farm_vars
+
+    def _update_farm_population(self, vars_int, vars_float):
+        """
+        Update basic wind farm data during optimization,
+        for example the number of turbines
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+
+        """
+        n = np.max(vars_int[:, 0]) * np.max(vars_int[:, 1])
+        if self.farm.n_turbines < n:
+            self.farm.turbines += (n - self.farm.n_turbines) * self._turbine
+        elif self.farm.n_turbines > n:
+            self.farm.turbines = self.farm.turbines[:n]
 
     def opt2farm_vars_population(self, vars_int, vars_float, n_states):
         """
@@ -315,13 +360,43 @@ class RegularLayoutOptProblem(FarmOptProblem):
 
         """
         n_pop = len(vars_float)
+        n_turbines = self.farm.n_turbines
+        nx = vars_int[:, 0]
+        ny = vars_int[:, 1]
+        dx = vars_float[:, 0]
+        dy = vars_float[:, 1] 
+        ox = vars_float[:, 2]
+        oy = vars_float[:, 3]
+        a = vars_float[:, 4]
+        N = nx*ny
+
+        a = np.deg2rad(a)
+        nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
+        naz = np.zeros_like(nax)
+        naz[..., 2] = 1
+        nay = np.cross(naz, nax)
+
+        pts = np.zeros((n_pop, n_states, nx, ny, 2), dtype=FC.DTYPE)
+        pts[:] = self._xy0[None, None, None, None, :]
+        pts[..., 0] += ox[:, None, None, None]
+        pts[..., 1] += oy[:, None, None, None]
+        pts[:] += (
+            np.arange(nx)[None, None, :, None, None] * dx * nax[None, None, None, :2] 
+            + np.arange(ny)[None, None, None, :, None] * dy * nay[None, None, None, :2]
+            )
+
+        qts = np.zeros((n_pop, n_states, n_turbines, 2)) 
+        qts[:, :N] = pts.reshape(n_pop, n_states, N, 2)
+        qts[:, N:] = self._xy0[None, None, None, :] - 1000
+        del pts
+
+        valid = self.farm.boundary.points_inside(qts.reshape(n_states*n_turbines, 2))
+
         farm_vars = {
-            FV.X: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
-            FV.Y: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
+            FV.X: pts[:, :, 0],
+            FV.Y: pts[:, :, 1],
+            self.VALID: np.astype(valid.reshape(n_states, n_turbines), FC.DTYPE)
         }
-        xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
-        farm_vars[FV.X][:] = xy[:, None, :, 0]
-        farm_vars[FV.Y][:] = xy[:, None, :, 1]
 
         return farm_vars
 
@@ -351,8 +426,8 @@ class RegularLayoutOptProblem(FarmOptProblem):
         """
         res, objs, cons = super().finalize_individual(vars_int, vars_float, verbosity)
 
-        xy = vars_float.reshape(self.n_sel_turbines, 2)
-        for i, ti in enumerate(self.sel_turbines):
-            self.farm.turbines[ti].xy = xy[i]
+        for ti in range(self.farm.n_turbines):
+            self.farm.turbines[ti].xy = np.array(
+                [res[FV.X][0, ti], res[FV.Y][0, ti]], dtype=FC.DTYPE)
 
         return res, objs, cons

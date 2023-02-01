@@ -21,15 +21,16 @@ class Model(metaclass=ABCMeta):
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)
-
         self._id = next(self._ids[t])
-        self.name = type(self).__name__
+
+        ext = "" if self._id == 0 else f"{self._id}"
+        self.name = f"{type(self).__name__}{ext}"
+
         self.__initialized = False
 
     def __repr__(self):
         t = type(self).__name__
-        s = self.name if self.name == t else f"{self.name} ({t})"
-        return s
+        return f"{self.name} ({t})"
 
     @property
     def model_id(self):
@@ -59,8 +60,7 @@ class Model(metaclass=ABCMeta):
             Model specific variable name
 
         """
-        ext = "" if self._id == 0 else f"_id{self._id}"
-        return f"{self.name}{ext}_{v}"
+        return f"{self.name}_{v}"
 
     @property
     def initialized(self):
