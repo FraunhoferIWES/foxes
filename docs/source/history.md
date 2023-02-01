@@ -206,5 +206,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `Streamlines` now with maximal length option
 - Turbine models:
   - New: `Calculator`, simple variable calculation via user function
-
+- Opt:
+  - New opt probplem: `RegularLayoutOptProblem`, searches for a regular grid layout
+- Examples:
+  - New in `foxes.opt`: Example `layout_regular_grid`, demonstrates regular grid layout optimization
+  
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
