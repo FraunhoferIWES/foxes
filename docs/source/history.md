@@ -200,6 +200,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.1-alpha
 
+- Input states:
+  - Improved: `FieldDataNC` now supports states subset selection
 - Wake frames:
   - Improved: `Streamlines` now with maximal length option
 
