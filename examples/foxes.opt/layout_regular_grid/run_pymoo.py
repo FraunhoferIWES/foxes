@@ -124,12 +124,7 @@ if __name__ == "__main__":
                 seed=None,
             ),
             setup_pars=dict(),
-            term_pars=dict(
-                type="default",
-                n_max_gen=args.n_gen,
-                ftol=1e-6,
-                xtol=1e-6,
-            ),
+            term_pars=('n_gen', args.n_gen),
         )
         solver.initialize()
         solver.print_info()
