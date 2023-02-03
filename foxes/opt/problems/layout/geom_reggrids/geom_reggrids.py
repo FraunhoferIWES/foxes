@@ -1,0 +1,286 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import cdist
+from iwopy import Problem
+
+import foxes.constants as FC
+
+class GeomRegGrids(Problem):
+
+    def __init__(self, boundary, min_dist, n_grids, n_row_max=None, max_dist=None):
+        super().__init__(name="geom_reg_grids")
+
+        self.boundary = boundary
+        self.n_grids = n_grids
+        self.n_row_max = n_row_max
+        self.min_dist = float(min_dist)
+        self.max_dist = float(max_dist) if max_dist is not None else max_dist
+
+        self.NX = [f"nx{i}" for i in range(self.n_grids)]
+        self.NY = [f"ny{i}" for i in range(self.n_grids)]
+        self.OX = [f"ox{i}" for i in range(self.n_grids)]
+        self.OY = [f"oy{i}" for i in range(self.n_grids)]
+        self.DX = [f"dx{i}" for i in range(self.n_grids)]
+        self.DY = [f"dy{i}" for i in range(self.n_grids)]
+        self.ALPHA = [f"alpha{i}" for i in range(self.n_grids)]
+
+    def initialize(self, verbosity=1):
+        super().initialize(verbosity)
+
+        pmin = self.boundary.p_min()
+        pmax = self.boundary.p_max()
+        self._span = pmax - pmin
+        self._diag = np.linalg.norm(self._span)
+        self.max_dist = self._diag if self.max_dist is None else self.max_dist
+        if self.n_row_max is None:
+            self._nrow = int(self._diag/self.min_dist)
+            if self._nrow * self.min_dist < self._diag:
+                self._nrow += 1
+            self._nrow += 1
+        self._pmin = pmin - self._diag - self.min_dist
+        self._pmax = pmax + self.min_dist
+        
+        if verbosity > 0:
+            print(f"Grid data:")
+            print(f"  pmin        = {self._pmin}")
+            print(f"  pmax        = {self._pmax}")
+            print(f"  min dist    = {self.min_dist}")
+            print(f"  max dist    = {self.max_dist}")
+            print(f"  n row max   = {self._nrow}")
+            print(f"  n gpts max  = {self._nrow**2}")
+            print(f"  n grids     = {self.n_grids}")
+            print(f"  n trbns max = {self.n_grids*self._nrow**2}")
+
+        self.apply_individual(self.initial_values_int(), self.initial_values_float())
+
+    def var_names_int(self):
+        """
+        The names of int variables.
+
+        Returns
+        -------
+        names : list of str
+            The names of the int variables
+
+        """
+        return list(np.array([self.NX, self.NY]).T.flat)
+
+    def initial_values_int(self):
+        """
+        The initial values of the int variables.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Initial int values, shape: (n_vars_int,)
+
+        """
+        return np.full(self.n_grids*2, 2, dtype=FC.ITYPE)
+
+    def min_values_int(self):
+        """
+        The minimal values of the integer variables.
+
+        Use -self.INT_INF for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Minimal int values, shape: (n_vars_int,)
+
+        """
+        return np.ones(self.n_grids*2, dtype=FC.ITYPE)
+
+    def max_values_int(self):
+        """
+        The maximal values of the integer variables.
+
+        Use self.INT_INF for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Maximal int values, shape: (n_vars_int,)
+
+        """
+        return np.full(self.n_grids*2, self._nrow, dtype=FC.ITYPE)
+
+    def var_names_float(self):
+        """
+        The names of float variables.
+
+        Returns
+        -------
+        names : list of str
+            The names of the float variables
+
+        """
+        return list(np.array([
+            self.OX, self.OY, self.DX, self.DY, self.ALPHA]).T.flat)
+
+    def initial_values_float(self):
+        """
+        The initial values of the float variables.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Initial float values, shape: (n_vars_float,)
+
+        """
+        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        vals[:, :2] = self._pmin + self._diag + self.min_dist + self._span/2
+        vals[:, 2:4] = 2*self.min_dist
+        return vals.reshape(self.n_grids*5)
+
+    def min_values_float(self):
+        """
+        The minimal values of the float variables.
+
+        Use -numpy.inf for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Minimal float values, shape: (n_vars_float,)
+
+        """
+        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        vals[:, :2] = self._pmin
+        vals[:, 2:4] = self.min_dist
+        return vals.reshape(self.n_grids*5)
+
+    def max_values_float(self):
+        """
+        The maximal values of the float variables.
+
+        Use numpy.inf for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Maximal float values, shape: (n_vars_float,)
+
+        """
+        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        vals[:, :2] = self._pmax
+        vals[:, 2:4] = self._diag
+        vals[:, 4] = 90.
+        return vals.reshape(self.n_grids*5)
+
+    def apply_individual(self, vars_int, vars_float):
+
+        vint = vars_int.reshape(self.n_grids, 2)
+        vflt = vars_float.reshape(self.n_grids, 5)
+        nx = vint[:, 0]
+        ny = vint[:, 1]
+        ox = vflt[:, 0]
+        oy = vflt[:, 1]
+        dx = vflt[:, 2]
+        dy = vflt[:, 3]
+        a = np.deg2rad(vflt[:, 4])
+        n_points = np.sum(np.product(vint[:, :2], axis=1))
+
+        nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
+        naz = np.zeros_like(nax)
+        naz[:, 2] = 1
+        nay = np.cross(naz, nax)
+
+        valid = np.zeros(n_points, dtype=bool)
+        pts = np.full((n_points, 2), np.nan, dtype=FC.DTYPE)
+        n0 = 0
+        for gi in range(self.n_grids):
+
+            n = nx[gi] * ny[gi]
+            n1 = n0 + n
+
+            qts = pts[n0:n1].reshape(nx[gi], ny[gi], 2)
+            qts[:, :, 0] = ox[gi]
+            qts[:, :, 1] = oy[gi]
+            qts[:] += np.arange(nx[gi])[:, None, None] * dx[gi] * nax[gi, None, None, :2]
+            qts[:] += np.arange(ny[gi])[None, :, None] * dy[gi] * nay[gi, None, None, :2]
+            qts = qts.reshape(n, 2)
+
+            # set out of boundary points invalid:
+            valid[n0:n1] = self.boundary.points_inside(qts)
+
+            # set points invalid which are too close to other grids:
+            if n0 > 0:
+                dists = cdist(qts, pts[:n0])
+                valid[n0:n1][np.any(dists < self.min_dist, axis=1)] = False
+
+            n0 = n1
+
+        return pts, valid
+
+    def apply_population(self, vars_int, vars_float):
+
+        n_pop = vars_int.shape[0]
+        vint = vars_int.reshape(n_pop, self.n_grids, 2)
+        vflt = vars_float.reshape(n_pop, self.n_grids, 5)
+        nx = vint[:, :, 0]
+        ny = vint[:, :, 1]
+        ox = vflt[:, :, 0]
+        oy = vflt[:, :, 1]
+        dx = vflt[:, :, 2]
+        dy = vflt[:, :, 3]
+        a = np.deg2rad(vflt[:, :, 4])
+        n_points = np.max(np.sum(np.product(vint[:, :, :2], axis=2), axis=1))
+
+        nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
+        naz = np.zeros_like(nax)
+        naz[:, :, 2] = 1
+        nay = np.cross(naz, nax)
+
+        valid = np.zeros((n_pop, n_points), dtype=bool)
+        pts = np.full((n_pop, n_points, 2), np.nan, dtype=FC.DTYPE)
+        for pi in range(n_pop):
+            n0 = 0
+            for gi in range(self.n_grids):
+
+                n = nx[pi, gi] * ny[pi, gi]
+                n1 = n0 + n
+
+                qts = pts[pi, n0:n1].reshape(nx[pi, gi], ny[pi, gi], 2)
+                qts[:, :, 0] = ox[pi, gi]
+                qts[:, :, 1] = oy[pi, gi]
+                qts[:] += np.arange(nx[pi, gi])[:, None, None] * dx[pi, gi] * nax[pi, gi, None, None, :2]
+                qts[:] += np.arange(ny[pi, gi])[None, :, None] * dy[pi, gi] * nay[pi, gi, None, None, :2]
+                qts = qts.reshape(n, 2)
+
+                # set out of boundary points invalid:
+                valid[pi, n0:n1] = self.boundary.points_inside(qts)
+
+                # set points invalid which are too close to other grids:
+                if n0 > 0:
+                    dists = cdist(qts, pts[pi, :n0])
+                    valid[pi, n0:n1][np.any(dists < self.min_dist, axis=1)] = False
+
+                n0 = n1
+
+        return pts, valid
+
+    def get_fig(self, xy=None, valid=None, ax=None, title=None, **bargs):
+
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        hbargs = {"fill_mode": "inside_lightgray"}
+        hbargs.update(bargs)
+        self.boundary.add_to_figure(ax, **hbargs)
+
+        if xy is not None:
+            if valid is not None:
+                xy = xy[valid]
+            ax.scatter(xy[:, 0], xy[:, 1], color="orange")
+
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
+
+        if title is None:
+            l = len(xy) if xy is not None else 0
+            title = f"N = {l}, min_dist = {self.min_dist}"
+        ax.set_title(title)
+
+        return ax
