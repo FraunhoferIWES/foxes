@@ -251,10 +251,11 @@ class DataCalcModel(Model):
         )
 
         # try to show progress bar:
-        try:
-            progress(results)
-        except ValueError:
-            pass
+        if algo.verbosity > 0:
+            try:
+                progress(results)
+            except ValueError:
+                pass
 
         # update data by calculation results:
         return results.compute()

@@ -20,21 +20,37 @@ class FarmObjective(Objective):
     kwargs : dict, optional
         Additional parameters for `iwopy.Objective`
 
-    Attributes
-    ----------
-    farm: foxes.WindFarm
-        The wind farm
-    sel_turbines: list of int
-        The selected turbines
-
     """
 
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
         super().__init__(problem, name, **kwargs)
-        self.farm = problem.farm
-        self.sel_turbines = (
-            problem.sel_turbines if sel_turbines is None else sel_turbines
-        )
+        self._sel_turbines = sel_turbines
+
+    @property
+    def farm(self):
+        """
+        The wind farm
+
+        Returns
+        -------
+        foxes.core.WindFarm :
+            The wind farm
+
+        """
+        return self.problem.farm
+
+    @property
+    def sel_turbines(self):
+        """
+        The list of selected turbines
+
+        Returns
+        -------
+        list of int :
+            The list of selected turbines
+
+        """
+        return self.problem.sel_turbines if self._sel_turbines is None else self._sel_turbines
 
     @property
     def n_sel_turbines(self):

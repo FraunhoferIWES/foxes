@@ -176,6 +176,7 @@ class FarmVarObjective(FarmObjective):
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
 
+
         return np.array([data], dtype=np.float64)
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):

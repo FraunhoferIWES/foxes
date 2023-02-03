@@ -258,24 +258,19 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if verbosity > 1:
-            print(f"-- {self.name}: Starting initialization -- ")
-
         idata = super().initialize(algo, verbosity)
 
         self.collect_models(algo)
 
-        algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
-            idata=idata, verbosity=verbosity)
+        # done by algo.update_idata
+        #algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
+        #    idata=idata, verbosity=verbosity)
 
         idata["coords"][FV.TMODELS] = self.turbine_model_names
         idata["data_vars"][FV.TMODEL_SELS] = (
             (FV.STATE, FV.TURBINE, FV.TMODELS),
             self.turbine_model_sels,
         )
-
-        if verbosity > 1:
-            print(f"-- {self.name}: Finished initialization -- ")
 
         return idata
 

@@ -185,6 +185,7 @@ class Algorithm(Model):
 
         for m in models:
 
+            pr = False
             if m.initialized:
                 try:
                     hidata = self._idata_mem[m.name]
@@ -192,13 +193,31 @@ class Algorithm(Model):
                     raise KeyError(f"Model '{m.name}' initialized but not found in idata memory")
 
             else:
+
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
                 self._idata_mem[m.name] = hidata
 
+                pr = False
+                if isinstance(m, FarmController):
+                    if verbosity > 1:
+                        print(f"-- {m.name}: Starting sub-model initialization -- ")
+                        pr = True
+                    self.update_idata(m.pre_rotor_models, idata, verbosity)
+                    self.update_idata(m.post_rotor_models, idata, verbosity)
+                elif isinstance(m, FarmDataModelList) or isinstance(m, PointDataModelList):
+                    if verbosity > 1:
+                        print(f"-- {m.name}: Starting sub-model initialization -- ")
+                        pr = True
+                    for mm in m.models:
+                        self.update_idata(mm, idata, verbosity)
+
             if idata is not None:
                 idata["coords"].update(hidata["coords"])
                 idata["data_vars"].update(hidata["data_vars"])
+
+            if pr:
+                print(f"-- {m.name}: Finished sub-model initialization -- ")
 
     @property
     def idata_mem(self):
@@ -212,6 +231,46 @@ class Algorithm(Model):
 
         """
         return self._idata_mem
+    
+    def update_n_turbines(self):
+        """
+        Reset the number of turbines, 
+        according to self.farm
+        """
+        if self.n_turbines != self.farm.n_turbines:
+            self.n_turbines = self.farm.n_turbines
+
+            newk = {}
+            for mname, idata in self.idata_mem.items():
+                if mname[:2] == "__":
+                    continue
+                for dname, d in idata["data_vars"].items():
+                    k = f"__{mname}_{dname}_turbinv"
+                    if k in self.idata_mem:
+                        ok = self.idata_mem[k]
+                    else:
+                        ok = None
+                        if FV.TURBINE in d[0]:
+                            i = d[0].index(FV.TURBINE)
+                            ok = (np.unique(d[1], axis=1).shape[i] == 1)
+                        newk[k] = ok
+                    if ok is not None:
+                        if not ok:
+                            raise ValueError(f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines")
+                        if FV.TURBINE in idata["coords"]:
+                            idata["coords"][FV.TURBINE] = np.arange(self.n_turbines)
+                        i = d[0].index(FV.TURBINE)
+                        n0 = d[1].shape[i]
+                        if n0 > self.n_turbines:
+                            idata["data_vars"][dname] = (d[0], np.take(d[1], range(self.n_turbines), axis=i))
+                        elif n0 < self.n_turbines:
+                            shp = [d[1].shape[j] if j != i else self.n_turbines-n0 for j in range(len(d[1].shape))]
+                            a = np.zeros(shp, dtype=d[1].dtype)
+                            shp = [d[1].shape[j] if j != i else 1 for j in range(len(d[1].shape))]
+                            a[:] = np.take(d[1], -1, axis=i).reshape(shp)
+                            idata["data_vars"][dname] = (d[0], np.append(d[1], a, axis=i))
+            
+            self._idata_mem.update(newk)
 
     def get_models_data(self, idata=None):
         """
@@ -235,7 +294,7 @@ class Algorithm(Model):
             if not self.initialized:
                 raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
             idata = self._idata_mem.pop(self.name)
-            mnames = list(self._idata_mem.keys())
+            mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
             for mname in mnames:
                 if mname in self.keep_models:
                     hidata = self._idata_mem.get(mname)
@@ -303,14 +362,14 @@ class Algorithm(Model):
         if isinstance(model, FarmController):
             if verbosity > 1:
                 print(f"Finalizing model '{model.name}'")
-                print(f"-- {model.name}: Starting finalization -- ")
+                print(f"-- {model.name}: Starting sub-model finalization -- ")
                 pr = True
             self.finalize_model(model.pre_rotor_models, verbosity)
             self.finalize_model(model.post_rotor_models, verbosity)
         elif isinstance(model, FarmDataModelList) or isinstance(model, PointDataModelList):
             if verbosity > 1:
                 print(f"Finalizing model '{model.name}'")
-                print(f"-- {model.name}: Starting finalization -- ")
+                print(f"-- {model.name}: Starting sub-model finalization -- ")
                 pr = True
             for m in model.models:
                 self.finalize_model(m, verbosity)
@@ -323,7 +382,7 @@ class Algorithm(Model):
                 del self._idata_mem[model.name]
         
         if pr:
-            print(f"-- {model.name}: Finished finalization -- ")
+            print(f"-- {model.name}: Finished sub-model finalization -- ")
 
     def finalize(self, clear_mem=False):
         """

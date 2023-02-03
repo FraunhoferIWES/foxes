@@ -364,17 +364,14 @@ class FarmOptProblem(Problem):
             The results of the variable application
             to the problem
 
-        """
-        # prepare:
-        self._update_farm_individual(vars_int, vars_float)
-        n_states = self._org_n_states
-        
+        """       
         # reset states, if needed:
         if isinstance(self.algo.states, PopStates):
             self._reset_states(self.algo.states.states)
-            self.algo.n_states = n_states
+            self.algo.n_states = self._org_n_states
 
         # update models:
+        self._update_farm_individual(vars_int, vars_float)
         self._update_models_individual(vars_int, vars_float)
 
         # run the farm calculation:

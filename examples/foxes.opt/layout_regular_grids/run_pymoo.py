@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
-from foxes.opt.problems.layout import RegularLayoutOptProblem
-from foxes.opt.objectives import MaxFarmPower
+from foxes.opt.problems.layout import RegGridsLayoutOptProblem
+from foxes.opt.objectives import MaxNTurbines
 
 if __name__ == "__main__":
 
@@ -38,14 +38,18 @@ if __name__ == "__main__":
         type=float,
         default=500.0,
     )
+    parser.add_argument("-m", "--n_maxr", help="Maximal turbines per row", type=int, default=None)
     parser.add_argument(
-        "-A", "--opt_algo", help="The pymoo algorithm name", default="GA"
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="MixedVariableGA"
     )
     parser.add_argument(
         "-P", "--n_pop", help="The population size", type=int, default=50
     )
     parser.add_argument(
-        "-G", "--n_gen", help="The nmber of generations", type=int, default=300
+        "-G", "--n_gen", help="The number of generations", type=int, default=300
+    )
+    parser.add_argument(
+        "-g", "--n_grids", help="The number of grids", type=int, default=2
     )
     parser.add_argument(
         "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
@@ -71,9 +75,10 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0) \
-        + foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[0, 0], [0, 1600], [1000, 1800], [900, -200]], dtype=np.float64)) 
+    boundary = foxes.utils.geom2d.ClosedPolygon(np.array(
+    [[0, 0], [0, 2100], [1500, 2300], [1400, -200]], dtype=np.float64)) \
+        + foxes.utils.geom2d.Circle([2500.0, 0.0], 500.0) \
+        + foxes.utils.geom2d.Circle([2500.0, 500.0], 600.0)
 
     farm = foxes.WindFarm(boundary=boundary)
     farm.add_turbine(foxes.Turbine(
@@ -104,12 +109,16 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = RegularLayoutOptProblem(
+        problem = RegGridsLayoutOptProblem(
             "layout_opt", 
-            algo, min_spacing=args.min_dist,
-            runner=runner
+            algo, 
+            min_spacing=args.min_dist,
+            n_grids=args.n_grids,
+            max_n_row=args.n_maxr,
+            runner=runner,
+            calc_farm_args={"ambient": True}
         )
-        problem.add_objective(MaxFarmPower(problem))
+        problem.add_objective(MaxNTurbines(problem))
         problem.initialize()
 
         solver = Optimizer_pymoo(
@@ -138,27 +147,8 @@ if __name__ == "__main__":
         print()
         print(results)
 
-        fig, axs = plt.subplots(1, 2, figsize=(12, 8))
-
-        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
-
-        o = foxes.output.FlowPlots2D(algo, results.problem_results)
-        p_min = np.array([-1100.0, -1100.0])
-        p_max = np.array([1100.0, 2000.0])
-        fig = o.get_mean_fig_xy(
-            "WS",
-            resolution=20,
-            fig=fig,
-            ax=axs[1],
-            xmin=p_min[0],
-            xmax=p_max[0],
-            ymin=p_min[1],
-            ymax=p_max[1],
-        )
-        dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)
-        farm.boundary.add_to_figure(
-            axs[1], fill_mode="outside_white", pars_distance=dpars
-        )
+        fig, ax = plt.subplots(figsize=(12, 8))
+        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax)
 
         plt.show()
         plt.close(fig)

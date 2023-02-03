@@ -174,9 +174,12 @@ class Downwind(Algorithm):
         calc_pars = []
         t2f = fm.farm_models.Turbine2FarmModel
         mlist = FarmDataModelList(models=[])
+        mlist.name = f"{self.name}_calc"
 
         # 0) set XHYD:
-        mlist.models.append(t2f(fm.turbine_models.SetXYHD()))
+        m = fm.turbine_models.SetXYHD()
+        m.name = "set_xyhd_tm"
+        mlist.models.append(t2f(m))
         mlist.models[-1].name = "set_xyhd"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -199,6 +202,7 @@ class Downwind(Algorithm):
 
         # 4) calculate turbine order:
         mlist.models.append(dm.CalcOrder())
+        mlist.models[-1].name = "calc_order"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 5) run post-rotor turbine models via farm controller:
@@ -290,9 +294,9 @@ class Downwind(Algorithm):
         del models_data
 
         # finalize models:
+        self.finalize_model(mlist)
         if finalize:
             self.print("\n")
-            mlist.finalize(self, self.verbosity)
             self.finalize()
 
         if ambient:
