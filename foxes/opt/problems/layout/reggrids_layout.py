@@ -5,6 +5,7 @@ from foxes.opt.core import FarmOptProblem, PopStates
 from foxes.models.turbine_models import Calculator
 import foxes.variables as FV
 import foxes.constants as FC
+from .geom_reggrids.geom_reggrids import GeomRegGrids
 
 
 class RegGridsLayoutOptProblem(FarmOptProblem):
@@ -21,13 +22,14 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         The problem's name
     algo : foxes.core.Algorithm
         The algorithm
-    min_spacing : float
-        The minimal turbine spacing
+    min_dist : float
+        The minimal distance between points
     n_grids : int
         The number of grids
-    max_n_row : int, optional
-        The maximal number of turbines per 
-        grid and row
+    n_row_max : int, optional
+        The maximal number of points in a row
+    max_dist : float, optional
+        The maximal distance between points
     runner : foxes.core.Runner, optional
         The runner for running the algorithm
     calc_farm_args : dict
@@ -51,9 +53,10 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         self,
         name,
         algo,
-        min_spacing,
-        n_grids,
-        max_n_row=None,
+        min_dist, 
+        n_grids=1, 
+        n_row_max=None, 
+        max_dist=None,
         runner=None,
         calc_farm_args={},
         **kwargs,
@@ -67,17 +70,11 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             **kwargs,
         )
 
-        self.min_spacing = min_spacing
-        self.n_grids = n_grids
-        self.max_n_row = max_n_row
-
-        self.NX = [f"nx{i}" for i in range(self.n_grids)]
-        self.NY = [f"ny{i}" for i in range(self.n_grids)]
-        self.OX = [f"ox{i}" for i in range(self.n_grids)]
-        self.OY = [f"oy{i}" for i in range(self.n_grids)]
-        self.DX = [f"dx{i}" for i in range(self.n_grids)]
-        self.DY = [f"dy{i}" for i in range(self.n_grids)]
-        self.ALPHA = [f"alpha{i}" for i in range(self.n_grids)]
+        b = algo.farm.boundary
+        assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
+        
+        self._geomp = GeomRegGrids(b, min_dist=min_dist, n_grids=n_grids,
+            n_row_max=n_row_max, max_dist=max_dist)
 
     def _update_keep_models(self, drop_vars, verbosity=1):
         """
@@ -105,6 +102,10 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             The verbosity level, 0 = silent
 
         """
+        self._geomp.objs = self.objs
+        self._geomp.cons = self.cons
+        self._geomp.initialize(verbosity)
+
         self._mname = self.name + "_calc"
         for t in self.algo.farm.turbines:
             if self._mname not in t.models:
@@ -112,47 +113,6 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         self._turbine = deepcopy(self.farm.turbines[-1])
 
         super().initialize(verbosity)
-
-        b = self.farm.boundary
-        assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
-        pmax = b.p_max()
-        pmin = b.p_min()
-        self._pmin = pmin
-        self._xy0 = pmin
-        self._span = pmax - pmin
-        self._len = np.linalg.norm(self._span)
-        self.max_spacing = self._len
-        if self.max_n_row is None:
-            n_steps = int(self._len/self.min_spacing)
-            if n_steps * self.min_spacing < self._len:
-                n_steps += 1
-            self._nrow = n_steps + 1
-        else:
-            self._nrow = self.max_n_row
-        self._gpts = self._nrow**2
-
-        if verbosity > 0:
-            print(f"Problem '{self.name}':")
-            print(f"  xy0          = {self._xy0}")
-            print(f"  span         = {self._len:.2f}")
-            print(f"  min spacing  = {self.min_spacing:.2f}")
-            print(f"  max spacing  = {self.max_spacing:.2f}")
-            print(f"  n row pts    = {self._nrow}")
-            print(f"  n grid pts   = {self._gpts}")
-            print(f"  n grids      = {self.n_grids}")
-            print(f"  n max turbns = {self.n_grids*self._gpts}")
-            print(f"  turbine mdls = {self._turbine.models}")
-
-        if self.farm.n_turbines < self._gpts:
-            for i in range(self._gpts - self.farm.n_turbines):
-                ti = len(self.farm.turbines)
-                self.farm.turbines.append(deepcopy(self._turbine))
-                self.farm.turbines[-1].index = ti
-                self.farm.turbines[-1].name = f"T{ti}"
-        elif self.farm.n_turbines > self._gpts:
-            self.farm.turbines = self.farm.turbines[:self._gpts]
-        self.algo.n_turbines = self._gpts
-        self.sel_turbines = list(range(self._gpts))
 
     def _init_mbook(self, verbosity=1):
         """
@@ -172,10 +132,6 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
             pre_rotor=False)
         
-        for t in self.farm.turbines:
-            if not self._mname in t.models:
-                t.models.append(self._mname)
-
     def var_names_int(self):
         """
         The names of int variables.
@@ -186,7 +142,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             The names of the int variables
 
         """
-        return np.array(np.array([self.NX, self.NY]).T.flat)
+        return self._geomp.var_names_int()
 
     def initial_values_int(self):
         """
@@ -198,7 +154,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Initial int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_grids*2, 2, dtype=FC.ITYPE)
+        return self._geomp.initial_values_int()
 
     def min_values_int(self):
         """
@@ -212,7 +168,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Minimal int values, shape: (n_vars_int,)
 
         """
-        return np.ones(self.n_grids*2, dtype=FC.ITYPE)
+        return self._geomp.min_values_int()
 
     def max_values_int(self):
         """
@@ -226,7 +182,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Maximal int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_grids*2, self._nrow, dtype=FC.ITYPE)
+        return self._geomp.max_values_int()
 
     def var_names_float(self):
         """
@@ -238,8 +194,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             The names of the float variables
 
         """
-        return np.array(np.array([
-            self.OX, self.OY, self.DX, self.DY, self.ALPHA]).T.flat)
+        return self._geomp.var_names_float()
 
     def initial_values_float(self):
         """
@@ -251,10 +206,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Initial float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
-        vals[:, :2] = self._xy0 + self._span/2
-        vals[:, 2:4] = self.min_spacing
-        return vals.reshape(self.n_grids*5)
+        return self._geomp.initial_values_float()
 
     def min_values_float(self):
         """
@@ -268,10 +220,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Minimal float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
-        vals[:, :2] = self._xy0 - self._len - self.min_spacing
-        vals[:, 2:4] = self.min_spacing
-        return vals.reshape(self.n_grids*5)
+        return self._geomp.min_values_float()
 
     def max_values_float(self):
         """
@@ -285,11 +234,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             Maximal float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
-        vals[:, :2] = self._xy0 + self._len + self.min_spacing
-        vals[:, 2:4] = self._len
-        vals[:, 4] = 90.
-        return vals.reshape(self.n_grids*5)
+        return self._geomp.max_values_float()
 
     def _update_farm_individual(self, vars_int, vars_float):
         """
@@ -305,7 +250,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
 
         """
         n0 = self.farm.n_turbines
-        nxny = vars_int.reshape(self.n_grids, 2)
+        nxny = vars_int.reshape(self._geomp.n_grids, 2)
         n = np.sum(np.product(nxny, axis=1))
         if n0 > n:
             self.farm.turbines = self.farm.turbines[:n]
@@ -316,7 +261,6 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
-            self.sel_turbines = range(n)
 
     def _update_farm_population(self, vars_int, vars_float):
         """
@@ -333,7 +277,7 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         """
         n0 = self.farm.n_turbines
         n_pop = vars_int.shape[0]
-        nxny = vars_int.reshape(n_pop, self.n_grids, 2)
+        nxny = vars_int.reshape(n_pop, self._geomp.n_grids, 2)
         n = np.max(np.sum(np.product(nxny, axis=2), axis=1))
         if n0 > n:
             self.farm.turbines = self.farm.turbines[:n]
@@ -344,7 +288,6 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
-            self.sel_turbines = range(n)
 
     def opt2farm_vars_individual(self, vars_int, vars_float):
         """
@@ -367,53 +310,23 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             (n_states, n_sel_turbines)
 
         """
-        vint = vars_int.reshape(self.n_grids, 2)
-        vflt = vars_float.reshape(self.n_grids, 5)
-        nx = vint[:, 0]
-        ny = vint[:, 1]
-        ox = vflt[:, 0]
-        oy = vflt[:, 1]
-        dx = vflt[:, 2]
-        dy = vflt[:, 3]
-        a = np.deg2rad(vflt[:, 4])
+        pts, vld = self._geomp.apply_individual(vars_int, vars_float)
+
+        n_pts = pts.shape[0]
         n_states = self.algo.n_states
         n_turbines = self.farm.n_turbines
         
-        nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
-        naz = np.zeros_like(nax)
-        naz[:, 2] = 1
-        nay = np.cross(naz, nax)
+        pmi = np.min(self._geomp._pmin)
+        points = np.full((n_states, n_turbines, 2), pmi, dtype=FC.DTYPE)
+        points[:, :n_pts] = pts[None, :, :]
 
-        valid = np.zeros((n_states, n_turbines), dtype=bool)
-        pts = np.zeros((n_states, n_turbines, 2), dtype=FC.DTYPE)
-        n0 = 0
-        for gi in range(self.n_grids):
-
-            n = nx[gi] * ny[gi]
-            n1 = n0 + n
-
-            qts = pts[:, n0:n1].reshape(n_states, nx[gi], ny[gi], 2)
-            qts[:, :, :, 0] = ox[gi]
-            qts[:, :, :, 1] = oy[gi]
-            qts[:] += np.arange(nx[gi])[None, :, None, None] * dx[gi] * nax[gi, None, None, None, :2]
-            qts[:] += np.arange(ny[gi])[None, None, :, None] * dy[gi] * nay[gi, None, None, None, :2]
-
-            valid[:, n0:n1] = self.farm.boundary.points_inside(qts.reshape(n_states*n, 2)).reshape(n_states, n)
-
-            # set points invalid which are too close to other grids:
-            if n0 > 0:
-                for i in range(n):
-                    dists = np.linalg.norm(pts[0, n0+i, None, :] - pts[0, :n0, :], axis=-1)
-                    if np.min(dists) < self.min_spacing:
-                        valid[:, n0+i] = False
-
-            n0 = n1
-        pts[:, n1:] = self._xy0[None, None, :] - self._len
+        valid = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+        valid[:, :n_pts] = vld
 
         farm_vars = {
-            FV.X: pts[:, :, 0],
-            FV.Y: pts[:, :, 1],
-            FV.VALID: valid.astype(FC.DTYPE)
+            FV.X: points[:, :, 0],
+            FV.Y: points[:, :, 1],
+            FV.VALID: valid
         }
 
         return farm_vars
@@ -441,56 +354,23 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             (n_pop, n_states, n_sel_turbines)
 
         """
-        n_pop = len(vars_float)
-        vint = vars_int.reshape(n_pop, self.n_grids, 2)
-        vflt = vars_float.reshape(n_pop, self.n_grids, 5)
-        nx = vint[:, :, 0]
-        ny = vint[:, :, 1]
-        ox = vflt[:, :, 0]
-        oy = vflt[:, :, 1]
-        dx = vflt[:, :, 2]
-        dy = vflt[:, :, 3]
-        a = np.deg2rad(vflt[:, :, 4])
+        pts, vld = self._geomp.apply_population(vars_int, vars_float)
+
+        n_pop, n_pts = vld.shape
         n_states = self._org_n_states
         n_turbines = self.farm.n_turbines
 
-        a = np.deg2rad(a)
-        nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
-        naz = np.zeros_like(nax)
-        naz[..., 2] = 1
-        nay = np.cross(naz, nax, axis=-1)
+        pmi = np.min(self._geomp._pmin)
+        points = np.full((n_pop, n_states, n_turbines, 2), pmi, dtype=FC.DTYPE)
+        points[:, :, :n_pts] = pts[:, None, :, :]
 
-        valid = np.zeros((n_pop, n_states, n_turbines), dtype=bool)
-        pts = np.zeros((n_pop, n_states, n_turbines, 2), dtype=FC.DTYPE)
-        for pi in range(n_pop):
-            n0 = 0
-            for gi in range(self.n_grids):
-
-                n = nx[pi, gi] * ny[pi, gi]
-                n1 = n0 + n
-
-                qts = pts[pi, :, n0:n1].reshape(n_states, nx[pi, gi], ny[pi, gi], 2)
-                qts[:, :, :, 0] = ox[pi, gi]
-                qts[:, :, :, 1] = oy[pi, gi]
-                qts[:] += np.arange(nx[pi, gi])[None, :, None, None] * dx[pi, gi] * nax[pi, gi, None, None, None, :2]
-                qts[:] += np.arange(ny[pi, gi])[None, None, :, None] * dy[pi, gi] * nay[pi, gi, None, None, None, :2]
-
-                valid[pi, :, n0:n1] = self.farm.boundary.points_inside(qts.reshape(n_states*n, 2)).reshape(n_states, n)
-
-                # set points invalid which are too close to other grids:
-                if n0 > 0:
-                    for i in range(n):
-                        dists = np.linalg.norm(pts[pi, 0, n0+i, None, :] - pts[pi, 0, :n0, :], axis=-1)
-                        if np.min(dists) < self.min_spacing:
-                            valid[pi, :, n0+i] = False
-
-                n0 = n1
-            pts[pi, :, n1:] = self._xy0[None, None, :] - self._len
+        valid = np.zeros((n_pop, n_states, n_turbines), dtype=FC.DTYPE)
+        valid[:, :, :n_pts] = vld[:, None, :]
 
         farm_vars = {
-            FV.X: pts[:, :, :, 0],
-            FV.Y: pts[:, :, :, 1],
-            FV.VALID: valid.astype(FC.DTYPE)
+            FV.X: points[:, :, :, 0],
+            FV.Y: points[:, :, :, 1],
+            FV.VALID: valid
         }
 
         return farm_vars
@@ -519,33 +399,20 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             The constraints values, shape: (n_constraints,)
 
         """
-        print("FINALIZE",vars_int)
-        farm_vars = self.apply_individual(vars_int, vars_float)
-        print("VALID", self.algo.n_states, self.algo.n_turbines,np.sum(farm_vars[FV.VALID].to_numpy()))
-
-        """
-        if isinstance(self.algo.states, PopStates):
-            self._reset_states(self.algo.states.states)
-            self.algo.n_states = self._org_n_states
-
         self._update_farm_individual(vars_int, vars_float)
         self._update_models_individual(vars_int, vars_float)
-        farm_vars = self.opt2farm_vars_individual(vars_int, vars_float)
-        """
+        pts, vld = self._geomp.apply_individual(vars_int, vars_float)
+        xy = pts[vld]
+        n_xy = xy.shape[0]
 
-        sel = np.where(farm_vars[FV.VALID][0])[0]
-        x = farm_vars[FV.X][0, sel]
-        y = farm_vars[FV.Y][0, sel]
-        
-        self.farm.turbines = [t for i, t in enumerate(self.farm.turbines) if i in sel]
-        for i, t in enumerate(self.farm.turbines):
-            t.xy = np.array([x[i], y[i]], dtype=FC.DTYPE)
-            t.models = [m for m in t.models if m not in [self.name, self._mname]]
-            t.index = i
-            t.name = f"T{i}"
+        self.farm.turbines = self.farm.turbines[:n_xy]
+        for ti, t in enumerate(self.farm.turbines):
+            t.xy = xy[ti]
+            t.index = ti
+            t.name = f"T{ti}"
+            t.models = [mname for mname in t.models if mname not in [self.name, self._mname]]
         self.algo.update_n_turbines()
 
-        self.algo.mbook.turbine_models[self.name].reset()
         pars = dict(finalize=True)
         pars.update(self.calc_farm_args)
         self._count += 1

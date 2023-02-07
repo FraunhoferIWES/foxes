@@ -5,7 +5,7 @@ from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
 from foxes.opt.problems.layout import RegGridsLayoutOptProblem
-from foxes.opt.objectives import MaxNTurbines
+from foxes.opt.objectives import MaxFarmPower
 
 if __name__ == "__main__":
 
@@ -112,13 +112,13 @@ if __name__ == "__main__":
         problem = RegGridsLayoutOptProblem(
             "layout_opt", 
             algo, 
-            min_spacing=args.min_dist,
+            min_dist=args.min_dist,
             n_grids=args.n_grids,
-            max_n_row=args.n_maxr,
+            n_row_max=args.n_maxr,
             runner=runner,
-            calc_farm_args={"ambient": True}
+            calc_farm_args={}
         )
-        problem.add_objective(MaxNTurbines(problem))
+        problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
 
         solver = Optimizer_pymoo(
@@ -147,8 +147,27 @@ if __name__ == "__main__":
         print()
         print(results)
 
-        fig, ax = plt.subplots(figsize=(12, 8))
-        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax)
+        fig, axs = plt.subplots(1, 2, figsize=(12, 8))
+
+        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
+
+        o = foxes.output.FlowPlots2D(algo, results.problem_results)
+        p_min = boundary.p_min() - 500
+        p_max = boundary.p_max() + 500
+        fig = o.get_mean_fig_xy(
+            "WS",
+            resolution=20,
+            fig=fig,
+            ax=axs[1],
+            xmin=p_min[0],
+            xmax=p_max[0],
+            ymin=p_min[1],
+            ymax=p_max[1],
+        )
+        dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)
+        farm.boundary.add_to_figure(
+            axs[1], fill_mode="outside_white", pars_distance=dpars
+        )
 
         plt.show()
         plt.close(fig)
