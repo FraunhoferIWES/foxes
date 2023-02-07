@@ -207,8 +207,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Turbine models:
   - New: `Calculator`, simple variable calculation via user function
 - Opt:
-  - New opt probplem: `RegularLayoutOptProblem`, searches for a regular grid layout
+  - New opt problem: `RegularLayoutOptProblem`, searches for a regular grid layout
+  - New opt problem: `GeomRegGrids`, finds regular grid layout by purely geometrical means (no wind farm calculation)
 - Examples:
   - New in `foxes.opt`: Example `layout_regular_grid`, demonstrates regular grid layout optimization
+  - New in `foxes.opt`: Example `geom_reggrids`, purely geometrical regular layout optimization
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)

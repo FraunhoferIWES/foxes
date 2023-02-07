@@ -240,6 +240,7 @@ class Algorithm(Model):
         if self.n_turbines != self.farm.n_turbines:
             self.n_turbines = self.farm.n_turbines
 
+            # resize stored idata, if dependent on turbine coord:
             newk = {}
             for mname, idata in self.idata_mem.items():
                 if mname[:2] == "__":

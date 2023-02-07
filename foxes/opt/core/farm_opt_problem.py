@@ -35,8 +35,6 @@ class FarmOptProblem(Problem):
         The algorithm
     runner : foxes.core.Runner
         The runner for running the algorithm
-    sel_turbines : list of int
-        The turbines selected for optimization
     pre_rotor : bool
         Flag for running before rotor model
     calc_farm_args : dict
@@ -60,12 +58,49 @@ class FarmOptProblem(Problem):
         self.runner = runner
         self.pre_rotor = pre_rotor
         self.calc_farm_args = calc_farm_args
-        self.sel_turbines = (
-            sel_turbines if sel_turbines is not None else list(range(algo.n_turbines))
-        )
 
+        self._sel_turbines = sel_turbines
         self._count = None
 
+    @property
+    def farm(self):
+        """
+        The wind farm
+
+        Returns
+        -------
+        foxes.core.WindFarm :
+            The wind farm
+
+        """
+        return self.algo.farm
+
+    @property
+    def sel_turbines(self):
+        """
+        The selected turbines
+
+        Returns
+        -------
+        list of int :
+            Indices of the selected turbines
+
+        """
+        return self._sel_turbines if self._sel_turbines is not None else list(range(self.farm.n_turbines))
+
+    @property
+    def n_sel_turbines(self):
+        """
+        The numer of selected turbines
+
+        Returns
+        -------
+        int :
+            The numer of selected turbines
+
+        """
+        return len(self.sel_turbines)
+        
     def tvar(self, var, turbine_i):
         """
         Gets turbine variable name
@@ -106,32 +141,6 @@ class FarmOptProblem(Problem):
         t = tvr.split("_")
         return t[0], int(t[1])
 
-    @property
-    def n_sel_turbines(self):
-        """
-        The numer of selected turbines
-
-        Returns
-        -------
-        int :
-            The numer of selected turbines
-
-        """
-        return len(self.sel_turbines)
-
-    @property
-    def farm(self):
-        """
-        The wind farm
-
-        Returns
-        -------
-        foxes.core.WindFarm :
-            The wind farm
-
-        """
-        return self.algo.farm
-
     def _init_mbook(self, verbosity=1):
         """
         Initialize the model book
@@ -166,7 +175,7 @@ class FarmOptProblem(Problem):
         Parameters
         ----------
         drop_vars : list of str
-            Variables that decided about dropping model
+            Variables that decide about dropping model
             from algo.keep_models
         verbosity : int
             The verbosity level, 0 = silent
@@ -204,9 +213,8 @@ class FarmOptProblem(Problem):
 
         self._init_mbook(verbosity)
 
-        if self.algo.initialized:
-            raise ValueError("The given algorithm is already initialized")
-        self.algo.initialize()
+        if not self.algo.initialized:
+            self.algo.initialize()
         self._org_states_name = self.algo.states.name
         self._org_n_states = self.algo.n_states
 
