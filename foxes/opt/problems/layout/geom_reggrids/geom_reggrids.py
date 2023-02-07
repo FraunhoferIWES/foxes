@@ -6,8 +6,48 @@ from iwopy import Problem
 import foxes.constants as FC
 
 class GeomRegGrids(Problem):
+    """
+    A regular grid within a boundary geometry.
 
-    def __init__(self, boundary, min_dist, n_grids, n_row_max=None, max_dist=None):
+    This optimization problem does not involve
+    wind farms.
+
+    Parameters
+    ----------
+    boundary : foxes.utils.geom2d.AreaGeometry
+        The boundary geometry
+    min_dist : float
+        The minimal distance between points
+    n_grids : int
+        The number of grids
+    n_row_max : int, optional
+        The maximal number of points in a row
+    max_dist : float, optional
+        The maximal distance between points
+    
+    Attributes
+    ----------
+    boundary : foxes.utils.geom2d.AreaGeometry
+        The boundary geometry
+    min_dist : float
+        The minimal distance between points
+    n_grids : int
+        The number of grids
+    n_row_max : int
+        The maximal number of points in a row
+    max_dist : float
+        The maximal distance between points
+
+    """
+
+    def __init__(
+            self, 
+            boundary, 
+            min_dist, 
+            n_grids, 
+            n_row_max=None, 
+            max_dist=None
+        ):
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -16,15 +56,24 @@ class GeomRegGrids(Problem):
         self.min_dist = float(min_dist)
         self.max_dist = float(max_dist) if max_dist is not None else max_dist
 
-        self.NX = [f"nx{i}" for i in range(self.n_grids)]
-        self.NY = [f"ny{i}" for i in range(self.n_grids)]
-        self.OX = [f"ox{i}" for i in range(self.n_grids)]
-        self.OY = [f"oy{i}" for i in range(self.n_grids)]
-        self.DX = [f"dx{i}" for i in range(self.n_grids)]
-        self.DY = [f"dy{i}" for i in range(self.n_grids)]
-        self.ALPHA = [f"alpha{i}" for i in range(self.n_grids)]
+        self._NX = [f"nx{i}" for i in range(self.n_grids)]
+        self._NY = [f"ny{i}" for i in range(self.n_grids)]
+        self._OX = [f"ox{i}" for i in range(self.n_grids)]
+        self._OY = [f"oy{i}" for i in range(self.n_grids)]
+        self._DX = [f"dx{i}" for i in range(self.n_grids)]
+        self._DY = [f"dy{i}" for i in range(self.n_grids)]
+        self._ALPHA = [f"alpha{i}" for i in range(self.n_grids)]
 
     def initialize(self, verbosity=1):
+        """
+        Initialize the object.
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
         super().initialize(verbosity)
 
         pmin = self.boundary.p_min()
@@ -63,7 +112,7 @@ class GeomRegGrids(Problem):
             The names of the int variables
 
         """
-        return list(np.array([self.NX, self.NY]).T.flat)
+        return list(np.array([self._NX, self._NY]).T.flat)
 
     def initial_values_int(self):
         """
@@ -116,7 +165,7 @@ class GeomRegGrids(Problem):
 
         """
         return list(np.array([
-            self.OX, self.OY, self.DX, self.DY, self.ALPHA]).T.flat)
+            self._OX, self._OY, self._DX, self._DY, self._ALPHA]).T.flat)
 
     def initial_values_float(self):
         """
@@ -169,7 +218,23 @@ class GeomRegGrids(Problem):
         return vals.reshape(self.n_grids*5)
 
     def apply_individual(self, vars_int, vars_float):
+        """
+        Apply new variables to the problem.
 
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+
+        Returns
+        -------
+        problem_results : Any
+            The results of the variable application
+            to the problem
+
+        """       
         vint = vars_int.reshape(self.n_grids, 2)
         vflt = vars_float.reshape(self.n_grids, 5)
         nx = vint[:, 0]
@@ -214,7 +279,24 @@ class GeomRegGrids(Problem):
         return pts, valid
 
     def apply_population(self, vars_int, vars_float):
+        """
+        Apply new variables to the problem,
+        for a whole population.
 
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+
+        Returns
+        -------
+        problem_results : Any
+            The results of the variable application
+            to the problem
+
+        """
         n_pop = vars_int.shape[0]
         vint = vars_int.reshape(n_pop, self.n_grids, 2)
         vflt = vars_float.reshape(n_pop, self.n_grids, 5)
@@ -261,9 +343,30 @@ class GeomRegGrids(Problem):
         return pts, valid
 
     def get_fig(self, xy=None, valid=None, ax=None, title=None, **bargs):
+        """
+        Return plotly figure axis.
 
+        Parameters
+        ----------
+        xy : numpy.ndarary, optional
+            The xy coordinate array, shape: (n_points, 2)
+        valid : numpy.ndarray, optional
+            Boolean array of validity, shape: (n_points,)
+        ax : pyplot.Axis, optional
+            The figure axis
+        title : str, optional
+            The figure title
+        bars : dict, optional
+            The boundary plot arguments
+        
+        Returns
+        -------
+        ax : pyplot.Axis
+            The figure axis
+
+        """
         if ax is None:
-            fig, ax = plt.subplots()
+            __, ax = plt.subplots()
         
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
