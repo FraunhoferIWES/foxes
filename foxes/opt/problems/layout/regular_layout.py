@@ -112,7 +112,6 @@ class RegularLayoutOptProblem(FarmOptProblem):
         elif self.farm.n_turbines > self._nturb:
             self.farm.turbines = self.farm.turbines[:self._nturb]
         self.algo.n_turbines = self._nturb
-        self.sel_turbines = list(range(self._nturb))
 
         super().initialize(verbosity)
 

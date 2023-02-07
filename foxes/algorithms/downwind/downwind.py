@@ -294,9 +294,9 @@ class Downwind(Algorithm):
         del models_data
 
         # finalize models:
-        self.finalize_model(mlist)
         if finalize:
             self.print("\n")
+            self.finalize_model(mlist)
             self.finalize()
 
         if ambient:

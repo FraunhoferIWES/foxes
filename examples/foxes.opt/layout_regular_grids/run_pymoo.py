@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "-P", "--n_pop", help="The population size", type=int, default=50
     )
     parser.add_argument(
-        "-G", "--n_gen", help="The number of generations", type=int, default=300
+        "-G", "--n_gen", help="The number of generations", type=int, default=50
     )
     parser.add_argument(
         "-g", "--n_grids", help="The number of grids", type=int, default=2
