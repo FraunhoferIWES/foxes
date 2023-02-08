@@ -31,17 +31,26 @@ class TuningProblem(FarmOptProblem):
         self,
         name,
         algo,
+        vars_names,
+        vars_init,
+        vars_min=None,
+        vars_max=None,
         runner=None,
-        # sel_turbines=None,
+        sel_turbines=None,
         calc_farm_args={},
         **kwargs,
     ):
+        self.vars_names = vars_names
+        self.vars_init = vars_init
+        self.vars_min = vars_min
+        self.vars_max = vars_max
+
         super().__init__(
             name,
             algo,
             runner,
             pre_rotor=True,
-            # sel_turbines=sel_turbines,
+            sel_turbines=sel_turbines,
             calc_farm_args=calc_farm_args,
             **kwargs,
         )
@@ -56,26 +65,48 @@ class TuningProblem(FarmOptProblem):
             The names of the float variables
 
         """
-        return ['PA_ALPHA','PA_BETA'] ## hardcoded
+        return self.vars_names
 
-    def output_farm_vars(self, algo):
+    def initial_values_float(self):
         """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
+        The initial values of the float variables.
 
         Returns
         -------
-        output_vars : list of str
-            The output variable names
+        values : numpy.ndarray
+            Initial float values, shape: (n_vars_float,)
 
         """
-        return [FV.PA_ALPHA, FV.PA_BETA] ## hardcoded
-    
+        return self.vars_init
 
+    def min_values_float(self):
+        """
+        The minimal values of the float variables.
+
+        Use -numpy.inf for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Minimal float values, shape: (n_vars_float,)
+
+        """
+        return self.vars_min
+
+    def max_values_float(self):
+        """
+        The maximal values of the float variables.
+
+        Use numpy.inf for unbounded.
+
+        Returns
+        -------
+        values : numpy.ndarray
+            Maximal float values, shape: (n_vars_float,)
+
+        """
+        return self.vars_max
+    
     def opt2farm_vars_individual(self, vars_int, vars_float):
         """
         Translates optimization variables to farm variables
@@ -99,7 +130,7 @@ class TuningProblem(FarmOptProblem):
         """
         farm_vars = {
             FV.PA_ALPHA: np.zeros((self.algo.n_states), dtype=FC.DTYPE),
-            FV.PA_ALPHA: np.zeros((self.algo.n_states), dtype=FC.DTYPE),
+            FV.PA_BETA: np.zeros((self.algo.n_states), dtype=FC.DTYPE),
         }
         farm_vars[FV.PA_ALPHA][:] = vars_float[0]
         farm_vars[FV.PA_BETA][:] = vars_float[1]
@@ -130,36 +161,3 @@ class TuningProblem(FarmOptProblem):
 
         """
         pass
-
-
-
-    def finalize_individual(self, vars_int, vars_float, verbosity=1):
-        """
-        Finalization, given the champion data.
-
-        Parameters
-        ----------
-        vars_int : np.array
-            The optimal integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
-            The optimal float variable values, shape: (n_vars_float,)
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        problem_results : Any
-            The results of the variable application
-            to the problem
-        objs : np.array
-            The objective function values, shape: (n_objectives,)
-        cons : np.array
-            The constraints values, shape: (n_constraints,)
-
-        """
-        res, objs, cons = super().finalize_individual(vars_int, vars_float, verbosity)
-
-        self.mbook.wake_frames["yawed_tuning"] = YawedWakes(
-            alpha=vars_float[0],beta=vars_float[1]) ## add new wake_frame (deflection model) with some initial values
-
-        return res, objs, cons

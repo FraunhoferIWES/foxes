@@ -47,14 +47,14 @@ class YawedWakes(WakeFrame):
         self,
         k=None,
         ct_max=0.9999,
-        alpha=0.58,
-        beta=0.07,
+        alpha=None, #DEV
+        beta=None, #DEV
         base_frame=RotorWD(),
     ):
         super().__init__()
 
         self.base_frame = base_frame
-        self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.model = PorteAgelModel(ct_max)
 
         setattr(self, FV.K, k)
         setattr(self, FV.YAWM, 0.0)

@@ -18,9 +18,9 @@ class PorteAgelModel:
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
     alpha : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region #DEV: to be deleted
     beta : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region #DEV: to be deleted
 
     Attributes
     ----------
@@ -28,9 +28,9 @@ class PorteAgelModel:
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
     alpha : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region #DEV: to be deleted
     beta : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region #DEV: to be deleted
 
     """
 
@@ -51,10 +51,11 @@ class PorteAgelModel:
     SIGMA_Z_FAR = "sigma_z_far"
     DELTA_FAR = "delta_far"
 
-    def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
+    # def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07): #DEV
+    def __init__(self, ct_max=0.9999):
         self.ct_max = ct_max
-        self.alpha = alpha
-        self.beta = beta
+        # self.alpha = alpha #DEV
+        # self.beta = beta #DEV
 
     @property
     def pars(self):
@@ -67,7 +68,8 @@ class PorteAgelModel:
             Dictionary of the model parameters
 
         """
-        return dict(alpha=self.alpha, beta=self.beta, ct_max=self.ct_max)
+        # return dict(alpha=self.alpha, beta=self.beta, ct_max=self.ct_max) #DEV
+        return dict(ct_max=self.ct_max)
 
     def calc_data(
         self,
@@ -77,6 +79,8 @@ class PorteAgelModel:
         x,
         gamma,
         k,
+        alpha, #DEV
+        beta, #DEV
     ):
         """
         Calculate common model data, store it in mdata.
@@ -96,6 +100,10 @@ class PorteAgelModel:
             The YAWM angles in radiants, shape: (n_states, n_points)
         k : numpy.ndarray
             The k parameter values, shape: (n_states, n_points)
+        alpha : numpy.ndarray
+            The alpha parameter values, shape: (n_states, n_points) #DEV
+        beta : numpy.ndarray 
+            The beta parameter values, shape: (n_states, n_points) #DEV
 
         """
         # prepare:
@@ -139,6 +147,8 @@ class PorteAgelModel:
             ws = ws[sp_sel]
             ti = ti[sp_sel]
             k = k[sp_sel]
+            alpha = alpha[sp_sel] #DEV
+            beta = beta[sp_sel] #DEV
             gamma = gamma[sp_sel]
 
             # calc theta_c0, Eq. (6.12):
@@ -146,8 +156,8 @@ class PorteAgelModel:
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
 
             # calculate x0, Eq. (7.3):
-            alpha = self.alpha
-            beta = self.beta
+            # alpha = self.alpha #DEV
+            # beta = self.beta #DEV
             sqomct = np.sqrt(1 - ct)
             x0 = (
                 D
@@ -309,9 +319,11 @@ class PorteAgelWake(DistSlicedWakeModel):
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
     alpha : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region. If not given here
+        it will be searched in the farm data, by default None #DEV
     beta : float
-        model parameter used to determine onset of far wake region
+        model parameter used to determine onset of far wake region If not given here
+        it will be searched in the farm data, by default None #DEV
 
     Attributes
     ----------
@@ -320,23 +332,34 @@ class PorteAgelWake(DistSlicedWakeModel):
     K : float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
+    alpha : float
+        model parameter used to determine onset of far wake region. If not given here
+        it will be searched in the farm data. #DEV
+    beta : float
+        model parameter used to determine onset of far wake region. If not given here
+        it will be searched in the farm data. #DEV
     YAWM : float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07):
+    # def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07): 
+    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=None, beta=None): #DEV
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.model = PorteAgelModel(ct_max, alpha, beta)
+        # self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.model = PorteAgelModel(ct_max)
 
         setattr(self, FV.K, k)
+        setattr(self, FV.PA_ALPHA, alpha) #DEV
+        setattr(self, FV.PA_BETA, beta) #DEV
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        # s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"(k={self.k}, alpha={self.alpha}, beta={self.beta}, sp={self.superpositions[FV.WS]})" #DEV
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -414,8 +437,16 @@ class PorteAgelWake(DistSlicedWakeModel):
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
 
+            # get alpha: #DEV
+            alpha = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            alpha[:] = self.get_data(FV.PA_ALPHA, fdata, upcast="farm")[st_sel][:, None]
+
+            # get beta: #DEV
+            beta = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            beta[:] = self.get_data(FV.PA_BETA, fdata, upcast="farm")[st_sel][:, None]
+
             # run calculation:
-            self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
+            self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k, alpha, beta)
 
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
