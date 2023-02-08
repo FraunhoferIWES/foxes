@@ -85,6 +85,9 @@ KZ = "kz"
 KTI = "kTI"
 KTIY = "kTIy"
 KTIZ = "kTIz"
+PA_ALPHA = "PA_alpha"
+PA_BETA = "PA_beta"
+
 
 Z0 = "z0"
 MOL = "MOL"
