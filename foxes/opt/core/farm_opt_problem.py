@@ -1,10 +1,6 @@
-import numpy as np
-from abc import abstractmethod
 from iwopy import Problem
 
-from foxes.models.turbine_models import SetFarmVars
 from foxes.utils.runners import DefaultRunner
-import foxes.constants as FC
 import foxes.variables as FV
 from .pop_states import PopStates
 
@@ -15,6 +11,8 @@ class FarmOptProblem(Problem):
 
     Parameters
     ----------
+    name : str
+        The problem's name
     algo : foxes.core.Algorithm
         The algorithm
     runner : foxes.core.Runner, optional
@@ -22,8 +20,6 @@ class FarmOptProblem(Problem):
     sel_turbines : list of int, optional
         The turbines selected for optimization,
         or None for all
-    pre_rotor : bool
-        Flag for running before rotor model
     calc_farm_args : dict
         Additional parameters for algo.calc_farm()
     kwargs : dict, optional
@@ -35,8 +31,6 @@ class FarmOptProblem(Problem):
         The algorithm
     runner : foxes.core.Runner
         The runner for running the algorithm
-    pre_rotor : bool
-        Flag for running before rotor model
     calc_farm_args : dict
         Additional parameters for algo.calc_farm()
 
@@ -48,7 +42,6 @@ class FarmOptProblem(Problem):
         algo,
         runner=None,
         sel_turbines=None,
-        pre_rotor=False,
         calc_farm_args={},
         **kwargs,
     ):
@@ -56,7 +49,6 @@ class FarmOptProblem(Problem):
 
         self.algo = algo
         self.runner = runner
-        self.pre_rotor = pre_rotor
         self.calc_farm_args = calc_farm_args
 
         self._sel_turbines = sel_turbines
@@ -100,182 +92,6 @@ class FarmOptProblem(Problem):
 
         """
         return len(self.sel_turbines)
-        
-    def tvar(self, var, turbine_i):
-        """
-        Gets turbine variable name
-
-        Parameters
-        ----------
-        var : str
-            The variable name
-        turbine_i : int
-            The turbine index
-
-        Returns
-        -------
-        str :
-            The turbine variable name
-
-        """
-        return f"{var}_{turbine_i:04d}"
-
-    def parse_tvar(self, tvr):
-        """
-        Parse foxes variable name and turbine index
-        from turbine variable
-
-        Parameters
-        ----------
-        tvr : str
-            The turbine variable name
-
-        Returns
-        -------
-        var : str
-            The foxes variable name
-        turbine_i : int
-            The turbine index
-
-        """
-        t = tvr.split("_")
-        return t[0], int(t[1])
-
-    def _init_mbook(self, verbosity=1):
-        """
-        Initialize the model book
-
-        Parameters
-        ----------
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        found = False
-        for t in self.algo.farm.turbines:
-            if self.name in t.models:
-                found = True
-                break
-        if not found:
-            raise ValueError(
-                f"FarmOptProblem '{self.name}': Missing entry '{self.name}' among any of the turbine models"
-            )
-
-        if self.name in self.algo.mbook.turbine_models:
-            raise KeyError(
-                f"FarmOptProblem '{self.name}': Turbine model entry '{self.name}' already exists in model book"
-            )
-
-        self.algo.mbook.turbine_models[self.name] = SetFarmVars(pre_rotor=self.pre_rotor)
-
-    def _update_keep_models(self, drop_vars, verbosity=1):
-        """
-        Updates algo.keep_models during initialization
-
-        Parameters
-        ----------
-        drop_vars : list of str
-            Variables that decide about dropping model
-            from algo.keep_models
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        self.algo.keep_models.append(self._org_states_name)
-        for mname, idata in self.algo.idata_mem.items():
-            if mname not in [self._org_states_name, self.name]:
-                keep = True
-                for d in idata["data_vars"].values():
-                    for dropv in drop_vars:
-                        if dropv in d[0]:
-                            keep = False
-                            break
-                    if not keep:
-                        break
-                if keep:
-                    self.algo.keep_models.append(mname)
-
-    def initialize(self, verbosity=1):
-        """
-        Initialize the object.
-
-        Parameters
-        ----------
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        if self.runner is None:
-            self.runner = DefaultRunner()
-            self.runner.initialize()
-        elif not self.runner.initialized:
-            raise ValueError(f"FarmOptProblem '{self.name}': Runner not initialized.")
-
-        self._init_mbook(verbosity)
-
-        if not self.algo.initialized:
-            self.algo.initialize()
-        self._org_states_name = self.algo.states.name
-        self._org_n_states = self.algo.n_states
-
-        # keep models that do not contain state related data,
-        # and always the original states:
-        self._update_keep_models(drop_vars=[FV.STATE], verbosity=verbosity)
-        self.algo.finalize()
-
-        self._count = 0
-
-        super().initialize(verbosity)
-
-    @abstractmethod
-    def opt2farm_vars_individual(self, vars_int, vars_float):
-        """
-        Translates optimization variables to farm variables
-
-        Parameters
-        ----------
-        vars_int : numpy.ndarray
-            The integer optimization variable values,
-            shape: (n_vars_int,)
-        vars_float : numpy.ndarray
-            The float optimization variable values,
-            shape: (n_vars_float,)
-
-        Returns
-        -------
-        farm_vars : dict
-            The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape:
-            (n_states, n_sel_turbines)
-
-        """
-        pass
-
-    @abstractmethod
-    def opt2farm_vars_population(self, vars_int, vars_float, n_states):
-        """
-        Translates optimization variables to farm variables
-
-        Parameters
-        ----------
-        vars_int : numpy.ndarray
-            The integer optimization variable values,
-            shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
-            The float optimization variable values,
-            shape: (n_pop, n_vars_float)
-        n_states : int
-            The number of original (non-pop) states
-
-        Returns
-        -------
-        farm_vars : dict
-            The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape:
-            (n_pop, n_states, n_sel_turbines)
-
-        """
-        pass
 
     @property
     def all_turbines(self):
@@ -303,6 +119,116 @@ class FarmOptProblem(Problem):
         """
         return self._count
 
+    @classmethod
+    def tvar(cls, var, turbine_i):
+        """
+        Gets turbine variable name
+
+        Parameters
+        ----------
+        var : str
+            The variable name
+        turbine_i : int
+            The turbine index
+
+        Returns
+        -------
+        str :
+            The turbine variable name
+
+        """
+        return f"{var}_{turbine_i:04d}"
+
+    @classmethod
+    def parse_tvar(cls, tvr):
+        """
+        Parse foxes variable name and turbine index
+        from turbine variable
+
+        Parameters
+        ----------
+        tvr : str
+            The turbine variable name
+
+        Returns
+        -------
+        var : str
+            The foxes variable name
+        turbine_i : int
+            The turbine index
+
+        """
+        t = tvr.split("_")
+        return t[0], int(t[1])
+
+    def _update_keep_models(self, drop_vars, exclude=None, verbosity=1):
+        """
+        Updates algo.keep_models during initialization
+
+        Parameters
+        ----------
+        drop_vars : list of str
+            Variables that decide about dropping model
+            from algo.keep_models
+        exclude : list of str, optional
+            The model names to be excluded, default
+            is original states and problem model names
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+        if exclude is None:
+            exclude = [self._org_states_name]
+        self.algo.keep_models.append(self._org_states_name)
+        for mname, idata in self.algo.idata_mem.items():
+            if mname not in exclude and self.name not in mname:
+                keep = True
+                for d in idata["data_vars"].values():
+                    for dropv in drop_vars:
+                        if dropv in d[0]:
+                            keep = False
+                            break
+                    if not keep:
+                        break
+                if keep:
+                    self.algo.keep_models.append(mname)
+
+    def initialize(self, drop_vars=[FV.STATE], exclude=None, verbosity=1):
+        """
+        Initialize the object.
+
+        Parameters
+        ----------
+        drop_vars : list of str
+            Variables that decide about dropping model
+            from algo.keep_models
+        exclude : list of str, optional
+            The model names to be excluded, default
+            is original states and problem model names
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
+        if self.runner is None:
+            self.runner = DefaultRunner()
+            self.runner.initialize()
+        elif not self.runner.initialized:
+            raise ValueError(f"FarmOptProblem '{self.name}': Runner not initialized.")
+
+        if not self.algo.initialized:
+            self.algo.initialize()
+        self._org_states_name = self.algo.states.name
+        self._org_n_states = self.algo.n_states
+
+        # keep models that do not contain state related data,
+        # and always the original states:
+        self._update_keep_models(drop_vars, exclude, verbosity)
+        self.algo.finalize()
+
+        self._count = 0
+
+        super().initialize(verbosity)
+
     def _reset_states(self, states):
         """
         Reset the states in the algorithm
@@ -311,11 +237,14 @@ class FarmOptProblem(Problem):
             if self.algo.initialized:
                 self.algo.finalize()
             self.algo.states = states
-
-    def _update_farm_individual(self, vars_int, vars_float):
+    
+    def update_problem_individual(self, vars_int, vars_float):
         """
-        Update basic wind farm data during optimization,
-        for example the number of turbines
+        Update the algo and other data using
+        the latest optimization variables.
+        
+        This function is called before running the farm 
+        calculation.
 
         Parameters
         ----------
@@ -325,35 +254,34 @@ class FarmOptProblem(Problem):
             The float variable values, shape: (n_vars_float,)
 
         """
-        pass
+        # reset states, if needed:
+        if isinstance(self.algo.states, PopStates):
+            self._reset_states(self.algo.states.states)
+            self.algo.n_states = self._org_n_states
 
-    def _update_models_individual(self, vars_int, vars_float):
+    def update_problem_population(self, vars_int, vars_float):
         """
-        Update the models during optimization.
+        Update the algo and other data using
+        the latest optimization variables.
+        
+        This function is called before running the farm 
+        calculation.
 
         Parameters
         ----------
         vars_int : np.array
-            The integer variable values, shape: (n_vars_int,)
+            The integer variable values, shape: (n_pop, n_vars_int,)
         vars_float : np.array
-            The float variable values, shape: (n_vars_float,) 
+            The float variable values, shape: (n_pop, n_vars_float,)
 
         """
-        # prepare:
-        model = self.algo.mbook.turbine_models[self.name]
-        n_states = self._org_n_states
-
-        # create/overwrite turbine model that sets variables to opt values:
-        model.reset()
-        for v, vals in self.opt2farm_vars_individual(vars_int, vars_float).items():
-            if self.all_turbines:
-                model.add_var(v, vals)
-            else:
-                data = np.zeros(
-                    (n_states, self.algo.n_turbines), dtype=FC.DTYPE
-                )
-                data[:, self.sel_turbines] = vals
-                model.add_var(v, data)
+        # set/reset pop states, if needed:
+        n_pop = len(vars_float)
+        if not isinstance(self.algo.states, PopStates):
+            self._reset_states(PopStates(self.algo.states, n_pop))
+        elif self.algo.states.n_pop != n_pop:
+            ostates = self.algo.states.states
+            self._reset_states(PopStates(ostates, n_pop))
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -373,72 +301,9 @@ class FarmOptProblem(Problem):
             to the problem
 
         """       
-        # reset states, if needed:
-        if isinstance(self.algo.states, PopStates):
-            self._reset_states(self.algo.states.states)
-            self.algo.n_states = self._org_n_states
-
-        # update models:
-        self._update_farm_individual(vars_int, vars_float)
-        self._update_models_individual(vars_int, vars_float)
-
-        # run the farm calculation:
-        pars = dict(finalize=True)
-        pars.update(self.calc_farm_args)
-
         self._count += 1
-
-        return self.runner.run(self.algo.calc_farm, kwargs=pars)
-
-    def _update_farm_population(self, vars_int, vars_float):
-        """
-        Update basic wind farm data during optimization,
-        for example the number of turbines
-
-        Parameters
-        ----------
-        vars_int : np.array
-            The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
-            The float variable values, shape: (n_pop, n_vars_float)
-
-        """
-        pass
-
-    def _update_models_population(self, vars_int, vars_float):
-        """
-        Update the models during optimization.
-
-        Parameters
-        ----------
-        vars_int : np.array
-            The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
-            The float variable values, shape: (n_pop, n_vars_float)
-
-        """
-        # prepare:
-        model = self.algo.mbook.turbine_models[self.name]
-        n_pop = len(vars_float)
-        n_states = self._org_n_states
-        n_pstates = n_states * n_pop
-
-        # create/overwrite turbine model that sets variables to opt values:
-        model.reset()
-        for v, vals in self.opt2farm_vars_population(
-            vars_int, vars_float, n_states
-        ).items():
-            shp0 = list(vals.shape)
-            shp1 = [n_pstates] + shp0[2:]
-            if self.all_turbines:
-                model.add_var(v, vals.reshape(shp1))
-            else:
-                data = np.zeros(
-                    (n_pstates, self.algo.n_turbines), dtype=FC.DTYPE
-                )
-                data[:, self.sel_turbines] = vals.reshape(shp1)
-                model.add_var(v, data)
-                del data
+        self.update_problem_individual(vars_int, vars_float)
+        return self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
 
     def apply_population(self, vars_int, vars_float):
         """
@@ -459,30 +324,12 @@ class FarmOptProblem(Problem):
             to the problem
 
         """
-        # prepare:
-        self._update_farm_population(vars_int, vars_float)
-        n_pop = len(vars_float)
-        n_states = self._org_n_states
-
-        # set/reset pop states, if needed:
-        if not isinstance(self.algo.states, PopStates):
-            self._reset_states(PopStates(self.algo.states, n_pop))
-        elif self.algo.states.n_pop != n_pop:
-            ostates = self.algo.states.states
-            self._reset_states(PopStates(ostates, n_pop))
-            del ostates
-
-        # update models:
-        self._update_models_population(vars_int, vars_float)
-
-        # run the farm calculation:
-        pars = dict(finalize=True)
-        pars.update(self.calc_farm_args)
-        results = self.runner.run(self.algo.calc_farm, kwargs=pars)
-        results["n_pop"] = n_pop
-        results["n_org_states"] = n_states
-
         self._count += 1
+        
+        self.update_problem_population(vars_int, vars_float)
+        results = self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
+        results["n_pop"] = len(vars_float)
+        results["n_org_states"] = self._org_n_states
 
         return results
 

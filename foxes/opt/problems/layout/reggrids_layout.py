@@ -1,14 +1,14 @@
 import numpy as np
 from copy import deepcopy
 
-from foxes.opt.core import FarmOptProblem, PopStates
+from foxes.opt.core import FarmOptProblem, FarmVarsProblem
 from foxes.models.turbine_models import Calculator
 import foxes.variables as FV
 import foxes.constants as FC
 from .geom_reggrids.geom_reggrids import GeomRegGrids
 
 
-class RegGridsLayoutOptProblem(FarmOptProblem):
+class RegGridsLayoutOptProblem(FarmVarsProblem):
     """
     Places turbines on several regular grids and optimizes
     their parameters.
@@ -32,10 +32,8 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         The maximal distance between points
     runner : foxes.core.Runner, optional
         The runner for running the algorithm
-    calc_farm_args : dict
-        Additional parameters for algo.calc_farm()
     kwargs : dict, optional
-        Additional parameters for `FarmOptProblem`
+        Additional parameters for `FarmVarsProblem`
 
     Attributes
     ----------
@@ -58,17 +56,9 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         n_row_max=None, 
         max_dist=None,
         runner=None,
-        calc_farm_args={},
         **kwargs,
     ):
-        super().__init__(
-            name,
-            algo,
-            runner,
-            pre_rotor=True,
-            calc_farm_args=calc_farm_args,
-            **kwargs,
-        )
+        super().__init__(name, algo, runner, **kwargs)
 
         b = algo.farm.boundary
         assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
@@ -76,30 +66,16 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         self._geomp = GeomRegGrids(b, min_dist=min_dist, n_grids=n_grids,
             n_row_max=n_row_max, max_dist=max_dist)
 
-    def _update_keep_models(self, drop_vars, verbosity=1):
-        """
-        Updates algo.keep_models during initialization
-
-        Parameters
-        ----------
-        drop_vars : list of str
-            Variables that decided about dropping model
-            from algo.keep_models
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        dvrs = drop_vars + [FV.TURBINE] if FV.TURBINE not in drop_vars else drop_vars
-        super()._update_keep_models(dvrs, verbosity)
-
-    def initialize(self, verbosity=1):
+    def initialize(self, verbosity=1, **kwargs):
         """
         Initialize the object.
 
         Parameters
-        ----------
+        ---------- 
         verbosity : int
             The verbosity level, 0 = silent
+        kwargs : dict, optional
+            Additional parameters for super class init
 
         """
         self._geomp.objs = self.objs
@@ -112,26 +88,19 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
                 t.models.append(self._mname)
         self._turbine = deepcopy(self.farm.turbines[-1])
 
-        super().initialize(verbosity)
-
-    def _init_mbook(self, verbosity=1):
-        """
-        Initialize the model book
-
-        Parameters
-        ----------
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        super()._init_mbook(verbosity)
-
         self.algo.mbook.turbine_models[self._mname] = Calculator(
             in_vars=[FV.VALID, FV.P, FV.CT],
             out_vars=[FV.VALID, FV.P, FV.CT],
             func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
             pre_rotor=False)
-        
+
+        super().initialize(
+            pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
+            post_rotor_vars=[],
+            verbosity=verbosity,
+            **kwargs
+        )
+
     def var_names_int(self):
         """
         The names of int variables.
@@ -236,10 +205,13 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
         """
         return self._geomp.max_values_float()
 
-    def _update_farm_individual(self, vars_int, vars_float):
+    def update_problem_individual(self, vars_int, vars_float):
         """
-        Update basic wind farm data during optimization,
-        for example the number of turbines
+        Update the algo and other data using
+        the latest optimization variables.
+        
+        This function is called before running the farm 
+        calculation.
 
         Parameters
         ----------
@@ -261,18 +233,23 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
+        
+        super().update_problem_individual(vars_int, vars_float)
 
-    def _update_farm_population(self, vars_int, vars_float):
+    def update_problem_population(self, vars_int, vars_float):
         """
-        Update basic wind farm data during optimization,
-        for example the number of turbines
+        Update the algo and other data using
+        the latest optimization variables.
+        
+        This function is called before running the farm 
+        calculation.
 
         Parameters
         ----------
         vars_int : np.array
-            The integer variable values, shape: (n_pop, n_vars_int)
+            The integer variable values, shape: (n_pop, n_vars_int,)
         vars_float : np.array
-            The float variable values, shape: (n_pop, n_vars_float)
+            The float variable values, shape: (n_pop, n_vars_float,)
 
         """
         n0 = self.farm.n_turbines
@@ -288,6 +265,8 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
+        
+        super().update_problem_population(vars_int, vars_float)
 
     def opt2farm_vars_individual(self, vars_int, vars_float):
         """
@@ -399,8 +378,6 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             The constraints values, shape: (n_constraints,)
 
         """
-        self._update_farm_individual(vars_int, vars_float)
-        self._update_models_individual(vars_int, vars_float)
         pts, vld = self._geomp.apply_individual(vars_int, vars_float)
         xy = pts[vld]
         n_xy = xy.shape[0]
@@ -413,15 +390,4 @@ class RegGridsLayoutOptProblem(FarmOptProblem):
             t.models = [mname for mname in t.models if mname not in [self.name, self._mname]]
         self.algo.update_n_turbines()
 
-        pars = dict(finalize=True)
-        pars.update(self.calc_farm_args)
-        self._count += 1
-        results = self.runner.run(self.algo.calc_farm, kwargs=pars)
-
-        varsi, varsf = self._find_vars(vars_int, vars_float, self.objs)
-        objs = self.objs.finalize_individual(varsi, varsf, results, verbosity)
-
-        varsi, varsf = self._find_vars(vars_int, vars_float, self.cons)
-        cons = self.cons.finalize_individual(varsi, varsf, results, verbosity)
-
-        return results, objs, cons
+        return FarmOptProblem.finalize_individual(self, vars_int, vars_float, verbosity=1)

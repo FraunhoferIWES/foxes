@@ -1,50 +1,14 @@
 import numpy as np
 
-from foxes.opt.core import FarmOptProblem
+from foxes.opt.core import FarmVarsProblem
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class FarmLayoutOptProblem(FarmOptProblem):
+class FarmLayoutOptProblem(FarmVarsProblem):
     """
     The turbine positioning optimization problem
-
-    Parameters
-    ----------
-    name : str
-        The problem's name
-    algo : foxes.core.Algorithm
-        The algorithm
-    runner : foxes.core.Runner, optional
-        The runner for running the algorithm
-    sel_turbines : list of int, optional
-        The turbines selected for optimization,
-        or None for all
-    calc_farm_args : dict
-        Additional parameters for algo.calc_farm()
-    kwargs : dict, optional
-        Additional parameters for `FarmOptProblem`
-
     """
-
-    def __init__(
-        self,
-        name,
-        algo,
-        runner=None,
-        sel_turbines=None,
-        calc_farm_args={},
-        **kwargs,
-    ):
-        super().__init__(
-            name,
-            algo,
-            runner,
-            pre_rotor=True,
-            sel_turbines=sel_turbines,
-            calc_farm_args=calc_farm_args,
-            **kwargs,
-        )
 
     def var_names_float(self):
         """
@@ -111,6 +75,25 @@ class FarmLayoutOptProblem(FarmOptProblem):
         out = np.zeros((self.n_sel_turbines, 2), dtype=FC.DTYPE)
         out[:] = b.p_max()[None, :]
         return out.reshape(self.n_sel_turbines * 2)
+
+    def initialize(self, verbosity=1, **kwargs):
+        """
+        Initialize the object.
+
+        Parameters
+        ---------- 
+        verbosity : int
+            The verbosity level, 0 = silent
+        kwargs : dict, optional
+            Additional parameters for super class init
+
+        """
+        super().initialize(
+            pre_rotor_vars=[FV.X, FV.Y],
+            post_rotor_vars=[],
+            verbosity=verbosity,
+            **kwargs
+        )
 
     def opt2farm_vars_individual(self, vars_int, vars_float):
         """

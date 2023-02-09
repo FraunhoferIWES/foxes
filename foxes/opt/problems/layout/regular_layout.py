@@ -1,14 +1,13 @@
 import numpy as np
 from copy import deepcopy
 
-from foxes.opt.core import FarmOptProblem
+from foxes.opt.core import FarmVarsProblem, FarmOptProblem
 from foxes.models.turbine_models import Calculator
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.utils import wd2uv
 
 
-class RegularLayoutOptProblem(FarmOptProblem):
+class RegularLayoutOptProblem(FarmVarsProblem):
     """
     Places turbines on a regular grid and optimizes
     its parameters.
@@ -21,12 +20,8 @@ class RegularLayoutOptProblem(FarmOptProblem):
         The algorithm
     min_spacing : float
         The minimal turbine spacing
-    runner : foxes.core.Runner, optional
-        The runner for running the algorithm
-    calc_farm_args : dict
-        Additional parameters for algo.calc_farm()
     kwargs : dict, optional
-        Additional parameters for `FarmOptProblem`
+        Additional parameters for `FarmVarsProblem`
 
     Attributes
     ----------
@@ -40,36 +35,27 @@ class RegularLayoutOptProblem(FarmOptProblem):
     OFFSET_X = "offset_X"
     OFFSET_Y = "offset_Y"
     ANGLE = "angle"
-    VALID = "valid"
 
     def __init__(
         self,
         name,
         algo,
         min_spacing,
-        runner=None,
-        calc_farm_args={},
         **kwargs,
     ):
-        super().__init__(
-            name,
-            algo,
-            runner,
-            pre_rotor=True,
-            calc_farm_args=calc_farm_args,
-            **kwargs,
-        )
-
+        super().__init__(name, algo, **kwargs)
         self.min_spacing = min_spacing
 
-    def initialize(self, verbosity=1):
+    def initialize(self, verbosity=1, **kwargs):
         """
         Initialize the object.
 
         Parameters
-        ----------
+        ----------  
         verbosity : int
             The verbosity level, 0 = silent
+        kwargs : dict, optional
+            Additional parameters for super class init
 
         """
         self._mname = self.name + "_calc"
@@ -77,6 +63,12 @@ class RegularLayoutOptProblem(FarmOptProblem):
             if self._mname not in t.models:
                 t.models.append(self._mname)
         self._turbine = deepcopy(self.farm.turbines[-1])
+
+        self.algo.mbook.turbine_models[self._mname] = Calculator(
+            in_vars=[FV.VALID, FV.P, FV.CT],
+            out_vars=[FV.VALID, FV.P, FV.CT],
+            func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
+            pre_rotor=False)
 
         b = self.farm.boundary
         assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
@@ -113,25 +105,13 @@ class RegularLayoutOptProblem(FarmOptProblem):
             self.farm.turbines = self.farm.turbines[:self._nturb]
         self.algo.n_turbines = self._nturb
 
-        super().initialize(verbosity)
-
-    def _init_mbook(self, verbosity=1):
-        """
-        Initialize the model book
-
-        Parameters
-        ----------
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        super()._init_mbook(verbosity)
-
-        self.algo.mbook.turbine_models[self._mname] = Calculator(
-            in_vars=[self.VALID, FV.P, FV.CT],
-            out_vars=[self.VALID, FV.P, FV.CT],
-            func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
-            pre_rotor=False)
+        super().initialize(
+            pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
+            post_rotor_vars=[],
+            drop_vars=[FV.STATE, FV.TURBINE],
+            verbosity=verbosity,
+            **kwargs
+        )
 
     def var_names_float(self):
         """
@@ -248,7 +228,7 @@ class RegularLayoutOptProblem(FarmOptProblem):
         farm_vars = {
             FV.X: pts[:, :, 0],
             FV.Y: pts[:, :, 1],
-            self.VALID: valid.reshape(n_states, nx*ny).astype(FC.DTYPE)
+            FV.VALID: valid.reshape(n_states, nx*ny).astype(FC.DTYPE)
         }
 
         return farm_vars
@@ -313,7 +293,7 @@ class RegularLayoutOptProblem(FarmOptProblem):
         farm_vars = {
             FV.X: qts[:, :, :, 0],
             FV.Y: qts[:, :, :, 1],
-            self.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE)
+            FV.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE)
         }
 
         return farm_vars
@@ -343,7 +323,7 @@ class RegularLayoutOptProblem(FarmOptProblem):
 
         """
         farm_vars = self.opt2farm_vars_individual(vars_int, vars_float)
-        sel = np.where(farm_vars[self.VALID][0])[0]
+        sel = np.where(farm_vars[FV.VALID][0])[0]
         x = farm_vars[FV.X][0, sel]
         y = farm_vars[FV.Y][0, sel]
         
@@ -353,18 +333,6 @@ class RegularLayoutOptProblem(FarmOptProblem):
             t.models = [m for m in t.models if m not in [self.name, self._mname]]
             t.index = i
             t.name = f"T{i}"
-        self.algo.n_turbines = len(sel)
+        self.algo.update_n_turbines()
 
-        self.algo.mbook.turbine_models[self.name].reset()
-        pars = dict(finalize=True)
-        pars.update(self.calc_farm_args)
-        self._count += 1
-        results = self.runner.run(self.algo.calc_farm, kwargs=pars)
-
-        varsi, varsf = self._find_vars(vars_int, vars_float, self.objs)
-        objs = self.objs.finalize_individual(varsi, varsf, results, verbosity)
-
-        varsi, varsf = self._find_vars(vars_int, vars_float, self.cons)
-        cons = self.cons.finalize_individual(varsi, varsf, results, verbosity)
-
-        return results, objs, cons
+        return FarmOptProblem.finalize_individual(self, vars_int, vars_float, verbosity=1)

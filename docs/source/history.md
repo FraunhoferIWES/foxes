@@ -207,6 +207,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Turbine models:
   - New: `Calculator`, simple variable calculation via user function
 - Opt:
+  - Now two abstract problems in core: `FarmOptProblem` and `FarmVarsProblem`, the latter invokes the `SetFarmVars` turbine model 
   - New opt problem: `RegularLayoutOptProblem`, searches for a regular grid layout
   - New opt problem: `GeomRegGrids`, finds regular grid layout by purely geometrical means (no wind farm calculation)
 - Examples:

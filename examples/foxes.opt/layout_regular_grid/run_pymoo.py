@@ -45,7 +45,7 @@ if __name__ == "__main__":
         "-P", "--n_pop", help="The population size", type=int, default=50
     )
     parser.add_argument(
-        "-G", "--n_gen", help="The nmber of generations", type=int, default=300
+        "-G", "--n_gen", help="The nmber of generations", type=int, default=150
     )
     parser.add_argument(
         "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
