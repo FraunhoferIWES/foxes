@@ -141,6 +141,14 @@ class Downwind(Algorithm):
             )
         self.print(deco)
         self.print()
+    
+    def init_states(self):
+        """
+        Initialize states, if needed.
+        """
+        if not self.states.initialized:
+            self.update_idata(self.states)
+            self.n_states = self.states.size()
 
     def initialize(self):
         """
@@ -149,8 +157,7 @@ class Downwind(Algorithm):
         self.print(f"\nInitializing algorithm '{self.name}'")
         super().initialize()           
 
-        self.update_idata(self.states)
-        self.n_states = self.states.size()
+        self.init_states()
 
         mdls = [
             self.rotor_model,

@@ -33,22 +33,28 @@ class FarmVarsProblem(FarmOptProblem):
         self._vars_pre = {}
         self._vars_post = {}
         if isinstance(pre_rotor_vars, dict):
-            self._vars_pre = {m: v for m, v in pre_rotor_vars if len(v)}
+            self._vars_pre = {m: v for m, v in pre_rotor_vars.items() if len(v)}
         elif len(pre_rotor_vars):
             self._vars_pre = {self.name: pre_rotor_vars}
         if isinstance(post_rotor_vars, dict):
-            self._vars_post = {m: v for m, v in post_rotor_vars if len(v)}
+            self._vars_post = {m: v for m, v in post_rotor_vars.items() if len(v)}
         elif len(post_rotor_vars):
             self._vars_post = {self.name: post_rotor_vars}
 
         cnt = 0
         for src, pre in zip((self._vars_pre, self._vars_post), (True, False)):
             for mname, vrs in src.items():
+
                 if mname in self.algo.mbook.turbine_models:
-                    raise KeyError(
-                        f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' already exists in model book"
-                    )
-                self.algo.mbook.turbine_models[mname] = SetFarmVars(pre_rotor=pre)
+                    m = self.algo.mbook.turbine_models[mname]
+                    if not isinstance(m, SetFarmVars):
+                        raise KeyError(
+                            f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' already exists in model book, and is not of type SetFarmVars"
+                        )
+                    elif m.pre_rotor != pre:
+                        raise ValueError(f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre}")
+                else:
+                    self.algo.mbook.turbine_models[mname] = SetFarmVars(pre_rotor=pre)
 
                 found = False
                 for t in self.algo.farm.turbines:
