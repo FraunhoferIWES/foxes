@@ -284,3 +284,32 @@ class MaxFarmPower(FarmVarObjective):
             scale=scale,
             **kwargs,
         )
+
+class MinimalMaxTI(FarmVarObjective):
+    """
+    Minimize the maximal turbine TI
+
+    Parameters
+    ----------
+    problem : foxes.opt.FarmOptProblem
+        The underlying optimization problem
+    name : str
+        The name of the objective function
+    kwargs : dict, optional
+        Additional parameters for `FarmVarObjective`
+
+    """
+
+    def __init__(self, problem, name="minimize_TI", **kwargs):
+
+        scale = kwargs.pop("scale") if "scale" in kwargs else 1.
+        super().__init__(
+            problem,
+            name,
+            variable=FV.TI,
+            contract_states="max",
+            contract_turbines="max",
+            minimize=True,
+            scale=scale,
+            **kwargs,
+        )
