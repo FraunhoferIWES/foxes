@@ -31,9 +31,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="auto"
     )
-    parser.add_argument("--ws", help="The wind speed", type=float, default=8.0)
+    parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
-    parser.add_argument("--ti", help="The TI value", type=float, default=0.05)
+    parser.add_argument("--ti", help="The TI value", type=float, default=0.06)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
         "-d",
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         xy_base=np.array([500.0, 500.0]),
         step_vectors=np.array([[1300.0, 0], [200, 600.0]]),
         steps=(N, N),
-        turbine_models=["kTI_05", "opt_yawm", "yawm2yaw", ttype.name],
+        turbine_models=["kTI_02", "opt_yawm", "yawm2yaw", ttype.name],
     )
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = OptFarmVars("opt_yawm", algo)
+        problem = OptFarmVars("opt_yawm", algo, runner=runner)
         problem.add_var(FV.YAWM, float, 0., -30., 30., level="turbine")
         problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
