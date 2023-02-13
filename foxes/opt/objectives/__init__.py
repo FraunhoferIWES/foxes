@@ -1,3 +1,2 @@
-from .farm_vars import FarmVarObjective, MaxFarmPower, MinimalMaxTI
+from .farm_vars import FarmVarObjective, MaxFarmPower, MinimalMaxTI, MinimalAPref
 from .max_n_turbines import MaxNTurbines
-from .PA_tuning_objective import TuningObjective

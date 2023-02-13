@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from foxes.opt.core.farm_objective import FarmObjective
@@ -176,7 +177,6 @@ class FarmVarObjective(FarmObjective):
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
 
-
         return np.array([data], dtype=np.float64)
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
@@ -313,3 +313,72 @@ class MinimalMaxTI(FarmVarObjective):
             scale=scale,
             **kwargs,
         )
+
+class MinimalAPref(FarmVarObjective):
+    """
+    Minimize the AP diff to reference
+
+    Parameters
+    ----------
+    problem : foxes.opt.FarmOptProblem
+        The underlying optimization problem
+    name : str
+        The name of the objective function
+    kwargs : dict, optional
+        Additional parameters for `FarmVarObjective`
+
+    """
+
+    def __init__(self, problem, ref_vals, name="minimize_APref", **kwargs):
+        self.ref_vals = ref_vals ## DEV
+
+        scale = kwargs.pop("scale") if "scale" in kwargs else 1.
+        super().__init__(
+            problem,
+            name,
+            variable=FV.REWS, ## DEV
+            contract_states="max",
+            contract_turbines="max",
+            minimize=True,
+            scale=scale,
+            **kwargs,
+        )
+
+    def calc_population(self, vars_int, vars_float, problem_results, components=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
+        n_pop = problem_results["n_pop"].values
+        n_states = problem_results["n_org_states"].values
+        n_turbines = problem_results.dims[FV.TURBINE]
+        data = (
+            problem_results[self.variable]
+            .to_numpy()
+            .reshape(n_pop, n_states, n_turbines)
+        )
+        data = xr.DataArray(data, dims=(FV.POP, FV.STATE, FV.TURBINE))
+
+        if self.n_sel_turbines < self.farm.n_turbines:
+            data = data[:, self.sel_turbines]
+
+        data = data - self.ref_vals ## DEV
+
+        return self._contract(data / self.scale).to_numpy()[:, None]
