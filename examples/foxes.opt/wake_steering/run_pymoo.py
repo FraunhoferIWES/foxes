@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
-from foxes.opt.problems.layout import RegularLayoutOptProblem
-from foxes.opt.objectives import MaxFarmPower
+from foxes.opt.problems import OptFarmVars
+from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI
+import foxes.variables as FV
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-nt", "--n_t", help="The number of turbines", type=int, default=10
+    )
     parser.add_argument(
         "-t",
         "--turbine_file",
@@ -21,8 +25,11 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_linear_k002"],
+        default=["PorteAgel_linear", "CrespoHernandez_quadratic"],
         nargs="+",
+    )
+    parser.add_argument(
+        "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="auto"
@@ -34,18 +41,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--min_dist",
-        help="Minimal turbine distance in m",
+        help="Minimal turbine distance in unit D",
         type=float,
-        default=500.0,
+        default=None,
     )
     parser.add_argument(
         "-A", "--opt_algo", help="The pymoo algorithm name", default="GA"
     )
     parser.add_argument(
-        "-P", "--n_pop", help="The population size", type=int, default=50
+        "-P", "--n_pop", help="The population size", type=int, default=80
     )
     parser.add_argument(
-        "-G", "--n_gen", help="The nmber of generations", type=int, default=150
+        "-G", "--n_gen", help="The nmber of generations", type=int, default=100
     )
     parser.add_argument(
         "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
@@ -71,16 +78,15 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0) \
-        + foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[0, 0], [0, 1600], [1000, 1800], [900, -200]], dtype=np.float64)) 
-
-    farm = foxes.WindFarm(boundary=boundary)
-    farm.add_turbine(foxes.Turbine(
-        xy=np.array([0.0, 0.0]),
-        turbine_models=["layout_opt", "kTI_02", ttype.name]
-    ))
-
+    farm = foxes.WindFarm()
+    N = int(np.sqrt(args.n_t) + 0.5)
+    foxes.input.farm_layout.add_grid(
+        farm,
+        xy_base=np.array([500.0, 500.0]),
+        step_vectors=np.array([[1300.0, 0], [200, 600.0]]),
+        steps=(N, N),
+        turbine_models=args.tmodels + ["opt_yawm", "yawm2yaw", ttype.name],
+    )
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
     )
@@ -91,7 +97,7 @@ if __name__ == "__main__":
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
-        wake_frame="rotor_wd",
+        wake_frame="yawed",
         partial_wakes_model=args.pwakes,
         verbosity=0,
     )
@@ -104,12 +110,10 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = RegularLayoutOptProblem(
-            "layout_opt", 
-            algo, min_spacing=args.min_dist,
-            runner=runner
-        )
-        problem.add_objective(MaxFarmPower(problem))
+        problem = OptFarmVars("opt_yawm", algo, runner=runner)
+        problem.add_var(FV.YAWM, float, 0., -40., 40., level="turbine")
+        #problem.add_objective(MaxFarmPower(problem))
+        problem.add_objective(MinimalMaxTI(problem))
         problem.initialize()
 
         solver = Optimizer_pymoo(
@@ -138,27 +142,9 @@ if __name__ == "__main__":
         print()
         print(results)
 
-        fig, axs = plt.subplots(1, 2, figsize=(12, 8))
-
-        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=axs[0])
+        fr = results.problem_results.to_dataframe()
+        print(fr[[FV.X, FV.Y, FV.AMB_WD, FV.REWS, FV.TI, FV.P, FV.YAWM]])
 
         o = foxes.output.FlowPlots2D(algo, results.problem_results)
-        p_min = np.array([-1100.0, -1100.0])
-        p_max = np.array([1100.0, 2000.0])
-        fig = o.get_mean_fig_xy(
-            "WS",
-            resolution=20,
-            fig=fig,
-            ax=axs[1],
-            xmin=p_min[0],
-            xmax=p_max[0],
-            ymin=p_min[1],
-            ymax=p_max[1],
-        )
-        dpars = dict(alpha=0.6, zorder=10, p_min=p_min, p_max=p_max)
-        farm.boundary.add_to_figure(
-            axs[1], fill_mode="outside_white", pars_distance=dpars
-        )
-
+        fig = o.get_mean_fig_xy("WS", resolution=10)
         plt.show()
-        plt.close(fig)
