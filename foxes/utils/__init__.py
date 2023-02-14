@@ -5,7 +5,7 @@ from .dict import Dict
 from .data_book import DataBook
 from .plotly_helpers import show_plotly_fig
 from .cubic_roots import cubic_roots
-from .geopandas_helpers import read_shp, shp2csv
+from .geopandas_helpers import read_shp, shp2csv, read_shp_polygons
 
 from . import two_circles
 from . import abl
