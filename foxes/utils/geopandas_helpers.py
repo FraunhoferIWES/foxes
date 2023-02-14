@@ -74,11 +74,11 @@ def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
 
     return gpdf
 
-def read_shp_polygons(fname, names, index_col=1):
+def read_shp_polygons(fname, names=None, name_col="Name", geom_col=None):
     """
     Reads the polygon points from csv or shp file.
     
-    The points are read from column 'geom',
+    The points are read from geom_col,
     containing string entries like
 
     POLYGON ((6.415 54.086, 6.568 54.089, ...))
@@ -91,10 +91,13 @@ def read_shp_polygons(fname, names, index_col=1):
     ----------
     fn: str
         Path to the .csv or .shp file
-    names: list:str
-        The names of the polygons to be extracted
-    index_col: int
-        Index of the column that contains the area names
+    names: list: of str, optinal
+        The names of the polygons to be extracted. All by
+        default
+    name_col: int
+        Column that contains the area names
+    geom_col : str, optional
+        The geometry column, default 'geom' or 'geometry'
 
     Returns
     -------
@@ -104,21 +107,27 @@ def read_shp_polygons(fname, names, index_col=1):
 
     """
     if isinstance(fname, pd.DataFrame):
-        pdf = fname
+        pdf = fname.reset_index()
     else:
         fn = Path(fname)
         if fn.suffix == ".shp":
-            pdf = pd.DataFrame(read_shp(fn)).rename(columns={"geometry": "geom"})
+            pdf = pd.DataFrame(read_shp(fn)).reset_index()
         else:
-            pdf = pd.read_csv(fn, index_col=index_col)
+            pdf = pd.read_csv(fn)
+
+    pdf.set_index(name_col, inplace=True)
+    if geom_col is None:
+        geom_col = "geom" if "geom" in pdf.columns else "geometry"
+    pdf[geom_col] = [str(g) for g in pdf[geom_col]]
 
     out = {}
+    names = pdf.index.tolist() if names is None else names
     for name in names:
 
         if not name in pdf.index:
-            raise KeyError(f"Name '{name}' not found in file '{fn}'. Names: {list(pdf.index)}")
+            raise KeyError(f"Name '{name}' not found in file '{fn}'. Names: {pdf.index.tolist()}")
 
-        a = pdf[pdf.index==name].geom.values[0]
+        a = pdf.loc[name, geom_col]
 
         multi = "MULTIPOLYGON" in a
 
