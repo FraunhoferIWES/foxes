@@ -81,6 +81,7 @@ class GeomRegGrids(Problem):
         self._span = pmax - pmin
         self._diag = np.linalg.norm(self._span)
         self.max_dist = self._diag if self.max_dist is None else self.max_dist
+        self._nrow = self.n_row_max
         if self.n_row_max is None:
             self._nrow = int(self._diag/self.min_dist)
             if self._nrow * self.min_dist < self._diag:
