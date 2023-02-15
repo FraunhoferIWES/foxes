@@ -379,6 +379,6 @@ class MinimalAPref(FarmVarObjective):
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
 
-        data = data - self.ref_vals ## DEV
+        data = data - self.ref_vals[None,None,:] ## DEV
 
         return self._contract(data / self.scale).to_numpy()[:, None]

@@ -115,6 +115,7 @@ if __name__ == "__main__":
     )
     df_out = pd.read_csv(path_local+'LES_out.csv')
     ref_vals = np.asarray([df_in['WS'][0],df_out['REWS'][0]]) ## Reference wind 
+    print('ref_vals',ref_vals)
 
     algo = foxes.algorithms.Downwind(
         mbook,
@@ -123,7 +124,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="yawed",
-        partial_wakes_model=args.pwakes,
+        partial_wakes_model='rotor_points',
         verbosity=0,
     )
 
