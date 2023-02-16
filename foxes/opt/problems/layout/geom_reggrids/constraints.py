@@ -41,7 +41,7 @@ class CFixN(Constraint):
 
     def __init__(self, problem, N, name="cfixN", **kwargs):
         super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+            vnames_float=problem.var_names_float(), tol=0.1, **kwargs)
         self.N = N
 
     def n_components(self):
@@ -49,8 +49,10 @@ class CFixN(Constraint):
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
         __, valid = problem_results
-        return np.array([self.N - np.sum(valid), np.sum(valid) - self.N])
+        vld = np.sum(valid)
+        return np.array([self.N - vld, vld - self.N])
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
         __, valid = problem_results
-        return np.stack([self.N - np.sum(valid, axis=1)[:, None], np.sum(valid, axis=1)[:, None] - self.N], axis=-1)
+        vld = np.sum(valid, axis=1)
+        return np.stack([self.N - vld, vld - self.N], axis=-1)

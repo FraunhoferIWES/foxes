@@ -20,6 +20,8 @@ class GeomRegGrids(Problem):
         The minimal distance between points
     n_grids : int
         The number of grids
+    n_max : int, optional
+        The maximal number of points
     n_row_max : int, optional
         The maximal number of points in a row
     max_dist : float, optional
@@ -33,6 +35,8 @@ class GeomRegGrids(Problem):
         The minimal distance between points
     n_grids : int
         The number of grids
+    n_max : int
+        The maximal number of points
     n_row_max : int
         The maximal number of points in a row
     max_dist : float
@@ -45,6 +49,7 @@ class GeomRegGrids(Problem):
             boundary, 
             min_dist, 
             n_grids, 
+            n_max=None,
             n_row_max=None, 
             max_dist=None
         ):
@@ -52,6 +57,7 @@ class GeomRegGrids(Problem):
 
         self.boundary = boundary
         self.n_grids = n_grids
+        self.n_max = n_max
         self.n_row_max = n_row_max
         self.min_dist = float(min_dist)
         self.max_dist = float(max_dist) if max_dist is not None else max_dist
@@ -83,10 +89,15 @@ class GeomRegGrids(Problem):
         self.max_dist = self._diag if self.max_dist is None else self.max_dist
         self._nrow = self.n_row_max
         if self.n_row_max is None:
-            self._nrow = int(self._diag/self.min_dist)
-            if self._nrow * self.min_dist < self._diag:
+            if self.n_max is None:
+                self._nrow = int(self._diag/self.min_dist)
+                if self._nrow * self.min_dist < self._diag:
+                    self._nrow += 1
                 self._nrow += 1
-            self._nrow += 1
+            else:
+                self._nrow = self.n_max
+        if self.n_max is None:
+            self.n_max = self.n_grids*self._nrow**2
         self._pmin = pmin - self._diag - self.min_dist
         self._pmax = pmax + self.min_dist
         
@@ -99,7 +110,7 @@ class GeomRegGrids(Problem):
             print(f"  n row max   = {self._nrow}")
             print(f"  n gpts max  = {self._nrow**2}")
             print(f"  n grids     = {self.n_grids}")
-            print(f"  n trbns max = {self.n_grids*self._nrow**2}")
+            print(f"  n max       = {self.n_max}")
 
         self.apply_individual(self.initial_values_int(), self.initial_values_float())
 
@@ -245,7 +256,7 @@ class GeomRegGrids(Problem):
         dx = vflt[:, 2]
         dy = vflt[:, 3]
         a = np.deg2rad(vflt[:, 4])
-        n_points = np.sum(np.product(vint[:, :2], axis=1))
+        n_points = self.n_max
 
         nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
         naz = np.zeros_like(nax)
@@ -259,6 +270,8 @@ class GeomRegGrids(Problem):
 
             n = nx[gi] * ny[gi]
             n1 = n0 + n
+            if n1 > n_points:
+                continue
 
             qts = pts[n0:n1].reshape(nx[gi], ny[gi], 2)
             qts[:, :, 0] = ox[gi]
@@ -308,7 +321,7 @@ class GeomRegGrids(Problem):
         dx = vflt[:, :, 2]
         dy = vflt[:, :, 3]
         a = np.deg2rad(vflt[:, :, 4])
-        n_points = np.max(np.sum(np.product(vint[:, :, :2], axis=2), axis=1))
+        n_points = self.n_max
 
         nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
         naz = np.zeros_like(nax)
@@ -323,6 +336,8 @@ class GeomRegGrids(Problem):
 
                 n = nx[pi, gi] * ny[pi, gi]
                 n1 = n0 + n
+                if n1 > n_points:
+                    continue
 
                 qts = pts[pi, n0:n1].reshape(nx[pi, gi], ny[pi, gi], 2)
                 qts[:, :, 0] = ox[pi, gi]
