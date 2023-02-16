@@ -82,10 +82,14 @@ class PowerMask(TurbineModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self._P_rated = np.array(
-            [t.P_nominal for t in algo.farm_controller.turbine_types], dtype=FC.DTYPE
-        )
-
+        self._P_rated = []
+        for t in algo.farm_controller.turbine_types:
+            Pnom = FC.DTYPE(t.P_nominal)
+            if np.isnan(Pnom):
+                raise ValueError(f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'")
+            self._P_rated.append(Pnom)
+        self._P_rated = np.array(self._P_rated, dtype=FC.DTYPE)
+        
         return super().initialize(algo, verbosity)
 
     @classmethod
