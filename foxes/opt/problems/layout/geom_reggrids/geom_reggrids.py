@@ -26,6 +26,8 @@ class GeomRegGrids(Problem):
         The maximal number of points in a row
     max_dist : float, optional
         The maximal distance between points
+    D : float, optional
+        The diameter of circle fully within boundary
     
     Attributes
     ----------
@@ -41,6 +43,8 @@ class GeomRegGrids(Problem):
         The maximal number of points in a row
     max_dist : float
         The maximal distance between points
+    D : float
+        The diameter of circle fully within boundary
 
     """
 
@@ -51,7 +55,8 @@ class GeomRegGrids(Problem):
             n_grids, 
             n_max=None,
             n_row_max=None, 
-            max_dist=None
+            max_dist=None,
+            D=None,
         ):
         super().__init__(name="geom_reg_grids")
 
@@ -61,6 +66,7 @@ class GeomRegGrids(Problem):
         self.n_row_max = n_row_max
         self.min_dist = float(min_dist)
         self.max_dist = float(max_dist) if max_dist is not None else max_dist
+        self.D = D
 
         self._NX = [f"nx{i}" for i in range(self.n_grids)]
         self._NY = [f"ny{i}" for i in range(self.n_grids)]
@@ -281,7 +287,13 @@ class GeomRegGrids(Problem):
             qts = qts.reshape(n, 2)
 
             # set out of boundary points invalid:
-            valid[n0:n1] = self.boundary.points_inside(qts)
+            if self.D is None:
+                valid[n0:n1] = self.boundary.points_inside(qts)
+            else:
+                valid[n0:n1] = (
+                    self.boundary.points_inside(qts) &
+                    (self.boundary.points_distance(qts) >= self.D / 2)
+                )
 
             # set points invalid which are too close to other grids:
             if n0 > 0:
@@ -347,7 +359,13 @@ class GeomRegGrids(Problem):
                 qts = qts.reshape(n, 2)
 
                 # set out of boundary points invalid:
-                valid[pi, n0:n1] = self.boundary.points_inside(qts)
+                if self.D is None:
+                    valid[pi, n0:n1] = self.boundary.points_inside(qts)
+                else:
+                    valid[pi, n0:n1] = (
+                        self.boundary.points_inside(qts) &
+                        (self.boundary.points_distance(qts) >= self.D / 2)
+                    )
 
                 # set points invalid which are too close to other grids:
                 if n0 > 0:
@@ -358,7 +376,7 @@ class GeomRegGrids(Problem):
 
         return pts, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, **bargs):
+    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
         """
         Return plotly figure axis.
 
@@ -372,6 +390,8 @@ class GeomRegGrids(Problem):
             The figure axis
         title : str, optional
             The figure title
+        true_circle : bool
+            Draw points as circles with diameter self.D
         bars : dict, optional
             The boundary plot arguments
         
@@ -391,7 +411,11 @@ class GeomRegGrids(Problem):
         if xy is not None:
             if valid is not None:
                 xy = xy[valid]
-            ax.scatter(xy[:, 0], xy[:, 1], color="orange")
+            if not true_circle or self.D is None:
+                ax.scatter(xy[:, 0], xy[:, 1], color="orange")
+            else:
+                for x, y in xy:
+                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")
