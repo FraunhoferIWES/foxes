@@ -136,3 +136,4 @@ log.*
 .vscode/
 _autosummary/
 scratch/
+*.swp
