@@ -329,14 +329,15 @@ class MinimalAPref(FarmVarObjective):
 
     """
 
-    def __init__(self, problem, ref_vals, name="minimize_APref", **kwargs):
+    def __init__(self, problem, ref_vals, g_pts, name="minimize_APref", **kwargs):
         self.ref_vals = ref_vals ## DEV
+        self.g_pts = g_pts ## DEV
 
         scale = kwargs.pop("scale") if "scale" in kwargs else 1.
         super().__init__(
             problem,
             name,
-            variable=FV.REWS, ## DEV
+            variable=FV.WS, ## DEV
             contract_states="max",
             contract_turbines="max",
             minimize=True,
@@ -344,10 +345,45 @@ class MinimalAPref(FarmVarObjective):
             **kwargs,
         )
 
+    def calc_individual(self, vars_int, vars_float, problem_results, components=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
+        # point_results = self.algo.calc_points(problem_results, points=self.g_pts, **kwargs)
+        # print(point_results)
+
+        data = problem_results[self.variable]
+        if self.n_sel_turbines < self.farm.n_turbines:
+            data = data[:, self.sel_turbines]
+        data = self._contract(data) / self.scale
+
+
+        data = data - self.ref_vals[None,:] ## DEV
+
+        return np.array([data], dtype=np.float64)
+
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
         """
         Calculate values for all individuals of a population.
-
         Parameters
         ----------
         vars_int : np.array

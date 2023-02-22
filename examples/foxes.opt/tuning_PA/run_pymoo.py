@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
+from foxes.utils import wd2wdvec, wd2uv
 from foxes.opt.problems import OptFarmVars
 from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI, MinimalAPref
 import foxes.variables as FV
+import foxes.constants as FC
 
 if __name__ == "__main__":
 
@@ -86,18 +88,14 @@ if __name__ == "__main__":
     mbook.turbine_types[ttype.name] = ttype
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_row(
-        farm=farm,
-        xy_base=np.array([0.0, 0.0]),
-        xy_step=np.array([args.deltax, args.deltay]),
-        n_turbines=2,
-        # turbine_models=args.tmodels + ["set_yawm", "yawm2yaw", ttype.name],
-        turbine_models=args.tmodels + ["opt_yawm", "yawm2yaw", ttype.name],
+    farm.add_turbine(
+        foxes.Turbine(
+            xy=np.array([0.0, 0.0]),
+            D = 126.,
+            H = 90.,
+            turbine_models=args.tmodels + ["opt_yawm", "yawm2yaw", ttype.name],
+        )
     )
-
-    # states = foxes.input.states.SingleStateStates(
-    #     ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
-    # )
 
     path_local = '/home/sengers/data/foxes-cases/LES_ref/'
     df_in = pd.read_csv(path_local+'LES_in.csv')
@@ -114,8 +112,31 @@ if __name__ == "__main__":
         profiles={FV.WS: "ShearedProfile"},
     )
     df_out = pd.read_csv(path_local+'LES_out.csv')
-    ref_vals = np.asarray([df_in['WS'][0],df_out['REWS'][0]]) ## Reference wind 
-    print('ref_vals',ref_vals)
+    ref_vals = np.asarray([df_out['REWS'][0]]) ## Reference wind 
+
+    ## Define points
+
+    x_pos = [750]
+    y_pos = np.arange(farm.turbines[0].D/2*-1,farm.turbines[0].D/2,5)
+    z_pos = np.arange(farm.turbines[0].H-farm.turbines[0].D/2,farm.turbines[0].H+farm.turbines[0].D/2,5)
+
+    try:
+        n_x = np.append(wd2uv(states.fixed_vars['WD']), [0.0], axis=0) 
+        n_z = np.array([0.0, 0.0, 1.0])
+        n_y = np.cross(n_z, n_x)    
+    except KeyError:
+        raise KeyError('WD not found in fixed_vars')
+
+    N_x, N_y, N_z = len(x_pos), len(y_pos), len(z_pos)
+    n_pts = len(x_pos) * len(y_pos) * len(z_pos)
+    g_pts = np.zeros((N_x, N_y, N_z, 3), dtype=FC.DTYPE)
+    for ix in range(N_x):
+        x_pos_tmp = x_pos[ix]
+        g_pts[:] += x_pos_tmp * n_x[None, None, None, :]
+        g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
+        g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
+        g_pts = g_pts.reshape(1, n_pts, 3)
+    print(g_pts)
 
     algo = foxes.algorithms.Downwind(
         mbook,
@@ -140,7 +161,7 @@ if __name__ == "__main__":
         problem.add_var(FV.YAWM, float, 0., -40., 40., level="turbine")
         # problem.add_objective(MaxFarmPower(problem))
         # problem.add_objective(MinimalMaxTI(problem))
-        problem.add_objective(MinimalAPref(problem,ref_vals=ref_vals))
+        problem.add_objective(MinimalAPref(problem,ref_vals=ref_vals,g_pts=g_pts))
         problem.initialize()
 
         solver = Optimizer_pymoo(
