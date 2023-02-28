@@ -70,13 +70,13 @@ class MaxGridSpacing(Objective):
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
         vflt = vars_float.reshape(self.problem.n_grids, 5)
         delta = np.minimum(vflt[:, 2], vflt[:, 3])
-        return np.min(delta)
+        return np.nanmin(delta)
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
         n_pop = vars_float.shape[0]
         vflt = vars_float.reshape(n_pop, self.problem.n_grids, 5)
         delta = np.minimum(vflt[:, :, 2], vflt[:, :, 3])
-        return np.min(delta, axis=1)[:, None]
+        return np.nanmin(delta, axis=1)[:, None]
 
 class MaxDensity(Objective):
 
@@ -118,7 +118,7 @@ class MaxDensity(Objective):
         xy, valid = problem_results
         xy = xy[valid]
         dists = cdist(self._probes, xy)
-        return np.max(np.min(dists, axis=1))
+        return np.nanmax(np.nanmin(dists, axis=1))
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
         n_pop = vars_float.shape[0]
@@ -128,5 +128,5 @@ class MaxDensity(Objective):
             if np.any(valid[pi]):
                 hxy = xy[pi][valid[pi]]
                 dists = cdist(self._probes, hxy)
-                out[pi] = np.max(np.min(dists, axis=1))
+                out[pi] = np.nanmax(np.nanmin(dists, axis=1))
         return out[:, None]

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
-import foxes.opt.problems.layout.geom_reggrids as grg
+import foxes.opt.problems.layout.geom_layouts as grg
 
 if __name__ == "__main__":
 
