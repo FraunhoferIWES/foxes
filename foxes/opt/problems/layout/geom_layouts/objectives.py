@@ -84,7 +84,7 @@ class MaxDensity(Objective):
         super().__init__(problem, name, vnames_int=problem.var_names_int(), 
             vnames_float=problem.var_names_float())
         self.dfactor = dfactor
-        self.min_dist = self.min_dist if min_dist is None else min_dist
+        self.min_dist = problem.min_dist if min_dist is None else min_dist
 
     def n_components(self):
         return 1
