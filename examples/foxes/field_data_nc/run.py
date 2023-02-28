@@ -2,13 +2,14 @@ import time
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import xarray as xr
 
 import foxes
 import foxes.variables as FV
 from foxes.utils.runners import DaskRunner
 
 
-def run_foxes(args):
+def run_foxes(args, sdata):
 
     cks = (
         None
@@ -21,11 +22,10 @@ def run_foxes(args):
     mbook.turbine_types[ttype.name] = ttype
 
     states = foxes.input.states.FieldDataNC(
-        args.file_pattern,
+        sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225},
-        pre_load=not args.no_pre_load,
     )
 
     farm = foxes.WindFarm()
@@ -108,9 +108,6 @@ if __name__ == "__main__":
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
     parser.add_argument(
-        "-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true"
-    )
-    parser.add_argument(
         "-n",
         "--n_workers",
         help="The number of workers for distributed run",
@@ -129,10 +126,20 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    sdata = xr.open_mfdataset(
+        args.file_pattern,
+        parallel=False,
+        concat_dim="Time",
+        combine="nested",
+        data_vars="minimal",
+        coords="minimal",
+        compat="override",
+    )
+    
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
 
-        runner.run(run_foxes, args=(args,))
+        runner.run(run_foxes, args=(args, sdata))

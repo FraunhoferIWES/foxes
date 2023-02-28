@@ -15,5 +15,5 @@ python3 run.py -h
 For all netCDF file to be considered, run
 
 ```console
-python3 run.py "data/data_0.nc"
+python3 run.py "data/data_*.nc"
 ```
