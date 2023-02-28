@@ -210,6 +210,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Now two abstract problems in core: `FarmOptProblem` and `FarmVarsProblem`, the latter invokes the `SetFarmVars` turbine model 
   - New opt problem: `RegularLayoutOptProblem`, searches for a regular grid layout
   - New opt problem: `GeomRegGrids`, finds regular grid layout by purely geometrical means (no wind farm calculation)
+  - New opt problem: `GeomLayout`, turbine positioning based on xy variables, also purely geometrical
 - Examples:
   - New in `foxes.opt`: Example `layout_regular_grid`, demonstrates regular grid layout optimization
   - New in `foxes.opt`: Example `geom_reggrids`, purely geometrical regular layout optimization

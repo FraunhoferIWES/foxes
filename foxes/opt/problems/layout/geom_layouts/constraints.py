@@ -4,6 +4,113 @@ from iwopy import Constraint
 
 import foxes.constants as FC
 
+class Valid(Constraint):
+
+    def __init__(self, problem, name="valid", **kwargs):
+        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
+            vnames_float=problem.var_names_float(), **kwargs)
+
+    def n_components(self):
+        return 1
+
+    def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        __, valid = problem_results
+        return np.sum(~valid)
+
+    def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        __, valid = problem_results
+        return np.sum(~valid, axis=1)[:, None]
+
+class Boundary(Constraint):
+
+    def __init__(self, problem, n_turbines=None, D=None, name="boundary", **kwargs):
+        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
+            vnames_float=problem.var_names_float(), **kwargs)
+        self.n_turbines = problem.n_turbines if n_turbines is None else n_turbines
+        self.D = problem.D if D is None else D
+
+    def n_components(self):
+        return self.n_turbines
+
+    def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        xy, __ = problem_results
+        
+        dists = self.problem.boundary.points_distance(xy)
+        dists[self.problem.boundary.points_inside(xy)] *= -1
+
+        if self.D is not None:
+            dists += self.D/2
+        
+        return dists
+
+    def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        xy, __ = problem_results
+        n_pop, n_xy = xy.shape[:2]
+
+        xy = xy.reshape(n_pop*n_xy, 2)
+        dists = self.problem.boundary.points_distance(xy)
+        dists[self.problem.boundary.points_inside(xy)] *= -1
+        dists = dists.reshape(n_pop, n_xy)
+
+        if self.D is not None:
+            dists += self.D/2
+
+        return dists
+
+class MinDist(Constraint):
+
+    def __init__(self, problem, min_dist=None, n_turbines=None, name="min_dist", **kwargs):
+        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
+            vnames_float=problem.var_names_float(), **kwargs)
+        self.min_dist = problem.min_dist if min_dist is None else min_dist
+        self.n_turbines = problem.n_turbines if n_turbines is None else n_turbines
+
+    def initialize(self, verbosity=0):
+        """
+        Initialize the constaint.
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+            
+        """
+        N = self.n_turbines
+        self._i2t = []  # i --> (ti, tj)
+        self._t2i = np.full([N, N], -1)  # (ti, tj) --> i
+        i = 0
+        for ti in range(N):
+            for tj in range(N):
+                if ti != tj and self._t2i[ti, tj] < 0:
+                    self._i2t.append([ti, tj])
+                    self._t2i[ti, tj] = i
+                    self._t2i[tj, ti] = i
+                    i += 1
+        self._i2t = np.array(self._i2t)
+        self._cnames = [f"{self.name}_{ti}_{tj}" for ti, tj in self._i2t]
+        super().initialize(verbosity)
+
+    def n_components(self):
+        return len(self._i2t)
+
+    def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        xy, __ = problem_results
+
+        a = np.take_along_axis(xy, self._i2t[:, 0, None], axis=0)
+        b = np.take_along_axis(xy, self._i2t[:, 1, None], axis=0)
+        d = np.linalg.norm(a - b, axis=-1)
+
+        return self.min_dist - d
+
+    def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        xy, __ = problem_results
+
+        a = np.take_along_axis(xy, self._i2t[None, :, 0, None], axis=1)
+        b = np.take_along_axis(xy, self._i2t[None, :, 1, None], axis=1)
+        d = np.linalg.norm(a - b, axis=-1)
+
+        return self.min_dist - d
+    
 class CMinN(Constraint):
 
     def __init__(self, problem, N, name="cminN", **kwargs):
