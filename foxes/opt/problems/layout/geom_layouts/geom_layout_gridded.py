@@ -197,9 +197,10 @@ class GeomLayoutGridded(Problem):
         vint = vars_int.reshape(n_pop*self.n_turbines).astype(FC.ITYPE)
         xy = self._pts[vint, :].reshape(n_pop, self.n_turbines, 2)
 
-        __, ui = np.unique(vars_int, axis=1, return_index=True)
         valid = np.zeros((n_pop, self.n_turbines), dtype=bool)
-        valid[ui] = True
+        for pi in range(n_pop):
+            __, ui = np.unique(vars_int[pi], return_index=True)
+            valid[pi, ui] = True
 
         return xy, valid
 
