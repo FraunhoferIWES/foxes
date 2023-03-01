@@ -102,6 +102,9 @@ def run_foxes(args):
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
 
+    o = foxes.output.StateTurbineMap(farm_results)
+    ax = o.plot_map(FV.P, cmap="inferno", figsize=(6, 7))
+    plt.show()
 
 if __name__ == "__main__":
 

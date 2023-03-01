@@ -116,5 +116,5 @@ class Turbine2FarmModel(FarmModel):
 
         """
         if self.turbine_model.initialized:
-            self.turbine_model.finalize(algo, verbosity)
+            algo.finalize_model(self.turbine_model, verbosity)
         super().finalize(algo, verbosity)

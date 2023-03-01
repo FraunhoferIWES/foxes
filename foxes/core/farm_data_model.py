@@ -194,19 +194,15 @@ class FarmDataModelList(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if verbosity > 1:
-            print(f"-- {self.name}: Starting initialization -- ")
-
         idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.models, idata=idata, verbosity=verbosity)
 
-        if verbosity > 1:
-            print(f"-- {self.name}: Finished initialization -- ")
+        # done by algo.update_idata
+        #algo.update_idata(self.models, idata=idata, verbosity=verbosity)
 
         return idata
 
     def calculate(self, algo, mdata, fdata, parameters=[]):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

@@ -47,6 +47,8 @@ class FieldDataNC(States):
         Fill value in case of exceeding bounds, if no bounds error
     time_format : str
         The datetime parsing format string
+    sel : dict, optional
+        Subset selection via xr.Dataset.sel()
 
     Attributes
     ----------
@@ -80,6 +82,8 @@ class FieldDataNC(States):
         Fill value in case of exceeding bounds, if no bounds error
     time_format : str
         The datetime parsing format string
+    sel : dict
+        Subset selection via xr.Dataset.sel()
 
     """
 
@@ -98,6 +102,7 @@ class FieldDataNC(States):
         bounds_error=True,
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
+        sel=None,
     ):
         super().__init__()
 
@@ -113,6 +118,7 @@ class FieldDataNC(States):
         self.bounds_error = bounds_error
         self.fill_value = fill_value
         self.time_format = time_format
+        self.sel = sel
 
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
@@ -172,7 +178,7 @@ class FieldDataNC(States):
                 (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
             )
 
-        if verbosity > 0:
+        if verbosity > 1:
             print(f"\n{self.name}: Data ranges")
             for v, i in self._dkys.items():
                 d = data[..., i]
@@ -186,6 +192,9 @@ class FieldDataNC(States):
     def _read_nc(self, algo, pattern, verbosity):
 
         def extract_data(ds):
+
+            if self.sel is not None:
+                ds = ds.sel(self.sel)
 
             for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
                 if not c in ds:
@@ -502,3 +511,4 @@ class FieldDataNC(States):
                     )
 
         return out
+

@@ -48,7 +48,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "-A", "--opt_algo", help="The pymoo algorithm name", default="ga"
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="GA"
     )
     parser.add_argument(
         "-P", "--n_pop", help="The population size", type=int, default=50

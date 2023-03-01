@@ -10,6 +10,7 @@ RWEIGHTS = "rotor_weights"
 ORDER = "order"
 
 VARS = "vars"
+VALID = "valid"
 TMODELS = "tmodels"
 TMODEL_SELS = "tmodel_sels"
 

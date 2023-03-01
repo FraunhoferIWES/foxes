@@ -18,6 +18,8 @@ class Streamlines(WakeFrame):
         The streamline step size in m
     n_delstor : int
         The streamline point storage increase
+    max_length : float
+        The maximal streamline length
     cl_ipars : dict
         Interpolation parameters for centre line
         point interpolation
@@ -28,16 +30,19 @@ class Streamlines(WakeFrame):
         The streamline step size in m
     n_delstor : int
         The streamline point storage increase
+    max_length : float
+        The maximal streamline length
     cl_ipars : dict
         Interpolation parameters for centre line
         point interpolation
 
     """
 
-    def __init__(self, step, n_delstor=100, cl_ipars={}):
+    def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
         super().__init__()
         self.step = step
         self.n_delstor = n_delstor
+        self.max_length = max_length
         self.cl_ipars = cl_ipars
 
     def __repr__(self):
@@ -161,7 +166,6 @@ class Streamlines(WakeFrame):
         data = mdata[self.DATA]
         spts = data[..., :3]
         sn = data[..., 3:6]
-        slen = data[..., 6]
 
         # find minimal distances to existing streamline points:
         # n_states, n_turbines, n_points, n_spts
@@ -173,10 +177,11 @@ class Streamlines(WakeFrame):
                 dists[:, ti, ti] = 1e20
         inds = np.argmin(dists, axis=3)
         dists = np.take_along_axis(dists, inds[:, :, :, None], axis=3)[..., 0]
+        done = inds < n_spts - 1
 
         # calc streamline points, as many as needed:
-        done = inds < n_spts - 1
-        while not np.all(done):
+        maxl = np.nanmax(data[:, :, n_spts-1, 6])
+        while maxl + self.step <= self.max_length and not np.all(done):
 
             # print("CALC STREAMLINES, TODO", np.sum(~done))
 
@@ -195,11 +200,12 @@ class Streamlines(WakeFrame):
 
             # rotation:
             done = inds < n_spts - 1
+            maxl = np.nanmax(data[:, :, n_spts-1, 6])
             del newpts
 
         # shrink to size:
         mdata[self.DATA] = data[:, :, :n_spts]
-        del data, spts, sn, slen
+        del data, spts, sn
 
         # select streamline points:
         # n_states, n_turbines, n_points, 7
@@ -228,9 +234,13 @@ class Streamlines(WakeFrame):
         """
         data = mdata[self.DATA]
         slen = data[:, :, mdata[self.CNTR]-1, 6]
-        while np.min(slen) < length:
+        minl = np.nanmin(slen)
+        maxl = np.nanmax(slen)
+        while maxl + self.step <= self.max_length and minl < length:
             __, data, n_spts = self._add_next_point(algo, mdata, fdata)
             slen = data[:, :, n_spts-1, 6]
+            minl = np.nanmin(slen)
+            maxl = np.nanmax(slen)
 
     def calc_order(self, algo, mdata, fdata):
         """ "

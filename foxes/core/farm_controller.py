@@ -1,7 +1,6 @@
 import numpy as np
 
-from .farm_data_model import FarmDataModelList
-from .farm_data_model import FarmDataModel
+from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
@@ -159,17 +158,21 @@ class FarmController(FarmDataModel):
                         raise TypeError(
                             f"Model {mname} type {type(m).__name__} is not derived from {TurbineType.__name__}"
                         )
+                    models = [m]
                     istype = True
                 elif mname in algo.mbook.turbine_models:
                     m = algo.mbook.turbine_models[mname]
-                    if not isinstance(m, TurbineModel):
-                        raise TypeError(
-                            f"Model {mname} type {type(m).__name__} is not derived from {TurbineModel.__name__}"
-                        )
+                    models = m.models if isinstance(m, FarmDataModelList) else [m]
+                    for mm in models:
+                        if not isinstance(mm, TurbineModel):
+                            raise TypeError(
+                                f"Model {mname} type {type(mm).__name__} is not derived from {TurbineModel.__name__}"
+                            )
                 else:
                     raise KeyError(
                         f"Model {mname} not found in model book types or models"
                     )
+                    
                 if istype:
                     if self.turbine_types[ti] is None:
                         self.turbine_types[ti] = m
@@ -178,17 +181,18 @@ class FarmController(FarmDataModel):
                             f"Turbine {ti}, {t.name}: Multiple turbine types found in self.turbine_models list, {self.turbine_types[ti].name} and {mname}"
                         )
 
-                m.name = mname
-                if prer is None:
-                    prer = m.pre_rotor
-                elif not prer and m.pre_rotor:
-                    raise ValueError(
-                        f"Turbine {ti}, {t.name}: Model is classified as pre-rotor, but following the post-rotor model '{t.models[mi-1]}'"
-                    )
-                if m.pre_rotor:
-                    prer_models[ti].append(m)
-                else:
-                    postr_models[ti].append(m)
+                for m in models:
+                    m.name = mname
+                    if prer is None:
+                        prer = m.pre_rotor
+                    elif not prer and m.pre_rotor:
+                        raise ValueError(
+                            f"Turbine {ti}, {t.name}: Model is classified as pre-rotor, but following the post-rotor model '{t.models[mi-1]}'"
+                        )
+                    if m.pre_rotor:
+                        prer_models[ti].append(m)
+                    else:
+                        postr_models[ti].append(m)
 
             if self.turbine_types[ti] is None:
                 raise ValueError(
@@ -254,24 +258,19 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if verbosity > 1:
-            print(f"-- {self.name}: Starting initialization -- ")
-
         idata = super().initialize(algo, verbosity)
 
         self.collect_models(algo)
 
-        algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
-            idata=idata, verbosity=verbosity)
+        # done by algo.update_idata
+        #algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
+        #    idata=idata, verbosity=verbosity)
 
         idata["coords"][FV.TMODELS] = self.turbine_model_names
         idata["data_vars"][FV.TMODEL_SELS] = (
             (FV.STATE, FV.TURBINE, FV.TMODELS),
             self.turbine_model_sels,
         )
-
-        if verbosity > 1:
-            print(f"-- {self.name}: Finished initialization -- ")
 
         return idata
 

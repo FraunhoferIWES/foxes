@@ -110,7 +110,7 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = FarmLayoutOptProblem("layout_opt", algo)
+        problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
         problem.add_objective(MaxFarmPower(problem))
         problem.add_constraint(FarmBoundaryConstraint(problem))
         if args.min_dist is not None:

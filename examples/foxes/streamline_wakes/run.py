@@ -53,6 +53,7 @@ def run_foxes(args):
         wake_frame=args.wake_frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
+        keep_models=[states.name, args.wake_frame, ttype.name],
     )
 
     time0 = time.time()

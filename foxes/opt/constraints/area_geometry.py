@@ -19,6 +19,10 @@ class AreaGeometryConstraint(FarmConstraint):
         The area geometry
     sel_turbines : list of int, optional
         The selected turbines
+    disc_inside : bool
+        Ensure full rotor disc inside boundary
+    D : float, optional
+        Use this radius for rotor disc inside condition
     kwargs : dict, optional
         Additional parameters for `iwopy.Constraint`
 
@@ -30,6 +34,10 @@ class AreaGeometryConstraint(FarmConstraint):
         The selected turbines
     geometry : foxes.utils.geom2d.AreaGeometry
         The area geometry
+    disc_inside : bool
+        Ensure full rotor disc inside boundary
+    D : float
+        Use this radius for rotor disc inside condition
 
     """
 
@@ -39,9 +47,13 @@ class AreaGeometryConstraint(FarmConstraint):
         name,
         geometry,
         sel_turbines=None,
+        disc_inside=False,
+        D=None,
         **kwargs,
     ):
         self.geometry = geometry
+        self.disc_inside = disc_inside
+        self.D = D
 
         selt = problem.sel_turbines if sel_turbines is None else sel_turbines
         vrs = []
@@ -115,6 +127,12 @@ class AreaGeometryConstraint(FarmConstraint):
         dists = self.geometry.points_distance(xy)
         dists[self.geometry.points_inside(xy)] *= -1
 
+        if self.disc_inside:
+            if self.D is None:
+                dists += problem_results[FV.D].to_numpy()[0, self.sel_turbines][s]/2
+            else:
+                dists += self.D/2
+
         return dists
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
@@ -149,8 +167,15 @@ class AreaGeometryConstraint(FarmConstraint):
 
         dists = self.geometry.points_distance(xy)
         dists[self.geometry.points_inside(xy)] *= -1
+        dists = dists.reshape(n_pop, n_cmpnts)
 
-        return dists.reshape(n_pop, n_cmpnts)
+        if self.disc_inside:
+            if self.D is None:
+                dists += problem_results[FV.D].to_numpy()[None, 0, self.sel_turbines][s]/2
+            else:
+                dists += self.D/2
+
+        return dists
 
 
 class FarmBoundaryConstraint(AreaGeometryConstraint):

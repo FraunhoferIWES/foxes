@@ -43,7 +43,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "-A", "--opt_algo", help="The pymoo algorithm name", default="ga"
+        "-A", "--opt_algo", help="The pymoo algorithm name", default="GA"
     )
     parser.add_argument(
         "-P", "--n_pop", help="The population size", type=int, default=50
@@ -108,9 +108,9 @@ if __name__ == "__main__":
         verbosity=1,
     ) as runner:
 
-        problem = FarmLayoutOptProblem("layout_opt", algo)
+        problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
         problem.add_objective(MaxFarmPower(problem))
-        problem.add_constraint(FarmBoundaryConstraint(problem))
+        problem.add_constraint(FarmBoundaryConstraint(problem, disc_inside=True))
         if args.min_dist is not None:
             problem.add_constraint(
                 MinDistConstraint(problem, min_dist=args.min_dist, min_dist_unit="D")
