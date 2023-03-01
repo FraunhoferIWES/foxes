@@ -79,8 +79,12 @@ class StateTurbineMap(Output):
         ax.set_xticklabels(turbines[:-1])
         yt = ax.get_yticks()
         ytl = ax.get_yticklabels()
-        ax.set_yticks(yt[:-1] + 0.5 * (yt[-1] - yt[-2]))
-        ax.set_yticklabels(ytl[:-1])
+        ax.set_yticks(yt[:-1] + 0.5 * (yt[-1] - yt[-2]), ytl[:-1])
+        if len(turbines) > 10:
+            xt = ax.get_xticks()
+            xtl = [None for t in xt]
+            xtl[::5] = ax.get_xticklabels()[::5]
+            ax.set_xticks(xt, xtl)
         fig.colorbar(c, ax=ax)
 
         t = title if title is not None else variable
