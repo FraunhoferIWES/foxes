@@ -219,3 +219,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New functions for shape file handling: `read_shp`, `shp2csv`, `read_shp_polygons`
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
+
+## v0.3.2-alpha
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.2](https://github.com/FraunhoferIWES/foxes/commits/v0.3.2)
