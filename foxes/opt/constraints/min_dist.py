@@ -57,6 +57,15 @@ class MinDistConstraint(FarmConstraint):
         super().__init__(problem, name, sel_turbines, vnames_float=vrs, **kwargs)
 
     def initialize(self, verbosity=0):
+        """
+        Initialize the constaint.
+
+        Parameters
+        ----------
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        """
         N = self.farm.n_turbines
         self._i2t = []  # i --> (ti, tj)
         self._t2i = np.full([N, N], -1)  # (ti, tj) --> i
@@ -129,9 +138,6 @@ class MinDistConstraint(FarmConstraint):
             The component values, shape: (n_sel_components,)
 
         """
-        n_states = problem_results.dims[FV.STATE]
-        n_turbines = problem_results.dims[FV.TURBINE]
-
         xy = np.stack(
             [problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()],
             axis=-1,

@@ -20,11 +20,15 @@ class GeomRegGrids(Problem):
         The minimal distance between points
     n_grids : int
         The number of grids
+    n_max : int, optional
+        The maximal number of points
     n_row_max : int, optional
         The maximal number of points in a row
     max_dist : float, optional
         The maximal distance between points
-    
+    D : float, optional
+        The diameter of circle fully within boundary
+
     Attributes
     ----------
     boundary : foxes.utils.geom2d.AreaGeometry
@@ -33,10 +37,14 @@ class GeomRegGrids(Problem):
         The minimal distance between points
     n_grids : int
         The number of grids
+    n_max : int
+        The maximal number of points
     n_row_max : int
         The maximal number of points in a row
     max_dist : float
         The maximal distance between points
+    D : float
+        The diameter of circle fully within boundary
 
     """
 
@@ -45,16 +53,20 @@ class GeomRegGrids(Problem):
             boundary, 
             min_dist, 
             n_grids, 
+            n_max=None,
             n_row_max=None, 
-            max_dist=None
+            max_dist=None,
+            D=None,
         ):
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
         self.n_grids = n_grids
+        self.n_max = n_max
         self.n_row_max = n_row_max
         self.min_dist = float(min_dist)
         self.max_dist = float(max_dist) if max_dist is not None else max_dist
+        self.D = D
 
         self._NX = [f"nx{i}" for i in range(self.n_grids)]
         self._NY = [f"ny{i}" for i in range(self.n_grids)]
@@ -81,11 +93,19 @@ class GeomRegGrids(Problem):
         self._span = pmax - pmin
         self._diag = np.linalg.norm(self._span)
         self.max_dist = self._diag if self.max_dist is None else self.max_dist
+        self._nrow = self.n_row_max
         if self.n_row_max is None:
-            self._nrow = int(self._diag/self.min_dist)
-            if self._nrow * self.min_dist < self._diag:
+            if self.n_max is None:
+                self._nrow = int(self._diag/self.min_dist)
+                if self._nrow * self.min_dist < self._diag:
+                    self._nrow += 1
                 self._nrow += 1
-            self._nrow += 1
+            else:
+                self._nrow = self.n_max
+        if self.n_max is None:
+            self.n_max = self.n_grids*self._nrow**2
+        elif self.n_max <= self._nrow:
+            self._nrow = self.n_max
         self._pmin = pmin - self._diag - self.min_dist
         self._pmax = pmax + self.min_dist
         
@@ -96,9 +116,8 @@ class GeomRegGrids(Problem):
             print(f"  min dist    = {self.min_dist}")
             print(f"  max dist    = {self.max_dist}")
             print(f"  n row max   = {self._nrow}")
-            print(f"  n gpts max  = {self._nrow**2}")
+            print(f"  n max       = {self.n_max}")
             print(f"  n grids     = {self.n_grids}")
-            print(f"  n trbns max = {self.n_grids*self._nrow**2}")
 
         self.apply_individual(self.initial_values_int(), self.initial_values_float())
 
@@ -164,8 +183,9 @@ class GeomRegGrids(Problem):
             The names of the float variables
 
         """
-        return list(np.array([
-            self._OX, self._OY, self._DX, self._DY, self._ALPHA]).T.flat)
+        return list(np.array(
+            [self._OX, self._OY, self._DX, self._DY, self._ALPHA]
+            ).T.flat)
 
     def initial_values_float(self):
         """
@@ -177,10 +197,12 @@ class GeomRegGrids(Problem):
             Initial float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        n = 5
+        vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
         vals[:, :2] = self._pmin + self._diag + self.min_dist + self._span/2
         vals[:, 2:4] = 2*self.min_dist
-        return vals.reshape(self.n_grids*5)
+        vals[:, 5:] = 0
+        return vals.reshape(self.n_grids*n)
 
     def min_values_float(self):
         """
@@ -194,10 +216,12 @@ class GeomRegGrids(Problem):
             Minimal float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        n = 5
+        vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
         vals[:, :2] = self._pmin
         vals[:, 2:4] = self.min_dist
-        return vals.reshape(self.n_grids*5)
+        vals[:, 5:] = -self._diag/3
+        return vals.reshape(self.n_grids*n)
 
     def max_values_float(self):
         """
@@ -211,11 +235,13 @@ class GeomRegGrids(Problem):
             Maximal float values, shape: (n_vars_float,)
 
         """
-        vals = np.zeros((self.n_grids, 5), dtype=FC.DTYPE)
+        n = 5
+        vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
         vals[:, :2] = self._pmax
-        vals[:, 2:4] = self._diag
+        vals[:, 2:4] = self.max_dist
         vals[:, 4] = 90.
-        return vals.reshape(self.n_grids*5)
+        vals[:, 5:] = self._diag/3
+        return vals.reshape(self.n_grids*n)
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -244,7 +270,8 @@ class GeomRegGrids(Problem):
         dx = vflt[:, 2]
         dy = vflt[:, 3]
         a = np.deg2rad(vflt[:, 4])
-        n_points = np.sum(np.product(vint[:, :2], axis=1))
+        s = vflt[:, 5:]
+        n_points = self.n_max
 
         nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
         naz = np.zeros_like(nax)
@@ -259,15 +286,30 @@ class GeomRegGrids(Problem):
             n = nx[gi] * ny[gi]
             n1 = n0 + n
 
-            qts = pts[n0:n1].reshape(nx[gi], ny[gi], 2)
+            if n1 <= n_points:
+                qts = pts[n0:n1].reshape(nx[gi], ny[gi], 2)
+            else:
+                qts = np.zeros((nx[gi], ny[gi], 2), dtype=FC.DTYPE)
+
             qts[:, :, 0] = ox[gi]
             qts[:, :, 1] = oy[gi]
             qts[:] += np.arange(nx[gi])[:, None, None] * dx[gi] * nax[gi, None, None, :2]
             qts[:] += np.arange(ny[gi])[None, :, None] * dy[gi] * nay[gi, None, None, :2]
             qts = qts.reshape(n, 2)
 
+            if n1 > n_points:
+                n1 = n_points
+                qts = qts[:(n1-n0)]
+                pts[n0:] = qts
+
             # set out of boundary points invalid:
-            valid[n0:n1] = self.boundary.points_inside(qts)
+            if self.D is None:
+                valid[n0:n1] = self.boundary.points_inside(qts)
+            else:
+                valid[n0:n1] = (
+                    self.boundary.points_inside(qts) &
+                    (self.boundary.points_distance(qts) >= self.D / 2)
+                )
 
             # set points invalid which are too close to other grids:
             if n0 > 0:
@@ -275,6 +317,8 @@ class GeomRegGrids(Problem):
                 valid[n0:n1][np.any(dists < self.min_dist, axis=1)] = False
 
             n0 = n1
+            if n0 >= n_points:
+                break
 
         return pts, valid
 
@@ -307,7 +351,8 @@ class GeomRegGrids(Problem):
         dx = vflt[:, :, 2]
         dy = vflt[:, :, 3]
         a = np.deg2rad(vflt[:, :, 4])
-        n_points = np.max(np.sum(np.product(vint[:, :, :2], axis=2), axis=1))
+        s = vflt[:, :, 5:]
+        n_points = self.n_max
 
         nax = np.stack([np.cos(a), np.sin(a), np.zeros_like(a)], axis=-1)
         naz = np.zeros_like(nax)
@@ -323,15 +368,30 @@ class GeomRegGrids(Problem):
                 n = nx[pi, gi] * ny[pi, gi]
                 n1 = n0 + n
 
-                qts = pts[pi, n0:n1].reshape(nx[pi, gi], ny[pi, gi], 2)
+                if n1 <= n_points:
+                    qts = pts[pi, n0:n1].reshape(nx[pi, gi], ny[pi, gi], 2)
+                else:
+                    qts = np.zeros((nx[pi, gi], ny[pi, gi], 2), dtype=FC.DTYPE)
+
                 qts[:, :, 0] = ox[pi, gi]
                 qts[:, :, 1] = oy[pi, gi]
                 qts[:] += np.arange(nx[pi, gi])[:, None, None] * dx[pi, gi] * nax[pi, gi, None, None, :2]
                 qts[:] += np.arange(ny[pi, gi])[None, :, None] * dy[pi, gi] * nay[pi, gi, None, None, :2]
                 qts = qts.reshape(n, 2)
 
+                if n1 > n_points:
+                    n1 = n_points
+                    qts = qts[:(n1-n0)]
+                    pts[pi, n0:] = qts
+
                 # set out of boundary points invalid:
-                valid[pi, n0:n1] = self.boundary.points_inside(qts)
+                if self.D is None:
+                    valid[pi, n0:n1] = self.boundary.points_inside(qts)
+                else:
+                    valid[pi, n0:n1] = (
+                        self.boundary.points_inside(qts) &
+                        (self.boundary.points_distance(qts) >= self.D / 2)
+                    )
 
                 # set points invalid which are too close to other grids:
                 if n0 > 0:
@@ -340,9 +400,12 @@ class GeomRegGrids(Problem):
 
                 n0 = n1
 
+                if n0 >= n_points:
+                    break
+
         return pts, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, **bargs):
+    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
         """
         Return plotly figure axis.
 
@@ -356,6 +419,8 @@ class GeomRegGrids(Problem):
             The figure axis
         title : str, optional
             The figure title
+        true_circle : bool
+            Draw points as circles with diameter self.D
         bars : dict, optional
             The boundary plot arguments
         
@@ -375,15 +440,24 @@ class GeomRegGrids(Problem):
         if xy is not None:
             if valid is not None:
                 xy = xy[valid]
-            ax.scatter(xy[:, 0], xy[:, 1], color="orange")
+            if not true_circle or self.D is None:
+                ax.scatter(xy[:, 0], xy[:, 1], color="orange")
+            else:
+                for x, y in xy:
+                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
 
         if title is None:
-            l = len(xy) if xy is not None else 0
-            title = f"N = {l}, min_dist = {self.min_dist}"
+            if xy is None:
+                title = f"Optimization area"
+            else:
+                l = len(xy) if xy is not None else 0
+                dists = cdist(xy, xy)
+                np.fill_diagonal(dists, 1e20)
+                title = f"N = {l}, min_dist = {np.min(dists):.1f} m"
         ax.set_title(title)
 
         return ax

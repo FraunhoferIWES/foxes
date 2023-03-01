@@ -5,7 +5,7 @@ from foxes.opt.core import FarmOptProblem, FarmVarsProblem
 from foxes.models.turbine_models import Calculator
 import foxes.variables as FV
 import foxes.constants as FC
-from .geom_reggrids.geom_reggrids import GeomRegGrids
+from .geom_layouts.geom_reggrids import GeomRegGrids
 
 
 class RegGridsLayoutOptProblem(FarmVarsProblem):
@@ -297,10 +297,16 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         
         pmi = np.min(self._geomp._pmin)
         points = np.full((n_states, n_turbines, 2), pmi, dtype=FC.DTYPE)
-        points[:, :n_pts] = pts[None, :, :]
+        if n_pts <= n_turbines:
+            points[:, :n_pts] = pts[None, :, :]
+        else:
+            points[:] = pts[None, :n_turbines, :]
 
         valid = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
-        valid[:, :n_pts] = vld
+        if n_pts <= n_turbines:
+            valid[:, :n_pts] = vld[None, :]
+        else:
+            valid[:] = vld[None, :n_turbines]
 
         farm_vars = {
             FV.X: points[:, :, 0],
@@ -341,10 +347,16 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         pmi = np.min(self._geomp._pmin)
         points = np.full((n_pop, n_states, n_turbines, 2), pmi, dtype=FC.DTYPE)
-        points[:, :, :n_pts] = pts[:, None, :, :]
+        if n_pts <= n_turbines:
+            points[:, :, :n_pts] = pts[:, None, :, :]
+        else:
+            points[:] = pts[:, None, :n_turbines, :]
 
         valid = np.zeros((n_pop, n_states, n_turbines), dtype=FC.DTYPE)
-        valid[:, :, :n_pts] = vld[:, None, :]
+        if n_pts <= n_turbines:
+            valid[:, :, :n_pts] = vld[:, None, :]
+        else:
+            valid[:] = vld[:, None, :n_turbines]
 
         farm_vars = {
             FV.X: points[:, :, :, 0],

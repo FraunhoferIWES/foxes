@@ -172,64 +172,64 @@ class FarmLayoutOutput(Output):
         else:
             ax = fig.axes[0] if ax is None else ax
 
-        # for b in self.farm.boundary_geometry:
-        #    b.add_to_figure(fig, ax)
-
         D = self.D
-        if normalize_D and D is None:
-            if self.from_res:
-                if self.fres[FV.D].min() != self.fres[FV.D].max():
-                    raise ValueError(f"Expecting uniform D, found {self.fres[FV.D]}")
-                D = self.fres[FV.D][0]
-            else:
-                D = None
-                for ti, t in enumerate(self.farm.turbines):
-                    hD = t.D
+        x = None
+        if self.farm.n_turbines:
+
+            if normalize_D and D is None:
+                if self.from_res:
+                    if self.fres[FV.D].min() != self.fres[FV.D].max():
+                        raise ValueError(f"Expecting uniform D, found {self.fres[FV.D]}")
+                    D = self.fres[FV.D][0]
+                else:
+                    D = None
+                    for ti, t in enumerate(self.farm.turbines):
+                        hD = t.D
+                        if D is None:
+                            D = hD
+                        elif D != hD:
+                            raise ValueError(
+                                f"Turbine {ti} has wrong rotor diameter, expecting D = {D} m, found D = {hD} m"
+                            )
                     if D is None:
-                        D = hD
-                    elif D != hD:
                         raise ValueError(
-                            f"Turbine {ti} has wrong rotor diameter, expecting D = {D} m, found D = {hD} m"
+                            f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
                         )
-                if D is None:
-                    raise ValueError(
-                        f"Variable '{FV.D}' not found in turbines. Maybe set explicitely, or try from_results?"
+
+            data = self.get_layout_data()
+            x = data[:, 0] / D if normalize_D else data[:, 0]
+            y = data[:, 1] / D if normalize_D else data[:, 1]
+            n = range(len(x))
+
+            kw = {"c": "orange"}
+            kw.update(**kwargs)
+
+            if color_by is not None:
+                if self.fres is None:
+                    raise ValueError(f"Missing farm_results for color_by '{color_by}'")
+                if color_by[:5] == "mean_":
+                    kw["c"] = np.einsum(
+                        "st,st->t", self.fres[color_by[5:]], self.fres[FV.WEIGHT]
+                    )
+                elif color_by[:4] == "sum_":
+                    kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
+                elif color_by[:4] == "min_":
+                    kw["c"] = np.min(self.fres[color_by[4:]], axis=0)
+                elif color_by[:4] == "max_":
+                    kw["c"] = np.max(self.fres[color_by[4:]], axis=0)
+                else:
+                    raise KeyError(
+                        f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable"
                     )
 
-        data = self.get_layout_data()
-        x = data[:, 0] / D if normalize_D else data[:, 0]
-        y = data[:, 1] / D if normalize_D else data[:, 1]
-        n = range(len(x))
+            im = ax.scatter(x, y, **kw)
 
-        kw = {"c": "orange"}
-        kw.update(**kwargs)
-
-        if color_by is not None:
-            if self.fres is None:
-                raise ValueError(f"Missing farm_results for color_by '{color_by}'")
-            if color_by[:5] == "mean_":
-                kw["c"] = np.einsum(
-                    "st,st->t", self.fres[color_by[5:]], self.fres[FV.WEIGHT]
-                )
-            elif color_by[:4] == "sum_":
-                kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
-            elif color_by[:4] == "min_":
-                kw["c"] = np.min(self.fres[color_by[4:]], axis=0)
-            elif color_by[:4] == "max_":
-                kw["c"] = np.max(self.fres[color_by[4:]], axis=0)
-            else:
-                raise KeyError(
-                    f"Unknown color_by '{color_by}'. Choose: mean_X, sum_X, min_X, max_X, where X is a farm_results variable"
-                )
-
-        im = ax.scatter(x, y, **kw)
-
-        if annotate == 1:
-            for i, txt in enumerate(n):
-                ax.annotate(int(txt), (x[i], y[i]), size=fontsize)
-        elif annotate == 2:
-            for i, t in enumerate(self.farm.turbines):
-                ax.annotate(t.name, (x[i], y[i]), size=fontsize)
+            if annotate == 1:
+                for i, txt in enumerate(n):
+                    ax.annotate(int(txt), (x[i], y[i]), size=fontsize)
+            elif annotate == 2:
+                for i, t in enumerate(self.farm.turbines):
+                    ax.annotate(t.name, (x[i], y[i]), size=fontsize)
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}
@@ -251,7 +251,7 @@ class FarmLayoutOutput(Output):
 
         # if len(self.farm.boundary_geometry) \
         #    or ( min(x) != max(x) and min(y) != max(y) ):
-        if min(x) != max(x) and min(y) != max(y):
+        if x is None or (min(x) != max(x) and min(y) != max(y)):
             ax.set_aspect("equal", adjustable="box")
 
         ax.autoscale_view(tight=True)

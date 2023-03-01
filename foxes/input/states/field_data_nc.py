@@ -178,7 +178,7 @@ class FieldDataNC(States):
                 (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
             )
 
-        if verbosity > 0:
+        if verbosity > 1:
             print(f"\n{self.name}: Data ranges")
             for v, i in self._dkys.items():
                 d = data[..., i]

@@ -187,8 +187,8 @@ class AreaGeometry(metaclass=ABCMeta):
                 plt.colorbar(im, ax=ax, orientation="vertical", label="distance")
 
         ax.autoscale_view()
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
         ax.set_aspect("equal", adjustable="box")
 
     def inverse(self):
