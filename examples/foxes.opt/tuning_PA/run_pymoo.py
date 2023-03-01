@@ -7,9 +7,86 @@ from iwopy.interfaces.pymoo import Optimizer_pymoo
 import foxes
 from foxes.utils import wd2wdvec, wd2uv
 from foxes.opt.problems import OptFarmVars
-from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI, MinimalAPref
 import foxes.variables as FV
 import foxes.constants as FC
+from iwopy import Objective
+
+def mask_turb(y,z,rcy=0,hh=0,rr=63):
+    y = np.array(y)
+    z = np.array(z)
+    ## Make mask of rotor area virtual downstream turbine
+    mask = np.zeros((len(z),len(y)))
+    for z_idx in range(len(mask)): ## loop over vertical
+        z_tmp = z[z_idx] 
+        y_left = rcy - np.sqrt(rr**2-(z_tmp-hh)**2) ## use equation of circle
+        y_right = rcy + np.sqrt(rr**2-(z_tmp-hh)**2) ## to determine left,right edge 
+        for y_idx in range(len(mask[z_idx])): ## loop over horizontal
+            y_tmp = y[y_idx]
+            if y_left < y_tmp < y_right: ## if between left and right edge
+                mask[z_idx,y_idx] = 1   
+            else:
+                mask[z_idx,y_idx] = np.nan
+    return mask
+
+class MinimalAPref(Objective):
+    """
+    Minimize the AP diff to reference
+
+    Parameters
+    ----------
+    problem : foxes.opt.FarmOptProblem
+        The underlying optimization problem
+    name : str
+        The name of the objective function
+    kwargs : dict, optional
+        Additional parameters for `FarmVarObjective`
+
+    """
+
+    def __init__(self, problem, ref_vals, g_pts, name="minimize_APref", **kwargs):
+        self.ref_vals = ref_vals ## DEV
+        self.g_pts = g_pts ## DEV
+
+        super().__init__(problem, name, vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float())
+
+    def n_components(self):
+        return 1
+    
+    def maximize(self):
+        return [False]
+
+
+    def calc_individual(self, vars_int, vars_float, problem_results, components=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
+        point_results = problem.algo.calc_points(problem_results, points=self.g_pts)
+        data = point_results[FV.WS].to_numpy()
+        data = np.nanmean(data,axis=1)
+        
+        del point_results
+        data = np.sum(np.abs(data - self.ref_vals[None,:]))
+        return np.array([data], dtype=np.float64)
 
 if __name__ == "__main__":
 
@@ -61,7 +138,7 @@ if __name__ == "__main__":
         "-P", "--n_pop", help="The population size", type=int, default=80
     )
     parser.add_argument(
-        "-G", "--n_gen", help="The nmber of generations", type=int, default=100
+        "-G", "--n_gen", help="The number of generations", type=int, default=100
     )
     parser.add_argument(
         "-nop", "--no_pop", help="Switch off vectorization", action="store_true"
@@ -103,6 +180,7 @@ if __name__ == "__main__":
     df_in['TI'] = df_in['TI']/100
     df_in = df_in.iloc[0,:].to_frame().T
     # yawm = [[k] for k in df_in['yawm']]
+    print(df_in)
 
     states = foxes.input.states.StatesTable(
         data_source=df_in, ## df
@@ -111,32 +189,6 @@ if __name__ == "__main__":
         fixed_vars={FV.RHO: 1.225, FV.H: 90.0, FV.WD: 270.0},
         profiles={FV.WS: "ShearedProfile"},
     )
-    df_out = pd.read_csv(path_local+'LES_out.csv')
-    ref_vals = np.asarray([df_out['REWS'][0]]) ## Reference wind 
-
-    ## Define points
-
-    x_pos = [750]
-    y_pos = np.arange(farm.turbines[0].D/2*-1,farm.turbines[0].D/2,5)
-    z_pos = np.arange(farm.turbines[0].H-farm.turbines[0].D/2,farm.turbines[0].H+farm.turbines[0].D/2,5)
-
-    try:
-        n_x = np.append(wd2uv(states.fixed_vars['WD']), [0.0], axis=0) 
-        n_z = np.array([0.0, 0.0, 1.0])
-        n_y = np.cross(n_z, n_x)    
-    except KeyError:
-        raise KeyError('WD not found in fixed_vars')
-
-    N_x, N_y, N_z = len(x_pos), len(y_pos), len(z_pos)
-    n_pts = len(x_pos) * len(y_pos) * len(z_pos)
-    g_pts = np.zeros((N_x, N_y, N_z, 3), dtype=FC.DTYPE)
-    for ix in range(N_x):
-        x_pos_tmp = x_pos[ix]
-        g_pts[:] += x_pos_tmp * n_x[None, None, None, :]
-        g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
-        g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
-        g_pts = g_pts.reshape(1, n_pts, 3)
-    print(g_pts)
 
     algo = foxes.algorithms.Downwind(
         mbook,
@@ -149,6 +201,38 @@ if __name__ == "__main__":
         verbosity=0,
     )
 
+    ## Define other variables needed for optimization
+    df_out = pd.read_csv(path_local+'LES_out.csv')
+    ref_vals = np.asarray([df_out['REWS'][0]]) ## Reference wind 
+
+    ## Define points
+    x_pos = [750]
+    y_pos = np.arange(farm.turbines[0].D/2*-1,farm.turbines[0].D/2,5)
+    z_pos = np.arange(farm.turbines[0].H-farm.turbines[0].D/2,farm.turbines[0].H+farm.turbines[0].D/2,5)
+
+    print(farm.turbines[0].xy)
+
+    try:
+        n_x = np.append(wd2uv(states.fixed_vars['WD']), [0.0], axis=0) 
+        n_z = np.array([0.0, 0.0, 1.0])
+        n_y = np.cross(n_z, n_x)    
+    except KeyError:
+        raise KeyError('WD not found in fixed_vars')
+
+    n_states = len(df_in)
+    N_x, N_y, N_z = len(x_pos), len(y_pos), len(z_pos)
+    n_pts = N_x*N_y*N_z
+    g_pts = np.zeros((n_states,N_x, N_y, N_z, 3), dtype=FC.DTYPE)
+    for ix in range(N_x):
+        x_pos_tmp = x_pos[ix]
+        g_pts[:] += x_pos_tmp * n_x[None, None, None, None, :]
+        g_pts[:] += y_pos[None, None, :, None, None] * n_y[None, None, None, None, :]
+        g_pts[:] += z_pos[None, None, None, :, None] * n_z[None, None, None, None, :]
+    mask = mask_turb(y_pos,z_pos,farm.turbines[0].xy[1],farm.turbines[0].H,farm.turbines[0].D/2) ## circular rotor area
+    mask = np.swapaxes(mask,0,1) ## correct order of dimensions
+    g_pts = g_pts*mask[None,None,:,:,None] ## mask out
+    g_pts = g_pts.reshape(n_states, n_pts, 3)
+
     with foxes.utils.runners.DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
@@ -159,8 +243,6 @@ if __name__ == "__main__":
 
         problem = OptFarmVars("opt_yawm", algo, runner=runner)
         problem.add_var(FV.YAWM, float, 0., -40., 40., level="turbine")
-        # problem.add_objective(MaxFarmPower(problem))
-        # problem.add_objective(MinimalMaxTI(problem))
         problem.add_objective(MinimalAPref(problem,ref_vals=ref_vals,g_pts=g_pts))
         problem.initialize()
 
