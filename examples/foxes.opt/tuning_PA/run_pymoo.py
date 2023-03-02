@@ -178,9 +178,8 @@ if __name__ == "__main__":
     df_in = pd.read_csv(path_local+'LES_in.csv')
     df_in.index = range(len(df_in))
     df_in['TI'] = df_in['TI']/100
-    df_in = df_in.iloc[0,:].to_frame().T
+    df_in = df_in.iloc[0,:].to_frame().T ## First case only
     # yawm = [[k] for k in df_in['yawm']]
-    print(df_in)
 
     states = foxes.input.states.StatesTable(
         data_source=df_in, ## df
@@ -203,7 +202,7 @@ if __name__ == "__main__":
 
     ## Define other variables needed for optimization
     df_out = pd.read_csv(path_local+'LES_out.csv')
-    ref_vals = np.asarray([df_out['REWS'][0]]) ## Reference wind 
+    ref_vals = np.asarray([df_out['REWS'][0]]) ## Reference wind; first case only
 
     ## Define points
     x_pos = [750]
