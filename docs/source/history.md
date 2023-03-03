@@ -222,5 +222,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.2-alpha
 
-  
+- Bug fixes:
+  - Fix for bug in `FarmResultsEval` that affected time range calculations under Windows
+    
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.2](https://github.com/FraunhoferIWES/foxes/commits/v0.3.2)
