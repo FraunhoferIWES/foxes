@@ -211,6 +211,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New opt problem: `RegularLayoutOptProblem`, searches for a regular grid layout
   - New opt problem: `GeomRegGrids`, finds regular grid layout by purely geometrical means (no wind farm calculation)
   - New opt problem: `GeomLayout`, turbine positioning based on xy variables, also purely geometrical
+  - New opt problem: `GeomLayoutGridded`, a purely geometrical optimization on a gridded background
 - Examples:
   - New in `foxes.opt`: Example `layout_regular_grid`, demonstrates regular grid layout optimization
   - New in `foxes.opt`: Example `geom_reggrids`, purely geometrical regular layout optimization
@@ -218,3 +219,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New functions for shape file handling: `read_shp`, `shp2csv`, `read_shp_polygons`
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.1](https://github.com/FraunhoferIWES/foxes/commits/v0.3.1)
+
+## v0.3.2-alpha
+
+- Bug fixes:
+  - Fix for bug in `FarmResultsEval` that affected time range calculations under Windows
+    
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.2](https://github.com/FraunhoferIWES/foxes/commits/v0.3.2)
