@@ -16,7 +16,7 @@ The supported Python versions are:
 First create a new `conda` environment, for example called `foxes`, by
 
 ```console
-conda create --name foxes
+conda create -c conda-forge --name foxes
 ```
 
 Then activate the environment every time you work with `foxes`, by
