@@ -2,6 +2,7 @@ import numpy as np
 from abc import abstractmethod
 
 from .farm_opt_problem import FarmOptProblem
+from .farm_point_opt_problem import FarmPointOptProblem
 from foxes.models.turbine_models import SetFarmVars
 import foxes.constants as FC
 
@@ -207,3 +208,21 @@ class FarmVarsProblem(FarmOptProblem):
 
         if len(fvars):
             raise KeyError(f"Problem '{self.name}': Too many farm vars from opt2farm_vars_population: {list(fvars.keys())}")
+
+class FarmVarsPointProblem(FarmPointOptProblem):
+
+    def initialize(self, *args, **kwargs):
+        FarmVarsProblem.initialize(self, *args, **kwargs)
+    
+    def opt2farm_vars_individual(self, *args, **kwargs):
+        FarmVarsProblem.opt2farm_vars_individual(self, *args, **kwargs)
+
+    def opt2farm_vars_population(self, *args, **kwargs):
+        FarmVarsProblem.opt2farm_vars_population(self, *args, **kwargs)
+
+    def update_problem_individual(self, *args, **kwargs):
+        FarmVarsProblem.update_problem_individual(self, *args, **kwargs)
+
+    def update_problem_population(self, *args, **kwargs):
+        FarmVarsProblem.update_problem_population(self, *args, **kwargs)
+        
