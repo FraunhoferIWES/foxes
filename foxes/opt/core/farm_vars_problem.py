@@ -2,7 +2,6 @@ import numpy as np
 from abc import abstractmethod
 
 from .farm_opt_problem import FarmOptProblem
-from .farm_point_opt_problem import FarmPointOptProblem
 from foxes.models.turbine_models import SetFarmVars
 import foxes.constants as FC
 
