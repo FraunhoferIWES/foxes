@@ -348,13 +348,12 @@ class FarmOptProblem(Problem):
         if self.points is None:
             return farm_results
         else:
-            n_pop = farm_results["n_pop"]
+            n_pop = farm_results["n_pop"].values
             n_states, n_points = self.points.shape[:2]
             pop_points = np.zeros((n_pop, n_states, n_points, 3), dtype=FC.DTYPE)
             pop_points[:] = self.points[None, :, : , :]
             pop_points = pop_points.reshape(n_pop*n_states, n_points, 3)
-
-            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, self.points))
+            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, pop_points))
             return farm_results, point_results
 
     def add_to_layout_figure(self, ax, **kwargs):
