@@ -222,8 +222,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.2-alpha
 
-- Opt:
-  - New core problem: `FarmPointOptProblem`, for evaluating data at probe points
 - Bug fixes:
   - Fix for bug in `FarmResultsEval` that affected time range calculations under Windows
     
