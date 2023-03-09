@@ -63,8 +63,6 @@ class OptFarmVars(FarmVarsProblem):
             same turbine model
 
         """
-        if not hasattr(FV, name):
-            raise ValueError(f"Problem '{self.name}': Name '{name}' is not a foxes variable.")
         if typ is not float and typ is not int:
             raise TypeError(f"Problem '{self.name}': Expecting float or int, got type '{type(typ).__name__}'")
 

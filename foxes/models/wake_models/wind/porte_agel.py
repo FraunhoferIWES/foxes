@@ -155,8 +155,6 @@ class PorteAgelModel(Model):
             alpha = alpha[sp_sel]
             beta = beta[sp_sel]
 
-            print("ALPHA =", alpha)
-
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
