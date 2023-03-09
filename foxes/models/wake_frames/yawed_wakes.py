@@ -21,12 +21,12 @@ class YawedWakes(WakeFrame):
     ct_max : float, optional
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
-    alpha : float, optional
-        model parameter used to determine onset of far wake region
-    beta : float, optional
-        model parameter used to determine onset of far wake region
     base_frame : foxes.core.WakeFrame
         The wake frame from which to start
+    alpha : float
+        model parameter used to determine onset of far wake region
+    beta : float
+        model parameter used to determine onset of far wake region
 
     Attributes
     ----------
@@ -47,14 +47,14 @@ class YawedWakes(WakeFrame):
         self,
         k=None,
         ct_max=0.9999,
-        alpha=None, #DEV
-        beta=None, #DEV
         base_frame=RotorWD(),
+        alpha=0.58, 
+        beta=0.07
     ):
         super().__init__()
 
         self.base_frame = base_frame
-        self.model = PorteAgelModel(ct_max)
+        self.model = PorteAgelModel(ct_max, alpha, beta)
 
         setattr(self, FV.K, k)
         setattr(self, FV.YAWM, 0.0)

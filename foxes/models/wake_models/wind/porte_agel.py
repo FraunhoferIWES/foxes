@@ -1,11 +1,12 @@
 import numpy as np
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
+from foxes.core.model import Model
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class PorteAgelModel:
+class PorteAgelModel(Model):
     """
     Common calculations for the wake model and the wake
     frame, such that code repetitions can be avoided.
@@ -52,9 +53,10 @@ class PorteAgelModel:
     DELTA_FAR = "delta_far"
 
     def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
+        super().__init__()
         self.ct_max = ct_max
-        self.alpha = alpha
-        self.beta = beta
+        setattr(self, FV.PA_ALPHA, alpha)
+        setattr(self, FV.PA_BETA, beta)
 
     @property
     def pars(self):
@@ -67,7 +69,9 @@ class PorteAgelModel:
             Dictionary of the model parameters
 
         """
-        return dict(alpha=self.alpha, beta=self.beta, ct_max=self.ct_max)
+        alpha = getattr(self, FV.PA_ALPHA)
+        beta = getattr(self, FV.PA_BETA)
+        return dict(alpha=alpha, beta=beta, ct_max=self.ct_max)
 
     def calc_data(
         self,
@@ -132,6 +136,14 @@ class PorteAgelModel:
             ti = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ti[:] = fdata[FV.TI][st_sel][:, None]
 
+            # get alpha:
+            alpha = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            alpha[:] = Model.get_data(self, FV.PA_ALPHA, fdata, data_prio=True, upcast="farm")[st_sel][:, None]
+
+            # get beta:
+            beta = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            beta[:] = Model.get_data(self, FV.PA_BETA, fdata, data_prio=True, upcast="farm")[st_sel][:, None]
+
             # apply filter:
             x = x[sp_sel]
             D = D[sp_sel]
@@ -140,14 +152,16 @@ class PorteAgelModel:
             ti = ti[sp_sel]
             k = k[sp_sel]
             gamma = gamma[sp_sel]
+            alpha = alpha[sp_sel]
+            beta = beta[sp_sel]
+
+            print("ALPHA =", alpha)
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
 
             # calculate x0, Eq. (7.3):
-            alpha = self.alpha
-            beta = self.beta
             sqomct = np.sqrt(1 - ct)
             x0 = (
                 D
