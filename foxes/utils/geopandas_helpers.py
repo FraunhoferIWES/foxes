@@ -160,24 +160,25 @@ def read_shp_polygons(
     names = pdf.index.tolist() if names is None else names
     for name in names:
 
-        if not name in pdf.index:
-            raise KeyError(f"Name '{name}' not found in file '{fn}'. Names: {pdf.index.tolist()}")
+        if name == name:    # exclude nan values 
+            if not name in pdf.index:
+                raise KeyError(f"Name '{name}' not found in file '{fn}'. Names: {pdf.index.tolist()}")
 
-        a = pdf.loc[name, geom_col]
+            a = pdf.loc[name, geom_col]
 
-        multi = "MULTIPOLYGON" in a
+            multi = "MULTIPOLYGON" in a
 
-        a = a.replace("MULTIPOLYGON", "").replace("POLYGON", "")
-        a = a.replace(", ", ",")
-        a = a.lstrip().rstrip()
+            a = a.replace("MULTIPOLYGON", "").replace("POLYGON", "")
+            a = a.replace(", ", ",")
+            a = a.lstrip().rstrip()
 
-        a = ";".join([ w.replace(" ", ",") for w in a.split(",") ] )
-        a = a.replace(");(", "),(").replace(";", "),(")
-        data = ast.literal_eval(a)
-        if not multi:
-            data = [data]
+            a = ";".join([ w.replace(" ", ",") for w in a.split(",") ] )
+            a = a.replace(");(", "),(").replace(";", "),(")
+            data = ast.literal_eval(a)
+            if not multi:
+                data = [data]
 
-        out[name] = [np.array(d, dtype=FC.DTYPE) for d in  data]
+            out[name] = [np.array(d, dtype=FC.DTYPE) for d in  data]
     
     if isinstance(to_utm, str) or to_utm == True:
         check_import_utm()

@@ -196,6 +196,7 @@ class MultiHeightStates(States):
         else:
             data = data
         self._N = len(data.index)
+        self._inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
@@ -258,6 +259,18 @@ class MultiHeightStates(States):
         """
         return self._N
 
+    def index(self):
+        """
+        The index list
+
+        Returns
+        -------
+        indices : array_like
+            The index labels of states, or None for default integers
+
+        """
+        return self._inds
+    
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
