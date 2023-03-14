@@ -230,5 +230,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.3-alpha
 
+- Utils:
+  - Now `geopandas_helpers` can handle interior areas
     
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.3](https://github.com/FraunhoferIWES/foxes/commits/v0.3.3)
