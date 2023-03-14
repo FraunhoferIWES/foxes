@@ -121,6 +121,7 @@ def read_shp_polygons(
         geom_col="geometry",
         to_utm=True,
         ret_utm_zone=False,
+        **kwargs
     ):
     """
     Reads the polygon points from a shp file.
@@ -141,6 +142,8 @@ def read_shp_polygons(
         plus letter, e.g. "32U"
     ret_utm_zone : bool
         Return UTM zone plus letter as str
+    kwargs : dict, optional
+        Additional parameters for geopandas.read_shp()
 
     Returns
     -------
@@ -155,7 +158,7 @@ def read_shp_polygons(
 
     """
 
-    pdf = gpd.read_file(fname)
+    pdf = read_shp(fname, **kwargs)
     pnames = list(pdf[name_col])
 
     exterior = Dict()
@@ -194,7 +197,7 @@ def read_shp_polygons(
     else:
         return exterior, interior      
 
-def shp2geom2d(*args, **kwargs):
+def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
     """
     Read shapefile into geom2d geometry
 
@@ -202,12 +205,21 @@ def shp2geom2d(*args, **kwargs):
     ----------
     args : tuple, optional
         Arguments for read_shp_polygons()
+    ret_utm_zone : bool
+        Return UTM zone plus letter as str
     kwargs : dict, optional
         Keyword arguments for read_shp_polygons()
+    
+    Returns
+    -------
+    geom : foxes.tools.geom2D.AreaGeometry 
+        The geometry object
+    utm_zone_str : str, optional
+        The utem zone plus letter as str, e.g. "32U"
 
     """
 
-    exint = read_shp_polygons(*args, **kwargs)
+    exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)
 
     gext = []
     for g in exint[0].values():  
@@ -221,7 +233,10 @@ def shp2geom2d(*args, **kwargs):
         if len(q):
             geom -= AreaUnion(q)
 
-    return geom
+    if ret_utm_zone:
+        return geom, exint[2]
+    else:
+        return geom
 
 
 if __name__ == "__main__":
