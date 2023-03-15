@@ -161,6 +161,15 @@ def read_shp_polygons(
     pdf = read_shp(fname, **kwargs)
     pnames = list(pdf[name_col])
 
+    utmz = None
+    utml = None
+    apply_utm = False
+    if isinstance(to_utm, str) or to_utm == True:
+        apply_utm = True
+        check_import_utm()
+        utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None
+        utml = to_utm[-1] if isinstance(to_utm, str) else None
+
     exterior = Dict()
     interior = Dict()
     names = pnames if names is None else names
@@ -171,26 +180,24 @@ def read_shp_polygons(
 
             a = pdf.loc[pnames.index(name), geom_col]
             epe, epi = _extract_poly_coords(a)
+
+            def _to_utm(poly):
+                nonlocal utmz, utml
+                utm_poly = np.zeros_like(poly)
+                utm_poly[:, 0], utm_poly[:, 1], utmz, utml = utm.from_latlon(
+                    poly[:, 1], poly[:, 0], force_zone_number=utmz, force_zone_letter=utml)
+                return utm_poly
+
+            def _to_numpy(data):
+                if not len(data):
+                    return []
+                if isinstance(data[0], tuple):
+                    out = np.array(data, dtype=FC.DTYPE)
+                    return _to_utm(out) if apply_utm else out
+                return [_to_numpy(d) for d in data]
             
-            if len(epe) and isinstance(epe[0], tuple):
-                epe = [epe]
-            if len(epi) and isinstance(epi[0], tuple):
-                epi = [epi]
-            exterior[name] = [np.array(g, dtype=FC.DTYPE) for g in epe]
-            interior[name] = [np.array(g, dtype=FC.DTYPE) for g in epi]
-    
-    if isinstance(to_utm, str) or to_utm == True:
-        check_import_utm()
-        utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None
-        utml = to_utm[-1] if isinstance(to_utm, str) else None
-        for out in [exterior, interior]:
-            for name in out.keys():
-                utm_polys = []
-                for poly in out[name]:
-                    utm_polys.append(np.zeros_like(poly))
-                    utm_polys[-1][:, 0], utm_polys[-1][:, 1], utmz, utml = utm.from_latlon(
-                        poly[:, 1], poly[:, 0], force_zone_number=utmz, force_zone_letter=utml)
-                out[name] = utm_polys
+            exterior[name] = _to_numpy(epe)
+            interior[name] = _to_numpy(epi)
 
     if ret_utm_zone:
         return exterior, interior, f"{utmz}{utml}"
