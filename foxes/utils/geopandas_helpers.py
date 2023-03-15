@@ -3,7 +3,7 @@ import argparse
 
 import foxes.constants as FC
 from .dict import Dict
-from .geom2d import AreaUnion, AreaIntersection, ClosedPolygon
+from .geom2d import AreaUnion, ClosedPolygon
 
 try:
     import geopandas as gpd
@@ -228,17 +228,22 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
 
     exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)
 
-    gext = []
-    for g in exint[0].values():  
-        gext += [ClosedPolygon(pts) for pts in g if len(pts)]
-    geom = AreaUnion(gext)
+    def _create_geom(data):
+        if not len(data):
+            return None
+        if isinstance(data, dict):
+            gs = [_create_geom(g) for g in data.values()]
+            gs = [g for g in gs if g is not None]
+            return AreaUnion(gs) if len(gs) else None
+        if isinstance(data, np.ndarray) and len(data.shape) == 2:
+            return ClosedPolygon(data)
+        gs = [_create_geom(g) for g in data]
+        gs = [g for g in gs if g is not None]
+        return AreaUnion(gs) if len(gs) else None
 
-    for g in exint[1].values():
-        q = []
-        for h in g: 
-            q += [ClosedPolygon(pts) for pts in h if len(pts)]
-        if len(q):
-            geom -= AreaUnion(q)
+    gext = _create_geom(exint[0])
+    gint = _create_geom(exint[1])
+    geom = gext-gint if gint is not None else gext
 
     if ret_utm_zone:
         return geom, exint[2]
@@ -259,6 +264,6 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
-    g.add_to_figure(ax, fill_mode="dist_outside")
+    g.add_to_figure(ax)
     plt.show()
     plt.close(fig)
