@@ -17,7 +17,7 @@ authors:
     #orcid: ???
     affiliation: 1
   - name: Martin Dörenkämper
-    #orcid: ???
+    orcid: 0000-0002-0210-5733
     affiliation: 1
 affiliations:
  - name: Fraunhofer IWES, Küpkersweg 70, 26129 Oldenburg, Germany
