@@ -19,6 +19,9 @@ authors:
   - name: Martin Dörenkämper
     orcid: 0000-0002-0210-5733
     affiliation: 1
+  - name: Bernhard Stoevesandt
+    orcid: 0000-0001-6626-1084
+    affiliation: 1
 affiliations:
  - name: Fraunhofer IWES, Küpkersweg 70, 26129 Oldenburg, Germany
    index: 1
