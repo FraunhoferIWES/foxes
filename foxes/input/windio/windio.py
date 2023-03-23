@@ -3,7 +3,11 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from foxes.core import WindFarm
+from foxes.models import ModelBook
 from foxes.input.states import StatesTable
+from foxes.input.farm_layout import add_from_df
+from foxes.models.turbine_types import PCt_from_two
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -101,7 +105,7 @@ def read_site(site_yaml, **kwargs):
 
     return states
 
-def read_farm(farm_yaml):
+def read_farm(farm_yaml, mbook=None, layout=-1):
     """
     Reads a WindIO wind farm
 
@@ -109,6 +113,10 @@ def read_farm(farm_yaml):
     ----------
     farm_yaml : str
         Path to the yaml file
+    mbook: foxes.ModelBook, optional
+        The model book to start from
+    layout : str or int
+        The layout choice
 
     Returns
     -------
@@ -116,15 +124,54 @@ def read_farm(farm_yaml):
         The wind farm
 
     """
+    mbook = ModelBook() if mbook is None else mbook
     farm_yaml = Path(farm_yaml)
+    print(farm_yaml)
 
     with open(farm_yaml, 'r') as file:
         fdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
     
     print("READ FARM\n", fdict)
+
+    if isinstance(layout, str):
+        layout = fdict['layouts'][layout]
+    else:
+        lname = list(fdict['layouts'].keys())[layout]
+        layout = fdict['layouts'][lname]
+    print(layout)
+
+    import json
+    print(json.dumps(fdict, sort_keys=True, indent=4))
+    quit()
+
+    x = np.array(layout["coordinates"]["x"], dtype=FC.DTYPE)
+    y = np.array(layout["coordinates"]["y"], dtype=FC.DTYPE)
+    N = len(x)
+    ldata = pd.DataFrame(index=range(N))
+    ldata.index.name = "index"
+    ldata["x"] = x
+    ldata["y"] = y
+
+    print(ldata)
+
+    ct_ws = np.array(fdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
+    ct_data = pd.DataFrame(index=ct_ws)
+    ct_data.index.name = "ws"
+    ct_data["ct"] = np.array(fdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
+
+    ct_ws = np.array(fdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
+    ct_data = pd.DataFrame(index=ct_ws)
+    ct_data.index.name = "ws"
+    ct_data["ct"] = np.array(fdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
+
+    #mbook.turbine_types["windio_turbine"] = 
+
+    farm = WindFarm(name=fdict["name"])
+    add_from_df(farm, ldata, col_x="x", col_y="y")
+
     quit()
         
-def read_case(case_yaml, **kwargs):
+def read_case(case_yaml, site_pars={}, farm_pars={}):
     """
     Reads a WindIO case
 
@@ -132,8 +179,10 @@ def read_case(case_yaml, **kwargs):
     ----------
     case_yaml : str
         Path to the yaml file
-    kwargs : dict, optional
+    site_pars : dict
         Additional arguments for read_site
+    farm_pars : dict
+        Additional arguments for read_farm
 
     Returns
     -------
@@ -148,12 +197,12 @@ def read_case(case_yaml, **kwargs):
     site_yaml = case["site"]
     if site_yaml[0] == ".":
         site_yaml = (case_yaml.parent/site_yaml).resolve()
-    states = read_site(site_yaml, **kwargs)
+    states = read_site(site_yaml, **site_pars)
 
     farm_yaml = case["wind_farm"]
     if farm_yaml[0] == ".":
         farm_yaml = (case_yaml.parent/farm_yaml).resolve()
-    farm = read_farm(farm_yaml)
+    farm = read_farm(farm_yaml, **farm_pars)
 
     print(case)
     quit()

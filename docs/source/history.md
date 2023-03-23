@@ -237,5 +237,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.4-alpha
 
+- Input:
+  - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
     
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
