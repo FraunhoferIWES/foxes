@@ -95,6 +95,8 @@ class SetFarmVars(TurbineModel):
         for i, v in enumerate(self.vars):
 
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+            # if self.var(v) == 'set_yawm_YAWM':
+            #     print(np.shape(data),np.shape(self._vdata),self.var(v))
             data[:] = self._vdata[i]
 
             idata["data_vars"][self.var(v)] = ((FV.STATE, FV.TURBINE), data)

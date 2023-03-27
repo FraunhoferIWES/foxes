@@ -107,6 +107,7 @@ class PorteAgelModel(Model):
         n_points = x.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
 
+
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
@@ -154,7 +155,7 @@ class PorteAgelModel(Model):
             gamma = gamma[sp_sel]
             alpha = alpha[sp_sel]
             beta = beta[sp_sel]
-
+        
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
