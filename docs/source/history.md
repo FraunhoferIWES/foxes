@@ -239,5 +239,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Input:
   - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
+- Turbine types:
+  - New turbine type `CpCtFile`, reads CP and CT data from file or pandas DataFrame
+  - New turbine type `CpCtFromTwo`, reads CP and CT data from two files or pandas DataFrames
     
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)

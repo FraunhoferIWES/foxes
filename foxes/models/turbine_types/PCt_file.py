@@ -11,7 +11,7 @@ import foxes.variables as FV
 class PCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
-    from power-ct-curve data file.
+    from power-ct-curve data file (or pandas DataFrame).
 
     Parameters
     ----------

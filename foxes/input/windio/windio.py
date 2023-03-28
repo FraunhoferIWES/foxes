@@ -7,7 +7,7 @@ from foxes.core import WindFarm
 from foxes.models import ModelBook
 from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
-from foxes.models.turbine_types import PCt_from_two
+from foxes.models.turbine_types import CpCtFromTwo
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -35,13 +35,42 @@ def read_resource(res_yaml, fixed_vars=None, **kwargs):
 
     with open(res_yaml, 'r') as file:
         res = yaml.load(file, Loader=yaml.loader.BaseLoader)
-    
-    N = 0
-    for v in ["wind_direction", "wind_speed", "turbulence_intensity"]:
-        if v in res["wind_resource"]:
-            N = max(N, len(res["wind_resource"][v]))
-    data = pd.DataFrame(index=range(N))
-    data.index.name = "state"
+    wres = res["wind_resource"]
+
+    wd = np.array(wres["wind_direction"], dtype=FC.DTYPE)
+    ws = np.array(wres["wind_speed"], dtype=FC.DTYPE)
+    n_wd = len(wd)
+    n_ws = len(ws)
+    n = n_wd*n_ws
+
+    data = np.zeros((n_wd, n_ws, 2), dtype=FC.DTYPE)
+    data[:, :, 0] = wd[:, None]
+    data[:, :, 1] = ws[None, :]
+    names = ["wind_direction", "wind_speed"]
+
+    def _to_data(v, d, dims):
+        nonlocal data, names
+        hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
+        if len(dims) == 0:
+            hdata[:, :, 0] = FC.DTYPE(d)
+        elif len(dims) == 1:
+            if dims[0] == "wind_direction":
+                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[:, None]
+            elif dims[0] == "wind_speed":
+                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[None, :]
+            else:
+                raise ValueError(f"Unknown dimension '{dims[0]}' for data '{v}'")
+        elif len(dims) == 2:
+            if dims[0] == "wind_direction" and dims[1] == "wind_speed":
+                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)
+            elif dims[1] == "wind_direction" and dims[0] == "wind_speed":
+                hdata[:, :, 0] = np.swapaxes(np.array(d, dtype=FC.DTYPE), 0, 1)
+            else:
+                raise ValueError(f"Cannot handle dims = {dims} for data '{v}'")
+        else:
+            raise ValueError(f"Can not accept more than two dimensions, got {dims} for data '{v}'")
+        data = np.append(data, hdata, axis=2)
+        names.append(v)
 
     vmap = {
         "wind_direction": FV.WD,
@@ -51,23 +80,22 @@ def read_resource(res_yaml, fixed_vars=None, **kwargs):
         "probability": FV.WEIGHT
     }
 
-    for v, d in res["wind_resource"].items():
+    for v, d in wres.items():
+        if v in vmap and isinstance(d, dict):
+            _to_data(v, d["data"], d["dims"])
 
-        if v == "probability":
-            d = d["data"]
-        elif v == "turbulence_intensity":
-            if len(d["dims"]) == 0:
-                d = d["data"]
-            elif d["dims"] == ["%"]:
-                d = d["data"] / 100.0
-            else:
-                raise ValueError(f"Unknown dimensions for variable '{v}'. Know '[]' or '[%]', found: {d['dims']}")
-        
-        data[vmap[v]] = np.array(d, dtype=FC.DTYPE) if len(d) > 1 else d[0]
+    n_vars = len(names)
+    data = data.reshape(n, n_vars)    
+
+    data = pd.DataFrame(index=range(n), data=data, columns=names)
+    data.index.name = "state"
+    data.rename(columns=vmap, inplace=True)
     
     ovars = [v for v in data.columns if v != FV.WEIGHT]
     if fixed_vars is not None:
         ovars.append([v for v in fixed_vars.keys() if v not in data.columns])
+    
+    print(data)
 
     return StatesTable(
         data,
@@ -105,7 +133,7 @@ def read_site(site_yaml, **kwargs):
 
     return states
 
-def read_farm(farm_yaml, mbook=None, layout=-1):
+def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     """
     Reads a WindIO wind farm
 
@@ -117,32 +145,30 @@ def read_farm(farm_yaml, mbook=None, layout=-1):
         The model book to start from
     layout : str or int
         The layout choice
+    turbine_models : list of str
+        Additional turbine models
+    kwargs : dict, optional
+        Additional parameters for add_from_df()
 
     Returns
     -------
+    mbook: foxes.ModelBook
+        The model book
     farm : foxes.WindFarm
         The wind farm
 
     """
     mbook = ModelBook() if mbook is None else mbook
     farm_yaml = Path(farm_yaml)
-    print(farm_yaml)
 
     with open(farm_yaml, 'r') as file:
         fdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
-    
-    print("READ FARM\n", fdict)
 
     if isinstance(layout, str):
         layout = fdict['layouts'][layout]
     else:
         lname = list(fdict['layouts'].keys())[layout]
         layout = fdict['layouts'][lname]
-    print(layout)
-
-    import json
-    print(json.dumps(fdict, sort_keys=True, indent=4))
-    quit()
 
     x = np.array(layout["coordinates"]["x"], dtype=FC.DTYPE)
     y = np.array(layout["coordinates"]["y"], dtype=FC.DTYPE)
@@ -152,24 +178,41 @@ def read_farm(farm_yaml, mbook=None, layout=-1):
     ldata["x"] = x
     ldata["y"] = y
 
-    print(ldata)
+    if "turbines" in fdict:
+        turbines_yaml = fdict["turbines"]
+        if turbines_yaml[0] == ".":
+            turbines_yaml = (farm_yaml.parent/turbines_yaml).resolve()
 
-    ct_ws = np.array(fdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
-    ct_data = pd.DataFrame(index=ct_ws)
-    ct_data.index.name = "ws"
-    ct_data["ct"] = np.array(fdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
+        with open(turbines_yaml, 'r') as file:
+            tdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
+        
+        pdict = tdict["performance"]
 
-    ct_ws = np.array(fdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
-    ct_data = pd.DataFrame(index=ct_ws)
-    ct_data.index.name = "ws"
-    ct_data["ct"] = np.array(fdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
+    else:
+        tdict = fdict
+        pdict = fdict
 
-    #mbook.turbine_types["windio_turbine"] = 
+    ct_ws = np.array(pdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
+    ct_data = pd.DataFrame(index=range(len(ct_ws)))
+    ct_data["ws"] = ct_ws
+    ct_data["ct"] = np.array(pdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
 
+    cp_ws = np.array(pdict["Cp_curve"]["Cp_wind_speeds"], dtype=FC.DTYPE)
+    cp_data = pd.DataFrame(index=range(len(cp_ws)))
+    cp_data["ws"] = cp_ws
+    cp_data["cp"] = np.array(pdict["Cp_curve"]["Cp_values"], dtype=FC.DTYPE)
+
+    D = float(tdict["rotor_diameter"])
+    H = float(tdict["hub_height"])
+
+    mbook.turbine_types["windio_turbine"] = CpCtFromTwo(cp_data, ct_data, col_ws_cp_file="ws",
+                                                        col_cp="cp", D=D, H=H)
+
+    models = ["windio_turbine"] + turbine_models
     farm = WindFarm(name=fdict["name"])
-    add_from_df(farm, ldata, col_x="x", col_y="y")
+    add_from_df(farm, ldata, col_x="x", col_y="y", turbine_models=models, **kwargs)
 
-    quit()
+    return mbook, farm
         
 def read_case(case_yaml, site_pars={}, farm_pars={}):
     """
@@ -202,7 +245,7 @@ def read_case(case_yaml, site_pars={}, farm_pars={}):
     farm_yaml = case["wind_farm"]
     if farm_yaml[0] == ".":
         farm_yaml = (case_yaml.parent/farm_yaml).resolve()
-    farm = read_farm(farm_yaml, **farm_pars)
+    mbook, farm = read_farm(farm_yaml, **farm_pars)
 
     print(case)
     quit()
