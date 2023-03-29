@@ -46,7 +46,7 @@ conda install -c conda-forge foxes
 For developers using `conda`, we recommend first installing foxes, then removing only the `foxes` package while keeping the dependencies, and then adding `foxes` again from a git using `conda develop`:
 
 ```console
-conda install -c conda-forge foxes
+conda install -c conda-forge foxes conda-build
 conda remove foxes --force
 git clone https://github.com/FraunhoferIWES/foxes.git
 cd foxes

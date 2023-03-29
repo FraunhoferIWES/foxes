@@ -224,5 +224,18 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Bug fixes:
   - Fix for bug in `FarmResultsEval` that affected time range calculations under Windows
+  - Bug fixes for `FarmResultsEval` with time series data
     
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.2](https://github.com/FraunhoferIWES/foxes/commits/v0.3.2)
+
+## v0.3.3-alpha
+
+- Utils:
+  - Now `geopandas_helpers` can handle interior areas
+    
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.3](https://github.com/FraunhoferIWES/foxes/commits/v0.3.3)
+
+## v0.3.4-alpha
+
+    
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
