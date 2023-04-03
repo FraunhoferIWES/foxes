@@ -235,5 +235,7 @@ class DaskRunner(Runner):
 
         else:
             dask.config.config["scheduler"] = self._config0
+        
+        dask.config.refresh()
 
         super().finalize()

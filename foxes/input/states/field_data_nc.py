@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pathlib import Path
 from scipy.interpolate import RegularGridInterpolator
 
 from foxes.core import States
@@ -103,6 +104,7 @@ class FieldDataNC(States):
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
+        verbosity=1
     ):
         super().__init__()
 
@@ -126,6 +128,23 @@ class FieldDataNC(States):
 
         self._inds = None
         self._N = None
+
+        if not isinstance(self.data_source, xr.Dataset):
+            fpath = Path(self.data_source)
+            TODO
+            if verbosity:
+                print(f"States '{self.name}': Reading files {self.data_source}")
+            try:
+                r = self._read_nc(algo, self.data_source, verbosity)
+            except OSError:
+                if verbosity:
+                    print(
+                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                    )
+                fpath = algo.dbook.get_file_path(STATES, self.data_source, check_raw=False)
+                if verbosity:
+                    print(f"Path: {fpath}")
+                r = self._read_nc(algo, fpath, verbosity)
 
     def _get_data(self, ds, verbosity):
         """

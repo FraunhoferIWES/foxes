@@ -4,6 +4,7 @@ import pandas as pd
 from .PCt_from_two import PCtFromTwo
 from foxes.data import parse_Pct_two_files
 from foxes.utils import PandasFileHelper
+import foxes.constants as FC
 
 class CpCtFromTwo(PCtFromTwo):
     """
@@ -58,7 +59,7 @@ class CpCtFromTwo(PCtFromTwo):
         A = np.pi*(D/2)**2
         ws = data_cp[col_ws_cp_file].to_numpy()
         cp = data_cp[col_cp].to_numpy()
-        data_cp["P"] = 0.5*rho*A*cp*ws**3
+        data_cp["P"] = 0.5*rho*A*cp*ws**3 / FC.P_UNITS[FC.kW]
 
         super().__init__(data_cp, data_ct, col_ws_P_file=col_ws_cp_file, col_P="P", 
-                         rho=rho, **pars)
+                         rho=rho, P_unit=FC.kW, **pars)

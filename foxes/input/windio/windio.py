@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from foxes.core import WindFarm
+from foxes.core import WindFarm, Algorithm
 from foxes.models import ModelBook
 from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
@@ -11,7 +11,7 @@ from foxes.models.turbine_types import CpCtFromTwo
 import foxes.constants as FC
 import foxes.variables as FV
 
-def read_resource(res_yaml, fixed_vars=None, **kwargs):
+def read_resource(res_yaml, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource
 
@@ -19,7 +19,7 @@ def read_resource(res_yaml, fixed_vars=None, **kwargs):
     ----------
     res_yaml : str
         Path to the yaml file
-    fixed_vars : dict, optional
+    fixed_vars : dict
         Additional fixes variables that do 
         not occur in the yaml
     kwargs : dict, optional
@@ -91,11 +91,8 @@ def read_resource(res_yaml, fixed_vars=None, **kwargs):
     data.index.name = "state"
     data.rename(columns=vmap, inplace=True)
     
-    ovars = [v for v in data.columns if v != FV.WEIGHT]
-    if fixed_vars is not None:
-        ovars.append([v for v in fixed_vars.keys() if v not in data.columns])
-    
-    print(data)
+    ovars = {v: v for v in data.columns if v != FV.WEIGHT}
+    ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
 
     return StatesTable(
         data,
@@ -117,8 +114,8 @@ def read_site(site_yaml, **kwargs):
 
     Returns
     -------
-    states: foxes.states.StatesTable
-        The uniform states
+    states : foxes.states.States
+        The states object
 
     """
     site_yaml = Path(site_yaml)
@@ -141,7 +138,7 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     ----------
     farm_yaml : str
         Path to the yaml file
-    mbook: foxes.ModelBook, optional
+    mbook : foxes.ModelBook, optional
         The model book to start from
     layout : str or int
         The layout choice
@@ -152,7 +149,7 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     Returns
     -------
-    mbook: foxes.ModelBook
+    mbook : foxes.ModelBook
         The model book
     farm : foxes.WindFarm
         The wind farm
@@ -213,8 +210,49 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     add_from_df(farm, ldata, col_x="x", col_y="y", turbine_models=models, **kwargs)
 
     return mbook, farm
-        
-def read_case(case_yaml, site_pars={}, farm_pars={}):
+
+def read_anlyses(analyses, mbook, farm, states, keymap={}, 
+                 algo_type="Downwind", **algo_pars):
+    """
+    Reads a WindIO wind farm
+
+    Parameters
+    ----------
+    analyses : dict
+        The analyses sub-dict of the case
+    mbook : foxes.ModelBook
+        The model book
+    farm : foxes.WindFarm
+        The wind farm
+    states : foxes.states.States
+        The states object
+    keymap : dict
+        Translation from windio to foxes keywords
+    algo_type : str
+        The default algorithm class name
+    algo_pars : dict, optional
+        Additional parameters for the algorithm 
+        constructor
+
+    Returns
+    -------
+    algo : foxes.core.Algorithm
+        The algorithm
+
+    """
+    wmodel = analyses["wake_model"]["name"]
+    wmodels = [keymap.get(wmodel, wmodel)]
+
+    return Algorithm.new(
+        algo_type,
+        mbook,
+        farm,
+        states,
+        wake_models=wmodels,
+        **algo_pars
+    )
+
+def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
     """
     Reads a WindIO case
 
@@ -226,10 +264,19 @@ def read_case(case_yaml, site_pars={}, farm_pars={}):
         Additional arguments for read_site
     farm_pars : dict
         Additional arguments for read_farm
+    ana_pars : dict
+        Additional arguments for read_analyses
 
     Returns
     -------
-
+    mbook : foxes.ModelBook
+        The model book
+    farm : foxes.WindFarm
+        The wind farm
+    states : foxes.states.States
+        The states object
+    algo : foxes.core.Algorithm
+        The algorithm
 
     """
     case_yaml = Path(case_yaml)
@@ -247,8 +294,11 @@ def read_case(case_yaml, site_pars={}, farm_pars={}):
         farm_yaml = (case_yaml.parent/farm_yaml).resolve()
     mbook, farm = read_farm(farm_yaml, **farm_pars)
 
-    print(case)
-    quit()
+    attr_dict = case["attributes"]
+    algo = read_anlyses(attr_dict["analyses"], mbook, farm,
+                        states, **ana_pars)
+
+    return mbook, farm, states, algo
 
 if __name__ == "__main__":
 

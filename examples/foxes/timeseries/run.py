@@ -89,8 +89,8 @@ def run_foxes(args):
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
-    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
 
