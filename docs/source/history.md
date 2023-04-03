@@ -246,5 +246,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: Turbine types now calculate `P_nominal` as maximum, if not explicitely given
 - Constants:
   - Introducing `P_UNITS`, used in turbine types and output evaluation
-    
+- States:
+  - Bug fixed in `FieldDataNC` with loading multiple files
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
