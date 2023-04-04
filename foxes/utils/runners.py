@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABCMeta
 from copy import deepcopy
 import dask
-from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
-
+from dask.distributed import get_client
+from dask.diagnostics import ProgressBar
 
 class Runner(metaclass=ABCMeta):
     """
@@ -169,6 +169,14 @@ class DaskRunner(Runner):
         ):
             self.scheduler = "distributed"
 
+    @classmethod
+    def is_distributed(cls):
+        try:
+            get_client()
+            return True
+        except ValueError:
+            return False
+    
     def initialize(self):
         """
         Initialize the runner

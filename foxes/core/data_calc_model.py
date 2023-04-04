@@ -5,8 +5,10 @@ from dask.distributed import progress
 
 from .model import Model
 from .data import Data
+from foxes.utils.runners import DaskRunner
 import foxes.variables as FV
 import foxes.constants as FC
+
 
 
 class DataCalcModel(Model):
@@ -247,15 +249,11 @@ class DataCalcModel(Model):
 
         # reorganize results Dataset:
         results = (
-            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS).persist()
+            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS)
         )
 
-        # try to show progress bar:
-        if algo.verbosity > 0:
-            try:
-                progress(results)
-            except ValueError:
-                pass
+        if DaskRunner.is_distributed():
+            progress(results.persist())
 
         # update data by calculation results:
         return results.compute()
