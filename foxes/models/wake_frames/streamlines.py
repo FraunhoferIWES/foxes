@@ -168,8 +168,7 @@ class Streamlines(WakeFrame):
         sn = data[..., 3:6]
 
         # find minimal distances to existing streamline points:
-        # n_states, n_turbines, n_spts
-        # loop over target points, since otherwise this blows memory:
+        # (loop over target points, since otherwise this blows memory)
         done = np.zeros((n_states, n_turbines, n_points), dtype=bool)
         inds = np.full((n_states, n_turbines, n_points), -1, dtype=FC.ITYPE)
         dists = np.full((n_states, n_turbines, n_points), np.nan, dtype=FC.DTYPE)
