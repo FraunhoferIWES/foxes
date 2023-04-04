@@ -9,7 +9,7 @@ import foxes.variables as FV
 from foxes.utils.runners import DaskRunner
 
 
-def run_foxes(args, sdata):
+def run_foxes(args, states):
 
     cks = (
         None
@@ -20,13 +20,6 @@ def run_foxes(args, sdata):
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-
-    states = foxes.input.states.FieldDataNC(
-        sdata,
-        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        fixed_vars={FV.RHO: 1.225},
-    )
 
     farm = foxes.WindFarm()
     N = int(args.n_turbines**0.5)
@@ -126,6 +119,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    """
     sdata = xr.open_mfdataset(
         args.file_pattern,
         parallel=False,
@@ -135,11 +129,19 @@ if __name__ == "__main__":
         coords="minimal",
         compat="override",
     )
+    """
     
+    states = foxes.input.states.FieldDataNC(
+        args.file_pattern,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
+        fixed_vars={FV.RHO: 1.225},
+    )
+
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
 
-        runner.run(run_foxes, args=(args, sdata))
+        runner.run(run_foxes, args=(args, states))

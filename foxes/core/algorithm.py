@@ -6,9 +6,8 @@ from .farm_data_model import FarmDataModelList
 from .point_data_model import PointDataModelList
 from .farm_controller import FarmController
 from foxes.data import StaticData
-from foxes.utils import Dict
+from foxes.utils import Dict, all_subclasses
 import foxes.variables as FV
-
 
 class Algorithm(Model):
     """
@@ -399,3 +398,37 @@ class Algorithm(Model):
             self._idata_mem = Dict()
         if self.initialized:
             super().finalize(self, self.verbosity)
+
+    @classmethod
+    def new(cls, algo_type, *args, **kwargs):
+        """
+        Run-time algorithm factory.
+
+        Parameters
+        ----------
+        algo_type : str
+            The selected derived class name
+        args : tuple, optional
+            Additional parameters for the constructor
+        kwargs : dict, optional
+            Additional parameters for the constructor
+
+        """
+
+        if algo_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = algo_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == algo_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Algorithm type '{}' is not defined, available types are \n {}".format(
+                algo_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)
+        

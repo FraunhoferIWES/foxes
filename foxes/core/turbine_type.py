@@ -1,5 +1,5 @@
 from .turbine_model import TurbineModel
-
+import foxes.constants as FC
 
 class TurbineType(TurbineModel):
     """
@@ -18,6 +18,9 @@ class TurbineType(TurbineModel):
         The hub height
     P_nominal : float, optional
         The nominal power in kW
+    P_unit : str
+        The unit of power, choices:
+        W, kW, MW, GW
 
     Attributes
     ----------
@@ -29,13 +32,26 @@ class TurbineType(TurbineModel):
         The hub height
     P_nominal : float
         The nominal power in kW
+    P_unit : str
+        The unit of power
 
     """
 
-    def __init__(self, name=None, D=None, H=None, P_nominal=None):
+    def __init__(
+            self, 
+            name=None, 
+            D=None, 
+            H=None, 
+            P_nominal=None,
+            P_unit="kW"
+        ):
         super().__init__()
 
         self.name = name if name is not None else type(self).__name__
         self.D = D
         self.H = H
         self.P_nominal = P_nominal
+        self.P_unit = P_unit
+
+        if P_unit not in FC.P_UNITS:
+            raise KeyError(f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}")

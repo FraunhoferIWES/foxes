@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pathlib import Path
 from scipy.interpolate import RegularGridInterpolator
+from copy import deepcopy
 
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd
-from foxes.data import STATES
+from foxes.data import STATES, StaticData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -49,6 +51,8 @@ class FieldDataNC(States):
         The datetime parsing format string
     sel : dict, optional
         Subset selection via xr.Dataset.sel()
+    verbosity : int
+        Verbosity level for pre_load file reading
 
     Attributes
     ----------
@@ -103,6 +107,7 @@ class FieldDataNC(States):
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
+        verbosity=1
     ):
         super().__init__()
 
@@ -127,11 +132,31 @@ class FieldDataNC(States):
         self._inds = None
         self._N = None
 
+        # pre-load file reading, usually prior to DaskRunner:
+        if pre_load and not isinstance(self.data_source, xr.Dataset):
+
+            if "*" in self.data_source:
+                fpath = self.data_source
+            else:
+                fpath = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
+            if verbosity:
+                print(f"States '{self.name}': Reading files {fpath}")
+
+            with xr.open_mfdataset(
+                str(fpath),
+                parallel=False,
+                concat_dim=self.states_coord,
+                combine="nested",
+                data_vars="minimal",
+                coords="minimal",
+                compat="override",
+            ) as ds:
+                self.data_source = ds.load()
+
     def _get_data(self, ds, verbosity):
         """
         Helper function for data extraction
         """
-
         x = ds[self.x_coord].to_numpy()
         y = ds[self.y_coord].to_numpy()
         h = ds[self.h_coord].to_numpy()
@@ -172,7 +197,6 @@ class FieldDataNC(States):
         for v in vars_s:
             ncv = self.var2ncvar[v]
             data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None]
-
         if FV.WD in self.fixed_vars:
             data[..., self._dkys[FV.WD]] = np.full(
                 (n_sts, n_h, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
@@ -240,11 +264,9 @@ class FieldDataNC(States):
                 y = ds[self.y_coord].to_numpy()
                 x = ds[self.x_coord].to_numpy()
                 v = list(self._dkys.keys())
-
                 coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
                 data = self._get_data(ds, verbosity)
                 data = (coos, data)
-
                 return h, y, x, v, data
 
         if isinstance(self.data_source, xr.Dataset):
@@ -252,14 +274,14 @@ class FieldDataNC(States):
         else:
             with xr.open_mfdataset(
                 pattern,
-                parallel=True,
+                parallel=False,
                 concat_dim=self.states_coord,
                 combine="nested",
                 data_vars="minimal",
                 coords="minimal",
                 compat="override",
             ) as ds:
-                out = extract_data(ds)
+                out = extract_data(ds.load()) if self.pre_load else extract_data(ds)
             return out
 
     def initialize(self, algo, verbosity=0):
