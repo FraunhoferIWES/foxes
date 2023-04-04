@@ -191,10 +191,6 @@ class DaskRunner(Runner):
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
 
-        else:
-            self._config0 = deepcopy(dask.config.config)
-            dask.config.config["scheduler"] = self.scheduler
-
         super().initialize()
 
     def print(self, *args, **kwargs):
@@ -240,9 +236,6 @@ class DaskRunner(Runner):
             self.print("\n\nShutting down dask cluster")
             self._client.close()
             self._cluster.close()
-
-        else:
-            dask.config.config["scheduler"] = self._config0
         
         dask.config.refresh()
 

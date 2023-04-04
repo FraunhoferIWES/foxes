@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 from abc import abstractmethod
 from dask.distributed import progress
+from dask.diagnostics import ProgressBar
 
 from .model import Model
 from .data import Data
@@ -252,7 +253,7 @@ class DataCalcModel(Model):
             results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS)
         )
 
-        if DaskRunner.is_distributed():
+        if DaskRunner.is_distributed() and len(ProgressBar.active):
             progress(results.persist())
 
         # update data by calculation results:
