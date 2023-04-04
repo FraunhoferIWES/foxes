@@ -168,16 +168,22 @@ class Streamlines(WakeFrame):
         sn = data[..., 3:6]
 
         # find minimal distances to existing streamline points:
-        # n_states, n_turbines, n_points, n_spts
-        dists = np.linalg.norm(
-            points[:, None, :, None] - spts[:, :, None, :n_spts], axis=-1
-        )
-        if tcase:
-            for ti in range(n_turbines):
-                dists[:, ti, ti] = 1e20
-        inds = np.argmin(dists, axis=3)
-        dists = np.take_along_axis(dists, inds[:, :, :, None], axis=3)[..., 0]
-        done = inds < n_spts - 1
+        # n_states, n_turbines, n_spts
+        # loop over target points, since otherwise this blows memory:
+        done = np.zeros((n_states, n_turbines, n_points), dtype=bool)
+        inds = np.full((n_states, n_turbines, n_points), -1, dtype=FC.ITYPE)
+        dists = np.full((n_states, n_turbines, n_points), np.nan, dtype=FC.DTYPE)
+        for pi in range(n_points):
+
+            hdists = np.linalg.norm(
+                points[:, None, pi, None] - spts[:, :, :n_spts], axis=-1
+            )
+            if tcase:
+                hdists[:, pi] = np.inf
+            inds[:, :, pi] = np.argmin(hdists, axis=2)
+            dists[:, :, pi] = np.take_along_axis(hdists, inds[:, :, pi, None], axis=2)[..., 0]
+            done[:, :, pi] = inds[:, :, pi] < n_spts - 1
+            del hdists
 
         # calc streamline points, as many as needed:
         maxl = np.nanmax(data[:, :, n_spts-1, 6])
