@@ -210,7 +210,7 @@ class Streamlines(WakeFrame):
 
         # shrink to size:
         mdata[self.DATA] = data[:, :, :n_spts]
-        del data, spts, sn
+        del data, spts, sn, dists, done
 
         # select streamline points:
         # n_states, n_turbines, n_points, 7
