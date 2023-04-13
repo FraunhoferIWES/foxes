@@ -136,7 +136,7 @@ class FieldDataNC(States):
         # pre-load file reading, usually prior to DaskRunner:
         if not isinstance(self.data_source, xr.Dataset):
 
-            if "*" in self.data_source:
+            if "*" in str(self.data_source):
                 pass
             else:
                 self.data_source = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
