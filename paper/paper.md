@@ -36,27 +36,32 @@ bibliography: paper.bib
 
 # Summary
 
-The pre and post construction analysis of wind farms requires the fast evaluation of 
-the annual energy production for long-term time series which often contain many ten 
-thousand entries. In addition, wake effects from neighbouring wind farms and wind farm 
-clusters need to be considered, such that realistic off-shore scenarios can include as
-many as thousands of wind turbines. Hence scalability is an issue of central importance
-for modern numerical wind farm and wake modelling approaches. Furthermore, optimization 
-of wind farms and wind farm control parameters are often based on genetic or other 
-heuristic algorithms. For such approaches the vectorized evaluation of optimization 
-variables is the key for fast and efficient calculations.
+The production of electrical power by wind farms depends on the meteorological conditions
+at the site, for example time (and space) dependent wind speed and wind direction fields. 
+Furthermore, for each wind turbine, its location within the wind farm plays a crucial role, 
+since wake effects stemming from up-stream turbines reduce the wind speed and increase 
+turbulence at the rotor. Naturally, also the rotor height and size as well as specifics related
+to the wind turbine model are decisive. When it comes to wind farm calculations, the pre and 
+post construction analysis requires the fast evaluation of the annual energy production for 
+meteorological long-term time series data which often contain many ten thousand entries. 
+In addition, wake effects from neighbouring wind farms and wind farm clusters need to be 
+considered, such that realistic off-shore scenarios can include as many as thousands of wind
+turbines. Hence scalability is an issue of central importance for modern numerical wind farm 
+and wake modelling approaches. Furthermore, optimization of wind farms and wind farm control 
+parameters are often based on genetic or other heuristic algorithms. For such methods the 
+vectorized evaluation of optimization variables is the key for fast and efficient calculations.
 
 # Statement of need
 
-`foxes` is a Python package that calculates wind farm results including wind turbine wake 
-effects. The meteorological input data can be a timeseries or statistical data like wind 
-roses or other distributions. Uniform inflow fields are supported as well as
-horizontal profiles and three dimensional flow fields from other sources, for example
-mesoscale simulation results.
+The `Farm Evaluation and eXtended yield Evaluation Software (foxes)` is a Python package that 
+calculates wind farm results including wind turbine wake effects. The meteorological input data 
+can be a timeseries or statistical data like wind roses or other distributions. Uniform inflow 
+fields are supported as well as horizontal profiles and three dimensional flow fields from other 
+sources, for example mesoscale simulation results.
 
 `foxes` is build upon the idea of fast vectorized evaluation of the input states, making use 
-of the `Dask` package [@dask] via the `xarray` package [@xarray]. This means that in general it 
-does not solve differential equations that interconnect the states and rather relies either on 
+of the `dask` package [@dask] via the `xarray` package [@xarray]. This means that in general, it 
+does not solve differential equations that interconnect the states, but rather relies either on 
 analytical models or on lookup-table based models. An exception are the included features of 
 calculations along streamlines of the background flow, and also integrations of variables along 
 the latter for some models.
@@ -64,11 +69,20 @@ the latter for some models.
 `foxes` was designed to be very modular when it comes to modelling aspects of wind farm 
 calculations. Users can combine various model types and easily add new models, such that a 
 realistic representation of the wind farm's behaviour can be achieved. Any wind farm calculation 
-variable in `foxes` can be subjected to optimization via the `IWOPY` package [@iwopy], with 
+variable in `foxes` can be subjected to optimization via the `iwopy` package [@iwopy], with 
 support for vectorized evaluation of optimization variables.
+
+Other related open source Python packages that follow a similar agenda, but with differences in 
+details and performance, are `pywake` [@pywake] and `floris` [@floris]. The `foxes` package has no 
+code overlap with these packages and has been developed as an independent software by Fraunhofer IWES 
+for many years.
 
 # Acknowledgements
 
-The development of `foxes` and its predecessors flapFOAM and flappy (internal - non public) has been supported through multiple publicly funded research projects. We acknowledge in particular the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects Smart Wind Farms (grant no. 0325851B), GW-Wakes (0325397B) and X-Wakes (03EE3008A) as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework of the project H2Digital (03SF0635).
+The development of `foxes` and its predecessors flapFOAM and flappy (internal - non public) has been 
+supported through multiple publicly funded research projects. We acknowledge in particular the funding 
+by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the projects Smart Wind 
+Farms (grant no. 0325851B), GW-Wakes (0325397B) and X-Wakes (03EE3008A) as well as the funding by the 
+Federal Ministry of Education and Research (BMBF) in the framework of the project H2Digital (03SF0635).
 
 # References
