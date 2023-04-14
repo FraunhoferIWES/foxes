@@ -131,19 +131,23 @@ class FieldDataNC(States):
 
         self._inds = None
         self._N = None
+        self._weights = None
 
         # pre-load file reading, usually prior to DaskRunner:
-        if pre_load and not isinstance(self.data_source, xr.Dataset):
+        if not isinstance(self.data_source, xr.Dataset):
 
-            if "*" in self.data_source:
-                fpath = self.data_source
+            if "*" in str(self.data_source):
+                pass
             else:
-                fpath = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
+                self.data_source = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
             if verbosity:
-                print(f"States '{self.name}': Reading files {fpath}")
+                if pre_load:
+                    print(f"States '{self.name}': Reading data from '{self.data_source}'")
+                else:
+                    print(f"States '{self.name}': Reading index from '{self.data_source}'")
 
             with xr.open_mfdataset(
-                str(fpath),
+                str(self.data_source),
                 parallel=False,
                 concat_dim=self.states_coord,
                 combine="nested",
@@ -151,8 +155,47 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                self.data_source = ds.load()
+                
+                dss = ds if self.sel is None else ds.sel(self.sel)
+                if pre_load:
+                    self.data_source = dss.load()
+                else:
+                    self.data_source = dss
+                self._get_inds(dss)
 
+    def _get_inds(self, ds):
+        """
+        Helper function for index and weights 
+        reading
+        """
+        for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
+            if not c in ds:
+                raise KeyError(
+                    f"States '{self.name}': Missing coordinate '{c}' in data"
+                )
+
+        self._inds = ds[self.states_coord].to_numpy()
+        if self.time_format is not None:
+            self._inds = pd.to_datetime(
+                self._inds, format=self.time_format
+            ).to_numpy()
+        self._N = len(self._inds)
+
+        if self.weight_ncvar is not None:
+            self._weights = ds[self.weight_ncvar].to_numpy()
+
+        for v in self.ovars:
+            if v in self.var2ncvar:
+                ncv = self.var2ncvar[v]
+                if not ncv in ds:
+                    raise KeyError(
+                        f"States '{self.name}': nc variable '{ncv}' not found in data, found: {sorted(list(ds.keys()))}"
+                    )
+            elif v not in self.fixed_vars:
+                raise ValueError(
+                    f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
+                )  
+                
     def _get_data(self, ds, verbosity):
         """
         Helper function for data extraction
@@ -213,77 +256,6 @@ class FieldDataNC(States):
 
         return data
 
-    def _read_nc(self, algo, pattern, verbosity):
-
-        def extract_data(ds):
-
-            if self.sel is not None:
-                ds = ds.sel(self.sel)
-
-            for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
-                if not c in ds:
-                    raise KeyError(
-                        f"States '{self.name}': Missing coordinate '{c}' in data"
-                    )
-
-            self._inds = ds[self.states_coord].to_numpy()
-            if self.time_format is not None:
-                self._inds = pd.to_datetime(
-                    self._inds, format=self.time_format
-                ).to_numpy()
-            self._N = len(self._inds)
-
-            if self.weight_ncvar is not None:
-                self._weights = ds[self.weight_ncvar].to_numpy()
-            else:
-                self._weights = np.full(
-                    (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
-                )
-
-            for v in self.ovars:
-                if v in self.var2ncvar:
-                    ncv = self.var2ncvar[v]
-                    if not ncv in ds:
-                        raise KeyError(
-                            f"States '{self.name}': nc variable '{ncv}' not found in data, found: {sorted(list(ds.keys()))}"
-                        )
-                elif v not in self.fixed_vars:
-                    raise ValueError(
-                        f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                    )  
-
-            if self.pre_load:
-
-                self.X = self.var(FV.X)
-                self.Y = self.var(FV.Y)
-                self.H = self.var(FV.H)
-                self.VARS = self.var("vars")
-                self.DATA = self.var("data")
-
-                h = ds[self.h_coord].to_numpy()
-                y = ds[self.y_coord].to_numpy()
-                x = ds[self.x_coord].to_numpy()
-                v = list(self._dkys.keys())
-                coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
-                data = self._get_data(ds, verbosity)
-                data = (coos, data)
-                return h, y, x, v, data
-
-        if isinstance(self.data_source, xr.Dataset):
-            return extract_data(self.data_source)
-        else:
-            with xr.open_mfdataset(
-                pattern,
-                parallel=False,
-                concat_dim=self.states_coord,
-                combine="nested",
-                data_vars="minimal",
-                coords="minimal",
-                compat="override",
-            ) as ds:
-                out = extract_data(ds.load()) if self.pre_load else extract_data(ds)
-            return out
-
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -309,6 +281,7 @@ class FieldDataNC(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+        
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars
         ):
@@ -326,31 +299,32 @@ class FieldDataNC(States):
             if v not in self._dkys:
                 self._dkys[v] = len(self._dkys)
         self._n_dvars = len(self._dkys)
-        self._weights = None
 
-        if isinstance(self.data_source, xr.Dataset):
-            r = self._read_nc(algo, None, verbosity)
-        else:
-            if verbosity:
-                print(f"States '{self.name}': Reading files {self.data_source}")
-            try:
-                r = self._read_nc(algo, self.data_source, verbosity)
-            except OSError:
-                if verbosity:
-                    print(
-                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
-                    )
-                fpath = algo.dbook.get_file_path(STATES, self.data_source, check_raw=False)
-                if verbosity:
-                    print(f"Path: {fpath}")
-                r = self._read_nc(algo, fpath, verbosity)
+        if self._weights is None:
+            self._weights = np.full(
+                (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
+            )
 
         idata = super().initialize(algo, verbosity)
         self._update_idata(algo, idata)
 
         if self.pre_load:
 
-            h, y, x, v, data = r
+            self.X = self.var(FV.X)
+            self.Y = self.var(FV.Y)
+            self.H = self.var(FV.H)
+            self.VARS = self.var("vars")
+            self.DATA = self.var("data")
+
+            ds = self.data_source
+
+            h = ds[self.h_coord].to_numpy()
+            y = ds[self.y_coord].to_numpy()
+            x = ds[self.x_coord].to_numpy()
+            v = list(self._dkys.keys())
+            coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
+            data = self._get_data(ds, verbosity)
+            data = (coos, data)
 
             idata["coords"][self.H] = h
             idata["coords"][self.Y] = y
@@ -459,24 +433,13 @@ class FieldDataNC(States):
         else:
             i0 = np.where(self._inds == mdata[FV.STATE][0])[0][0]
             s = slice(i0, i0 + n_states)
-            ds = (
-                xr.open_mfdataset(
-                    self.data_source,
-                    parallel=False,
-                    concat_dim=self.states_coord,
-                    combine="nested",
-                    data_vars="minimal",
-                    coords="minimal",
-                    compat="override",
-                )
-                .isel({self.states_coord: s})
-                .load()
-            )
+            ds = self.data_source.isel({self.states_coord: s}).load()
 
             x = ds[self.x_coord].to_numpy()
             y = ds[self.y_coord].to_numpy()
             h = ds[self.h_coord].to_numpy()
             data = self._get_data(ds, verbosity=0)
+
             del ds
 
         # translate WS, WD into U, V:

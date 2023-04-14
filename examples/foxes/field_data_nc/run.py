@@ -117,25 +117,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-npl", "--no_pre_load", help="Do not pre-load data", action="store_true")
     args = parser.parse_args()
-
-    """
-    sdata = xr.open_mfdataset(
-        args.file_pattern,
-        parallel=False,
-        concat_dim="Time",
-        combine="nested",
-        data_vars="minimal",
-        coords="minimal",
-        compat="override",
-    )
-    """
     
     states = foxes.input.states.FieldDataNC(
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225},
+        pre_load=not args.no_pre_load
     )
 
     with DaskRunner(

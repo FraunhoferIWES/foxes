@@ -248,5 +248,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Introducing `P_UNITS`, used in turbine types and output evaluation
 - States:
   - Bug fixed in `FieldDataNC` with loading multiple files
+- Core:
+  - Improved `DataCalcModel`: Now cleaner treatment of runs with `progress_bar=False`. Also now slimmer for `distributed` scheduler
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
