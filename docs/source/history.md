@@ -237,6 +237,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.4-alpha
 
+- Installation:
+  - `foxes` now supports Python 3.11
 - Input:
   - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
   - New interface to [windIO](https://github.com/IEAWindTask37/windIO) case yaml files
