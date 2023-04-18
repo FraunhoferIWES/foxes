@@ -234,3 +234,23 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Now `geopandas_helpers` can handle interior areas
     
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.3](https://github.com/FraunhoferIWES/foxes/commits/v0.3.3)
+
+## v0.3.4-alpha
+
+- Installation:
+  - `foxes` now supports Python 3.11
+- Input:
+  - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
+  - New interface to [windIO](https://github.com/IEAWindTask37/windIO) case yaml files
+- Turbine types:
+  - New turbine type `CpCtFile`, reads CP and CT data from file or pandas DataFrame
+  - New turbine type `CpCtFromTwo`, reads CP and CT data from two files or pandas DataFrames
+  - Improved: Turbine types now calculate `P_nominal` as maximum, if not explicitely given
+- Constants:
+  - Introducing `P_UNITS`, used in turbine types and output evaluation
+- States:
+  - Bug fixed in `FieldDataNC` with loading multiple files
+- Core:
+  - Improved `DataCalcModel`: Now cleaner treatment of runs with `progress_bar=False`. Also now slimmer for `distributed` scheduler
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)

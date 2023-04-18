@@ -6,12 +6,12 @@ from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 class PCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
-    from power-ct-curve data file.
+    from power-ct-curve data file (or pandas DataFrame).
 
     Parameters
     ----------
@@ -154,6 +154,11 @@ class PCtFile(TurbineType):
         self.data_ws = data.index.to_numpy()
         self.data_P = data[self.col_P].to_numpy()
         self.data_ct = data[self.col_ct].to_numpy()
+
+        if self.P_nominal is None:
+            self.P_nominal = np.max(self.data_P) / FC.P_UNITS[self.P_unit]
+            if verbosity > 0:
+                print(f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}")
 
         return super().initialize(algo, verbosity)
 

@@ -23,7 +23,7 @@ def test():
     ck = {FV.STATE: c}
 
     mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtTwoFiles(
+    ttype = foxes.models.turbine_types.PCtFromTwo(
         data_source_P=tPfile,
         data_source_ct=tCtfile,
         col_ws_P_file="ws",

@@ -72,7 +72,7 @@ def run_foxes(args):
     print(f"\nFarm power        : {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+    print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
 
     if args.calc_mean:
         o = foxes.output.FlowPlots2D(algo, farm_results)
