@@ -257,5 +257,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.5-alpha
 
+- Models:
+  - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)

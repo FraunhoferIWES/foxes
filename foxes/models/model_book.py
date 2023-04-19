@@ -167,6 +167,10 @@ class ModelBook:
             max_amb=fm.wake_superpositions.MaxSuperposition(
                 scalings=f"source_turbine_{FV.AMB_REWS}"
             ),
+            product=fm.wake_superpositions.ProductSuperposition(),
+            product_lim=fm.wake_superpositions.ProductSuperposition(
+                lim_low={FV.WS: 1e-4},
+            ),
             ti_linear=fm.wake_superpositions.TISuperposition(
                 ti_superp="linear", superp_to_amb="quadratic"
             ),
@@ -187,6 +191,8 @@ class ModelBook:
             "quadratic_amb",
             "max",
             "max_amb",
+            "product",
+            "product_lim"
         ]
         for s in slist:
 
