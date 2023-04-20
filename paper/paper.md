@@ -36,16 +36,17 @@ bibliography: paper.bib
 
 # Summary
 
-The production of electrical power by wind farms depends on the meteorological conditions
-at the site, for example time (and space) dependent wind speed and wind direction fields. 
-Furthermore, for each wind turbine, its location within the wind farm plays a crucial role, 
-since wake effects stemming from up-stream turbines reduce the wind speed and increase 
-turbulence at the rotor. Naturally, also the rotor height and size as well as specifics related
-to the wind turbine model are decisive. When it comes to wind farm calculations, the pre and 
-post construction analysis requires the fast evaluation of the annual energy production for 
-meteorological long-term time series data which often contain many ten thousand entries. 
+The amount of electrical energy that wind farms are able to extract from the kinetic energy
+of the wind naturally depends on the meteorological conditions at the site. In particular,
+wind speed and wind direction are decisive quantities, and in general those are time and space
+dependent fields. Furthermore, for each wind turbine, its location within the wind farm plays an 
+important role, since wake effects stemming from up-stream turbines reduce the wind speed and 
+increase turbulence at the rotor. Additinally, the rotor height, its size as well as specifics 
+related to the wind turbine model are crucial parameters. When it comes to wind farm production 
+analysis, the fast evaluation of the annual energy production for long-term time series of 
+meteorological conditions is required, and such data often contains many ten thousand entries. 
 In addition, wake effects from neighbouring wind farms and wind farm clusters need to be 
-considered, such that realistic off-shore scenarios can include as many as thousands of wind
+considered, such that realistic offshore scenarios can include as many as thousands of wind
 turbines. Hence scalability is an issue of central importance for modern numerical wind farm 
 and wake modelling approaches. Furthermore, optimization of wind farms and wind farm control 
 parameters are often based on genetic or other heuristic algorithms. For such methods the 
@@ -54,10 +55,11 @@ vectorized evaluation of optimization variables is the key for fast and efficien
 # Statement of need
 
 The `Farm Evaluation and eXtended yield Evaluation Software (foxes)` is a Python package that 
-calculates wind farm results including wind turbine wake effects. The meteorological input data 
-can be a timeseries or statistical data like wind roses or other distributions. Uniform inflow 
-fields are supported as well as horizontal profiles and three dimensional flow fields from other 
-sources, for example mesoscale simulation results.
+calculates wind farm results such as power prudiction or wind turbine wake effects. The meteorological 
+input data can be a timeseries or statistical data like wind speed histograms, wind roses or any other 
+distribution. Uniform inflow fields are supported as well as horizontal profiles and three dimensional
+flow fields from other sources, for example wind fields from mesoscale weather models or wind
+atlases [@newa].
 
 `foxes` is build upon the idea of fast vectorized evaluation of the input states, making use 
 of the `dask` package [@dask] via the `xarray` package [@xarray]. This means that in general, it 
