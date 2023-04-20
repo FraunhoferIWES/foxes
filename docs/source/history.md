@@ -237,6 +237,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.4-alpha
 
+- Installation:
+  - `foxes` now supports Python 3.11
 - Input:
   - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
   - New interface to [windIO](https://github.com/IEAWindTask37/windIO) case yaml files
@@ -252,3 +254,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `DataCalcModel`: Now cleaner treatment of runs with `progress_bar=False`. Also now slimmer for `distributed` scheduler
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
+
+## v0.3.5-alpha
+
+- Models:
+  - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
