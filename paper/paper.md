@@ -75,9 +75,9 @@ variable in `foxes` can be subjected to optimization via the `iwopy` package [@i
 support for vectorized evaluation of optimization variables.
 
 Other related open source Python packages that follow a similar agenda, but with differences in 
-details and performance, are `pywake` [@pywake] and `floris` [@floris]. The `foxes` package has no 
-code overlap with these packages and has been developed as an independent software by Fraunhofer IWES 
-for many years.
+methods, models and architecture, are `pywake` [@pywake] and `floris` [@floris]. The `foxes` package 
+has no code overlap with these packages and has been developed as an independent software for many 
+years.
 
 # Acknowledgements
 
