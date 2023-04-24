@@ -259,5 +259,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Models:
   - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
-
+- Bug fixes:
+  - Bug fixed that caused problems when restarting the `SectorManagement` turbine model, e.g. for flow plots
+  
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
