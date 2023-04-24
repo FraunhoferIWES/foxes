@@ -107,7 +107,7 @@ class FieldDataNC(States):
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
-        verbosity=1
+        verbosity=1,
     ):
         super().__init__()
 
@@ -135,16 +135,21 @@ class FieldDataNC(States):
 
         # pre-load file reading, usually prior to DaskRunner:
         if not isinstance(self.data_source, xr.Dataset):
-
             if "*" in str(self.data_source):
                 pass
             else:
-                self.data_source = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
+                self.data_source = StaticData().get_file_path(
+                    STATES, self.data_source, check_raw=True
+                )
             if verbosity:
                 if pre_load:
-                    print(f"States '{self.name}': Reading data from '{self.data_source}'")
+                    print(
+                        f"States '{self.name}': Reading data from '{self.data_source}'"
+                    )
                 else:
-                    print(f"States '{self.name}': Reading index from '{self.data_source}'")
+                    print(
+                        f"States '{self.name}': Reading index from '{self.data_source}'"
+                    )
 
             with xr.open_mfdataset(
                 str(self.data_source),
@@ -155,7 +160,6 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                
                 dss = ds if self.sel is None else ds.sel(self.sel)
                 if pre_load:
                     self.data_source = dss.load()
@@ -165,7 +169,7 @@ class FieldDataNC(States):
 
     def _get_inds(self, ds):
         """
-        Helper function for index and weights 
+        Helper function for index and weights
         reading
         """
         for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
@@ -176,9 +180,7 @@ class FieldDataNC(States):
 
         self._inds = ds[self.states_coord].to_numpy()
         if self.time_format is not None:
-            self._inds = pd.to_datetime(
-                self._inds, format=self.time_format
-            ).to_numpy()
+            self._inds = pd.to_datetime(self._inds, format=self.time_format).to_numpy()
         self._N = len(self._inds)
 
         if self.weight_ncvar is not None:
@@ -194,8 +196,8 @@ class FieldDataNC(States):
             elif v not in self.fixed_vars:
                 raise ValueError(
                     f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                )  
-                
+                )
+
     def _get_data(self, ds, verbosity):
         """
         Helper function for data extraction
@@ -281,7 +283,7 @@ class FieldDataNC(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        
+
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars
         ):
@@ -309,7 +311,6 @@ class FieldDataNC(States):
         self._update_idata(algo, idata)
 
         if self.pre_load:
-
             self.X = self.var(FV.X)
             self.Y = self.var(FV.Y)
             self.H = self.var(FV.H)
@@ -331,7 +332,7 @@ class FieldDataNC(States):
             idata["coords"][self.X] = x
             idata["coords"][self.VARS] = v
             idata["data_vars"][self.DATA] = data
-        
+
         return idata
 
     def size(self):
@@ -496,4 +497,3 @@ class FieldDataNC(States):
                     )
 
         return out
-

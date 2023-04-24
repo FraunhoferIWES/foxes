@@ -95,9 +95,10 @@ class PartialDistSlicedWake(PartialWakesModel):
         self.YZ = self.var("YZ")
         self.W = self.var(FV.WEIGHT)
 
-        algo.update_idata([self.rotor_model, self.grotor], 
-            idata=idata, verbosity=verbosity)
-        
+        algo.update_idata(
+            [self.rotor_model, self.grotor], idata=idata, verbosity=verbosity
+        )
+
         return idata
 
     def new_wake_deltas(self, algo, mdata, fdata):
@@ -176,7 +177,6 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         # evaluate wake models:
         for w in self.wake_models:
-
             wdeltas, sp_sel = w.calc_wakes_spsel_x_yz(
                 algo, mdata, fdata, states_source_turbine, x, yz
             )
@@ -186,7 +186,6 @@ class PartialDistSlicedWake(PartialWakesModel):
             wsps = wsps.reshape(n_states, n_points)
 
             for v, wdel in wdeltas.items():
-
                 d = np.zeros((n_states, n_turbines, n_rpoints), dtype=FC.DTYPE)
                 d[sp_sel] = wdel
                 d = d.reshape(n_states, n_points)[wsps]
@@ -256,7 +255,6 @@ class PartialDistSlicedWake(PartialWakesModel):
         elif FV.WD in amb_res and np.any(
             np.min(amb_res[FV.WD], axis=2) != np.max(amb_res[FV.WD], axis=2)
         ):
-
             wd = amb_res[FV.WD].reshape(n_states, n_turbines, n_rpoints)[st_sel]
             ws = amb_res[FV.WS].reshape(n_states, n_turbines, n_rpoints)[st_sel]
             uv = wd2uv(wd, ws, axis=-1)

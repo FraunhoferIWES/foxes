@@ -66,7 +66,6 @@ class FarmResultsEval(Output):
         expr = ",".join(inds) + "->" + rhs
 
         if np.any(nas):
-
             sel = ~np.any(nas, axis=1)
             fields = [f[sel] for f in fields]
 
@@ -408,7 +407,7 @@ class FarmResultsEval(Output):
             pass
         else:
             raise KeyError("Expecting either 'algo' or 'P_unit_W'")
-        
+
         # compute yield per turbine
         if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
             if hours is not None:

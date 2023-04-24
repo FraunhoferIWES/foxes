@@ -11,7 +11,6 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-
     n_s = 800
     n_t = 76
     c = 1000

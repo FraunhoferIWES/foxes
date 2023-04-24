@@ -92,7 +92,6 @@ class Mapped(PartialWakesModel):
 
         pws = {}
         for w in self.wake_models:
-
             pdat = None
             if w.name in self.wname2pwake:
                 pdat = deepcopy(self.wname2pwake[w.name])
@@ -120,7 +119,7 @@ class Mapped(PartialWakesModel):
                     f"Partial wakes '{self.name}': Applying {pname} to {[w.name for w in pars['wake_models']]}"
                 )
             self._pwakes.append(PartialWakesModel.new(pname, **pars))
-        
+
         algo.update_idata(self._pwakes, idata=idata, verbosity=verbosity)
 
         return idata

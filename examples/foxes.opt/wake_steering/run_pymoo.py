@@ -9,7 +9,6 @@ from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI
 import foxes.variables as FV
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-nt", "--n_t", help="The number of turbines", type=int, default=10
@@ -109,10 +108,9 @@ if __name__ == "__main__":
         progress_bar=False,
         verbosity=1,
     ) as runner:
-
         problem = OptFarmVars("opt_yawm", algo, runner=runner)
-        problem.add_var(FV.YAWM, float, 0., -40., 40., level="turbine")
-        #problem.add_objective(MaxFarmPower(problem))
+        problem.add_var(FV.YAWM, float, 0.0, -40.0, 40.0, level="turbine")
+        # problem.add_objective(MaxFarmPower(problem))
         problem.add_objective(MinimalMaxTI(problem))
         problem.initialize()
 
@@ -127,7 +125,7 @@ if __name__ == "__main__":
                 seed=None,
             ),
             setup_pars=dict(),
-            term_pars=('n_gen', args.n_gen),
+            term_pars=("n_gen", args.n_gen),
         )
         solver.initialize()
         solver.print_info()

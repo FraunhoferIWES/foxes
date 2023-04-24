@@ -7,7 +7,6 @@ from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     cks = None if args.nodask else {FV.STATE: args.chunksize}
 
     mbook = foxes.models.ModelBook()
@@ -91,7 +90,9 @@ def run_foxes(args):
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
     turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
@@ -106,7 +107,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -168,5 +168,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

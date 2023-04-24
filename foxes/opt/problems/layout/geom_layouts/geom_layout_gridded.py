@@ -5,6 +5,7 @@ from iwopy import Problem
 
 import foxes.constants as FC
 
+
 class GeomLayoutGridded(Problem):
     """
     A layout within a boundary geometry, purely
@@ -43,13 +44,13 @@ class GeomLayoutGridded(Problem):
     """
 
     def __init__(
-            self, 
-            boundary, 
-            n_turbines, 
-            grid_spacing,
-            min_dist=None,
-            D=None,
-        ):
+        self,
+        boundary,
+        n_turbines,
+        grid_spacing,
+        min_dist=None,
+        D=None,
+    ):
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -75,29 +76,32 @@ class GeomLayoutGridded(Problem):
         pmin = self.boundary.p_min()
         pmax = self.boundary.p_max() + self.grid_spacing
         self._pts = np.stack(
-                np.meshgrid(
-                    np.arange(pmin[0], pmax[0], self.grid_spacing),
-                    np.arange(pmin[1], pmax[1], self.grid_spacing),
-                    indexing='ij'
-                ), axis=-1)
+            np.meshgrid(
+                np.arange(pmin[0], pmax[0], self.grid_spacing),
+                np.arange(pmin[1], pmax[1], self.grid_spacing),
+                indexing="ij",
+            ),
+            axis=-1,
+        )
         nx, ny = self._pts.shape[:2]
-        self._pts = self._pts.reshape(nx*ny, 2)
+        self._pts = self._pts.reshape(nx * ny, 2)
 
         if self.D is None:
             valid = self.boundary.points_inside(self._pts)
         else:
-            valid = (
-                self.boundary.points_inside(self._pts) &
-                (self.boundary.points_distance(self._pts) >= self.D / 2)
+            valid = self.boundary.points_inside(self._pts) & (
+                self.boundary.points_distance(self._pts) >= self.D / 2
             )
         self._pts = self._pts[valid]
         self._N = len(self._pts)
 
-        if verbosity>0:
+        if verbosity > 0:
             print(f"Problem '{self.name}': n_bgd_pts = {self._N}")
 
         if self._N < self.n_turbines:
-            raise ValueError(f"Problem '{self.name}': Background grid only provides {self._N} points for {self.n_turbines} turbines")
+            raise ValueError(
+                f"Problem '{self.name}': Background grid only provides {self._N} points for {self.n_turbines} turbines"
+            )
 
         self.apply_individual(self.initial_values_int(), self.initial_values_float())
 
@@ -147,7 +151,7 @@ class GeomLayoutGridded(Problem):
             Maximal int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_turbines, self._N-1, dtype=FC.ITYPE)
+        return np.full(self.n_turbines, self._N - 1, dtype=FC.ITYPE)
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -166,13 +170,13 @@ class GeomLayoutGridded(Problem):
             The results of the variable application
             to the problem
 
-        """       
+        """
         xy = self._pts[vars_int.astype(FC.ITYPE)]
         __, ui = np.unique(vars_int, return_index=True)
         valid = np.zeros(self.n_turbines, dtype=bool)
         valid[ui] = True
         return xy, valid
-    
+
     def apply_population(self, vars_int, vars_float):
         """
         Apply new variables to the problem,
@@ -194,7 +198,7 @@ class GeomLayoutGridded(Problem):
         """
         n_pop = vars_int.shape[0]
 
-        vint = vars_int.reshape(n_pop*self.n_turbines).astype(FC.ITYPE)
+        vint = vars_int.reshape(n_pop * self.n_turbines).astype(FC.ITYPE)
         xy = self._pts[vint, :].reshape(n_pop, self.n_turbines, 2)
 
         valid = np.zeros((n_pop, self.n_turbines), dtype=bool)
@@ -204,7 +208,9 @@ class GeomLayoutGridded(Problem):
 
         return xy, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
+    def get_fig(
+        self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs
+    ):
         """
         Return plotly figure axis.
 
@@ -222,7 +228,7 @@ class GeomLayoutGridded(Problem):
             Draw points as circles with diameter self.D
         bars : dict, optional
             The boundary plot arguments
-        
+
         Returns
         -------
         ax : pyplot.Axis
@@ -231,7 +237,7 @@ class GeomLayoutGridded(Problem):
         """
         if ax is None:
             __, ax = plt.subplots()
-        
+
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
         self.boundary.add_to_figure(ax, **hbargs)
@@ -243,7 +249,9 @@ class GeomLayoutGridded(Problem):
                 ax.scatter(xy[:, 0], xy[:, 1], color="orange")
             else:
                 for x, y in xy:
-                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
+                    ax.add_patch(
+                        plt.Circle((x, y), self.D / 2, color="blue", fill=True)
+                    )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")

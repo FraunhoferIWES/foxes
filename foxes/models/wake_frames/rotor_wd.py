@@ -119,7 +119,7 @@ class RotorWD(WakeFrame):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
         points : numpy.ndarray

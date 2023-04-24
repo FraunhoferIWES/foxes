@@ -42,7 +42,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
     n_grids : int
         The number of grids
     max_n_row : int
-        The maximal number of turbines per 
+        The maximal number of turbines per
         grid and row
 
     """
@@ -51,9 +51,9 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         self,
         name,
         algo,
-        min_dist, 
-        n_grids=1, 
-        n_row_max=None, 
+        min_dist,
+        n_grids=1,
+        n_row_max=None,
         max_dist=None,
         runner=None,
         **kwargs,
@@ -62,16 +62,21 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         b = algo.farm.boundary
         assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
-        
-        self._geomp = GeomRegGrids(b, min_dist=min_dist, n_grids=n_grids,
-            n_row_max=n_row_max, max_dist=max_dist)
+
+        self._geomp = GeomRegGrids(
+            b,
+            min_dist=min_dist,
+            n_grids=n_grids,
+            n_row_max=n_row_max,
+            max_dist=max_dist,
+        )
 
     def initialize(self, verbosity=1, **kwargs):
         """
         Initialize the object.
 
         Parameters
-        ---------- 
+        ----------
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
@@ -91,14 +96,15 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         self.algo.mbook.turbine_models[self._mname] = Calculator(
             in_vars=[FV.VALID, FV.P, FV.CT],
             out_vars=[FV.VALID, FV.P, FV.CT],
-            func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
-            pre_rotor=False)
+            func=lambda valid, P, ct, st_sel: (valid, P * valid, ct * valid),
+            pre_rotor=False,
+        )
 
         super().initialize(
             pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
             post_rotor_vars=[],
             verbosity=verbosity,
-            **kwargs
+            **kwargs,
         )
 
     def var_names_int(self):
@@ -209,8 +215,8 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -233,15 +239,15 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
-        
+
         super().update_problem_individual(vars_int, vars_float)
 
     def update_problem_population(self, vars_int, vars_float):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -265,7 +271,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
                 self.farm.turbines[-1].name = f"T{n0 + i}"
         if n != n0:
             self.algo.update_n_turbines()
-        
+
         super().update_problem_population(vars_int, vars_float)
 
     def opt2farm_vars_individual(self, vars_int, vars_float):
@@ -294,7 +300,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         n_pts = pts.shape[0]
         n_states = self.algo.n_states
         n_turbines = self.farm.n_turbines
-        
+
         pmi = np.min(self._geomp._pmin)
         points = np.full((n_states, n_turbines, 2), pmi, dtype=FC.DTYPE)
         if n_pts <= n_turbines:
@@ -308,11 +314,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         else:
             valid[:] = vld[None, :n_turbines]
 
-        farm_vars = {
-            FV.X: points[:, :, 0],
-            FV.Y: points[:, :, 1],
-            FV.VALID: valid
-        }
+        farm_vars = {FV.X: points[:, :, 0], FV.Y: points[:, :, 1], FV.VALID: valid}
 
         return farm_vars
 
@@ -361,7 +363,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         farm_vars = {
             FV.X: points[:, :, :, 0],
             FV.Y: points[:, :, :, 1],
-            FV.VALID: valid
+            FV.VALID: valid,
         }
 
         return farm_vars
@@ -399,7 +401,11 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
             t.xy = xy[ti]
             t.index = ti
             t.name = f"T{ti}"
-            t.models = [mname for mname in t.models if mname not in [self.name, self._mname]]
+            t.models = [
+                mname for mname in t.models if mname not in [self.name, self._mname]
+            ]
         self.algo.update_n_turbines()
 
-        return FarmOptProblem.finalize_individual(self, vars_int, vars_float, verbosity=1)
+        return FarmOptProblem.finalize_individual(
+            self, vars_int, vars_float, verbosity=1
+        )

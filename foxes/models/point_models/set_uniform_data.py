@@ -46,7 +46,7 @@ class SetUniformData(PointDataModel):
         self.data_source = data_source
         self.ovars = output_vars
         self.var2col = var2col
-        
+
         self._rpars = pd_read_pars
 
     def initialize(self, algo, verbosity=0):
@@ -89,9 +89,7 @@ class SetUniformData(PointDataModel):
             rpars = dict(index_col=0)
             rpars.update(self._rpars)
             data = PandasFileHelper().read_file(self.data_source, **rpars)
-            data = data[
-                [self.var2col.get(v, v) for v in self.ovars]
-            ].to_numpy(FC.DTYPE)
+            data = data[[self.var2col.get(v, v) for v in self.ovars]].to_numpy(FC.DTYPE)
 
         idata = super().initialize(algo, verbosity)
         idata["coords"][self.VARS] = self.ovars

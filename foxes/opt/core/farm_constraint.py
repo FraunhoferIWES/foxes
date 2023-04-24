@@ -50,7 +50,11 @@ class FarmConstraint(Constraint):
             The list of selected turbines
 
         """
-        return self.problem.sel_turbines if self._sel_turbines is None else self._sel_turbines
+        return (
+            self.problem.sel_turbines
+            if self._sel_turbines is None
+            else self._sel_turbines
+        )
 
     @property
     def n_sel_turbines(self):

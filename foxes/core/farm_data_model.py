@@ -197,7 +197,7 @@ class FarmDataModelList(FarmDataModel):
         idata = super().initialize(algo, verbosity)
 
         # done by algo.update_idata
-        #algo.update_idata(self.models, idata=idata, verbosity=verbosity)
+        # algo.update_idata(self.models, idata=idata, verbosity=verbosity)
 
         return idata
 

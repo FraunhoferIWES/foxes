@@ -47,7 +47,6 @@ class Data(Dict):
 
         self.sizes = {}
         for v, d in data.items():
-
             dim = dims[v]
 
             # remove axes of size 1, added by dask for extra loop dimensions:
@@ -79,7 +78,6 @@ class Data(Dict):
             and dims[FV.Y] == (FV.STATE, FV.TURBINE)
             and dims[FV.H] == (FV.STATE, FV.TURBINE)
         ):
-
             self[FV.TXYH] = np.zeros(
                 (self.n_states, self.n_turbines, 3), dtype=FC.DTYPE
             )

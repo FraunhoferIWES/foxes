@@ -95,10 +95,8 @@ class PandasFileHelper:
         L = len(fname)
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-
             l = len(fmt)
             if fname[L - l :] == fmt:
-
                 if fmt[:3] == "csv":
                     f = pd.read_csv
 
@@ -153,10 +151,8 @@ class PandasFileHelper:
         L = len(file_path)
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-
             l = len(fmt)
             if file_path[L - l :] == fmt:
-
                 if fmt[:3] == "csv":
                     f = out.to_csv
 
@@ -167,7 +163,6 @@ class PandasFileHelper:
                     f = out.to_netcdf
 
                 if f is not None:
-
                     pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
                     pars.update(kwargs)
 

@@ -10,7 +10,6 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-
     c = 180
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
     sfile = thisdir / "states.csv.gz"
@@ -34,7 +33,6 @@ def test():
 
     base_results = None
     for rotor, pwake, lim in cases:
-
         print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
 
         mbook = foxes.models.ModelBook()
@@ -96,6 +94,6 @@ def test():
 
             assert (chk < lim).all()
 
+
 if __name__ == "__main__":
     test()
-    

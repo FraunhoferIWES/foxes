@@ -111,7 +111,7 @@ class MultiHeightStates(States):
             State index selection via pandas loc function
         verbosity : int
             The verbosity level, 0 = silent
-            
+
         """
         if self.initialized:
             if algo is None:
@@ -270,7 +270,7 @@ class MultiHeightStates(States):
 
         """
         return self._inds
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.

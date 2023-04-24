@@ -83,12 +83,10 @@ def calc_area(r1, r2, d):
     # condition d < r1 + r2:
     sel0 = d < r1 + r2
     if np.any(sel0):
-
         # condition r1 >= r2:
         sela = r1 >= r2
         selr = sel0 & sela
         if np.any(selr):
-
             # condition d <= r1 - r2:
             selb = d <= r1 - r2
             seld = selr & selb
@@ -103,7 +101,6 @@ def calc_area(r1, r2, d):
         # condition r1 < r2:
         selr = sel0 & (~sela)
         if np.any(selr):
-
             # condition d <= r2 - r1:
             selb = d <= r2 - r1
             seld = selr & selb

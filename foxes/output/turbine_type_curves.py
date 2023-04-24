@@ -132,7 +132,6 @@ class TurbineTypeCurves(Output):
         results = algo.calc_farm()
 
         if P_max is not None:
-
             sname = f"_{type(self).__name__}_set_Pmax"
             self.mbook.turbine_models[sname] = SetFarmVars()
             self.mbook.turbine_models[sname].add_var(FV.MAX_P, P_max)
@@ -151,7 +150,6 @@ class TurbineTypeCurves(Output):
             del self.mbook.turbine_models[sname]
 
         for i, v in enumerate(vars):
-
             ax = axs[i]
             if ax is None:
                 __, ax = plt.subplots(figsize=figsize)

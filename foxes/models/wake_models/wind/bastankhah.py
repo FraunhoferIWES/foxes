@@ -123,7 +123,6 @@ class BastankhahWake(GaussianWakeModel):
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # apply selection:
             x = x[sp_sel]
             ct = ct[sp_sel]

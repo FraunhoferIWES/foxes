@@ -50,13 +50,9 @@ def clean():
 
 
 def run_tutorial(path):
-
     try:
-
         with cd(path):
-
             if os.path.isfile("README.md") or os.path.isfile("run.py"):
-
                 print("Path:", os.getcwd())
 
                 if not os.path.isfile("README.md"):
@@ -97,13 +93,11 @@ def run_tutorial(path):
             return clean()
 
     except FileNotFoundError:
-
         print(f"\nFAILED TO ENTER DIRECTORY {path}\n")
         return 1
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-i",
@@ -161,11 +155,9 @@ if __name__ == "__main__":
     dryres = []
     for w in sorted(os.walk(".")):
         for d in sorted(w[1]):
-
             tdir = os.path.join(w[0], d)
 
             if args.incopt or args.forceopt or not "optimization" in tdir:
-
                 ok = True
                 for k in excld:
                     if k in tdir:
@@ -180,9 +172,7 @@ if __name__ == "__main__":
                     ok = False
 
                 if ok:
-
                     if counter >= args.step:
-
                         if not (args.dry or args.Dry):
                             print("\nEXAMPLE", counter)
 

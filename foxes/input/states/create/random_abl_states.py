@@ -100,7 +100,6 @@ def write_random_abl_states(
     )
 
     if digits is not None:
-
         hdigits = {c: 4 for c in cols_minmax.keys()}
 
         wcol = var2col.get(FV.WEIGHT, FV.WEIGHT)

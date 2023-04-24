@@ -135,7 +135,6 @@ class QuadraticSuperposition(WakeSuperposition):
                 or (len(scaling) > 15 and scaling[14] == "_")
             )
         ):
-
             if scaling == f"source_turbine":
                 var = variable
             elif scaling == "source_turbine_amb":

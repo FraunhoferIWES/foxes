@@ -64,7 +64,7 @@ class SectorManagement(TurbineModel):
 
         self._rdata = None
         self._tdata = None
-        self._trbs  = None
+        self._trbs = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -115,7 +115,6 @@ class SectorManagement(TurbineModel):
 
         self._rcols = []
         for v in self._rvars:
-
             col_vmin = f"{v}_min"
             col_vmin = self._colmap.get(col_vmin, col_vmin)
             if col_vmin not in data.columns:

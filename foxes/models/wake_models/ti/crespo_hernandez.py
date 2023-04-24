@@ -251,7 +251,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         # calc far wake:
         if np.any(~sel):
-
             # calculate delta:
             #
             # Note the sign flip of the exponent ti[~sel]**(-0.0325)

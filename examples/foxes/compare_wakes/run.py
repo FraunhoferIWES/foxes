@@ -8,7 +8,6 @@ from foxes.utils.runners import DaskRunner
 
 
 def calc(mbook, farm, states, wakes, points, args):
-
     cks = None if args.nodask else {FV.STATE: args.chunksize}
 
     algo = foxes.algorithms.Downwind(
@@ -32,7 +31,6 @@ def calc(mbook, farm, states, wakes, points, args):
 
 
 def run_foxes(args):
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -81,14 +79,12 @@ def run_foxes(args):
     fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
 
     for wake in args.wakes:
-
         wakes = [wake] + args.ewakes
         print("Calculating:", wakes)
 
         results = calc(mbook, farm, states, wakes, points, args).reshape(nd, ny)
 
         for di, d in enumerate(args.dists_D):
-
             if nrows == 1 or ncols == 1:
                 ax = axs[di]
             else:
@@ -97,7 +93,7 @@ def run_foxes(args):
                 ax = axs[xi, yi]
 
             if args.deficit:
-                dfz = (args.ws - results[di])/args.ws
+                dfz = (args.ws - results[di]) / args.ws
                 ax.plot(ylist / D, dfz, label=wake)
                 ax.set_ylabel("WS deficit")
             else:
@@ -126,14 +122,13 @@ def run_foxes(args):
     fig, ax = plt.subplots(figsize=figsize)
 
     for wake in args.wakes:
-
         wakes = [wake] + args.ewakes
         print("Calculating:", wakes)
 
         results = calc(mbook, farm, states, wakes, points, args)
 
         if args.deficit:
-            dfz = (args.ws - results[0])/args.ws
+            dfz = (args.ws - results[0]) / args.ws
             ax.plot(xlist / D, dfz, label=wake)
             ax.set_ylabel("WS deficit")
         else:
@@ -149,7 +144,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d",
@@ -211,7 +205,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
-    parser.add_argument("-dfz", "--deficit", help="Plot the wind deficit instead of wind speed", action="store_true")
+    parser.add_argument(
+        "-dfz",
+        "--deficit",
+        help="Plot the wind deficit instead of wind speed",
+        action="store_true",
+    )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
     )
@@ -240,5 +239,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

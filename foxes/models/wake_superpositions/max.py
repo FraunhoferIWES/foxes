@@ -125,7 +125,6 @@ class MaxSuperposition(WakeSuperposition):
         odelta = wake_delta[sel_sp]
 
         if scaling is None:
-
             wake_delta[sel_sp] = np.maximum(odelta, wake_model_result)
             return wake_delta
 
@@ -142,7 +141,6 @@ class MaxSuperposition(WakeSuperposition):
                 or (len(scaling) > 15 and scaling[14] == "_")
             )
         ):
-
             if scaling == f"source_turbine":
                 var = variable
             elif scaling == "source_turbine_amb":

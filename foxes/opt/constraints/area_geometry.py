@@ -129,9 +129,9 @@ class AreaGeometryConstraint(FarmConstraint):
 
         if self.disc_inside:
             if self.D is None:
-                dists += problem_results[FV.D].to_numpy()[0, self.sel_turbines][s]/2
+                dists += problem_results[FV.D].to_numpy()[0, self.sel_turbines][s] / 2
             else:
-                dists += self.D/2
+                dists += self.D / 2
 
         return dists
 
@@ -171,9 +171,11 @@ class AreaGeometryConstraint(FarmConstraint):
 
         if self.disc_inside:
             if self.D is None:
-                dists += problem_results[FV.D].to_numpy()[None, 0, self.sel_turbines][s]/2
+                dists += (
+                    problem_results[FV.D].to_numpy()[None, 0, self.sel_turbines][s] / 2
+                )
             else:
-                dists += self.D/2
+                dists += self.D / 2
 
         return dists
 

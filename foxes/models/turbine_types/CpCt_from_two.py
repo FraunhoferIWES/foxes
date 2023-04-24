@@ -6,10 +6,11 @@ from foxes.data import parse_Pct_two_files
 from foxes.utils import PandasFileHelper
 import foxes.constants as FC
 
+
 class CpCtFromTwo(PCtFromTwo):
     """
     Calculate power and ct by interpolating
-    cp and ct from two files (or two pandas 
+    cp and ct from two files (or two pandas
     DataFrames).
 
     Parameters
@@ -54,12 +55,19 @@ class CpCtFromTwo(PCtFromTwo):
             data_cp = data_source_cp
             data_ct = data_source_ct
             pars = parameters
-        
+
         D = pars["D"]
-        A = np.pi*(D/2)**2
+        A = np.pi * (D / 2) ** 2
         ws = data_cp[col_ws_cp_file].to_numpy()
         cp = data_cp[col_cp].to_numpy()
-        data_cp["P"] = 0.5*rho*A*cp*ws**3 / FC.P_UNITS[FC.kW]
+        data_cp["P"] = 0.5 * rho * A * cp * ws**3 / FC.P_UNITS[FC.kW]
 
-        super().__init__(data_cp, data_ct, col_ws_P_file=col_ws_cp_file, col_P="P", 
-                         rho=rho, P_unit=FC.kW, **pars)
+        super().__init__(
+            data_cp,
+            data_ct,
+            col_ws_P_file=col_ws_cp_file,
+            col_P="P",
+            rho=rho,
+            P_unit=FC.kW,
+            **pars,
+        )

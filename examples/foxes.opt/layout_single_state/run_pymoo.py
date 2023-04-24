@@ -9,7 +9,6 @@ from foxes.opt.constraints import FarmBoundaryConstraint, MinDistConstraint
 from foxes.opt.objectives import MaxFarmPower
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-nt", "--n_t", help="The number of turbines", type=int, default=10
@@ -107,7 +106,6 @@ if __name__ == "__main__":
         progress_bar=False,
         verbosity=1,
     ) as runner:
-
         problem = FarmLayoutOptProblem("layout_opt", algo, runner=runner)
         problem.add_objective(MaxFarmPower(problem))
         problem.add_constraint(FarmBoundaryConstraint(problem, disc_inside=True))

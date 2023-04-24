@@ -9,6 +9,7 @@ from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
 import foxes.variables as FV
 
+
 class Algorithm(Model):
     """
     Abstract base class for algorithms.
@@ -172,27 +173,29 @@ class Algorithm(Model):
             to idata memory
         verbosity : int, optional
             The verbosity level, 0 = silent
-            
+
         """
         if idata is None and not self.initialized:
-            raise ValueError(f"Algorithm '{self.name}': update_idata called before initialization")
-        
+            raise ValueError(
+                f"Algorithm '{self.name}': update_idata called before initialization"
+            )
+
         verbosity = self.verbosity if verbosity is None else verbosity
 
         if not isinstance(models, list) and not isinstance(models, tuple):
             models = [models]
 
         for m in models:
-
             pr = False
             if m.initialized:
                 try:
                     hidata = self._idata_mem[m.name]
                 except KeyError:
-                    raise KeyError(f"Model '{m.name}' initialized but not found in idata memory")
+                    raise KeyError(
+                        f"Model '{m.name}' initialized but not found in idata memory"
+                    )
 
             else:
-
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
                 self._idata_mem[m.name] = hidata
@@ -204,7 +207,9 @@ class Algorithm(Model):
                         pr = True
                     self.update_idata(m.pre_rotor_models, idata, verbosity)
                     self.update_idata(m.post_rotor_models, idata, verbosity)
-                elif isinstance(m, FarmDataModelList) or isinstance(m, PointDataModelList):
+                elif isinstance(m, FarmDataModelList) or isinstance(
+                    m, PointDataModelList
+                ):
                     if verbosity > 1:
                         print(f"-- {m.name}: Starting sub-model initialization -- ")
                         pr = True
@@ -230,10 +235,10 @@ class Algorithm(Model):
 
         """
         return self._idata_mem
-    
+
     def update_n_turbines(self):
         """
-        Reset the number of turbines, 
+        Reset the number of turbines,
         according to self.farm
         """
         if self.n_turbines != self.farm.n_turbines:
@@ -252,24 +257,38 @@ class Algorithm(Model):
                         ok = None
                         if FV.TURBINE in d[0]:
                             i = d[0].index(FV.TURBINE)
-                            ok = (np.unique(d[1], axis=1).shape[i] == 1)
+                            ok = np.unique(d[1], axis=1).shape[i] == 1
                         newk[k] = ok
                     if ok is not None:
                         if not ok:
-                            raise ValueError(f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines")
+                            raise ValueError(
+                                f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines"
+                            )
                         if FV.TURBINE in idata["coords"]:
                             idata["coords"][FV.TURBINE] = np.arange(self.n_turbines)
                         i = d[0].index(FV.TURBINE)
                         n0 = d[1].shape[i]
                         if n0 > self.n_turbines:
-                            idata["data_vars"][dname] = (d[0], np.take(d[1], range(self.n_turbines), axis=i))
+                            idata["data_vars"][dname] = (
+                                d[0],
+                                np.take(d[1], range(self.n_turbines), axis=i),
+                            )
                         elif n0 < self.n_turbines:
-                            shp = [d[1].shape[j] if j != i else self.n_turbines-n0 for j in range(len(d[1].shape))]
+                            shp = [
+                                d[1].shape[j] if j != i else self.n_turbines - n0
+                                for j in range(len(d[1].shape))
+                            ]
                             a = np.zeros(shp, dtype=d[1].dtype)
-                            shp = [d[1].shape[j] if j != i else 1 for j in range(len(d[1].shape))]
+                            shp = [
+                                d[1].shape[j] if j != i else 1
+                                for j in range(len(d[1].shape))
+                            ]
                             a[:] = np.take(d[1], -1, axis=i).reshape(shp)
-                            idata["data_vars"][dname] = (d[0], np.append(d[1], a, axis=i))
-            
+                            idata["data_vars"][dname] = (
+                                d[0],
+                                np.append(d[1], a, axis=i),
+                            )
+
             self._idata_mem.update(newk)
 
     def get_models_data(self, idata=None):
@@ -292,7 +311,9 @@ class Algorithm(Model):
         """
         if idata is None:
             if not self.initialized:
-                raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
+                raise ValueError(
+                    f"Algorithm '{self.name}': get_models_data called before initialization"
+                )
             idata = self._idata_mem.pop(self.name)
             mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
             for mname in mnames:
@@ -357,7 +378,7 @@ class Algorithm(Model):
 
         """
         verbosity = self.verbosity if verbosity is None else verbosity
-  
+
         pr = False
         if isinstance(model, FarmController):
             if verbosity > 1:
@@ -366,7 +387,9 @@ class Algorithm(Model):
                 pr = True
             self.finalize_model(model.pre_rotor_models, verbosity)
             self.finalize_model(model.post_rotor_models, verbosity)
-        elif isinstance(model, FarmDataModelList) or isinstance(model, PointDataModelList):
+        elif isinstance(model, FarmDataModelList) or isinstance(
+            model, PointDataModelList
+        ):
             if verbosity > 1:
                 print(f"Finalizing model '{model.name}'")
                 print(f"-- {model.name}: Starting sub-model finalization -- ")
@@ -380,7 +403,7 @@ class Algorithm(Model):
             model.finalize(self, verbosity)
             if model.name in self._idata_mem:
                 del self._idata_mem[model.name]
-        
+
         if pr:
             print(f"-- {model.name}: Finished sub-model finalization -- ")
 
@@ -427,8 +450,9 @@ class Algorithm(Model):
                     return scls(*args, **kwargs)
 
         else:
-            estr = "Algorithm type '{}' is not defined, available types are \n {}".format(
-                algo_type, sorted([i.__name__ for i in allc])
+            estr = (
+                "Algorithm type '{}' is not defined, available types are \n {}".format(
+                    algo_type, sorted([i.__name__ for i in allc])
+                )
             )
             raise KeyError(estr)
-        

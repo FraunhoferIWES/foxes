@@ -8,6 +8,7 @@ from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class PCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
@@ -158,7 +159,9 @@ class PCtFile(TurbineType):
         if self.P_nominal is None:
             self.P_nominal = np.max(self.data_P) / FC.P_UNITS[self.P_unit]
             if verbosity > 0:
-                print(f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}")
+                print(
+                    f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
+                )
 
         return super().initialize(algo, verbosity)
 
@@ -193,7 +196,6 @@ class PCtFile(TurbineType):
 
         # apply air density correction:
         if self.rho is not None:
-
             # correct wind speed by air density, such
             # that in the partial load region the
             # correct value is reconstructed:
@@ -204,7 +206,6 @@ class PCtFile(TurbineType):
 
         # in yawed case, calc yaw corrected wind speed:
         if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
-
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:

@@ -37,36 +37,37 @@ class Iterative(Downwind):
     FarmWakesCalculation = FarmWakesCalculation
 
     def __init__(
-            self, 
-            *args, 
-            conv=DefaultConv(), 
-            max_its=None, 
-            conv_error=True,
-            **kwargs
-        ):
+        self, *args, conv=DefaultConv(), max_its=None, conv_error=True, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.conv = conv
         self.max_its = max_its
         self.conv_error = conv_error
 
     def _collect_farm_models(
-            self,
-            vars_to_amb,
-            calc_parameters,
-            ambient,
-        ):
+        self,
+        vars_to_amb,
+        calc_parameters,
+        ambient,
+    ):
         """
         Helper function that creates model list
         """
         # get models from Downwind algorithm:
         mlist, calc_pars = super()._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient)
+            vars_to_amb, calc_parameters, ambient
+        )
 
         # wrap the models into a loop:
-        mlist = LoopRunner(self.conv, mlist.models, max_its=self.max_its, 
-                            conv_error=self.conv_error, verbosity=self.verbosity-1)
+        mlist = LoopRunner(
+            self.conv,
+            mlist.models,
+            max_its=self.max_its,
+            conv_error=self.conv_error,
+            verbosity=self.verbosity - 1,
+        )
 
         # flag only the last model as wake relevant:
-        mlist.model_wflag[-1] = True 
+        mlist.model_wflag[-1] = True
 
         return mlist, calc_pars

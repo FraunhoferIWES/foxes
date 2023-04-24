@@ -176,20 +176,17 @@ class PartialTopHat(PartialWakesModel):
 
         sel0 = (ct > 0.0) & (x > 0.0)
         if np.any(sel0):
-
             R = mdata[self.WCOOS_R]
             r = np.zeros_like(R)
             D = fdata[FV.D]
 
             for w in self.wake_models:
-
                 wr = w.calc_wake_radius(
                     algo, mdata, fdata, states_source_turbine, x, ct
                 )
 
                 sel_sp = sel0 & (wr > R - D / 2)
                 if np.any(sel_sp):
-
                     hx = x[sel_sp]
                     hct = ct[sel_sp]
                     hwr = wr[sel_sp]
