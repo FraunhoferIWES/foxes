@@ -84,10 +84,10 @@ class ProductSuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
-        
+
         if np.max(np.abs(wake_delta)) < 1e-14:
             wake_delta[:] = 1
-        wake_delta[sel_sp] *= (1 + wake_model_result)
+        wake_delta[sel_sp] *= 1 + wake_model_result
         return wake_delta
 
     def calc_final_wake_delta(

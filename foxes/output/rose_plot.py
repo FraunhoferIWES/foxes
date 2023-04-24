@@ -27,7 +27,6 @@ class RosePlotOutput(Output):
     """
 
     def __init__(self, results):
-
         dims = list(results.dims.keys())
         if dims[1] == FV.TURBINE:
             self._rtype = FV.TURBINE
@@ -332,7 +331,6 @@ class StatesRosePlotOutput(RosePlotOutput):
     """
 
     def __init__(self, states, point, mbook=None, ws_var=FV.AMB_REWS):
-
         farm = WindFarm()
         farm.add_turbine(
             Turbine(

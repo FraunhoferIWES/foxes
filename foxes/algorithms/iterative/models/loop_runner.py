@@ -41,19 +41,22 @@ class LoopRunner(FarmDataModelList):
         The verbosity level, 0 = silent
 
     """
+
     def __init__(
-            self, 
-            conv, 
-            models=[], 
-            model_wflag=None, 
-            max_its=None, 
-            conv_error=True,
-            verbosity=0
-        ):
+        self,
+        conv,
+        models=[],
+        model_wflag=None,
+        max_its=None,
+        conv_error=True,
+        verbosity=0,
+    ):
         super().__init__(models=models)
         self.conv = conv
-        self.verbosity=verbosity
-        self.model_wflag = [False for m in models] if model_wflag is None else model_wflag
+        self.verbosity = verbosity
+        self.model_wflag = (
+            [False for m in models] if model_wflag is None else model_wflag
+        )
         self.max_its = max_its
         self.conv_error = conv_error
 
@@ -101,7 +104,6 @@ class LoopRunner(FarmDataModelList):
         it = 0
         max_its = algo.n_turbines + 1 if self.max_its is None else self.max_its
         while it < max_its:
-
             if self.verbosity > 0:
                 print(f"\n{self.name}: Running iteration {it} (max_its = {max_its})\n")
 
@@ -109,7 +111,7 @@ class LoopRunner(FarmDataModelList):
             if fdata0 is None:
                 results = super().calculate(algo, mdata, fdata, parameters)
                 fdata.update(results)
-            
+
             # only run wake relevant models after first iteration:
             else:
                 for mi, m in enumerate(self.models):
@@ -117,14 +119,16 @@ class LoopRunner(FarmDataModelList):
                         results = m.calculate(algo, mdata, fdata, **parameters[mi])
                         fdata.update(results)
             del results
-            
+
             if self.conv.check_converged(self, fdata0, fdata, verbosity=self.verbosity):
                 break
             else:
                 fdata0 = deepcopy(fdata)
                 it += 1
-        
+
         if it >= max_its and self.conv_error:
-            raise ValueError(f"{self.name}: Maximal numer of iterations {max_its} reached, not converging.")
-        
+            raise ValueError(
+                f"{self.name}: Maximal numer of iterations {max_its} reached, not converging."
+            )
+
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -2,6 +2,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
+
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
@@ -57,7 +58,9 @@ class PointWakesCalculation(PointDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.pvars = algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
+        self.pvars = (
+            algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
+        )
 
         idata = super().initialize(algo, verbosity)
         if self.emodels is not None:
@@ -122,7 +125,6 @@ class PointWakesCalculation(PointDataModel):
             del hdeltas
 
         for oi in range(n_order):
-
             o = torder[:, oi]
             wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, o, points)
 

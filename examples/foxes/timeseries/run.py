@@ -8,7 +8,6 @@ from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     cks = None if args.nodask else {FV.STATE: args.chunksize}
 
     mbook = foxes.models.ModelBook()
@@ -89,7 +88,9 @@ def run_foxes(args):
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
     turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
@@ -106,8 +107,8 @@ def run_foxes(args):
     ax = o.plot_map(FV.P, cmap="inferno", figsize=(6, 7))
     plt.show()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -175,7 +176,9 @@ if __name__ == "__main__":
         help="The timestep of the input timeseries or data in minutes",
         default=60 * 24 * 365,  # default is one year
     )
-    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     args = parser.parse_args()
 
     # set timestep for debugging
@@ -186,5 +189,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

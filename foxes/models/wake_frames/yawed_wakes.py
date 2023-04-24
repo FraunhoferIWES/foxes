@@ -124,7 +124,9 @@ class YawedWakes(WakeFrame):
 
         # get gamma:
         gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
+        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][
+            :, None
+        ]
         gamma *= np.pi / 180
 
         # get k:
@@ -137,7 +139,6 @@ class YawedWakes(WakeFrame):
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
         if np.any(sp_sel):
-
             # prepare:
             n_sp_sel = np.sum(sp_sel)
             ydef = np.zeros((n_sp_sel,), dtype=FC.DTYPE)
@@ -148,7 +149,6 @@ class YawedWakes(WakeFrame):
 
             # near wake:
             if np.any(near):
-
                 # collect data:
                 delta = self.model.get_data(PorteAgelModel.DELTA_NEAR, mdata)
 
@@ -157,7 +157,6 @@ class YawedWakes(WakeFrame):
 
             # far wake:
             if np.any(far):
-
                 # collect data:
                 delta = self.model.get_data(PorteAgelModel.DELTA_FAR, mdata)
 
@@ -221,20 +220,23 @@ class YawedWakes(WakeFrame):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
         points : numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        points = self.base_frame.get_centreline_points(algo, mdata, fdata, 
-                    states_source_turbine, x)
+        points = self.base_frame.get_centreline_points(
+            algo, mdata, fdata, states_source_turbine, x
+        )
 
         nx = np.zeros_like(points)
         nx[:, 0] = points[:, 1] - points[:, 0]
         nx[:, -1] = points[:, -1] - points[:, -2]
-        nx[:, 1:-1] = 0.5*(points[:, 1:-1] - points[:, :-2]) + 0.5*(points[:, 2:] - points[:, 1:-1])
+        nx[:, 1:-1] = 0.5 * (points[:, 1:-1] - points[:, :-2]) + 0.5 * (
+            points[:, 2:] - points[:, 1:-1]
+        )
         nx /= np.linalg.norm(nx, axis=-1)[:, :, None]
 
         nz = np.zeros_like(nx)
@@ -246,7 +248,7 @@ class YawedWakes(WakeFrame):
         self._update_y(mdata, fdata, states_source_turbine, x, y)
 
         points += y[:, :, None] * ny
-        
+
         return points
 
     def finalize(self, algo, verbosity=0):

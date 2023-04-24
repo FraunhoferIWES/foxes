@@ -64,7 +64,9 @@ class PopStates(States):
         self._update_idata(algo, idata)
 
         if not self.states.name in algo._idata_mem:
-            raise KeyError(f"States idata '{self.states.name}' not found in algo idata memory")
+            raise KeyError(
+                f"States idata '{self.states.name}' not found in algo idata memory"
+            )
         else:
             idata0 = algo._idata_mem[self.states.name]
 

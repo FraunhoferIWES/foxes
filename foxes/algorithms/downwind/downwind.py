@@ -69,7 +69,7 @@ class Downwind(Algorithm):
     FarmWakesCalculation = dm.FarmWakesCalculation
     PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
     SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
-    
+
     def __init__(
         self,
         mbook,
@@ -141,7 +141,7 @@ class Downwind(Algorithm):
             )
         self.print(deco)
         self.print()
-    
+
     def init_states(self):
         """
         Initialize states, if needed.
@@ -152,10 +152,10 @@ class Downwind(Algorithm):
 
     def initialize(self):
         """
-        Initializes the algorithm.          
+        Initializes the algorithm.
         """
         self.print(f"\nInitializing algorithm '{self.name}'")
-        super().initialize()           
+        super().initialize()
 
         self.init_states()
 
@@ -169,11 +169,11 @@ class Downwind(Algorithm):
         self.update_idata(mdls)
 
     def _collect_farm_models(
-            self,
-            vars_to_amb,
-            calc_parameters,
-            ambient,
-        ):
+        self,
+        vars_to_amb,
+        calc_parameters,
+        ambient,
+    ):
         """
         Helper function that creates model list
         """
@@ -277,7 +277,8 @@ class Downwind(Algorithm):
 
         # collect models:
         mlist, calc_pars = self._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient)
+            vars_to_amb, calc_parameters, ambient
+        )
 
         # initialize models and get input model data:
         self.update_idata(mlist)
@@ -313,13 +314,13 @@ class Downwind(Algorithm):
         return farm_results
 
     def _collect_point_models(
-            self,
-            vars,
-            vars_to_amb,
-            calc_parameters,
-            point_models,
-            ambient,
-        ):
+        self,
+        vars,
+        vars_to_amb,
+        calc_parameters,
+        point_models,
+        ambient,
+    ):
         """
         Helper function that creates model list
         """
@@ -434,7 +435,8 @@ class Downwind(Algorithm):
 
         # collect models:
         mlist, calc_pars = self._collect_point_models(
-            vars, vars_to_amb, calc_parameters, point_models, ambient)
+            vars, vars_to_amb, calc_parameters, point_models, ambient
+        )
 
         # initialize models and get input model data:
         self.update_idata(mlist)
@@ -515,7 +517,7 @@ class Downwind(Algorithm):
             self.wake_frame,
             self.partial_wakes_model,
         ] + self.wake_models
-        
+
         for m in mdls:
             self.finalize_model(m)
 

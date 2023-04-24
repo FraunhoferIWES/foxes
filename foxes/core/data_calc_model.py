@@ -11,7 +11,6 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-
 class DataCalcModel(Model):
     """
     Abstract base class for models with
@@ -75,7 +74,6 @@ class DataCalcModel(Model):
         # reconstruct original data:
         data = []
         for hvars in dvars:
-
             v2l = {v: lvars.index(v) for v in hvars if v in lvars}
             v2e = {v: evars.index(v) for v in hvars if v in evars}
 
@@ -173,7 +171,9 @@ class DataCalcModel(Model):
         """
         # check:
         if not self.initialized:
-            raise ValueError(f"DataCalcModel '{self.name}': run_calculation called for uninitialized model")
+            raise ValueError(
+                f"DataCalcModel '{self.name}': run_calculation called for uninitialized model"
+            )
 
         # prepare:
         loopd = set(loop_dims)
@@ -187,7 +187,6 @@ class DataCalcModel(Model):
         edims = []
         dvars = []
         for ds in data:
-
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
             ldims += [ds[v].dims for v in hvarsl]
@@ -249,9 +248,7 @@ class DataCalcModel(Model):
         )
 
         # reorganize results Dataset:
-        results = (
-            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS)
-        )
+        results = results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS)
 
         if DaskRunner.is_distributed() and len(ProgressBar.active):
             progress(results.persist())

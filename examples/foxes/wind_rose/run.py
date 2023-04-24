@@ -8,7 +8,6 @@ from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     cks = None if args.nodask else {FV.STATE: args.chunksize}
     if args.calc_mean:
         cks[FV.POINT] = 4000
@@ -81,7 +80,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -152,5 +150,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

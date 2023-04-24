@@ -44,7 +44,6 @@ class FarmLayoutOutput(Output):
     def __init__(
         self, farm, farm_results=None, from_results=False, results_state=None, D=None
     ):
-
         self.farm = farm
         self.fres = farm_results
         self.from_res = from_results
@@ -175,11 +174,12 @@ class FarmLayoutOutput(Output):
         D = self.D
         x = None
         if self.farm.n_turbines:
-
             if normalize_D and D is None:
                 if self.from_res:
                     if self.fres[FV.D].min() != self.fres[FV.D].max():
-                        raise ValueError(f"Expecting uniform D, found {self.fres[FV.D]}")
+                        raise ValueError(
+                            f"Expecting uniform D, found {self.fres[FV.D]}"
+                        )
                     D = self.fres[FV.D][0]
                 else:
                     D = None

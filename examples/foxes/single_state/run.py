@@ -6,7 +6,6 @@ import foxes
 import foxes.variables as FV
 
 if __name__ == "__main__":
-
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -50,7 +49,9 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     args = parser.parse_args()
 
     # create model book
@@ -95,7 +96,7 @@ if __name__ == "__main__":
     # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
-    
+
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
@@ -133,7 +134,9 @@ if __name__ == "__main__":
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
     turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
@@ -155,8 +158,6 @@ if __name__ == "__main__":
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(
-        args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
-    )
+    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
     fig = next(g)
     plt.show()

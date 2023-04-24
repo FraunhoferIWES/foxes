@@ -5,6 +5,7 @@ from iwopy import Problem
 
 import foxes.constants as FC
 
+
 class GeomRegGrid(Problem):
     """
     A regular grid within a boundary geometry.
@@ -41,13 +42,13 @@ class GeomRegGrid(Problem):
     """
 
     def __init__(
-            self, 
-            boundary, 
-            n_turbines,
-            min_dist, 
-            max_dist=None,
-            D=None,
-        ):
+        self,
+        boundary,
+        n_turbines,
+        min_dist,
+        max_dist=None,
+        D=None,
+    ):
         super().__init__(name="geom_reg_grid")
 
         self.boundary = boundary
@@ -76,11 +77,14 @@ class GeomRegGrid(Problem):
 
         pmin = self.boundary.p_min()
         pmax = self.boundary.p_max()
-        self._pc = 0.5*(pmin + pmax)
+        self._pc = 0.5 * (pmin + pmax)
         self._diag = np.linalg.norm(pmax - pmin)
         self.max_dist = self._diag if self.max_dist is None else self.max_dist
-        self._nrow = int(np.maximum(self._diag/self.min_dist, np.sqrt(self.n_turbines)+0.5)) + 3
-        
+        self._nrow = (
+            int(np.maximum(self._diag / self.min_dist, np.sqrt(self.n_turbines) + 0.5))
+            + 3
+        )
+
         if verbosity > 0:
             print(f"Grid data:")
             print(f"  pmin        = {pmin}")
@@ -102,8 +106,7 @@ class GeomRegGrid(Problem):
             The names of the float variables
 
         """
-        return list(np.array(
-            [self._SX, self._SY, self._DX, self._DY, self._ALPHA]))
+        return list(np.array([self._SX, self._SY, self._DX, self._DY, self._ALPHA]))
 
     def initial_values_float(self):
         """
@@ -151,7 +154,7 @@ class GeomRegGrid(Problem):
         vals = np.zeros(5, dtype=FC.DTYPE)
         vals[:2] = 0.5
         vals[2:4] = self.max_dist
-        vals[4] = 90.
+        vals[4] = 90.0
         return vals
 
     def apply_individual(self, vars_int, vars_float):
@@ -171,7 +174,7 @@ class GeomRegGrid(Problem):
             The results of the variable application
             to the problem
 
-        """       
+        """
         sx, sy, dx, dy, alpha = vars_float
 
         a = np.deg2rad(alpha)
@@ -179,25 +182,28 @@ class GeomRegGrid(Problem):
         nay = np.stack([-np.sin(a), np.cos(a)], axis=-1)
 
         pts = (
-            self._pc[None, None, :] +
-            (np.arange(self._nrow)[:, None, None] - (self._nrow-1)/2 + sx)*dx*nax[None, None, :] +
-            (np.arange(self._nrow)[None, :, None] - (self._nrow-1)/2 + sy)*dy*nay[None, None, :]
+            self._pc[None, None, :]
+            + (np.arange(self._nrow)[:, None, None] - (self._nrow - 1) / 2 + sx)
+            * dx
+            * nax[None, None, :]
+            + (np.arange(self._nrow)[None, :, None] - (self._nrow - 1) / 2 + sy)
+            * dy
+            * nay[None, None, :]
         )
         pts = pts.reshape(self._nrow**2, 2)
 
         if self.D is None:
             valid = self.boundary.points_inside(pts)
         else:
-            valid= (
-                self.boundary.points_inside(pts) &
-                (self.boundary.points_distance(pts) >= self.D / 2)
+            valid = self.boundary.points_inside(pts) & (
+                self.boundary.points_distance(pts) >= self.D / 2
             )
 
         nvl = np.sum(valid)
         if nvl >= self.n_turbines:
-            return pts[valid][:self.n_turbines], np.ones(self.n_turbines, dtype=bool)
+            return pts[valid][: self.n_turbines], np.ones(self.n_turbines, dtype=bool)
         else:
-            qts = np.append(pts[valid], pts[~valid][:(self.n_turbines-nvl)], axis=0)
+            qts = np.append(pts[valid], pts[~valid][: (self.n_turbines - nvl)], axis=0)
             vld = np.zeros(self.n_turbines, dtype=bool)
             vld[:nvl] = True
             return qts, vld
@@ -227,24 +233,35 @@ class GeomRegGrid(Problem):
         dx = vars_float[:, 2]
         dy = vars_float[:, 3]
         alpha = vars_float[:, 4]
-        
+
         a = np.deg2rad(alpha)
         nax = np.stack([np.cos(a), np.sin(a)], axis=-1)
         nay = np.stack([-np.sin(a), np.cos(a)], axis=-1)
 
         pts = (
-            self._pc[None, None, None, :] +
-            (np.arange(self._nrow)[None, :, None, None] - (self._nrow-1)/2 + sx[:, None, None, None])*dx[:, None, None, None]*nax[:, None, None, :] +
-            (np.arange(self._nrow)[None, None, :, None] - (self._nrow-1)/2 + sy[:, None, None, None])*dy[:, None, None, None]*nay[:, None, None, :]
+            self._pc[None, None, None, :]
+            + (
+                np.arange(self._nrow)[None, :, None, None]
+                - (self._nrow - 1) / 2
+                + sx[:, None, None, None]
+            )
+            * dx[:, None, None, None]
+            * nax[:, None, None, :]
+            + (
+                np.arange(self._nrow)[None, None, :, None]
+                - (self._nrow - 1) / 2
+                + sy[:, None, None, None]
+            )
+            * dy[:, None, None, None]
+            * nay[:, None, None, :]
         )
-        pts = pts.reshape(n_pop*self._nrow**2, 2)
+        pts = pts.reshape(n_pop * self._nrow**2, 2)
 
         if self.D is None:
             valid = self.boundary.points_inside(pts)
         else:
-            valid= (
-                self.boundary.points_inside(pts) &
-                (self.boundary.points_distance(pts) >= self.D / 2)
+            valid = self.boundary.points_inside(pts) & (
+                self.boundary.points_distance(pts) >= self.D / 2
             )
         valid = valid.reshape(n_pop, self._nrow**2)
         pts = pts.reshape(n_pop, self._nrow**2, 2)
@@ -254,15 +271,21 @@ class GeomRegGrid(Problem):
         vld = np.zeros((n_pop, self.n_turbines), dtype=bool)
         for pi in range(n_pop):
             if nvl[pi] >= self.n_turbines:
-                qts[pi] = pts[pi, valid[pi]][:self.n_turbines]
+                qts[pi] = pts[pi, valid[pi]][: self.n_turbines]
                 vld[pi] = np.ones(self.n_turbines, dtype=bool)
             else:
-                qts[pi] = np.append(pts[pi, valid[pi]], pts[pi, ~valid[pi]][:(self.n_turbines-nvl[pi])], axis=0)
-                vld[pi, :nvl[pi]] = True
+                qts[pi] = np.append(
+                    pts[pi, valid[pi]],
+                    pts[pi, ~valid[pi]][: (self.n_turbines - nvl[pi])],
+                    axis=0,
+                )
+                vld[pi, : nvl[pi]] = True
 
         return qts, vld
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
+    def get_fig(
+        self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs
+    ):
         """
         Return plotly figure axis.
 
@@ -280,7 +303,7 @@ class GeomRegGrid(Problem):
             Draw points as circles with diameter self.D
         bars : dict, optional
             The boundary plot arguments
-        
+
         Returns
         -------
         ax : pyplot.Axis
@@ -289,7 +312,7 @@ class GeomRegGrid(Problem):
         """
         if ax is None:
             __, ax = plt.subplots()
-        
+
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
         self.boundary.add_to_figure(ax, **hbargs)
@@ -301,7 +324,9 @@ class GeomRegGrid(Problem):
                 ax.scatter(xy[:, 0], xy[:, 1], color="orange")
             else:
                 for x, y in xy:
-                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
+                    ax.add_patch(
+                        plt.Circle((x, y), self.D / 2, color="blue", fill=True)
+                    )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")

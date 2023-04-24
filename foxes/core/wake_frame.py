@@ -7,6 +7,7 @@ from .model import Model
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -91,26 +92,28 @@ class WakeFrame(Model):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
         points : numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        raise NotImplementedError(f"Wake frame '{self.name}': Centreline points requested but not implemented.")
-    
+        raise NotImplementedError(
+            f"Wake frame '{self.name}': Centreline points requested but not implemented."
+        )
+
     def calc_centreline_integral(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            states_source_turbine,
-            variables,
-            x,
-            dx,
-            **ipars,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        states_source_turbine,
+        variables,
+        x,
+        dx,
+        **ipars,
+    ):
         """
         Integrates variables along the centreline.
 
@@ -128,7 +131,7 @@ class WakeFrame(Model):
         variables : list of str
             The variables to be integrated
         x : numpy.ndarray
-            The wake frame x coordinates of the upper integral bounds, 
+            The wake frame x coordinates of the upper integral bounds,
             shape: (n_states, n_points)
         dx : float
             The step size of the integral
@@ -147,25 +150,24 @@ class WakeFrame(Model):
         n_vars = len(vrs)
 
         # calc evaluation points:
-        xmin = 0.
+        xmin = 0.0
         xmax = np.max(x)
-        n_steps = int((xmax - xmin)/dx)
-        if xmin + n_steps*dx < xmax:
+        n_steps = int((xmax - xmin) / dx)
+        if xmin + n_steps * dx < xmax:
             n_steps += 1
         n_ix = n_steps + 1
-        xs = np.arange(xmin, xmin+n_ix*dx, dx)
+        xs = np.arange(xmin, xmin + n_ix * dx, dx)
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
-        pts = self.get_centreline_points(algo, mdata, fdata, states_source_turbine, xpts)
+        pts = self.get_centreline_points(
+            algo, mdata, fdata, states_source_turbine, xpts
+        )
 
         # run ambient calculation:
         pdata = {FV.POINTS: pts}
         pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
         pdata.update(
-            {
-                v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE)
-                for v in vrs
-            }
+            {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
         )
         pdims.update({v: (FV.STATE, FV.POINT) for v in vrs})
         pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
@@ -191,19 +193,25 @@ class WakeFrame(Model):
             res = wcalc.calculate(algo, mdata, fdata, pdata)
             pdata.update(res)
             del wcalc, res
-        
+
         # collect integration results:
         iresults = np.zeros((n_states, n_ix, n_vars), dtype=FC.DTYPE)
         for vi, v in enumerate(variables):
             for i in range(n_steps):
-                iresults[:, i+1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx 
+                iresults[:, i + 1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx
 
         # interpolate to x of interest:
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
-        qts = qts.reshape(n_states*n_points, 2)
-        results = interpn((np.arange(n_states), xs), iresults, qts, bounds_error=False, 
-                            fill_value=0., **ipars)
+        qts = qts.reshape(n_states * n_points, 2)
+        results = interpn(
+            (np.arange(n_states), xs),
+            iresults,
+            qts,
+            bounds_error=False,
+            fill_value=0.0,
+            **ipars,
+        )
 
         return results.reshape(n_states, n_points, n_vars)

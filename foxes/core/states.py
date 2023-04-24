@@ -107,7 +107,7 @@ class States(PointDataModel):
 
         """
         return [FV.WS, FV.WD, FV.TI, FV.RHO]
-    
+
     def __add__(self, s):
         if isinstance(s, list):
             return ExtendedStates(self, s)
@@ -285,7 +285,7 @@ class ExtendedStates(States):
             The verbosity level
 
         """
-        self.pmodels.finalize(algo,  verbosity)
+        self.pmodels.finalize(algo, verbosity)
         super().finalize(algo, verbosity)
 
     def __add__(self, m):

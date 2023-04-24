@@ -10,7 +10,6 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-
     c = 500
     cpath = thisdir / "flappy"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
@@ -26,7 +25,6 @@ def test():
     ck = {FV.STATE: c}
 
     for i, (wakes, rotor, pwake) in enumerate(cases):
-
         print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")
 
         mbook = foxes.models.ModelBook()

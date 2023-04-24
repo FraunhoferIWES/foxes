@@ -6,9 +6,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 
-
 class ShearedProfile(VerticalProfile):
-
     def input_vars(self):
         """
         The input variables needed for the profile
@@ -20,7 +18,6 @@ class ShearedProfile(VerticalProfile):
             The variable names
         """
         return [FV.WS, FV.H, FV.SHEAR]
-
 
     def calculate(self, data, heights):
         """

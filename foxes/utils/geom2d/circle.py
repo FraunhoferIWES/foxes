@@ -144,7 +144,6 @@ class Circle(AreaGeometry):
 
 
 if __name__ == "__main__":
-
     centre = np.array([3.0, 4.0])
     radius = 2.5
     N = 500

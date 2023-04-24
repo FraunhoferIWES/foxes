@@ -10,7 +10,6 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-
     print(thisdir)
 
     c = 2000

@@ -10,10 +10,4 @@ kW = "kW"
 MW = "MW"
 GW = "GW"
 TW = "TW"
-P_UNITS = {
-    W: 1.0,
-    kW: 1.e3,
-    MW: 1.e6,
-    GW: 1.e9,
-    TW: 1.e12
-}
+P_UNITS = {W: 1.0, kW: 1.0e3, MW: 1.0e6, GW: 1.0e9, TW: 1.0e12}

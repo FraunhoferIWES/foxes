@@ -171,7 +171,6 @@ class HalfPlane(AreaGeometry):
 
 
 if __name__ == "__main__":
-
     from .circle import Circle
 
     p0 = [4, 5]

@@ -21,7 +21,6 @@ class ResultsWriter(Output):
     """
 
     def __init__(self, farm_results=None, data=None):
-
         if farm_results is not None and data is None:
             self.data = farm_results.to_dataframe().reset_index()
             self.data[FV.TNAME] = farm_results[FV.TNAME].to_numpy()[

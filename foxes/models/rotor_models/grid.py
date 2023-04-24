@@ -85,11 +85,9 @@ class GridRotor(RotorModel):
         self.dpoints[:, 2] = y.reshape(N)
 
         if self.reduce:
-
             self.weights = np.zeros((self.n, self.n), dtype=FC.DTYPE)
             for i in range(0, self.n):
                 for j in range(0, self.n):
-
                     d = delta / self.nint
                     hx = [
                         x[i, j] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)
@@ -110,7 +108,6 @@ class GridRotor(RotorModel):
             self.weights /= np.sum(self.weights)
 
         else:
-
             self.dpoints[:, 1] = x.reshape(N)
             self.dpoints[:, 2] = y.reshape(N)
             self.weights = np.ones(N, dtype=FC.DTYPE) / N

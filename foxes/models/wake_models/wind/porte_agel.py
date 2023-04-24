@@ -123,7 +123,6 @@ class PorteAgelModel:
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # get ws:
             ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ws[:] = fdata[FV.REWS][st_sel][:, None]
@@ -166,7 +165,6 @@ class PorteAgelModel:
             near = x < x0
             out[self.NEAR] = near
             if np.any(near):
-
                 # apply filter:
                 wsn = ws[near]
                 ctn = ct[near]
@@ -195,7 +193,6 @@ class PorteAgelModel:
             # calc far wake data:
             far = ~near
             if np.any(far):
-
                 # apply filter:
                 ws = ws[far]
                 ct = ct[far]
@@ -404,10 +401,11 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         # calculate model data:
         if not self.model.has_data(mdata, states_source_turbine, x):
-
             # get gamma:
             gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
+            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[
+                st_sel
+            ][:, None]
             gamma *= np.pi / 180
 
             # get k:
@@ -422,7 +420,6 @@ class PorteAgelWake(DistSlicedWakeModel):
         n_sp_sel = np.sum(sp_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
         if np.any(sp_sel):
-
             # apply filter:
             yz = yz[sp_sel]
 
@@ -432,7 +429,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # near wake:
             if np.any(near):
-
                 # collect data:
                 ampl = self.model.get_data(PorteAgelModel.AMPL_NEAR, mdata)
                 r_pc = self.model.get_data(PorteAgelModel.R_PC, mdata)
@@ -452,7 +448,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # far wake:
             if np.any(far):
-
                 # apply filter:
                 yz = yz[far]
 

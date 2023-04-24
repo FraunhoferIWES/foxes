@@ -214,7 +214,6 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-
             wd = rpoint_results[FV.WD]
             ws = rpoint_results[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
@@ -223,7 +222,6 @@ class RotorModel(FarmDataModel):
         wd = None
         vdone = []
         for v in self.calc_vars:
-
             if v not in fdata:
                 fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
 
@@ -245,7 +243,6 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-
             if stsel is None:
                 yaw = fdata[FV.YAW].copy()
             else:
@@ -254,7 +251,6 @@ class RotorModel(FarmDataModel):
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
-
                 if v == FV.REWS:
                     rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
                     self._set_res(fdata, v, rews, stsel)
@@ -262,7 +258,6 @@ class RotorModel(FarmDataModel):
                     vdone.append(v)
 
                 elif v == FV.REWS2:
-
                     # For highly inhomogeneous wind fields
                     # and multiple rotor points some of the uv
                     # vectors may have negative projections onto the
@@ -283,7 +278,6 @@ class RotorModel(FarmDataModel):
                     vdone.append(v)
 
                 elif v == FV.REWS3:
-
                     # For highly inhomogeneous wind fields
                     # and multiple rotor points some of the uv
                     # vectors may have negative projections onto the

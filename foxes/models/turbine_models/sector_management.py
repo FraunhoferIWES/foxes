@@ -64,6 +64,7 @@ class SectorManagement(TurbineModel):
 
         self._rdata = None
         self._tdata = None
+        self._trbs = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -97,23 +98,23 @@ class SectorManagement(TurbineModel):
                 print(f"{self.name}: Reading file {self.source}")
             data = PandasFileHelper.read_file(self.source, **self._rpars)
 
-        if self._col_i is not None and self._col_t is None:
-            data.reset_index(inplace=True)
-        elif self._col_i is None and self._col_t is not None:
-            tnames = algo.farm.turbine_names
-            inds = [tnames.index(name) for name in data[self._col_t]]
-            data[FV.TURBINE] = inds
-            self._col_i = FV.TURBINE
-        else:
-            raise KeyError(
-                f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
-            )
-        self._trbs = data[self._col_i].to_numpy()
+        if self._trbs is None:
+            if self._col_i is not None and self._col_t is None:
+                data.reset_index(inplace=True)
+            elif self._col_i is None and self._col_t is not None:
+                tnames = algo.farm.turbine_names
+                inds = [tnames.index(name) for name in data[self._col_t]]
+                data[FV.TURBINE] = inds
+                self._col_i = FV.TURBINE
+            else:
+                raise KeyError(
+                    f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
+                )
+            self._trbs = data[self._col_i].to_numpy()
         n_trbs = len(self._trbs)
 
         self._rcols = []
         for v in self._rvars:
-
             col_vmin = f"{v}_min"
             col_vmin = self._colmap.get(col_vmin, col_vmin)
             if col_vmin not in data.columns:

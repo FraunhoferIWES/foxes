@@ -84,7 +84,9 @@ class StatesTable(States):
         self.states_loc = states_loc
 
         if self.states_loc is not None and self.states_sel is not None:
-            raise ValueError(f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one")
+            raise ValueError(
+                f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one"
+            )
 
         self._weights = None
         self._N = None
@@ -102,7 +104,7 @@ class StatesTable(States):
             State index selection via pandas loc function
         verbosity : int
             The verbosity level, 0 = silent
-            
+
         """
         if self.initialized:
             if algo is None:
@@ -112,7 +114,7 @@ class StatesTable(States):
             self.finalize(algo, verbosity)
         self.states_sel = states_sel
         self.states_loc = states_loc
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -216,9 +218,10 @@ class StatesTable(States):
         idata["coords"][self.VARS] = self._tvars
         idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
 
-        algo.update_idata(list(self._profiles.values()),
-            idata=idata, verbosity=verbosity)
-            
+        algo.update_idata(
+            list(self._profiles.values()), idata=idata, verbosity=verbosity
+        )
+
         return idata
 
     def size(self):
@@ -244,7 +247,7 @@ class StatesTable(States):
 
         """
         return self._inds
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.

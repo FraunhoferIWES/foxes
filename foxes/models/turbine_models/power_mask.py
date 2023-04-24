@@ -86,15 +86,16 @@ class PowerMask(TurbineModel):
         for t in algo.farm_controller.turbine_types:
             Pnom = FC.DTYPE(t.P_nominal)
             if np.isnan(Pnom):
-                raise ValueError(f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'")
+                raise ValueError(
+                    f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'"
+                )
             self._P_rated.append(Pnom)
         self._P_rated = np.array(self._P_rated, dtype=FC.DTYPE)
-        
+
         return super().initialize(algo, verbosity)
 
     @classmethod
     def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=100):
-
         # select power entries for which this is active:
         P = data[FV.P]
         sel = ~np.isnan(max_P) & (
@@ -102,7 +103,6 @@ class PowerMask(TurbineModel):
             | ((max_P > rated_P) & (P > rated_P - P_lim))
         )
         if np.any(sel):
-
             # apply selection:
             max_P = max_P[sel]
             ws = data[var_ws][sel]
@@ -168,7 +168,7 @@ class PowerMask(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        
+
         # prepare:
         max_P = fdata[FV.MAX_P]
         rated_P = self._P_rated[None, :]

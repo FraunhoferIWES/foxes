@@ -102,10 +102,9 @@ class FlowPlots2D(Output):
         hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
 
-        
-        if invert_axis == 'x':
+        if invert_axis == "x":
             hax.invert_xaxis()
-        elif invert_axis == 'y':
+        elif invert_axis == "y":
             hax.invert_yaxis()
 
         if add_bar:
@@ -303,7 +302,7 @@ class FlowPlots2D(Output):
         if normalize_xy is not None:
             x_pos /= normalize_xy
             y_pos /= normalize_xy
-    
+
         if title is None:
             title = f"States mean, z =  {int(np.round(z_pos))} m"
 
@@ -789,7 +788,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
-            invert_axis='x',
+            invert_axis="x",
         )
 
         return out
@@ -981,7 +980,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
             ttl = f"State {s}" if title is None else title
             ttl += f", z =  {int(np.round(z_pos))} m"
 
@@ -1018,7 +1016,7 @@ class FlowPlots2D(Output):
         self,
         var,
         resolution,
-        x_direction=270.,
+        x_direction=270.0,
         xmin=None,
         zmin=0.0,
         xmax=None,
@@ -1223,7 +1221,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", y =  {int(np.round(y_pos))} m"
@@ -1261,7 +1258,7 @@ class FlowPlots2D(Output):
         self,
         var,
         resolution,
-        x_direction=270.,
+        x_direction=270.0,
         ymin=None,
         zmin=0.0,
         ymax=None,
@@ -1374,7 +1371,7 @@ class FlowPlots2D(Output):
         # prepare:
         n_states = self.algo.n_states
         n_turbines = self.algo.n_turbines
-        n_x = np.append(wd2uv(x_direction), [0.0], axis=0) ## -180 to get [1,0,0]
+        n_x = np.append(wd2uv(x_direction), [0.0], axis=0)  ## -180 to get [1,0,0]
         n_z = np.array([0.0, 0.0, 1.0])
         n_y = np.cross(n_z, n_x)
 
@@ -1465,7 +1462,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", x =  {int(np.round(x_pos))} m"
@@ -1495,7 +1491,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv=quiv,
-                invert_axis='x',
+                invert_axis="x",
             )
 
             yield out

@@ -144,7 +144,6 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-
             wd = rpoint_results[FV.WD]
             ws = rpoint_results[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
@@ -153,7 +152,6 @@ class CentreRotor(RotorModel):
         wd = None
         vdone = []
         for v in self.calc_vars:
-
             if v not in fdata:
                 fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
 
@@ -174,7 +172,6 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-
             if stsel is None:
                 yaw = fdata[FV.YAW]
             else:
@@ -183,7 +180,6 @@ class CentreRotor(RotorModel):
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
-
                 if v == FV.REWS or v == FV.REWS2 or v == FV.REWS3:
                     rews = wsp[:, :, 0]
                     self._set_res(fdata, v, rews, stsel)

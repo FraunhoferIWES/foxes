@@ -176,7 +176,6 @@ class FarmVarObjective(FarmObjective):
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
 
-
         return np.array([data], dtype=np.float64)
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
@@ -262,7 +261,6 @@ class MaxFarmPower(FarmVarObjective):
     """
 
     def __init__(self, problem, name="maximize_power", **kwargs):
-
         if "scale" in kwargs:
             scale = kwargs.pop("scale")
         else:
@@ -285,6 +283,7 @@ class MaxFarmPower(FarmVarObjective):
             **kwargs,
         )
 
+
 class MinimalMaxTI(FarmVarObjective):
     """
     Minimize the maximal turbine TI
@@ -301,8 +300,7 @@ class MinimalMaxTI(FarmVarObjective):
     """
 
     def __init__(self, problem, name="minimize_TI", **kwargs):
-
-        scale = kwargs.pop("scale") if "scale" in kwargs else 1.
+        scale = kwargs.pop("scale") if "scale" in kwargs else 1.0
         super().__init__(
             problem,
             name,

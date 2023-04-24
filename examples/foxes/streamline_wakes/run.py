@@ -9,7 +9,6 @@ from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     cks = (
         None
         if args.nodask
@@ -83,7 +82,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-f",
@@ -155,5 +153,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

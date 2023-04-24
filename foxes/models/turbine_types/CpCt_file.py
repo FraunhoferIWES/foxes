@@ -5,6 +5,7 @@ from .PCt_file import PCtFile
 from foxes.data import parse_Pct_file_name
 from foxes.utils import PandasFileHelper
 
+
 class CpCtFile(PCtFile):
     """
     Calculate power and ct by interpolating
@@ -43,11 +44,11 @@ class CpCtFile(PCtFile):
         else:
             data = data_source
             pars = parameters
-        
+
         D = pars["D"]
-        A = np.pi*(D/2)**2
+        A = np.pi * (D / 2) ** 2
         ws = data[col_ws].to_numpy()
         cp = data[col_cp].to_numpy()
-        data["P"] = 0.5*rho*A*cp*ws**3
+        data["P"] = 0.5 * rho * A * cp * ws**3
 
         super().__init__(data, col_ws=col_ws, col_P="P", rho=rho, **pars)

@@ -23,7 +23,7 @@ class FarmVarsProblem(FarmOptProblem):
             key: sub-model str, value: var names as list of str
         post_rotor_vars : list of str or dict
             The post_rotor farm variables. If dict, then
-            key: sub-model str, value: var names as list of str   
+            key: sub-model str, value: var names as list of str
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
@@ -44,7 +44,6 @@ class FarmVarsProblem(FarmOptProblem):
         cnt = 0
         for src, pre in zip((self._vars_pre, self._vars_post), (True, False)):
             for mname, vrs in src.items():
-
                 if mname in self.algo.mbook.turbine_models:
                     m = self.algo.mbook.turbine_models[mname]
                     if not isinstance(m, SetFarmVars):
@@ -52,7 +51,9 @@ class FarmVarsProblem(FarmOptProblem):
                             f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' already exists in model book, and is not of type SetFarmVars"
                         )
                     elif m.pre_rotor != pre:
-                        raise ValueError(f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre}")
+                        raise ValueError(
+                            f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre}"
+                        )
                 else:
                     self.algo.mbook.turbine_models[mname] = SetFarmVars(pre_rotor=pre)
 
@@ -67,7 +68,9 @@ class FarmVarsProblem(FarmOptProblem):
                     )
                 cnt += len(vrs)
         if not cnt:
-            raise ValueError(f"Problem '{self.name}': Neither pre_rotor_vars not post_rotor_vars containing variables")
+            raise ValueError(
+                f"Problem '{self.name}': Neither pre_rotor_vars not post_rotor_vars containing variables"
+            )
 
         super().initialize(verbosity=verbosity, **kwargs)
 
@@ -125,8 +128,8 @@ class FarmVarsProblem(FarmOptProblem):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -160,14 +163,16 @@ class FarmVarsProblem(FarmOptProblem):
                         model.add_var(v, data)
 
         if len(fvars):
-            raise KeyError(f"Problem '{self.name}': Too many farm vars from opt2farm_vars_individual: {list(fvars.keys())}")
-        
+            raise KeyError(
+                f"Problem '{self.name}': Too many farm vars from opt2farm_vars_individual: {list(fvars.keys())}"
+            )
+
     def update_problem_population(self, vars_int, vars_float):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -206,4 +211,6 @@ class FarmVarsProblem(FarmOptProblem):
                         del data
 
         if len(fvars):
-            raise KeyError(f"Problem '{self.name}': Too many farm vars from opt2farm_vars_population: {list(fvars.keys())}")
+            raise KeyError(
+                f"Problem '{self.name}': Too many farm vars from opt2farm_vars_population: {list(fvars.keys())}"
+            )
