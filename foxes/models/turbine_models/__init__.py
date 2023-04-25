@@ -8,3 +8,4 @@ from .table_factors import TableFactors
 from .yaw2yawm import YAW2YAWM
 from .yawm2yaw import YAWM2YAW
 from .calculator import Calculator
+from .rotor_centre_calc import RotorCentreCalc

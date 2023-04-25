@@ -14,8 +14,6 @@ class Data(Dict):
 
     Parameters
     ----------
-    name : str
-        The data container name
     data : dict
         The initial data to be stored
     dims : dict
@@ -24,7 +22,9 @@ class Data(Dict):
     loop_dims : array_like of str
         List of the loop dimensions during xarray's
         `apply_ufunc` calculations
-
+    name : str
+        The data container name
+        
     Attributes
     ----------
     dims : dict
@@ -38,7 +38,7 @@ class Data(Dict):
 
     """
 
-    def __init__(self, data, dims, loop_dims):
+    def __init__(self, data, dims, loop_dims, name="data"):
         super().__init__(name="data")
 
         self.update(data)

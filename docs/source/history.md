@@ -259,6 +259,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Models:
   - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
+  - New turbine model: `RotorCentreCalc`, calculates data at rotor centre, irrespective of rotor model
 - Bug fixes:
   - Bug fixed that caused problems when restarting the `SectorManagement` turbine model, e.g. for flow plots
   
