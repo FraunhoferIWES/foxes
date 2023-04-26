@@ -106,12 +106,18 @@ class RotorCentreCalc(TurbineModel):
 
         """
         # prepare point data:
+        pdata = {FV.POINTS: fdata[FV.TXYH]}
+        dims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        for v in self.calc_vars.values():
+            pdata[v] = np.zeros_like(pdata[FV.POINTS][:, :, 0])
+            dims[v] = (FV.STATE, FV.POINT)
         pdata = Data(
             name=f"{self.name}_pdata",
-            data={FV.POINTS: fdata[FV.TXYH]},
-            dims={FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)},
+            data=pdata,
+            dims=dims,
             loop_dims=[FV.STATE, FV.POINT]
         )
+        del dims
 
         # run ambient calculation:
         res = algo.states.calculate(algo, mdata, fdata, pdata)
@@ -122,7 +128,7 @@ class RotorCentreCalc(TurbineModel):
 
         # run wake calculation:
         res = self._wcalc.calculate(algo, mdata, fdata, pdata)
-
+        
         # extract results:
         out = {v: fdata[v] for v in self.calc_vars.keys()}
         for v in out.keys():
