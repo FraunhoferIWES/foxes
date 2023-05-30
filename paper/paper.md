@@ -36,6 +36,16 @@ bibliography: paper.bib
 
 # Summary
 
+The `Farm Evaluation and eXtended yield Evaluation Software (foxes)` is a Python package that 
+calculates wind farm results such as power production or wind turbine wake effects. The meteorological 
+input data can be a timeseries or statistical data like wind speed histograms, wind roses or any other 
+distribution. Uniform inflow fields are supported as well as horizontal profiles and three dimensional
+flow fields from other sources, for example wind fields from mesoscale weather models or wind
+atlases [@newa]. Typical applications are wind farm optimization, e.g. layout optimization or wake steering;
+wind farm pre and post construction analyses; wake model studies, comparison and validation; and wind farm simulations invoking complex model interactions.
+
+# Statement of need
+
 The amount of electrical energy that wind farms are able to extract from the kinetic energy
 of the wind naturally depends on the meteorological conditions at the site. In particular,
 wind speed and wind direction are decisive quantities, and in general those are time and space
@@ -45,21 +55,11 @@ increase turbulence at the rotor. Additinally, the rotor height, its size as wel
 related to the wind turbine model are crucial parameters. When it comes to wind farm production 
 analysis, the fast evaluation of the annual energy production for long-term time series of 
 meteorological conditions is required, and such data often contains many ten thousand entries. 
+
 In addition, wake effects from neighbouring wind farms and wind farm clusters need to be 
 considered, such that realistic offshore scenarios can include as many as thousands of wind
 turbines. Hence scalability is an issue of central importance for modern numerical wind farm 
-and wake modelling approaches. Furthermore, optimization of wind farms and wind farm control 
-parameters are often based on genetic or other heuristic algorithms. For such methods the 
-vectorized evaluation of optimization variables is the key for fast and efficient calculations.
-
-# Statement of need
-
-The `Farm Evaluation and eXtended yield Evaluation Software (foxes)` is a Python package that 
-calculates wind farm results such as power prudiction or wind turbine wake effects. The meteorological 
-input data can be a timeseries or statistical data like wind speed histograms, wind roses or any other 
-distribution. Uniform inflow fields are supported as well as horizontal profiles and three dimensional
-flow fields from other sources, for example wind fields from mesoscale weather models or wind
-atlases [@newa].
+and wake modelling approaches. 
 
 `foxes` is build upon the idea of fast vectorized evaluation of the input states, making use 
 of the `dask` package [@dask] via the `xarray` package [@xarray]. This means that in general, it 
@@ -70,9 +70,9 @@ the latter for some models.
 
 `foxes` was designed to be very modular when it comes to modelling aspects of wind farm 
 calculations. Users can combine various model types and easily add new models, such that a 
-realistic representation of the wind farm's behaviour can be achieved. Any wind farm calculation 
-variable in `foxes` can be subjected to optimization via the `iwopy` package [@iwopy], with 
-support for vectorized evaluation of optimization variables.
+realistic representation of the wind farm's behaviour can be achieved. Such models include, among others, rotor discretization models, wake models and turbine models such as wind sector management, turbine derating or power boost.
+
+Any wind farm calculation variable in `foxes` can be subjected to optimization via the `iwopy` package [@iwopy], with support for vectorized evaluation of optimization variables. This is crucial for the fast evaluation of genetic or other heuristic algorithms, for example for the purpose of solving the turbine positioning optimization problem or finding optimal wind farm control parameters.
 
 Other related open source Python packages that follow a similar agenda, but with differences in 
 methods, models and architecture, are `pywake` [@pywake] and `floris` [@floris]. The `foxes` package 
