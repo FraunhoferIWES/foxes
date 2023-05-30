@@ -43,6 +43,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         Model parameter
     e3 : float
         Model parameter
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
@@ -67,6 +69,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     near_wake_D : float
         The near wake distance in units of D,
         calculated from TI and ct if None
+    k_var : str
+        The variable name for k
 
     """
 
@@ -83,6 +87,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
+        k_var=FV.K
     ):
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
@@ -94,12 +99,14 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.use_ambti = use_ambti
         self.sbeta_factor = sbeta_factor
         self.near_wake_D = near_wake_D
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={getattr(self, FV.K)}, sp={self.superpositions[FV.TI]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -166,9 +173,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         D = fdata[FV.D][st_sel][:, None]
 
         # get k:
-        k = self.get_data(FV.K, fdata, st_sel)
-        if isinstance(k, np.ndarray):
-            k = k[:, None]
+        k = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
 
         # calculate:
         sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))
