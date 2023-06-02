@@ -1,10 +1,10 @@
 from abc import abstractmethod, ABCMeta
-from copy import deepcopy
 import dask
 from dask.distributed import Client, LocalCluster
 from dask.distributed import get_client
 from dask.diagnostics import ProgressBar
 
+import foxes.constants as FC
 
 class Runner(metaclass=ABCMeta):
     """

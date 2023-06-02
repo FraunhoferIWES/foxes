@@ -93,7 +93,7 @@ class SetUniformData(PointDataModel):
 
         idata = super().initialize(algo, verbosity)
         idata["coords"][self.VARS] = self.ovars
-        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data)
+        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
         return idata
 

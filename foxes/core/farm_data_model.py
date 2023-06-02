@@ -1,8 +1,7 @@
 from abc import abstractmethod
 
 from .data_calc_model import DataCalcModel
-import foxes.variables as FV
-
+import foxes.constants as FC
 
 class FarmDataModel(DataCalcModel):
     """
@@ -99,8 +98,8 @@ class FarmDataModel(DataCalcModel):
             algo,
             *data,
             out_vars=out_vars,
-            loop_dims=[FV.STATE],
-            out_core_vars=[FV.TURBINE, FV.VARS],
+            loop_dims=[FC.STATE],
+            out_core_vars=[FC.TURBINE, FC.VARS],
             **calc_pars,
         )
 

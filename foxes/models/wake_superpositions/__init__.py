@@ -1,3 +1,6 @@
+"""
+Wake superposition models.
+"""
 from .linear import LinearSuperposition
 from .quadratic import QuadraticSuperposition
 from .max import MaxSuperposition

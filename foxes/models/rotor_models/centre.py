@@ -162,7 +162,7 @@ class CentreRotor(RotorModel):
                 vdone.append(v)
 
             elif v == FV.WS:
-                self._set_res(fdata, v, ws, stsel)
+                self._set_res(fdata, v, ws[:, :, 0], stsel)
                 del ws
                 vdone.append(v)
         del uv, wd

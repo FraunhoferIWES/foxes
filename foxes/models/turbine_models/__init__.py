@@ -1,3 +1,6 @@
+"""
+Turbine models.
+"""
 from .set_XYHD import SetXYHD
 from .kTI_model import kTI
 from .set_farm_vars import SetFarmVars
@@ -8,3 +11,4 @@ from .table_factors import TableFactors
 from .yaw2yawm import YAW2YAWM
 from .yawm2yaw import YAWM2YAW
 from .calculator import Calculator
+from .rotor_centre_calc import RotorCentreCalc

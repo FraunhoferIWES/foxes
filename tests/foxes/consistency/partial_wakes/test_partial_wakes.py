@@ -4,7 +4,7 @@ from dask.diagnostics import ProgressBar
 
 import foxes
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -29,7 +29,7 @@ def test():
         ("centre", "grid36", 0.016),
     ]
 
-    ck = {FV.STATE: c}
+    ck = {FC.STATE: c}
 
     base_results = None
     for rotor, pwake, lim in cases:

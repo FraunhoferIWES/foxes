@@ -107,6 +107,12 @@ class ModelBook:
             yaw2yawm=fm.turbine_models.YAW2YAWM(),
             yawm2yaw=fm.turbine_models.YAWM2YAW(),
         )
+        self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc({
+            f"{FV.WD}_HH": FV.WD,
+            f"{FV.WS}_HH": FV.WS,
+            f"{FV.TI}_HH": FV.TI,
+            f"{FV.RHO}_HH": FV.RHO,
+        })
 
         self.farm_models = Dict(
             name="farm_models",

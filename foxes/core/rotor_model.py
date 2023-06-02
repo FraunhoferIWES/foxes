@@ -7,7 +7,6 @@ from .farm_data_model import FarmDataModel
 from .data import Data
 from foxes.utils import wd2uv, uv2wd
 
-
 class RotorModel(FarmDataModel):
     """
     Abstract base class of rotor models.
@@ -352,7 +351,7 @@ class RotorModel(FarmDataModel):
         """
 
         if rpoints is None:
-            rpoints = mdata.get(FV.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
+            rpoints = mdata.get(FC.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
         if states_turbine is not None:
             n_states = mdata.n_states
             stsel = (np.arange(n_states), states_turbine)
@@ -361,24 +360,24 @@ class RotorModel(FarmDataModel):
         n_points = n_turbines * n_rpoints
 
         if weights is None:
-            weights = mdata.get(FV.RWEIGHTS, self.rotor_point_weights())
+            weights = mdata.get(FC.RWEIGHTS, self.rotor_point_weights())
 
         if store_rpoints:
-            mdata[FV.RPOINTS] = rpoints
-            mdata.dims[FV.RPOINTS] = (FV.STATE, FV.TURBINE, FV.RPOINT, FV.XYH)
+            mdata[FC.RPOINTS] = rpoints
+            mdata.dims[FC.RPOINTS] = (FC.STATE, FC.TURBINE, FC.RPOINT, FV.XYH)
         if store_rweights:
-            mdata[FV.RWEIGHTS] = weights
-            mdata.dims[FV.RWEIGHTS] = (FV.RPOINT,)
+            mdata[FC.RWEIGHTS] = weights
+            mdata.dims[FC.RWEIGHTS] = (FC.RPOINT,)
 
         svars = algo.states.output_point_vars(algo)
         points = rpoints.reshape(n_states, n_points, 3)
-        pdata = {FV.POINTS: points}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata = {FC.POINTS: points}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdata.update(
             {v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars}
         )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
+        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         del pdims, points
 
         sres = algo.states.calculate(algo, mdata, fdata, pdata)
@@ -390,7 +389,7 @@ class RotorModel(FarmDataModel):
             rpoint_results[v] = pdata[v].reshape(n_states, n_turbines, n_rpoints)
 
         if store_amb_res:
-            mdata[FV.AMB_RPOINT_RESULTS] = rpoint_results
+            mdata[FC.AMB_RPOINT_RESULTS] = rpoint_results
 
         self.eval_rpoint_results(
             algo,

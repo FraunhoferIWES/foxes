@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import foxes.variables as FV
+import foxes.constants as FC
 from .output import Output
 
 
@@ -56,8 +56,8 @@ class StateTurbineMap(Output):
             The plot axis
 
         """
-        turbines = self.results[FV.TURBINE].to_numpy()
-        states = self.results[FV.STATE].to_numpy()
+        turbines = self.results[FC.TURBINE].to_numpy()
+        states = self.results[FC.STATE].to_numpy()
 
         if ax is None:
             __, ax = plt.subplots(figsize=figsize)

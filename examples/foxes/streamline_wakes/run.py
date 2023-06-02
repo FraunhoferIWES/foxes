@@ -5,6 +5,7 @@ import numpy as np
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
@@ -12,7 +13,7 @@ def run_foxes(args):
     cks = (
         None
         if args.nodask
-        else {FV.STATE: args.chunksize, "point": args.chunksize_points}
+        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
     )
 
     mbook = foxes.models.ModelBook()

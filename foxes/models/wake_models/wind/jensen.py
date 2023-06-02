@@ -21,23 +21,29 @@ class JensenWake(TopHatWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
     k : float, optional
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
+    k_var : str
+        The variable name for k
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999):
+    def __init__(self, superposition, k=None, ct_max=0.9999, k_var=FV.K):
         super().__init__(superpositions={FV.WS: superposition}, ct_max=ct_max)
 
-        setattr(self, FV.K, k)
+        self.k_var = k_var
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -100,7 +106,7 @@ class JensenWake(TopHatWakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         R = fdata[FV.D][st_sel][:, None] / 2
-        k = self.get_data(FV.K, fdata, st_sel)
+        k = self.get_data(self.k_var, fdata, st_sel)
 
         if isinstance(k, np.ndarray):
             k = k[:, None]

@@ -94,14 +94,14 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         self._turbine = deepcopy(self.farm.turbines[-1])
 
         self.algo.mbook.turbine_models[self._mname] = Calculator(
-            in_vars=[FV.VALID, FV.P, FV.CT],
-            out_vars=[FV.VALID, FV.P, FV.CT],
+            in_vars=[FC.VALID, FV.P, FV.CT],
+            out_vars=[FC.VALID, FV.P, FV.CT],
             func=lambda valid, P, ct, st_sel: (valid, P * valid, ct * valid),
             pre_rotor=False,
         )
 
         super().initialize(
-            pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
+            pre_rotor_vars=[FV.X, FV.Y, FC.VALID],
             post_rotor_vars=[],
             verbosity=verbosity,
             **kwargs,
@@ -314,7 +314,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         else:
             valid[:] = vld[None, :n_turbines]
 
-        farm_vars = {FV.X: points[:, :, 0], FV.Y: points[:, :, 1], FV.VALID: valid}
+        farm_vars = {FV.X: points[:, :, 0], FV.Y: points[:, :, 1], FC.VALID: valid}
 
         return farm_vars
 
@@ -363,7 +363,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         farm_vars = {
             FV.X: points[:, :, :, 0],
             FV.Y: points[:, :, :, 1],
-            FV.VALID: valid,
+            FC.VALID: valid,
         }
 
         return farm_vars

@@ -248,9 +248,9 @@ class PartialTopHat(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        weights = self.get_data(FV.RWEIGHTS, mdata)
-        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FV.RPOINTS, mdata)
+        weights = self.get_data(FC.RWEIGHTS, mdata)
+        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
+        rpoints = self.get_data(FC.RPOINTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wres = {}
@@ -269,7 +269,7 @@ class PartialTopHat(PartialWakesModel):
             if v in wake_deltas:
                 wres[v] += wdel[v]
                 if update_amb_res:
-                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

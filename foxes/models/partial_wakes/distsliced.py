@@ -236,9 +236,9 @@ class PartialDistSlicedWake(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FV.RPOINTS, mdata)
-        rweights = self.get_data(FV.RWEIGHTS, mdata)
+        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
+        rpoints = self.get_data(FC.RPOINTS, mdata)
+        rweights = self.get_data(FC.RWEIGHTS, mdata)
         wweights = self.grotor.rotor_point_weights()
         n_wpoints = self.grotor.n_rotor_points()
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
@@ -285,7 +285,7 @@ class PartialDistSlicedWake(PartialWakesModel):
             if v in wake_deltas:
                 wres[v] += wdel[v]
                 if update_amb_res:
-                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(
