@@ -1,8 +1,7 @@
 import numpy as np
 
 from foxes.opt.core.farm_objective import FarmObjective
-import foxes.variables as FV
-
+import foxes.constants as FC
 
 class MaxNTurbines(FarmObjective):
     """
@@ -15,14 +14,14 @@ class MaxNTurbines(FarmObjective):
     name : str
         The name of the objective function
     check_valid : bool
-        Check FV.VALID variable before counting
+        Check FC.VALID variable before counting
     kwargs : dict, optional
         Additional parameters for `FarmObjective`
 
     Attributes
     ----------
     check_valid : bool
-        Check FV.VALID variable before counting
+        Check FC.VALID variable before counting
 
     """
 
@@ -85,8 +84,8 @@ class MaxNTurbines(FarmObjective):
             The component values, shape: (n_sel_components,)
 
         """
-        if FV.VALID in problem_results and self.check_valid:
-            vld = np.sum(problem_results[FV.VALID].to_numpy(), axis=1)
+        if FC.VALID in problem_results and self.check_valid:
+            vld = np.sum(problem_results[FC.VALID].to_numpy(), axis=1)
             if np.min(vld) != np.max(vld):
                 raise ValueError(
                     f"Objective '{self.name}': Number of valid turbines is state dependend, counting impossible"
@@ -122,7 +121,7 @@ class MaxNTurbines(FarmObjective):
             n_states = problem_results["n_org_states"].to_numpy()
             n_turbines = self.farm.n_turbines
             vld = (
-                problem_results[FV.VALID]
+                problem_results[FC.VALID]
                 .to_numpy()
                 .reshape(n_pop, n_states, n_turbines)
             )

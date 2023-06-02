@@ -65,8 +65,8 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         self._turbine = deepcopy(self.farm.turbines[-1])
 
         self.algo.mbook.turbine_models[self._mname] = Calculator(
-            in_vars=[FV.VALID, FV.P, FV.CT],
-            out_vars=[FV.VALID, FV.P, FV.CT],
+            in_vars=[FC.VALID, FV.P, FV.CT],
+            out_vars=[FC.VALID, FV.P, FV.CT],
             func=lambda valid, P, ct, st_sel: (valid, P * valid, ct * valid),
             pre_rotor=False,
         )
@@ -107,9 +107,9 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         self.algo.n_turbines = self._nturb
 
         super().initialize(
-            pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
+            pre_rotor_vars=[FV.X, FV.Y, FC.VALID],
             post_rotor_vars=[],
-            drop_vars=[FV.STATE, FV.TURBINE],
+            drop_vars=[FC.STATE, FC.TURBINE],
             verbosity=verbosity,
             **kwargs,
         )
@@ -229,7 +229,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         farm_vars = {
             FV.X: pts[:, :, 0],
             FV.Y: pts[:, :, 1],
-            FV.VALID: valid.reshape(n_states, nx * ny).astype(FC.DTYPE),
+            FC.VALID: valid.reshape(n_states, nx * ny).astype(FC.DTYPE),
         }
 
         return farm_vars
@@ -298,7 +298,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         farm_vars = {
             FV.X: qts[:, :, :, 0],
             FV.Y: qts[:, :, :, 1],
-            FV.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE),
+            FC.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE),
         }
 
         return farm_vars
@@ -328,7 +328,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         """
         farm_vars = self.opt2farm_vars_individual(vars_int, vars_float)
-        sel = np.where(farm_vars[FV.VALID][0])[0]
+        sel = np.where(farm_vars[FC.VALID][0])[0]
         x = farm_vars[FV.X][0, sel]
         y = farm_vars[FV.Y][0, sel]
 

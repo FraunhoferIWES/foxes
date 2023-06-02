@@ -4,7 +4,7 @@ import pandas as pd
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 class SectorManagement(TurbineModel):
     """
@@ -104,8 +104,8 @@ class SectorManagement(TurbineModel):
             elif self._col_i is None and self._col_t is not None:
                 tnames = algo.farm.turbine_names
                 inds = [tnames.index(name) for name in data[self._col_t]]
-                data[FV.TURBINE] = inds
-                self._col_i = FV.TURBINE
+                data[FC.TURBINE] = inds
+                self._col_i = FC.TURBINE
             else:
                 raise KeyError(
                     f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"

@@ -57,7 +57,7 @@ class PopStates(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.STATE0 = self.var(FV.STATE + "0")
+        self.STATE0 = self.var(FC.STATE + "0")
         self.SMAP = self.var("SMAP")
 
         idata = super().initialize(algo, verbosity)
@@ -71,20 +71,20 @@ class PopStates(States):
             idata0 = algo._idata_mem[self.states.name]
 
         for cname, coord in idata0["coords"].items():
-            if cname != FV.STATE:
+            if cname != FC.STATE:
                 idata["coords"][cname] = coord
             else:
                 idata["coords"][self.STATE0] = coord
 
         for dname, (dims0, data0) in idata0["data_vars"].items():
             if dname != FV.WEIGHT:
-                hdims = tuple([d if d != FV.STATE else self.STATE0 for d in dims0])
+                hdims = tuple([d if d != FC.STATE else self.STATE0 for d in dims0])
                 idata["data_vars"][dname] = (hdims, data0)
 
         smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
         smap[:] = np.arange(self.states.size())[None, :]
         smap = smap.reshape(self.size())
-        idata["data_vars"][self.SMAP] = ((FV.STATE,), smap)
+        idata["data_vars"][self.SMAP] = ((FC.STATE,), smap)
 
         found = False
         for dname, (dims0, data0) in idata["data_vars"].items():
@@ -181,7 +181,7 @@ class PopStates(States):
                 pass
             elif dms[0] == self.STATE0:
                 hdata[dname] = data[smap]
-                hdims[dname] = tuple([FV.STATE] + list(dms)[1:])
+                hdims[dname] = tuple([FC.STATE] + list(dms)[1:])
             elif self.STATE0 in dms:
                 raise ValueError(
                     f"States '{self.name}': Found states variable not at dimension 0 for mdata entry '{dname}': {dms}"

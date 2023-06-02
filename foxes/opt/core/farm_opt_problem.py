@@ -1,7 +1,7 @@
 from iwopy import Problem
 
 from foxes.utils.runners import DefaultRunner
-import foxes.variables as FV
+import foxes.constants as FC
 from .pop_states import PopStates
 
 
@@ -197,7 +197,7 @@ class FarmOptProblem(Problem):
                 if keep:
                     self.algo.keep_models.append(mname)
 
-    def initialize(self, drop_vars=[FV.STATE], exclude=None, verbosity=1):
+    def initialize(self, drop_vars=[FC.STATE], exclude=None, verbosity=1):
         """
         Initialize the object.
 

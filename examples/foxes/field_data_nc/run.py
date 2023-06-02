@@ -2,18 +2,17 @@ import time
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-import xarray as xr
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
-
 
 def run_foxes(args, states):
     cks = (
         None
         if args.nodask
-        else {FV.STATE: args.chunksize, "point": args.chunksize_points}
+        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
     )
 
     mbook = foxes.models.ModelBook()

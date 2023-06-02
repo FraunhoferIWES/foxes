@@ -216,7 +216,7 @@ class StatesTable(States):
         idata = super().initialize(algo, verbosity)
         self._update_idata(algo, idata)
         idata["coords"][self.VARS] = self._tvars
-        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
+        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
 
         algo.update_idata(
             list(self._profiles.values()), idata=idata, verbosity=verbosity
@@ -307,7 +307,7 @@ class StatesTable(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
 
         for i, v in enumerate(self._tvars):
             pdata[v][:] = mdata[self.DATA][:, i, None]

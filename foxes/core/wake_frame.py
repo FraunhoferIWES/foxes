@@ -7,7 +7,6 @@ from .model import Model
 import foxes.constants as FC
 import foxes.variables as FV
 
-
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -164,13 +163,13 @@ class WakeFrame(Model):
         )
 
         # run ambient calculation:
-        pdata = {FV.POINTS: pts}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata = {FC.POINTS: pts}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdata.update(
             {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
         )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in vrs})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        pdims.update({v: (FC.STATE, FC.POINT) for v in vrs})
+        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
         amb2var = algo.SetAmbPointResults()

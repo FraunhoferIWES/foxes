@@ -4,8 +4,6 @@ from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
-import foxes.variables as FV
-
 
 class FarmController(FarmDataModel):
     """
@@ -214,7 +212,7 @@ class FarmController(FarmDataModel):
         Private helper function for gathering model parameters.
         """
         if from_data:
-            s = mdata[FV.TMODEL_SELS]
+            s = mdata[FC.TMODEL_SELS]
         else:
             s = self.turbine_model_sels
         if st_sel is not None:
@@ -262,9 +260,9 @@ class FarmController(FarmDataModel):
         # algo.update_idata([self.pre_rotor_models, self.post_rotor_models],
         #    idata=idata, verbosity=verbosity)
 
-        idata["coords"][FV.TMODELS] = self.turbine_model_names
-        idata["data_vars"][FV.TMODEL_SELS] = (
-            (FV.STATE, FV.TURBINE, FV.TMODELS),
+        idata["coords"][FC.TMODELS] = self.turbine_model_names
+        idata["data_vars"][FC.TMODEL_SELS] = (
+            (FC.STATE, FC.TURBINE, FC.TMODELS),
             self.turbine_model_sels,
         )
 
@@ -324,7 +322,7 @@ class FarmController(FarmDataModel):
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
         pars = self.__get_pars(algo, s.models, "calc", mdata, st_sel, from_data=True)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
-        self.turbine_model_sels = mdata[FV.TMODEL_SELS]
+        self.turbine_model_sels = mdata[FC.TMODEL_SELS]
         return res
 
     def finalize(self, algo, verbosity=0):

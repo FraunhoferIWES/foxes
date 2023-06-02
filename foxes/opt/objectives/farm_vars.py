@@ -3,7 +3,7 @@ import xarray as xr
 
 from foxes.opt.core.farm_objective import FarmObjective
 from foxes import variables as FV
-
+import foxes.constants as FC
 
 class FarmVarObjective(FarmObjective):
     """
@@ -65,7 +65,7 @@ class FarmVarObjective(FarmObjective):
         self.minimize = minimize
         self.deps = deps
         self.scale = scale
-        self.rules = {FV.STATE: contract_states, FV.TURBINE: contract_turbines}
+        self.rules = {FC.STATE: contract_states, FC.TURBINE: contract_turbines}
 
     def initialize(self, verbosity=0):
         """
@@ -202,13 +202,13 @@ class FarmVarObjective(FarmObjective):
         """
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
-        n_turbines = problem_results.dims[FV.TURBINE]
+        n_turbines = problem_results.dims[FC.TURBINE]
         data = (
             problem_results[self.variable]
             .to_numpy()
             .reshape(n_pop, n_states, n_turbines)
         )
-        data = xr.DataArray(data, dims=(FV.POP, FV.STATE, FV.TURBINE))
+        data = xr.DataArray(data, dims=(FC.POP, FC.STATE, FC.TURBINE))
 
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]

@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils import wd2uv, uv2wd
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
@@ -28,13 +29,13 @@ class RosePlotOutput(Output):
 
     def __init__(self, results):
         dims = list(results.dims.keys())
-        if dims[1] == FV.TURBINE:
-            self._rtype = FV.TURBINE
-        elif dims[1] == FV.POINT:
-            self._rtype = FV.POINT
+        if dims[1] == FC.TURBINE:
+            self._rtype = FC.TURBINE
+        elif dims[1] == FC.POINT:
+            self._rtype = FC.POINT
         else:
             raise KeyError(
-                f"Results dimension 1 is neither '{FV.TURBINE}' nor '{FV.POINT}': dims = {results.dims}"
+                f"Results dimension 1 is neither '{FC.TURBINE}' nor '{FC.POINT}': dims = {results.dims}"
             )
 
         self.results = results.to_dataframe()
@@ -147,7 +148,7 @@ class RosePlotOutput(Output):
         data[FV.WEIGHT] *= 100
         data = data.rename(columns={FV.WEIGHT: "frequency"})
 
-        el = turbine if self._rtype == FV.TURBINE else point
+        el = turbine if self._rtype == FC.TURBINE else point
         if el is None:
             data = data.groupby(level=0).mean()
         else:
