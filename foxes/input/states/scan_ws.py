@@ -69,7 +69,7 @@ class ScanWS(States):
 
         idata = super().initialize(algo, verbosity)
         self._update_idata(algo, idata)
-        idata["data_vars"][self.WS] = ((FV.STATE,), self._wsl)
+        idata["data_vars"][self.WS] = ((FC.STATE,), self._wsl)
 
         return idata
 

@@ -6,7 +6,6 @@ import foxes
 import foxes.variables as FV
 
 if __name__ == "__main__":
-
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -23,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
-        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=800.0
     )
     parser.add_argument(
         "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
@@ -35,10 +34,13 @@ if __name__ == "__main__":
         default="NREL-5MW-D126-H90.csv",
     )
     parser.add_argument(
+        "-m", "--tmodels", help="The turbine models", default=["kTI_K1", "kTI_K2"], nargs="+"
+    )
+    parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_quadratic", "CrespoHernandez_max"],
+        default=["B_K1", "CH_K2"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -46,17 +48,24 @@ if __name__ == "__main__":
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
-    parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
-    )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument("-it", "--iterative", help="Use iterative algorithm", action="store_true")
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     args = parser.parse_args()
 
     # create model book
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
+    mbook.turbine_models["kTI_K1"] = foxes.models.turbine_models.kTI(kTI=0.2, k_var="K1", ti_var=FV.AMB_TI)
+    mbook.turbine_models["kTI_K2"] = foxes.models.turbine_models.kTI(kTI=0.4, k_var="K2", ti_var=FV.AMB_TI)
+    mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.BastankhahWake(
+        superposition="quadratic", k_var="K1"
+    )
+    mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
+        superposition="max", k_var="K2", use_ambti=False
+    )
 
     # create states
     states = foxes.input.states.SingleStateStates(
@@ -95,7 +104,7 @@ if __name__ == "__main__":
     # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
-    
+
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
@@ -133,7 +142,9 @@ if __name__ == "__main__":
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
     turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
@@ -155,8 +166,6 @@ if __name__ == "__main__":
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(
-        args.var, resolution=10, x_direction=np.mod(args.wd, 360.0)
-    )
+    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
     fig = next(g)
     plt.show()

@@ -5,11 +5,10 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
-
 def calc(args, rotor, sdata, pwake, cks):
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -62,8 +61,7 @@ def calc(args, rotor, sdata, pwake, cks):
 
 
 def run_foxes(args):
-
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     ws = args.ws
     var = args.var
@@ -87,9 +85,7 @@ def run_foxes(args):
 
     fig, ax = plt.subplots(figsize=(10, 4))
     if len(args.rotors) == 1:
-
         for pwake in args.pwakes:
-
             farm_results, D = calc(args, args.rotors[0], sdata, pwake, cks)
 
             ax.plot(
@@ -103,9 +99,7 @@ def run_foxes(args):
             title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
 
     elif len(args.pwakes) == 1:
-
         for rotor in args.rotors:
-
             farm_results, D = calc(args, rotor, sdata, args.pwakes[0], cks)
 
             ax.plot(
@@ -119,9 +113,7 @@ def run_foxes(args):
             title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
 
     elif len(args.rotors) == len(args.pwakes):
-
         for rotor, pwake in zip(args.rotors, args.pwakes):
-
             farm_results, D = calc(args, rotor, sdata, pwake, cks)
 
             ax.plot(
@@ -152,7 +144,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
@@ -226,5 +217,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

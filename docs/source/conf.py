@@ -22,7 +22,7 @@ from foxes import __version__
 # -- Project information -----------------------------------------------------
 
 project = "foxes"
-copyright = "2022, Fraunhofer IWES"
+copyright = "2023, Fraunhofer IWES"
 author = "Fraunhofer IWES"
 
 # The short X.Y version
@@ -41,6 +41,8 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx_immaterial",
+    #"sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -61,6 +63,7 @@ intersphinx_mapping = {
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+autosummary_generate = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -84,12 +87,15 @@ exclude_patterns = [
     # ipynb checkpoints
     "notebooks/.ipynb_checkpoints/*.ipynb",
     "build/*",
+    # DEBUG
+    #"examples.rst",
+    #"notebooks/layout_opt.ipynb"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-autosummary_generate = True
+#autosummary_generate = True
 napolean_use_rtype = False
 
 # -- Options for sphinxcontrib.email ------------------------------------------
@@ -125,14 +131,15 @@ nbsphinx_timeout = 180
 # nbsphinx_responsive_width = '700px'
 
 # This is processed by Jinja2 and inserted before each notebook
+# Fix for issue with pyplot, cf
+# https://github.com/readthedocs/sphinx_rtd_theme/issues/788#issuecomment-585785027
 nbsphinx_prolog = r"""
-{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}
-.. only:: html
-    .. role:: raw-html(raw)
-        :format: html
-    .. nbinfo::
-        :raw-html:`<a href="https://colab.research.google.com/github/DTUWindEnergy/PyWake/blob/master/{{ docname }}"><img alt="Open and run in Colab (interactive)" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>
-        <a href="https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/-/tree/master/{{ docname }}"><img alt="Edit on Gitlab" src="https://img.shields.io/badge/Edit%20on-Gitlab-blue?style=flat&logo=gitlab" style="vertical-align:text-bottom"></a>`
+.. raw:: html
+
+    <script src='http://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js'></script>
+    <script>require=requirejs;</script>
+
+
 """
 
 # This is processed by Jinja2 and inserted after each notebook
@@ -179,7 +186,8 @@ autodoc_class_signature = "separated"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_immaterial"
+
 # html_theme = 'cloud'
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -188,7 +196,15 @@ html_theme = "sphinx_rtd_theme"
 html_theme_options = {
     # TOC options
     #'navigation_depth': 2,  # only show 2 levels on left sidebar
-    "collapse_navigation": False,  # don't allow sidebar to collapse
+    #"collapse_navigation": False,  # don't allow sidebar to collapse,
+    "site_url": "https://fraunhoferiwes.github.io/foxes.docs/index.html",
+    "repo_url": "https://github.com/FraunhoferIWES/foxes",
+    "icon": {
+        "repo": "fontawesome/brands/github",
+        "edit": "material/file-edit-outline"
+    },
+    "palette": { "primary": "teal" },
+    "toc_title_is_page_title": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -260,7 +276,7 @@ texinfo_documents = [
         "foxes Documentation",
         author,
         "foxes",
-        "One line description of project.",
+        "Farm Optimization and eXtended yield Evaluation Software",
         "Miscellaneous",
     ),
 ]
@@ -285,3 +301,13 @@ epub_exclude_files = ["search.html"]
 
 
 # -- Extension configuration -------------------------------------------------
+
+#python_apigen_modules = {
+#    "foxes.core": "core/",
+#}
+
+#python_apigen_default_groups = [
+#    ("class:.*", "Classes"),
+#    (r".*\.__(init|new)__", "Constructors"),
+#    (r".*\.__(str|repr)__", "String representation"),
+#]

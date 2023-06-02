@@ -8,7 +8,6 @@ from foxes.opt.problems.layout import RegGridsLayoutOptProblem
 from foxes.opt.objectives import MaxFarmPower
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-t",
@@ -38,7 +37,9 @@ if __name__ == "__main__":
         type=float,
         default=500.0,
     )
-    parser.add_argument("-m", "--n_maxr", help="Maximal turbines per row", type=int, default=None)
+    parser.add_argument(
+        "-m", "--n_maxr", help="Maximal turbines per row", type=int, default=None
+    )
     parser.add_argument(
         "-A", "--opt_algo", help="The pymoo algorithm name", default="MixedVariableGA"
     )
@@ -75,16 +76,20 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[0, 0], [0, 2100], [1500, 2300], [1400, -200]], dtype=np.float64)) \
-        + foxes.utils.geom2d.Circle([2500.0, 0.0], 500.0) \
+    boundary = (
+        foxes.utils.geom2d.ClosedPolygon(
+            np.array([[0, 0], [0, 2100], [1500, 2300], [1400, -200]], dtype=np.float64)
+        )
+        + foxes.utils.geom2d.Circle([2500.0, 0.0], 500.0)
         + foxes.utils.geom2d.Circle([2500.0, 500.0], 600.0)
+    )
 
     farm = foxes.WindFarm(boundary=boundary)
-    farm.add_turbine(foxes.Turbine(
-        xy=np.array([0.0, 0.0]),
-        turbine_models=["layout_opt", "kTI_02", ttype.name]
-    ))
+    farm.add_turbine(
+        foxes.Turbine(
+            xy=np.array([0.0, 0.0]), turbine_models=["layout_opt", "kTI_02", ttype.name]
+        )
+    )
 
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
@@ -108,15 +113,14 @@ if __name__ == "__main__":
         progress_bar=False,
         verbosity=1,
     ) as runner:
-
         problem = RegGridsLayoutOptProblem(
-            "layout_opt", 
-            algo, 
+            "layout_opt",
+            algo,
             min_dist=args.min_dist,
             n_grids=args.n_grids,
             n_row_max=args.n_maxr,
             runner=runner,
-            calc_farm_args={}
+            calc_farm_args={},
         )
         problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
@@ -132,7 +136,7 @@ if __name__ == "__main__":
                 seed=None,
             ),
             setup_pars=dict(),
-            term_pars=('n_gen', args.n_gen),
+            term_pars=("n_gen", args.n_gen),
         )
         solver.initialize()
         solver.print_info()

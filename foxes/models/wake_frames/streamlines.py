@@ -79,7 +79,6 @@ class Streamlines(WakeFrame):
         return super().initialize(algo, verbosity)
 
     def _init_data(self, mdata, fdata):
-
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
@@ -118,7 +117,7 @@ class Streamlines(WakeFrame):
                 axis=2,
             )
             mdata[self.DATA] = data
-        
+
         # data aliases:
         spts = data[..., :3]
         sn = data[..., 3:6]
@@ -134,16 +133,13 @@ class Streamlines(WakeFrame):
 
         # calculate next tangential vector:
         svars = algo.states.output_point_vars(algo)
-        pdata = {FV.POINTS: newpts}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata = {FC.POINTS: newpts}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdata.update(
-            {
-                v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-                for v in svars
-            }
+            {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars}
         )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
+        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         data[:, :, n_spts, 5] = 0.0
         data[:, :, n_spts, 3:5] = wd2uv(
             algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
@@ -180,9 +176,8 @@ class Streamlines(WakeFrame):
         done = inds < n_spts - 1
 
         # calc streamline points, as many as needed:
-        maxl = np.nanmax(data[:, :, n_spts-1, 6])
+        maxl = np.nanmax(data[:, :, n_spts - 1, 6])
         while maxl + self.step <= self.max_length and not np.all(done):
-
             # print("CALC STREAMLINES, TODO", np.sum(~done))
 
             # add next streamline point:
@@ -200,7 +195,7 @@ class Streamlines(WakeFrame):
 
             # rotation:
             done = inds < n_spts - 1
-            maxl = np.nanmax(data[:, :, n_spts-1, 6])
+            maxl = np.nanmax(data[:, :, n_spts - 1, 6])
             del newpts
 
         # shrink to size:
@@ -233,12 +228,12 @@ class Streamlines(WakeFrame):
         Helper function, ensures minimal length of streamlines
         """
         data = mdata[self.DATA]
-        slen = data[:, :, mdata[self.CNTR]-1, 6]
+        slen = data[:, :, mdata[self.CNTR] - 1, 6]
         minl = np.nanmin(slen)
         maxl = np.nanmax(slen)
         while maxl + self.step <= self.max_length and minl < length:
             __, data, n_spts = self._add_next_point(algo, mdata, fdata)
-            slen = data[:, :, n_spts-1, 6]
+            slen = data[:, :, n_spts - 1, 6]
             minl = np.nanmin(slen)
             maxl = np.nanmax(slen)
 
@@ -345,7 +340,7 @@ class Streamlines(WakeFrame):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
         points : numpy.ndarray
@@ -367,8 +362,8 @@ class Streamlines(WakeFrame):
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
-        qts = qts.reshape(n_states*n_points, 2)
-        ipars = dict(bounds_error=False, fill_value=0.)
+        qts = qts.reshape(n_states * n_points, 2)
+        ipars = dict(bounds_error=False, fill_value=0.0)
         ipars.update(self.cl_ipars)
         results = interpn((np.arange(n_states), xs), spts, qts, **ipars)
 

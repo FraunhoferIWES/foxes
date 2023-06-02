@@ -3,7 +3,7 @@ import xarray as xr
 
 from foxes.opt.core.farm_objective import FarmObjective
 from foxes import variables as FV
-
+import foxes.constants as FC
 
 class FarmVarObjective(FarmObjective):
     """
@@ -65,7 +65,7 @@ class FarmVarObjective(FarmObjective):
         self.minimize = minimize
         self.deps = deps
         self.scale = scale
-        self.rules = {FV.STATE: contract_states, FV.TURBINE: contract_turbines}
+        self.rules = {FC.STATE: contract_states, FC.TURBINE: contract_turbines}
 
     def initialize(self, verbosity=0):
         """
@@ -176,7 +176,6 @@ class FarmVarObjective(FarmObjective):
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
 
-
         return np.array([data], dtype=np.float64)
 
     def calc_population(self, vars_int, vars_float, problem_results, components=None):
@@ -203,13 +202,13 @@ class FarmVarObjective(FarmObjective):
         """
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
-        n_turbines = problem_results.dims[FV.TURBINE]
+        n_turbines = problem_results.dims[FC.TURBINE]
         data = (
             problem_results[self.variable]
             .to_numpy()
             .reshape(n_pop, n_states, n_turbines)
         )
-        data = xr.DataArray(data, dims=(FV.POP, FV.STATE, FV.TURBINE))
+        data = xr.DataArray(data, dims=(FC.POP, FC.STATE, FC.TURBINE))
 
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
@@ -262,7 +261,6 @@ class MaxFarmPower(FarmVarObjective):
     """
 
     def __init__(self, problem, name="maximize_power", **kwargs):
-
         if "scale" in kwargs:
             scale = kwargs.pop("scale")
         else:
@@ -285,6 +283,7 @@ class MaxFarmPower(FarmVarObjective):
             **kwargs,
         )
 
+
 class MinimalMaxTI(FarmVarObjective):
     """
     Minimize the maximal turbine TI
@@ -301,8 +300,7 @@ class MinimalMaxTI(FarmVarObjective):
     """
 
     def __init__(self, problem, name="minimize_TI", **kwargs):
-
-        scale = kwargs.pop("scale") if "scale" in kwargs else 1.
+        scale = kwargs.pop("scale") if "scale" in kwargs else 1.0
         super().__init__(
             problem,
             name,

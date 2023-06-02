@@ -42,7 +42,6 @@ def add_from_json(
         farm.name = farm_name
 
     for wt_name, wdict in fdict.items():
-
         pars = deepcopy(turbine_parameters)
         if "D" in wdict:
             pars["D"] = wdict["D"]

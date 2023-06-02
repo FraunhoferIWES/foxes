@@ -5,7 +5,6 @@ import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -69,7 +68,7 @@ class Downwind(Algorithm):
     FarmWakesCalculation = dm.FarmWakesCalculation
     PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
     SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
-    
+
     def __init__(
         self,
         mbook,
@@ -80,7 +79,7 @@ class Downwind(Algorithm):
         wake_frame="rotor_wd",
         partial_wakes_model="auto",
         farm_controller="basic_ctrl",
-        chunks={FV.STATE: 1000},
+        chunks={FC.STATE: 1000},
         dbook=None,
         keep_models=[],
         verbosity=1,
@@ -141,7 +140,7 @@ class Downwind(Algorithm):
             )
         self.print(deco)
         self.print()
-    
+
     def init_states(self):
         """
         Initialize states, if needed.
@@ -152,10 +151,10 @@ class Downwind(Algorithm):
 
     def initialize(self):
         """
-        Initializes the algorithm.          
+        Initializes the algorithm.
         """
         self.print(f"\nInitializing algorithm '{self.name}'")
-        super().initialize()           
+        super().initialize()
 
         self.init_states()
 
@@ -169,11 +168,11 @@ class Downwind(Algorithm):
         self.update_idata(mdls)
 
     def _collect_farm_models(
-            self,
-            vars_to_amb,
-            calc_parameters,
-            ambient,
-        ):
+        self,
+        vars_to_amb,
+        calc_parameters,
+        ambient,
+    ):
         """
         Helper function that creates model list
         """
@@ -277,7 +276,8 @@ class Downwind(Algorithm):
 
         # collect models:
         mlist, calc_pars = self._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient)
+            vars_to_amb, calc_parameters, ambient
+        )
 
         # initialize models and get input model data:
         self.update_idata(mlist)
@@ -295,7 +295,7 @@ class Downwind(Algorithm):
         farm_results = mlist.run_calculation(
             self, models_data, out_vars=self.farm_vars, parameters=calc_pars
         )
-        farm_results[FV.TNAME] = ((FV.TURBINE,), self.farm.turbine_names)
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
             farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
         del models_data
@@ -313,13 +313,13 @@ class Downwind(Algorithm):
         return farm_results
 
     def _collect_point_models(
-            self,
-            vars,
-            vars_to_amb,
-            calc_parameters,
-            point_models,
-            ambient,
-        ):
+        self,
+        vars,
+        vars_to_amb,
+        calc_parameters,
+        point_models,
+        ambient,
+    ):
         """
         Helper function that creates model list
         """
@@ -434,7 +434,8 @@ class Downwind(Algorithm):
 
         # collect models:
         mlist, calc_pars = self._collect_point_models(
-            vars, vars_to_amb, calc_parameters, point_models, ambient)
+            vars, vars_to_amb, calc_parameters, point_models, ambient
+        )
 
         # initialize models and get input model data:
         self.update_idata(mlist)
@@ -447,14 +448,14 @@ class Downwind(Algorithm):
 
         # chunk farm results:
         if self.chunks is not None:
-            farm_results = farm_results.chunk(chunks={FV.STATE: self.chunks[FV.STATE]})
+            farm_results = farm_results.chunk(chunks={FC.STATE: self.chunks[FC.STATE]})
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
-        if FV.STATE in farm_results.coords:
-            sinds = farm_results.coords[FV.STATE]
-        elif models_data is not None and FV.STATE in models_data.coords:
-            sinds = models_data.coords[FV.STATE]
+        if FC.STATE in farm_results.coords:
+            sinds = farm_results.coords[FC.STATE]
+        elif models_data is not None and FC.STATE in models_data.coords:
+            sinds = models_data.coords[FC.STATE]
         else:
             sinds = None
         point_data = self.new_point_data(points, sinds)
@@ -515,7 +516,7 @@ class Downwind(Algorithm):
             self.wake_frame,
             self.partial_wakes_model,
         ] + self.wake_models
-        
+
         for m in mdls:
             self.finalize_model(m)
 

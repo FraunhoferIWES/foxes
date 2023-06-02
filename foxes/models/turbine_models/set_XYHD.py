@@ -102,7 +102,6 @@ class SetXYHD(TurbineModel):
         for ti in range(n_turbines):
             ssel = st_sel[:, ti]
             if np.any(ssel):
-
                 if np.all(ssel):
                     ssel = np.s_[:]
 

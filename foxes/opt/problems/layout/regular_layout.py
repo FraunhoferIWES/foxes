@@ -51,7 +51,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         Initialize the object.
 
         Parameters
-        ----------  
+        ----------
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
@@ -65,24 +65,25 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         self._turbine = deepcopy(self.farm.turbines[-1])
 
         self.algo.mbook.turbine_models[self._mname] = Calculator(
-            in_vars=[FV.VALID, FV.P, FV.CT],
-            out_vars=[FV.VALID, FV.P, FV.CT],
-            func=lambda valid, P, ct, st_sel: (valid, P*valid, ct*valid),
-            pre_rotor=False)
+            in_vars=[FC.VALID, FV.P, FV.CT],
+            out_vars=[FC.VALID, FV.P, FV.CT],
+            func=lambda valid, P, ct, st_sel: (valid, P * valid, ct * valid),
+            pre_rotor=False,
+        )
 
         b = self.farm.boundary
         assert b is not None, f"Problem '{self.name}': Missing wind farm boundary."
         pmax = b.p_max()
         pmin = b.p_min()
         self._pmin = pmin
-        self._xy0 = 0.5*(pmin+pmax)
-        self._halfspan = (pmax - pmin)/2
+        self._xy0 = 0.5 * (pmin + pmax)
+        self._halfspan = (pmax - pmin) / 2
         self._halflen = np.linalg.norm(self._halfspan)
-        self.max_spacing = 2*(self._halflen + self.min_spacing)
-        self._halfn = int(self._halflen/self.min_spacing)
+        self.max_spacing = 2 * (self._halflen + self.min_spacing)
+        self._halfn = int(self._halflen / self.min_spacing)
         if self._halfn * self.min_spacing < self._halflen:
             self._halfn += 1
-        self._nrow = 2*self._halfn+1
+        self._nrow = 2 * self._halfn + 1
         self._nturb = self._nrow**2
 
         if verbosity > 0:
@@ -102,15 +103,15 @@ class RegularLayoutOptProblem(FarmVarsProblem):
                 self.farm.turbines[-1].index = ti
                 self.farm.turbines[-1].name = f"T{ti}"
         elif self.farm.n_turbines > self._nturb:
-            self.farm.turbines = self.farm.turbines[:self._nturb]
+            self.farm.turbines = self.farm.turbines[: self._nturb]
         self.algo.n_turbines = self._nturb
 
         super().initialize(
-            pre_rotor_vars=[FV.X, FV.Y, FV.VALID],
+            pre_rotor_vars=[FV.X, FV.Y, FC.VALID],
             post_rotor_vars=[],
-            drop_vars=[FV.STATE, FV.TURBINE],
+            drop_vars=[FC.STATE, FC.TURBINE],
             verbosity=verbosity,
-            **kwargs
+            **kwargs,
         )
 
     def var_names_float(self):
@@ -124,11 +125,12 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         """
         return [
-            self.SPACING_X, 
-            self.SPACING_Y, 
+            self.SPACING_X,
+            self.SPACING_Y,
             self.OFFSET_X,
             self.OFFSET_Y,
-            self.ANGLE]
+            self.ANGLE,
+        ]
 
     def initial_values_float(self):
         """
@@ -140,10 +142,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
             Initial float values, shape: (n_vars_float,)
 
         """
-        return [
-            self.min_spacing, 
-            self.min_spacing, 
-            0., 0., 0.]
+        return [self.min_spacing, self.min_spacing, 0.0, 0.0, 0.0]
 
     def min_values_float(self):
         """
@@ -158,11 +157,12 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         """
         return [
-            self.min_spacing, 
-            self.min_spacing, 
-            -self._halfspan[0] - self.min_spacing, 
-            -self._halfspan[1] - self.min_spacing, 
-            0.]
+            self.min_spacing,
+            self.min_spacing,
+            -self._halfspan[0] - self.min_spacing,
+            -self._halfspan[1] - self.min_spacing,
+            0.0,
+        ]
 
     def max_values_float(self):
         """
@@ -177,11 +177,12 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         """
         return [
-                self.max_spacing, 
-                self.max_spacing, 
-                self._halfspan[0] + self.min_spacing,
-                self._halfspan[1] + self.min_spacing,
-                90.]
+            self.max_spacing,
+            self.max_spacing,
+            self._halfspan[0] + self.min_spacing,
+            self._halfspan[1] + self.min_spacing,
+            90.0,
+        ]
 
     def opt2farm_vars_individual(self, vars_int, vars_float):
         """
@@ -209,26 +210,26 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         n_states = self.algo.n_states
         nx = self._nrow
         ny = self._nrow
-        
+
         a = np.deg2rad(a)
-        nax = np.array([np.cos(a), np.sin(a), 0.], dtype=FC.DTYPE)
-        nay = np.cross(np.array([0., 0., 1.], dtype=FC.DTYPE), nax)
+        nax = np.array([np.cos(a), np.sin(a), 0.0], dtype=FC.DTYPE)
+        nay = np.cross(np.array([0.0, 0.0, 1.0], dtype=FC.DTYPE), nax)
         x0 = self._xy0 + np.array([ox, oy], dtype=FC.DTYPE)
 
         pts = np.zeros((n_states, nx, ny, 2), dtype=FC.DTYPE)
         pts[:] = (
-            x0[None, None, None, :] 
-            + np.arange(nx)[None, :, None, None] * dx * nax[None, None, None, :2] 
+            x0[None, None, None, :]
+            + np.arange(nx)[None, :, None, None] * dx * nax[None, None, None, :2]
             + np.arange(ny)[None, None, :, None] * dy * nay[None, None, None, :2]
         )
 
-        pts = pts.reshape(n_states, nx*ny, 2)
-        valid = self.farm.boundary.points_inside(pts.reshape(n_states*nx*ny, 2))
+        pts = pts.reshape(n_states, nx * ny, 2)
+        valid = self.farm.boundary.points_inside(pts.reshape(n_states * nx * ny, 2))
 
         farm_vars = {
             FV.X: pts[:, :, 0],
             FV.Y: pts[:, :, 1],
-            FV.VALID: valid.reshape(n_states, nx*ny).astype(FC.DTYPE)
+            FC.VALID: valid.reshape(n_states, nx * ny).astype(FC.DTYPE),
         }
 
         return farm_vars
@@ -259,7 +260,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         n_pop = len(vars_float)
         n_turbines = self.farm.n_turbines
         dx = vars_float[:, 0]
-        dy = vars_float[:, 1] 
+        dy = vars_float[:, 1]
         ox = vars_float[:, 2]
         oy = vars_float[:, 3]
         nx = self._nrow
@@ -278,22 +279,26 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         pts[..., 0] += ox[:, None, None, None]
         pts[..., 1] += oy[:, None, None, None]
         pts[:] += (
-            np.arange(nx)[None, None, :, None, None] * dx[:, None, None, None, None] 
-            * nax[:, None, None, None, :2] 
-            + np.arange(ny)[None, None, None, :, None] * dy[:, None, None, None, None] 
+            np.arange(nx)[None, None, :, None, None]
+            * dx[:, None, None, None, None]
+            * nax[:, None, None, None, :2]
+            + np.arange(ny)[None, None, None, :, None]
+            * dy[:, None, None, None, None]
             * nay[:, None, None, None, :2]
-            )
+        )
 
-        qts = np.zeros((n_pop, n_states, n_turbines, 2)) 
+        qts = np.zeros((n_pop, n_states, n_turbines, 2))
         qts[:, :N] = pts.reshape(n_pop, n_states, N, 2)
         del pts
 
-        valid = self.farm.boundary.points_inside(qts.reshape(n_pop*n_states*n_turbines, 2))
+        valid = self.farm.boundary.points_inside(
+            qts.reshape(n_pop * n_states * n_turbines, 2)
+        )
 
         farm_vars = {
             FV.X: qts[:, :, :, 0],
             FV.Y: qts[:, :, :, 1],
-            FV.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE)
+            FC.VALID: valid.reshape(n_pop, n_states, n_turbines).astype(FC.DTYPE),
         }
 
         return farm_vars
@@ -323,10 +328,10 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         """
         farm_vars = self.opt2farm_vars_individual(vars_int, vars_float)
-        sel = np.where(farm_vars[FV.VALID][0])[0]
+        sel = np.where(farm_vars[FC.VALID][0])[0]
         x = farm_vars[FV.X][0, sel]
         y = farm_vars[FV.Y][0, sel]
-        
+
         self.farm.turbines = [t for i, t in enumerate(self.farm.turbines) if i in sel]
         for i, t in enumerate(self.farm.turbines):
             t.xy = np.array([x[i], y[i]], dtype=FC.DTYPE)
@@ -335,4 +340,6 @@ class RegularLayoutOptProblem(FarmVarsProblem):
             t.name = f"T{i}"
         self.algo.update_n_turbines()
 
-        return FarmOptProblem.finalize_individual(self, vars_int, vars_float, verbosity=1)
+        return FarmOptProblem.finalize_individual(
+            self, vars_int, vars_float, verbosity=1
+        )

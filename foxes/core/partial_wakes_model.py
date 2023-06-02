@@ -64,7 +64,7 @@ class PartialWakesModel(Model):
 
         idata = super().initialize(algo, verbosity)
         algo.update_idata(self.wake_models, idata=idata, verbosity=verbosity)
-        
+
         return idata
 
     @abstractmethod

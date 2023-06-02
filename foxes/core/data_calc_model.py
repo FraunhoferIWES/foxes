@@ -7,9 +7,7 @@ from dask.diagnostics import ProgressBar
 from .model import Model
 from .data import Data
 from foxes.utils.runners import DaskRunner
-import foxes.variables as FV
 import foxes.constants as FC
-
 
 
 class DataCalcModel(Model):
@@ -75,7 +73,6 @@ class DataCalcModel(Model):
         # reconstruct original data:
         data = []
         for hvars in dvars:
-
             v2l = {v: lvars.index(v) for v in hvars if v in lvars}
             v2e = {v: evars.index(v) for v in hvars if v in evars}
 
@@ -161,7 +158,7 @@ class DataCalcModel(Model):
             `apply_ufunc` calculations
         out_core_vars : list of str
             The core dimensions of the output data, use
-            `FV.VARS` for variables dimension (required)
+            `FC.VARS` for variables dimension (required)
         **calc_pars : dict, optional
             Additional arguments for the `calculate` function
 
@@ -173,7 +170,9 @@ class DataCalcModel(Model):
         """
         # check:
         if not self.initialized:
-            raise ValueError(f"DataCalcModel '{self.name}': run_calculation called for uninitialized model")
+            raise ValueError(
+                f"DataCalcModel '{self.name}': run_calculation called for uninitialized model"
+            )
 
         # prepare:
         loopd = set(loop_dims)
@@ -187,7 +186,6 @@ class DataCalcModel(Model):
         edims = []
         dvars = []
         for ds in data:
-
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
             ldims += [ds[v].dims for v in hvarsl]
@@ -211,16 +209,16 @@ class DataCalcModel(Model):
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
 
         # setup dask options:
-        dargs = dict(output_sizes={FV.VARS: len(out_vars)})
-        if FV.TURBINE in loopd and FV.TURBINE not in ldims.values():
-            dargs["output_sizes"][FV.TURBINE] = algo.n_turbines
-        if FV.VARS not in out_core_vars:
+        dargs = dict(output_sizes={FC.VARS: len(out_vars)})
+        if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
+            dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
+        if FC.VARS not in out_core_vars:
             raise ValueError(
-                f"Model '{self.name}': Expecting '{FV.VARS}' in out_core_vars, got {out_core_vars}"
+                f"Model '{self.name}': Expecting '{FC.VARS}' in out_core_vars, got {out_core_vars}"
             )
 
         # setup arguments for wrapper function:
-        out_dims = loop_dims + list(set(out_core_vars).difference([FV.VARS]))
+        out_dims = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
             algo=algo,
             dvars=dvars,
@@ -249,9 +247,7 @@ class DataCalcModel(Model):
         )
 
         # reorganize results Dataset:
-        results = (
-            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS)
-        )
+        results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
 
         if DaskRunner.is_distributed() and len(ProgressBar.active):
             progress(results.persist())

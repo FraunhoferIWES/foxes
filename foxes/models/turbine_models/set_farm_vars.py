@@ -2,8 +2,6 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.constants as FC
-import foxes.variables as FV
-
 
 class SetFarmVars(TurbineModel):
     """
@@ -93,11 +91,10 @@ class SetFarmVars(TurbineModel):
         idata = super().initialize(algo, verbosity)
 
         for i, v in enumerate(self.vars):
-
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
             data[:] = self._vdata[i]
 
-            idata["data_vars"][self.var(v)] = ((FV.STATE, FV.TURBINE), data)
+            idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 
         return idata
 
@@ -132,7 +129,6 @@ class SetFarmVars(TurbineModel):
         allt = np.all(st_sel)
 
         for v in self.vars:
-
             data = mdata[self.var(v)]
             hsel = ~np.isnan(data)
             hallt = np.all(hsel)
@@ -141,7 +137,6 @@ class SetFarmVars(TurbineModel):
                 fdata[v][:] = data
 
             else:
-
                 if v not in fdata:
                     fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
 

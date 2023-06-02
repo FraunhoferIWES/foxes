@@ -7,7 +7,6 @@ import foxes
 import foxes.opt.problems.layout.geom_layouts as grg
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d",
@@ -16,7 +15,9 @@ if __name__ == "__main__":
         type=float,
         default=400.0,
     )
-    parser.add_argument("-m", "--n_maxr", help="Maximal turbines per row", type=int, default=None)
+    parser.add_argument(
+        "-m", "--n_maxr", help="Maximal turbines per row", type=int, default=None
+    )
     parser.add_argument(
         "-g", "--n_grids", help="The number of grids", type=int, default=2
     )
@@ -34,11 +35,19 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    boundary = foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[0, 1000], [400, 1600], [2500, 1100], [2200, 300]], dtype=np.float64)) \
-        + foxes.utils.geom2d.Circle([2500.0, 0.0], 500.0) \
-        + foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[2200, 0], [2200, 2600], [2800, 2600], [2800, 0]], dtype=np.float64))
+    boundary = (
+        foxes.utils.geom2d.ClosedPolygon(
+            np.array(
+                [[0, 1000], [400, 1600], [2500, 1100], [2200, 300]], dtype=np.float64
+            )
+        )
+        + foxes.utils.geom2d.Circle([2500.0, 0.0], 500.0)
+        + foxes.utils.geom2d.ClosedPolygon(
+            np.array(
+                [[2200, 0], [2200, 2600], [2800, 2600], [2800, 0]], dtype=np.float64
+            )
+        )
+    )
 
     problem = grg.GeomRegGrids(boundary, args.min_dist, args.n_grids, args.n_maxr)
     problem.add_objective(grg.OMaxN(problem))
@@ -59,7 +68,7 @@ if __name__ == "__main__":
             seed=None,
         ),
         setup_pars=dict(),
-        term_pars=('n_gen', args.n_gen),
+        term_pars=("n_gen", args.n_gen),
     )
     solver.initialize()
     solver.print_info()

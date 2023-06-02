@@ -4,6 +4,7 @@ import foxes.constants as FC
 from .rotor_wd import RotorWD
 from foxes.core import WakeFrame
 
+
 class FarmOrder(WakeFrame):
     """
     Invokes turbine ordering as defined
@@ -110,7 +111,9 @@ class FarmOrder(WakeFrame):
             The wake coordinates, shape: (n_states, n_points, 3)
 
         """
-        return self.base_frame.get_wake_coos(algo, mdata, fdata, states_source_turbine, points)
+        return self.base_frame.get_wake_coos(
+            algo, mdata, fdata, states_source_turbine, points
+        )
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
@@ -130,15 +133,17 @@ class FarmOrder(WakeFrame):
             wake causing turbine. Shape: (n_states,)
         x : numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
         points : numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        return self.base_frame.get_centreline_points(algo, mdata, fdata, states_source_turbine, x)
-        
+        return self.base_frame.get_centreline_points(
+            algo, mdata, fdata, states_source_turbine, x
+        )
+
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

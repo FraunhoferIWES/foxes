@@ -124,7 +124,6 @@ class TISuperposition(WakeSuperposition):
         """
         # linear superposition to ambient:
         if self.superp_to_amb == "linear":
-
             if self.ti_superp == "linear" or self.ti_superp == "max":
                 return wake_delta
             elif self.ti_superp == "quadratic":
@@ -136,7 +135,6 @@ class TISuperposition(WakeSuperposition):
 
         # quadratic superposition to ambient:
         elif self.superp_to_amb == "quadratic":
-
             if self.ti_superp == "linear" or self.ti_superp == "max":
                 return np.sqrt(wake_delta**2 + amb_results**2) - amb_results
             elif self.ti_superp == "quadratic":

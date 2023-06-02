@@ -15,7 +15,7 @@ class Calculator(TurbineModel):
         The output variables
     func : Function
         The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
-        where inX and outY are numpy.ndarrays and 
+        where inX and outY are numpy.ndarrays and
         st_sel is the boolean state-turbine selection.
         All arrays have shape (n_states, n_turbines).
     kwargs : dict, optional
@@ -29,7 +29,7 @@ class Calculator(TurbineModel):
         The output variables
     func : Function
         The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
-        where inX and outY are numpy.ndarrays and 
+        where inX and outY are numpy.ndarrays and
         st_sel is the boolean state-turbine selection.
         All arrays have shape (n_states, n_turbines).
 

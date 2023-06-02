@@ -4,8 +4,6 @@ from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
-import foxes.variables as FV
-
 
 class FarmController(FarmDataModel):
     """
@@ -82,9 +80,7 @@ class FarmController(FarmDataModel):
             news = False
 
             for ti, mlist in enumerate(models):
-
                 if tmis[ti] < len(mlist):
-
                     mname = mnames[ti][tmis[ti]]
                     isnext = True
                     for tj, jnames in enumerate(mnames):
@@ -98,7 +94,6 @@ class FarmController(FarmDataModel):
                             break
 
                     if isnext:
-
                         m = models[ti][tmis[ti]]
                         tmodels.append(m)
 
@@ -150,7 +145,6 @@ class FarmController(FarmDataModel):
         for ti, t in enumerate(algo.farm.turbines):
             prer = None
             for mi, mname in enumerate(t.models):
-
                 istype = False
                 if mname in algo.mbook.turbine_types:
                     m = algo.mbook.turbine_types[mname]
@@ -172,7 +166,7 @@ class FarmController(FarmDataModel):
                     raise KeyError(
                         f"Model {mname} not found in model book types or models"
                     )
-                    
+
                 if istype:
                     if self.turbine_types[ti] is None:
                         self.turbine_types[ti] = m
@@ -218,7 +212,7 @@ class FarmController(FarmDataModel):
         Private helper function for gathering model parameters.
         """
         if from_data:
-            s = mdata[FV.TMODEL_SELS]
+            s = mdata[FC.TMODEL_SELS]
         else:
             s = self.turbine_model_sels
         if st_sel is not None:
@@ -263,12 +257,12 @@ class FarmController(FarmDataModel):
         self.collect_models(algo)
 
         # done by algo.update_idata
-        #algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
+        # algo.update_idata([self.pre_rotor_models, self.post_rotor_models],
         #    idata=idata, verbosity=verbosity)
 
-        idata["coords"][FV.TMODELS] = self.turbine_model_names
-        idata["data_vars"][FV.TMODEL_SELS] = (
-            (FV.STATE, FV.TURBINE, FV.TMODELS),
+        idata["coords"][FC.TMODELS] = self.turbine_model_names
+        idata["data_vars"][FC.TMODEL_SELS] = (
+            (FC.STATE, FC.TURBINE, FC.TMODELS),
             self.turbine_model_sels,
         )
 
@@ -328,7 +322,7 @@ class FarmController(FarmDataModel):
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
         pars = self.__get_pars(algo, s.models, "calc", mdata, st_sel, from_data=True)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
-        self.turbine_model_sels = mdata[FV.TMODEL_SELS]
+        self.turbine_model_sels = mdata[FC.TMODEL_SELS]
         return res
 
     def finalize(self, algo, verbosity=0):

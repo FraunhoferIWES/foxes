@@ -24,8 +24,6 @@ def add_from_csv(
     """
     Add turbines to wind farm via csv input file.
 
-    Additional turbine_parameters are forwarded to the WindFarm.add_turbine().
-
     Parameters
     ----------
     farm : foxes.WindFarm
@@ -62,6 +60,8 @@ def add_from_csv(
         Start turbine names by 1 instead of 0
     verbosity : int
         The verbosity level, 0 = silent
+    turbine_parameters : dict, optional
+        Additional parameters are forwarded to the WindFarm.add_turbine().
 
     """
 
@@ -77,7 +77,6 @@ def add_from_csv(
     D = turbine_parameters.pop("D", None)
 
     for i in data.index:
-
         s = 1 if turbine_base_name_count_shift else 0
         tname = (
             f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]

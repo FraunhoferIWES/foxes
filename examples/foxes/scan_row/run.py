@@ -5,18 +5,18 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     n_s = args.n_s
     n_t = args.n_t
     n_p = args.n_p
     p0 = np.array([0.0, 0.0])
     stp = np.array([500.0, 0.0])
 
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
@@ -92,7 +92,9 @@ def run_foxes(args):
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(algo=algo, annual=True, ambient=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
     turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
@@ -107,7 +109,6 @@ def run_foxes(args):
     print()
 
     if args.calc_cline:
-
         points = np.zeros((n_s, n_p, 3))
         points[:, :, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)[
             None, :
@@ -143,7 +144,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("n_s", help="The number of states", type=int)
     parser.add_argument("n_t", help="The number of turbines", type=int)
@@ -206,5 +206,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

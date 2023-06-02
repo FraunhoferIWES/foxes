@@ -1,7 +1,7 @@
 from iwopy import Problem
 
 from foxes.utils.runners import DefaultRunner
-import foxes.variables as FV
+import foxes.constants as FC
 from .pop_states import PopStates
 
 
@@ -78,7 +78,11 @@ class FarmOptProblem(Problem):
             Indices of the selected turbines
 
         """
-        return self._sel_turbines if self._sel_turbines is not None else list(range(self.farm.n_turbines))
+        return (
+            self._sel_turbines
+            if self._sel_turbines is not None
+            else list(range(self.farm.n_turbines))
+        )
 
     @property
     def n_sel_turbines(self):
@@ -105,7 +109,7 @@ class FarmOptProblem(Problem):
 
         """
         return len(self.sel_turbines) == self.algo.n_turbines
-    
+
     @property
     def counter(self):
         """
@@ -193,7 +197,7 @@ class FarmOptProblem(Problem):
                 if keep:
                     self.algo.keep_models.append(mname)
 
-    def initialize(self, drop_vars=[FV.STATE], exclude=None, verbosity=1):
+    def initialize(self, drop_vars=[FC.STATE], exclude=None, verbosity=1):
         """
         Initialize the object.
 
@@ -237,13 +241,13 @@ class FarmOptProblem(Problem):
             if self.algo.initialized:
                 self.algo.finalize()
             self.algo.states = states
-    
+
     def update_problem_individual(self, vars_int, vars_float):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -263,8 +267,8 @@ class FarmOptProblem(Problem):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
@@ -300,7 +304,7 @@ class FarmOptProblem(Problem):
             The results of the variable application
             to the problem
 
-        """       
+        """
         self._count += 1
         self.update_problem_individual(vars_int, vars_float)
         return self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
@@ -325,7 +329,7 @@ class FarmOptProblem(Problem):
 
         """
         self._count += 1
-        
+
         self.update_problem_population(vars_int, vars_float)
         results = self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
         results["n_pop"] = len(vars_float)

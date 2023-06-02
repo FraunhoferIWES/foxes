@@ -254,3 +254,17 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `DataCalcModel`: Now cleaner treatment of runs with `progress_bar=False`. Also now slimmer for `distributed` scheduler
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
+
+## v0.3.5-alpha
+
+- General:
+  - Moving identifier-type entries from `foxes.variables` to `foxes.constants`
+- Models:
+  - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
+  - New turbine model: `RotorCentreCalc`, calculates data at rotor centre, irrespective of rotor model
+- Bug fixes:
+  - Bug fixed that caused problems when restarting the `SectorManagement` turbine model, e.g. for flow plots
+- Documentation:
+  - Completely new style, fixing issues with incomplete API entries
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)

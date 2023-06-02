@@ -8,6 +8,8 @@ from .farm_controller import FarmController
 from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
 import foxes.variables as FV
+import foxes.constants as FC
+
 
 class Algorithm(Model):
     """
@@ -33,7 +35,7 @@ class Algorithm(Model):
     keep_models : list of str
         Keep these models data in memory and do not finalize them
 
-    Parameters
+    Attributes
     ----------
     mbook : foxes.ModelBook
         The model book
@@ -101,19 +103,19 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Input {mtype} data entry '{v}': Wrong data shape, expecting {len(t[0])} dimensions, got {t[1].shape}"
                 )
-            if FV.STATE in t[0]:
-                if t[0][0] != FV.STATE:
+            if FC.STATE in t[0]:
+                if t[0][0] != FC.STATE:
                     raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FV.STATE}' not at first position, got {t[0]}"
+                        f"Input {mtype} data entry '{v}': Dimension '{FC.STATE}' not at first position, got {t[0]}"
                     )
-                if FV.POINT in t[0] and t[0][1] != FV.POINT:
+                if FC.POINT in t[0] and t[0][1] != FC.POINT:
                     raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FV.POINT}' not at second position, got {t[0]}"
+                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at second position, got {t[0]}"
                     )
-            elif FV.POINT in t[0]:
-                if t[0][0] != FV.POINT:
+            elif FC.POINT in t[0]:
+                if t[0][0] != FC.POINT:
                     raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FV.POINT}' not at first position, got {t[0]}"
+                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at first position, got {t[0]}"
                     )
             for d, s in zip(t[0], t[1].shape):
                 if d not in sizes:
@@ -140,13 +142,13 @@ class Algorithm(Model):
         """
         xrdata = xr.Dataset(**idata)
         if self.chunks is not None:
-            if FV.TURBINE in self.chunks.keys():
+            if FC.TURBINE in self.chunks.keys():
                 raise ValueError(
-                    f"Dimension '{FV.TURBINE}' cannot be chunked, got chunks {self.chunks}"
+                    f"Dimension '{FC.TURBINE}' cannot be chunked, got chunks {self.chunks}"
                 )
-            if FV.RPOINT in self.chunks.keys():
+            if FC.RPOINT in self.chunks.keys():
                 raise ValueError(
-                    f"Dimension '{FV.RPOINT}' cannot be chunked, got chunks {self.chunks}"
+                    f"Dimension '{FC.RPOINT}' cannot be chunked, got chunks {self.chunks}"
                 )
             xrdata = xrdata.chunk(
                 chunks={c: v for c, v in self.chunks.items() if c in sizes}
@@ -172,27 +174,29 @@ class Algorithm(Model):
             to idata memory
         verbosity : int, optional
             The verbosity level, 0 = silent
-            
+
         """
         if idata is None and not self.initialized:
-            raise ValueError(f"Algorithm '{self.name}': update_idata called before initialization")
-        
+            raise ValueError(
+                f"Algorithm '{self.name}': update_idata called before initialization"
+            )
+
         verbosity = self.verbosity if verbosity is None else verbosity
 
         if not isinstance(models, list) and not isinstance(models, tuple):
             models = [models]
 
         for m in models:
-
             pr = False
             if m.initialized:
                 try:
                     hidata = self._idata_mem[m.name]
                 except KeyError:
-                    raise KeyError(f"Model '{m.name}' initialized but not found in idata memory")
+                    raise KeyError(
+                        f"Model '{m.name}' initialized but not found in idata memory"
+                    )
 
             else:
-
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
                 self._idata_mem[m.name] = hidata
@@ -204,7 +208,9 @@ class Algorithm(Model):
                         pr = True
                     self.update_idata(m.pre_rotor_models, idata, verbosity)
                     self.update_idata(m.post_rotor_models, idata, verbosity)
-                elif isinstance(m, FarmDataModelList) or isinstance(m, PointDataModelList):
+                elif isinstance(m, FarmDataModelList) or isinstance(
+                    m, PointDataModelList
+                ):
                     if verbosity > 1:
                         print(f"-- {m.name}: Starting sub-model initialization -- ")
                         pr = True
@@ -230,10 +236,10 @@ class Algorithm(Model):
 
         """
         return self._idata_mem
-    
+
     def update_n_turbines(self):
         """
-        Reset the number of turbines, 
+        Reset the number of turbines,
         according to self.farm
         """
         if self.n_turbines != self.farm.n_turbines:
@@ -250,26 +256,40 @@ class Algorithm(Model):
                         ok = self.idata_mem[k]
                     else:
                         ok = None
-                        if FV.TURBINE in d[0]:
-                            i = d[0].index(FV.TURBINE)
-                            ok = (np.unique(d[1], axis=1).shape[i] == 1)
+                        if FC.TURBINE in d[0]:
+                            i = d[0].index(FC.TURBINE)
+                            ok = np.unique(d[1], axis=1).shape[i] == 1
                         newk[k] = ok
                     if ok is not None:
                         if not ok:
-                            raise ValueError(f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines")
-                        if FV.TURBINE in idata["coords"]:
-                            idata["coords"][FV.TURBINE] = np.arange(self.n_turbines)
-                        i = d[0].index(FV.TURBINE)
+                            raise ValueError(
+                                f"{self.name}: Stored idata entry '{mname}:{dname}' is turbine dependent, unable to reset n_turbines"
+                            )
+                        if FC.TURBINE in idata["coords"]:
+                            idata["coords"][FC.TURBINE] = np.arange(self.n_turbines)
+                        i = d[0].index(FC.TURBINE)
                         n0 = d[1].shape[i]
                         if n0 > self.n_turbines:
-                            idata["data_vars"][dname] = (d[0], np.take(d[1], range(self.n_turbines), axis=i))
+                            idata["data_vars"][dname] = (
+                                d[0],
+                                np.take(d[1], range(self.n_turbines), axis=i),
+                            )
                         elif n0 < self.n_turbines:
-                            shp = [d[1].shape[j] if j != i else self.n_turbines-n0 for j in range(len(d[1].shape))]
+                            shp = [
+                                d[1].shape[j] if j != i else self.n_turbines - n0
+                                for j in range(len(d[1].shape))
+                            ]
                             a = np.zeros(shp, dtype=d[1].dtype)
-                            shp = [d[1].shape[j] if j != i else 1 for j in range(len(d[1].shape))]
+                            shp = [
+                                d[1].shape[j] if j != i else 1
+                                for j in range(len(d[1].shape))
+                            ]
                             a[:] = np.take(d[1], -1, axis=i).reshape(shp)
-                            idata["data_vars"][dname] = (d[0], np.append(d[1], a, axis=i))
-            
+                            idata["data_vars"][dname] = (
+                                d[0],
+                                np.append(d[1], a, axis=i),
+                            )
+
             self._idata_mem.update(newk)
 
     def get_models_data(self, idata=None):
@@ -292,7 +312,9 @@ class Algorithm(Model):
         """
         if idata is None:
             if not self.initialized:
-                raise ValueError(f"Algorithm '{self.name}': get_models_data called before initialization")
+                raise ValueError(
+                    f"Algorithm '{self.name}': get_models_data called before initialization"
+                )
             idata = self._idata_mem.pop(self.name)
             mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
             for mname in mnames:
@@ -327,7 +349,7 @@ class Algorithm(Model):
         if states_indices is None:
             idata = {"coords": {}, "data_vars": {}}
         else:
-            idata = {"coords": {FV.STATE: states_indices}, "data_vars": {}}
+            idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
 
         if (
             len(points.shape) != 3
@@ -337,7 +359,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}"
             )
-        idata["data_vars"][FV.POINTS] = ((FV.STATE, FV.POINT, FV.XYH), points)
+        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FV.XYH), points)
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
@@ -357,7 +379,7 @@ class Algorithm(Model):
 
         """
         verbosity = self.verbosity if verbosity is None else verbosity
-  
+
         pr = False
         if isinstance(model, FarmController):
             if verbosity > 1:
@@ -366,7 +388,9 @@ class Algorithm(Model):
                 pr = True
             self.finalize_model(model.pre_rotor_models, verbosity)
             self.finalize_model(model.post_rotor_models, verbosity)
-        elif isinstance(model, FarmDataModelList) or isinstance(model, PointDataModelList):
+        elif isinstance(model, FarmDataModelList) or isinstance(
+            model, PointDataModelList
+        ):
             if verbosity > 1:
                 print(f"Finalizing model '{model.name}'")
                 print(f"-- {model.name}: Starting sub-model finalization -- ")
@@ -380,7 +404,7 @@ class Algorithm(Model):
             model.finalize(self, verbosity)
             if model.name in self._idata_mem:
                 del self._idata_mem[model.name]
-        
+
         if pr:
             print(f"-- {model.name}: Finished sub-model finalization -- ")
 
@@ -427,8 +451,9 @@ class Algorithm(Model):
                     return scls(*args, **kwargs)
 
         else:
-            estr = "Algorithm type '{}' is not defined, available types are \n {}".format(
-                algo_type, sorted([i.__name__ for i in allc])
+            estr = (
+                "Algorithm type '{}' is not defined, available types are \n {}".format(
+                    algo_type, sorted([i.__name__ for i in allc])
+                )
             )
             raise KeyError(estr)
-        

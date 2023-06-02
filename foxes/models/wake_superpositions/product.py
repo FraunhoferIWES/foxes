@@ -6,19 +6,20 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class LinearSuperposition(WakeSuperposition):
+class ProductSuperposition(WakeSuperposition):
     """
-    Linear supersposition of wake model results,
-    optionally rescaled.
+    Product wind wake superposition.
+
+    This is based on the idea that the dimensionless
+    wind deficit should be rescaled with the wake
+    corrected wind field, rather than the rotor
+    equivalent wind speed.
+
+    Source: https://arxiv.org/pdf/2010.03873.pdf
+            Equation (8)
 
     Parameters
     ----------
-    scalings : dict or number or str
-        Scaling rules. If `dict`, key: variable name str,
-        value: number or str. If `str`:
-        - `source_turbine`: Scale by source turbine value of variable
-        - `source_turbine_amb`: Scale by source turbine ambient value of variable
-        - `source_turbine_<var>`: Scale by source turbine value of variable <var>
     lim_low : dict, optional
         Lower limits of the final wake deltas. Key: variable str,
         value: float
@@ -28,8 +29,6 @@ class LinearSuperposition(WakeSuperposition):
 
     Attributes
     ----------
-    scalings : dict or number or str
-        The scaling rules
     lim_low : dict
         Lower limits of the final wake deltas. Key: variable str,
         value: float
@@ -39,10 +38,8 @@ class LinearSuperposition(WakeSuperposition):
 
     """
 
-    def __init__(self, scalings, lim_low=None, lim_high=None):
+    def __init__(self, lim_low=None, lim_high=None):
         super().__init__()
-
-        self.scalings = scalings
         self.lim_low = lim_low
         self.lim_high = lim_high
 
@@ -87,63 +84,11 @@ class LinearSuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
-        if isinstance(self.scalings, dict):
-            try:
-                scaling = self.scalings[variable]
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': No scaling found for wake variable '{variable}'"
-                )
-        else:
-            scaling = self.scalings
 
-        if scaling is None:
-            wake_delta[sel_sp] += wake_model_result
-            return wake_delta
-
-        elif isinstance(scaling, numbers.Number):
-            wake_delta[sel_sp] += scaling * wake_model_result
-            return wake_delta
-
-        elif (
-            isinstance(scaling, str)
-            and len(scaling) >= 14
-            and (
-                scaling == f"source_turbine"
-                or scaling == "source_turbine_amb"
-                or (len(scaling) > 15 and scaling[14] == "_")
-            )
-        ):
-            if scaling == f"source_turbine":
-                var = variable
-            elif scaling == "source_turbine_amb":
-                var = FV.var2amb[variable]
-            else:
-                var = scaling[15:]
-
-            try:
-                vdata = fdata[var]
-
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': Scaling variable '{var}' for wake variable '{variable}' not found in fdata {sorted(list(fdata.keys()))}"
-                )
-
-            n_states = mdata.n_states
-            n_points = wake_delta.shape[1]
-            stsel = (np.arange(n_states), states_source_turbine)
-            scale = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            scale[:] = vdata[stsel][:, None]
-            scale = scale[sel_sp]
-
-            wake_delta[sel_sp] += scale * wake_model_result
-
-            return wake_delta
-
-        else:
-            raise ValueError(
-                f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'"
-            )
+        if np.max(np.abs(wake_delta)) < 1e-14:
+            wake_delta[:] = 1
+        wake_delta[sel_sp] *= 1 + wake_model_result
+        return wake_delta
 
     def calc_final_wake_delta(
         self, algo, mdata, fdata, variable, amb_results, wake_delta
@@ -174,7 +119,7 @@ class LinearSuperposition(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        w = wake_delta
+        w = amb_results * (wake_delta - 1)
         if self.lim_low is not None and variable in self.lim_low:
             w = np.maximum(w, self.lim_low[variable] - amb_results)
         if self.lim_high is not None and variable in self.lim_high:

@@ -155,9 +155,7 @@ class WsRho2PCtTwoFiles(TurbineType):
         if isinstance(self.source_P, pd.DataFrame):
             data = self.source_P
         else:
-            fpath = algo.dbook.get_file_path(
-                PCTCURVE, self.source_P, check_raw=True
-            )
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
             pars = {"index_col": 0}
             pars.update(self.rpars_P)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -172,9 +170,7 @@ class WsRho2PCtTwoFiles(TurbineType):
         if isinstance(self.source_ct, pd.DataFrame):
             data = self.source_ct
         else:
-            fpath = algo.dbook.get_file_path(
-                PCTCURVE, self.source_ct, check_raw=True
-            )
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
             pars = {"index_col": 0}
             pars.update(self.rpars_ct)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -241,7 +237,6 @@ class WsRho2PCtTwoFiles(TurbineType):
         if np.any(st_sel_P0):
             fdata[FV.P][st_sel_P0] = 0
         if np.any(st_sel_P):
-
             # prepare interpolation:
             n_sel = np.sum(st_sel_P)
             qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
@@ -250,7 +245,6 @@ class WsRho2PCtTwoFiles(TurbineType):
 
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_P is not None:
-
                 # calculate corrected wind speed wsc,
                 # gives ws**3 * cos**p_P in partial load region
                 # and smoothly deals with full load region:
@@ -283,7 +277,6 @@ class WsRho2PCtTwoFiles(TurbineType):
         if np.any(st_sel_ct0):
             fdata[FV.CT][st_sel_ct0] = 0
         if np.any(st_sel_ct):
-
             # prepare interpolation:
             n_sel = np.sum(st_sel_ct)
             qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
@@ -292,7 +285,6 @@ class WsRho2PCtTwoFiles(TurbineType):
 
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_ct is not None:
-
                 # calculate corrected wind speed wsc,
                 # gives ws**3 * cos**p_P in partial load region
                 # and smoothly deals with full load region:

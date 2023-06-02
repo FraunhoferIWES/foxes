@@ -129,7 +129,6 @@ class TurbOParkWake(GaussianWakeModel):
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # apply selection:
             x = x[sp_sel]
             ct = ct[sp_sel]
@@ -146,8 +145,8 @@ class TurbOParkWake(GaussianWakeModel):
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            #sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            #sbeta[sbeta > sblim] = sblim
+            # sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
             alpha = self.c1 * ati
@@ -156,12 +155,15 @@ class TurbOParkWake(GaussianWakeModel):
             # calculate sigma (eqn 4)
             sigma = D * (
                 epsilon
-                + self.A*ati/beta
+                + self.A
+                * ati
+                / beta
                 * (
-                    np.sqrt((alpha + beta*x/D)**2 + 1)
+                    np.sqrt((alpha + beta * x / D) ** 2 + 1)
                     - np.sqrt(1 + alpha**2)
                     - np.log(
-                        (np.sqrt((alpha + beta*x/D)**2 + 1) + 1)*alpha
+                        (np.sqrt((alpha + beta * x / D) ** 2 + 1) + 1)
+                        * alpha
                         / ((np.sqrt(1 + alpha**2) + 1) * (alpha + beta * x / D))
                     )
                 )
@@ -170,7 +172,7 @@ class TurbOParkWake(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                #sblim,
+                # sblim,
                 alpha,
                 beta,
                 epsilon,
@@ -193,6 +195,7 @@ class TurbOParkWake(GaussianWakeModel):
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
         return {FV.WS: (ampld, sigma)}, sp_sel
+
 
 class TurbOParkWakeIX(GaussianWakeModel):
     """
@@ -240,12 +243,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
     """
 
     def __init__(
-        self, 
-        superposition, 
+        self,
+        superposition,
         dx,
-        A, 
-        sbeta_factor=0.25, 
-        ct_max=0.9999, 
+        A,
+        sbeta_factor=0.25,
+        ct_max=0.9999,
         ti_var=FV.TI,
         **ipars,
     ):
@@ -331,9 +334,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # apply selection:
-            #x = x[sp_sel]
+            # x = x[sp_sel]
             ct = ct[sp_sel]
 
             # get D:
@@ -343,14 +345,21 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            #sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            #sbeta[sbeta > sblim] = sblim
+            # sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
+            # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
             # get TI by integratiion along centre line:
-            ti_ix = algo.wake_frame.calc_centreline_integral(algo, mdata, fdata, 
-                                states_source_turbine, [self.ti_var], x, 
-                                dx=self.dx, **self.ipars)[:, :, 0]
+            ti_ix = algo.wake_frame.calc_centreline_integral(
+                algo,
+                mdata,
+                fdata,
+                states_source_turbine,
+                [self.ti_var],
+                x,
+                dx=self.dx,
+                **self.ipars,
+            )[:, :, 0]
 
             # calculate sigma (eqn 1, plus epsilon from eqn 4 for x = 0)
             sigma = D * epsilon + self.A * ti_ix[sp_sel]
@@ -358,7 +367,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                #sblim,
+                # sblim,
                 epsilon,
             )
 

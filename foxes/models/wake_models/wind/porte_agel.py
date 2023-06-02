@@ -106,7 +106,7 @@ class PorteAgelModel:
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -123,7 +123,6 @@ class PorteAgelModel:
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # get ws:
             ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ws[:] = fdata[FV.REWS][st_sel][:, None]
@@ -166,7 +165,6 @@ class PorteAgelModel:
             near = x < x0
             out[self.NEAR] = near
             if np.any(near):
-
                 # apply filter:
                 wsn = ws[near]
                 ctn = ct[near]
@@ -195,7 +193,6 @@ class PorteAgelModel:
             # calc far wake data:
             far = ~near
             if np.any(far):
-
                 # apply filter:
                 ws = ws[far]
                 ct = ct[far]
@@ -257,7 +254,7 @@ class PorteAgelModel:
 
         """
         check = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -312,6 +309,8 @@ class PorteAgelWake(DistSlicedWakeModel):
         model parameter used to determine onset of far wake region
     beta : float
         model parameter used to determine onset of far wake region
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
@@ -323,20 +322,24 @@ class PorteAgelWake(DistSlicedWakeModel):
     YAWM : float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
+    k_var : str
+        The variable name for k
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07):
+    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07, k_var=FV.K):
         super().__init__(superpositions={FV.WS: superposition})
 
         self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -404,15 +407,16 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         # calculate model data:
         if not self.model.has_data(mdata, states_source_turbine, x):
-
             # get gamma:
             gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
+            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[
+                st_sel
+            ][:, None]
             gamma *= np.pi / 180
 
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
+            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
 
             # run calculation:
             self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
@@ -422,7 +426,6 @@ class PorteAgelWake(DistSlicedWakeModel):
         n_sp_sel = np.sum(sp_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
         if np.any(sp_sel):
-
             # apply filter:
             yz = yz[sp_sel]
 
@@ -432,7 +435,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # near wake:
             if np.any(near):
-
                 # collect data:
                 ampl = self.model.get_data(PorteAgelModel.AMPL_NEAR, mdata)
                 r_pc = self.model.get_data(PorteAgelModel.R_PC, mdata)
@@ -452,7 +454,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # far wake:
             if np.any(far):
-
                 # apply filter:
                 yz = yz[far]
 

@@ -57,7 +57,9 @@ class PointWakesCalculation(PointDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.pvars = algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
+        self.pvars = (
+            algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
+        )
 
         idata = super().initialize(algo, verbosity)
         if self.emodels is not None:
@@ -109,7 +111,7 @@ class PointWakesCalculation(PointDataModel):
         """
         torder = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order = torder.shape[1]
-        points = pdata[FV.POINTS]
+        points = pdata[FC.POINTS]
 
         wdeltas = {}
         wmodels = []
@@ -122,7 +124,6 @@ class PointWakesCalculation(PointDataModel):
             del hdeltas
 
         for oi in range(n_order):
-
             o = torder[:, oi]
             wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, o, points)
 
