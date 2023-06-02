@@ -63,20 +63,20 @@ class Data(Dict):
                         f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {self[v].shape[ci]} in shape {self[v].shape}"
                     )
 
-        if FV.STATE in self.sizes:
-            self.n_states = self.sizes[FV.STATE]
-        if FV.TURBINE in self.sizes:
-            self.n_turbines = self.sizes[FV.TURBINE]
-        if FV.POINT in self.sizes:
-            self.n_points = self.sizes[FV.POINT]
+        if FC.STATE in self.sizes:
+            self.n_states = self.sizes[FC.STATE]
+        if FC.TURBINE in self.sizes:
+            self.n_turbines = self.sizes[FC.TURBINE]
+        if FC.POINT in self.sizes:
+            self.n_points = self.sizes[FC.POINT]
 
         if (
             FV.X in data
             and FV.Y in data
             and FV.H in data
-            and dims[FV.X] == (FV.STATE, FV.TURBINE)
-            and dims[FV.Y] == (FV.STATE, FV.TURBINE)
-            and dims[FV.H] == (FV.STATE, FV.TURBINE)
+            and dims[FV.X] == (FC.STATE, FC.TURBINE)
+            and dims[FV.Y] == (FC.STATE, FC.TURBINE)
+            and dims[FV.H] == (FC.STATE, FC.TURBINE)
         ):
             self[FV.TXYH] = np.zeros(
                 (self.n_states, self.n_turbines, 3), dtype=FC.DTYPE

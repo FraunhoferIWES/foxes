@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
     if args.calc_mean:
-        cks[FV.POINT] = 4000
+        cks[FC.POINT] = 4000
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)

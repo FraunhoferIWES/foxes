@@ -106,7 +106,7 @@ class PorteAgelModel:
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -254,7 +254,7 @@ class PorteAgelModel:
 
         """
         check = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -309,6 +309,8 @@ class PorteAgelWake(DistSlicedWakeModel):
         model parameter used to determine onset of far wake region
     beta : float
         model parameter used to determine onset of far wake region
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
@@ -320,20 +322,24 @@ class PorteAgelWake(DistSlicedWakeModel):
     YAWM : float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
+    k_var : str
+        The variable name for k
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07):
+    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07, k_var=FV.K):
         super().__init__(superpositions={FV.WS: superposition})
 
         self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -410,7 +416,7 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
+            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
 
             # run calculation:
             self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)

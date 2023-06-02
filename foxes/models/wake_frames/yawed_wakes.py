@@ -27,6 +27,8 @@ class YawedWakes(WakeFrame):
         model parameter used to determine onset of far wake region
     base_frame : foxes.core.WakeFrame
         The wake frame from which to start
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
@@ -40,6 +42,8 @@ class YawedWakes(WakeFrame):
         it will be searched in the farm data.
     base_frame : foxes.core.WakeFrame
         The wake frame from which to start
+    k_var : str
+        The variable name for k
 
     """
 
@@ -50,13 +54,15 @@ class YawedWakes(WakeFrame):
         alpha=0.58,
         beta=0.07,
         base_frame=RotorWD(),
+        k_var=FV.K,
     ):
         super().__init__()
 
         self.base_frame = base_frame
         self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def initialize(self, algo, verbosity=0):
@@ -131,7 +137,7 @@ class YawedWakes(WakeFrame):
 
         # get k:
         k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
+        k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
 
         # run model calculation:
         self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)

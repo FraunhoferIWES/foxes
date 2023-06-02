@@ -2,7 +2,6 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
-
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
@@ -112,7 +111,7 @@ class PointWakesCalculation(PointDataModel):
         """
         torder = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order = torder.shape[1]
-        points = pdata[FV.POINTS]
+        points = pdata[FC.POINTS]
 
         wdeltas = {}
         wmodels = []

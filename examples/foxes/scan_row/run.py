@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
@@ -15,7 +16,7 @@ def run_foxes(args):
     p0 = np.array([0.0, 0.0])
     stp = np.array([500.0, 0.0])
 
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)

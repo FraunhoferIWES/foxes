@@ -23,19 +23,29 @@ class kTI(TurbineModel):
     ti_val : float, optional
         The uniform value of `TI`. If not given it
         will be searched in farm data
+    k_var : str
+        The variable name for k
+
+    Attributes
+    ----------
+    ti_var : str
+        The `TI` variable name
+    k_var : str
+        The variable name for k
 
     """
 
-    def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None):
+    def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
         super().__init__()
 
         self.ti_var = ti_var
+        self.k_var = k_var
         setattr(self, ti_var, ti_val)
         setattr(self, FV.KTI, kTI)
         setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
-        return super().__repr__() + f"(kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        return super().__repr__() + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
 
     def output_farm_vars(self, algo):
         """
@@ -52,7 +62,7 @@ class kTI(TurbineModel):
             The output variable names
 
         """
-        return [FV.K]
+        return [self.k_var]
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -85,9 +95,9 @@ class kTI(TurbineModel):
         ti = self.get_data(self.ti_var, fdata, st_sel)
 
         k = fdata.get(
-            FV.K, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
+            self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
         )
 
         k[st_sel] = kTI * ti + kb
 
-        return {FV.K: k}
+        return {self.k_var: k}

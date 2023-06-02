@@ -1,4 +1,4 @@
-from .add_from_csv import add_from_csv
+from .from_csv import add_from_csv
 
 
 def add_from_df(

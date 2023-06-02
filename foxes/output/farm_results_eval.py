@@ -98,7 +98,7 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        n_turbines = self.results.dims[FV.TURBINE]
+        n_turbines = self.results.dims[FC.TURBINE]
 
         rdata = {}
         for v, op in vars_op.items():
@@ -122,7 +122,7 @@ class FarmResultsEval(Output):
                 )
 
         data = pd.DataFrame(index=range(n_turbines), data=rdata)
-        data.index.name = FV.TURBINE
+        data.index.name = FC.TURBINE
 
         return data
 
@@ -143,7 +143,7 @@ class FarmResultsEval(Output):
             The results per state
 
         """
-        states = self.results.coords[FV.STATE].to_numpy()
+        states = self.results.coords[FC.STATE].to_numpy()
 
         rdata = {}
         for v, op in vars_op.items():
@@ -164,7 +164,7 @@ class FarmResultsEval(Output):
                 )
 
         data = pd.DataFrame(index=states, data=rdata)
-        data.index.name = FV.STATE
+        data.index.name = FC.STATE
 
         return data
 
@@ -409,10 +409,10 @@ class FarmResultsEval(Output):
             raise KeyError("Expecting either 'algo' or 'P_unit_W'")
 
         # compute yield per turbine
-        if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
+        if np.issubdtype(self.results[FC.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
-            times = self.results[FV.STATE].to_numpy()
+            times = self.results[FC.STATE].to_numpy()
             if delta_t is None:
                 delta_t = times[-1] - times[-2]
             duration = times[-1] - times[0] + delta_t

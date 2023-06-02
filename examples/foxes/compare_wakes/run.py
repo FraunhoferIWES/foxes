@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
-
 def calc(mbook, farm, states, wakes, points, args):
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     algo = foxes.algorithms.Downwind(
         mbook,

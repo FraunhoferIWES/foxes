@@ -979,7 +979,7 @@ class FlowPlots2D(Output):
             y_pos /= normalize_xy
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", z =  {int(np.round(z_pos))} m"
 
@@ -1220,7 +1220,7 @@ class FlowPlots2D(Output):
             z_pos /= normalize_z
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", y =  {int(np.round(y_pos))} m"
@@ -1461,7 +1461,7 @@ class FlowPlots2D(Output):
             z_pos /= normalize_z
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", x =  {int(np.round(x_pos))} m"

@@ -4,7 +4,7 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -22,7 +22,7 @@ def test():
         (["Bastankhah_linear"], "grid64", "grid64"),
     ]
 
-    ck = {FV.STATE: c}
+    ck = {FC.STATE: c}
 
     for i, (wakes, rotor, pwake) in enumerate(cases):
         print(f"\nENTERING CASE {(wakes, rotor, pwake)}\n")

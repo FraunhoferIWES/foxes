@@ -110,7 +110,7 @@ class TurbineTypeCurves(Output):
         ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=FC.DTYPE)
         n_states = len(ws)
         sdata = pd.DataFrame(index=range(n_states))
-        sdata.index.name = FV.STATE
+        sdata.index.name = FC.STATE
         sdata[FV.WS] = ws
 
         models = [turbine_type]

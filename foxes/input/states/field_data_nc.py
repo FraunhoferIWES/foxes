@@ -323,7 +323,7 @@ class FieldDataNC(States):
             y = ds[self.y_coord].to_numpy()
             x = ds[self.x_coord].to_numpy()
             v = list(self._dkys.keys())
-            coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
+            coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
             data = self._get_data(ds, verbosity)
             data = (coos, data)
 
@@ -419,7 +419,7 @@ class FieldDataNC(States):
 
         """
         # prepare:
-        points = pdata[FV.POINTS]
+        points = pdata[FC.POINTS]
         n_pts = points.shape[1]
         n_states = fdata.n_states
 
@@ -432,7 +432,7 @@ class FieldDataNC(States):
 
         # read data for this chunk:
         else:
-            i0 = np.where(self._inds == mdata[FV.STATE][0])[0][0]
+            i0 = np.where(self._inds == mdata[FC.STATE][0])[0][0]
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
 

@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from .point_data_model import PointDataModel, PointDataModelList
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 class States(PointDataModel):
     """
@@ -76,18 +76,18 @@ class States(PointDataModel):
         """
         sinds = self.index()
         if sinds is not None:
-            idata["coords"][FV.STATE] = sinds
+            idata["coords"][FC.STATE] = sinds
 
         weights = self.weights(algo)
         if len(weights.shape) != 2:
             raise ValueError(
-                f"States '{self.name}': Wrong weights dimension, expecing ({FV.STATE}, {FV.TURBINE}), got shape {weights.shape}"
+                f"States '{self.name}': Wrong weights dimension, expecing ({FC.STATE}, {FC.TURBINE}), got shape {weights.shape}"
             )
         if weights.shape[1] != algo.n_turbines:
             raise ValueError(
-                f"States '{self.name}': Wrong size of second axis dimension '{FV.TURBINE}': Expecting {algo.n_turbines}, got {weights.shape[1]}"
+                f"States '{self.name}': Wrong size of second axis dimension '{FC.TURBINE}': Expecting {algo.n_turbines}, got {weights.shape[1]}"
             )
-        idata["data_vars"][FV.WEIGHT] = ((FV.STATE, FV.TURBINE), weights)
+        idata["data_vars"][FV.WEIGHT] = ((FC.STATE, FC.TURBINE), weights)
 
         return idata
 

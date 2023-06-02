@@ -5,7 +5,6 @@ import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -80,7 +79,7 @@ class Downwind(Algorithm):
         wake_frame="rotor_wd",
         partial_wakes_model="auto",
         farm_controller="basic_ctrl",
-        chunks={FV.STATE: 1000},
+        chunks={FC.STATE: 1000},
         dbook=None,
         keep_models=[],
         verbosity=1,
@@ -296,7 +295,7 @@ class Downwind(Algorithm):
         farm_results = mlist.run_calculation(
             self, models_data, out_vars=self.farm_vars, parameters=calc_pars
         )
-        farm_results[FV.TNAME] = ((FV.TURBINE,), self.farm.turbine_names)
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
             farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
         del models_data
@@ -449,14 +448,14 @@ class Downwind(Algorithm):
 
         # chunk farm results:
         if self.chunks is not None:
-            farm_results = farm_results.chunk(chunks={FV.STATE: self.chunks[FV.STATE]})
+            farm_results = farm_results.chunk(chunks={FC.STATE: self.chunks[FC.STATE]})
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
-        if FV.STATE in farm_results.coords:
-            sinds = farm_results.coords[FV.STATE]
-        elif models_data is not None and FV.STATE in models_data.coords:
-            sinds = models_data.coords[FV.STATE]
+        if FC.STATE in farm_results.coords:
+            sinds = farm_results.coords[FC.STATE]
+        elif models_data is not None and FC.STATE in models_data.coords:
+            sinds = models_data.coords[FC.STATE]
         else:
             sinds = None
         point_data = self.new_point_data(points, sinds)

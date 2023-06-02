@@ -1,3 +1,6 @@
+"""
+Model collection.
+"""
 from . import turbine_types
 from . import rotor_models
 from . import turbine_models
