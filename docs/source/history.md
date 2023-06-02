@@ -268,3 +268,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Completely new style, fixing issues with incomplete API entries
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
+
+## v0.3.6-alpha
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)
