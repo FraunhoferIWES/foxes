@@ -262,7 +262,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Models:
   - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
   - New turbine model: `RotorCentreCalc`, calculates data at rotor centre, irrespective of rotor model
-  - Improved: Now option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
 - Bug fixes:
   - Bug fixed that caused problems when restarting the `SectorManagement` turbine model, e.g. for flow plots
 - Documentation:
@@ -272,6 +271,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.6-alpha
 
-
+- Models:
+  - Improved: Now option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)
