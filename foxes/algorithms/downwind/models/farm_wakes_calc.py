@@ -55,7 +55,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         self.pwakes = algo.partial_wakes_model
-        
+
         idata = super().initialize(algo, verbosity)
         algo.update_idata(self.pwakes, idata=idata, verbosity=verbosity)
 
@@ -91,11 +91,9 @@ class FarmWakesCalculation(FarmDataModel):
         wdeltas = self.pwakes.new_wake_deltas(algo, mdata, fdata)
 
         for oi in range(n_order):
-
             o = torder[:, oi]
 
             if oi > 0:
-
                 self.pwakes.evaluate_results(
                     algo, mdata, fdata, wdeltas, states_turbine=o
                 )

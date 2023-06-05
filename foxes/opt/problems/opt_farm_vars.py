@@ -3,8 +3,8 @@ import pandas as pd
 
 from foxes.opt.core import FarmVarsProblem
 from foxes.models.turbine_models import SetFarmVars
-import foxes.variables as FV
 import foxes.constants as FC
+
 
 class OptFarmVars(FarmVarsProblem):
     """
@@ -18,23 +18,23 @@ class OptFarmVars(FarmVarsProblem):
         Keyword arguments for `FarmVarsProblem`
 
     """
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._vars = None
 
     def add_var(
-        self, 
-        name, 
-        typ, 
-        init, 
-        min, 
-        max, 
-        level="uniform", 
+        self,
+        name,
+        typ,
+        init,
+        min,
+        max,
+        level="uniform",
         sel=None,
         pre_rotor=False,
         model_key=None,
-        ):
+    ):
         """
         Add a variable.
 
@@ -53,7 +53,7 @@ class OptFarmVars(FarmVarsProblem):
         level : str
             Choices: uniform, state, turbine, state-turbine
         sel : numpy.ndarray, optional
-            States/turbines/state-turbine selection, 
+            States/turbines/state-turbine selection,
             depending on the level
         pre_rotor : bool
             Apply this variable before rotor model
@@ -64,7 +64,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if typ is not float and typ is not int:
-            raise TypeError(f"Problem '{self.name}': Expecting float or int, got type '{type(typ).__name__}'")
+            raise TypeError(
+                f"Problem '{self.name}': Expecting float or int, got type '{type(typ).__name__}'"
+            )
 
         mname = self.name if model_key is None else model_key
         if mname in self.algo.mbook.turbine_models:
@@ -74,25 +76,32 @@ class OptFarmVars(FarmVarsProblem):
                     f"Problem '{self.name}': Turbine model entry '{mname}' already exists in model book, and is not of type SetFarmVars"
                 )
             elif m.pre_rotor != pre_rotor:
-                raise ValueError(f"Problem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre_rotor}")
+                raise ValueError(
+                    f"Problem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre_rotor}"
+                )
         else:
             self.algo.mbook.turbine_models[mname] = SetFarmVars(pre_rotor=pre_rotor)
 
         if self._vars is None:
-            i0 = 0 
+            i0 = 0
             i0i = 0
             i0f = 0
         else:
             if name in self._vars["var"].tolist():
-                raise ValueError(f"Problem '{self.name}': Attempt to add variable '{name}' twice")
+                raise ValueError(
+                    f"Problem '{self.name}': Attempt to add variable '{name}' twice"
+                )
             i0 = len(self._vars.index)
             grps = self._vars.groupby("type")
             i0i = len(grps.get_group("int").index) if "int" in grps.groups.keys() else 0
-            i0f = len(grps.get_group("float").index) if "float" in grps.groups.keys() else 0
+            i0f = (
+                len(grps.get_group("float").index)
+                if "float" in grps.groups.keys()
+                else 0
+            )
             del grps
 
         if level == "uniform":
-
             hdata = pd.DataFrame(index=[i0])
             hdata.loc[i0, "name"] = name
             hdata.loc[i0, "var"] = name
@@ -109,15 +118,14 @@ class OptFarmVars(FarmVarsProblem):
             hdata.loc[i0, "model_key"] = mname
 
         elif level == "state":
-
             if not self.algo.initialized:
                 self.algo.initialize()
-                
+
             states = np.arange(self.algo.n_states)
             if sel is not None:
                 states = states[sel]
             inds = i0 + np.arange(len(states))
-            tinds = inds-i0+i0i if typ is int else inds-i0+i0f
+            tinds = inds - i0 + i0i if typ is int else inds - i0 + i0f
 
             hdata = pd.DataFrame(index=inds)
             hdata.loc[inds, "name"] = [f"{name}_{i:05d}" for i in range(len(states))]
@@ -138,13 +146,12 @@ class OptFarmVars(FarmVarsProblem):
             hdata.loc[inds, "model_key"] = mname
 
         elif level == "turbine":
-
             if sel is None:
                 turbines = self.sel_turbines
             else:
                 turbines = np.arange(self.algo.n_turbines)[sel]
             inds = i0 + np.arange(len(turbines))
-            tinds = inds-i0+i0i if typ is int else inds-i0+i0f
+            tinds = inds - i0 + i0i if typ is int else inds - i0 + i0f
 
             hdata = pd.DataFrame(index=inds)
             hdata.loc[inds, "name"] = [f"{name}_{i:04d}" for i in range(len(turbines))]
@@ -154,8 +161,10 @@ class OptFarmVars(FarmVarsProblem):
             hdata.loc[inds, "level"] = level
             hdata.loc[inds, "state"] = -1
             hdata.loc[inds, "turbine"] = turbines
-            hdata.loc[inds, "sel_turbine"] = [self.sel_turbines.index(ti) for ti in turbines]
-            
+            hdata.loc[inds, "sel_turbine"] = [
+                self.sel_turbines.index(ti) for ti in turbines
+            ]
+
             for c, d in [("init", init), ("min", min), ("max", max)]:
                 data = np.full(len(inds), np.nan, dtype=FC.DTYPE)
                 data[:] = d
@@ -165,7 +174,6 @@ class OptFarmVars(FarmVarsProblem):
             hdata.loc[inds, "model_key"] = mname
 
         elif level == "state-turbine":
-
             if not self.algo.initialized:
                 self.algo.initialize()
 
@@ -176,21 +184,25 @@ class OptFarmVars(FarmVarsProblem):
                 sel[:, self.sel_turbines] = True
             else:
                 sel = np.array(sel, dtype=bool)
-            st = np.arange(n_states*n_turbines).reshape(n_states, n_turbines)[sel]
+            st = np.arange(n_states * n_turbines).reshape(n_states, n_turbines)[sel]
             whr = np.where(sel)
             n_inds = len(st)
             inds = i0 + np.arange(n_inds)
-            tinds = inds-i0+i0i if typ is int else inds-i0+i0f
+            tinds = inds - i0 + i0i if typ is int else inds - i0 + i0f
 
             hdata = pd.DataFrame(index=inds)
-            hdata.loc[inds, "name"] = [f"{name}_{whr[0][i]:05d}_{whr[1][i]:04d}" for i in range(len(st))]
+            hdata.loc[inds, "name"] = [
+                f"{name}_{whr[0][i]:05d}_{whr[1][i]:04d}" for i in range(len(st))
+            ]
             hdata.loc[inds, "var"] = name
             hdata.loc[inds, "type"] = "int" if typ is int else "float"
             hdata.loc[inds, "index"] = tinds
             hdata.loc[inds, "level"] = level
             hdata.loc[inds, "state"] = whr[0]
             hdata.loc[inds, "turbine"] = whr[1]
-            hdata.loc[inds, "sel_turbine"] = [self.sel_turbines.index(ti) for ti in whr[1]]
+            hdata.loc[inds, "sel_turbine"] = [
+                self.sel_turbines.index(ti) for ti in whr[1]
+            ]
 
             for c, d in [("init", init), ("min", min), ("max", max)]:
                 data = np.full(n_inds, np.nan, dtype=FC.DTYPE)
@@ -204,13 +216,15 @@ class OptFarmVars(FarmVarsProblem):
             hdata.loc[inds, "model_key"] = mname
 
         else:
-            raise ValueError(f"Problem '{self.name}': Unknown level '{level}'. Choices: uniform, state, turbine, state-turbine")
+            raise ValueError(
+                f"Problem '{self.name}': Unknown level '{level}'. Choices: uniform, state, turbine, state-turbine"
+            )
 
         if self._vars is None:
             self._vars = hdata
         else:
             self._vars = pd.concat([self._vars, hdata], axis=0)
-        
+
         icols = ["index", "state", "turbine", "sel_turbine"]
         for c in icols:
             self._vars[c] = self._vars[c].astype(FC.ITYPE)
@@ -228,7 +242,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         if verbosity > 0:
             print(f"Problem '{self.name}': Optimization variable list")
@@ -240,7 +256,9 @@ class OptFarmVars(FarmVarsProblem):
         postv = {}
         for (mname, pre), g in self._vars.groupby(["model_key", "pre_rotor"]):
             if (pre and mname in postv) or (not pre and mname in prev):
-                raise ValueError(f"Problem '{self.name}': Model '{mname}' reveived both pre_rotor and non-pre_rotor variables")
+                raise ValueError(
+                    f"Problem '{self.name}': Model '{mname}' reveived both pre_rotor and non-pre_rotor variables"
+                )
             tg = prev if pre else postv
             if mname not in tg:
                 tg[mname] = set(g["var"].tolist())
@@ -251,7 +269,7 @@ class OptFarmVars(FarmVarsProblem):
             pre_rotor_vars={mname: list(vrs) for mname, vrs in prev.items()},
             post_rotor_vars={mname: list(vrs) for mname, vrs in postv.items()},
             verbosity=verbosity,
-            **kwargs
+            **kwargs,
         )
 
     def var_names_int(self):
@@ -265,8 +283,10 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
-        
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
+
         grps = self._vars.groupby("type")
         if "int" not in grps.groups.keys():
             return []
@@ -284,7 +304,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "int" not in grps.groups.keys():
@@ -305,7 +327,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "int" not in grps.groups.keys():
@@ -326,7 +350,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "int" not in grps.groups.keys():
@@ -345,7 +371,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "float" not in grps.groups.keys():
@@ -364,7 +392,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "float" not in grps.groups.keys():
@@ -385,7 +415,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "float" not in grps.groups.keys():
@@ -406,7 +438,9 @@ class OptFarmVars(FarmVarsProblem):
 
         """
         if self._vars is None:
-            raise ValueError(f"Problem '{self.name}': No variables added for optimization.")
+            raise ValueError(
+                f"Problem '{self.name}': No variables added for optimization."
+            )
 
         grps = self._vars.groupby("type")
         if "float" not in grps.groups.keys():
@@ -441,35 +475,36 @@ class OptFarmVars(FarmVarsProblem):
         farm_vars = {}
         grps = self._vars.groupby(["type", "var", "level"])
         for (typ, var, level), g in grps:
-
             src = vars_int if typ == "int" else vars_float
             i0 = g.index[0]
             i1 = g.index[-1]
-            data = src[np.s_[i0:i1+1]]
+            data = src[np.s_[i0 : i1 + 1]]
 
             if level == "uniform":
                 farm_vars[var] = np.full((n_states, n_sturb), data[0], dtype=FC.DTYPE)
-            
+
             elif level == "state":
                 farm_vars[var] = np.full((n_states, n_sturb), np.nan, dtype=FC.DTYPE)
                 if np.all(g["state"] == np.arange(n_states)):
                     farm_vars[var][:] = data[:, None]
                 else:
                     farm_vars[var][g["state"]] = data[:, None]
-            
+
             elif level == "turbine":
                 farm_vars[var] = np.full((n_states, n_sturb), np.nan, dtype=FC.DTYPE)
                 if np.all(g["sel_turbine"] == np.arange(n_sturb)):
                     farm_vars[var][:] = data[None, :]
                 else:
                     farm_vars[var][:, g["sel_turbine"]] = data[None, :]
-            
+
             elif level == "state-turbine":
                 farm_vars[var] = np.full((n_states, n_sturb), np.nan, dtype=FC.DTYPE)
                 farm_vars[var][g["state"], g["sel_turbine"]] = data
-            
+
             else:
-                raise ValueError(f"Problem '{self.name}': Unknown level '{level}' encountered for variable '{var}'. Valid choices: uniform, state, turbine, state-turbine")
+                raise ValueError(
+                    f"Problem '{self.name}': Unknown level '{level}' encountered for variable '{var}'. Valid choices: uniform, state, turbine, state-turbine"
+                )
 
         return farm_vars
 
@@ -502,35 +537,44 @@ class OptFarmVars(FarmVarsProblem):
         farm_vars = {}
         grps = self._vars.groupby(["type", "var", "level"])
         for (typ, var, level), g in grps:
-
             src = vars_int if typ == "int" else vars_float
             i0 = g.index[0]
             i1 = g.index[-1]
-            data = src[:, np.s_[i0:i1+1]]
+            data = src[:, np.s_[i0 : i1 + 1]]
 
             if level == "uniform":
-                farm_vars[var] = np.full((n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE)
+                farm_vars[var] = np.full(
+                    (n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE
+                )
                 farm_vars[var][:] = data[:, 0, None, None]
-            
+
             elif level == "state":
-                farm_vars[var] = np.full((n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE)
+                farm_vars[var] = np.full(
+                    (n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE
+                )
                 if np.all(g["state"] == np.arange(n_states)):
                     farm_vars[var][:] = data[:, :, None]
                 else:
                     farm_vars[var][:, g["state"]] = data[:, :, None]
-            
+
             elif level == "turbine":
-                farm_vars[var] = np.full((n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE)
+                farm_vars[var] = np.full(
+                    (n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE
+                )
                 if np.all(g["sel_turbine"] == np.arange(n_sturb)):
                     farm_vars[var][:] = data[:, None, :]
                 else:
                     farm_vars[var][:, :, g["sel_turbine"]] = data[:, None, :]
-            
+
             elif level == "state-turbine":
-                farm_vars[var] = np.full((n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE)
+                farm_vars[var] = np.full(
+                    (n_pop, n_states, n_sturb), np.nan, dtype=FC.DTYPE
+                )
                 farm_vars[var][:, g["state"], g["sel_turbine"]] = data
-           
+
             else:
-                raise ValueError(f"Problem '{self.name}': Unknown level '{level}' encountered for variable '{var}'. Valid choices: uniform, state, turbine, state-turbine")
+                raise ValueError(
+                    f"Problem '{self.name}': Unknown level '{level}' encountered for variable '{var}'. Valid choices: uniform, state, turbine, state-turbine"
+                )
 
         return farm_vars

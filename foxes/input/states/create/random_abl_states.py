@@ -35,7 +35,7 @@ def create_random_abl_states(
     """
 
     data = pd.DataFrame(index=range(n_states))
-    data.index.name = FV.STATE
+    data.index.name = FC.STATE
 
     for v, mm in cols_minmax.items():
         data[v] = np.random.uniform(low=mm[0], high=mm[1], size=(n_states,)).astype(
@@ -100,7 +100,6 @@ def write_random_abl_states(
     )
 
     if digits is not None:
-
         hdigits = {c: 4 for c in cols_minmax.keys()}
 
         wcol = var2col.get(FV.WEIGHT, FV.WEIGHT)

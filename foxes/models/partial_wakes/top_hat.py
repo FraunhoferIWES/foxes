@@ -176,20 +176,17 @@ class PartialTopHat(PartialWakesModel):
 
         sel0 = (ct > 0.0) & (x > 0.0)
         if np.any(sel0):
-
             R = mdata[self.WCOOS_R]
             r = np.zeros_like(R)
             D = fdata[FV.D]
 
             for w in self.wake_models:
-
                 wr = w.calc_wake_radius(
                     algo, mdata, fdata, states_source_turbine, x, ct
                 )
 
                 sel_sp = sel0 & (wr > R - D / 2)
                 if np.any(sel_sp):
-
                     hx = x[sel_sp]
                     hct = ct[sel_sp]
                     hwr = wr[sel_sp]
@@ -251,9 +248,9 @@ class PartialTopHat(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        weights = self.get_data(FV.RWEIGHTS, mdata)
-        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FV.RPOINTS, mdata)
+        weights = self.get_data(FC.RWEIGHTS, mdata)
+        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
+        rpoints = self.get_data(FC.RPOINTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wres = {}
@@ -272,7 +269,7 @@ class PartialTopHat(PartialWakesModel):
             if v in wake_deltas:
                 wres[v] += wdel[v]
                 if update_amb_res:
-                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

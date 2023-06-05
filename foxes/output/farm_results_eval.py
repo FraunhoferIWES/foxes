@@ -66,7 +66,6 @@ class FarmResultsEval(Output):
         expr = ",".join(inds) + "->" + rhs
 
         if np.any(nas):
-
             sel = ~np.any(nas, axis=1)
             fields = [f[sel] for f in fields]
 
@@ -99,7 +98,7 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        n_turbines = self.results.dims[FV.TURBINE]
+        n_turbines = self.results.dims[FC.TURBINE]
 
         rdata = {}
         for v, op in vars_op.items():
@@ -123,7 +122,7 @@ class FarmResultsEval(Output):
                 )
 
         data = pd.DataFrame(index=range(n_turbines), data=rdata)
-        data.index.name = FV.TURBINE
+        data.index.name = FC.TURBINE
 
         return data
 
@@ -144,7 +143,7 @@ class FarmResultsEval(Output):
             The results per state
 
         """
-        states = self.results.coords[FV.STATE].to_numpy()
+        states = self.results.coords[FC.STATE].to_numpy()
 
         rdata = {}
         for v, op in vars_op.items():
@@ -165,7 +164,7 @@ class FarmResultsEval(Output):
                 )
 
         data = pd.DataFrame(index=states, data=rdata)
-        data.index.name = FV.STATE
+        data.index.name = FC.STATE
 
         return data
 
@@ -359,17 +358,20 @@ class FarmResultsEval(Output):
 
     def calc_turbine_yield(
         self,
+        algo=None,
         annual=False,
         ambient=False,
         hours=None,
         delta_t=None,
-        P_unit_W=1e3,
+        P_unit_W=None,
     ):
         """
         Calculates the yield per turbine
 
         Parameters
         ----------
+        algo : foxes.core.Algorithm, optional
+            The algorithm, for P_nominal lookup
         annual : bool, optional
             Flag for returing annual results, by default False
         ambient : bool, optional
@@ -380,7 +382,8 @@ class FarmResultsEval(Output):
             The time delta step in case of time series data,
             by default automatically determined
         P_unit_W : float
-            The power unit in Watts, 1000 for kW
+            The power unit in Watts, 1000 for kW. Looked up
+            in algorithm if not given
 
         Returns
         -------
@@ -395,11 +398,21 @@ class FarmResultsEval(Output):
             var_in = FV.P
             var_out = FV.YLD
 
+        if algo is not None and P_unit_W is None:
+            P_unit_W = np.array(
+                [FC.P_UNITS[t.P_unit] for t in algo.farm_controller.turbine_types],
+                dtype=FC.DTYPE,
+            )[:, None]
+        elif algo is None and P_unit_W is not None:
+            pass
+        else:
+            raise KeyError("Expecting either 'algo' or 'P_unit_W'")
+
         # compute yield per turbine
-        if np.issubdtype(self.results[FV.STATE].dtype, np.datetime64):
+        if np.issubdtype(self.results[FC.STATE].dtype, np.datetime64):
             if hours is not None:
                 raise KeyError("Unexpected parameter 'hours' for timeseries data")
-            times = self.results[FV.STATE].to_numpy()
+            times = self.results[FC.STATE].to_numpy()
             if delta_t is None:
                 delta_t = times[-1] - times[-2]
             duration = times[-1] - times[0] + delta_t

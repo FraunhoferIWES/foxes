@@ -95,11 +95,8 @@ class FarmWakesCalculation(FarmDataModel):
             self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, o, wdeltas)
 
         for oi in range(n_order):
-
             o = torder[:, oi]
-            self.pwakes.evaluate_results(
-                algo, mdata, fdata, wdeltas, states_turbine=o
-            )
+            self.pwakes.evaluate_results(algo, mdata, fdata, wdeltas, states_turbine=o)
 
             trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
             np.put_along_axis(trbs, o[:, None], True, axis=1)

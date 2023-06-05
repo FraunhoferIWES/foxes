@@ -141,7 +141,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         wdeltas = {}
         sp_sel = (ct > 0.0) & (x > 1e-5) & np.any(r < wake_r[:, :, None], axis=2)
         if np.any(sp_sel):
-
             x = x[sp_sel]
             r = r[sp_sel]
             ct = ct[sp_sel]

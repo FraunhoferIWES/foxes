@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.opt.core.farm_constraint import FarmConstraint
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 class MinDistConstraint(FarmConstraint):
     """
@@ -195,7 +195,7 @@ class MinDistConstraint(FarmConstraint):
         """
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
-        n_turbines = problem_results.dims[FV.TURBINE]
+        n_turbines = problem_results.dims[FC.TURBINE]
 
         xy = np.stack(
             [problem_results[FV.X].to_numpy(), problem_results[FV.Y].to_numpy()],

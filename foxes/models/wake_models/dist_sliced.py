@@ -65,9 +65,8 @@ class DistSlicedWakeModel(WakeModel):
         }
 
         idata = super().initialize(algo, verbosity)
-        algo.update_idata(list(self.superp.values()),
-            idata=idata, verbosity=verbosity)
-        
+        algo.update_idata(list(self.superp.values()), idata=idata, verbosity=verbosity)
+
         return idata
 
     @abstractmethod
@@ -142,7 +141,6 @@ class DistSlicedWakeModel(WakeModel):
         )
 
         for v, hdel in wdeltas.items():
-
             try:
                 superp = self.superp[v]
             except KeyError:
@@ -206,4 +204,3 @@ class DistSlicedWakeModel(WakeModel):
         for s in self.superp.values():
             s.finalize(algo, verbosity)
         super().finalize(algo, verbosity)
-        

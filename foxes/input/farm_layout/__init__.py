@@ -1,5 +1,9 @@
-from .add_row import add_row
-from .add_grid import add_grid
-from .add_from_json import add_from_json
-from .add_from_csv import add_from_csv
-from .add_from_file import add_from_file
+"""
+Functions for adding turbines to the wind farm.
+"""
+from .row import add_row
+from .grid import add_grid
+from .from_json import add_from_json
+from .from_csv import add_from_csv
+from .from_file import add_from_file
+from .from_df import add_from_df

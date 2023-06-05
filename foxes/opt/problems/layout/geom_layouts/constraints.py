@@ -4,11 +4,16 @@ from iwopy import Constraint
 
 import foxes.constants as FC
 
-class Valid(Constraint):
 
+class Valid(Constraint):
     def __init__(self, problem, name="valid", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            **kwargs,
+        )
 
     def n_components(self):
         return 1
@@ -21,11 +26,16 @@ class Valid(Constraint):
         __, valid = problem_results
         return np.sum(~valid, axis=1)[:, None]
 
-class Boundary(Constraint):
 
+class Boundary(Constraint):
     def __init__(self, problem, n_turbines=None, D=None, name="boundary", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            **kwargs,
+        )
         self.n_turbines = problem.n_turbines if n_turbines is None else n_turbines
         self.D = problem.D if D is None else D
 
@@ -34,34 +44,41 @@ class Boundary(Constraint):
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
         xy, __ = problem_results
-        
+
         dists = self.problem.boundary.points_distance(xy)
         dists[self.problem.boundary.points_inside(xy)] *= -1
 
         if self.D is not None:
-            dists += self.D/2
-        
+            dists += self.D / 2
+
         return dists
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
         xy, __ = problem_results
         n_pop, n_xy = xy.shape[:2]
 
-        xy = xy.reshape(n_pop*n_xy, 2)
+        xy = xy.reshape(n_pop * n_xy, 2)
         dists = self.problem.boundary.points_distance(xy)
         dists[self.problem.boundary.points_inside(xy)] *= -1
         dists = dists.reshape(n_pop, n_xy)
 
         if self.D is not None:
-            dists += self.D/2
+            dists += self.D / 2
 
         return dists
 
-class MinDist(Constraint):
 
-    def __init__(self, problem, min_dist=None, n_turbines=None, name="min_dist", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+class MinDist(Constraint):
+    def __init__(
+        self, problem, min_dist=None, n_turbines=None, name="min_dist", **kwargs
+    ):
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            **kwargs,
+        )
         self.min_dist = problem.min_dist if min_dist is None else min_dist
         self.n_turbines = problem.n_turbines if n_turbines is None else n_turbines
 
@@ -73,7 +90,7 @@ class MinDist(Constraint):
         ----------
         verbosity : int
             The verbosity level, 0 = silent
-            
+
         """
         N = self.n_turbines
         self._i2t = []  # i --> (ti, tj)
@@ -110,12 +127,17 @@ class MinDist(Constraint):
         d = np.linalg.norm(a - b, axis=-1)
 
         return self.min_dist - d
-    
-class CMinN(Constraint):
 
+
+class CMinN(Constraint):
     def __init__(self, problem, N, name="cminN", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            **kwargs,
+        )
         self.N = N
 
     def n_components(self):
@@ -129,11 +151,16 @@ class CMinN(Constraint):
         __, valid = problem_results
         return self.N - np.sum(valid, axis=1)[:, None]
 
-class CMaxN(Constraint):
 
+class CMaxN(Constraint):
     def __init__(self, problem, N, name="cmaxN", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), **kwargs)
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            **kwargs,
+        )
         self.N = N
 
     def n_components(self):
@@ -147,11 +174,17 @@ class CMaxN(Constraint):
         __, valid = problem_results
         return np.sum(valid, axis=1)[:, None] - self.N
 
-class CFixN(Constraint):
 
+class CFixN(Constraint):
     def __init__(self, problem, N, name="cfixN", **kwargs):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float(), tol=0.1, **kwargs)
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+            tol=0.1,
+            **kwargs,
+        )
         self.N = N
 
     def n_components(self):
@@ -167,20 +200,24 @@ class CFixN(Constraint):
         vld = np.sum(valid, axis=1)
         return np.stack([self.N - vld, vld - self.N], axis=-1)
 
-class CMinDensity(Constraint):
 
+class CMinDensity(Constraint):
     def __init__(self, problem, min_value, dfactor=1, name="min_density"):
-        super().__init__(problem, name, vnames_int=problem.var_names_int(), 
-            vnames_float=problem.var_names_float())
+        super().__init__(
+            problem,
+            name,
+            vnames_int=problem.var_names_int(),
+            vnames_float=problem.var_names_float(),
+        )
         self.min_value = min_value
         self.dfactor = dfactor
 
     def n_components(self):
         return 1
-    
+
     def initialize(self, verbosity):
         super().initialize(verbosity)
-        
+
         # define regular grid of probe points:
         geom = self.problem.boundary
         pmin = geom.p_min()
@@ -188,13 +225,14 @@ class CMinDensity(Constraint):
         detlta = self.problem.min_dist / self.dfactor
         self._probes = np.stack(
             np.meshgrid(
-                np.arange(pmin[0]-detlta, pmax[0]+2*detlta, detlta),
-                np.arange(pmin[1]-detlta, pmax[1]+2*detlta, detlta),
-                indexing='ij'
-            ), axis=-1
+                np.arange(pmin[0] - detlta, pmax[0] + 2 * detlta, detlta),
+                np.arange(pmin[1] - detlta, pmax[1] + 2 * detlta, detlta),
+                indexing="ij",
+            ),
+            axis=-1,
         )
         nx, ny = self._probes.shape[:2]
-        n = nx*ny
+        n = nx * ny
         self._probes = self._probes.reshape(n, 2)
 
         # reduce to points within geometry:
@@ -215,5 +253,5 @@ class CMinDensity(Constraint):
             if np.any(valid[pi]):
                 hxy = xy[pi][valid[pi]]
                 dists = cdist(self._probes, hxy)
-                out[pi] = np.nanmax(np.nanmin(dists, axis=1)) -  self.min_value
+                out[pi] = np.nanmax(np.nanmin(dists, axis=1)) - self.min_value
         return out[:, None]

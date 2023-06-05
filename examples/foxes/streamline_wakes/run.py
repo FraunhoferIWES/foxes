@@ -5,15 +5,15 @@ import numpy as np
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
     cks = (
         None
         if args.nodask
-        else {FV.STATE: args.chunksize, "point": args.chunksize_points}
+        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
     )
 
     mbook = foxes.models.ModelBook()
@@ -83,7 +83,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-f",
@@ -155,5 +154,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

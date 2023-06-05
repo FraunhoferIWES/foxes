@@ -30,13 +30,16 @@ class IECTIWake(TopHatWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
-
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
     opening_angle : float
         The wake opening angle. The wake growth parameter k is calculated
         based on the wake opening angle.
+    k_var : str
+        The variable name for k
 
     """
 
@@ -46,17 +49,20 @@ class IECTIWake(TopHatWakeModel):
         opening_angle=21.6,
         ct_max=0.9999,
         iec_type="2019",
+        k_var=FV.K
     ):
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
         k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
         self.iec_type = iec_type
-        setattr(self, FV.K, k)
+        self.k_var = k_var
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={getattr(self, FV.K)}, sp={self.superpositions[FV.TI]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -120,7 +126,7 @@ class IECTIWake(TopHatWakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get k:
-        k = self.get_data(FV.K, fdata, st_sel, data_prio=False)
+        k = self.get_data(self.k_var, fdata, st_sel, data_prio=False)
         if isinstance(k, np.ndarray):
             k = k[:, None]
 

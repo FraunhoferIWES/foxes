@@ -28,6 +28,8 @@ class BastankhahWake(GaussianWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
+    k_var : str
+        The variable name for k
 
     Attributes
     ----------
@@ -39,20 +41,24 @@ class BastankhahWake(GaussianWakeModel):
     ct_max : float
         The maximal value for ct, values beyond will be limited
         to this number
+    k_var : str
+        The variable name for k
 
     """
 
-    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999):
+    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K):
         super().__init__(superpositions={FV.WS: superposition})
 
         self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -123,7 +129,6 @@ class BastankhahWake(GaussianWakeModel):
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # apply selection:
             x = x[sp_sel]
             ct = ct[sp_sel]
@@ -135,7 +140,7 @@ class BastankhahWake(GaussianWakeModel):
 
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
+            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
             k = k[sp_sel]
 
             # calculate sigma:

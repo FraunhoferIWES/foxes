@@ -8,7 +8,6 @@ import flappy as fl
 from flappy.config.variables import variables as FV
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=500
@@ -37,7 +36,6 @@ if __name__ == "__main__":
     fl.init_flappy(n_cpus=args.n_cpus)
 
     for i, (wakes, superp, rotor) in enumerate(cases):
-
         print(f"\nCase {(wakes, superp, rotor)}")
 
         # load model book:
