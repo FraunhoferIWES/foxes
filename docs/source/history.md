@@ -272,11 +272,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 ## v0.3.6-alpha
 
 - Models:
-  - Improved: Now option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
+  - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
   - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
 - Utils:
-  - Improved `DaskRunner`: Now supports clusters that run the Slurm queue system
+  - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
 - Examples:
-  - New: `timeseries_slurm`, shows how to run foxes on a HPC with slurm queueing system
+  - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)
