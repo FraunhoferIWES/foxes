@@ -194,9 +194,9 @@ class SingleStateStates(States):
                 (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
             )
 
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
         if len(self._profiles):
-            z = pdata[FV.POINTS][:, :, 2]
+            z = pdata[FC.POINTS][:, :, 2]
             for k, v in self.profdata.items():
                 pdata[k] = v
             for v, p in self._profiles.items():

@@ -111,7 +111,7 @@ class MultiHeightStates(States):
             State index selection via pandas loc function
         verbosity : int
             The verbosity level, 0 = silent
-            
+
         """
         if self.initialized:
             if algo is None:
@@ -236,14 +236,14 @@ class MultiHeightStates(States):
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
-        dims = (FV.STATE, self.VARS, self.H)
+        dims = (FC.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
             data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
 
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FV.STATE,), d)
+            idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
 
         return idata
 
@@ -270,7 +270,7 @@ class MultiHeightStates(States):
 
         """
         return self._inds
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -331,7 +331,7 @@ class MultiHeightStates(States):
 
         """
         h = mdata[self.H]
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
         n_h = len(h)
         vrs = list(mdata[self.VARS])
 

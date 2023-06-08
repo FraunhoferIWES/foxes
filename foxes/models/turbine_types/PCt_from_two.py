@@ -5,9 +5,10 @@ from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
 import foxes.variables as FV
+import foxes.constants as FC
 
 
-class PCtTwoFiles(TurbineType):
+class PCtFromTwo(TurbineType):
     """
     Calculate power and ct by interpolating
     from power curve and ct curve data files.
@@ -87,7 +88,6 @@ class PCtTwoFiles(TurbineType):
         pd_file_read_pars_ct={},
         **parameters,
     ):
-
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame
         ):
@@ -161,9 +161,7 @@ class PCtTwoFiles(TurbineType):
         if isinstance(self.source_P, pd.DataFrame):
             self._data_P = self.source_P
         else:
-            fpath = algo.dbook.get_file_path(
-                PCTCURVE, self.source_P, check_raw=True
-            )
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
             self._data_P = PandasFileHelper.read_file(fpath, **self.rpars_P)
 
         self._data_P = self._data_P.set_index(self.col_ws_P_file).sort_index()
@@ -174,14 +172,19 @@ class PCtTwoFiles(TurbineType):
         if isinstance(self.source_ct, pd.DataFrame):
             self._data_ct = self.source_ct
         else:
-            fpath = algo.dbook.get_file_path(
-                PCTCURVE, self.source_ct, check_raw=True
-            )
+            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
             self._data_ct = PandasFileHelper.read_file(fpath, **self.rpars_ct)
 
         self._data_ct = self._data_ct.set_index(self.col_ws_ct_file).sort_index()
         self._data_ws_ct = self._data_ct.index.to_numpy()
         self._data_ct = self._data_ct[self.col_ct].to_numpy()
+
+        if self.P_nominal is None:
+            self.P_nominal = np.max(self._data_P) / FC.P_UNITS[self.P_unit]
+            if verbosity > 0:
+                print(
+                    f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
+                )
 
         return super().initialize(algo, verbosity)
 
@@ -216,7 +219,6 @@ class PCtTwoFiles(TurbineType):
 
         # apply air density correction:
         if self.rho is not None:
-
             # correct wind speed by air density, such
             # that in the partial load region the
             # correct value is reconstructed:
@@ -227,7 +229,6 @@ class PCtTwoFiles(TurbineType):
 
         # in yawed case, calc yaw corrected wind speed:
         if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
-
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:

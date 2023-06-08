@@ -1,3 +1,6 @@
+"""
+General utilities.
+"""
 from .wind_dir import wd2uv, wd2wdvec, wdvec2wd, uv2wd, delta_wd
 from .pandas_helpers import PandasFileHelper
 from .subclasses import all_subclasses

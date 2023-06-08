@@ -2,8 +2,6 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.constants as FC
-import foxes.variables as FV
-
 
 class SetFarmVars(TurbineModel):
     """
@@ -39,7 +37,7 @@ class SetFarmVars(TurbineModel):
 
         """
         self.vars.append(var)
-        self._vdata.append(data)
+        self._vdata.append(np.asarray(data, dtype=FC.DTYPE))
 
     def reset(self):
         """
@@ -93,13 +91,20 @@ class SetFarmVars(TurbineModel):
         idata = super().initialize(algo, verbosity)
 
         for i, v in enumerate(self.vars):
-
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
-            # if self.var(v) == 'set_yawm_YAWM':
-            #     print(np.shape(data),np.shape(self._vdata),self.var(v))
-            data[:] = self._vdata[i]
 
-            idata["data_vars"][self.var(v)] = ((FV.STATE, FV.TURBINE), data)
+            # in case the model is used during vectorized optimization:
+            vdata = self._vdata[i]
+            if vdata.shape[0] != algo.n_states and hasattr(algo.states, "n_pop"):
+                n_pop = algo.states.n_pop
+                n_ost = algo.states.states.size()
+                n_trb = algo.n_turbines
+                vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
+                vdata[:] = self._vdata[i][None, :]
+                vdata = vdata.reshape(n_pop*n_ost, n_trb)
+            data[:] = vdata
+
+            idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 
         return idata
 
@@ -134,7 +139,6 @@ class SetFarmVars(TurbineModel):
         allt = np.all(st_sel)
 
         for v in self.vars:
-
             data = mdata[self.var(v)]
             hsel = ~np.isnan(data)
             hallt = np.all(hsel)
@@ -143,7 +147,6 @@ class SetFarmVars(TurbineModel):
                 fdata[v][:] = data
 
             else:
-
                 if v not in fdata:
                     fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
 

@@ -5,7 +5,7 @@ from foxes.core import Turbine
 
 def add_from_csv(
     farm,
-    file_path,
+    data_source,
     col_index=None,
     col_name=None,
     col_x="x",
@@ -24,14 +24,12 @@ def add_from_csv(
     """
     Add turbines to wind farm via csv input file.
 
-    Additional turbine_parameters are forwarded to the WindFarm.add_turbine().
-
     Parameters
     ----------
     farm : foxes.WindFarm
         The wind farm
-    file_path : str
-        The input csv file
+    data_source : str or pandas.DataFrame
+        The input csv file or data source
     col_index : str, optional
         The index column, or None
     col_name : str, optional
@@ -62,19 +60,23 @@ def add_from_csv(
         Start turbine names by 1 instead of 0
     verbosity : int
         The verbosity level, 0 = silent
+    turbine_parameters : dict, optional
+        Additional parameters are forwarded to the WindFarm.add_turbine().
 
     """
 
-    if verbosity:
-        print("Reading file", file_path)
-    data = pd.read_csv(file_path, index_col=col_index)
+    if isinstance(data_source, pd.DataFrame):
+        data = data_source
+    else:
+        if verbosity:
+            print("Reading file", data_source)
+        data = pd.read_csv(data_source, index_col=col_index)
 
     tmodels = turbine_parameters.pop("turbine_models", [])
     H = turbine_parameters.pop("H", None)
     D = turbine_parameters.pop("D", None)
 
     for i in data.index:
-
         s = 1 if turbine_base_name_count_shift else 0
         tname = (
             f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]

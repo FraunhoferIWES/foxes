@@ -17,7 +17,6 @@ class Model(metaclass=ABCMeta):
     _ids = {}
 
     def __init__(self):
-
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)
@@ -101,7 +100,9 @@ class Model(metaclass=ABCMeta):
 
         """
         if self.initialized:
-            raise ValueError(f"Model '{self.name}': initialize called for already initialized object")
+            raise ValueError(
+                f"Model '{self.name}': initialize called for already initialized object"
+            )
         self.__initialized = True
         return {"coords": {}, "data_vars": {}}
 
@@ -118,7 +119,9 @@ class Model(metaclass=ABCMeta):
 
         """
         if not self.initialized:
-            raise ValueError(f"Model '{self.name}': Finalization called for uninitialized object")
+            raise ValueError(
+                f"Model '{self.name}': Finalization called for uninitialized object"
+            )
         self.__initialized = False
 
     def get_data(

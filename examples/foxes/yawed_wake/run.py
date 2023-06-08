@@ -6,7 +6,6 @@ import foxes
 import foxes.variables as FV
 
 if __name__ == "__main__":
-
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -102,7 +101,9 @@ if __name__ == "__main__":
     # vertical flow plot
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_yz(args.var, resolution=10, x=750, ymin=-200,ymax=200,zmax=300)
+    g = o.gen_states_fig_yz(
+        args.var, resolution=10, x=750, ymin=-200, ymax=200, zmax=300
+    )
     fig = next(g)
     plt.show()
     plt.close(fig)
@@ -144,8 +145,10 @@ if __name__ == "__main__":
             FV.EFF: "mean",
         }
     )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(annual=True, ambient=True)
-    turbine_results[FV.YLD] = o.calc_turbine_yield(annual=True)
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
+    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
     print("\nResults by turbine:\n")
     print(turbine_results)
 

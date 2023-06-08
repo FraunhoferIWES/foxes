@@ -81,7 +81,7 @@ class FarmLayoutOptProblem(FarmVarsProblem):
         Initialize the object.
 
         Parameters
-        ---------- 
+        ----------
         verbosity : int
             The verbosity level, 0 = silent
         kwargs : dict, optional
@@ -92,7 +92,7 @@ class FarmLayoutOptProblem(FarmVarsProblem):
             pre_rotor_vars=[FV.X, FV.Y],
             post_rotor_vars=[],
             verbosity=verbosity,
-            **kwargs
+            **kwargs,
         )
 
     def opt2farm_vars_individual(self, vars_int, vars_float):

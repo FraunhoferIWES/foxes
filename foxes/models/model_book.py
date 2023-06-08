@@ -3,7 +3,13 @@ import numpy as np
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict
-from foxes.core import TurbineModel, RotorModel, FarmModel, PointDataModel, FarmController
+from foxes.core import (
+    TurbineModel,
+    RotorModel,
+    FarmModel,
+    PointDataModel,
+    FarmController,
+)
 
 
 class ModelBook:
@@ -57,7 +63,6 @@ class ModelBook:
     """
 
     def __init__(self, Pct_file=None):
-
         self.point_models = Dict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
@@ -72,10 +77,18 @@ class ModelBook:
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
-        self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile("NREL-5MW-D126-H90.csv")
-        self.turbine_types["DTU10MW"] = fm.turbine_types.PCtFile("DTU-10MW-D178d3-H119.csv")
-        self.turbine_types["IEA15MW"] = fm.turbine_types.PCtFile("IEA-15MW-D240-H150.csv")
-        self.turbine_types["IWT7.5MW"] = fm.turbine_types.PCtFile("IWT-7d5MW-D164-H100.csv")
+        self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile(
+            "NREL-5MW-D126-H90.csv"
+        )
+        self.turbine_types["DTU10MW"] = fm.turbine_types.PCtFile(
+            "DTU-10MW-D178d3-H119.csv"
+        )
+        self.turbine_types["IEA15MW"] = fm.turbine_types.PCtFile(
+            "IEA-15MW-D240-H150.csv"
+        )
+        self.turbine_types["IWT7.5MW"] = fm.turbine_types.PCtFile(
+            "IWT-7d5MW-D164-H100.csv"
+        )
         if Pct_file is not None:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
@@ -94,6 +107,12 @@ class ModelBook:
             yaw2yawm=fm.turbine_models.YAW2YAWM(),
             yawm2yaw=fm.turbine_models.YAWM2YAW(),
         )
+        self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc({
+            f"{FV.WD}_HH": FV.WD,
+            f"{FV.WS}_HH": FV.WS,
+            f"{FV.TI}_HH": FV.TI,
+            f"{FV.RHO}_HH": FV.RHO,
+        })
 
         self.farm_models = Dict(
             name="farm_models",
@@ -131,9 +150,11 @@ class ModelBook:
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
             yawed=fm.wake_frames.YawedWakes(),
         )
-        stps = [1., 5., 10., 50., 100., 500.]
+        stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
         for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(step=s)
+            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(
+                step=s
+            )
         for s in stps:
             self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
                 base_frame=fm.wake_frames.Streamlines(step=s)
@@ -167,6 +188,10 @@ class ModelBook:
             max_amb=fm.wake_superpositions.MaxSuperposition(
                 scalings=f"source_turbine_{FV.AMB_REWS}"
             ),
+            product=fm.wake_superpositions.ProductSuperposition(),
+            product_lim=fm.wake_superpositions.ProductSuperposition(
+                lim_low={FV.WS: 1e-4},
+            ),
             ti_linear=fm.wake_superpositions.TISuperposition(
                 ti_superp="linear", superp_to_amb="quadratic"
             ),
@@ -187,9 +212,10 @@ class ModelBook:
             "quadratic_amb",
             "max",
             "max_amb",
+            "product",
+            "product_lim",
         ]
         for s in slist:
-
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
                 superposition=s
             )
@@ -209,12 +235,12 @@ class ModelBook:
             self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
                 superposition=s
             )
-            self.wake_models[f"Bastankhah_{s}_k002"] = fm.wake_models.wind.BastankhahWake(
-                k=0.02, superposition=s
-            )
-            self.wake_models[f"Bastankhah_{s}_k004"] = fm.wake_models.wind.BastankhahWake(
-                k=0.04, superposition=s
-            )
+            self.wake_models[
+                f"Bastankhah_{s}_k002"
+            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s)
+            self.wake_models[
+                f"Bastankhah_{s}_k004"
+            ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=s)
 
             self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
                 superposition=s
@@ -234,14 +260,14 @@ class ModelBook:
             )
 
             As = [0.02, 0.04]
-            dxs = [0.01, 1., 5., 10., 50., 100.]
+            dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
             for A in As:
                 for dx in dxs:
                     a = str(A).replace(".", "")
                     d = str(dx).replace(".", "") if dx < 1 else int(dx)
-                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = fm.wake_models.wind.TurbOParkWakeIX(
-                        A=A, superposition=s, dx=dx
-                    )
+                    self.wake_models[
+                        f"TurbOParkIX_{s}_A{a}_dx{d}"
+                    ] = fm.wake_models.wind.TurbOParkWakeIX(A=A, superposition=s, dx=dx)
 
         slist = ["ti_linear", "ti_quadratic", "ti_max"]
         for s in slist:

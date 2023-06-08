@@ -5,6 +5,7 @@ from iwopy import Problem
 
 import foxes.constants as FC
 
+
 class GeomRegGrids(Problem):
     """
     A regular grid within a boundary geometry.
@@ -49,15 +50,15 @@ class GeomRegGrids(Problem):
     """
 
     def __init__(
-            self, 
-            boundary, 
-            min_dist, 
-            n_grids, 
-            n_max=None,
-            n_row_max=None, 
-            max_dist=None,
-            D=None,
-        ):
+        self,
+        boundary,
+        min_dist,
+        n_grids,
+        n_max=None,
+        n_row_max=None,
+        max_dist=None,
+        D=None,
+    ):
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -96,19 +97,19 @@ class GeomRegGrids(Problem):
         self._nrow = self.n_row_max
         if self.n_row_max is None:
             if self.n_max is None:
-                self._nrow = int(self._diag/self.min_dist)
+                self._nrow = int(self._diag / self.min_dist)
                 if self._nrow * self.min_dist < self._diag:
                     self._nrow += 1
                 self._nrow += 1
             else:
                 self._nrow = self.n_max
         if self.n_max is None:
-            self.n_max = self.n_grids*self._nrow**2
+            self.n_max = self.n_grids * self._nrow**2
         elif self.n_max <= self._nrow:
             self._nrow = self.n_max
         self._pmin = pmin - self._diag - self.min_dist
         self._pmax = pmax + self.min_dist
-        
+
         if verbosity > 0:
             print(f"Grid data:")
             print(f"  pmin        = {self._pmin}")
@@ -143,7 +144,7 @@ class GeomRegGrids(Problem):
             Initial int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_grids*2, 2, dtype=FC.ITYPE)
+        return np.full(self.n_grids * 2, 2, dtype=FC.ITYPE)
 
     def min_values_int(self):
         """
@@ -157,7 +158,7 @@ class GeomRegGrids(Problem):
             Minimal int values, shape: (n_vars_int,)
 
         """
-        return np.ones(self.n_grids*2, dtype=FC.ITYPE)
+        return np.ones(self.n_grids * 2, dtype=FC.ITYPE)
 
     def max_values_int(self):
         """
@@ -171,7 +172,7 @@ class GeomRegGrids(Problem):
             Maximal int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_grids*2, self._nrow, dtype=FC.ITYPE)
+        return np.full(self.n_grids * 2, self._nrow, dtype=FC.ITYPE)
 
     def var_names_float(self):
         """
@@ -183,9 +184,9 @@ class GeomRegGrids(Problem):
             The names of the float variables
 
         """
-        return list(np.array(
-            [self._OX, self._OY, self._DX, self._DY, self._ALPHA]
-            ).T.flat)
+        return list(
+            np.array([self._OX, self._OY, self._DX, self._DY, self._ALPHA]).T.flat
+        )
 
     def initial_values_float(self):
         """
@@ -199,10 +200,10 @@ class GeomRegGrids(Problem):
         """
         n = 5
         vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
-        vals[:, :2] = self._pmin + self._diag + self.min_dist + self._span/2
-        vals[:, 2:4] = 2*self.min_dist
+        vals[:, :2] = self._pmin + self._diag + self.min_dist + self._span / 2
+        vals[:, 2:4] = 2 * self.min_dist
         vals[:, 5:] = 0
-        return vals.reshape(self.n_grids*n)
+        return vals.reshape(self.n_grids * n)
 
     def min_values_float(self):
         """
@@ -220,8 +221,8 @@ class GeomRegGrids(Problem):
         vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
         vals[:, :2] = self._pmin
         vals[:, 2:4] = self.min_dist
-        vals[:, 5:] = -self._diag/3
-        return vals.reshape(self.n_grids*n)
+        vals[:, 5:] = -self._diag / 3
+        return vals.reshape(self.n_grids * n)
 
     def max_values_float(self):
         """
@@ -239,9 +240,9 @@ class GeomRegGrids(Problem):
         vals = np.zeros((self.n_grids, n), dtype=FC.DTYPE)
         vals[:, :2] = self._pmax
         vals[:, 2:4] = self.max_dist
-        vals[:, 4] = 90.
-        vals[:, 5:] = self._diag/3
-        return vals.reshape(self.n_grids*n)
+        vals[:, 4] = 90.0
+        vals[:, 5:] = self._diag / 3
+        return vals.reshape(self.n_grids * n)
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -260,7 +261,7 @@ class GeomRegGrids(Problem):
             The results of the variable application
             to the problem
 
-        """       
+        """
         vint = vars_int.reshape(self.n_grids, 2)
         vflt = vars_float.reshape(self.n_grids, 5)
         nx = vint[:, 0]
@@ -282,7 +283,6 @@ class GeomRegGrids(Problem):
         pts = np.full((n_points, 2), np.nan, dtype=FC.DTYPE)
         n0 = 0
         for gi in range(self.n_grids):
-
             n = nx[gi] * ny[gi]
             n1 = n0 + n
 
@@ -293,22 +293,25 @@ class GeomRegGrids(Problem):
 
             qts[:, :, 0] = ox[gi]
             qts[:, :, 1] = oy[gi]
-            qts[:] += np.arange(nx[gi])[:, None, None] * dx[gi] * nax[gi, None, None, :2]
-            qts[:] += np.arange(ny[gi])[None, :, None] * dy[gi] * nay[gi, None, None, :2]
+            qts[:] += (
+                np.arange(nx[gi])[:, None, None] * dx[gi] * nax[gi, None, None, :2]
+            )
+            qts[:] += (
+                np.arange(ny[gi])[None, :, None] * dy[gi] * nay[gi, None, None, :2]
+            )
             qts = qts.reshape(n, 2)
 
             if n1 > n_points:
                 n1 = n_points
-                qts = qts[:(n1-n0)]
+                qts = qts[: (n1 - n0)]
                 pts[n0:] = qts
 
             # set out of boundary points invalid:
             if self.D is None:
                 valid[n0:n1] = self.boundary.points_inside(qts)
             else:
-                valid[n0:n1] = (
-                    self.boundary.points_inside(qts) &
-                    (self.boundary.points_distance(qts) >= self.D / 2)
+                valid[n0:n1] = self.boundary.points_inside(qts) & (
+                    self.boundary.points_distance(qts) >= self.D / 2
                 )
 
             # set points invalid which are too close to other grids:
@@ -364,7 +367,6 @@ class GeomRegGrids(Problem):
         for pi in range(n_pop):
             n0 = 0
             for gi in range(self.n_grids):
-
                 n = nx[pi, gi] * ny[pi, gi]
                 n1 = n0 + n
 
@@ -375,22 +377,29 @@ class GeomRegGrids(Problem):
 
                 qts[:, :, 0] = ox[pi, gi]
                 qts[:, :, 1] = oy[pi, gi]
-                qts[:] += np.arange(nx[pi, gi])[:, None, None] * dx[pi, gi] * nax[pi, gi, None, None, :2]
-                qts[:] += np.arange(ny[pi, gi])[None, :, None] * dy[pi, gi] * nay[pi, gi, None, None, :2]
+                qts[:] += (
+                    np.arange(nx[pi, gi])[:, None, None]
+                    * dx[pi, gi]
+                    * nax[pi, gi, None, None, :2]
+                )
+                qts[:] += (
+                    np.arange(ny[pi, gi])[None, :, None]
+                    * dy[pi, gi]
+                    * nay[pi, gi, None, None, :2]
+                )
                 qts = qts.reshape(n, 2)
 
                 if n1 > n_points:
                     n1 = n_points
-                    qts = qts[:(n1-n0)]
+                    qts = qts[: (n1 - n0)]
                     pts[pi, n0:] = qts
 
                 # set out of boundary points invalid:
                 if self.D is None:
                     valid[pi, n0:n1] = self.boundary.points_inside(qts)
                 else:
-                    valid[pi, n0:n1] = (
-                        self.boundary.points_inside(qts) &
-                        (self.boundary.points_distance(qts) >= self.D / 2)
+                    valid[pi, n0:n1] = self.boundary.points_inside(qts) & (
+                        self.boundary.points_distance(qts) >= self.D / 2
                     )
 
                 # set points invalid which are too close to other grids:
@@ -405,7 +414,9 @@ class GeomRegGrids(Problem):
 
         return pts, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
+    def get_fig(
+        self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs
+    ):
         """
         Return plotly figure axis.
 
@@ -423,7 +434,7 @@ class GeomRegGrids(Problem):
             Draw points as circles with diameter self.D
         bars : dict, optional
             The boundary plot arguments
-        
+
         Returns
         -------
         ax : pyplot.Axis
@@ -432,7 +443,7 @@ class GeomRegGrids(Problem):
         """
         if ax is None:
             __, ax = plt.subplots()
-        
+
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
         self.boundary.add_to_figure(ax, **hbargs)
@@ -444,7 +455,9 @@ class GeomRegGrids(Problem):
                 ax.scatter(xy[:, 0], xy[:, 1], color="orange")
             else:
                 for x, y in xy:
-                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
+                    ax.add_patch(
+                        plt.Circle((x, y), self.D / 2, color="blue", fill=True)
+                    )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")

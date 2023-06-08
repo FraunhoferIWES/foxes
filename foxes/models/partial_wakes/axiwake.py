@@ -84,7 +84,7 @@ class PartialAxiwake(PartialWakesModel):
                 raise TypeError(
                     f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not an AxisymmetricWakeModel"
                 )
-        
+
         return idata
 
     def new_wake_deltas(self, algo, mdata, fdata):
@@ -168,7 +168,6 @@ class PartialAxiwake(PartialWakesModel):
         # case wake centre outside rotor disk:
         sel = (x > 1e-5) & (R > D / 2)
         if np.any(sel):
-
             n_sel = np.sum(sel)
             Rsel = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             Rsel[:] = R[sel][:, None]
@@ -190,7 +189,6 @@ class PartialAxiwake(PartialWakesModel):
         # case wake centre inside rotor disk:
         sel = (x > 1e-5) & (R < D / 2)
         if np.any(sel):
-
             n_sel = np.sum(sel)
             Rsel = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             Rsel[:] = R[sel][:, None]
@@ -217,13 +215,11 @@ class PartialAxiwake(PartialWakesModel):
 
         # evaluate wake models:
         for w in self.wake_models:
-
             wdeltas, sp_sel = w.calc_wakes_spsel_x_r(
                 algo, mdata, fdata, states_source_turbine, x, r
             )
 
             for v, wdel in wdeltas.items():
-
                 d = np.einsum("ps,ps->p", wdel, weights[sp_sel])
 
                 try:
@@ -272,9 +268,9 @@ class PartialAxiwake(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        weights = self.get_data(FV.RWEIGHTS, mdata)
-        amb_res = self.get_data(FV.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FV.RPOINTS, mdata)
+        weights = self.get_data(FC.RWEIGHTS, mdata)
+        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
+        rpoints = self.get_data(FC.RPOINTS, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wres = {}
@@ -293,7 +289,7 @@ class PartialAxiwake(PartialWakesModel):
             if v in wake_deltas:
                 wres[v] += wdel[v]
                 if update_amb_res:
-                    mdata[FV.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

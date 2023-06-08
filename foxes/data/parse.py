@@ -29,7 +29,7 @@ def parse_Pct_file_name(file_name):
                 f"Illegal use of '.' in '{sname}', please replace by 'd' for float value dots. Parsing stopped."
             )
             return pars
-    
+
     if "-" in sname and "_" in sname:
         warnings.warn(
             f"Illegal file name '{file_name}': Contains both '-' and '_'. Parsing stopped."
@@ -44,7 +44,6 @@ def parse_Pct_file_name(file_name):
     pars["name"] = pieces[0]
     pieces = pieces[1:]
     for p in pieces:
-
         if p[-1] == "W":
             if p[-2] == "k":
                 pars["P_nominal"] = float(p[:-2].replace("d", "."))

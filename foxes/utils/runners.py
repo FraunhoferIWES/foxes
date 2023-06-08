@@ -1,9 +1,10 @@
 from abc import abstractmethod, ABCMeta
-from copy import deepcopy
 import dask
-from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
+from dask.distributed import get_client
+from dask.diagnostics import ProgressBar
 
+import foxes.constants as FC
 
 class Runner(metaclass=ABCMeta):
     """
@@ -169,12 +170,19 @@ class DaskRunner(Runner):
         ):
             self.scheduler = "distributed"
 
+    @classmethod
+    def is_distributed(cls):
+        try:
+            get_client()
+            return True
+        except ValueError:
+            return False
+
     def initialize(self):
         """
         Initialize the runner
         """
         if self.scheduler == "distributed":
-
             self.print("Launching dask cluster..")
 
             self._cluster = LocalCluster(**self.cluster_args)
@@ -182,10 +190,6 @@ class DaskRunner(Runner):
 
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
-
-        else:
-            self._config0 = deepcopy(dask.config.config)
-            dask.config.config["scheduler"] = self.scheduler
 
         super().initialize()
 
@@ -228,12 +232,10 @@ class DaskRunner(Runner):
         Finallize the runner
         """
         if self.scheduler == "distributed":
-
             self.print("\n\nShutting down dask cluster")
             self._client.close()
             self._cluster.close()
 
-        else:
-            dask.config.config["scheduler"] = self._config0
+        dask.config.refresh()
 
         super().finalize()

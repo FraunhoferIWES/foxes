@@ -106,7 +106,6 @@ class AreaGeometry(metaclass=ABCMeta):
 
         """
         if fill_mode is not None:
-
             if "Nx" in pars_distance or "Ny" in pars_distance:
                 Nx = pars_distance.pop("Nx")
                 Ny = pars_distance.pop("Ny")
@@ -459,7 +458,6 @@ class AreaUnion(AreaGeometry):
         pins = np.zeros(n_pts, dtype=bool)
         nerst = np.zeros((n_pts, 2), dtype=np.float64) if return_nearest else None
         for g in self.geometries:
-
             res = g.points_distance(points, return_nearest)
             ins = g.points_inside(points)
             d = res[0] if return_nearest else res

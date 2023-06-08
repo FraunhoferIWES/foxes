@@ -1,5 +1,5 @@
 from .output import Output
-import foxes.variables as FV
+import foxes.constants as FC
 
 
 class ResultsWriter(Output):
@@ -21,13 +21,12 @@ class ResultsWriter(Output):
     """
 
     def __init__(self, farm_results=None, data=None):
-
         if farm_results is not None and data is None:
             self.data = farm_results.to_dataframe().reset_index()
-            self.data[FV.TNAME] = farm_results[FV.TNAME].to_numpy()[
-                self.data[FV.TURBINE]
+            self.data[FC.TNAME] = farm_results[FC.TNAME].to_numpy()[
+                self.data[FC.TURBINE]
             ]
-            self.data.set_index([FV.STATE, FV.TURBINE], inplace=True)
+            self.data.set_index([FC.STATE, FC.TURBINE], inplace=True)
         elif farm_results is None and data is not None:
             self.data = data
         else:
@@ -82,6 +81,6 @@ class ResultsWriter(Output):
             data = self.data[list(variables)]
 
         if turbine_names:
-            data = data.reset_index().set_index([FV.STATE, FV.TNAME])
+            data = data.reset_index().set_index([FC.STATE, FC.TNAME])
 
         super().write(file_path, data, **kwargs)

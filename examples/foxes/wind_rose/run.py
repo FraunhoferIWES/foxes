@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
 def run_foxes(args):
-
-    cks = None if args.nodask else {FV.STATE: args.chunksize}
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
     if args.calc_mean:
-        cks[FV.POINT] = 4000
+        cks[FC.POINT] = 4000
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
@@ -72,7 +72,7 @@ def run_foxes(args):
     print(f"\nFarm power        : {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield():.2f} GWh")
+    print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
 
     if args.calc_mean:
         o = foxes.output.FlowPlots2D(algo, farm_results)
@@ -81,7 +81,6 @@ def run_foxes(args):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-l",
@@ -152,5 +151,4 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         runner.run(run_foxes, args=(args,))

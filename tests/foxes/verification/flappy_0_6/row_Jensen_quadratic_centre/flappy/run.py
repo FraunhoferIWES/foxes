@@ -7,7 +7,6 @@ import flappy as fl
 from flappy.config.variables import variables as FV
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=500
