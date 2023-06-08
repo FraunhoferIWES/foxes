@@ -1,5 +1,6 @@
-from abc import abstractmethod, ABCMeta
 import dask
+from abc import abstractmethod, ABCMeta
+from copy import deepcopy
 from dask.distributed import Client, LocalCluster
 from dask.distributed import get_client
 from dask.diagnostics import ProgressBar
@@ -183,9 +184,26 @@ class DaskRunner(Runner):
         Initialize the runner
         """
         if self.scheduler == "distributed":
-            self.print("Launching dask cluster..")
+
+            self.print("Launching local dask cluster..")
 
             self._cluster = LocalCluster(**self.cluster_args)
+            self._client = Client(self._cluster, **self.client_args)
+
+            self.print(self._cluster)
+            self.print(f"Dashboard: {self._client.dashboard_link}\n")
+
+        elif self.scheduler == "slurm":
+
+            from dask_jobqueue import SLURMCluster
+
+            self.print("Launching dask cluster on HPC using SLURM..")
+
+            cargs = deepcopy(self.cluster_args)
+            nodes = cargs.pop("nodes", 1)
+            
+            self._cluster = SLURMCluster(**cargs)
+            self._cluster.scale(jobs=nodes)
             self._client = Client(self._cluster, **self.client_args)
 
             self.print(self._cluster)
@@ -231,7 +249,7 @@ class DaskRunner(Runner):
         """
         Finallize the runner
         """
-        if self.scheduler == "distributed":
+        if self.scheduler in ["distributed", "slurm"]:
             self.print("\n\nShutting down dask cluster")
             self._client.close()
             self._cluster.close()
