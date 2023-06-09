@@ -7,6 +7,9 @@ class PointDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
     point based data.
+
+    :group: core
+    
     """
 
     @abstractmethod
@@ -14,14 +17,9 @@ class PointDataModel(DataCalcModel):
         """
         The variables which are being modified by the model.
 
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -37,18 +35,18 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
@@ -64,18 +62,18 @@ class PointDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : tuple of xarray.Dataset
+        *data: tuple of xarray.Dataset
             The input data
         out_vars: list of str
             The calculation output variables
-        **calc_pars : dict, optional
+        **calc_pars: dict, optional
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results : xarray.Dataset
+        results: xarray.Dataset
             The calculation results
 
         """
@@ -107,12 +105,12 @@ class PointDataModelList(PointDataModel):
 
     Parameters
     ----------
-    models : list of foxes.core.PointDataModel
+    models: list of foxes.core.PointDataModel
         The model list
 
     Attributes
     ----------
-    models : list of foxes.core.PointDataModel
+    models: list of foxes.core.PointDataModel
         The model list
 
     """
@@ -127,7 +125,7 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        model : foxes.core.PointDataModel
+        model: foxes.core.PointDataModel
             The model to add
 
         """
@@ -139,12 +137,12 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -165,14 +163,14 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -198,20 +196,20 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
-        parameters : list of dict, optional
+        parameters: list of dict, optional
             A list of parameter dicts, one for each model
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
@@ -239,9 +237,9 @@ class PointDataModelList(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 means silent
 
         """

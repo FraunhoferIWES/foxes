@@ -12,6 +12,8 @@ class States(PointDataModel):
     typically wind speed, wind direction, turbulence
     intensity and air density.
 
+    :group: core
+
     """
 
     @abstractmethod
@@ -33,7 +35,7 @@ class States(PointDataModel):
 
         Returns
         -------
-        indices : array_like
+        indices: array_like
             The index labels of states, or None for default integers
 
         """
@@ -46,12 +48,12 @@ class States(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -66,9 +68,9 @@ class States(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -97,12 +99,12 @@ class States(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -127,16 +129,16 @@ class ExtendedStates(States):
 
     Parameters
     ----------
-    states : foxes.core.States
+    states: foxes.core.States
         The base states to start from
-    point_models : list of foxes.core.PointDataModel, optional
+    point_models: list of foxes.core.PointDataModel, optional
         The point models, executed after states
 
     Attributes
     ----------
-    states : foxes.core.States
+    states: foxes.core.States
         The base states to start from
-    pmodels : foxes.core.PointDataModelList
+    pmodels: foxes.core.PointDataModelList
         The point models, including states as first model
 
     """
@@ -152,7 +154,7 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        model : foxes.core.PointDataModel
+        model: foxes.core.PointDataModel
             The model to add
 
         """
@@ -176,7 +178,7 @@ class ExtendedStates(States):
 
         Returns
         -------
-        indices : array_like
+        indices: array_like
             The index labels of states, or None for default integers
 
         """
@@ -188,12 +190,12 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -211,14 +213,14 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -235,12 +237,12 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -255,18 +257,18 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
@@ -279,9 +281,9 @@ class ExtendedStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

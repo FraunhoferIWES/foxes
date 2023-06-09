@@ -11,6 +11,9 @@ class WakeSuperposition(Model):
     if superposition models are used, or if the
     wake model computes the total wake result by
     other means.
+
+    :group: core
+    
     """
 
     @abstractmethod
@@ -30,28 +33,28 @@ class WakeSuperposition(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sel_sp : numpy.ndarray of bool
+        sel_sp: numpy.ndarray of bool
             The selection of points, shape: (n_states, n_points)
-        variable : str
+        variable: str
             The variable name for which the wake deltas applies
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The original wake deltas, shape: (n_states, n_points)
-        wake_model_result : numpy.ndarray
+        wake_model_result: numpy.ndarray
             The new wake deltas of the selected points,
             shape: (n_sel_sp,)
 
         Returns
         -------
-        wdelta : numpy.ndarray
+        wdelta: numpy.ndarray
             The updated wake deltas, shape: (n_states, n_points)
 
         """
@@ -67,22 +70,22 @@ class WakeSuperposition(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        variable : str
+        variable: str
             The variable name for which the wake deltas applies
-        amb_results : numpy.ndarray
+        amb_results: numpy.ndarray
             The ambient results, shape: (n_states, n_points)
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The wake deltas, shape: (n_states, n_points)
 
         Returns
         -------
-        final_wake_delta : numpy.ndarray
+        final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape: (n_states, n_points)
 

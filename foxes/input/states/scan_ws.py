@@ -11,27 +11,33 @@ class ScanWS(States):
 
     Parameters
     ----------
-    ws_list : array_like
-        The wind speed values
-    wd : float
+    wd: float
         The wind direction
-    ti : float, optional
+    ti: float
         The TI value
-    rho : float, optional
+    rho: float
         The air density
-
-    Parameters
-    ----------
-    wd : float
-        The wind direction
-    ti : float
-        The TI value
-    rho : float
-        The air density
+    
+    :group: input.states
 
     """
 
     def __init__(self, ws_list, wd, ti=None, rho=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        ws_list: array_like
+            The wind speed values
+        wd: float
+            The wind direction
+        ti: float, optional
+            The TI value
+        rho: float, optional
+            The air density
+
+        """
         super().__init__()
 
         self._wsl = np.array(ws_list)
@@ -52,14 +58,14 @@ class ScanWS(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -91,12 +97,12 @@ class ScanWS(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -115,12 +121,12 @@ class ScanWS(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -135,18 +141,18 @@ class ScanWS(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 

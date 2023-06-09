@@ -19,41 +19,47 @@ class Algorithm(Model):
     calculations, and contain the calculation functions
     which are meant to be called from top level code.
 
-    Parameters
-    ----------
-    mbook : foxes.ModelBook
-        The model book
-    farm : foxes.WindFarm
-        The wind farm
-    chunks : dict
-        The chunks choice for running in parallel with dask,
-        e.g. `{"state": 1000}` for chunks of 1000 states
-    verbosity : int
-        The verbosity level, 0 means silent
-    dbook : foxes.DataBook, optional
-        The data book, or None for default
-    keep_models : list of str
-        Keep these models data in memory and do not finalize them
-
     Attributes
     ----------
-    mbook : foxes.ModelBook
+    mbook: foxes.models.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    chunks : dict
+    chunks: dict
         The chunks choice for running in parallel with dask,
         e.g. `{"state": 1000}` for chunks of 1000 states
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 means silent
-    dbook : foxes.DataBook
+    dbook: foxes.DataBook
         The data book, or None for default
-    keep_models : list of str
+    keep_models: list of str
         Keep these models data in memory and do not finalize them
+    
+    :group: core
 
     """
 
     def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=[]):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        mbook: foxes.models.ModelBook
+            The model book
+        farm: foxes.WindFarm
+            The wind farm
+        chunks: dict
+            The chunks choice for running in parallel with dask,
+            e.g. `{"state": 1000}` for chunks of 1000 states
+        verbosity: int
+            The verbosity level, 0 means silent
+        dbook: foxes.DataBook, optional
+            The data book, or None for default
+        keep_models: list of str
+            Keep these models data in memory and do not finalize them
+
+        """
         super().__init__()
 
         self.name = type(self).__name__
@@ -167,12 +173,12 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        models : foxes.core.Model or list of foxes.core.Model
+        models: foxes.core.Model or list of foxes.core.Model
             The models to initialize
-        idata : dict, optional
+        idata: dict, optional
             The idata dictionary to be updated, else only add
             to idata memory
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level, 0 = silent
 
         """
@@ -298,7 +304,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        idata : dict, optional
+        idata: dict, optional
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`.
@@ -334,9 +340,9 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The points, shape: (n_states, n_points, 3)
-        states_indices : array_like, optional
+        states_indices: array_like, optional
             The indices of the states dimension
 
         Returns
@@ -371,10 +377,10 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        model : foxes.core.Model
+        model: foxes.core.Model
             The model to be finalized, if not in the
             keep_models list
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level, 0 = silent
 
         """
@@ -414,7 +420,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        clear_mem : bool
+        clear_mem: bool
             Clear idata memory, including keep_models entries
 
         """
@@ -430,11 +436,11 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        algo_type : str
+        algo_type: str
             The selected derived class name
-        args : tuple, optional
+        args: tuple, optional
             Additional parameters for the constructor
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for the constructor
 
         """

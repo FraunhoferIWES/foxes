@@ -23,6 +23,8 @@ class DataCalcModel(Model):
     For each individual data chunk the `calculate`
     function is called.
 
+    :group: core
+
     """
 
     @abstractmethod
@@ -35,16 +37,16 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : foxes.core.Data
+        data: tuple of foxes.core.Data
             The input data
-        **parameters : dict, optional
+        parameters: dict, optional
             The calculation parameters
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray
 
@@ -147,24 +149,24 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : tuple of xarray.Dataset
+        data: tuple of xarray.Dataset
             The input data
         out_vars: list of str
             The calculation output variables
-        loop_dims : array_like of str
+        loop_dims: array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
-        out_core_vars : list of str
+        out_core_vars: list of str
             The core dimensions of the output data, use
             `FC.VARS` for variables dimension (required)
-        **calc_pars : dict, optional
+        calc_pars: dict, optional
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results : xarray.Dataset
+        results: xarray.Dataset
             The calculation results
 
         """

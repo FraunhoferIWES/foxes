@@ -42,16 +42,16 @@ release = __version__
 # ones.
 extensions = [
     "sphinx_immaterial",
-    #"sphinx_immaterial.apidoc.python.apigen",
+    "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.inheritance_diagram",
-    "nbsphinx",
-    "sphinx.ext.doctest",
+    #"sphinx.ext.autosummary",
+    #"sphinx.ext.intersphinx",
+    #"sphinx.ext.mathjax",
+    #"sphinx.ext.napoleon",
+    #"sphinx.ext.viewcode",
+    #"sphinx.ext.inheritance_diagram",
+    #"nbsphinx",
+    #"sphinx.ext.doctest",
     "m2r2",
 ]
 
@@ -62,7 +62,7 @@ intersphinx_mapping = {
 }
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+#templates_path = ["_templates"]
 autosummary_generate = True
 
 # The suffix(es) of source filenames.
@@ -87,9 +87,12 @@ exclude_patterns = [
     # ipynb checkpoints
     "notebooks/.ipynb_checkpoints/*.ipynb",
     "build/*",
+    "_templates/*",
     # DEBUG
-    #"examples.rst",
-    #"notebooks/layout_opt.ipynb"
+    "examples.rst",
+    "notebooks/*",
+    #"notebooks/layout_opt.ipynb,"
+    #"api.rst"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -299,12 +302,33 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_preprocess_types = True
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
 
 # -- Extension configuration -------------------------------------------------
 
-#python_apigen_modules = {
-#    "foxes.core": "core/",
-#}
+python_apigen_modules = {
+    "foxes.core": "core/",
+    "foxes.data": "data/",
+    "foxes.models": "models/",
+    "foxes.input.farm_layout": "input/farm_layout/",
+    "foxes.input.states": "input/states/",
+    "foxes.input.windio": "input/windio/",
+    "foxes.utils": "utils/",
+}
 
 #python_apigen_default_groups = [
 #    ("class:.*", "Classes"),

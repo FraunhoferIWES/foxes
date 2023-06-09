@@ -16,53 +16,58 @@ class ModelBook:
     """
     Container for all kinds of models.
 
-    Parameters
-    ----------
-    Pct_file : str, optional
-        Path to power/ct curve file, for creation
-        of default turbine type model
-
     Attributes
     ----------
-    point_models : foxes.utils.Dict
+    point_models: foxes.utils.Dict
         The point models. Keys: model name str,
         values: foxes.core.PointDataModel
-    rotor_models : foxes.utils.Dict
+    rotor_models: foxes.utils.Dict
         The rotor models. Keys: model name str,
         values: foxes.core.RotorModel
-    turbine_types : foxes.utils.Dict
+    turbine_types: foxes.utils.Dict
         The turbine type models. Keys: model name str,
         values: foxes.core.TurbineType
-    turbine_models : foxes.utils.Dict
+    turbine_models: foxes.utils.Dict
         The turbine models. Keys: model name str,
         values: foxes.core.TurbineModel
-    turbine_orders : foxes.utils.Dict
+    turbine_orders: foxes.utils.Dict
         The turbine orders. Keys: model name str,
         values: foxes.core.TurbineOrder
-    farm_models : foxes.utils.Dict
+    farm_models: foxes.utils.Dict
         The farm models. Keys: model name str,
         values: foxes.core.FarmModel
-    farm_controllers : foxes.utils.Dict
+    farm_controllers: foxes.utils.Dict
         The farm controllers. Keys: model name str,
         values: foxes.core.FarmController
-    partial_wakes : foxes.utils.Dict
+    partial_wakes: foxes.utils.Dict
         The partial wakes. Keys: model name str,
         values: foxes.core.PartialWakeModel
-    wake_frames : foxes.utils.Dict
+    wake_frames: foxes.utils.Dict
         The wake frames. Keys: model name str,
         values: foxes.core.WakeFrame
-    wake_superpositions : foxes.utils.Dict
+    wake_superpositions: foxes.utils.Dict
         The wake superposition models. Keys: model name str,
         values: foxes.core.WakeSuperposition
-    wake_models : foxes.utils.Dict
+    wake_models: foxes.utils.Dict
         The wake models. Keys: model name str,
         values: foxes.core.WakeModel
-    sources : foxes.utils.Dict
+    sources: foxes.utils.Dict
         All sources dict
+    
+    :group: foxes
 
     """
 
     def __init__(self, Pct_file=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        Pct_file: str, optional
+            Path to power/ct curve file, for creation
+            of default turbine type model
+        """
         self.point_models = Dict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
@@ -316,9 +321,9 @@ class ModelBook:
 
         Parameters
         ----------
-        subset : list of str, optional
+        subset: list of str, optional
             Selection of model types
-        search :  str, optional
+        search:  str, optional
             String that has to be part of the model name
 
         """
@@ -341,9 +346,9 @@ class ModelBook:
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
