@@ -12,36 +12,19 @@ class LookupTable(TurbineModel):
     Calculates the data by interpolation of
     lookup-table data
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        The lookup-table data
-    input_vars : list of str
-        The foxes input variables
-    output_vars : list of str
-        The foxes output variables
-    varmap : dict
-        Mapping from foxes variable names
-        to column names in the data_source
-    pd_file_read_pars : dict
-        Parameters for pandas file reading
-    xr_interp_args : dict
-        Parameters for xarray interpolation method
-    kwargs : dict, optional
-        Additional parameters, added as default 
-        values if not in data
-
     Attributes
     ----------
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         The lookup-table data
-    input_vars : list of str
+    input_vars: list of str
         The foxes input variables
-    output_vars : list of str
+    output_vars: list of str
         The foxes output variables
-    varmap : dict
+    varmap: dict
         Mapping from foxes variable names
         to column names in the data_source
+
+    :group: models.turbine_models
 
     """
 
@@ -55,6 +38,29 @@ class LookupTable(TurbineModel):
             xr_interp_args={},
             **kwargs
         ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            The lookup-table data
+        input_vars: list of str
+            The foxes input variables
+        output_vars: list of str
+            The foxes output variables
+        varmap: dict
+            Mapping from foxes variable names
+            to column names in the data_source
+        pd_file_read_pars: dict
+            Parameters for pandas file reading
+        xr_interp_args: dict
+            Parameters for xarray interpolation method
+        kwargs: dict, optional
+            Additional parameters, added as default 
+            values if not in data
+
+        """
         super().__init__()
 
         self.data_source = data_source
@@ -77,12 +83,12 @@ class LookupTable(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -100,14 +106,14 @@ class LookupTable(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -156,19 +162,19 @@ class LookupTable(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

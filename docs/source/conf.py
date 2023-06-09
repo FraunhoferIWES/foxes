@@ -323,11 +323,21 @@ napoleon_attr_annotations = True
 python_apigen_modules = {
     "foxes.core": "core/",
     "foxes.data": "data/",
-    "foxes.models": "models/",
     "foxes.input.farm_layout": "input/farm_layout/",
     "foxes.input.states": "input/states/",
     "foxes.input.windio": "input/windio/",
     "foxes.utils": "utils/",
+    "foxes.models.farm_controllers": "models/farm_controllers/",
+    "foxes.models.farm_models": "models/farm_models/",
+    "foxes.models.partial_wakes": "models/partial_wakes/",
+    "foxes.models.point_models": "models/point_models/",
+    "foxes.models.rotor_models": "models/rotor_models/",
+    "foxes.models.turbine_models": "models/turbine_models/",
+    "foxes.models.turbine_types": "models/turbine_types/",
+    "foxes.models.vertical_profiles": "models/vertical_profiles/",
+    "foxes.models.wake_frames": "models/wake_frames/",
+    "foxes.models.wake_models": "models/wake_models/",
+    "foxes.models.wake_superpositions": "models/wake_superpositions/",
 }
 
 #python_apigen_default_groups = [

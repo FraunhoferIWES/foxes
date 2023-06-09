@@ -17,37 +17,43 @@ class Mapped(PartialWakesModel):
     This is required if more than one wake models are
     used and different partial wake models should be invoked.
 
-    Parameters
-    ----------
-    wname2pwake : dict, optional
-        Mapping from wake model name to partial wakes.
-        Key: model name str, value: Tuple of length 2,
-        (Partial wake class name, parameter dict)
-    wtype2pwake : dict, optional
-        Mapping from wake model class name to partial wakes.
-        Key: wake model class name str, value: Tuple of length 2,
-        (Partial wake class name, parameter dict)
-    wake_models : list of foxes.core.WakeModel, optional
-        The wake models, default are the ones from the algorithm
-    wake_frame : foxes.core.WakeFrame, optional
-        The wake frame, default is the one from the algorithm
-
     Attributes
     ----------
-    wname2pwake : dict
+    wname2pwake: dict
         Mapping from wake model name to partial wakes.
         Key: model name str, value: Tuple of length 2,
         (Partial wake class name, parameter dict)
-    wtype2pwake : dict
+    wtype2pwake: dict
         Mapping from wake model class name to partial wakes.
         Key: wake model class name str, value: Tuple of length 2,
         (Partial wake class name, parameter dict)
+    
+    :group: models.partial_wakes
 
     """
 
     def __init__(
         self, wname2pwake={}, wtype2pwake=None, wake_models=None, wake_frame=None
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        wname2pwake: dict, optional
+            Mapping from wake model name to partial wakes.
+            Key: model name str, value: Tuple of length 2,
+            (Partial wake class name, parameter dict)
+        wtype2pwake: dict, optional
+            Mapping from wake model class name to partial wakes.
+            Key: wake model class name str, value: Tuple of length 2,
+            (Partial wake class name, parameter dict)
+        wake_models: list of foxes.core.WakeModel, optional
+            The wake models, default are the ones from the algorithm
+        wake_frame: foxes.core.WakeFrame, optional
+            The wake frame, default is the one from the algorithm
+
+        """
         super().__init__(wake_models, wake_frame)
 
         self.wname2pwake = wname2pwake
@@ -75,14 +81,14 @@ class Mapped(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -131,16 +137,16 @@ class Mapped(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        wake_deltas : dict
+        wake_deltas: dict
             Keys: Variable name str, values: any
 
         """
@@ -155,16 +161,16 @@ class Mapped(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray of int
+        states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
 
@@ -183,22 +189,22 @@ class Mapped(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
-        states_turbine : numpy.ndarray of int
+        states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res : bool
+        update_amb_res: bool
             Flag for updating ambient results
 
         """
@@ -213,9 +219,9 @@ class Mapped(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

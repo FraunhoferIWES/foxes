@@ -9,7 +9,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class WsRho2PCtTwoFiles(TurbineType):
+class WsRho2PCtFromTwo(TurbineType):
     """
     Calculate air density dependent power
     and ct values, as given by two individual
@@ -22,49 +22,26 @@ class WsRho2PCtTwoFiles(TurbineType):
     and the subsequent columns are air density values
     (not neccessarily in order).
 
-    Parameters
-    ----------
-    data_source_P : str or pandas.DataFrame
-        The file path for the power curve, static name, or data
-    data_source_ct : str or pandas.DataFrame
-        The file path for the ct curve, static name, or data
-    p_ct: float
-        The exponent for yaw dependency of ct
-    p_P: float
-        The exponent for yaw dependency of P
-    var_ws_ct : str
-        The wind speed variable for ct lookup
-    var_ws_P : str
-        The wind speed variable for power lookup
-    pd_file_read_pars_P:  dict
-        Parameters for pandas power file reading
-    pd_file_read_pars_ct:  dict
-        Parameters for pandas ct file reading
-    interpn_pars_P : dict, optional
-        Parameters for scipy.interpolate.interpn()
-    interpn_pars_ct : dict, optional
-        Parameters for scipy.interpolate.interpn()
-    parameters : dict, optional
-        Additional parameters for TurbineType class
-
     Attributes
     ----------
-    source_P : str or pandas.DataFrame
+    source_P: str or pandas.DataFrame
         The file path for the power curve, static name, or data
-    source_ct : str or pandas.DataFrame
+    source_ct: str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    WSCT : str
+    WSCT: str
         The wind speed variable for ct lookup
-    WSP : str
+    WSP: str
         The wind speed variable for power lookup
-    rpars_P : dict, optional
+    rpars_P: dict, optional
         Parameters for pandas power file reading
-    rpars_ct : dict, optional
+    rpars_ct: dict, optional
         Parameters for pandas ct file reading
-    ipars_P : dict, optional
+    ipars_P: dict, optional
         Parameters for scipy.interpolate.interpn()
-    ipars_ct : dict, optional
+    ipars_ct: dict, optional
         Parameters for scipy.interpolate.interpn()
+
+    :group: models.turbine_types
 
     """
 
@@ -82,6 +59,35 @@ class WsRho2PCtTwoFiles(TurbineType):
         interpn_pars_ct=None,
         **parameters,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source_P: str or pandas.DataFrame
+            The file path for the power curve, static name, or data
+        data_source_ct: str or pandas.DataFrame
+            The file path for the ct curve, static name, or data
+        p_ct: float
+            The exponent for yaw dependency of ct
+        p_P: float
+            The exponent for yaw dependency of P
+        var_ws_ct: str
+            The wind speed variable for ct lookup
+        var_ws_P: str
+            The wind speed variable for power lookup
+        pd_file_read_pars_P:  dict
+            Parameters for pandas power file reading
+        pd_file_read_pars_ct:  dict
+            Parameters for pandas ct file reading
+        interpn_pars_P: dict, optional
+            Parameters for scipy.interpolate.interpn()
+        interpn_pars_ct: dict, optional
+            Parameters for scipy.interpolate.interpn()
+        parameters: dict, optional
+            Additional parameters for TurbineType class
+
+        """
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame
         ):
@@ -115,12 +121,12 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -138,14 +144,14 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -209,19 +215,19 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -314,9 +320,9 @@ class WsRho2PCtTwoFiles(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

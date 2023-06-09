@@ -7,6 +7,9 @@ import foxes.variables as FV
 class TKE2TI(PointDataModel):
     """
     Calculates TI from TKE, using TI = sqrt( 3/2 * TKE) / WS
+
+    :group: models.point_models
+    
     """
 
     def output_point_vars(self, algo):
@@ -15,12 +18,12 @@ class TKE2TI(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -35,18 +38,18 @@ class TKE2TI(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
