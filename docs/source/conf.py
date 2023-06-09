@@ -326,7 +326,6 @@ python_apigen_modules = {
     "foxes.input.farm_layout": "input/farm_layout/",
     "foxes.input.states": "input/states/",
     "foxes.input.windio": "input/windio/",
-    "foxes.utils": "utils/",
     "foxes.models.farm_controllers": "models/farm_controllers/",
     "foxes.models.farm_models": "models/farm_models/",
     "foxes.models.partial_wakes": "models/partial_wakes/",
@@ -340,6 +339,11 @@ python_apigen_modules = {
     "foxes.models.wake_models.wind": "models/wake_models/wind/",
     "foxes.models.wake_models.ti": "models/wake_models/ti/",
     "foxes.models.wake_superpositions": "models/wake_superpositions/",
+    "foxes.utils": "utils/",
+    "foxes.utils.abl": "utils/abl",
+    "foxes.utils.geom2d": "utils/geom2d/",
+    "foxes.utils.runners": "utils/runners/",
+    "foxes.utils.two_circles": "utils/two_circles/",
 }
 
 #python_apigen_default_groups = [

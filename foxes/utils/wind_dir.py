@@ -8,18 +8,20 @@ def wd2wdvec(wd, ws=1.0, axis=-1):
 
     Parameters
     ----------
-    wd : numpy.ndarray
+    wd: numpy.ndarray
         Wind direction array (any shape)
-    ws : float or numpy.ndarray
+    ws: float or numpy.ndarray
         The wind speed. Has to broadcast against wd.
-    axis : int
+    axis: int
         Location where to insert the (x, y) dimension
         into the shape of wd
 
     Returns
     -------
-    wdvec : numpy.ndarray
+    wdvec: numpy.ndarray
         The wind direction vectors
+    
+    :group: utils
 
     """
 
@@ -39,18 +41,20 @@ def wd2uv(wd, ws=1.0, axis=-1):
 
     Parameters
     ----------
-    wd : numpy.ndarray
+    wd: numpy.ndarray
         Wind direction array (any shape)
-    ws : float or numpy.ndarray
+    ws: float or numpy.ndarray
         The wind speed. Has to broadcast against wd.
-    axis : int
+    axis: int
         Axis location where to insert the (u, v) components
         into the shape of wd
 
     Returns
     -------
-    uv : numpy.ndarray
+    uv: numpy.ndarray
         The wind vectors
+
+    :group: utils
 
     """
     return -wd2wdvec(wd, ws, axis)
@@ -62,15 +66,17 @@ def uv2wd(uv, axis=-1):
 
     Parameters
     ----------
-    uv : numpy.ndarray
+    uv: numpy.ndarray
         The wind vectors, any shape
-    axis : int
+    axis: int
         The axis which corresponds to (u, v) components
 
     Returns
     -------
-    wd : numpy.ndarray
+    wd: numpy.ndarray
         The wind direction array
+
+    :group: utils
 
     """
 
@@ -92,15 +98,17 @@ def wdvec2wd(wdvec, axis=-1):
 
     Parameters
     ----------
-    wdvec : numpy.ndarray
+    wdvec: numpy.ndarray
         The wind direction vectors, any shape
-    axis : int
+    axis: int
         The axis which corresponds to (x, y) components
 
     Returns
     -------
-    wd : numpy.ndarray
+    wd: numpy.ndarray
         The wind direction array
+
+    :group: utils
 
     """
     return uv2wd(-wdvec, axis)
@@ -112,10 +120,10 @@ def delta_wd(wd_a, wd_b):
 
     Parameters
     ----------
-    wd_a : numpy.ndarray
+    wd_a: numpy.ndarray
         Array of wind directions.
         Shape: any shape
-    wd_b : numpy.ndarray
+    wd_b: numpy.ndarray
         Array of wind directions.
         Shape: same as wd_a
 
@@ -124,6 +132,8 @@ def delta_wd(wd_a, wd_b):
     numpy.ndarray :
         Array of wind direction deltas.
         Shape: same as wd_a, wd_b
+
+    :group: utils
 
     """
     out = wd_b - wd_a

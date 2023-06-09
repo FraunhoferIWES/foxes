@@ -69,8 +69,8 @@ propagate.
 
 foxes.models.wake_models
 ------------------------
-The wake models. They compute wake deltas from source turbines at 
-given evaluation points.
+The wake models. They compute wake deltas due to source turbines at 
+any set of evaluation points.
 
     .. toctree::
         :maxdepth: 2

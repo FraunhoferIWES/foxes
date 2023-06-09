@@ -5,11 +5,12 @@ from dask.distributed import Client, LocalCluster
 from dask.distributed import get_client
 from dask.diagnostics import ProgressBar
 
-import foxes.constants as FC
-
 class Runner(metaclass=ABCMeta):
     """
     Abstract base class for runners.
+
+    :group: utils.runners
+
     """
 
     def __init__(self):
@@ -45,16 +46,16 @@ class Runner(metaclass=ABCMeta):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """
@@ -73,6 +74,9 @@ class Runner(metaclass=ABCMeta):
 class DefaultRunner(Runner):
     """
     Class for default function execution.
+
+    :group: utils.runners
+
     """
 
     def run(self, func, args=tuple(), kwargs={}):
@@ -81,16 +85,16 @@ class DefaultRunner(Runner):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """
@@ -101,35 +105,20 @@ class DaskRunner(Runner):
     """
     Class for function execution via dask
 
-    Parameters
-    ----------
-    scheduler : str, optional
-        The dask scheduler choice
-    n_workers : int, optional
-        The number of workers for parallel run
-    threads_per_worker : int, optional
-        The number of threads per worker for parallel run
-    progress_bar : bool
-        Flag for showing progress bar
-    cluster_args : dict, optional
-        Explicit arguments for the cluster setup
-    client_args : dict, optional
-        Explicit arguments for the client setup
-    verbosity : int
-        The verbosity level, 0 = silent
-
     Attributes
     ----------
-    scheduler : str, optional
+    scheduler: str, optional
         The dask scheduler choice
-    progress_bar : bool
+    progress_bar: bool
         Flag for showing progress bar
-    cluster_args : dict, optional
+    cluster_args: dict, optional
         Explicit arguments for the cluster setup
-    client_args : dict, optional
+    client_args: dict, optional
         Explicit arguments for the client setup
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
+
+    :group: utils.runners
 
     """
 
@@ -144,6 +133,27 @@ class DaskRunner(Runner):
         progress_bar=True,
         verbosity=1,
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        scheduler: str, optional
+            The dask scheduler choice
+        n_workers: int, optional
+            The number of workers for parallel run
+        threads_per_worker: int, optional
+            The number of threads per worker for parallel run
+        progress_bar: bool
+            Flag for showing progress bar
+        cluster_args: dict, optional
+            Explicit arguments for the cluster setup
+        client_args: dict, optional
+            Explicit arguments for the client setup
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
         super().__init__()
 
         self.scheduler = scheduler
@@ -224,16 +234,16 @@ class DaskRunner(Runner):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """

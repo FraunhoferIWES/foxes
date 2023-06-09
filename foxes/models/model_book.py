@@ -1,5 +1,3 @@
-import numpy as np
-
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict

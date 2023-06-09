@@ -37,7 +37,9 @@ This package contains all concrete model classes.
 
 foxes.utils
 ------------
-Utilities and helper functions that are not limited to the
-use within *foxes*
+Utilities and helper functions that are not *foxes* specific.
 
-    .. python-apigen-group:: utils
+    .. toctree::
+        :maxdepth: 2
+
+        api_utils
