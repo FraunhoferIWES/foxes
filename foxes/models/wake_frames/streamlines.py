@@ -12,33 +12,39 @@ class Streamlines(WakeFrame):
     """
     Streamline following wakes
 
-    Parameters
-    ----------
-    step : float
-        The streamline step size in m
-    n_delstor : int
-        The streamline point storage increase
-    max_length : float
-        The maximal streamline length
-    cl_ipars : dict
-        Interpolation parameters for centre line
-        point interpolation
-
     Attributes
     ----------
-    step : float
+    step: float
         The streamline step size in m
-    n_delstor : int
+    n_delstor: int
         The streamline point storage increase
-    max_length : float
+    max_length: float
         The maximal streamline length
-    cl_ipars : dict
+    cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
+    
+    :group: models.wake_frames
 
     """
 
     def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        step: float
+            The streamline step size in m
+        n_delstor: int
+            The streamline point storage increase
+        max_length: float
+            The maximal streamline length
+        cl_ipars: dict
+            Interpolation parameters for centre line
+            point interpolation
+
+        """
         super().__init__()
         self.step = step
         self.n_delstor = n_delstor
@@ -60,14 +66,14 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -246,16 +252,16 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -286,21 +292,21 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake coordinates, shape: (n_states, n_points, 3)
 
         """
@@ -329,21 +335,21 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """

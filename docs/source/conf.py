@@ -337,6 +337,8 @@ python_apigen_modules = {
     "foxes.models.vertical_profiles": "models/vertical_profiles/",
     "foxes.models.wake_frames": "models/wake_frames/",
     "foxes.models.wake_models": "models/wake_models/",
+    "foxes.models.wake_models.wind": "models/wake_models/wind/",
+    "foxes.models.wake_models.ti": "models/wake_models/ti/",
     "foxes.models.wake_superpositions": "models/wake_superpositions/",
 }
 

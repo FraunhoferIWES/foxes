@@ -1,12 +1,15 @@
 from foxes.core import VerticalProfile
-from foxes.utils.abl import unstable
+from foxes.utils.abl import stable
 import foxes.constants as FC
 import foxes.variables as FV
 
 
-class ABLLogUnstableWsProfile(VerticalProfile):
+class ABLLogStableWsProfile(VerticalProfile):
     """
-    The unstable ABL wind speed log profile.
+    The stable ABL wind speed log profile.
+
+    :group: models.vertical_profiles
+    
     """
 
     def input_vars(self):
@@ -16,7 +19,7 @@ class ABLLogUnstableWsProfile(VerticalProfile):
 
         Returns
         -------
-        vars : list of str
+        vars: list of str
             The variable names
 
         """
@@ -28,14 +31,14 @@ class ABLLogUnstableWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        data : dict
+        data: dict
             The input data
-        heights : numpy.ndarray
+        heights: numpy.ndarray
             The evaluation heights
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The profile results, same
             shape as heights
 
@@ -45,7 +48,7 @@ class ABLLogUnstableWsProfile(VerticalProfile):
         z0 = data[FV.Z0]
         mol = data[FV.MOL]
 
-        ustar = unstable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
-        psi = unstable.psi(heights, mol)
+        ustar = stable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
+        psi = stable.psi(heights, mol)
 
-        return unstable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)
+        return stable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)

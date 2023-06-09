@@ -12,6 +12,9 @@ class ABLLogWsProfile(VerticalProfile):
 
     This profile picks the profile according to the mol value
     (neutral: mol = None or mol = 0)
+
+    :group: models.vertical_profiles
+    
     """
 
     def input_vars(self):
@@ -21,7 +24,7 @@ class ABLLogWsProfile(VerticalProfile):
 
         Returns
         -------
-        vars : list of str
+        vars: list of str
             The variable names
 
         """
@@ -33,14 +36,14 @@ class ABLLogWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        data : dict
+        data: dict
             The input data
-        heights : numpy.ndarray
+        heights: numpy.ndarray
             The evaluation heights
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The profile results, same
             shape as heights
 

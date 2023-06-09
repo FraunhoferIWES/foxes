@@ -12,24 +12,14 @@ class PorteAgelModel:
 
     Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
 
-    Parameters
-    ----------
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float
-        model parameter used to determine onset of far wake region
-    beta : float
-        model parameter used to determine onset of far wake region
-
     Attributes
     ----------
-    ct_max : float
+    ct_max: float
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
-    alpha : float
+    alpha: float
         model parameter used to determine onset of far wake region
-    beta : float
+    beta: float
         model parameter used to determine onset of far wake region
 
     """
@@ -52,6 +42,20 @@ class PorteAgelModel:
     DELTA_FAR = "delta_far"
 
     def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float
+            model parameter used to determine onset of far wake region
+        beta: float
+            model parameter used to determine onset of far wake region
+
+        """
         self.ct_max = ct_max
         self.alpha = alpha
         self.beta = beta
@@ -83,18 +87,18 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        gamma : numpy.ndarray
+        gamma: numpy.ndarray
             The YAWM angles in radiants, shape: (n_states, n_points)
-        k : numpy.ndarray
+        k: numpy.ndarray
             The k parameter values, shape: (n_states, n_points)
 
         """
@@ -239,17 +243,17 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        check : bool
+        check: bool
             True if data exists
 
         """
@@ -266,14 +270,14 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        key : str
+        key: str
             The data key
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
 
         Returns
         -------
-        data : numpy.ndarray
+        data: numpy.ndarray
             The data
 
         """
@@ -292,42 +296,47 @@ class PorteAgelWake(DistSlicedWakeModel):
 
     Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
 
-
-    Parameters
-    ----------
-    superposition : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    k : float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data, by default None
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float
-        model parameter used to determine onset of far wake region
-    beta : float
-        model parameter used to determine onset of far wake region
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    model : PorteAgelModel
+    model: PorteAgelModel
         The model for computing common data
-    K : float
+    K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    YAWM : float
+    YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.wake_models.wind
 
     """
 
     def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07, k_var=FV.K):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        superposition: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        k: float
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data, by default None
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float
+            model parameter used to determine onset of far wake region
+        beta: float
+            model parameter used to determine onset of far wake region
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.model = PorteAgelModel(ct_max, alpha, beta)
@@ -350,15 +359,15 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
+        n_points: int
             The number of wake evaluation points
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -374,27 +383,27 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        yz : numpy.ndarray
+        yz: numpy.ndarray
             The yz values for each x value, shape:
             (n_states, n_points, n_yz_per_x, 2)
 
         Returns
         -------
-        wdeltas : dict
+        wdeltas: dict
             The wake deltas. Key: variable name str,
             value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 

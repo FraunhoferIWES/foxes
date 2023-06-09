@@ -62,7 +62,7 @@ in one dimension, e.g., wind speed profiles.
 
 foxes.models.wake_frames
 ------------------------
-The wake frame models. They define the curve along which the wakes
+The wake frame models. They define the curves along which the wakes
 propagate.
 
     .. python-apigen-group:: models.wake_frames
@@ -72,7 +72,10 @@ foxes.models.wake_models
 The wake models. They compute wake deltas from source turbines at 
 given evaluation points.
 
-    .. python-apigen-group:: models.wake_models
+    .. toctree::
+        :maxdepth: 2
+
+        api_wake_models
 
 foxes.models.wake_superpositions
 --------------------------------

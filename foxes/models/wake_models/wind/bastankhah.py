@@ -14,39 +14,45 @@ class BastankhahWake(GaussianWakeModel):
     a constant of 0.25 instead of 0.2 is used as it fits better
     to the validation data
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
-    sbeta_factor : float
-        Factor multiplying sbeta
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    k : float, optional
+    k: float, optional
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    sbeta_factor : float
+    sbeta_factor: float
         Factor multiplying sbeta
-    ct_max : float
+    ct_max: float
         The maximal value for ct, values beyond will be limited
         to this number
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.wake_models.wind
 
     """
 
     def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        k: float, optional
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data.
+        sbeta_factor: float
+            Factor multiplying sbeta
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.ct_max = ct_max
@@ -69,15 +75,15 @@ class BastankhahWake(GaussianWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
+        n_points: int
             The number of wake evaluation points
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -94,24 +100,24 @@ class BastankhahWake(GaussianWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        amsi : tuple
+        amsi: tuple
             The amplitude and sigma, both numpy.ndarray
             with shape (n_sp_sel,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 

@@ -1,12 +1,15 @@
 from foxes.core import VerticalProfile
-from foxes.utils.abl import stable
+from foxes.utils.abl import neutral
 import foxes.constants as FC
 import foxes.variables as FV
 
 
-class ABLLogStableWsProfile(VerticalProfile):
+class ABLLogNeutralWsProfile(VerticalProfile):
     """
-    The stable ABL wind speed log profile.
+    The neutral ABL wind speed log profile.
+
+    :group: models.vertical_profiles
+    
     """
 
     def input_vars(self):
@@ -16,11 +19,11 @@ class ABLLogStableWsProfile(VerticalProfile):
 
         Returns
         -------
-        vars : list of str
+        vars: list of str
             The variable names
 
         """
-        return [FV.WS, FV.H, FV.Z0, FV.MOL]
+        return [FV.WS, FV.H, FV.Z0]
 
     def calculate(self, data, heights):
         """
@@ -28,24 +31,22 @@ class ABLLogStableWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        data : dict
+        data: dict
             The input data
-        heights : numpy.ndarray
+        heights: numpy.ndarray
             The evaluation heights
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The profile results, same
             shape as heights
 
         """
-        ws = data[FV.WS]
-        h0 = data[FV.H]
         z0 = data[FV.Z0]
-        mol = data[FV.MOL]
+        h0 = data[FV.H]
+        ws = data[FV.WS]
 
-        ustar = stable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
-        psi = stable.psi(heights, mol)
+        ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
 
-        return stable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)
+        return neutral.calc_ws(heights, z0, ustar, kappa=FC.KAPPA)
