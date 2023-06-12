@@ -344,6 +344,10 @@ python_apigen_modules = {
     "foxes.utils.geom2d": "utils/geom2d/",
     "foxes.utils.runners": "utils/runners/",
     "foxes.utils.two_circles": "utils/two_circles/",
+    "foxes.utils.abl.neutral": "utils/abl/neutral/",
+    "foxes.utils.abl.stable": "utils/abl/stable/",
+    "foxes.utils.abl.unstable": "utils/abl/unstable/",
+    "foxes.utils.abl.sheared": "utils/abl/sheared/",
 }
 
 #python_apigen_default_groups = [

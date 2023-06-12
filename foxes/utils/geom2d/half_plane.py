@@ -8,25 +8,31 @@ class HalfPlane(AreaGeometry):
     """
     This class represents a half plane in 2d.
 
-    Parameters
-    ----------
-    centre : numpy.ndarray
-        The centre point, shape: (2,)
-    n : numpy.ndarray
-        The direction vector to the inside, shape: (2,)
-
     Attributes
     ----------
-    centre : numpy.ndarray
+    centre: numpy.ndarray
         The centre point, shape: (2,)
-    n : numpy.ndarray
+    n: numpy.ndarray
         The direction vector to the inside, shape: (2,)
-    n : numpy.ndarray
+    n: numpy.ndarray
         The direction vector orthogonal to n, shape: (2,)
+
+    :group: utils.geom2d
 
     """
 
     def __init__(self, centre, n):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        centre: numpy.ndarray
+            The centre point, shape: (2,)
+        n: numpy.ndarray
+            The direction vector to the inside, shape: (2,)
+
+        """
         self.centre = np.array(centre, dtype=np.float64)
         self.n = np.array(n, dtype=np.float64)
         self.n /= np.linalg.norm(self.n)
@@ -38,7 +44,7 @@ class HalfPlane(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -59,7 +65,7 @@ class HalfPlane(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -80,17 +86,17 @@ class HalfPlane(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -112,12 +118,12 @@ class HalfPlane(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -133,17 +139,17 @@ class HalfPlane(AreaGeometry):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """
@@ -163,7 +169,7 @@ class HalfPlane(AreaGeometry):
 
         Returns
         -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
+        inverted: foxes.utils.geom2d.InvertedAreaGeometry
             The inverted geometry
 
         """

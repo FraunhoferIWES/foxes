@@ -1,7 +1,3 @@
-foxes.input
-===========
-Classes and functions that describe user input data.
-
 foxes.input.farm_layout
 -----------------------
 This package contains functions that can be used to add

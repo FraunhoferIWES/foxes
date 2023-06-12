@@ -6,7 +6,8 @@ foxes.utils
 foxes.utils.abl
 ---------------
 
-    .. python-apigen-group:: utils.abl
+    .. toctree::
+        api_utils_abl
 
 foxes.utils.geom2d
 ------------------
