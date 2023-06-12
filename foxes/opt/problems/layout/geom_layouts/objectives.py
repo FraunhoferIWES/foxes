@@ -6,7 +6,26 @@ import foxes.constants as FC
 
 
 class OMaxN(Objective):
+    """
+    Maximal number of turbines objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, name="maxN"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        name: str
+            The constraint name
+
+        """
         super().__init__(
             problem,
             name,
@@ -30,7 +49,26 @@ class OMaxN(Objective):
 
 
 class OMinN(OMaxN):
+    """
+    Minimal number of turbines objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, name="ominN"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        name: str
+            The constraint name
+
+        """
         super().__init__(problem, name)
 
     def maximize(self):
@@ -38,7 +76,28 @@ class OMinN(OMaxN):
 
 
 class OFixN(Objective):
+    """
+    Fixed number of turbines objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, N, name="ofixN"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        N: int
+            The number of turbines
+        name: str
+            The constraint name
+
+        """
         super().__init__(
             problem,
             name,
@@ -65,7 +124,26 @@ class OFixN(Objective):
 
 
 class MaxGridSpacing(Objective):
+    """
+    Maximal grid spacing objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, name="max_dxdy"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        name: str
+            The constraint name
+
+        """
         super().__init__(
             problem,
             name,
@@ -92,7 +170,30 @@ class MaxGridSpacing(Objective):
 
 
 class MaxDensity(Objective):
+    """
+    Maximal turbine density objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, dfactor=1, min_dist=None, name="max_density"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        dfactor: float
+            Delta factor for grid spacing
+        min_dist: float, optional
+            The minimal distance
+        name: str
+            The constraint name
+
+        """
         super().__init__(
             problem,
             name,
@@ -151,7 +252,34 @@ class MaxDensity(Objective):
 
 
 class MeMiMaDist(Objective):
+    """
+    Mean-min-max distance objective
+    for purely geometrical layouts problems.
+
+    :group: opt.problems.layout.geom_layouts.objectives
+
+    """
     def __init__(self, problem, scale=500.0, c1=1, c2=1, c3=1, name="MiMaMean"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying geometrical layout 
+            optimization problem
+        scale: float
+            The distance scale
+        c1: float
+            Parameter for mean weighting
+        c2: float
+            Parameter for max diff weighting
+        c3: float
+            Parameter for min diff weighting
+        name: str
+            The constraint name
+
+        """
         super().__init__(
             problem,
             name,

@@ -278,5 +278,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
 - Examples:
   - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
+- Documentation:
+  - Improved API docu, now based on `python-apigen`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)

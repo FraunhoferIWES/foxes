@@ -348,6 +348,14 @@ python_apigen_modules = {
     "foxes.utils.abl.stable": "utils/abl/stable/",
     "foxes.utils.abl.unstable": "utils/abl/unstable/",
     "foxes.utils.abl.sheared": "utils/abl/sheared/",
+    "foxes.opt.core": "utils/opt/core/",
+    "foxes.opt.problems": "utils/opt/problems/",
+    "foxes.opt.problems.layout": "utils/opt/problems/layout",
+    "foxes.opt.problems.layout.geom_layouts": "utils/opt/problems/layout/geom_layouts",
+    "foxes.opt.problems.layout.geom_layouts.objectives": "utils/opt/problems/layout/geom_layouts/objectives",
+    "foxes.opt.problems.layout.geom_layouts.constraints": "utils/opt/problems/layout/geom_layouts/constraints",
+    "foxes.opt.objectives": "utils/opt/objectives/",
+    "foxes.opt.constraints": "utils/opt/constraints/",
 }
 
 #python_apigen_default_groups = [

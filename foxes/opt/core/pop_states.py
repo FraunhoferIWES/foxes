@@ -11,23 +11,29 @@ class PopStates(States):
     calculation, via artificial states of length
     n_pop times n_states.
 
-    Parameters
-    ----------
-    states : foxes.core.States
-        The original states
-    n_pop : int
-        The population size
-
     Attributes
     ----------
-    states : foxes.core.States
+    states: foxes.core.States
         The original states
-    n_pop : int
+    n_pop: int
         The population size
+
+    :group: opt.core
 
     """
 
     def __init__(self, states, n_pop):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        states: foxes.core.States
+            The original states
+        n_pop: int
+            The population size
+
+        """
         super().__init__()
         self.states = states
         self.n_pop = n_pop
@@ -44,14 +50,14 @@ class PopStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -114,12 +120,12 @@ class PopStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -135,12 +141,12 @@ class PopStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -155,18 +161,18 @@ class PopStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 

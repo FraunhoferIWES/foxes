@@ -7,21 +7,12 @@ class MaxNTurbines(FarmObjective):
     """
     Maximizes the number of turrbines.
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the objective function
-    check_valid : bool
-        Check FC.VALID variable before counting
-    kwargs : dict, optional
-        Additional parameters for `FarmObjective`
-
     Attributes
     ----------
-    check_valid : bool
+    check_valid: bool
         Check FC.VALID variable before counting
+
+    :group: opt.objectives
 
     """
 
@@ -32,6 +23,21 @@ class MaxNTurbines(FarmObjective):
         check_valid=True,
         **kwargs,
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name: str
+            The name of the objective function
+        check_valid: bool
+            Check FC.VALID variable before counting
+        kwargs: dict, optional
+            Additional parameters for `FarmObjective`
+
+        """
         super().__init__(problem, name, **kwargs)
         self.check_valid = check_valid
 
@@ -54,7 +60,7 @@ class MaxNTurbines(FarmObjective):
 
         Returns
         -------
-        flags : np.array
+        flags: np.array
             Bool array for component maximization,
             shape: (n_components,)
 
@@ -68,19 +74,19 @@ class MaxNTurbines(FarmObjective):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_sel_components,)
 
         """
@@ -100,19 +106,19 @@ class MaxNTurbines(FarmObjective):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_pop, n_sel_components)
 
         """

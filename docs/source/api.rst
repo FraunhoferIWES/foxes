@@ -43,3 +43,16 @@ Utilities and helper functions that are not *foxes* specific.
         :maxdepth: 2
 
         api_utils
+
+foxes.opt
+---------
+Wind farm optimization within `foxes` is run
+via the `foxes.opt` sub-package. This internally
+makes use of the external `iwopy` package, whose
+documentation can be found
+`here <https://fraunhoferiwes.github.io/iwopy.docs/index.html>`_.
+
+    .. toctree::
+        :maxdepth: 2
+
+        api_opt
