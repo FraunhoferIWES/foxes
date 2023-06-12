@@ -269,7 +269,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
 
-## v0.4
+## v0.4.0
 
 - Models:
   - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
@@ -283,4 +283,4 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Documentation:
   - Improved API docu, now based on `python-apigen`
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)

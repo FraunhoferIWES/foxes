@@ -1,6 +1,18 @@
 foxes.models.wake_models
 ------------------------
-Abstract base classes for wake models. They introduce a wake model
+
+    .. table:: 
+        :widths: auto
+
+        =======================================  ============================================================
+        Package                                  Description
+        =======================================  ============================================================
+        :ref:`foxes.models.wake_models.wind`     Wind deficit wake models.
+        :ref:`foxes.models.wake_models.ti`       Turbulence intensity increase wake models.
+        =======================================  ============================================================
+
+Abstract base classes for wake models are available directly
+under the *foxes.models.wake_models* package. They introduce a wake model
 classification that is relevant for the different partial 
 wakes models.
 
@@ -14,6 +26,6 @@ Concrete wind deficit wake models.
 
 foxes.models.wake_models.ti
 ---------------------------
-Concrete turbulence intensity wake models.
+Concrete turbulence intensity increase wake models.
 
     .. python-apigen-group:: models.wake_models.ti
