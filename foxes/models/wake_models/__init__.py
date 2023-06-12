@@ -8,3 +8,4 @@ from .gaussian import GaussianWakeModel
 
 from . import wind
 from . import ti
+from . import induction
