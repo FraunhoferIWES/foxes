@@ -19,6 +19,9 @@ class Model(metaclass=ABCMeta):
     _ids = {}
 
     def __init__(self):
+        """
+        Constructor.
+        """
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)

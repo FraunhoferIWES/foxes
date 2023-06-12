@@ -24,7 +24,7 @@ class PartialWakesModel(Model):
 
     def __init__(self, wake_models=None, wake_frame=None):
         """
-        constructor.
+        Constructor.
         
         Parameters
         ----------

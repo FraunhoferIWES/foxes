@@ -88,10 +88,10 @@ exclude_patterns = [
     # ipynb checkpoints
     "notebooks/.ipynb_checkpoints/*.ipynb",
     "build/*",
-    "_templates/*",
+    #"_templates/*",
     # DEBUG
-    "examples.rst",
-    "notebooks/*",
+    #"examples.rst",
+    #"notebooks/*",
     #"notebooks/layout_opt.ipynb,"
     #"api.rst"
 ]
