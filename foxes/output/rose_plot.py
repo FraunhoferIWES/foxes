@@ -335,6 +335,8 @@ class StatesRosePlotOutput(RosePlotOutput):
     mbook: foxes.models.ModelBook, optional
         The model book
 
+    :group: output
+
     """
 
     def __init__(self, states, point, mbook=None, ws_var=FV.AMB_REWS):

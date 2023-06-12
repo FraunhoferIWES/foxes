@@ -410,6 +410,8 @@ class MultiHeightStates(States):
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
-    """
 
+    :group: input.states
+
+    """
     RDICT = {"index_col": 0, "parse_dates": [0]}

@@ -41,18 +41,18 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    #"nbsphinx",
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
     'sphinx.ext.autosectionlabel',
     #"sphinx.ext.autosummary",
-    #"sphinx.ext.intersphinx",
-    #"sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
     #"sphinx.ext.napoleon",
-    #"sphinx.ext.viewcode",
-    #"sphinx.ext.inheritance_diagram",
-    #"nbsphinx",
-    #"sphinx.ext.doctest",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.doctest",
     "m2r2",
 ]
 

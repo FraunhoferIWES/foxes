@@ -349,6 +349,8 @@ class StatesTable(States):
 class Timeseries(StatesTable):
     """
     Timeseries states data.
-    """
 
+    :group: input.states
+    
+    """
     RDICT = {"index_col": 0, "parse_dates": [0]}

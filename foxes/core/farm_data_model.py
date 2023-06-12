@@ -126,19 +126,25 @@ class FarmDataModelList(FarmDataModel):
     `calculate` functions are called together
     under one common call of xarray's `apply_ufunc`.
 
-    Parameters
-    ----------
-    models: list of foxes.core.FarmDataModel
-        The model list
-
     Attributes
     ----------
     models: list of foxes.core.FarmDataModel
         The model list
+    
+    :group: core
 
     """
 
     def __init__(self, models=[]):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        models: list of foxes.core.FarmDataModel
+            The model list
+
+        """
         super().__init__()
         self.models = models
 

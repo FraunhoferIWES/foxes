@@ -262,6 +262,8 @@ class MaxFarmPower(FarmVarObjective):
         The name of the objective function
     kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
+    
+    :group: opt.objectives
 
     """
 
@@ -301,6 +303,8 @@ class MinimalMaxTI(FarmVarObjective):
         The name of the objective function
     kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
+    
+    :group: opt.objectives
 
     """
 

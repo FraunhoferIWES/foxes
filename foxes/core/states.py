@@ -127,23 +127,29 @@ class ExtendedStates(States):
     """
     States extended by point data models.
 
-    Parameters
-    ----------
-    states: foxes.core.States
-        The base states to start from
-    point_models: list of foxes.core.PointDataModel, optional
-        The point models, executed after states
-
     Attributes
     ----------
     states: foxes.core.States
         The base states to start from
     pmodels: foxes.core.PointDataModelList
         The point models, including states as first model
+    
+    :group: core
 
     """
 
     def __init__(self, states, point_models=[]):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        states: foxes.core.States
+            The base states to start from
+        point_models: list of foxes.core.PointDataModel, optional
+            The point models, executed after states
+
+        """
         super().__init__()
         self.states = states
         self.pmodels = PointDataModelList(models=[states] + point_models)
