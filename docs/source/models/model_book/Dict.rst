@@ -6,5 +6,5 @@
 
 
 
-.. python-apigen-entity-page::  foxes.utils.Dict
+.. python-apigen-entity-page::  foxes.models.model_book.Dict
 

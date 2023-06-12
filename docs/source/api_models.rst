@@ -2,6 +2,25 @@ foxes.models
 ============
 This package contains all concrete model classes.
 
+    .. table:: 
+        :widths: auto
+
+        =======================================  ============================================================
+        Package                                  Description
+        =======================================  ============================================================
+        :ref:`foxes.models.farm_controllers`     Wind farm controller models. They execute turbine models.
+        :ref:`foxes.models.farm_models`          Wind farm models, i.e., turbine models for all turbines.
+        :ref:`foxes.models.partial_wakes`        Partial wake models, computing rotor effective wake deltas.
+        :ref:`foxes.models.point_models`         Point models, calculating results at points of interest.
+        :ref:`foxes.models.rotor_models`         Rotor models, computing rotor effective ambient results.
+        :ref:`foxes.models.turbine_models`       Turbine models, calculating data at turbines.
+        :ref:`foxes.models.turbine_types`        Turbine types, providing power and thrust.
+        :ref:`foxes.models.vertical_profiles`    Vertical profiles, for atmospheric input.
+        :ref:`foxes.models.wake_frames`          Wake frames, defining the wake propagation.
+        :ref:`foxes.models.wake_models`          Wake models, computing variable changes due to wakes.
+        :ref:`foxes.models.wake_superpositions`  Wake superposition models, evaluating multiple wakes deltas.
+        =======================================  ============================================================
+
 foxes.models.farm_controllers
 -----------------------------
 The wind farm controller models. They are responsible

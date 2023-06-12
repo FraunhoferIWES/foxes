@@ -1,5 +1,6 @@
 foxes.utils
------------
+===========
+Utilities and helper functions that are not *foxes* specific.
 
     .. python-apigen-group:: utils
 

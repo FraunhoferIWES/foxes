@@ -6,5 +6,5 @@
 
 
 
-.. python-apigen-entity-page::  foxes.utils.Dict.__getitem__
+.. python-apigen-entity-page::  foxes.models.model_book.Dict.__getitem__
 

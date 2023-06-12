@@ -34,16 +34,79 @@ class OMaxN(Objective):
         )
 
     def n_components(self):
+        """
+        Returns the number of components of the
+        function.
+
+        Returns
+        -------
+        int:
+            The number of components.
+
+        """
         return 1
 
     def maximize(self):
+        """
+        Returns flag for maximization of each component.
+
+        Returns
+        -------
+        flags: np.array
+            Bool array for component maximization,
+            shape: (n_components,)
+
+        """
         return [True]
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
         __, valid = problem_results
         return np.sum(valid)
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
         __, valid = problem_results
         return np.sum(valid, axis=1)[:, None]
 
@@ -107,17 +170,80 @@ class OFixN(Objective):
         self.N = N
 
     def n_components(self):
+        """
+        Returns the number of components of the
+        function.
+
+        Returns
+        -------
+        int:
+            The number of components.
+
+        """
         return 1
 
     def maximize(self):
+        """
+        Returns flag for maximization of each component.
+
+        Returns
+        -------
+        flags: np.array
+            Bool array for component maximization,
+            shape: (n_components,)
+
+        """
         return [False]
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
         __, valid = problem_results
         N = np.sum(valid, dtype=np.float64)
         return np.maximum(N - self.N, self.N - N)
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
         __, valid = problem_results
         N = np.sum(valid, axis=1, dtype=np.float64)[:, None]
         return np.maximum(N - self.N, self.N - N)
@@ -152,17 +278,80 @@ class MaxGridSpacing(Objective):
         )
 
     def n_components(self):
+        """
+        Returns the number of components of the
+        function.
+
+        Returns
+        -------
+        int:
+            The number of components.
+
+        """
         return 1
 
     def maximize(self):
+        """
+        Returns flag for maximization of each component.
+
+        Returns
+        -------
+        flags: np.array
+            Bool array for component maximization,
+            shape: (n_components,)
+
+        """
         return [True]
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
         vflt = vars_float.reshape(self.problem.n_grids, 5)
         delta = np.minimum(vflt[:, 2], vflt[:, 3])
         return np.nanmin(delta)
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
         n_pop = vars_float.shape[0]
         vflt = vars_float.reshape(n_pop, self.problem.n_grids, 5)
         delta = np.minimum(vflt[:, :, 2], vflt[:, :, 3])
@@ -204,12 +393,41 @@ class MaxDensity(Objective):
         self.min_dist = problem.min_dist if min_dist is None else min_dist
 
     def n_components(self):
+        """
+        Returns the number of components of the
+        function.
+
+        Returns
+        -------
+        int:
+            The number of components.
+
+        """
         return 1
 
     def maximize(self):
+        """
+        Returns flag for maximization of each component.
+
+        Returns
+        -------
+        flags: np.array
+            Bool array for component maximization,
+            shape: (n_components,)
+
+        """
         return [False]
 
     def initialize(self, verbosity):
+        """
+        Initialize the object.
+
+        Parameters
+        ----------
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
         super().initialize(verbosity)
 
         # define regular grid of probe points:
@@ -234,12 +452,55 @@ class MaxDensity(Objective):
         self._probes = self._probes[valid]
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
         xy, valid = problem_results
         xy = xy[valid]
         dists = cdist(self._probes, xy)
         return np.nanmax(np.nanmin(dists, axis=1))
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
         n_pop = vars_float.shape[0]
         xy, valid = problem_results
         out = np.full(n_pop, 1e20, dtype=FC.DTYPE)
@@ -292,12 +553,54 @@ class MeMiMaDist(Objective):
         self.c3 = c3
 
     def n_components(self):
+        """
+        Returns the number of components of the
+        function.
+
+        Returns
+        -------
+        int:
+            The number of components.
+
+        """
         return 1
 
     def maximize(self):
+        """
+        Returns flag for maximization of each component.
+
+        Returns
+        -------
+        flags: np.array
+            Bool array for component maximization,
+            shape: (n_components,)
+
+        """
         return [True]
 
     def calc_individual(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for a single individual of the
+        underlying problem.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_vars_int,)
+        vars_float : np.array
+            The float variable values, shape: (n_vars_float,)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_sel_components,)
+
+        """
         xy, valid = problem_results
         # xy = xy[valid]
 
@@ -315,6 +618,27 @@ class MeMiMaDist(Objective):
         )
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):
+        """
+        Calculate values for all individuals of a population.
+
+        Parameters
+        ----------
+        vars_int : np.array
+            The integer variable values, shape: (n_pop, n_vars_int)
+        vars_float : np.array
+            The float variable values, shape: (n_pop, n_vars_float)
+        problem_results : Any
+            The results of the variable application
+            to the problem
+        components : list of int, optional
+            The selected components or None for all
+
+        Returns
+        -------
+        values : np.array
+            The component values, shape: (n_pop, n_sel_components)
+
+        """
         xy, valid = problem_results
         n_pop, n_xy = xy.shape[:2]
 
