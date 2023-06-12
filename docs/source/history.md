@@ -273,5 +273,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Models:
   - Improved: Now option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
+  - Improved: foxes.opt is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)
