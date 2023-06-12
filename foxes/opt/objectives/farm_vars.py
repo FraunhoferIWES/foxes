@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from foxes.opt.core.farm_objective import FarmObjective
