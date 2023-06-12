@@ -41,7 +41,7 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    #"nbsphinx",
+    "nbsphinx",
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
@@ -64,7 +64,7 @@ intersphinx_mapping = {
 
 # Add any paths that contain templates here, relative to this directory.
 #templates_path = ["_templates"]
-autosummary_generate = True
+#autosummary_generate = False
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -103,7 +103,7 @@ pygments_style = None
 napolean_use_rtype = False
 
 # -- Options for sphinxcontrib.email ------------------------------------------
-email_automode = True
+# email_automode = True
 
 
 # -- Options for nbsphinx -----------------------------------------------------
