@@ -214,10 +214,10 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+#html_static_path = ["_static"]
 
 # custom.css is inside one of the html_static_path folders (e.g. _static)
-html_css_files = ["custom.css"]
+#html_css_files = ["custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -322,43 +322,43 @@ napoleon_attr_annotations = True
 # -- Extension configuration -------------------------------------------------
 
 python_apigen_modules = {
-    "foxes.core": "core/",
-    "foxes.data": "data/",
-    "foxes.input.farm_layout": "input/farm_layout/",
-    "foxes.input.states": "input/states/",
-    "foxes.input.windio": "input/windio/",
-    "foxes.output": "output/",
-    "foxes.models.model_book": "models/model_book/",
-    "foxes.models.farm_controllers": "models/farm_controllers/",
-    "foxes.models.farm_models": "models/farm_models/",
-    "foxes.models.partial_wakes": "models/partial_wakes/",
-    "foxes.models.point_models": "models/point_models/",
-    "foxes.models.rotor_models": "models/rotor_models/",
-    "foxes.models.turbine_models": "models/turbine_models/",
-    "foxes.models.turbine_types": "models/turbine_types/",
-    "foxes.models.vertical_profiles": "models/vertical_profiles/",
-    "foxes.models.wake_frames": "models/wake_frames/",
-    "foxes.models.wake_models": "models/wake_models/",
-    "foxes.models.wake_models.wind": "models/wake_models/wind/",
-    "foxes.models.wake_models.ti": "models/wake_models/ti/",
-    "foxes.models.wake_superpositions": "models/wake_superpositions/",
-    "foxes.utils": "utils/",
-    "foxes.utils.abl": "utils/abl",
-    "foxes.utils.geom2d": "utils/geom2d/",
-    "foxes.utils.runners": "utils/runners/",
-    "foxes.utils.two_circles": "utils/two_circles/",
-    "foxes.utils.abl.neutral": "utils/abl/neutral/",
-    "foxes.utils.abl.stable": "utils/abl/stable/",
-    "foxes.utils.abl.unstable": "utils/abl/unstable/",
-    "foxes.utils.abl.sheared": "utils/abl/sheared/",
-    "foxes.opt.core": "utils/opt/core/",
-    "foxes.opt.problems": "utils/opt/problems/",
-    "foxes.opt.problems.layout": "utils/opt/problems/layout",
-    "foxes.opt.problems.layout.geom_layouts": "utils/opt/problems/layout/geom_layouts",
-    "foxes.opt.problems.layout.geom_layouts.objectives": "utils/opt/problems/layout/geom_layouts/objectives",
-    "foxes.opt.problems.layout.geom_layouts.constraints": "utils/opt/problems/layout/geom_layouts/constraints",
-    "foxes.opt.objectives": "utils/opt/objectives/",
-    "foxes.opt.constraints": "utils/opt/constraints/",
+    "foxes.core": "_core/",
+    "foxes.data": "_data/",
+    "foxes.input.farm_layout": "_input/farm_layout/",
+    "foxes.input.states": "_input/states/",
+    "foxes.input.windio": "_input/windio/",
+    "foxes.output": "_output/",
+    "foxes.models.model_book": "_models/model_book/",
+    "foxes.models.farm_controllers": "_models/farm_controllers/",
+    "foxes.models.farm_models": "_models/farm_models/",
+    "foxes.models.partial_wakes": "_models/partial_wakes/",
+    "foxes.models.point_models": "_models/point_models/",
+    "foxes.models.rotor_models": "_models/rotor_models/",
+    "foxes.models.turbine_models": "_models/turbine_models/",
+    "foxes.models.turbine_types": "_models/turbine_types/",
+    "foxes.models.vertical_profiles": "_models/vertical_profiles/",
+    "foxes.models.wake_frames": "_models/wake_frames/",
+    "foxes.models.wake_models": "_models/wake_models/",
+    "foxes.models.wake_models.wind": "_models/wake_models/wind/",
+    "foxes.models.wake_models.ti": "_models/wake_models/ti/",
+    "foxes.models.wake_superpositions": "_models/wake_superpositions/",
+    "foxes.utils": "_utils/",
+    "foxes.utils.abl": "_utils/abl",
+    "foxes.utils.geom2d": "_utils/geom2d/",
+    "foxes.utils.runners": "_utils/runners/",
+    "foxes.utils.two_circles": "_utils/two_circles/",
+    "foxes.utils.abl.neutral": "_utils/abl/neutral/",
+    "foxes.utils.abl.stable": "_utils/abl/stable/",
+    "foxes.utils.abl.unstable": "_utils/abl/unstable/",
+    "foxes.utils.abl.sheared": "_utils/abl/sheared/",
+    "foxes.opt.core": "_utils/opt/core/",
+    "foxes.opt.problems": "_utils/opt/problems/",
+    "foxes.opt.problems.layout": "_utils/opt/problems/layout",
+    "foxes.opt.problems.layout.geom_layouts": "_utils/opt/problems/layout/geom_layouts",
+    "foxes.opt.problems.layout.geom_layouts.objectives": "_utils/opt/problems/layout/geom_layouts/objectives",
+    "foxes.opt.problems.layout.geom_layouts.constraints": "_utils/opt/problems/layout/geom_layouts/constraints",
+    "foxes.opt.objectives": "_utils/opt/objectives/",
+    "foxes.opt.constraints": "_utils/opt/constraints/",
 }
 
 #python_apigen_default_groups = [
