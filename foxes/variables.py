@@ -102,6 +102,10 @@ MOL : str
     The Monin-Ubukhof length in m
 SHEAR : str
     The shear exponent
+PA_ALPHA : str
+    The alpha parameter of the PorteAgel wake model
+PA_BETA : str
+    The beta parameter of the PorteAgel wake model
 
 """
 
@@ -176,3 +180,6 @@ KTI = "kTI"
 Z0 = "z0"
 MOL = "MOL"
 SHEAR = "shear"
+
+PA_ALPHA = "PA_alpha"
+PA_BETA = "PA_beta"

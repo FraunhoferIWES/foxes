@@ -43,7 +43,7 @@ class SetFarmVars(TurbineModel):
 
         """
         self.vars.append(var)
-        self._vdata.append(data)
+        self._vdata.append(np.asarray(data, dtype=FC.DTYPE))
 
     def reset(self):
         """
@@ -98,7 +98,22 @@ class SetFarmVars(TurbineModel):
 
         for i, v in enumerate(self.vars):
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
-            data[:] = self._vdata[i]
+            
+
+            if np.sum(np.shape((self._vdata))) == 1:
+                # exception when only single case is ran
+                data[:] = self._vdata[i]
+            else:
+                # in case the model is used during vectorized optimization:
+                vdata = self._vdata[i]
+                if vdata.shape[0] != algo.n_states and hasattr(algo.states, "n_pop"):
+                    n_pop = algo.states.n_pop
+                    n_ost = algo.states.states.size()
+                    n_trb = algo.n_turbines
+                    vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
+                    vdata[:] = self._vdata[i][None, :]
+                    vdata = vdata.reshape(n_pop*n_ost, n_trb)
+                data[:] = vdata
 
             idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 

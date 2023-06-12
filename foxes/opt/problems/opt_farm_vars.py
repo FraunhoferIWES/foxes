@@ -3,7 +3,6 @@ import pandas as pd
 
 from foxes.opt.core import FarmVarsProblem
 from foxes.models.turbine_models import SetFarmVars
-import foxes.variables as FV
 import foxes.constants as FC
 
 
@@ -70,10 +69,6 @@ class OptFarmVars(FarmVarsProblem):
             same turbine model
 
         """
-        if not hasattr(FV, name):
-            raise ValueError(
-                f"Problem '{self.name}': Name '{name}' is not a foxes variable."
-            )
         if typ is not float and typ is not int:
             raise TypeError(
                 f"Problem '{self.name}': Expecting float or int, got type '{type(typ).__name__}'"

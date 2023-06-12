@@ -1,3 +1,4 @@
+import numpy as np
 from iwopy import Problem
 
 from foxes.utils.runners import DefaultRunner
@@ -17,6 +18,8 @@ class FarmOptProblem(Problem):
         The runner for running the algorithm
     calc_farm_args: dict
         Additional parameters for algo.calc_farm()
+    points : numpy.ndarray
+        The probe points, shape: (n_states, n_points, 3)
 
     :group: opt.core
 
@@ -29,6 +32,7 @@ class FarmOptProblem(Problem):
         runner=None,
         sel_turbines=None,
         calc_farm_args={},
+        points=None,
         **kwargs,
     ):
         """
@@ -47,6 +51,8 @@ class FarmOptProblem(Problem):
             or None for all
         calc_farm_args: dict
             Additional parameters for algo.calc_farm()
+        points : numpy.ndarray, optional
+            The probe points, shape: (n_states, n_points, 3)
         kwargs: dict, optional
             Additional parameters for `iwopy.Problem`
 
@@ -56,6 +62,7 @@ class FarmOptProblem(Problem):
         self.algo = algo
         self.runner = runner
         self.calc_farm_args = calc_farm_args
+        self.points = points
 
         self._sel_turbines = sel_turbines
         self._count = None
@@ -313,7 +320,13 @@ class FarmOptProblem(Problem):
         """
         self._count += 1
         self.update_problem_individual(vars_int, vars_float)
-        return self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
+        farm_results = self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
+
+        if self.points is None:
+            return farm_results
+        else:
+            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, self.points))
+            return farm_results, point_results
 
     def apply_population(self, vars_int, vars_float):
         """
@@ -337,11 +350,20 @@ class FarmOptProblem(Problem):
         self._count += 1
 
         self.update_problem_population(vars_int, vars_float)
-        results = self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
-        results["n_pop"] = len(vars_float)
-        results["n_org_states"] = self._org_n_states
+        farm_results = self.runner.run(self.algo.calc_farm, kwargs=self.calc_farm_args)
+        farm_results["n_pop"] = len(vars_float)
+        farm_results["n_org_states"] = self._org_n_states
 
-        return results
+        if self.points is None:
+            return farm_results
+        else:
+            n_pop = farm_results["n_pop"].values
+            n_states, n_points = self.points.shape[:2]
+            pop_points = np.zeros((n_pop, n_states, n_points, 3), dtype=FC.DTYPE)
+            pop_points[:] = self.points[None, :, : , :]
+            pop_points = pop_points.reshape(n_pop*n_states, n_points, 3)
+            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, pop_points))
+            return farm_results, point_results
 
     def add_to_layout_figure(self, ax, **kwargs):
         """
