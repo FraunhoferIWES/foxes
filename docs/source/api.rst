@@ -13,5 +13,6 @@ API
         :ref:`foxes.models`  All concrete model classes.
         :ref:`foxes.utils`   Utilities and helper functions.
         :ref:`foxes.opt`     Classes for wind farm optimization.
+        :ref:`foxes.output`  Classes and functions for output creation.
         ===================  ================================================
 

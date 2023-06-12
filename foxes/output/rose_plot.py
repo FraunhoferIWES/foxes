@@ -15,19 +15,25 @@ class RosePlotOutput(Output):
     """
     Class for rose plot creation
 
-    Parameters
-    ----------
-    results : xarray.Dataset
-        The calculation results (farm or points)
-
     Attributes
     ----------
-    results : pandas.DataFrame
+    results: pandas.DataFrame
         The calculation results (farm or points)
+
+    :group: output
 
     """
 
     def __init__(self, results):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        results: xarray.Dataset
+            The calculation results (farm or points)
+
+        """
         dims = list(results.dims.keys())
         if dims[1] == FC.TURBINE:
             self._rtype = FC.TURBINE
@@ -47,14 +53,14 @@ class RosePlotOutput(Output):
 
         Parameters
         ----------
-        dname : str
+        dname: str
             The variable name
 
         Returns
         -------
-        title : str
+        title: str
             The long name of the variable
-        legend : str
+        legend: str
             The legend/axis text
 
         """
@@ -108,23 +114,23 @@ class RosePlotOutput(Output):
 
         Parameters
         ----------
-        sectors : int
+        sectors: int
             The number of wind direction sectors
-        var : str
+        var: str
             The data variable name
-        var_bins : list of float
+        var_bins: list of float
             The variable bin seperation values
-        wd_var : str, optional
+        wd_var: str, optional
             The wind direction variable name
-        turbine : int, optional
+        turbine: int, optional
             Only relevant in case of farm results.
             If None, mean over all turbines.
             Else, data from a single turbine
-        point : int, optional
+        point: int, optional
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
-        legend : str, optional
+        legend: str, optional
             The data legend string
 
         Returns
@@ -187,27 +193,27 @@ class RosePlotOutput(Output):
 
         Parameters
         ----------
-        sectors : int
+        sectors: int
             The number of wind direction sectors
-        var : str
+        var: str
             The data variable name
-        var_bins : list of float
+        var_bins: list of float
             The variable bin seperation values
-        wd_var : str, optional
+        wd_var: str, optional
             The wind direction variable name
-        turbine : int, optional
+        turbine: int, optional
             Only relevant in case of farm results.
             If None, mean over all turbines.
             Else, data from a single turbine
-        point : int, optional
+        point: int, optional
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
-        legend : str, optional
+        legend: str, optional
             The data legend string
-        layout_dict : dict, optional
+        layout_dict: dict, optional
             Optional parameters for the px figure layout
-        title_dict : dict, optional
+        title_dict: dict, optional
             Optional parameters for the px title layout
 
         Returns
@@ -272,29 +278,29 @@ class RosePlotOutput(Output):
 
         Parameters
         ----------
-        file_name : str
+        file_name: str
             Path to the output file
-        sectors : int
+        sectors: int
             The number of wind direction sectors
-        var : str
+        var: str
             The data variable name
-        var_bins : list of float
+        var_bins: list of float
             The variable bin seperation values
-        wd_var : str, optional
+        wd_var: str, optional
             The wind direction variable name
-        turbine : int, optional
+        turbine: int, optional
             Only relevant in case of farm results.
             If None, mean over all turbines.
             Else, data from a single turbine
-        point : int, optional
+        point: int, optional
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
-        legend : str, optional
+        legend: str, optional
             The data legend string
-        layout_dict : dict, optional
+        layout_dict: dict, optional
             Optional parameters for the px figure layout
-        title_dict : dict, optional
+        title_dict: dict, optional
             Optional parameters for the px title layout
 
         """
@@ -322,11 +328,11 @@ class StatesRosePlotOutput(RosePlotOutput):
 
     Parameters
     ----------
-    states : foxes.core.States
+    states: foxes.core.States
         The states from which to compute the wind rose
-    point : numpy.ndarray
+    point: numpy.ndarray
         The evaluation point, shape: (3,)
-    mbook : foxes.models.ModelBook, optional
+    mbook: foxes.models.ModelBook, optional
         The model book
 
     """

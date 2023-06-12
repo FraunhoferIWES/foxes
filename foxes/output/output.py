@@ -8,6 +8,8 @@ class Output:
     The job of this class is to provide handy
     helper functions.
 
+    :group: output
+
     """
 
     @classmethod
@@ -19,14 +21,14 @@ class Output:
 
         Parameters
         ----------
-        file_path : string
+        file_path: string
             The path to the output file
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The data
-        format_col2var : dict
+        format_col2var: dict
             Mapping from column names to flappy variables,
             for formatting
-        format_dict : dict
+        format_dict: dict
             Dictionary with format entries for columns, e.g.
             {FV.P: '{:.4f}'}. Note that the keys are flappy variables
 
@@ -57,7 +59,7 @@ class Output:
 
         Parameters
         ----------
-        model_type : string
+        model_type: string
             The selected derived class name
 
         """

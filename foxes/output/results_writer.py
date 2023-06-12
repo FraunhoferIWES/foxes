@@ -6,21 +6,27 @@ class ResultsWriter(Output):
     """
     Writes results farm data to file.
 
-    Parameters
-    ----------
-    farm_results : xarray.Dataset, optional
-        The farm results, if data is None
-    data : pandas.DataFrame, optional
-        The data, if farm_results is None
-
     Attributes
     ----------
-    data : pandas.DataFrame
+    data: pandas.DataFrame
         The farm results
+
+    :group: output
 
     """
 
     def __init__(self, farm_results=None, data=None):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        farm_results: xarray.Dataset, optional
+            The farm results, if data is None
+        data: pandas.DataFrame, optional
+            The data, if farm_results is None
+
+        """
         if farm_results is not None and data is None:
             self.data = farm_results.to_dataframe().reset_index()
             self.data[FC.TNAME] = farm_results[FC.TNAME].to_numpy()[
@@ -47,18 +53,18 @@ class ResultsWriter(Output):
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             Path the the csv file
-        variables : dict or list of str, optional
+        variables: dict or list of str, optional
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
             the column names. If None, then all data will be
             written.
-        turbine_names : bool
+        turbine_names: bool
             Use turbine names instead of turbine indices
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for Output.write()
 
         """
