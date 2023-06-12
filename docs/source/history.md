@@ -269,7 +269,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
 
-## v0.3.6-alpha
+## v0.4
 
 - Models:
   - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
@@ -282,5 +282,5 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
 - Documentation:
   - Improved API docu, now based on `python-apigen`
-  
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.6)
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4)
