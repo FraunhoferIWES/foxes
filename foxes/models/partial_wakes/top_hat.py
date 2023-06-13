@@ -26,7 +26,7 @@ class PartialTopHat(PartialWakesModel):
     def __init__(self, wake_models=None, wake_frame=None, rotor_model=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         wake_models: list of foxes.core.WakeModel, optional

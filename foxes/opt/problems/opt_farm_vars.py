@@ -17,7 +17,7 @@ class OptFarmVars(FarmVarsProblem):
     def __init__(self, *args, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -484,7 +484,7 @@ class OptFarmVars(FarmVarsProblem):
             src = vars_int if typ == "int" else vars_float
             i0 = g.index[0]
             i1 = g.index[-1]
-            data = src[np.s_[i0: i1 + 1]]
+            data = src[np.s_[i0 : i1 + 1]]
 
             if level == "uniform":
                 farm_vars[var] = np.full((n_states, n_sturb), data[0], dtype=FC.DTYPE)
@@ -546,7 +546,7 @@ class OptFarmVars(FarmVarsProblem):
             src = vars_int if typ == "int" else vars_float
             i0 = g.index[0]
             i1 = g.index[-1]
-            data = src[:, np.s_[i0: i1 + 1]]
+            data = src[:, np.s_[i0 : i1 + 1]]
 
             if level == "uniform":
                 farm_vars[var] = np.full(

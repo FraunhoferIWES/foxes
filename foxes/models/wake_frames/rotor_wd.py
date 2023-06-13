@@ -23,7 +23,7 @@ class RotorWD(WakeFrame):
     def __init__(self, var_wd=FV.WD):
         """
         Constructor.
-        
+
         Parameters
         ----------
         var_wd: str

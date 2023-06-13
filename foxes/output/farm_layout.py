@@ -35,7 +35,7 @@ class FarmLayoutOutput(Output):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         farm: foxes.WindFarm

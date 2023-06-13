@@ -24,7 +24,7 @@ class kTI(TurbineModel):
     def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
         """
         Constructor.
-        
+
         Parameters
         ----------
         kTI: float, optional
@@ -51,7 +51,10 @@ class kTI(TurbineModel):
         setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
-        return super().__repr__() + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        return (
+            super().__repr__()
+            + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        )
 
     def output_farm_vars(self, algo):
         """

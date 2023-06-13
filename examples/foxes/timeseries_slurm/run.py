@@ -225,18 +225,14 @@ if __name__ == "__main__":
     print("\nCalc time =", time1 - time0, "\n")
 
     cluster_args = {
-        'cores': 24, # number of cores per node
-        'memory': '64GB', # memory per node
-        'walltime': '00:00:10',
-        'queue':'eddy.p',
-        'nodes': 2
+        "cores": 24,  # number of cores per node
+        "memory": "64GB",  # memory per node
+        "walltime": "00:00:10",
+        "queue": "eddy.p",
+        "nodes": 2,
     }
 
-    with DaskRunner(
-        scheduler="slurm",
-        cluster_args=cluster_args
-    ) as runner:
-        
+    with DaskRunner(scheduler="slurm", cluster_args=cluster_args) as runner:
         time0 = time.time()
 
         farm_results = runner.run(algo.calc_farm)

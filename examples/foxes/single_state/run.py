@@ -34,7 +34,11 @@ if __name__ == "__main__":
         default="NREL-5MW-D126-H90.csv",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_K1", "kTI_K2"], nargs="+"
+        "-m",
+        "--tmodels",
+        help="The turbine models",
+        default=["kTI_K1", "kTI_K2"],
+        nargs="+",
     )
     parser.add_argument(
         "-w",
@@ -58,8 +62,12 @@ if __name__ == "__main__":
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-    mbook.turbine_models["kTI_K1"] = foxes.models.turbine_models.kTI(kTI=0.2, k_var="K1", ti_var=FV.AMB_TI)
-    mbook.turbine_models["kTI_K2"] = foxes.models.turbine_models.kTI(kTI=0.4, k_var="K2", ti_var=FV.AMB_TI)
+    mbook.turbine_models["kTI_K1"] = foxes.models.turbine_models.kTI(
+        kTI=0.2, k_var="K1", ti_var=FV.AMB_TI
+    )
+    mbook.turbine_models["kTI_K2"] = foxes.models.turbine_models.kTI(
+        kTI=0.4, k_var="K2", ti_var=FV.AMB_TI
+    )
     mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.BastankhahWake(
         superposition="quadratic", k_var="K1"
     )

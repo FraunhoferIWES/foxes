@@ -24,7 +24,7 @@ class JensenWake(TopHatWakeModel):
     def __init__(self, superposition, k=None, ct_max=0.9999, k_var=FV.K):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

@@ -34,7 +34,7 @@ class TurbOParkWake(GaussianWakeModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict
@@ -241,7 +241,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

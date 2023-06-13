@@ -22,7 +22,7 @@ class PandasFileHelper:
         The supported file formats for data export
     DEFAULT_FORMAT_DICT: dict
         Default column formatting
-    
+
     :group: utils
 
     """

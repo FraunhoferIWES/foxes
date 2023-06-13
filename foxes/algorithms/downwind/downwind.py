@@ -5,6 +5,7 @@ import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Downwind(Algorithm):
     """
     The downwind algorithm.

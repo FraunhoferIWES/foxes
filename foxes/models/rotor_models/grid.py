@@ -28,7 +28,7 @@ class GridRotor(RotorModel):
     def __init__(self, n, calc_vars, reduce=True, nint=200):
         """
         Constructor.
-        
+
         Parameters
         ----------
         n: int

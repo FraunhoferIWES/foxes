@@ -17,7 +17,7 @@ def parse_Pct_file_name(file_name):
     -------
     parsed_data: dict
         dict with data parsed from file name
-    
+
     :group: foxes
 
     """
@@ -84,7 +84,7 @@ def parse_Pct_two_files(file_name_A, file_name_B):
     -------
     parsed_data: dict
         dict with data parsed from file name
-    
+
     :group: foxes
 
     """

@@ -32,7 +32,7 @@ class PartialDistSlicedWake(PartialWakesModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         n: int, optional

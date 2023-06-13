@@ -27,7 +27,7 @@ class RosePlotOutput(Output):
     def __init__(self, results):
         """
         Constructor.
-        
+
         Parameters
         ----------
         results: xarray.Dataset

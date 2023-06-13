@@ -16,7 +16,7 @@ class PartialGrid(PartialDistSlicedWake):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         n: int, optional

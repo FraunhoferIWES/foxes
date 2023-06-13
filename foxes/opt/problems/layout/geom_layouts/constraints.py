@@ -12,14 +12,15 @@ class Valid(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, name="valid", **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         name: str
             The constraint name
@@ -107,14 +108,15 @@ class Boundary(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, n_turbines=None, D=None, name="boundary", **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         n_turbines: int, optional
             The number of turbines
@@ -225,16 +227,17 @@ class MinDist(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(
         self, problem, min_dist=None, n_turbines=None, name="min_dist", **kwargs
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         min_dist: float, optional
             The minimal distance between turbines
@@ -363,6 +366,7 @@ class CMinN(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, N, name="cminN", **kwargs):
         super().__init__(
             problem,
@@ -461,14 +465,15 @@ class CMaxN(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, N, name="cmaxN", **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         N: int
             The maximal number of turbines
@@ -559,14 +564,15 @@ class CFixN(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, N, name="cfixN", **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         N: int
             The number of turbines
@@ -660,14 +666,15 @@ class CMinDensity(Constraint):
     :group: opt.problems.layout.geom_layouts.constraints
 
     """
+
     def __init__(self, problem, min_value, dfactor=1, name="min_density"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         min_value: float
             The minimal turbine density

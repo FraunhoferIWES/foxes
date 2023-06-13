@@ -27,7 +27,7 @@ class Mapped(PartialWakesModel):
         Mapping from wake model class name to partial wakes.
         Key: wake model class name str, value: Tuple of length 2,
         (Partial wake class name, parameter dict)
-    
+
     :group: models.partial_wakes
 
     """
@@ -37,7 +37,7 @@ class Mapped(PartialWakesModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         wname2pwake: dict, optional

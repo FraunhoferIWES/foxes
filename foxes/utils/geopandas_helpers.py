@@ -63,7 +63,7 @@ def read_shp(fname, **kwargs):
     -------
     data: geopandas.GeoDataFrame
         The data frame in WSG84
-    
+
     :group: utils
 
     """
@@ -88,7 +88,7 @@ def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
         Additional parameters for geopandas to_csv()
     verbosity: int
         The verbosity level, 0 = silent
-    
+
     :group: utils
 
     """
@@ -167,7 +167,7 @@ def read_shp_polygons(
         Value: list:np.ndarray, shape of latter: (n_points, 2)
     utm_zone_str: str, optional
         The utem zone plus letter as str, e.g. "32U"
-    
+
     :group: utils
 
     """
@@ -244,9 +244,9 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
         The geometry object
     utm_zone_str: str, optional
         The utem zone plus letter as str, e.g. "32U"
-    
+
     :group: utils
-    
+
     """
 
     exint = read_shp_polygons(*args, ret_utm_zone=ret_utm_zone, **kwargs)

@@ -29,7 +29,7 @@ class GeomRegGrids(Problem):
         The maximal distance between points
     D: float
         The diameter of circle fully within boundary
-    
+
     :group: opt.problems.layout.geom_layouts
 
     """
@@ -46,7 +46,7 @@ class GeomRegGrids(Problem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         boundary: foxes.utils.geom2d.AreaGeometry

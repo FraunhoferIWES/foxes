@@ -11,7 +11,7 @@ class PorteAgelModel(Model):
     Common calculations for the wake model and the wake
     frame, such that code repetitions can be avoided.
 
-    Based on Bastankhah & Porte-Agel, 2016, 
+    Based on Bastankhah & Porte-Agel, 2016,
     https://doi.org/10.1017/jfm.2016.595
 
     Attributes
@@ -23,7 +23,7 @@ class PorteAgelModel(Model):
         model parameter used to determine onset of far wake region
     beta: float
         model parameter used to determine onset of far wake region
-    
+
     :group: models.wake_models.wind
 
     """
@@ -48,7 +48,7 @@ class PorteAgelModel(Model):
     def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ct_max: float
@@ -114,7 +114,6 @@ class PorteAgelModel(Model):
         n_points = x.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
 
-
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
@@ -145,11 +144,15 @@ class PorteAgelModel(Model):
 
             # get alpha:
             alpha = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            alpha[:] = Model.get_data(self, FV.PA_ALPHA, fdata, data_prio=True, upcast="farm")[st_sel][:, None]
+            alpha[:] = Model.get_data(
+                self, FV.PA_ALPHA, fdata, data_prio=True, upcast="farm"
+            )[st_sel][:, None]
 
             # get beta:
             beta = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            beta[:] = Model.get_data(self, FV.PA_BETA, fdata, data_prio=True, upcast="farm")[st_sel][:, None]
+            beta[:] = Model.get_data(
+                self, FV.PA_BETA, fdata, data_prio=True, upcast="farm"
+            )[st_sel][:, None]
 
             # apply filter:
             x = x[sp_sel]
@@ -161,7 +164,7 @@ class PorteAgelModel(Model):
             gamma = gamma[sp_sel]
             alpha = alpha[sp_sel]
             beta = beta[sp_sel]
-        
+
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
@@ -310,7 +313,7 @@ class PorteAgelWake(DistSlicedWakeModel):
     """
     The Bastankhah PorteAgel wake model
 
-    Based on Bastankhah & Porte-Agel, 2016, 
+    Based on Bastankhah & Porte-Agel, 2016,
     https://doi.org/10.1017/jfm.2016.595
 
     Attributes
@@ -331,17 +334,17 @@ class PorteAgelWake(DistSlicedWakeModel):
     """
 
     def __init__(
-            self, 
-            superposition, 
-            k=None, 
-            ct_max=0.9999, 
-            alpha=0.58, 
-            beta=0.07, 
-            k_var=FV.K,
-        ):
+        self,
+        superposition,
+        k=None,
+        ct_max=0.9999,
+        alpha=0.58,
+        beta=0.07,
+        k_var=FV.K,
+    ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superposition: dict

@@ -32,7 +32,7 @@ class PowerMask(TurbineModel):
     def __init__(self, var_ws_P=FV.REWS3, factor_P=1.0e3):
         """
         Constructor.
-        
+
         Parameters
         ----------
         var_ws_P: str

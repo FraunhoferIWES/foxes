@@ -36,7 +36,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         name: str

@@ -21,7 +21,7 @@ class AreaGeometryConstraint(FarmConstraint):
         Ensure full rotor disc inside boundary
     D: float
         Use this radius for rotor disc inside condition
-    
+
     :group: opt.constraints
 
     """
@@ -38,7 +38,7 @@ class AreaGeometryConstraint(FarmConstraint):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem : foxes.opt.FarmOptProblem
@@ -198,7 +198,7 @@ class FarmBoundaryConstraint(AreaGeometryConstraint):
     def __init__(self, problem, name="boundary", **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem

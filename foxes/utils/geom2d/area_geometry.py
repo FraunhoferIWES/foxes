@@ -222,7 +222,7 @@ class AreaGeometry(metaclass=ABCMeta):
 class InvertedAreaGeometry(AreaGeometry):
     """
     Base class for inverted geometries.
-    
+
     :group: utils.geom2d
 
     """
@@ -230,7 +230,7 @@ class InvertedAreaGeometry(AreaGeometry):
     def __init__(self, geometry):
         """
         Constructor.
-        
+
         Parameters
         ----------
         geometry: geom2d.AreaGeometry
@@ -388,7 +388,7 @@ class AreaUnion(AreaGeometry):
     ----------
     geometries: list of geom2d.AreaGeometry
         The geometries
-    
+
     :group: utils.geom2d
 
     """
@@ -396,7 +396,7 @@ class AreaUnion(AreaGeometry):
     def __init__(self, geometries):
         """
         Constructor.
-        
+
         Parameters
         ----------
         geometries: list of geom2d.AreaGeometry
@@ -600,10 +600,11 @@ class InvertedAreaUnion(InvertedAreaGeometry):
     :group: utils.geom2d
 
     """
+
     def __init__(self, union):
         """
         Constructor.
-        
+
         Parameters
         ----------
         union: geom2d.AreaUnion
@@ -680,7 +681,7 @@ class AreaIntersection(AreaGeometry):
     def __new__(cls, geometries):
         """
         Constructor.
-        
+
         Parameters
         ----------
         geometries: list of geom2d.AreaGeometry

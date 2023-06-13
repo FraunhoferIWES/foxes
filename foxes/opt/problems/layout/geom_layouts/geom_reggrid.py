@@ -25,7 +25,7 @@ class GeomRegGrid(Problem):
         The maximal distance between points
     D: float
         The diameter of circle fully within boundary
-    
+
     :group: opt.problems.layout.geom_layouts
 
     """
@@ -40,7 +40,7 @@ class GeomRegGrid(Problem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         boundary: foxes.utils.geom2d.AreaGeometry
@@ -285,7 +285,7 @@ class GeomRegGrid(Problem):
                     pts[pi, ~valid[pi]][: (self.n_turbines - nvl[pi])],
                     axis=0,
                 )
-                vld[pi,: nvl[pi]] = True
+                vld[pi, : nvl[pi]] = True
 
         return qts, vld
 

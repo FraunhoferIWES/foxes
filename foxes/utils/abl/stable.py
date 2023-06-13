@@ -18,7 +18,7 @@ def logz(height, z0):
     -------
     lz: float
         The log factor
-    
+
     :group: utils.abl.stable
 
     """

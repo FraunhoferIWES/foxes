@@ -26,7 +26,7 @@ class FlowPlots2D(Output):
     def __init__(self, algo, farm_results):
         """
         Constructor.
-        
+
         Parameters
         ----------
         algo: foxes.Algorithm

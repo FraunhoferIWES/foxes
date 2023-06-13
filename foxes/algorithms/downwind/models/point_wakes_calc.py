@@ -2,6 +2,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
+
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.

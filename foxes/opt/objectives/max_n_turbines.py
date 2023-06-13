@@ -3,6 +3,7 @@ import numpy as np
 from foxes.opt.core.farm_objective import FarmObjective
 import foxes.constants as FC
 
+
 class MaxNTurbines(FarmObjective):
     """
     Maximizes the number of turrbines.
@@ -25,7 +26,7 @@ class MaxNTurbines(FarmObjective):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem

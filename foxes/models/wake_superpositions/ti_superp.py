@@ -22,7 +22,7 @@ class TISuperposition(WakeSuperposition):
     def __init__(self, ti_superp, superp_to_amb="quadratic"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ti_superp: str

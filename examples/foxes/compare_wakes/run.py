@@ -7,6 +7,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
+
 def calc(mbook, farm, states, wakes, points, args):
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 

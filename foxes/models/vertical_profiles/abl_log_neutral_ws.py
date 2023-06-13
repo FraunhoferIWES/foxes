@@ -9,7 +9,7 @@ class ABLLogNeutralWsProfile(VerticalProfile):
     The neutral ABL wind speed log profile.
 
     :group: models.vertical_profiles
-    
+
     """
 
     def input_vars(self):

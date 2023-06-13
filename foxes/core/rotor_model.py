@@ -7,6 +7,7 @@ from .farm_data_model import FarmDataModel
 from .data import Data
 from foxes.utils import wd2uv, uv2wd
 
+
 class RotorModel(FarmDataModel):
     """
     Abstract base class of rotor models.
@@ -28,7 +29,7 @@ class RotorModel(FarmDataModel):
     def __init__(self, calc_vars):
         """
         Constructor.
-        
+
         Parameters
         ----------
         calc_vars: list of str

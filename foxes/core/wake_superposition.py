@@ -13,7 +13,7 @@ class WakeSuperposition(Model):
     other means.
 
     :group: core
-    
+
     """
 
     @abstractmethod

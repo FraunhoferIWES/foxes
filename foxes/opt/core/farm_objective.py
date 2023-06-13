@@ -16,7 +16,7 @@ class FarmObjective(Objective):
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
         """
         Constraints.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem

@@ -8,6 +8,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
+
 def run_foxes(args, states):
     cks = (
         None

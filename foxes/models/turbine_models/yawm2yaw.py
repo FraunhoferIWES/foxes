@@ -10,7 +10,7 @@ class YAWM2YAW(TurbineModel):
     yaw (i.e. YAWM)
 
     :group: models.turbine_models
-    
+
     """
 
     def output_farm_vars(self, algo):

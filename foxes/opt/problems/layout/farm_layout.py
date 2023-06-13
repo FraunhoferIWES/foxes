@@ -10,7 +10,7 @@ class FarmLayoutOptProblem(FarmVarsProblem):
     The turbine positioning optimization problem
 
     :group: opt.problems.layout
-    
+
     """
 
     def var_names_float(self):

@@ -4,6 +4,7 @@ from foxes.core import PartialWakesModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class RotorPoints(PartialWakesModel):
     """
     Partial wakes calculation directly by the
@@ -16,7 +17,7 @@ class RotorPoints(PartialWakesModel):
     def __init__(self, wake_models=None, wake_frame=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         wake_models: list of foxes.core.WakeModel, optional

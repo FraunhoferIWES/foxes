@@ -29,18 +29,18 @@ class LookupTable(TurbineModel):
     """
 
     def __init__(
-            self, 
-            data_source,
-            input_vars,
-            output_vars,
-            varmap={},
-            pd_file_read_pars={},
-            xr_interp_args={},
-            **kwargs
-        ):
+        self,
+        data_source,
+        input_vars,
+        output_vars,
+        varmap={},
+        pd_file_read_pars={},
+        xr_interp_args={},
+        **kwargs,
+    ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame
@@ -57,7 +57,7 @@ class LookupTable(TurbineModel):
         xr_interp_args: dict
             Parameters for xarray interpolation method
         kwargs: dict, optional
-            Additional parameters, added as default 
+            Additional parameters, added as default
             values if not in data
 
         """
@@ -74,7 +74,9 @@ class LookupTable(TurbineModel):
 
         for v, d in kwargs.items():
             if v not in input_vars:
-                raise KeyError(f"{self.name}: Default input parameter '{v}' not in list of inputs {input_vars}")
+                raise KeyError(
+                    f"{self.name}: Default input parameter '{v}' not in list of inputs {input_vars}"
+                )
             setattr(self, v, d)
 
     def output_farm_vars(self, algo):
@@ -120,39 +122,42 @@ class LookupTable(TurbineModel):
 
         """
         if self._data is None:
-            
             if isinstance(self.data_source, pd.DataFrame):
                 data = self.data_source
             else:
                 if verbosity > 0:
                     print(f"{self.name}: Reading file {self.data_source}")
                 data = PandasFileHelper.read_file(self.data_source, **self._rpars)
-        
+
             if verbosity > 0:
                 print(f"{self.name}: Preparing interpolation data")
             if len(self.varmap):
                 data = data.rename(columns={c: v for v, c in self.varmap.items()})
             data = data[self.input_vars + self.output_vars]
             data.sort_values(by=self.input_vars, inplace=True)
-            coords = {v: np.asarray(data[v].unique(), dtype=FC.DTYPE) for v in self.input_vars}
+            coords = {
+                v: np.asarray(data[v].unique(), dtype=FC.DTYPE) for v in self.input_vars
+            }
 
             dvars = {}
             for oname in self.output_vars:
                 pivot_matrix = data.pivot_table(index=self.input_vars, values=[oname])
                 dvars[oname] = (
-                    self.input_vars, 
-                    pivot_matrix.to_numpy(FC.DTYPE).reshape(pivot_matrix.index.levshape)
+                    self.input_vars,
+                    pivot_matrix.to_numpy(FC.DTYPE).reshape(
+                        pivot_matrix.index.levshape
+                    ),
                 )
-            
-            self._data = xr.Dataset(coords=coords, data_vars=dvars)        
-             
+
+            self._data = xr.Dataset(coords=coords, data_vars=dvars)
+
             if verbosity > 1:
                 print()
                 print(self._data)
                 print()
 
         return super().initialize(algo, verbosity)
-    
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.
@@ -182,8 +187,9 @@ class LookupTable(TurbineModel):
         indata = {
             v: xr.DataArray(
                 self.get_data(v, fdata, data_prio=True, upcast="farm")[st_sel],
-                dims=["_z"]
-            ) for v in self.input_vars
+                dims=["_z"],
+            )
+            for v in self.input_vars
         }
 
         odata = self._data.interp(**indata, **self._xargs)

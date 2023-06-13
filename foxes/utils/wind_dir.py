@@ -20,7 +20,7 @@ def wd2wdvec(wd, ws=1.0, axis=-1):
     -------
     wdvec: numpy.ndarray
         The wind direction vectors
-    
+
     :group: utils
 
     """

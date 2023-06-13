@@ -9,7 +9,7 @@ import foxes.constants as FC
 class TopHatWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for top-hat wake models.
-    
+
     :group: models.wake_models
 
     """
@@ -17,7 +17,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     def __init__(self, superpositions, ct_max=0.9999):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

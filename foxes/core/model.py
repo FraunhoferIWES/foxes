@@ -11,7 +11,7 @@ class Model(metaclass=ABCMeta):
     ----------
     name: str
         The model name
-    
+
     :group: core
 
     """

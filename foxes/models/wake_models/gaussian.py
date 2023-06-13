@@ -9,7 +9,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     Abstract base class for Gaussian wake models.
 
     :group: models.wake_models
-    
+
     """
 
     @abstractmethod

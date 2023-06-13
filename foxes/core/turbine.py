@@ -30,7 +30,7 @@ class Turbine:
         settings if given
 
     :group: foxes
-    
+
     """
 
     def __init__(

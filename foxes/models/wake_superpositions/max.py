@@ -23,7 +23,7 @@ class MaxSuperposition(WakeSuperposition):
     def __init__(self, scalings):
         """
         Constructor.
-        
+
         Parameters
         ----------
         scalings: dict or number or str

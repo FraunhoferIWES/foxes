@@ -14,7 +14,7 @@ class StateTurbineMap(Output):
     ----------
     results: xarray.Dataset
         The farm results
-    
+
     :group: output
 
     """

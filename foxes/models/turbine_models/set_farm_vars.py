@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import TurbineModel
 import foxes.constants as FC
 
+
 class SetFarmVars(TurbineModel):
     """
     Set farm data variables to given data.
@@ -19,7 +20,7 @@ class SetFarmVars(TurbineModel):
     def __init__(self, pre_rotor=False):
         """
         Constructor.
-        
+
         Parameters
         ----------
         pre_rotor: bool
@@ -101,17 +102,18 @@ class SetFarmVars(TurbineModel):
             vdata = self._vdata[i]
 
             # handle special case of call during vectorized optimization:
-            if (np.ndim(vdata) and 
-                vdata.shape[0] != algo.n_states and 
-                hasattr(algo.states, "n_pop")):
-
+            if (
+                np.ndim(vdata)
+                and vdata.shape[0] != algo.n_states
+                and hasattr(algo.states, "n_pop")
+            ):
                 n_pop = algo.states.n_pop
                 n_ost = algo.states.states.size()
                 n_trb = algo.n_turbines
                 vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
                 vdata[:] = self._vdata[i][None, :]
-                vdata = vdata.reshape(n_pop*n_ost, n_trb)
-            
+                vdata = vdata.reshape(n_pop * n_ost, n_trb)
+
             data[:] = vdata
             idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 

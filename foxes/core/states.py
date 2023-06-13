@@ -4,6 +4,7 @@ from .point_data_model import PointDataModel, PointDataModelList
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class States(PointDataModel):
     """
     Abstract base class for states.
@@ -133,7 +134,7 @@ class ExtendedStates(States):
         The base states to start from
     pmodels: foxes.core.PointDataModelList
         The point models, including states as first model
-    
+
     :group: core
 
     """
@@ -141,7 +142,7 @@ class ExtendedStates(States):
     def __init__(self, states, point_models=[]):
         """
         Constructor.
-        
+
         Parameters
         ----------
         states: foxes.core.States

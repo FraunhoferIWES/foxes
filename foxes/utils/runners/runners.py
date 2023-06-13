@@ -5,6 +5,7 @@ from dask.distributed import Client, LocalCluster
 from dask.distributed import get_client
 from dask.diagnostics import ProgressBar
 
+
 class Runner(metaclass=ABCMeta):
     """
     Abstract base class for runners.
@@ -135,7 +136,7 @@ class DaskRunner(Runner):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         scheduler: str, optional
@@ -194,7 +195,6 @@ class DaskRunner(Runner):
         Initialize the runner
         """
         if self.scheduler == "distributed":
-
             self.print("Launching local dask cluster..")
 
             self._cluster = LocalCluster(**self.cluster_args)
@@ -204,14 +204,13 @@ class DaskRunner(Runner):
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
 
         elif self.scheduler == "slurm":
-
             from dask_jobqueue import SLURMCluster
 
             self.print("Launching dask cluster on HPC using SLURM..")
 
             cargs = deepcopy(self.cluster_args)
             nodes = cargs.pop("nodes", 1)
-            
+
             self._cluster = SLURMCluster(**cargs)
             self._cluster.scale(jobs=nodes)
             self._client = Client(self._cluster, **self.client_args)

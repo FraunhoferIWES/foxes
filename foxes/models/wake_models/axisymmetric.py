@@ -13,7 +13,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
     is used by the `PartialAxiwake` partial wakes model.
 
     :group: models.wake_models
-    
+
     """
 
     @abstractmethod

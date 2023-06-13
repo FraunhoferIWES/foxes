@@ -25,7 +25,7 @@ class FarmResultsEval(Output):
     def __init__(self, farm_results):
         """
         Constructor.
-        
+
         Parameters
         ----------
         farm_results: xarray.Dataset

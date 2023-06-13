@@ -26,7 +26,7 @@ class FarmOrder(WakeFrame):
     def __init__(self, base_frame=RotorWD()):
         """
         Constructor.
-        
+
         Parameters
         ----------
         base_frame: foxes.core.WakeFrame

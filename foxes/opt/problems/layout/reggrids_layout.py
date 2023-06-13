@@ -25,7 +25,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
     max_n_row: int
         The maximal number of turbines per
         grid and row
-    
+
     :group: opt.problems.layout
 
     """
@@ -43,7 +43,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
     ):
         """
         Constraints.
-        
+
         Parameters
         ----------
         name: str

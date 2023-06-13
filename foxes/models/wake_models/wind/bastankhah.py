@@ -31,10 +31,12 @@ class BastankhahWake(GaussianWakeModel):
 
     """
 
-    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K):
+    def __init__(
+        self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K
+    ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

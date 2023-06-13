@@ -11,7 +11,7 @@ class Data(Dict):
 
     Used during the calculation of single chunks,
     usually for numpy data (not xarray data).
-        
+
     Attributes
     ----------
     dims: dict
@@ -24,13 +24,13 @@ class Data(Dict):
         The dimension sizes
 
     :group: core
-    
+
     """
 
     def __init__(self, data, dims, loop_dims, name="data"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data: dict

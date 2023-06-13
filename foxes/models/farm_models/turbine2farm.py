@@ -13,7 +13,7 @@ class Turbine2FarmModel(FarmModel):
     ----------
     turbine_model: foxes.core.TurbineModel
         The turbine model
-    
+
     :group: models.farm_models
 
     """
@@ -21,7 +21,7 @@ class Turbine2FarmModel(FarmModel):
     def __init__(self, turbine_model):
         """
         Constructor.
-        
+
         Parameters
         ----------
         turbine_model: foxes.core.TurbineModel

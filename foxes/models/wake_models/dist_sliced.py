@@ -29,7 +29,7 @@ class DistSlicedWakeModel(WakeModel):
     def __init__(self, superpositions):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

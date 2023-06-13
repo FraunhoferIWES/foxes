@@ -26,7 +26,7 @@ class CpCtFile(PCtFile):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame

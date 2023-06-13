@@ -27,7 +27,7 @@ class GeomLayoutGridded(Problem):
         The minimal distance between points
     D: float
         The diameter of circle fully within boundary
-    
+
     :group: opt.problems.layout.geom_layouts
 
     """
@@ -42,7 +42,7 @@ class GeomLayoutGridded(Problem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         boundary: foxes.utils.geom2d.AreaGeometry

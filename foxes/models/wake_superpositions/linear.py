@@ -29,7 +29,7 @@ class LinearSuperposition(WakeSuperposition):
     def __init__(self, scalings, lim_low=None, lim_high=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         scalings: dict or number or str

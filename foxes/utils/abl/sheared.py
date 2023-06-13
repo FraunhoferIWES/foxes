@@ -1,4 +1,3 @@
-
 def calc_ws(height, height0, WS0, shear):
     """
     Calculate wind speeds at given height
@@ -18,7 +17,7 @@ def calc_ws(height, height0, WS0, shear):
     -------
     ws: float
         The wind speed
-    
+
     :group: utils.abl.sheared
 
     """

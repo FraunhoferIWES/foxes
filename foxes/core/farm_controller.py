@@ -5,6 +5,7 @@ from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
 
+
 class FarmController(FarmDataModel):
     """
     Analyses selected turbine models and handles their call.
@@ -27,13 +28,13 @@ class FarmController(FarmDataModel):
         under their respecitve name
 
     :group: core
-    
+
     """
 
     def __init__(self, pars={}):
         """
         Constructor.
-        
+
         Parameters
         ----------
         pars: dict

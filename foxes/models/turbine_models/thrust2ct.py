@@ -22,7 +22,7 @@ class Thrust2Ct(TurbineModel):
     def __init__(self, thrust_var=FV.T, var_ws_ct=FV.REWS2):
         """
         Constructor.
-        
+
         Parameters
         ----------
         thrust_var: str

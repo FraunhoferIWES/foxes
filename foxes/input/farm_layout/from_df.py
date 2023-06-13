@@ -20,7 +20,7 @@ def add_from_df(
         Additional parameters for add_from_csv()
     kwargs: dict, optional
         Additional parameters for add_from_csv()
-    
+
     :group: input.farm_layout
 
     """

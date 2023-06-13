@@ -54,7 +54,7 @@ class PCtFile(TurbineType):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame

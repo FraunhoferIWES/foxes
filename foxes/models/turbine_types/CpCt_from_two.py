@@ -30,7 +30,7 @@ class CpCtFromTwo(PCtFromTwo):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source_cp: str or pandas.DataFrame

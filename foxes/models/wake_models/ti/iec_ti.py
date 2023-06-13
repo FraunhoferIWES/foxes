@@ -35,11 +35,11 @@ class IECTIWake(TopHatWakeModel):
         opening_angle=21.6,
         ct_max=0.9999,
         iec_type="2019",
-        k_var=FV.K
+        k_var=FV.K,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

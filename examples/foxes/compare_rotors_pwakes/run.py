@@ -8,6 +8,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
+
 def calc(args, rotor, sdata, pwake, cks):
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)

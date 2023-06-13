@@ -4,6 +4,7 @@ from foxes.opt.core.farm_constraint import FarmConstraint
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class MinDistConstraint(FarmConstraint):
     """
     Turbines must keep at least a minimal
@@ -35,7 +36,7 @@ class MinDistConstraint(FarmConstraint):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem

@@ -25,7 +25,7 @@ class PopStates(States):
     def __init__(self, states, n_pop):
         """
         Constructor.
-        
+
         Parameters
         ----------
         states: foxes.core.States

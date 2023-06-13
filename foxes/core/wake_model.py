@@ -8,7 +8,7 @@ class WakeModel(Model):
     Abstract base class for wake models.
 
     :group: core
-    
+
     """
 
     @abstractmethod

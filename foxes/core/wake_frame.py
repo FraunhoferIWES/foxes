@@ -7,6 +7,7 @@ from .model import Model
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.

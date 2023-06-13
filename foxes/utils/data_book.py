@@ -18,7 +18,7 @@ class DataBook:
     dbase: dict
         The data base. Key: context str,
         value: dict (file name str to pathlib.Path)
-    
+
     :group: utils
 
     """

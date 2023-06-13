@@ -34,7 +34,7 @@ class ProductSuperposition(WakeSuperposition):
     def __init__(self, lim_low=None, lim_high=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         lim_low: dict, optional

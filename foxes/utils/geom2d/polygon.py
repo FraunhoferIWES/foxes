@@ -25,7 +25,7 @@ class ClosedPolygon(AreaGeometry):
     def __init__(self, points):
         """
         Constructor.
-        
+
         Parameters
         ----------
         points: numpy.ndarray

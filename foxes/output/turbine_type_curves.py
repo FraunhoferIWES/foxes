@@ -21,7 +21,7 @@ class TurbineTypeCurves(Output):
     ----------
     mbook: foxes.models.ModelBook
         The model book
-    
+
     :group: output
 
     """
@@ -29,7 +29,7 @@ class TurbineTypeCurves(Output):
     def __init__(self, mbook):
         """
         Constructor.
-        
+
         Parameters
         ----------
         mbook: foxes.models.ModelBook

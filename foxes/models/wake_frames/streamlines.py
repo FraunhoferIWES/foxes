@@ -23,7 +23,7 @@ class Streamlines(WakeFrame):
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
-    
+
     :group: models.wake_frames
 
     """
@@ -31,7 +31,7 @@ class Streamlines(WakeFrame):
     def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
         """
         Constructor.
-        
+
         Parameters
         ----------
         step: float

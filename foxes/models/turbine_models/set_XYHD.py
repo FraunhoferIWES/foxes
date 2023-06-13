@@ -26,7 +26,7 @@ class SetXYHD(TurbineModel):
     def __init__(self, set_XY=True, set_H=True, set_D=True):
         """
         Constructor.
-        
+
         Parameters
         ----------
         set_XY: bool

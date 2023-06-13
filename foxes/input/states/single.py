@@ -32,7 +32,7 @@ class SingleStateStates(States):
     def __init__(self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ws: float

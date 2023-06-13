@@ -276,7 +276,7 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
         The states object
     algo: foxes.core.Algorithm
         The algorithm
-    
+
     :group: input.windio
 
     """

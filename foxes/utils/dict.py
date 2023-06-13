@@ -6,7 +6,7 @@ class Dict(dict):
     ----------
     name: str
         The dictionary name
-    
+
     :group: utils
 
     """
@@ -14,7 +14,7 @@ class Dict(dict):
     def __init__(self, *args, name=None, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         *args: tuple, optional

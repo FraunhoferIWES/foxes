@@ -18,7 +18,7 @@ class ResultsWriter(Output):
     def __init__(self, farm_results=None, data=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         farm_results: xarray.Dataset, optional

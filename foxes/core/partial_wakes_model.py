@@ -17,7 +17,7 @@ class PartialWakesModel(Model):
         The wake model selection
     wake_frame: foxes.core.WakeFrame, optional
         The wake frame
-    
+
     :group: core
 
     """
@@ -25,7 +25,7 @@ class PartialWakesModel(Model):
     def __init__(self, wake_models=None, wake_frame=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         wake_models: list of foxes.core.WakeModel

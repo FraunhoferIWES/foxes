@@ -34,7 +34,7 @@ class Algorithm(Model):
         The data book, or None for default
     keep_models: list of str
         Keep these models data in memory and do not finalize them
-    
+
     :group: core
 
     """

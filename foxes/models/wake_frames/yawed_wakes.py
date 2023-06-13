@@ -27,7 +27,7 @@ class YawedWakes(WakeFrame):
         The wake frame from which to start
     k_var: str
         The variable name for k
-    
+
     :group: models.wake_frames
 
     """
@@ -36,14 +36,14 @@ class YawedWakes(WakeFrame):
         self,
         k=None,
         ct_max=0.9999,
-        alpha=0.58, 
+        alpha=0.58,
         beta=0.07,
         base_frame=RotorWD(),
         k_var=FV.K,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         k: float, optional

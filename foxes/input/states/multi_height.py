@@ -43,7 +43,7 @@ class MultiHeightStates(States):
         State index selection via pandas loc function
     RDICT: dict
         Default pandas file reading parameters
-    
+
     :group: input.states
 
     """
@@ -64,7 +64,7 @@ class MultiHeightStates(States):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame
@@ -414,4 +414,5 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}

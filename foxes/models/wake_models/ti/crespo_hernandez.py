@@ -8,7 +8,7 @@ import foxes.constants as FC
 class CrespoHernandezTIWake(TopHatWakeModel):
     """
     The Crespo and Hernandez TI empirical correlation
-    
+
     Source: https://doi.org/10.1016/0167-6105(95)00033-X
 
     For the wake diameter we use Eqns. (17), (15), (4), (5) from
@@ -57,11 +57,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
-        k_var=FV.K
+        k_var=FV.K,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict

@@ -8,7 +8,7 @@ class BasicFarmController(FarmController):
     conditions.
 
     :group: models.farm_controllers
-    
+
     """
 
     pass
