@@ -133,6 +133,9 @@ dask-worker-space/
 veri_*
 log.*
 .vscode/
-_autosummary/
+docs/source/_*
 scratch/
 *.swp
+
+# exceptions:
+
