@@ -7,35 +7,41 @@ class Calculator(TurbineModel):
     """
     Calculates variables based on given functions.
 
-    Parameters
-    ----------
-    in_vars : list of str
-        The input farm vairables
-    out_vars : list of str
-        The output variables
-    func : Function
-        The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
-        where inX and outY are numpy.ndarrays and
-        st_sel is the boolean state-turbine selection.
-        All arrays have shape (n_states, n_turbines).
-    kwargs : dict, optional
-        Additional arguments for TurbineModel
-
     Attributes
     ----------
-    in_vars : list of str
+    in_vars: list of str
         The input farm vairables
-    out_vars : list of str
+    out_vars: list of str
         The output variables
-    func : Function
+    func: Function
         The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
         where inX and outY are numpy.ndarrays and
         st_sel is the boolean state-turbine selection.
         All arrays have shape (n_states, n_turbines).
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, in_vars, out_vars, func, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        in_vars: list of str
+            The input farm vairables
+        out_vars: list of str
+            The output variables
+        func: Function
+            The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
+            where inX and outY are numpy.ndarrays and
+            st_sel is the boolean state-turbine selection.
+            All arrays have shape (n_states, n_turbines).
+        kwargs: dict, optional
+            Additional arguments for TurbineModel
+
+        """
         super().__init__(**kwargs)
         self.in_vars = in_vars
         self.out_vars = out_vars
@@ -47,12 +53,12 @@ class Calculator(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -67,19 +73,19 @@ class Calculator(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

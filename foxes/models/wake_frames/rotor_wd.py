@@ -11,19 +11,25 @@ class RotorWD(WakeFrame):
     Align the first axis for each rotor with the
     local normalized wind direction.
 
-    Parameters
-    ----------
-    var_wd : str
-        The wind direction variable
-
     Attributes
     ----------
-    var_wd : str
+    var_wd: str
         The wind direction variable
+
+    :group: models.wake_frames
 
     """
 
     def __init__(self, var_wd=FV.WD):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        var_wd: str
+            The wind direction variable
+
+        """
         super().__init__()
         self.var_wd = var_wd
 
@@ -36,16 +42,16 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -62,21 +68,21 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake coordinates, shape: (n_states, n_points, 3)
 
         """
@@ -108,21 +114,21 @@ class RotorWD(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """

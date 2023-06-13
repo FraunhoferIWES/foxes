@@ -8,21 +8,27 @@ class RotorCentreCalc(TurbineModel):
     """
     Calculates data at the rotor centre
 
-    Parameters
-    ----------
-    calc_vars : dict
-        The variables that are calculated by the model,
-        keys: var names, values: rotor var names
-
     Attributes
     ----------
-    calc_vars : dict
+    calc_vars: dict
         The variables that are calculated by the model,
         keys: var names, values: rotor var names
         
+    :group: models.turbine_models
+
     """
 
     def __init__(self, calc_vars):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        calc_vars: dict
+            The variables that are calculated by the model,
+            keys: var names, values: rotor var names
+
+        """
         super().__init__()
         
         if isinstance(calc_vars, dict):
@@ -42,14 +48,14 @@ class RotorCentreCalc(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -69,12 +75,12 @@ class RotorCentreCalc(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -89,19 +95,19 @@ class RotorCentreCalc(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -143,9 +149,9 @@ class RotorCentreCalc(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """

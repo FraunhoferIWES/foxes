@@ -13,19 +13,21 @@ def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
 
     Parameters
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    file_path : str
+    file_path: str
         Path to the file
     verbosity
-    args : tuple, optional
+    args: tuple, optional
         Parameters forwarded to the method
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
-    dbook : foxes.DataBook, optional
+    dbook: foxes.DataBook, optional
         The data book, or None for default
-    kwargs : dict, optional
+    kwargs: dict, optional
         Parameters forwarded to the method
+
+    :group: input.farm_layout
 
     """
 

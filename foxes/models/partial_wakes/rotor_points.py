@@ -9,16 +9,22 @@ class RotorPoints(PartialWakesModel):
     Partial wakes calculation directly by the
     rotor model.
 
-    Parameters
-    ----------
-    wake_models : list of foxes.core.WakeModel, optional
-        The wake models, default are the ones from the algorithm
-    wake_frame : foxes.core.WakeFrame, optional
-        The wake frame, default is the one from the algorithm
+    :group: models.partial_wakes
 
     """
 
     def __init__(self, wake_models=None, wake_frame=None):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        wake_models: list of foxes.core.WakeModel, optional
+            The wake models, default are the ones from the algorithm
+        wake_frame: foxes.core.WakeFrame, optional
+            The wake frame, default is the one from the algorithm
+
+        """
         super().__init__(wake_models, wake_frame)
 
     def initialize(self, algo, verbosity=0):
@@ -33,14 +39,14 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -59,16 +65,16 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        rpoints : numpy.ndarray
+        rpoints: numpy.ndarray
             All rotor points, shape: (n_states, n_points, 3)
 
         """
@@ -83,16 +89,16 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        wake_deltas : dict
+        wake_deltas: dict
             Keys: Variable name str, values: any
 
         """
@@ -114,16 +120,16 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray of int
+        states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
 
@@ -147,22 +153,22 @@ class RotorPoints(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
-        states_turbine : numpy.ndarray of int
+        states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res : bool
+        update_amb_res: bool
             Flag for updating ambient results
 
         """

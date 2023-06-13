@@ -25,12 +25,14 @@ Source code repository (and issue tracker):
 
 Please report code issues under the github link above.
     
-License:
+License
+-------
     MIT_
 
 .. _MIT: https://github.com/FraunhoferIWES/foxes/blob/main/LICENSE
 
-Contents:
+Contents
+--------
     .. toctree::
         :maxdepth: 2
     
@@ -52,12 +54,12 @@ Contents:
         notebooks/data
 
     .. toctree::
-        :maxdepth: 2
+        :maxdepth: 1
 
         history
 
 Contributing
-============
+------------
 
 #. Fork *foxes* on *github*.
 #. Create a branch (`git checkout -b new_branch`)
@@ -66,7 +68,7 @@ Contributing
 #. Create a pull request `here <https://github.com/FraunhoferIWES/foxes/pulls>`_
 
 Acknowledgements
-================
+----------------
 
 The development of *foxes* and its predecessors *flapFOAM* and *flappy* (internal - non public) 
 has been supported through multiple publicly funded research projects. We acknowledge in particular 

@@ -11,26 +11,28 @@ def create_random_abl_states(
     """
     Create random abl states.
 
-    Parameters
+        Parameters
     ----------
-    n_states : int
+    n_states: int
         The number of states
-    cols_minmax : dict
+    cols_minmax: dict
         For each variable the min and max values,
         keys: variable name str, values: array_like
         with length 2
-    var2col : dict, optional
+    var2col: dict, optional
         Mapping from variables to column names
-    mol_abs_range : tuple
+    mol_abs_range: tuple
         Min and max of allowed MOL values, set to
         nan if exceeded (i.e., neutral stratification)
-    normalize : bool
+    normalize: bool
         Normalize weights to 1
-
+        
     Returns
     -------
-    data : pandas.DataFrame
+    data: pandas.DataFrame
         The created states data
+
+    :group: input.states
 
     """
 
@@ -68,26 +70,26 @@ def write_random_abl_states(
     **kwargs
 ):
     """
-    file_path : str
+    file_path: str
         Path to the file
-    n_states : int
+    n_states: int
         The number of states
-    cols_minmax : dict
+    cols_minmax: dict
         For each variable the min and max values,
         keys: variable name str, values: array_like
         with length 2
-    var2col : dict, optional
+    var2col: dict, optional
         Mapping from variables to column names
-    mol_abs_range : tuple
+    mol_abs_range: tuple
         Min and max of allowed MOL values, set to
         nan if exceeded (i.e., neutral stratification)
-    normalize : bool
+    normalize: bool
         Normalize weights to 1
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
-    digits : int or auto
+    digits: int or auto
         The number of digits to be written
-    kwargs : dict, optional
+    kwargs: dict, optional
         Parameters for `pandas.DataFrame.to_csv`
 
     """

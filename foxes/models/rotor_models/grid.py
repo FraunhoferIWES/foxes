@@ -6,25 +6,8 @@ import foxes.constants as FC
 
 class GridRotor(RotorModel):
     """
-    The regular grid rotor model, composed maximally
+    The weighted regular grid rotor model, composed maximally
     of n x n points, possibly kicking out the outside points.
-
-    Parameters
-    ----------
-    n: int
-        The number of points along one direction,
-        maximal number of points is N = n * n
-    calc_vars : list of str
-        The variables that are calculated by the model
-        (Their ambients are added automatically)
-    reduce: bool
-        Flag for reduction to points actually representing
-        an area with overlap with the circe, recalculating
-        the self.weights accordingly
-    nint: int
-        Integration steps per element
-    name: str, optional
-        The model name
 
     Attributes
     ----------
@@ -38,9 +21,32 @@ class GridRotor(RotorModel):
     nint: int
         Integration steps per element
 
+    :group: models.rotor_models
+
     """
 
     def __init__(self, n, calc_vars, reduce=True, nint=200):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        n: int
+            The number of points along one direction,
+            maximal number of points is N = n * n
+        calc_vars: list of str
+            The variables that are calculated by the model
+            (Their ambients are added automatically)
+        reduce: bool
+            Flag for reduction to points actually representing
+            an area with overlap with the circe, recalculating
+            the self.weights accordingly
+        nint: int
+            Integration steps per element
+        name: str, optional
+            The model name
+
+        """
         super().__init__(calc_vars)
 
         self.n = n
@@ -62,14 +68,14 @@ class GridRotor(RotorModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -120,7 +126,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        n_rpoints : int
+        n_rpoints: int
             The number of rotor points
 
         """
@@ -139,7 +145,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        dpoints : numpy.ndarray
+        dpoints: numpy.ndarray
             The design points, shape: (n_points, 3)
 
         """
@@ -151,7 +157,7 @@ class GridRotor(RotorModel):
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 

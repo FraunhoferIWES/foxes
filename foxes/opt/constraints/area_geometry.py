@@ -9,35 +9,20 @@ class AreaGeometryConstraint(FarmConstraint):
     Constrains turbine positions to the inside
     of a given area geometry.
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the constraint
-    geometry : foxes.utils.geom2d.AreaGeometry
-        The area geometry
-    sel_turbines : list of int, optional
-        The selected turbines
-    disc_inside : bool
-        Ensure full rotor disc inside boundary
-    D : float, optional
-        Use this radius for rotor disc inside condition
-    kwargs : dict, optional
-        Additional parameters for `iwopy.Constraint`
-
     Attributes
     ----------
     farm: foxes.WindFarm
         The wind farm
     sel_turbines: list
         The selected turbines
-    geometry : foxes.utils.geom2d.AreaGeometry
+    geometry: foxes.utils.geom2d.AreaGeometry
         The area geometry
-    disc_inside : bool
+    disc_inside: bool
         Ensure full rotor disc inside boundary
-    D : float
+    D: float
         Use this radius for rotor disc inside condition
+    
+    :group: opt.constraints
 
     """
 
@@ -51,6 +36,27 @@ class AreaGeometryConstraint(FarmConstraint):
         D=None,
         **kwargs,
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem : foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name : str
+            The name of the constraint
+        geometry : foxes.utils.geom2d.AreaGeometry
+            The area geometry
+        sel_turbines : list of int, optional
+            The selected turbines
+        disc_inside : bool
+            Ensure full rotor disc inside boundary
+        D : float, optional
+            Use this radius for rotor disc inside condition
+        kwargs : dict, optional
+            Additional parameters for `iwopy.Constraint`
+
+        """
         self.geometry = geometry
         self.disc_inside = disc_inside
         self.D = D
@@ -86,7 +92,7 @@ class AreaGeometryConstraint(FarmConstraint):
 
         Returns
         -------
-        deps : numpy.ndarray of bool
+        deps: numpy.ndarray of bool
             The dependencies of components on function
             variables, shape: (n_components, n_vars_float)
 
@@ -103,19 +109,19 @@ class AreaGeometryConstraint(FarmConstraint):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_sel_components,)
 
         """
@@ -141,19 +147,19 @@ class AreaGeometryConstraint(FarmConstraint):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_pop, n_sel_components)
 
         """
@@ -185,18 +191,24 @@ class FarmBoundaryConstraint(AreaGeometryConstraint):
     Constrains turbine positions to the inside of
     the wind farm boundary
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the constraint
-    kwargs : dict, optional
-        Additional parameters for `AreaGeometryConstraint`
+    :group: opt.constraints
 
     """
 
     def __init__(self, problem, name="boundary", **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name: str
+            The name of the constraint
+        kwargs: dict, optional
+            Additional parameters for `AreaGeometryConstraint`
+
+        """
         b = problem.farm.boundary
         assert b is not None, f"Constraint '{name}': Missing wind farm boundary."
         super().__init__(problem, name, geometry=b, **kwargs)

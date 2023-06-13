@@ -18,27 +18,33 @@ class PartialAxiwake(PartialWakesModel):
     The latter results are then weighted according to the overlap
     of radial wake circle area deltas and the target rotor disc area.
 
-    Parameters
-    ----------
-    n : int
-        The number of radial evaluation points
-    wake_models : list of foxes.core.WakeModel, optional
-        The wake models, default are the ones from the algorithm
-    wake_frame : foxes.core.WakeFrame, optional
-        The wake frame, default is the one from the algorithm
-    rotor_model : foxes.core.RotorModel, optional
-        The rotor model, default is the one from the algorithm
-
     Attributes
     ----------
-    n : int
+    n: int
         The number of radial evaluation points
-    rotor_model : foxes.core.RotorModel
+    rotor_model: foxes.core.RotorModel
         The rotor model, default is the one from the algorithm
+
+    :group: models.partial_wakes
 
     """
 
     def __init__(self, n, wake_models=None, wake_frame=None, rotor_model=None):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        n: int
+            The number of radial evaluation points
+        wake_models: list of foxes.core.WakeModel, optional
+            The wake models, default are the ones from the algorithm
+        wake_frame: foxes.core.WakeFrame, optional
+            The wake frame, default is the one from the algorithm
+        rotor_model: foxes.core.RotorModel, optional
+            The rotor model, default is the one from the algorithm
+
+        """
         super().__init__(wake_models, wake_frame)
 
         self.n = n
@@ -59,14 +65,14 @@ class PartialAxiwake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -94,16 +100,16 @@ class PartialAxiwake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        wake_deltas : dict
+        wake_deltas: dict
             Keys: Variable name str, values: any
 
         """
@@ -123,16 +129,16 @@ class PartialAxiwake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray of int
+        states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
 
@@ -249,22 +255,22 @@ class PartialAxiwake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
-        states_turbine : numpy.ndarray of int
+        states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res : bool
+        update_amb_res: bool
             Flag for updating ambient results
 
         """
@@ -302,9 +308,9 @@ class PartialAxiwake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

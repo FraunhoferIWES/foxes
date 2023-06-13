@@ -13,61 +13,31 @@ class PCtFromTwo(TurbineType):
     Calculate power and ct by interpolating
     from power curve and ct curve data files.
 
-    Parameters
-    ----------
-    data_source_P : str or pandas.DataFrame
-        The file path for the power curve, static name, or data
-    data_source_ct : str or pandas.DataFrame
-        The file path for the ct curve, static name, or data
-    col_ws_P_file : str
-        The wind speed column in the file of the power curve
-    col_ws_ct_file : str
-        The wind speed column in the file of the ct curve
-    col_P : str
-        The power column
-    col_ct : str
-        The ct column
-    rho: float, optional
-        The air densitiy for which the data is valid
-        or None for no correction
-    p_ct: float
-        The exponent for yaw dependency of ct
-    p_P: float
-        The exponent for yaw dependency of P
-    var_ws_ct : str
-        The wind speed variable for ct lookup
-    var_ws_P : str
-        The wind speed variable for power lookup
-    pd_file_read_pars_P:  dict
-        Parameters for pandas power file reading
-    pd_file_read_pars_ct:  dict
-        Parameters for pandas ct file reading
-    parameters : dict, optional
-        Additional parameters for TurbineType class
-
     Attributes
     ----------
-    source_P : str or pandas.DataFrame
+    source_P: str or pandas.DataFrame
         The file path for the power curve, static name, or data
-    source_ct : str or pandas.DataFrame
+    source_ct: str or pandas.DataFrame
         The file path for the ct curve, static name, or data
-    col_ws : str
+    col_ws: str
         The wind speed column
-    col_P : str
+    col_P: str
         The power column
-    col_ct : str
+    col_ct: str
         The ct column
     rho: float
         The air densitiy for which the data is valid
         or None for no correction
-    WSCT : str
+    WSCT: str
         The wind speed variable for ct lookup
-    WSP : str
+    WSP: str
         The wind speed variable for power lookup
-    rpars_P : dict, optional
+    rpars_P: dict, optional
         Parameters for pandas power file reading
-    rpars_ct : dict, optional
+    rpars_ct: dict, optional
         Parameters for pandas ct file reading
+
+    :group: models.turbine_types
 
     """
 
@@ -88,6 +58,42 @@ class PCtFromTwo(TurbineType):
         pd_file_read_pars_ct={},
         **parameters,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source_P: str or pandas.DataFrame
+            The file path for the power curve, static name, or data
+        data_source_ct: str or pandas.DataFrame
+            The file path for the ct curve, static name, or data
+        col_ws_P_file: str
+            The wind speed column in the file of the power curve
+        col_ws_ct_file: str
+            The wind speed column in the file of the ct curve
+        col_P: str
+            The power column
+        col_ct: str
+            The ct column
+        rho: float, optional
+            The air densitiy for which the data is valid
+            or None for no correction
+        p_ct: float
+            The exponent for yaw dependency of ct
+        p_P: float
+            The exponent for yaw dependency of P
+        var_ws_ct: str
+            The wind speed variable for ct lookup
+        var_ws_P: str
+            The wind speed variable for power lookup
+        pd_file_read_pars_P:  dict
+            Parameters for pandas power file reading
+        pd_file_read_pars_ct:  dict
+            Parameters for pandas ct file reading
+        parameters: dict, optional
+            Additional parameters for TurbineType class
+
+        """
         if not isinstance(data_source_P, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame
         ):
@@ -121,12 +127,12 @@ class PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -144,14 +150,14 @@ class PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -197,19 +203,19 @@ class PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -263,9 +269,9 @@ class PCtFromTwo(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

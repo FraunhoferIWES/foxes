@@ -8,21 +8,27 @@ class FarmDataModel(DataCalcModel):
     Abstract base class for models that modify
     farm data.
 
-    Parameters
-    ----------
-    pre_rotor : bool
-        Flag for running this model before
-        running the rotor model.
-
     Attributes
     ----------
-    pre_rotor : bool
+    pre_rotor: bool
         Flag for running this model before
         running the rotor model.
 
+    :group: core
+    
     """
 
     def __init__(self, pre_rotor=False):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        pre_rotor: bool
+            Flag for running this model before
+            running the rotor model.
+
+        """
         super().__init__()
         self.pre_rotor = pre_rotor
 
@@ -33,12 +39,12 @@ class FarmDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -54,16 +60,16 @@ class FarmDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -79,18 +85,18 @@ class FarmDataModel(DataCalcModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : tuple of xarray.Dataset
+        *data: tuple of xarray.Dataset
             The input data
         out_vars: list of str
             The calculation output variables
-        **calc_pars : dict, optional
+        **calc_pars: dict, optional
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results : xarray.Dataset
+        results: xarray.Dataset
             The calculation results
 
         """
@@ -120,19 +126,25 @@ class FarmDataModelList(FarmDataModel):
     `calculate` functions are called together
     under one common call of xarray's `apply_ufunc`.
 
-    Parameters
-    ----------
-    models : list of foxes.core.FarmDataModel
-        The model list
-
     Attributes
     ----------
-    models : list of foxes.core.FarmDataModel
+    models: list of foxes.core.FarmDataModel
         The model list
+    
+    :group: core
 
     """
 
     def __init__(self, models=[]):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        models: list of foxes.core.FarmDataModel
+            The model list
+
+        """
         super().__init__()
         self.models = models
 
@@ -142,7 +154,7 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        model : foxes.core.FarmDataModel
+        model: foxes.core.FarmDataModel
             The model to add
 
         """
@@ -154,12 +166,12 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -180,14 +192,14 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -209,18 +221,18 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        parameters : list of dict, optional
+        parameters: list of dict, optional
             A list of parameter dicts, one for each model
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -249,9 +261,9 @@ class FarmDataModelList(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 means silent
 
         """

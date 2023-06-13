@@ -268,3 +268,19 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Completely new style, fixing issues with incomplete API entries
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
+
+## v0.4.0
+
+- Models:
+  - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
+  - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
+- Utils:
+  - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
+- Examples:
+  - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
+- Optimization:
+  - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
+- Documentation:
+  - Improved API docu, now based on `python-apigen`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)

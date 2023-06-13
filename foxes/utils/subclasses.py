@@ -5,13 +5,15 @@ def all_subclasses(cls):
 
     Parameters
     ----------
-    cls : class
+    cls: class
         The base class
 
     Returns
     -------
     list of class:
         The derived classes
+    
+    :group: utils
 
     """
     return set(cls.__subclasses__()).union(

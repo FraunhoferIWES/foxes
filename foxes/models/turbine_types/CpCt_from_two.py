@@ -13,24 +13,7 @@ class CpCtFromTwo(PCtFromTwo):
     cp and ct from two files (or two pandas
     DataFrames).
 
-    Parameters
-    ----------
-    data_source_cp : str or pandas.DataFrame
-        The file path, static name, or data
-    data_source_ct : str or pandas.DataFrame
-        The file path, static name, or data
-    col_ws_cp_file : str
-        The wind speed column in the file of the cp curve
-    col_cp : str
-        The cp column
-    rho : float
-        The air density for the curves
-    pd_file_read_pars_cp:  dict
-        Parameters for pandas cp file reading
-    pd_file_read_pars_ct:  dict
-        Parameters for pandas ct file reading
-    paramerers : dict, optional
-        Additional parameters for PCtFile class
+    :group: models.turbine_types
 
     """
 
@@ -45,6 +28,29 @@ class CpCtFromTwo(PCtFromTwo):
         pd_file_read_pars_ct={},
         **parameters,
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        data_source_cp: str or pandas.DataFrame
+            The file path, static name, or data
+        data_source_ct: str or pandas.DataFrame
+            The file path, static name, or data
+        col_ws_cp_file: str
+            The wind speed column in the file of the cp curve
+        col_cp: str
+            The cp column
+        rho: float
+            The air density for the curves
+        pd_file_read_pars_cp:  dict
+            Parameters for pandas cp file reading
+        pd_file_read_pars_ct:  dict
+            Parameters for pandas ct file reading
+        parameters: dict, optional
+            Additional parameters for PCtFile class
+
+        """
         if not isinstance(data_source_cp, pd.DataFrame) or not isinstance(
             data_source_ct, pd.DataFrame
         ):

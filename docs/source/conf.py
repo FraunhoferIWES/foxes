@@ -41,16 +41,17 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "nbsphinx",
     "sphinx_immaterial",
-    #"sphinx_immaterial.apidoc.python.apigen",
+    "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
+    "sphinx.ext.autosectionlabel",
+    #"sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
+    #"sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "sphinx.ext.inheritance_diagram",
-    "nbsphinx",
+    #"sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
 ]
@@ -62,8 +63,8 @@ intersphinx_mapping = {
 }
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-autosummary_generate = True
+#templates_path = ["_templates"]
+#autosummary_generate = False
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -87,9 +88,12 @@ exclude_patterns = [
     # ipynb checkpoints
     "notebooks/.ipynb_checkpoints/*.ipynb",
     "build/*",
+    #"_templates/*",
     # DEBUG
     #"examples.rst",
-    #"notebooks/layout_opt.ipynb"
+    #"notebooks/*",
+    #"notebooks/layout_opt.ipynb,"
+    #"api.rst"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -99,7 +103,7 @@ pygments_style = None
 napolean_use_rtype = False
 
 # -- Options for sphinxcontrib.email ------------------------------------------
-email_automode = True
+# email_automode = True
 
 
 # -- Options for nbsphinx -----------------------------------------------------
@@ -210,10 +214,10 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+#html_static_path = ["_static"]
 
 # custom.css is inside one of the html_static_path folders (e.g. _static)
-html_css_files = ["custom.css"]
+#html_css_files = ["custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -299,15 +303,46 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
+# -- python_apigen configuration -------------------------------------------------
 
-# -- Extension configuration -------------------------------------------------
-
-#python_apigen_modules = {
-#    "foxes.core": "core/",
-#}
-
-#python_apigen_default_groups = [
-#    ("class:.*", "Classes"),
-#    (r".*\.__(init|new)__", "Constructors"),
-#    (r".*\.__(str|repr)__", "String representation"),
-#]
+python_apigen_modules = {
+    "foxes.variables": "_foxes/variables/",
+    "foxes.constants": "_foxes/constants/",
+    "foxes.core": "_core/",
+    "foxes.data": "_data/",
+    "foxes.input.farm_layout": "_input/farm_layout/",
+    "foxes.input.states": "_input/states/",
+    "foxes.input.windio": "_input/windio/",
+    "foxes.output": "_output/",
+    "foxes.models.model_book": "_models/model_book/",
+    "foxes.models.farm_controllers": "_models/farm_controllers/",
+    "foxes.models.farm_models": "_models/farm_models/",
+    "foxes.models.partial_wakes": "_models/partial_wakes/",
+    "foxes.models.point_models": "_models/point_models/",
+    "foxes.models.rotor_models": "_models/rotor_models/",
+    "foxes.models.turbine_models": "_models/turbine_models/",
+    "foxes.models.turbine_types": "_models/turbine_types/",
+    "foxes.models.vertical_profiles": "_models/vertical_profiles/",
+    "foxes.models.wake_frames": "_models/wake_frames/",
+    "foxes.models.wake_models": "_models/wake_models/",
+    "foxes.models.wake_models.wind": "_models/wake_models/wind/",
+    "foxes.models.wake_models.ti": "_models/wake_models/ti/",
+    "foxes.models.wake_superpositions": "_models/wake_superpositions/",
+    "foxes.utils": "_utils/",
+    "foxes.utils.abl": "_utils/abl",
+    "foxes.utils.geom2d": "_utils/geom2d/",
+    "foxes.utils.runners": "_utils/runners/",
+    "foxes.utils.two_circles": "_utils/two_circles/",
+    "foxes.utils.abl.neutral": "_utils/abl/neutral/",
+    "foxes.utils.abl.stable": "_utils/abl/stable/",
+    "foxes.utils.abl.unstable": "_utils/abl/unstable/",
+    "foxes.utils.abl.sheared": "_utils/abl/sheared/",
+    "foxes.opt.core": "_utils/opt/core/",
+    "foxes.opt.problems": "_utils/opt/problems/",
+    "foxes.opt.problems.layout": "_utils/opt/problems/layout",
+    "foxes.opt.problems.layout.geom_layouts": "_utils/opt/problems/layout/geom_layouts",
+    "foxes.opt.problems.layout.geom_layouts.objectives": "_utils/opt/problems/layout/geom_layouts/objectives",
+    "foxes.opt.problems.layout.geom_layouts.constraints": "_utils/opt/problems/layout/geom_layouts/constraints",
+    "foxes.opt.objectives": "_utils/opt/objectives/",
+    "foxes.opt.constraints": "_utils/opt/constraints/",
+}

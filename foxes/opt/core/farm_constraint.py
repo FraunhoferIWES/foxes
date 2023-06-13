@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from iwopy import Constraint
 
 from foxes.utils import all_subclasses
@@ -9,20 +8,26 @@ class FarmConstraint(Constraint):
     Abstract base class for foxes wind farm
     optimization constraints.
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the constraint
-    sel_turbines : list of int, optional
-        The selected turbines
-    kwargs : dict, optional
-        Additional parameters for `iwopy.Constraint`
+    :group: opt.core
 
     """
 
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name: str
+            The name of the constraint
+        sel_turbines: list of int, optional
+            The selected turbines
+        kwargs: dict, optional
+            Additional parameters for `iwopy.Constraint`
+
+        """
         super().__init__(problem, name, **kwargs)
         self._sel_turbines = sel_turbines
 
@@ -75,7 +80,7 @@ class FarmConstraint(Constraint):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The figure axis
 
         """

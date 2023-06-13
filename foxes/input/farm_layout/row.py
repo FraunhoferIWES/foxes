@@ -18,22 +18,24 @@ def add_row(
 
     Parameters
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    xy_base : numpy.ndarray
+    xy_base: numpy.ndarray
         The base point, shape: (2,)
-    xy_step : numpy.ndarray
+    xy_step: numpy.ndarray
         The step vector, shape: (2,)
-    n_turbines : int
+    n_turbines: int
         The number of turbines
-    indices : list of int, optional
+    indices: list of int, optional
         The turbine indices
-    names : list of str, optional
+    names: list of str, optional
         The turbine names
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
-    **turbine_parameters : dict, optional
+    turbine_parameters: dict, optional
         Parameters forwarded to `foxes.core.Turbine`
+
+    :group: input.farm_layout
 
     """
     p0 = np.array(xy_base)

@@ -8,48 +8,29 @@ class Turbine:
     The turbine is merely a defined by basic data
     entries and a choice of turbine models.
 
-    Parameters
-    ----------
-    xy : array_like
-        The turbine ground position, shape: (2,)
-    turbine_models : list of str
-        The turbine model names, as they appear
-        in the model book
-    index : int, optional
-        The index in the wind farm
-    name : str, optional
-        The turbine name/label
-    models_state_sel : list of numpy.ndarray, optional
-        For each turbine model, the state selection
-        boolean array with shape (n_states,)
-    D : float, optional
-        The rotor diameter. Overwrites turbine type
-        settings if given
-    H : float, optional
-        The hub height. Overwrites turbine type
-        settings if given
-
     Attributes
     ----------
-    xy : array_like
+    xy: array_like
         The turbine ground position, shape: (2,)
-    models : list of str
+    models: list of str
         The turbine model names, as they appear
         in the model book
-    index : int, optional
+    index: int, optional
         The index in the wind farm
-    name : str, optional
+    name: str, optional
         The turbine name/label
-    mstates_sel : list of numpy.ndarray, optional
+    mstates_sel: list of numpy.ndarray, optional
         For each turbine model, the state selection
         boolean array with shape (n_states,)
-    D : float, optional
+    D: float, optional
         The rotor diameter. Overwrites turbine type
         settings if given
-    H : float, optional
+    H: float, optional
         The hub height. Overwrites turbine type
         settings if given
 
+    :group: foxes
+    
     """
 
     def __init__(
@@ -62,6 +43,31 @@ class Turbine:
         D=None,
         H=None,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        xy: array_like
+            The turbine ground position, shape: (2,)
+        turbine_models: list of str
+            The turbine model names, as they appear
+            in the model book
+        index: int, optional
+            The index in the wind farm
+        name: str, optional
+            The turbine name/label
+        models_state_sel: list of numpy.ndarray, optional
+            For each turbine model, the state selection
+            boolean array with shape (n_states,)
+        D: float, optional
+            The rotor diameter. Overwrites turbine type
+            settings if given
+        H: float, optional
+            The hub height. Overwrites turbine type
+            settings if given
+
+        """
         self.index = index
         self.name = name
         self.xy = np.array(xy)
@@ -79,9 +85,9 @@ class Turbine:
 
         Parameters
         ----------
-        model : foxes.core.TurbineModel
+        model: foxes.core.TurbineModel
             The model
-        states_sel : numpy.ndarray of bool, optional
+        states_sel: numpy.ndarray of bool, optional
             The states selection for the model, shape: (n_states,)
 
         """
@@ -94,11 +100,11 @@ class Turbine:
 
         Parameters
         ----------
-        index : int
+        index: int
             The position in the model list
-        model : foxes.core.TurbineModel
+        model: foxes.core.TurbineModel
             The model
-        states_sel : numpy.ndarray of bool, optional
+        states_sel: numpy.ndarray of bool, optional
             The states selection for the model, shape: (n_states,)
 
         """

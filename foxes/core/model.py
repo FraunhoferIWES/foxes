@@ -9,14 +9,19 @@ class Model(metaclass=ABCMeta):
 
     Attributes
     ----------
-    name : str
+    name: str
         The model name
+    
+    :group: core
 
     """
 
     _ids = {}
 
     def __init__(self):
+        """
+        Constructor.
+        """
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)
@@ -50,7 +55,7 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        v : str
+        v: str
             The variable name
 
         Returns
@@ -86,14 +91,14 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -112,9 +117,9 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -139,13 +144,13 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        variable : str
+        variable: str
             The variable, serves as data key
-        data : dict
+        data: dict
             The data source
-        st_sel : numpy.ndarray of bool, optional
+        st_sel: numpy.ndarray of bool, optional
             If given, get the specified state-turbine subset
-        upcast : str, optional
+        upcast: str, optional
             Either 'farm' or 'points', broadcasts potential
             scalar data to numpy.ndarray with dimensions
             (n_states, n_turbines) or (n_states, n_points),

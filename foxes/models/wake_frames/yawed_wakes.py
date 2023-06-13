@@ -13,37 +13,22 @@ class YawedWakes(WakeFrame):
 
     Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
 
-    Parameters
-    ----------
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data, by default None
-    ct_max : float, optional
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float, optional
-        model parameter used to determine onset of far wake region
-    beta : float, optional
-        model parameter used to determine onset of far wake region
-    base_frame : foxes.core.WakeFrame
-        The wake frame from which to start
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    model : PorteAgelModel
+    model: PorteAgelModel
         The model for computing common data
-    K : float
+    K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    YAWM : float
+    YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    base_frame : foxes.core.WakeFrame
+    base_frame: foxes.core.WakeFrame
         The wake frame from which to start
-    k_var : str
+    k_var: str
         The variable name for k
+    
+    :group: models.wake_frames
 
     """
 
@@ -51,11 +36,32 @@ class YawedWakes(WakeFrame):
         self,
         k=None,
         ct_max=0.9999,
-        alpha=0.58,
+        alpha=0.58, 
         beta=0.07,
         base_frame=RotorWD(),
         k_var=FV.K,
     ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        k: float, optional
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data, by default None
+        ct_max: float, optional
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float, optional
+            model parameter used to determine onset of far wake region
+        beta: float, optional
+            model parameter used to determine onset of far wake region
+        base_frame: foxes.core.WakeFrame
+            The wake frame from which to start
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__()
 
         self.base_frame = base_frame
@@ -77,14 +83,14 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -104,16 +110,16 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -178,21 +184,21 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake coordinates, shape: (n_states, n_points, 3)
 
         """
@@ -215,21 +221,21 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -263,9 +269,9 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """

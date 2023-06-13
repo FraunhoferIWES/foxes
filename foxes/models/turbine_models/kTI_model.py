@@ -10,32 +10,38 @@ class kTI(TurbineModel):
     Calculates the wake model parameter `k`
     as a linear function of `TI`.
 
-    Parameters
-    ----------
-    kTI : float, optional
-        Uniform value for `kTI`. If not given it
-        will be searched in farm data
-    kb : float, optional
-        Uniform value for `kb`. If not given it
-        will be searched in farm data, and zero by default
-    ti_var : str
-        The `TI` variable name
-    ti_val : float, optional
-        The uniform value of `TI`. If not given it
-        will be searched in farm data
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    ti_var : str
+    ti_var: str
         The `TI` variable name
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        kTI: float, optional
+            Uniform value for `kTI`. If not given it
+            will be searched in farm data
+        kb: float, optional
+            Uniform value for `kb`. If not given it
+            will be searched in farm data, and zero by default
+        ti_var: str
+            The `TI` variable name
+        ti_val: float, optional
+            The uniform value of `TI`. If not given it
+            will be searched in farm data
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__()
 
         self.ti_var = ti_var
@@ -53,12 +59,12 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -73,19 +79,19 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

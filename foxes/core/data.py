@@ -11,34 +11,40 @@ class Data(Dict):
 
     Used during the calculation of single chunks,
     usually for numpy data (not xarray data).
-
-    Parameters
-    ----------
-    data : dict
-        The initial data to be stored
-    dims : dict
-        The dimensions tuples, same or subset
-        of data keys
-    loop_dims : array_like of str
-        List of the loop dimensions during xarray's
-        `apply_ufunc` calculations
-    name : str
-        The data container name
         
     Attributes
     ----------
-    dims : dict
+    dims: dict
         The dimensions tuples, same or subset
         of data keys
-    loop_dims : array_like of str
+    loop_dims: array_like of str
         List of the loop dimensions during xarray's
         `apply_ufunc` calculations
-    sizes : dict
+    sizes: dict
         The dimension sizes
 
+    :group: core
+    
     """
 
     def __init__(self, data, dims, loop_dims, name="data"):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        data: dict
+            The initial data to be stored
+        dims: dict
+            The dimensions tuples, same or subset
+            of data keys
+        loop_dims: array_like of str
+            List of the loop dimensions during xarray's
+            `apply_ufunc` calculations
+        name: str
+            The data container name
+
+        """
         super().__init__(name="data")
 
         self.update(data)

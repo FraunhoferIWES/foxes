@@ -11,35 +11,41 @@ class LinearSuperposition(WakeSuperposition):
     Linear supersposition of wake model results,
     optionally rescaled.
 
-    Parameters
+    Attributes
     ----------
-    scalings : dict or number or str
-        Scaling rules. If `dict`, key: variable name str,
-        value: number or str. If `str`:
-        - `source_turbine`: Scale by source turbine value of variable
-        - `source_turbine_amb`: Scale by source turbine ambient value of variable
-        - `source_turbine_<var>`: Scale by source turbine value of variable <var>
-    lim_low : dict, optional
+    scalings: dict or number or str
+        The scaling rules
+    lim_low: dict
         Lower limits of the final wake deltas. Key: variable str,
         value: float
-    lim_high : dict, optional
+    lim_high: dict
         Higher limits of the final wake deltas. Key: variable str,
         value: float
 
-    Attributes
-    ----------
-    scalings : dict or number or str
-        The scaling rules
-    lim_low : dict
-        Lower limits of the final wake deltas. Key: variable str,
-        value: float
-    lim_high : dict
-        Higher limits of the final wake deltas. Key: variable str,
-        value: float
+    :group: models.wake_superpositions
 
     """
 
     def __init__(self, scalings, lim_low=None, lim_high=None):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        scalings: dict or number or str
+            Scaling rules. If `dict`, key: variable name str,
+            value: number or str. If `str`:
+            - `source_turbine`: Scale by source turbine value of variable
+            - `source_turbine_amb`: Scale by source turbine ambient value of variable
+            - `source_turbine_<var>`: Scale by source turbine value of variable <var>
+        lim_low: dict, optional
+            Lower limits of the final wake deltas. Key: variable str,
+            value: float
+        lim_high: dict, optional
+            Higher limits of the final wake deltas. Key: variable str,
+            value: float
+
+        """
         super().__init__()
 
         self.scalings = scalings
@@ -62,28 +68,28 @@ class LinearSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sel_sp : numpy.ndarray of bool
+        sel_sp: numpy.ndarray of bool
             The selection of points, shape: (n_states, n_points)
-        variable : str
+        variable: str
             The variable name for which the wake deltas applies
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The original wake deltas, shape: (n_states, n_points)
-        wake_model_result : numpy.ndarray
+        wake_model_result: numpy.ndarray
             The new wake deltas of the selected points,
             shape: (n_sel_sp,)
 
         Returns
         -------
-        wdelta : numpy.ndarray
+        wdelta: numpy.ndarray
             The updated wake deltas, shape: (n_states, n_points)
 
         """
@@ -154,22 +160,22 @@ class LinearSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        variable : str
+        variable: str
             The variable name for which the wake deltas applies
-        amb_results : numpy.ndarray
+        amb_results: numpy.ndarray
             The ambient results, shape: (n_states, n_points)
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The wake deltas, shape: (n_states, n_points)
 
         Returns
         -------
-        final_wake_delta : numpy.ndarray
+        final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape: (n_states, n_points)
 
