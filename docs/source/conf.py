@@ -45,13 +45,13 @@ extensions = [
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
-    'sphinx.ext.autosectionlabel',
+    "sphinx.ext.autosectionlabel",
     #"sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     #"sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "sphinx.ext.inheritance_diagram",
+    #"sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
 ]
@@ -306,6 +306,8 @@ epub_exclude_files = ["search.html"]
 # -- python_apigen configuration -------------------------------------------------
 
 python_apigen_modules = {
+    "foxes.variables": "_foxes/variables/",
+    "foxes.constants": "_foxes/constants/",
     "foxes.core": "_core/",
     "foxes.data": "_data/",
     "foxes.input.farm_layout": "_input/farm_layout/",
