@@ -284,3 +284,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved API docu, now based on `python-apigen`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)
+
+## v0.4.1
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)
