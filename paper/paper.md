@@ -42,7 +42,8 @@ input data can be a timeseries or statistical data like wind speed histograms, w
 distribution. Uniform inflow fields are supported as well as horizontal profiles and three dimensional
 flow fields from other sources, for example wind fields from mesoscale weather models or wind
 atlases [@newa]. Typical applications are wind farm optimization, e.g. layout optimization or wake steering;
-wind farm pre and post construction analyses; wake model studies, comparison and validation; and wind farm simulations invoking complex model interactions.
+wind farm pre and post construction analyses; wake model studies, comparison and validation; 
+and wind farm simulations invoking complex model interactions.
 
 # Statement of need
 
@@ -51,7 +52,7 @@ of the wind naturally depends on the meteorological conditions at the site. In p
 wind speed and wind direction are decisive quantities, and in general those are time and space
 dependent fields. Furthermore, for each wind turbine, its location within the wind farm plays an 
 important role, since wake effects stemming from up-stream turbines reduce the wind speed and 
-increase turbulence at the rotor. Additinally, the rotor height, its size as well as specifics 
+increase turbulence at the rotor. Additionally, the rotor height, its size as well as specifics 
 related to the wind turbine model are crucial parameters. When it comes to wind farm production 
 analysis, the fast evaluation of the annual energy production for long-term time series of 
 meteorological conditions is required, and such data often contains many ten thousand entries. 
@@ -61,11 +62,11 @@ considered, such that realistic offshore scenarios can include as many as thousa
 turbines. Hence scalability is an issue of central importance for modern numerical wind farm 
 and wake modelling approaches. 
 
-`foxes` is build upon the idea of fast vectorized evaluation of the input states, making use 
+`foxes` is built upon the idea of fast vectorized evaluation of the input states, making use 
 of the `dask` package [@dask] via the `xarray` package [@xarray]. This means that in general, it 
 does not solve differential equations that interconnect the states, but rather relies either on 
-analytical models or on lookup-table based models. An exception are the included features of 
-calculations along streamlines of the background flow, and also integrations of variables along 
+analytical models or on lookup-table based models. Exceptions are the included features of 
+calculations along streamlines of the background flow and integrations of variables along 
 the latter for some models.
 
 `foxes` was designed to be very modular when it comes to modelling aspects of wind farm 
