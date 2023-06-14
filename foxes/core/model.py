@@ -2,6 +2,8 @@ import numpy as np
 from abc import ABCMeta
 from itertools import count
 
+import foxes.constants as FC
+from .data import Data
 
 class Model(metaclass=ABCMeta):
     """
@@ -209,3 +211,36 @@ class Model(metaclass=ABCMeta):
             except TypeError:
                 pass
         return out
+
+    @classmethod
+    def reduce_states(cls, sel_states, objs):
+        """
+        Modifies the given objects by selecting a
+        subset of states.
+        
+        Parameters
+        ----------
+        sel_states: list of int
+            The states selection
+        objs: list of foxes.core.Data
+            The objects, e.g. [mdata, fdata, pdata]
+            
+        Returns
+        -------
+        mobjs: list of foxes.core.Data
+            The modified objects with reduced
+            states dimension
+            
+        """
+        out = []
+        for o in objs:
+            data = {
+                v: d[sel_states] if o.dims[v][0] == FC.STATE else d
+                for v, d in o.items()
+            }
+            out.append(
+                Data(data, o.dims, loop_dims=o.loop_dims, name=o.name)
+            )
+                
+        return out
+    

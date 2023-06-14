@@ -168,6 +168,7 @@ class ModelBook:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
                 base_frame=fm.wake_frames.Streamlines(step=s)
             )
+        self.wake_frames["timelines"] = fm.wake_frames.Timelines()
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
