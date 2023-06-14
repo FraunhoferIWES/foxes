@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     #############################################
     # OVERWRITE ARGS FOR DEBUGGING HERE #
-    args.wakes = ["RHB_linear"]
+    args.wakes = ["RHB_linear"]#, "Jensen_linear_k007"]
     args.n_t = 1
     #############################################
 
@@ -165,15 +165,10 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10)
+    g = o.gen_states_fig_xy(args.var, resolution=5, xspace=200.0, yspace=200.0,)
     fig = next(g)
     plt.show()
     plt.savefig("RHB_horizontal_flow.png")
     plt.close(fig)
-    print()
 
-    # vertical flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
-    fig = next(g)
-    plt.show()
+    print()

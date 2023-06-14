@@ -202,5 +202,5 @@ class DistSlicedWakeModel(WakeModel):
 
         """
         for s in self.superp.values():
-            s.finalize(algo, verbosity)
+            algo.finalize_model(s, verbosity)
         super().finalize(algo, verbosity)

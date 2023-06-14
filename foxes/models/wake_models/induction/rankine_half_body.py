@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import WakeModel
+from foxes.utils import uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -16,9 +17,41 @@ class RHB(WakeModel):
     
     def __init__(self, superposition, ct_max=0.9999):
         super().__init__()
-
+        self.superposition = superposition
         self.ct_max = ct_max
 
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata : dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        self.superp = algo.mbook.wake_superpositions[self.superposition] 
+
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata([self.superp], idata=idata, verbosity=verbosity)
+
+        return idata
+    
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.
@@ -44,6 +77,7 @@ class RHB(WakeModel):
         """
         n_states = mdata.n_states
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
     def contribute_to_wake_deltas(
         self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas):
@@ -84,8 +118,7 @@ class RHB(WakeModel):
         # get r and theta
         r = np.sqrt(y**2 + z**2)
         r_sph = np.sqrt(r**2 + x**2)
-        theta = np.arctan2(r,x) # x has neg values, using abs, but always returns nans!
-        #n_r_x = r.shape[2]
+        theta = np.arctan2(r,x) 
 
         # define rankine half body shape (page 3)
         RHB_shape = np.cos(theta) -(2/m) * np.pi * ws * (r_sph*np.sin(theta))**2
@@ -95,56 +128,78 @@ class RHB(WakeModel):
 
         # select targets
         sp_sel = (ct > 0) & ( ( RHB_shape < -1 ) | ( x < xs ) )
-
-        # ws and wd delta storage
-        ws_deltas = np.zeros((n_states, n_points, 4), dtype=FC.DTYPE)
-        wd_deltas = np.zeros((n_states, n_points, 4), dtype=FC.DTYPE)
-
         if np.any(sp_sel):
 
             # apply selection
-            x = x[sp_sel]
-            y = y[sp_sel]
-            z = z[sp_sel]
-            ct = ct[sp_sel]
-            D = D[sp_sel]
-            ws = ws[sp_sel]
+            xyz = wake_coos[sp_sel] 
             m = m[sp_sel]
 
             # calc velocity components
-            vel_factor =  m / (4*np.pi*(x**2 +y**2 + z**2)**1.5)
-            u = vel_factor * x
-            v = vel_factor * y
-            w = vel_factor * z
+            vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
+            uv = vel_factor[:, None] * xyz[:, :2]
 
-            # calc wind direction in horizontal plane
-            wd = (180 + np.rad2deg(np.arctan2(u, v)))%360
+            # adding wind direction linearly:
+            wake_deltas[FV.WD][sp_sel] += uv2wd(uv, axis=-1)
 
-            ws_deltas[...,0][sp_sel] = x
-            ws_deltas[...,1][sp_sel] = y
-            ws_deltas[...,2][sp_sel] = z
-            ws_deltas[...,3][sp_sel] = u
+            wake_deltas[FV.WS][sp_sel] -= np.linalg.norm(uv, axis=-1)
 
-            wd_deltas[...,0][sp_sel] = x
-            wd_deltas[...,1][sp_sel] = y
-            wd_deltas[...,2][sp_sel] = z
-            wd_deltas[...,3][sp_sel] = wd
-
-        return {FV.WS: ws_deltas,
-                 FV.WD: wd_deltas}
-
-
-
+            # adding to wind speed deltas via superposition model
+            """
+            wake_deltas[FV.WS] = self.superp.calc_wakes_plus_wake(
+                algo,
+                mdata,
+                fdata,
+                states_source_turbine,
+                sp_sel,
+                FV.WS,
+                wake_deltas[FV.WS],
+                np.linalg.norm(uv, axis=-1),
+            )
+            """
             
+        return wake_deltas
 
+    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
+        """
+        Finalize the wake calculation.
 
+        Modifies wake_deltas on the fly.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        amb_results : dict
+            The ambient results, key: variable name str,
+            values: numpy.ndarray with shape (n_states, n_points)
+        wake_deltas : dict
+            The wake deltas, are being modified ob the fly.
+            Key: Variable name str, for which the wake delta
+            applies, values: numpy.ndarray with shape
+            (n_states, n_points, ...) before evaluation,
+            numpy.ndarray with shape (n_states, n_points) afterwards
 
+        """
+        return
+        wake_deltas[FV.WS] = self.superp.calc_final_wake_delta(
+            algo, mdata, fdata, FV.WS, amb_results[FV.WS], wake_deltas[FV.WS]
+        )
 
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
 
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        verbosity : int
+            The verbosity level, 0 = silent
 
-
-        print()
-        
-
-        
+        """
+        algo.finalize_model(self.superp, verbosity)
+        super().finalize(algo, verbosity)
