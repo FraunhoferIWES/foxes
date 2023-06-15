@@ -5,6 +5,7 @@ from iwopy import Problem
 
 import foxes.constants as FC
 
+
 class GeomLayout(Problem):
     """
     A layout within a boundary geometry, purely
@@ -13,42 +14,48 @@ class GeomLayout(Problem):
     This optimization problem does not involve
     wind farms.
 
-    Parameters
-    ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
-        The boundary geometry
-    n_turbines : int
-        The number of turbines in the layout
-    min_dist : float, optional
-        The minimal distance between points
-    D : float, optional
-        The diameter of circle fully within boundary
-    calc_valid : bool, optional
-        Evaluate validity
-
     Attributes
     ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
+    boundary: foxes.utils.geom2d.AreaGeometry
         The boundary geometry
-    n_turbines : int
+    n_turbines: int
         The number of turbines in the layout
-    min_dist : float
+    min_dist: float
         The minimal distance between points
-    D : float
+    D: float
         The diameter of circle fully within boundary
-    calc_valid : bool
+    calc_valid: bool
         Evaluate validity
+
+    :group: opt.problems.layout.geom_layouts
 
     """
 
     def __init__(
-            self, 
-            boundary, 
-            n_turbines, 
-            min_dist=None,
-            D=None,
-            calc_valid=None,
-        ):
+        self,
+        boundary,
+        n_turbines,
+        min_dist=None,
+        D=None,
+        calc_valid=None,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        boundary: foxes.utils.geom2d.AreaGeometry
+            The boundary geometry
+        n_turbines: int
+            The number of turbines in the layout
+        min_dist: float, optional
+            The minimal distance between points
+        D: float, optional
+            The diameter of circle fully within boundary
+        calc_valid: bool, optional
+            Evaluate validity
+
+        """
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -68,7 +75,7 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -81,7 +88,7 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -93,20 +100,22 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
         pmin = self.boundary.p_min()
         pmax = self.boundary.p_max()
-        pc = 0.5*(pmin + pmax)
-        delta = 0.8*(pmax-pmin)
+        pc = 0.5 * (pmin + pmax)
+        delta = 0.8 * (pmax - pmin)
 
         vals = np.zeros((self.n_turbines, 2), dtype=FC.DTYPE)
-        vals[:] = pc[None, :] - 0.5*delta[None, :]
-        vals[:] += np.arange(self.n_turbines)[:, None]*delta[None, :]/(self.n_turbines-1)
+        vals[:] = pc[None, :] - 0.5 * delta[None, :]
+        vals[:] += (
+            np.arange(self.n_turbines)[:, None] * delta[None, :] / (self.n_turbines - 1)
+        )
 
-        return vals.reshape(self.n_turbines*2)
+        return vals.reshape(self.n_turbines * 2)
 
     def min_values_float(self):
         """
@@ -116,13 +125,13 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
         vals = np.zeros((self.n_turbines, 2), dtype=FC.DTYPE)
         vals[:] = self.boundary.p_min()[None, :]
-        return vals.reshape(self.n_turbines*2)
+        return vals.reshape(self.n_turbines * 2)
 
     def max_values_float(self):
         """
@@ -132,13 +141,13 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
         vals = np.zeros((self.n_turbines, 2), dtype=FC.DTYPE)
         vals[:] = self.boundary.p_max()[None, :]
-        return vals.reshape(self.n_turbines*2)
+        return vals.reshape(self.n_turbines * 2)
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -146,18 +155,18 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
-        """       
+        """
         xy = vars_float.reshape(self.n_turbines, 2)
 
         valid = None
@@ -165,19 +174,18 @@ class GeomLayout(Problem):
             if self.D is None:
                 valid = self.boundary.points_inside(xy)
             else:
-                valid = (
-                    self.boundary.points_inside(xy) &
-                    (self.boundary.points_distance(xy) >= self.D / 2)
+                valid = self.boundary.points_inside(xy) & (
+                    self.boundary.points_distance(xy) >= self.D / 2
                 )
-            
+
             if self.min_dist is not None:
                 dists = cdist(xy, xy)
                 np.fill_diagonal(dists, 1e20)
                 dists = np.min(dists, axis=1)
-                valid[dists<self.min_dist] = False
-        
+                valid[dists < self.min_dist] = False
+
         return xy, valid
-    
+
     def apply_population(self, vars_int, vars_float):
         """
         Apply new variables to the problem,
@@ -185,14 +193,14 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
@@ -202,13 +210,12 @@ class GeomLayout(Problem):
 
         valid = None
         if self.calc_valid:
-            qts = xy.reshape(n_pop*self.n_turbines, 2)
+            qts = xy.reshape(n_pop * self.n_turbines, 2)
             if self.D is None:
                 valid = self.boundary.points_inside(qts)
             else:
-                valid = (
-                    self.boundary.points_inside(qts) &
-                    (self.boundary.points_distance(qts) >= self.D / 2)
+                valid = self.boundary.points_inside(qts) & (
+                    self.boundary.points_distance(qts) >= self.D / 2
                 )
             valid = valid.reshape(n_pop, self.n_turbines)
 
@@ -217,38 +224,40 @@ class GeomLayout(Problem):
                     dists = cdist(xy[pi], xy[pi])
                     np.fill_diagonal(dists, 1e20)
                     dists = np.min(dists, axis=1)
-                    valid[pi, dists<self.min_dist] = False
-        
+                    valid[pi, dists < self.min_dist] = False
+
         return xy, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
+    def get_fig(
+        self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs
+    ):
         """
         Return plotly figure axis.
 
         Parameters
         ----------
-        xy : numpy.ndarary, optional
+        xy: numpy.ndarary, optional
             The xy coordinate array, shape: (n_points, 2)
-        valid : numpy.ndarray, optional
+        valid: numpy.ndarray, optional
             Boolean array of validity, shape: (n_points,)
-        ax : pyplot.Axis, optional
+        ax: pyplot.Axis, optional
             The figure axis
-        title : str, optional
+        title: str, optional
             The figure title
-        true_circle : bool
+        true_circle: bool
             Draw points as circles with diameter self.D
-        bars : dict, optional
+        bars: dict, optional
             The boundary plot arguments
-        
+
         Returns
         -------
-        ax : pyplot.Axis
+        ax: pyplot.Axis
             The figure axis
 
         """
         if ax is None:
             __, ax = plt.subplots()
-        
+
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
         self.boundary.add_to_figure(ax, **hbargs)
@@ -260,7 +269,9 @@ class GeomLayout(Problem):
                 ax.scatter(xy[:, 0], xy[:, 1], color="orange")
             else:
                 for x, y in xy:
-                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
+                    ax.add_patch(
+                        plt.Circle((x, y), self.D / 2, color="blue", fill=True)
+                    )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")

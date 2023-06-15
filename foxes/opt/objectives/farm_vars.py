@@ -3,48 +3,29 @@ import xarray as xr
 
 from foxes.opt.core.farm_objective import FarmObjective
 from foxes import variables as FV
+import foxes.constants as FC
 
 
 class FarmVarObjective(FarmObjective):
     """
     Objectives based on farm variables.
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the objective function
-    variable : str
-        The foxes variable name
-    contract_states : str
-        Contraction rule for states: min, max, sum, mean
-    contract_turbines : str
-        Contraction rule for turbines: min, max, sum, mean
-    minimize : bool
-        Switch for maximizing or minimizing
-    deps : list of str
-        The foxes variables on which the variable depends,
-        or None for all
-    scale : float
-        The scaling factor
-    kwargs : dict, optional
-        Additional parameters for `FarmObjective`
-
     Attributes
     ----------
-    variable : str
+    variable: str
         The variable name
-    minimize : bool
+    minimize: bool
         Switch for maximizing or minimizing
-    deps : list of str
+    deps: list of str
         The foxes variables on which the variable depends,
         or None for all
-    rules : dict
+    rules: dict
         Contraction rules. Key: coordinate name str, value
         is str: min, max, sum, mean
-    scale : float
+    scale: float
         The scaling factor
+
+    :group: opt.objectives
 
     """
 
@@ -60,12 +41,38 @@ class FarmVarObjective(FarmObjective):
         scale=1.0,
         **kwargs,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name: str
+            The name of the objective function
+        variable: str
+            The foxes variable name
+        contract_states: str
+            Contraction rule for states: min, max, sum, mean
+        contract_turbines: str
+            Contraction rule for turbines: min, max, sum, mean
+        minimize: bool
+            Switch for maximizing or minimizing
+        deps: list of str
+            The foxes variables on which the variable depends,
+            or None for all
+        scale: float
+            The scaling factor
+        kwargs: dict, optional
+            Additional parameters for `FarmObjective`
+
+        """
         super().__init__(problem, name, **kwargs)
         self.variable = variable
         self.minimize = minimize
         self.deps = deps
         self.scale = scale
-        self.rules = {FV.STATE: contract_states, FV.TURBINE: contract_turbines}
+        self.rules = {FC.STATE: contract_states, FC.TURBINE: contract_turbines}
 
     def initialize(self, verbosity=0):
         """
@@ -73,11 +80,10 @@ class FarmVarObjective(FarmObjective):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
-
         super().initialize(verbosity)
 
     def n_components(self):
@@ -99,7 +105,7 @@ class FarmVarObjective(FarmObjective):
 
         Returns
         -------
-        flags : np.array
+        flags: np.array
             Bool array for component maximization,
             shape: (n_components,)
 
@@ -113,7 +119,7 @@ class FarmVarObjective(FarmObjective):
 
         Returns
         -------
-        deps : numpy.ndarray of bool
+        deps: numpy.ndarray of bool
             The dependencies of components on function
             variables, shape: (n_components, n_vars_float)
 
@@ -155,19 +161,19 @@ class FarmVarObjective(FarmObjective):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_sel_components,)
 
         """
@@ -175,7 +181,6 @@ class FarmVarObjective(FarmObjective):
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
         data = self._contract(data) / self.scale
-
 
         return np.array([data], dtype=np.float64)
 
@@ -185,31 +190,31 @@ class FarmVarObjective(FarmObjective):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_pop, n_sel_components)
 
         """
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
-        n_turbines = problem_results.dims[FV.TURBINE]
+        n_turbines = problem_results.dims[FC.TURBINE]
         data = (
             problem_results[self.variable]
             .to_numpy()
             .reshape(n_pop, n_states, n_turbines)
         )
-        data = xr.DataArray(data, dims=(FV.POP, FV.STATE, FV.TURBINE))
+        data = xr.DataArray(data, dims=(FC.POP, FC.STATE, FC.TURBINE))
 
         if self.n_sel_turbines < self.farm.n_turbines:
             data = data[:, self.sel_turbines]
@@ -222,19 +227,19 @@ class FarmVarObjective(FarmObjective):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The optimal integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The optimal float variable values, shape: (n_vars_float,)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_components,)
 
         """
@@ -252,17 +257,18 @@ class MaxFarmPower(FarmVarObjective):
 
     Parameters
     ----------
-    problem : foxes.opt.FarmOptProblem
+    problem: foxes.opt.FarmOptProblem
         The underlying optimization problem
-    name : str
+    name: str
         The name of the objective function
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
+
+    :group: opt.objectives
 
     """
 
     def __init__(self, problem, name="maximize_power", **kwargs):
-
         if "scale" in kwargs:
             scale = kwargs.pop("scale")
         else:
@@ -285,24 +291,26 @@ class MaxFarmPower(FarmVarObjective):
             **kwargs,
         )
 
+
 class MinimalMaxTI(FarmVarObjective):
     """
     Minimize the maximal turbine TI
 
     Parameters
     ----------
-    problem : foxes.opt.FarmOptProblem
+    problem: foxes.opt.FarmOptProblem
         The underlying optimization problem
-    name : str
+    name: str
         The name of the objective function
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
+
+    :group: opt.objectives
 
     """
 
     def __init__(self, problem, name="minimize_TI", **kwargs):
-
-        scale = kwargs.pop("scale") if "scale" in kwargs else 1.
+        scale = kwargs.pop("scale") if "scale" in kwargs else 1.0
         super().__init__(
             problem,
             name,

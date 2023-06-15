@@ -10,6 +10,9 @@ class FarmVarsProblem(FarmOptProblem):
     """
     Abstract base class for models that optimize
     farm variables.
+
+    :group: opt.core
+
     """
 
     def initialize(self, pre_rotor_vars, post_rotor_vars, verbosity=1, **kwargs):
@@ -18,15 +21,15 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        pre_rotor_vars : list of str or dict
+        pre_rotor_vars: list of str or dict
             The pre_rotor farm variables. If dict, then
             key: sub-model str, value: var names as list of str
-        post_rotor_vars : list of str or dict
+        post_rotor_vars: list of str or dict
             The post_rotor farm variables. If dict, then
-            key: sub-model str, value: var names as list of str   
-        verbosity : int
+            key: sub-model str, value: var names as list of str
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for super class init
 
         """
@@ -44,7 +47,6 @@ class FarmVarsProblem(FarmOptProblem):
         cnt = 0
         for src, pre in zip((self._vars_pre, self._vars_post), (True, False)):
             for mname, vrs in src.items():
-
                 if mname in self.algo.mbook.turbine_models:
                     m = self.algo.mbook.turbine_models[mname]
                     if not isinstance(m, SetFarmVars):
@@ -52,7 +54,9 @@ class FarmVarsProblem(FarmOptProblem):
                             f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' already exists in model book, and is not of type SetFarmVars"
                         )
                     elif m.pre_rotor != pre:
-                        raise ValueError(f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre}")
+                        raise ValueError(
+                            f"FarmOptProblem '{self.name}': Turbine model entry '{mname}' exists in model book, and disagrees on pre_rotor = {pre}"
+                        )
                 else:
                     self.algo.mbook.turbine_models[mname] = SetFarmVars(pre_rotor=pre)
 
@@ -67,7 +71,9 @@ class FarmVarsProblem(FarmOptProblem):
                     )
                 cnt += len(vrs)
         if not cnt:
-            raise ValueError(f"Problem '{self.name}': Neither pre_rotor_vars not post_rotor_vars containing variables")
+            raise ValueError(
+                f"Problem '{self.name}': Neither pre_rotor_vars not post_rotor_vars containing variables"
+            )
 
         super().initialize(verbosity=verbosity, **kwargs)
 
@@ -78,16 +84,16 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_vars_int,)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_vars_float,)
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
@@ -102,18 +108,18 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
-        n_states : int
+        n_states: int
             The number of original (non-pop) states
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)
@@ -125,15 +131,15 @@ class FarmVarsProblem(FarmOptProblem):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         """
@@ -160,21 +166,23 @@ class FarmVarsProblem(FarmOptProblem):
                         model.add_var(v, data)
 
         if len(fvars):
-            raise KeyError(f"Problem '{self.name}': Too many farm vars from opt2farm_vars_individual: {list(fvars.keys())}")
-        
+            raise KeyError(
+                f"Problem '{self.name}': Too many farm vars from opt2farm_vars_individual: {list(fvars.keys())}"
+            )
+
     def update_problem_population(self, vars_int, vars_float):
         """
         Update the algo and other data using
         the latest optimization variables.
-        
-        This function is called before running the farm 
+
+        This function is called before running the farm
         calculation.
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float,)
 
         """
@@ -206,4 +214,6 @@ class FarmVarsProblem(FarmOptProblem):
                         del data
 
         if len(fvars):
-            raise KeyError(f"Problem '{self.name}': Too many farm vars from opt2farm_vars_population: {list(fvars.keys())}")
+            raise KeyError(
+                f"Problem '{self.name}': Too many farm vars from opt2farm_vars_population: {list(fvars.keys())}"
+            )

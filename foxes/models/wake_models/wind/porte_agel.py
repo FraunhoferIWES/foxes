@@ -1,36 +1,30 @@
 import numpy as np
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
+from foxes.core.model import Model
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class PorteAgelModel:
+class PorteAgelModel(Model):
     """
     Common calculations for the wake model and the wake
     frame, such that code repetitions can be avoided.
 
-    Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
-
-    Parameters
-    ----------
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float
-        model parameter used to determine onset of far wake region
-    beta : float
-        model parameter used to determine onset of far wake region
+    Based on Bastankhah & Porte-Agel, 2016,
+    https://doi.org/10.1017/jfm.2016.595
 
     Attributes
     ----------
-    ct_max : float
+    ct_max: float
         The maximal value for ct, values beyond will be limited
         to this number, by default 0.9999
-    alpha : float
+    alpha: float
         model parameter used to determine onset of far wake region
-    beta : float
+    beta: float
         model parameter used to determine onset of far wake region
+
+    :group: models.wake_models.wind
 
     """
 
@@ -52,9 +46,24 @@ class PorteAgelModel:
     DELTA_FAR = "delta_far"
 
     def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float
+            model parameter used to determine onset of far wake region
+        beta: float
+            model parameter used to determine onset of far wake region
+
+        """
+        super().__init__()
         self.ct_max = ct_max
-        self.alpha = alpha
-        self.beta = beta
+        setattr(self, FV.PA_ALPHA, alpha)
+        setattr(self, FV.PA_BETA, beta)
 
     @property
     def pars(self):
@@ -67,7 +76,9 @@ class PorteAgelModel:
             Dictionary of the model parameters
 
         """
-        return dict(alpha=self.alpha, beta=self.beta, ct_max=self.ct_max)
+        alpha = getattr(self, FV.PA_ALPHA)
+        beta = getattr(self, FV.PA_BETA)
+        return dict(alpha=alpha, beta=beta, ct_max=self.ct_max)
 
     def calc_data(
         self,
@@ -83,18 +94,18 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        gamma : numpy.ndarray
+        gamma: numpy.ndarray
             The YAWM angles in radiants, shape: (n_states, n_points)
-        k : numpy.ndarray
+        k: numpy.ndarray
             The k parameter values, shape: (n_states, n_points)
 
         """
@@ -106,7 +117,7 @@ class PorteAgelModel:
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -123,7 +134,6 @@ class PorteAgelModel:
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # get ws:
             ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ws[:] = fdata[FV.REWS][st_sel][:, None]
@@ -131,6 +141,18 @@ class PorteAgelModel:
             # get TI:
             ti = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             ti[:] = fdata[FV.TI][st_sel][:, None]
+
+            # get alpha:
+            alpha = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            alpha[:] = Model.get_data(
+                self, FV.PA_ALPHA, fdata, data_prio=True, upcast="farm"
+            )[st_sel][:, None]
+
+            # get beta:
+            beta = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            beta[:] = Model.get_data(
+                self, FV.PA_BETA, fdata, data_prio=True, upcast="farm"
+            )[st_sel][:, None]
 
             # apply filter:
             x = x[sp_sel]
@@ -140,14 +162,14 @@ class PorteAgelModel:
             ti = ti[sp_sel]
             k = k[sp_sel]
             gamma = gamma[sp_sel]
+            alpha = alpha[sp_sel]
+            beta = beta[sp_sel]
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
             theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
 
             # calculate x0, Eq. (7.3):
-            alpha = self.alpha
-            beta = self.beta
             sqomct = np.sqrt(1 - ct)
             x0 = (
                 D
@@ -166,7 +188,6 @@ class PorteAgelModel:
             near = x < x0
             out[self.NEAR] = near
             if np.any(near):
-
                 # apply filter:
                 wsn = ws[near]
                 ctn = ct[near]
@@ -195,7 +216,6 @@ class PorteAgelModel:
             # calc far wake data:
             far = ~near
             if np.any(far):
-
                 # apply filter:
                 ws = ws[far]
                 ct = ct[far]
@@ -242,22 +262,22 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        check : bool
+        check: bool
             True if data exists
 
         """
         check = (
-            mdata[FV.STATE][0],
+            mdata[FC.STATE][0],
             states_source_turbine[0],
             x.shape,
         )
@@ -269,14 +289,14 @@ class PorteAgelModel:
 
         Parameters
         ----------
-        key : str
+        key: str
             The data key
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
 
         Returns
         -------
-        data : numpy.ndarray
+        data: numpy.ndarray
             The data
 
         """
@@ -293,50 +313,70 @@ class PorteAgelWake(DistSlicedWakeModel):
     """
     The Bastankhah PorteAgel wake model
 
-    Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
-
-
-    Parameters
-    ----------
-    superposition : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    k : float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data, by default None
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float
-        model parameter used to determine onset of far wake region
-    beta : float
-        model parameter used to determine onset of far wake region
+    Based on Bastankhah & Porte-Agel, 2016,
+    https://doi.org/10.1017/jfm.2016.595
 
     Attributes
     ----------
-    model : PorteAgelModel
+    model: PorteAgelModel
         The model for computing common data
-    K : float
+    K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    YAWM : float
+    YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
+    k_var: str
+        The variable name for k
+
+    :group: models.wake_models.wind
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999, alpha=0.58, beta=0.07):
+    def __init__(
+        self,
+        superposition,
+        k=None,
+        ct_max=0.9999,
+        alpha=0.58,
+        beta=0.07,
+        k_var=FV.K,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superposition: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        k: float
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data, by default None
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float
+            model parameter used to determine onset of far wake region
+        beta: float
+            model parameter used to determine onset of far wake region
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.k_var = k_var
 
-        setattr(self, FV.K, k)
+        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -347,15 +387,15 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
+        n_points: int
             The number of wake evaluation points
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -371,27 +411,27 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        yz : numpy.ndarray
+        yz: numpy.ndarray
             The yz values for each x value, shape:
             (n_states, n_points, n_yz_per_x, 2)
 
         Returns
         -------
-        wdeltas : dict
+        wdeltas: dict
             The wake deltas. Key: variable name str,
             value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 
@@ -404,15 +444,16 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         # calculate model data:
         if not self.model.has_data(mdata, states_source_turbine, x):
-
             # get gamma:
             gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][:, None]
+            gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[
+                st_sel
+            ][:, None]
             gamma *= np.pi / 180
 
             # get k:
             k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(FV.K, fdata, upcast="farm")[st_sel][:, None]
+            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
 
             # run calculation:
             self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
@@ -422,7 +463,6 @@ class PorteAgelWake(DistSlicedWakeModel):
         n_sp_sel = np.sum(sp_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
         if np.any(sp_sel):
-
             # apply filter:
             yz = yz[sp_sel]
 
@@ -432,7 +472,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # near wake:
             if np.any(near):
-
                 # collect data:
                 ampl = self.model.get_data(PorteAgelModel.AMPL_NEAR, mdata)
                 r_pc = self.model.get_data(PorteAgelModel.R_PC, mdata)
@@ -452,7 +491,6 @@ class PorteAgelWake(DistSlicedWakeModel):
 
             # far wake:
             if np.any(far):
-
                 # apply filter:
                 yz = yz[far]
 

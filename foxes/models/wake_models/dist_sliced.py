@@ -12,26 +12,32 @@ class DistSlicedWakeModel(WakeModel):
     The multi-yz ability is used by the `PartialDistSlicedWake`
     partial wakes model.
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-
     Attributes
     ----------
-    superpositions : dict
+    superpositions: dict
         The superpositions. Key: variable name str,
         value: The wake superposition model name,
         will be looked up in model book
-    superp : dict
+    superp: dict
         The superposition dict, key: variable name str,
         value: `foxes.core.WakeSuperposition`
+
+    :group: models.wake_models
 
     """
 
     def __init__(self, superpositions):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+
+        """
         super().__init__()
         self.superpositions = superpositions
 
@@ -47,14 +53,14 @@ class DistSlicedWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -65,9 +71,8 @@ class DistSlicedWakeModel(WakeModel):
         }
 
         idata = super().initialize(algo, verbosity)
-        algo.update_idata(list(self.superp.values()),
-            idata=idata, verbosity=verbosity)
-        
+        algo.update_idata(list(self.superp.values()), idata=idata, verbosity=verbosity)
+
         return idata
 
     @abstractmethod
@@ -77,27 +82,27 @@ class DistSlicedWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        yz : numpy.ndarray
+        yz: numpy.ndarray
             The yz values for each x value, shape:
             (n_states, n_points, n_yz_per_x, 2)
 
         Returns
         -------
-        wdeltas : dict
+        wdeltas: dict
             The wake deltas. Key: variable name str,
             value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 
@@ -115,19 +120,19 @@ class DistSlicedWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -142,7 +147,6 @@ class DistSlicedWakeModel(WakeModel):
         )
 
         for v, hdel in wdeltas.items():
-
             try:
                 superp = self.superp[v]
             except KeyError:
@@ -169,16 +173,16 @@ class DistSlicedWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        amb_results : dict
+        amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the wake delta
             applies, values: numpy.ndarray with shape
@@ -197,13 +201,12 @@ class DistSlicedWakeModel(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
         for s in self.superp.values():
             s.finalize(algo, verbosity)
         super().finalize(algo, verbosity)
-        

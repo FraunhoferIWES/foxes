@@ -24,44 +24,46 @@ def add_from_csv(
     """
     Add turbines to wind farm via csv input file.
 
-    Additional turbine_parameters are forwarded to the WindFarm.add_turbine().
-
     Parameters
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         The input csv file or data source
-    col_index : str, optional
+    col_index: str, optional
         The index column, or None
-    col_name : str, optional
+    col_name: str, optional
         The name column, or None
-    col_x : str, optional
+    col_x: str, optional
         The x column
-    col_y : str, optional
+    col_y: str, optional
         The y column
     col_H: str, optional
         The hub height column
-    col_D : str, optional
+    col_D: str, optional
         The rotor diameter column
-    col_id : str, optional
+    col_id: str, optional
         The id column
-    cols_models_pre : list of str, optional
+    cols_models_pre: list of str, optional
         The turbine model columns, entered before
         turbine_models
-    cols_models_post : list of str, optional
+    cols_models_post: list of str, optional
         The turbine model columns, entered after
         turbine_models
-    turbine_base_name : str, optional
+    turbine_base_name: str, optional
         The turbine base name, only used
         if col_name is None
-    turbine_ids : list, optional
+    turbine_ids: list, optional
         The turbine ids, or None for
         index
-    turbine_base_name_count_shift : bool, optional
+    turbine_base_name_count_shift: bool, optional
         Start turbine names by 1 instead of 0
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
+    turbine_parameters: dict, optional
+        Additional parameters are forwarded to the WindFarm.add_turbine().
+
+    :group: input.farm_layout
 
     """
 
@@ -77,7 +79,6 @@ def add_from_csv(
     D = turbine_parameters.pop("D", None)
 
     for i in data.index:
-
         s = 1 if turbine_base_name_count_shift else 0
         tname = (
             f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]

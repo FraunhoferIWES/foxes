@@ -17,26 +17,15 @@ class IECTIWake(TopHatWakeModel):
 
     Source: http://orbit.dtu.dk/files/3750291/2009_31.pdf
 
-
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    opening_angle : float
-        The wake opening angle. The wake growth parameter k is calculated
-        based on the wake opening angle.
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-
-
     Attributes
     ----------
-    opening_angle : float
+    opening_angle: float
         The wake opening angle. The wake growth parameter k is calculated
         based on the wake opening angle.
+    k_var: str
+        The variable name for k
+
+    :group: models.wake_models.ti
 
     """
 
@@ -46,17 +35,39 @@ class IECTIWake(TopHatWakeModel):
         opening_angle=21.6,
         ct_max=0.9999,
         iec_type="2019",
+        k_var=FV.K,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        opening_angle: float
+            The wake opening angle. The wake growth parameter k is calculated
+            based on the wake opening angle.
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
         k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
         self.iec_type = iec_type
-        setattr(self, FV.K, k)
+        self.k_var = k_var
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={getattr(self, FV.K)}, sp={self.superpositions[FV.TI]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -67,15 +78,15 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
+        n_points: int
             The number of wake evaluation points
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -91,27 +102,27 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        r : numpy.ndarray
+        r: numpy.ndarray
             The radial values for each x value, shape:
             (n_states, n_points, n_r_per_x, 2)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
 
         Returns
         -------
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_states, n_points)
 
         """
@@ -120,7 +131,7 @@ class IECTIWake(TopHatWakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get k:
-        k = self.get_data(FV.K, fdata, st_sel, data_prio=False)
+        k = self.get_data(self.k_var, fdata, st_sel, data_prio=False)
         if isinstance(k, np.ndarray):
             k = k[:, None]
 
@@ -137,29 +148,29 @@ class IECTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_sp_sel,)
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_sp_sel,)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_sp_sel,)
 
         Returns
         -------
-        cl_del : dict
+        cl_del: dict
             The centre line wake deltas. Key: variable name str,
             varlue: numpy.ndarray, shape: (n_sp_sel,)
 

@@ -13,6 +13,9 @@ class StaticData(DataBook):
     """
     A DataBook filled with static data from
     this directory.
+
+    :group: foxes
+
     """
 
     def __init__(self):

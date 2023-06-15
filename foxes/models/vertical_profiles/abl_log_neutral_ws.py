@@ -7,6 +7,9 @@ import foxes.variables as FV
 class ABLLogNeutralWsProfile(VerticalProfile):
     """
     The neutral ABL wind speed log profile.
+
+    :group: models.vertical_profiles
+
     """
 
     def input_vars(self):
@@ -16,7 +19,7 @@ class ABLLogNeutralWsProfile(VerticalProfile):
 
         Returns
         -------
-        vars : list of str
+        vars: list of str
             The variable names
 
         """
@@ -28,14 +31,14 @@ class ABLLogNeutralWsProfile(VerticalProfile):
 
         Parameters
         ----------
-        data : dict
+        data: dict
             The input data
-        heights : numpy.ndarray
+        heights: numpy.ndarray
             The evaluation heights
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The profile results, same
             shape as heights
 

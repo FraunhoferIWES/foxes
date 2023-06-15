@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import foxes.variables as FV
+import foxes.constants as FC
 from .output import Output
 
 
@@ -10,19 +10,25 @@ class StateTurbineMap(Output):
     Creates heat maps with turbines on the one
     and states on the other axis.
 
-    Parameters
-    ----------
-    farm_results : xarray.Dataset
-        The farm results
-
     Attributes
     ----------
-    results : xarray.Dataset
+    results: xarray.Dataset
         The farm results
+
+    :group: output
 
     """
 
     def __init__(self, farm_results):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        farm_results: xarray.Dataset
+            The farm results
+
+        """
         self.results = farm_results
 
     def plot_map(
@@ -38,26 +44,26 @@ class StateTurbineMap(Output):
 
         Parameters
         ----------
-        variable : str
+        variable: str
             The variable to plot
-        title : str, optional
+        title: str, optional
             The plot title
-        ax : pyplot.Axis, optional
+        ax: pyplot.Axis, optional
             The axis
-        figsize : tuple
+        figsize: tuple
             The figsize argument for plt.subplots()
             in case ax is not provided
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for plt.pcolormesh()
 
         Returns
         -------
-        ax : pyplot.Axis
+        ax: pyplot.Axis
             The plot axis
 
         """
-        turbines = self.results[FV.TURBINE].to_numpy()
-        states = self.results[FV.STATE].to_numpy()
+        turbines = self.results[FC.TURBINE].to_numpy()
+        states = self.results[FC.STATE].to_numpy()
 
         if ax is None:
             __, ax = plt.subplots(figsize=figsize)

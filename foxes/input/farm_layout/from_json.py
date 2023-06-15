@@ -13,16 +13,18 @@ def add_from_json(
 
     Parameters
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    file_path : str
+    file_path: str
         Path to the file
-    set_farm_name : bool
+    set_farm_name: bool
         Flag for inferring wind farm name from data
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
-    **turbine_parameters : dict, optional
+    turbine_parameters: dict, optional
         Parameters forwarded to `foxes.core.Turbine`
+
+    :group: input.farm_layout
 
     """
 
@@ -42,7 +44,6 @@ def add_from_json(
         farm.name = farm_name
 
     for wt_name, wdict in fdict.items():
-
         pars = deepcopy(turbine_parameters)
         if "D" in wdict:
             pars["D"] = wdict["D"]

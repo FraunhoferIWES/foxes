@@ -11,22 +11,27 @@ class ClosedPolygon(AreaGeometry):
     """
     This class represents a closed 2D polygon.
 
-    Parameters
-    ----------
-    points : numpy.ndarray
-        The polygon points, shape: (n_points, 2)
-
     Attributes
     ----------
-    points : numpy.ndarray
+    points: numpy.ndarray
         The polygon points
-    poly : matplotlib.path.Path
+    poly: matplotlib.path.Path
         The closed polygon geometry
+
+    :group: utils.geom2d
 
     """
 
     def __init__(self, points):
+        """
+        Constructor.
 
+        Parameters
+        ----------
+        points: numpy.ndarray
+            The polygon points, shape: (n_points, 2)
+
+        """
         self.points = points
 
         if not np.all(points[0] == points[-1]):
@@ -42,7 +47,7 @@ class ClosedPolygon(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -54,7 +59,7 @@ class ClosedPolygon(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -66,17 +71,17 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -93,21 +98,18 @@ class ClosedPolygon(AreaGeometry):
             dists = np.min(dists, axis=1)
 
         for pi in range(len(self.points) - 1):
-
             pA = self.points[pi]
             pB = self.points[pi + 1]
             n = pB - pA
             d = np.linalg.norm(n)
 
             if d > 0:
-
                 n /= d
                 q = points - pA[None, :]
                 x = np.einsum("pd,d->p", q, n)
 
                 sel = (x > 0) & (x < d)
                 if np.any(sel):
-
                     x = x[sel]
                     y2 = np.maximum(np.linalg.norm(q[sel], axis=1) ** 2 - x**2, 0.0)
 
@@ -136,12 +138,12 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -155,17 +157,17 @@ class ClosedPolygon(AreaGeometry):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """
@@ -182,7 +184,6 @@ class ClosedPolygon(AreaGeometry):
 
 
 if __name__ == "__main__":
-
     points = np.array([[1.0, 1.0], [1.3, 6], [5.8, 6.2], [6.5, 0.8]])
     N = 500
 

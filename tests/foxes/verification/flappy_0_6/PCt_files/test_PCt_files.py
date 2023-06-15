@@ -4,13 +4,12 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-
+import foxes.constants as FC
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-
     print(thisdir)
 
     c = 2000
@@ -20,7 +19,7 @@ def test():
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
 
-    ck = {FV.STATE: c}
+    ck = {FC.STATE: c}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFromTwo(

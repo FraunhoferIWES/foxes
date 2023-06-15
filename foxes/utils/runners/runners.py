@@ -1,13 +1,17 @@
+import dask
 from abc import abstractmethod, ABCMeta
 from copy import deepcopy
-import dask
-from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster
+from dask.distributed import get_client
+from dask.diagnostics import ProgressBar
 
 
 class Runner(metaclass=ABCMeta):
     """
     Abstract base class for runners.
+
+    :group: utils.runners
+
     """
 
     def __init__(self):
@@ -43,16 +47,16 @@ class Runner(metaclass=ABCMeta):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """
@@ -71,6 +75,9 @@ class Runner(metaclass=ABCMeta):
 class DefaultRunner(Runner):
     """
     Class for default function execution.
+
+    :group: utils.runners
+
     """
 
     def run(self, func, args=tuple(), kwargs={}):
@@ -79,16 +86,16 @@ class DefaultRunner(Runner):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """
@@ -99,35 +106,20 @@ class DaskRunner(Runner):
     """
     Class for function execution via dask
 
-    Parameters
-    ----------
-    scheduler : str, optional
-        The dask scheduler choice
-    n_workers : int, optional
-        The number of workers for parallel run
-    threads_per_worker : int, optional
-        The number of threads per worker for parallel run
-    progress_bar : bool
-        Flag for showing progress bar
-    cluster_args : dict, optional
-        Explicit arguments for the cluster setup
-    client_args : dict, optional
-        Explicit arguments for the client setup
-    verbosity : int
-        The verbosity level, 0 = silent
-
     Attributes
     ----------
-    scheduler : str, optional
+    scheduler: str, optional
         The dask scheduler choice
-    progress_bar : bool
+    progress_bar: bool
         Flag for showing progress bar
-    cluster_args : dict, optional
+    cluster_args: dict, optional
         Explicit arguments for the cluster setup
-    client_args : dict, optional
+    client_args: dict, optional
         Explicit arguments for the client setup
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
+
+    :group: utils.runners
 
     """
 
@@ -142,6 +134,27 @@ class DaskRunner(Runner):
         progress_bar=True,
         verbosity=1,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        scheduler: str, optional
+            The dask scheduler choice
+        n_workers: int, optional
+            The number of workers for parallel run
+        threads_per_worker: int, optional
+            The number of threads per worker for parallel run
+        progress_bar: bool
+            Flag for showing progress bar
+        cluster_args: dict, optional
+            Explicit arguments for the cluster setup
+        client_args: dict, optional
+            Explicit arguments for the client setup
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
         super().__init__()
 
         self.scheduler = scheduler
@@ -169,13 +182,20 @@ class DaskRunner(Runner):
         ):
             self.scheduler = "distributed"
 
+    @classmethod
+    def is_distributed(cls):
+        try:
+            get_client()
+            return True
+        except ValueError:
+            return False
+
     def initialize(self):
         """
         Initialize the runner
         """
         if self.scheduler == "distributed":
-
-            self.print("Launching dask cluster..")
+            self.print("Launching local dask cluster..")
 
             self._cluster = LocalCluster(**self.cluster_args)
             self._client = Client(self._cluster, **self.client_args)
@@ -183,9 +203,20 @@ class DaskRunner(Runner):
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
 
-        else:
-            self._config0 = deepcopy(dask.config.config)
-            dask.config.config["scheduler"] = self.scheduler
+        elif self.scheduler == "slurm":
+            from dask_jobqueue import SLURMCluster
+
+            self.print("Launching dask cluster on HPC using SLURM..")
+
+            cargs = deepcopy(self.cluster_args)
+            nodes = cargs.pop("nodes", 1)
+
+            self._cluster = SLURMCluster(**cargs)
+            self._cluster.scale(jobs=nodes)
+            self._client = Client(self._cluster, **self.client_args)
+
+            self.print(self._cluster)
+            self.print(f"Dashboard: {self._client.dashboard_link}\n")
 
         super().initialize()
 
@@ -202,16 +233,16 @@ class DaskRunner(Runner):
 
         Parameters
         ----------
-        func : Function
+        func: Function
             The function to be run
-        args : tuple
+        args: tuple
             The function arguments
-        kwargs : dict
+        kwargs: dict
             The function keyword arguments
 
         Returns
         -------
-        results : Any
+        results: Any
             The functions return value
 
         """
@@ -227,15 +258,11 @@ class DaskRunner(Runner):
         """
         Finallize the runner
         """
-        if self.scheduler == "distributed":
-
+        if self.scheduler in ["distributed", "slurm"]:
             self.print("\n\nShutting down dask cluster")
             self._client.close()
             self._cluster.close()
 
-        else:
-            dask.config.config["scheduler"] = self._config0
-        
         dask.config.refresh()
 
         super().finalize()

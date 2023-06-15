@@ -5,6 +5,7 @@ from iwopy import Problem
 
 import foxes.constants as FC
 
+
 class GeomLayoutGridded(Problem):
     """
     A layout within a boundary geometry, purely
@@ -14,42 +15,48 @@ class GeomLayoutGridded(Problem):
     This optimization problem does not involve
     wind farms.
 
-    Parameters
-    ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
-        The boundary geometry
-    n_turbines : int
-        The number of turbines in the layout
-    grid_spacing : float
-        The background grid spacing
-    min_dist : float, optional
-        The minimal distance between points
-    D : float, optional
-        The diameter of circle fully within boundary
-
     Attributes
     ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
+    boundary: foxes.utils.geom2d.AreaGeometry
         The boundary geometry
-    n_turbines : int
+    n_turbines: int
         The number of turbines in the layout
-    grid_spacing : float
+    grid_spacing: float
         The background grid spacing
-    min_dist : float
+    min_dist: float
         The minimal distance between points
-    D : float
+    D: float
         The diameter of circle fully within boundary
+
+    :group: opt.problems.layout.geom_layouts
 
     """
 
     def __init__(
-            self, 
-            boundary, 
-            n_turbines, 
-            grid_spacing,
-            min_dist=None,
-            D=None,
-        ):
+        self,
+        boundary,
+        n_turbines,
+        grid_spacing,
+        min_dist=None,
+        D=None,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        boundary: foxes.utils.geom2d.AreaGeometry
+            The boundary geometry
+        n_turbines: int
+            The number of turbines in the layout
+        grid_spacing: float
+            The background grid spacing
+        min_dist: float, optional
+            The minimal distance between points
+        D: float, optional
+            The diameter of circle fully within boundary
+
+        """
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -66,7 +73,7 @@ class GeomLayoutGridded(Problem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -75,29 +82,32 @@ class GeomLayoutGridded(Problem):
         pmin = self.boundary.p_min()
         pmax = self.boundary.p_max() + self.grid_spacing
         self._pts = np.stack(
-                np.meshgrid(
-                    np.arange(pmin[0], pmax[0], self.grid_spacing),
-                    np.arange(pmin[1], pmax[1], self.grid_spacing),
-                    indexing='ij'
-                ), axis=-1)
+            np.meshgrid(
+                np.arange(pmin[0], pmax[0], self.grid_spacing),
+                np.arange(pmin[1], pmax[1], self.grid_spacing),
+                indexing="ij",
+            ),
+            axis=-1,
+        )
         nx, ny = self._pts.shape[:2]
-        self._pts = self._pts.reshape(nx*ny, 2)
+        self._pts = self._pts.reshape(nx * ny, 2)
 
         if self.D is None:
             valid = self.boundary.points_inside(self._pts)
         else:
-            valid = (
-                self.boundary.points_inside(self._pts) &
-                (self.boundary.points_distance(self._pts) >= self.D / 2)
+            valid = self.boundary.points_inside(self._pts) & (
+                self.boundary.points_distance(self._pts) >= self.D / 2
             )
         self._pts = self._pts[valid]
         self._N = len(self._pts)
 
-        if verbosity>0:
+        if verbosity > 0:
             print(f"Problem '{self.name}': n_bgd_pts = {self._N}")
 
         if self._N < self.n_turbines:
-            raise ValueError(f"Problem '{self.name}': Background grid only provides {self._N} points for {self.n_turbines} turbines")
+            raise ValueError(
+                f"Problem '{self.name}': Background grid only provides {self._N} points for {self.n_turbines} turbines"
+            )
 
         self.apply_individual(self.initial_values_int(), self.initial_values_float())
 
@@ -107,7 +117,7 @@ class GeomLayoutGridded(Problem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the int variables
 
         """
@@ -119,7 +129,7 @@ class GeomLayoutGridded(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial int values, shape: (n_vars_int,)
 
         """
@@ -131,7 +141,7 @@ class GeomLayoutGridded(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal int values, shape: (n_vars_int,)
 
         """
@@ -143,11 +153,11 @@ class GeomLayoutGridded(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal int values, shape: (n_vars_int,)
 
         """
-        return np.full(self.n_turbines, self._N-1, dtype=FC.ITYPE)
+        return np.full(self.n_turbines, self._N - 1, dtype=FC.ITYPE)
 
     def apply_individual(self, vars_int, vars_float):
         """
@@ -155,24 +165,24 @@ class GeomLayoutGridded(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
-        """       
+        """
         xy = self._pts[vars_int.astype(FC.ITYPE)]
         __, ui = np.unique(vars_int, return_index=True)
         valid = np.zeros(self.n_turbines, dtype=bool)
         valid[ui] = True
         return xy, valid
-    
+
     def apply_population(self, vars_int, vars_float):
         """
         Apply new variables to the problem,
@@ -180,21 +190,21 @@ class GeomLayoutGridded(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
         """
         n_pop = vars_int.shape[0]
 
-        vint = vars_int.reshape(n_pop*self.n_turbines).astype(FC.ITYPE)
+        vint = vars_int.reshape(n_pop * self.n_turbines).astype(FC.ITYPE)
         xy = self._pts[vint, :].reshape(n_pop, self.n_turbines, 2)
 
         valid = np.zeros((n_pop, self.n_turbines), dtype=bool)
@@ -204,34 +214,36 @@ class GeomLayoutGridded(Problem):
 
         return xy, valid
 
-    def get_fig(self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs):
+    def get_fig(
+        self, xy=None, valid=None, ax=None, title=None, true_circle=True, **bargs
+    ):
         """
         Return plotly figure axis.
 
         Parameters
         ----------
-        xy : numpy.ndarary, optional
+        xy: numpy.ndarary, optional
             The xy coordinate array, shape: (n_points, 2)
-        valid : numpy.ndarray, optional
+        valid: numpy.ndarray, optional
             Boolean array of validity, shape: (n_points,)
-        ax : pyplot.Axis, optional
+        ax: pyplot.Axis, optional
             The figure axis
-        title : str, optional
+        title: str, optional
             The figure title
-        true_circle : bool
+        true_circle: bool
             Draw points as circles with diameter self.D
-        bars : dict, optional
+        bars: dict, optional
             The boundary plot arguments
-        
+
         Returns
         -------
-        ax : pyplot.Axis
+        ax: pyplot.Axis
             The figure axis
 
         """
         if ax is None:
             __, ax = plt.subplots()
-        
+
         hbargs = {"fill_mode": "inside_lightgray"}
         hbargs.update(bargs)
         self.boundary.add_to_figure(ax, **hbargs)
@@ -243,7 +255,9 @@ class GeomLayoutGridded(Problem):
                 ax.scatter(xy[:, 0], xy[:, 1], color="orange")
             else:
                 for x, y in xy:
-                    ax.add_patch(plt.Circle((x, y), self.D/2, color="blue", fill=True))
+                    ax.add_patch(
+                        plt.Circle((x, y), self.D / 2, color="blue", fill=True)
+                    )
 
         ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("x [m]")

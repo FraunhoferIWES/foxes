@@ -17,19 +17,25 @@ class TurbineTypeCurves(Output):
     Creates power and ct curves for turbine
     types, optionally including derating/boost.
 
-    Parameters
-    ----------
-    mbook : foxes.models.ModelBook
-        The model book
-
     Attributes
     ----------
-    mbook : foxes.models.ModelBook
+    mbook: foxes.models.ModelBook
         The model book
+
+    :group: output
 
     """
 
     def __init__(self, mbook):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        mbook: foxes.models.ModelBook
+            The model book
+
+        """
         self.mbook = mbook
 
     def plot_curves(
@@ -55,43 +61,43 @@ class TurbineTypeCurves(Output):
 
         Parameters
         ----------
-        turbine_type : str
+        turbine_type: str
             The turbine type name from the
             model book
-        variables : str or list of str
+        variables: str or list of str
             For example FV.P or FV.CT
-        P_max : float, optional
+        P_max: float, optional
             The power mask value, if of interest
-        titles : list of str, optional
+        titles: list of str, optional
             The plot titles, one for each variable
-        x_label : str, optional
+        x_label: str, optional
             The x axis label
-        y_labels : list of str, optional
+        y_labels: list of str, optional
             The y axis lables, one for each variable
-        ws_min : float
+        ws_min: float
             The minimal wind speed
-        ws_max : float
+        ws_max: float
             The maximal wind speed
-        ws_step : float
+        ws_step: float
             The wind speed step size
-        ti : float
+        ti: float
             The TI value
-        rho : float
+        rho: float
             The air density value
-        axs : list of pyplot.Axis, optional
+        axs: list of pyplot.Axis, optional
             The axis, one for each variable
-        figsize : tuple
+        figsize: tuple
             The figsize argument for plt.subplots()
             in case ax is not provided
-        pmax_args : dict, optional
+        pmax_args: dict, optional
             Additionals parameters for plt.plot()
             for power mask case
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for plt.plot()
 
         Returns
         -------
-        axs : list of pyplot.Axis
+        axs: list of pyplot.Axis
             The plot axes, one for each variable
 
         """
@@ -110,7 +116,7 @@ class TurbineTypeCurves(Output):
         ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=FC.DTYPE)
         n_states = len(ws)
         sdata = pd.DataFrame(index=range(n_states))
-        sdata.index.name = FV.STATE
+        sdata.index.name = FC.STATE
         sdata[FV.WS] = ws
 
         models = [turbine_type]
@@ -132,7 +138,6 @@ class TurbineTypeCurves(Output):
         results = algo.calc_farm()
 
         if P_max is not None:
-
             sname = f"_{type(self).__name__}_set_Pmax"
             self.mbook.turbine_models[sname] = SetFarmVars()
             self.mbook.turbine_models[sname].add_var(FV.MAX_P, P_max)
@@ -151,7 +156,6 @@ class TurbineTypeCurves(Output):
             del self.mbook.turbine_models[sname]
 
         for i, v in enumerate(vars):
-
             ax = axs[i]
             if ax is None:
                 __, ax = plt.subplots(figsize=figsize)

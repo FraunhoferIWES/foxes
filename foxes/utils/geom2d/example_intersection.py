@@ -6,7 +6,6 @@ from .polygon import ClosedPolygon
 from .area_geometry import AreaIntersection
 
 if __name__ == "__main__":
-
     centres = []
     radii = []
     N = 500

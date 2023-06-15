@@ -12,23 +12,29 @@ class FlowPlots2D(Output):
     """
     Class for horizontal or vertical 2D flow plots
 
-    Parameters
-    ----------
-    algo : foxes.Algorithm
-        The algorithm for point calculation
-    farm_results : xarray.Dataset
-        The farm results
-
     Attributes
     ----------
-    algo : foxes.Algorithm
+    algo: foxes.Algorithm
         The algorithm for point calculation
-    farm_results : xarray.Dataset
+    farm_results: xarray.Dataset
         The farm results
+
+    :group: output
 
     """
 
     def __init__(self, algo, farm_results):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        algo: foxes.Algorithm
+            The algorithm for point calculation
+        farm_results: xarray.Dataset
+            The farm results
+
+        """
         self.algo = algo
         self.fres = farm_results
 
@@ -102,10 +108,9 @@ class FlowPlots2D(Output):
         hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
 
-        
-        if invert_axis == 'x':
+        if invert_axis == "x":
             hax.invert_xaxis()
-        elif invert_axis == 'y':
+        elif invert_axis == "y":
             hax.invert_yaxis()
 
         if add_bar:
@@ -164,71 +169,71 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        ylabel : str
+        ylabel: str
             The y axis label
-        z : float
+        z: float
             The z coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_xy : float, optional
+        normalize_xy: float, optional
             Divide x and y by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -303,7 +308,7 @@ class FlowPlots2D(Output):
         if normalize_xy is not None:
             x_pos /= normalize_xy
             y_pos /= normalize_xy
-    
+
         if title is None:
             title = f"States mean, z =  {int(np.round(z_pos))} m"
 
@@ -374,75 +379,75 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        y : float
+        y: float
             The y coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_x : float, optional
+        normalize_x: float, optional
             Divide x by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -604,75 +609,75 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        ylabel : str
+        ylabel: str
             The y axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        x : float
+        x: float
             The x coordinate of the plane
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_y : float, optional
+        normalize_y: float, optional
             Divide y by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -789,7 +794,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
-            invert_axis='x',
+            invert_axis="x",
         )
 
         return out
@@ -831,73 +836,73 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        ylabel : str
+        ylabel: str
             The y axis label
-        z : float
+        z: float
             The z coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_xy : float, optional
+        normalize_xy: float, optional
             Divide x and y by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at each `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -980,8 +985,7 @@ class FlowPlots2D(Output):
             y_pos /= normalize_xy
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", z =  {int(np.round(z_pos))} m"
 
@@ -1018,7 +1022,7 @@ class FlowPlots2D(Output):
         self,
         var,
         resolution,
-        x_direction=270.,
+        x_direction=270.0,
         xmin=None,
         zmin=0.0,
         xmax=None,
@@ -1053,77 +1057,77 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        y : float
+        y: float
             The y coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_x : float, optional
+        normalize_x: float, optional
             Divide x by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at ech `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -1222,8 +1226,7 @@ class FlowPlots2D(Output):
             z_pos /= normalize_z
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", y =  {int(np.round(y_pos))} m"
@@ -1261,7 +1264,7 @@ class FlowPlots2D(Output):
         self,
         var,
         resolution,
-        x_direction=270.,
+        x_direction=270.0,
         ymin=None,
         zmin=0.0,
         ymax=None,
@@ -1296,77 +1299,77 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        ylabel : str
+        ylabel: str
             The y axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        x : float
+        x: float
             The x coordinate of the plane
-        yspace : float
+        yspace: float
             The extra space in y direction, left and right of wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_y : float, optional
+        normalize_y: float, optional
             Divide y by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool, optional
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at ech `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool, optional
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool, optional
             Flag for image return
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
+        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
             The image object
 
         """
@@ -1374,7 +1377,7 @@ class FlowPlots2D(Output):
         # prepare:
         n_states = self.algo.n_states
         n_turbines = self.algo.n_turbines
-        n_x = np.append(wd2uv(x_direction), [0.0], axis=0) ## -180 to get [1,0,0]
+        n_x = np.append(wd2uv(x_direction), [0.0], axis=0)  ## -180 to get [1,0,0]
         n_z = np.array([0.0, 0.0, 1.0])
         n_y = np.cross(n_z, n_x)
 
@@ -1464,8 +1467,7 @@ class FlowPlots2D(Output):
             z_pos /= normalize_z
 
         # loop over states:
-        for si, s in enumerate(self.fres[FV.STATE].to_numpy()):
-
+        for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", x =  {int(np.round(x_pos))} m"
@@ -1495,7 +1497,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv=quiv,
-                invert_axis='x',
+                invert_axis="x",
             )
 
             yield out

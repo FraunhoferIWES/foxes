@@ -22,49 +22,29 @@ class MultiHeightStates(States):
 
     WS-50, WS-60, WS-100, ...
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        Either path to a file or data
-    output_vars : list of str
-        The output variables
-    heights : list of float
-        The heights at which to search data
-    var2col : dict, optional
-        Mapping from variable names to data column names
-    fixed_vars : dict, optional
-        Fixed uniform variable values, instead of
-        reading from data
-    pd_read_pars : dict, optional
-        pandas file reading parameters
-    states_sel : slice or range or list of int, optional
-        States subset selection
-    states_loc : list, optional
-        State index selection via pandas loc function
-    ipars : dict, optional
-        Parameters for scipy.interpolate.interp1d
-
     Attributes
     ----------
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         Either path to a file or data
-    ovars : list of str
+    ovars: list of str
         The output variables
-    heights : list of float
+    heights: list of float
         The heights at which to search data
-    var2col : dict, optional
+    var2col: dict, optional
         Mapping from variable names to data column names
-    fixed_vars : dict, optional
+    fixed_vars: dict, optional
         Fixed uniform variable values, instead of
         reading from data
-    pd_read_pars : dict, optional
+    pd_read_pars: dict, optional
         pandas file reading parameters
-    states_sel : slice or range or list of int
+    states_sel: slice or range or list of int
         States subset selection
-    states_loc : list
+    states_loc: list
         State index selection via pandas loc function
-    RDICT : dict
+    RDICT: dict
         Default pandas file reading parameters
+
+    :group: input.states
 
     """
 
@@ -82,6 +62,32 @@ class MultiHeightStates(States):
         states_loc=None,
         ipars={},
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            Either path to a file or data
+        output_vars: list of str
+            The output variables
+        heights: list of float
+            The heights at which to search data
+        var2col: dict, optional
+            Mapping from variable names to data column names
+        fixed_vars: dict, optional
+            Fixed uniform variable values, instead of
+            reading from data
+        pd_read_pars: dict, optional
+            pandas file reading parameters
+        states_sel: slice or range or list of int, optional
+            States subset selection
+        states_loc: list, optional
+            State index selection via pandas loc function
+        ipars: dict, optional
+            Parameters for scipy.interpolate.interp1d
+
+        """
         super().__init__()
 
         self.data_source = data_source
@@ -105,13 +111,13 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        states_sel : slice or range or list of int, optional
+        states_sel: slice or range or list of int, optional
             States subset selection
-        states_loc : list, optional
+        states_loc: list, optional
             State index selection via pandas loc function
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         if self.initialized:
             if algo is None:
@@ -157,14 +163,14 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -236,14 +242,14 @@ class MultiHeightStates(States):
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
-        dims = (FV.STATE, self.VARS, self.H)
+        dims = (FC.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
             data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
 
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FV.STATE,), d)
+            idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
 
         return idata
 
@@ -265,24 +271,24 @@ class MultiHeightStates(States):
 
         Returns
         -------
-        indices : array_like
+        indices: array_like
             The index labels of states, or None for default integers
 
         """
         return self._inds
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -294,12 +300,12 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -314,24 +320,24 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
         h = mdata[self.H]
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
         n_h = len(h)
         vrs = list(mdata[self.VARS])
 
@@ -388,9 +394,9 @@ class MultiHeightStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """
@@ -404,6 +410,9 @@ class MultiHeightStates(States):
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
+
+    :group: input.states
+
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}

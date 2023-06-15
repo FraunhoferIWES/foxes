@@ -12,33 +12,39 @@ class Streamlines(WakeFrame):
     """
     Streamline following wakes
 
-    Parameters
+    Attributes
     ----------
-    step : float
+    step: float
         The streamline step size in m
-    n_delstor : int
+    n_delstor: int
         The streamline point storage increase
-    max_length : float
+    max_length: float
         The maximal streamline length
-    cl_ipars : dict
+    cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
 
-    Attributes
-    ----------
-    step : float
-        The streamline step size in m
-    n_delstor : int
-        The streamline point storage increase
-    max_length : float
-        The maximal streamline length
-    cl_ipars : dict
-        Interpolation parameters for centre line
-        point interpolation
+    :group: models.wake_frames
 
     """
 
     def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        step: float
+            The streamline step size in m
+        n_delstor: int
+            The streamline point storage increase
+        max_length: float
+            The maximal streamline length
+        cl_ipars: dict
+            Interpolation parameters for centre line
+            point interpolation
+
+        """
         super().__init__()
         self.step = step
         self.n_delstor = n_delstor
@@ -60,14 +66,14 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -79,7 +85,6 @@ class Streamlines(WakeFrame):
         return super().initialize(algo, verbosity)
 
     def _init_data(self, mdata, fdata):
-
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
@@ -118,7 +123,7 @@ class Streamlines(WakeFrame):
                 axis=2,
             )
             mdata[self.DATA] = data
-        
+
         # data aliases:
         spts = data[..., :3]
         sn = data[..., 3:6]
@@ -134,16 +139,13 @@ class Streamlines(WakeFrame):
 
         # calculate next tangential vector:
         svars = algo.states.output_point_vars(algo)
-        pdata = {FV.POINTS: newpts}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata = {FC.POINTS: newpts}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdata.update(
-            {
-                v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-                for v in svars
-            }
+            {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars}
         )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in svars})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
+        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         data[:, :, n_spts, 5] = 0.0
         data[:, :, n_spts, 3:5] = wd2uv(
             algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
@@ -185,9 +187,8 @@ class Streamlines(WakeFrame):
             del hdists
 
         # calc streamline points, as many as needed:
-        maxl = np.nanmax(data[:, :, n_spts-1, 6])
+        maxl = np.nanmax(data[:, :, n_spts - 1, 6])
         while maxl + self.step <= self.max_length and not np.all(done):
-
             # print("CALC STREAMLINES, TODO", np.sum(~done))
 
             # add next streamline point:
@@ -205,7 +206,7 @@ class Streamlines(WakeFrame):
 
             # rotation:
             done = inds < n_spts - 1
-            maxl = np.nanmax(data[:, :, n_spts-1, 6])
+            maxl = np.nanmax(data[:, :, n_spts - 1, 6])
             del newpts
 
         # shrink to size:
@@ -238,12 +239,12 @@ class Streamlines(WakeFrame):
         Helper function, ensures minimal length of streamlines
         """
         data = mdata[self.DATA]
-        slen = data[:, :, mdata[self.CNTR]-1, 6]
+        slen = data[:, :, mdata[self.CNTR] - 1, 6]
         minl = np.nanmin(slen)
         maxl = np.nanmax(slen)
         while maxl + self.step <= self.max_length and minl < length:
             __, data, n_spts = self._add_next_point(algo, mdata, fdata)
-            slen = data[:, :, n_spts-1, 6]
+            slen = data[:, :, n_spts - 1, 6]
             minl = np.nanmin(slen)
             maxl = np.nanmax(slen)
 
@@ -256,16 +257,16 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -296,21 +297,21 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake coordinates, shape: (n_states, n_points, 3)
 
         """
@@ -339,21 +340,21 @@ class Streamlines(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -372,8 +373,8 @@ class Streamlines(WakeFrame):
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
-        qts = qts.reshape(n_states*n_points, 2)
-        ipars = dict(bounds_error=False, fill_value=0.)
+        qts = qts.reshape(n_states * n_points, 2)
+        ipars = dict(bounds_error=False, fill_value=0.0)
         ipars.update(self.cl_ipars)
         results = interpn((np.arange(n_states), xs), spts, qts, **ipars)
 

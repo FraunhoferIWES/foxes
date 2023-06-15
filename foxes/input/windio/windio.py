@@ -11,18 +11,19 @@ from foxes.models.turbine_types import CpCtFromTwo
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 def read_resource(res_yaml, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource
 
     Parameters
     ----------
-    res_yaml : str
+    res_yaml: str
         Path to the yaml file
-    fixed_vars : dict
-        Additional fixes variables that do 
+    fixed_vars: dict
+        Additional fixes variables that do
         not occur in the yaml
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional arguments for StatesTable
 
     Returns
@@ -33,7 +34,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     """
     res_yaml = Path(res_yaml)
 
-    with open(res_yaml, 'r') as file:
+    with open(res_yaml, "r") as file:
         res = yaml.load(file, Loader=yaml.loader.BaseLoader)
     wres = res["wind_resource"]
 
@@ -41,7 +42,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     ws = np.array(wres["wind_speed"], dtype=FC.DTYPE)
     n_wd = len(wd)
     n_ws = len(ws)
-    n = n_wd*n_ws
+    n = n_wd * n_ws
 
     data = np.zeros((n_wd, n_ws, 2), dtype=FC.DTYPE)
     data[:, :, 0] = wd[:, None]
@@ -68,7 +69,9 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             else:
                 raise ValueError(f"Cannot handle dims = {dims} for data '{v}'")
         else:
-            raise ValueError(f"Can not accept more than two dimensions, got {dims} for data '{v}'")
+            raise ValueError(
+                f"Can not accept more than two dimensions, got {dims} for data '{v}'"
+            )
         data = np.append(data, hdata, axis=2)
         names.append(v)
 
@@ -77,7 +80,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
         "wind_speed": FV.WS,
         "turbulence_intensity": FV.TI,
         "air_density": FV.RHO,
-        "probability": FV.WEIGHT
+        "probability": FV.WEIGHT,
     }
 
     for v, d in wres.items():
@@ -85,21 +88,17 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             _to_data(v, d["data"], d["dims"])
 
     n_vars = len(names)
-    data = data.reshape(n, n_vars)    
+    data = data.reshape(n, n_vars)
 
     data = pd.DataFrame(index=range(n), data=data, columns=names)
     data.index.name = "state"
     data.rename(columns=vmap, inplace=True)
-    
+
     ovars = {v: v for v in data.columns if v != FV.WEIGHT}
     ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
 
-    return StatesTable(
-        data,
-        output_vars=ovars,
-        fixed_vars=fixed_vars,
-        **kwargs
-    )
+    return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
+
 
 def read_site(site_yaml, **kwargs):
     """
@@ -107,28 +106,29 @@ def read_site(site_yaml, **kwargs):
 
     Parameters
     ----------
-    site_yaml : str
+    site_yaml: str
         Path to the yaml file
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional arguments for read_resource
 
     Returns
     -------
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
 
     """
     site_yaml = Path(site_yaml)
 
-    with open(site_yaml, 'r') as file:
+    with open(site_yaml, "r") as file:
         site = yaml.load(file, Loader=yaml.loader.BaseLoader)
 
     res_yaml = site["energy_resource"]
     if res_yaml[0] == ".":
-        res_yaml = (site_yaml.parent/res_yaml).resolve()
+        res_yaml = (site_yaml.parent / res_yaml).resolve()
     states = read_resource(res_yaml, **kwargs)
 
     return states
+
 
 def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     """
@@ -136,36 +136,36 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     Parameters
     ----------
-    farm_yaml : str
+    farm_yaml: str
         Path to the yaml file
-    mbook : foxes.ModelBook, optional
+    mbook: foxes.ModelBook, optional
         The model book to start from
-    layout : str or int
+    layout: str or int
         The layout choice
-    turbine_models : list of str
+    turbine_models: list of str
         Additional turbine models
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for add_from_df()
 
     Returns
     -------
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
 
     """
     mbook = ModelBook() if mbook is None else mbook
     farm_yaml = Path(farm_yaml)
 
-    with open(farm_yaml, 'r') as file:
+    with open(farm_yaml, "r") as file:
         fdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
 
     if isinstance(layout, str):
-        layout = fdict['layouts'][layout]
+        layout = fdict["layouts"][layout]
     else:
-        lname = list(fdict['layouts'].keys())[layout]
-        layout = fdict['layouts'][lname]
+        lname = list(fdict["layouts"].keys())[layout]
+        layout = fdict["layouts"][lname]
 
     x = np.array(layout["coordinates"]["x"], dtype=FC.DTYPE)
     y = np.array(layout["coordinates"]["y"], dtype=FC.DTYPE)
@@ -178,11 +178,11 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     if "turbines" in fdict:
         turbines_yaml = fdict["turbines"]
         if turbines_yaml[0] == ".":
-            turbines_yaml = (farm_yaml.parent/turbines_yaml).resolve()
+            turbines_yaml = (farm_yaml.parent / turbines_yaml).resolve()
 
-        with open(turbines_yaml, 'r') as file:
+        with open(turbines_yaml, "r") as file:
             tdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
-        
+
         pdict = tdict["performance"]
 
     else:
@@ -202,8 +202,9 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     D = float(tdict["rotor_diameter"])
     H = float(tdict["hub_height"])
 
-    mbook.turbine_types["windio_turbine"] = CpCtFromTwo(cp_data, ct_data, col_ws_cp_file="ws",
-                                                        col_cp="cp", D=D, H=H)
+    mbook.turbine_types["windio_turbine"] = CpCtFromTwo(
+        cp_data, ct_data, col_ws_cp_file="ws", col_cp="cp", D=D, H=H
+    )
 
     models = ["windio_turbine"] + turbine_models
     farm = WindFarm(name=fdict["name"])
@@ -211,32 +212,34 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     return mbook, farm
 
-def read_anlyses(analyses, mbook, farm, states, keymap={}, 
-                 algo_type="Downwind", **algo_pars):
+
+def read_anlyses(
+    analyses, mbook, farm, states, keymap={}, algo_type="Downwind", **algo_pars
+):
     """
     Reads a WindIO wind farm
 
     Parameters
     ----------
-    analyses : dict
+    analyses: dict
         The analyses sub-dict of the case
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
-    keymap : dict
+    keymap: dict
         Translation from windio to foxes keywords
-    algo_type : str
+    algo_type: str
         The default algorithm class name
-    algo_pars : dict, optional
-        Additional parameters for the algorithm 
+    algo_pars: dict, optional
+        Additional parameters for the algorithm
         constructor
 
     Returns
     -------
-    algo : foxes.core.Algorithm
+    algo: foxes.core.Algorithm
         The algorithm
 
     """
@@ -244,13 +247,9 @@ def read_anlyses(analyses, mbook, farm, states, keymap={},
     wmodels = [keymap.get(wmodel, wmodel)]
 
     return Algorithm.new(
-        algo_type,
-        mbook,
-        farm,
-        states,
-        wake_models=wmodels,
-        **algo_pars
+        algo_type, mbook, farm, states, wake_models=wmodels, **algo_pars
     )
+
 
 def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
     """
@@ -258,51 +257,53 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
 
     Parameters
     ----------
-    case_yaml : str
+    case_yaml: str
         Path to the yaml file
-    site_pars : dict
+    site_pars: dict
         Additional arguments for read_site
-    farm_pars : dict
+    farm_pars: dict
         Additional arguments for read_farm
-    ana_pars : dict
+    ana_pars: dict
         Additional arguments for read_analyses
 
     Returns
     -------
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
-    algo : foxes.core.Algorithm
+    algo: foxes.core.Algorithm
         The algorithm
+
+    :group: input.windio
 
     """
     case_yaml = Path(case_yaml)
 
-    with open(case_yaml, 'r') as file:
+    with open(case_yaml, "r") as file:
         case = yaml.load(file, Loader=yaml.loader.BaseLoader)
-    
+
     site_yaml = case["site"]
     if site_yaml[0] == ".":
-        site_yaml = (case_yaml.parent/site_yaml).resolve()
+        site_yaml = (case_yaml.parent / site_yaml).resolve()
     states = read_site(site_yaml, **site_pars)
 
     farm_yaml = case["wind_farm"]
     if farm_yaml[0] == ".":
-        farm_yaml = (case_yaml.parent/farm_yaml).resolve()
+        farm_yaml = (case_yaml.parent / farm_yaml).resolve()
     mbook, farm = read_farm(farm_yaml, **farm_pars)
 
     attr_dict = case["attributes"]
-    algo = read_anlyses(attr_dict["analyses"], mbook, farm,
-                        states, **ana_pars)
+    algo = read_anlyses(attr_dict["analyses"], mbook, farm, states, **ana_pars)
 
     return mbook, farm, states, algo
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("case_yaml", help="The case yaml file")
     args = parser.parse_args()

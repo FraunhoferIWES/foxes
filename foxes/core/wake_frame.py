@@ -7,6 +7,7 @@ from .model import Model
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -17,6 +18,8 @@ class WakeFrame(Model):
 
     They are also responsible for the calculation of
     the turbine evaluation order.
+
+    :group: core
 
     """
 
@@ -30,16 +33,16 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -52,21 +55,21 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
 
@@ -80,64 +83,66 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
-        
+
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        raise NotImplementedError(f"Wake frame '{self.name}': Centreline points requested but not implemented.")
-    
+        raise NotImplementedError(
+            f"Wake frame '{self.name}': Centreline points requested but not implemented."
+        )
+
     def calc_centreline_integral(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            states_source_turbine,
-            variables,
-            x,
-            dx,
-            **ipars,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        states_source_turbine,
+        variables,
+        x,
+        dx,
+        **ipars,
+    ):
         """
         Integrates variables along the centreline.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        variables : list of str
+        variables: list of str
             The variables to be integrated
-        x : numpy.ndarray
-            The wake frame x coordinates of the upper integral bounds, 
+        x: numpy.ndarray
+            The wake frame x coordinates of the upper integral bounds,
             shape: (n_states, n_points)
-        dx : float
+        dx: float
             The step size of the integral
-        ipars : dict, optional
+        ipars: dict, optional
             Additional interpolation parameters
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The integration results, shape: (n_states, n_points, n_vars)
 
         """
@@ -147,28 +152,27 @@ class WakeFrame(Model):
         n_vars = len(vrs)
 
         # calc evaluation points:
-        xmin = 0.
+        xmin = 0.0
         xmax = np.max(x)
-        n_steps = int((xmax - xmin)/dx)
-        if xmin + n_steps*dx < xmax:
+        n_steps = int((xmax - xmin) / dx)
+        if xmin + n_steps * dx < xmax:
             n_steps += 1
         n_ix = n_steps + 1
-        xs = np.arange(xmin, xmin+n_ix*dx, dx)
+        xs = np.arange(xmin, xmin + n_ix * dx, dx)
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
-        pts = self.get_centreline_points(algo, mdata, fdata, states_source_turbine, xpts)
+        pts = self.get_centreline_points(
+            algo, mdata, fdata, states_source_turbine, xpts
+        )
 
         # run ambient calculation:
-        pdata = {FV.POINTS: pts}
-        pdims = {FV.POINTS: (FV.STATE, FV.POINT, FV.XYH)}
+        pdata = {FC.POINTS: pts}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdata.update(
-            {
-                v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE)
-                for v in vrs
-            }
+            {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
         )
-        pdims.update({v: (FV.STATE, FV.POINT) for v in vrs})
-        pdata = Data(pdata, pdims, loop_dims=[FV.STATE, FV.POINT])
+        pdims.update({v: (FC.STATE, FC.POINT) for v in vrs})
+        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
         amb2var = algo.SetAmbPointResults()
@@ -191,19 +195,25 @@ class WakeFrame(Model):
             res = wcalc.calculate(algo, mdata, fdata, pdata)
             pdata.update(res)
             del wcalc, res
-        
+
         # collect integration results:
         iresults = np.zeros((n_states, n_ix, n_vars), dtype=FC.DTYPE)
         for vi, v in enumerate(variables):
             for i in range(n_steps):
-                iresults[:, i+1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx 
+                iresults[:, i + 1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx
 
         # interpolate to x of interest:
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
-        qts = qts.reshape(n_states*n_points, 2)
-        results = interpn((np.arange(n_states), xs), iresults, qts, bounds_error=False, 
-                            fill_value=0., **ipars)
+        qts = qts.reshape(n_states * n_points, 2)
+        results = interpn(
+            (np.arange(n_states), xs),
+            iresults,
+            qts,
+            bounds_error=False,
+            fill_value=0.0,
+            **ipars,
+        )
 
         return results.reshape(n_states, n_points, n_vars)

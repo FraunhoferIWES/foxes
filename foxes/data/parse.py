@@ -10,13 +10,15 @@ def parse_Pct_file_name(file_name):
 
     Parameters
     ----------
-    file_name : str or pathlib.Path
+    file_name: str or pathlib.Path
         Path to the file
 
     Returns
     -------
-    parsed_data : dict
+    parsed_data: dict
         dict with data parsed from file name
+
+    :group: foxes
 
     """
     sname = Path(file_name).stem
@@ -29,7 +31,7 @@ def parse_Pct_file_name(file_name):
                 f"Illegal use of '.' in '{sname}', please replace by 'd' for float value dots. Parsing stopped."
             )
             return pars
-    
+
     if "-" in sname and "_" in sname:
         warnings.warn(
             f"Illegal file name '{file_name}': Contains both '-' and '_'. Parsing stopped."
@@ -44,7 +46,6 @@ def parse_Pct_file_name(file_name):
     pars["name"] = pieces[0]
     pieces = pieces[1:]
     for p in pieces:
-
         if p[-1] == "W":
             if p[-2] == "k":
                 pars["P_nominal"] = float(p[:-2].replace("d", "."))
@@ -74,15 +75,17 @@ def parse_Pct_two_files(file_name_A, file_name_B):
 
     Parameters
     ----------
-    file_name_A : str or pathlib.Path
+    file_name_A: str or pathlib.Path
         Path to the first file
-    file_name_B : str or pathlib.Path
+    file_name_B: str or pathlib.Path
         Path to the second file
 
     Returns
     -------
-    parsed_data : dict
+    parsed_data: dict
         dict with data parsed from file name
+
+    :group: foxes
 
     """
     pars_A = parse_Pct_file_name(file_name_A)

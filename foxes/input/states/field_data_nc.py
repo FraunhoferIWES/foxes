@@ -17,77 +17,42 @@ class FieldDataNC(States):
     Heterogeneous ambient states on a regular
     horizontal grid in NetCDF format.
 
-    Parameters
-    ----------
-    data_source : str or xarray.Dataset
-        The data or the file search pattern, should end with
-        suffix '.nc'. One or many files.
-    output_vars : list of str
-        The output variables
-    var2ncvar : dict, optional
-        Mapping from variable names to variable names
-        in the nc file
-    fixed_vars : dict, optional
-        Uniform values for output variables, instead
-        of reading from data
-    states_coord : str
-        The states coordinate name in the data
-    x_coord : str
-        The x coordinate name in the data
-    y_coord : str
-        The y coordinate name in the data
-    h_coord : str
-        The height coordinate name in the data
-    pre_load : bool
-        Flag for loading all data into memory during
-        initialization
-    weight_ncvar : str, optional
-        Name of the weight data variable in the nc file(s)
-    bounds_error : bool
-        Flag for raising errors if bounds are exceeded
-    fill_value : number, optional
-        Fill value in case of exceeding bounds, if no bounds error
-    time_format : str
-        The datetime parsing format string
-    sel : dict, optional
-        Subset selection via xr.Dataset.sel()
-    verbosity : int
-        Verbosity level for pre_load file reading
-
     Attributes
     ----------
-    data_source : str or xarray.Dataset
+    data_source: str or xarray.Dataset
         The data or the file search pattern, should end with
         suffix '.nc'. One or many files.
-    ovars : list of str
+    ovars: list of str
         The output variables
-    var2ncvar : dict
+    var2ncvar: dict
         Mapping from variable names to variable names
         in the nc file
-    fixed_vars : dict
+    fixed_vars: dict
         Uniform values for output variables, instead
         of reading from data
-    states_coord : str
+    states_coord: str
         The states coordinate name in the data
-    x_coord : str
+    x_coord: str
         The x coordinate name in the data
-    y_coord : str
+    y_coord: str
         The y coordinate name in the data
-    h_coord : str
+    h_coord: str
         The height coordinate name in the data
-    pre_load : bool
+    pre_load: bool
         Flag for loading all data into memory during
         initialization
-    weight_ncvar : str
+    weight_ncvar: str
         Name of the weight data variable in the nc file(s)
-    bounds_error : bool
+    bounds_error: bool
         Flag for raising errors if bounds are exceeded
-    fill_value : number
+    fill_value: number
         Fill value in case of exceeding bounds, if no bounds error
-    time_format : str
+    time_format: str
         The datetime parsing format string
-    sel : dict
+    sel: dict
         Subset selection via xr.Dataset.sel()
+
+    :group: input.states
 
     """
 
@@ -107,8 +72,49 @@ class FieldDataNC(States):
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
-        verbosity=1
+        verbosity=1,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or xarray.Dataset
+            The data or the file search pattern, should end with
+            suffix '.nc'. One or many files.
+        output_vars: list of str
+            The output variables
+        var2ncvar: dict, optional
+            Mapping from variable names to variable names
+            in the nc file
+        fixed_vars: dict, optional
+            Uniform values for output variables, instead
+            of reading from data
+        states_coord: str
+            The states coordinate name in the data
+        x_coord: str
+            The x coordinate name in the data
+        y_coord: str
+            The y coordinate name in the data
+        h_coord: str
+            The height coordinate name in the data
+        pre_load: bool
+            Flag for loading all data into memory during
+            initialization
+        weight_ncvar: str, optional
+            Name of the weight data variable in the nc file(s)
+        bounds_error: bool
+            Flag for raising errors if bounds are exceeded
+        fill_value: number, optional
+            Fill value in case of exceeding bounds, if no bounds error
+        time_format: str
+            The datetime parsing format string
+        sel: dict, optional
+            Subset selection via xr.Dataset.sel()
+        verbosity: int
+            Verbosity level for pre_load file reading
+
+        """
         super().__init__()
 
         self.data_source = data_source
@@ -135,16 +141,21 @@ class FieldDataNC(States):
 
         # pre-load file reading, usually prior to DaskRunner:
         if not isinstance(self.data_source, xr.Dataset):
-
-            if "*" in self.data_source:
+            if "*" in str(self.data_source):
                 pass
             else:
-                self.data_source = StaticData().get_file_path(STATES, self.data_source, check_raw=True)
+                self.data_source = StaticData().get_file_path(
+                    STATES, self.data_source, check_raw=True
+                )
             if verbosity:
                 if pre_load:
-                    print(f"States '{self.name}': Reading data from '{self.data_source}'")
+                    print(
+                        f"States '{self.name}': Reading data from '{self.data_source}'"
+                    )
                 else:
-                    print(f"States '{self.name}': Reading index from '{self.data_source}'")
+                    print(
+                        f"States '{self.name}': Reading index from '{self.data_source}'"
+                    )
 
             with xr.open_mfdataset(
                 str(self.data_source),
@@ -155,7 +166,6 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                
                 dss = ds if self.sel is None else ds.sel(self.sel)
                 if pre_load:
                     self.data_source = dss.load()
@@ -165,7 +175,7 @@ class FieldDataNC(States):
 
     def _get_inds(self, ds):
         """
-        Helper function for index and weights 
+        Helper function for index and weights
         reading
         """
         for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
@@ -176,9 +186,7 @@ class FieldDataNC(States):
 
         self._inds = ds[self.states_coord].to_numpy()
         if self.time_format is not None:
-            self._inds = pd.to_datetime(
-                self._inds, format=self.time_format
-            ).to_numpy()
+            self._inds = pd.to_datetime(self._inds, format=self.time_format).to_numpy()
         self._N = len(self._inds)
 
         if self.weight_ncvar is not None:
@@ -194,8 +202,8 @@ class FieldDataNC(States):
             elif v not in self.fixed_vars:
                 raise ValueError(
                     f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                )  
-                
+                )
+
     def _get_data(self, ds, verbosity):
         """
         Helper function for data extraction
@@ -268,20 +276,20 @@ class FieldDataNC(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        
+
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars
         ):
@@ -309,7 +317,6 @@ class FieldDataNC(States):
         self._update_idata(algo, idata)
 
         if self.pre_load:
-
             self.X = self.var(FV.X)
             self.Y = self.var(FV.Y)
             self.H = self.var(FV.H)
@@ -322,7 +329,7 @@ class FieldDataNC(States):
             y = ds[self.y_coord].to_numpy()
             x = ds[self.x_coord].to_numpy()
             v = list(self._dkys.keys())
-            coos = (FV.STATE, self.H, self.Y, self.X, self.VARS)
+            coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
             data = self._get_data(ds, verbosity)
             data = (coos, data)
 
@@ -331,7 +338,7 @@ class FieldDataNC(States):
             idata["coords"][self.X] = x
             idata["coords"][self.VARS] = v
             idata["data_vars"][self.DATA] = data
-        
+
         return idata
 
     def size(self):
@@ -352,7 +359,7 @@ class FieldDataNC(States):
 
         Returns
         -------
-        indices : array_like
+        indices: array_like
             The index labels of states, or None for default integers
 
         """
@@ -364,12 +371,12 @@ class FieldDataNC(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -381,12 +388,12 @@ class FieldDataNC(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -401,24 +408,24 @@ class FieldDataNC(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
         # prepare:
-        points = pdata[FV.POINTS]
+        points = pdata[FC.POINTS]
         n_pts = points.shape[1]
         n_states = fdata.n_states
 
@@ -431,7 +438,7 @@ class FieldDataNC(States):
 
         # read data for this chunk:
         else:
-            i0 = np.where(self._inds == mdata[FV.STATE][0])[0][0]
+            i0 = np.where(self._inds == mdata[FC.STATE][0])[0][0]
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
 
@@ -469,7 +476,7 @@ class FieldDataNC(States):
             data = iterp(pts).reshape(n_states, n_pts, self._n_dvars)
         except ValueError as e:
             print(f"\n\nStates '{self.name}': Interpolation error")
-            print("INPUT VARS : (state, heights, y, x)")
+            print("INPUT VARS: (state, heights, y, x)")
             print(
                 "DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars]
             )
@@ -496,4 +503,3 @@ class FieldDataNC(States):
                     )
 
         return out
-

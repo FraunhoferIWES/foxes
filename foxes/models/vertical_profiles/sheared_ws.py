@@ -2,12 +2,16 @@ import numpy as np
 
 from foxes.core import VerticalProfile
 from foxes.utils import abl
-import foxes.constants as FC
 import foxes.variables as FV
 
 
-
 class ShearedProfile(VerticalProfile):
+    """
+    A wind shear profile, based on a shear exponent.
+
+    :group: models.vertical_profiles
+
+    """
 
     def input_vars(self):
         """
@@ -16,11 +20,11 @@ class ShearedProfile(VerticalProfile):
 
         Returns
         -------
-        vars : list of str
+        vars: list of str
             The variable names
+
         """
         return [FV.WS, FV.H, FV.SHEAR]
-
 
     def calculate(self, data, heights):
         """
@@ -28,14 +32,14 @@ class ShearedProfile(VerticalProfile):
 
         Parameters
         ----------
-        data : dict
+        data: dict
             The input data
-        heights : numpy.ndarray
+        heights: numpy.ndarray
             The evaluation heights
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The profile results, same
             shape as heights
 

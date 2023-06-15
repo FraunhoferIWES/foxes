@@ -18,23 +18,29 @@ class PowerMask(TurbineModel):
     so it is wise to use it after calling the
     turbine type model.
 
-    Parameters
-    ----------
-    var_ws_P : str
-        The wind speed variable for power lookup
-    factor_P : float
-        The power unit factor, e.g. 1000 for kW
-
     Attributes
     ----------
-    var_ws_P : str
+    var_ws_P: str
         The wind speed variable for power lookup
-    factor_P : float
+    factor_P: float
         The power unit factor, e.g. 1000 for kW
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, var_ws_P=FV.REWS3, factor_P=1.0e3):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        var_ws_P: str
+            The wind speed variable for power lookup
+        factor_P: float
+            The power unit factor, e.g. 1000 for kW
+
+        """
         super().__init__()
 
         self.var_ws_P = var_ws_P
@@ -46,12 +52,12 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -69,14 +75,14 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -86,15 +92,16 @@ class PowerMask(TurbineModel):
         for t in algo.farm_controller.turbine_types:
             Pnom = FC.DTYPE(t.P_nominal)
             if np.isnan(Pnom):
-                raise ValueError(f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'")
+                raise ValueError(
+                    f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'"
+                )
             self._P_rated.append(Pnom)
         self._P_rated = np.array(self._P_rated, dtype=FC.DTYPE)
-        
+
         return super().initialize(algo, verbosity)
 
     @classmethod
     def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=100):
-
         # select power entries for which this is active:
         P = data[FV.P]
         sel = ~np.isnan(max_P) & (
@@ -102,7 +109,6 @@ class PowerMask(TurbineModel):
             | ((max_P > rated_P) & (P > rated_P - P_lim))
         )
         if np.any(sel):
-
             # apply selection:
             max_P = max_P[sel]
             ws = data[var_ws][sel]
@@ -151,24 +157,24 @@ class PowerMask(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        
+
         # prepare:
         max_P = fdata[FV.MAX_P]
         rated_P = self._P_rated[None, :]

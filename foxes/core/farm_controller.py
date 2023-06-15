@@ -4,39 +4,44 @@ from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
-import foxes.variables as FV
 
 
 class FarmController(FarmDataModel):
     """
     Analyses selected turbine models and handles their call.
 
-    Parameters
-    ----------
-    pars : dict
-        Parameters for the turbine models, stored
-        under their respective name
-
     Attributes
     ----------
-    turbine_types : list of foxes.core.TurbineType
+    turbine_types: list of foxes.core.TurbineType
         The turbine type of each turbine
-    turbine_model_names : list of str
+    turbine_model_names: list of str
         Names of all turbine models found in the farm
-    turbine_model_sels : numpy.ndarray of bool
+    turbine_model_sels: numpy.ndarray of bool
         Selection flags for all turbine models,
         shape: (n_states, n_turbines, n_models)
-    pre_rotor_models : foxes.core.FarmDataModelList
+    pre_rotor_models: foxes.core.FarmDataModelList
         The turbine models with pre-rotor flag
-    post_rotor_models : foxes.core.FarmDataModelList
+    post_rotor_models: foxes.core.FarmDataModelList
         The turbine models without pre-rotor flag
-    pars : dict
+    pars: dict
         Parameters for the turbine models, stored
         under their respecitve name
+
+    :group: core
 
     """
 
     def __init__(self, pars={}):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        pars: dict
+            Parameters for the turbine models, stored
+            under their respective name
+
+        """
         super().__init__()
 
         self.turbine_types = None
@@ -53,13 +58,13 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        model_name : str
+        model_name: str
             Name of the model
-        init_pars : dict
+        init_pars: dict
             Parameters for initialization
-        calc_pars : dict
+        calc_pars: dict
             Parameters for calculation
-        final_pars : dict
+        final_pars: dict
             Parameters for finalization
 
         """
@@ -82,9 +87,7 @@ class FarmController(FarmDataModel):
             news = False
 
             for ti, mlist in enumerate(models):
-
                 if tmis[ti] < len(mlist):
-
                     mname = mnames[ti][tmis[ti]]
                     isnext = True
                     for tj, jnames in enumerate(mnames):
@@ -98,7 +101,6 @@ class FarmController(FarmDataModel):
                             break
 
                     if isnext:
-
                         m = models[ti][tmis[ti]]
                         tmodels.append(m)
 
@@ -138,7 +140,7 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         """
@@ -150,7 +152,6 @@ class FarmController(FarmDataModel):
         for ti, t in enumerate(algo.farm.turbines):
             prer = None
             for mi, mname in enumerate(t.models):
-
                 istype = False
                 if mname in algo.mbook.turbine_types:
                     m = algo.mbook.turbine_types[mname]
@@ -172,7 +173,7 @@ class FarmController(FarmDataModel):
                     raise KeyError(
                         f"Model {mname} not found in model book types or models"
                     )
-                    
+
                 if istype:
                     if self.turbine_types[ti] is None:
                         self.turbine_types[ti] = m
@@ -218,7 +219,7 @@ class FarmController(FarmDataModel):
         Private helper function for gathering model parameters.
         """
         if from_data:
-            s = mdata[FV.TMODEL_SELS]
+            s = mdata[FC.TMODEL_SELS]
         else:
             s = self.turbine_model_sels
         if st_sel is not None:
@@ -245,14 +246,14 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -263,12 +264,12 @@ class FarmController(FarmDataModel):
         self.collect_models(algo)
 
         # done by algo.update_idata
-        #algo.update_idata([self.pre_rotor_models, self.post_rotor_models], 
+        # algo.update_idata([self.pre_rotor_models, self.post_rotor_models],
         #    idata=idata, verbosity=verbosity)
 
-        idata["coords"][FV.TMODELS] = self.turbine_model_names
-        idata["data_vars"][FV.TMODEL_SELS] = (
-            (FV.STATE, FV.TURBINE, FV.TMODELS),
+        idata["coords"][FC.TMODELS] = self.turbine_model_names
+        idata["data_vars"][FC.TMODEL_SELS] = (
+            (FC.STATE, FC.TURBINE, FC.TMODELS),
             self.turbine_model_sels,
         )
 
@@ -280,12 +281,12 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -305,22 +306,22 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pre_rotor : bool
+        pre_rotor: bool
             Flag for running pre-rotor or post-rotor
             models
-        st_sel : numpy.ndarray of bool, optional
+        st_sel: numpy.ndarray of bool, optional
             Selection of states and turbines, shape:
             (n_states, n_turbines). None for all.
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -328,7 +329,7 @@ class FarmController(FarmDataModel):
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
         pars = self.__get_pars(algo, s.models, "calc", mdata, st_sel, from_data=True)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
-        self.turbine_model_sels = mdata[FV.TMODEL_SELS]
+        self.turbine_model_sels = mdata[FC.TMODEL_SELS]
         return res
 
     def finalize(self, algo, verbosity=0):
@@ -337,9 +338,9 @@ class FarmController(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 means silent
 
         """

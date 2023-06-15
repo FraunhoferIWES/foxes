@@ -2,6 +2,8 @@ import numpy as np
 from abc import ABCMeta
 from itertools import count
 
+import foxes.constants as FC
+from .data import Data
 
 class Model(metaclass=ABCMeta):
     """
@@ -9,15 +11,19 @@ class Model(metaclass=ABCMeta):
 
     Attributes
     ----------
-    name : str
+    name: str
         The model name
+
+    :group: core
 
     """
 
     _ids = {}
 
     def __init__(self):
-
+        """
+        Constructor.
+        """
         t = type(self).__name__
         if t not in self._ids:
             self._ids[t] = count(0)
@@ -51,7 +57,7 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        v : str
+        v: str
             The variable name
 
         Returns
@@ -87,21 +93,23 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         if self.initialized:
-            raise ValueError(f"Model '{self.name}': initialize called for already initialized object")
+            raise ValueError(
+                f"Model '{self.name}': initialize called for already initialized object"
+            )
         self.__initialized = True
         return {"coords": {}, "data_vars": {}}
 
@@ -111,14 +119,16 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
         if not self.initialized:
-            raise ValueError(f"Model '{self.name}': Finalization called for uninitialized object")
+            raise ValueError(
+                f"Model '{self.name}': Finalization called for uninitialized object"
+            )
         self.__initialized = False
 
     def get_data(
@@ -136,13 +146,13 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        variable : str
+        variable: str
             The variable, serves as data key
-        data : dict
+        data: dict
             The data source
-        st_sel : numpy.ndarray of bool, optional
+        st_sel: numpy.ndarray of bool, optional
             If given, get the specified state-turbine subset
-        upcast : str, optional
+        upcast: str, optional
             Either 'farm' or 'points', broadcasts potential
             scalar data to numpy.ndarray with dimensions
             (n_states, n_turbines) or (n_states, n_points),
@@ -201,3 +211,36 @@ class Model(metaclass=ABCMeta):
             except TypeError:
                 pass
         return out
+
+    @classmethod
+    def reduce_states(cls, sel_states, objs):
+        """
+        Modifies the given objects by selecting a
+        subset of states.
+        
+        Parameters
+        ----------
+        sel_states: list of int
+            The states selection
+        objs: list of foxes.core.Data
+            The objects, e.g. [mdata, fdata, pdata]
+            
+        Returns
+        -------
+        mobjs: list of foxes.core.Data
+            The modified objects with reduced
+            states dimension
+            
+        """
+        out = []
+        for o in objs:
+            data = {
+                v: d[sel_states] if o.dims[v][0] == FC.STATE else d
+                for v, d in o.items()
+            }
+            out.append(
+                Data(data, o.dims, loop_dims=o.loop_dims, name=o.name)
+            )
+                
+        return out
+    

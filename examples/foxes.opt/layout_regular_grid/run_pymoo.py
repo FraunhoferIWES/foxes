@@ -8,7 +8,6 @@ from foxes.opt.problems.layout import RegularLayoutOptProblem
 from foxes.opt.objectives import MaxFarmPower
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-t",
@@ -71,15 +70,18 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    boundary = foxes.utils.geom2d.Circle([0.0, 0.0], 1000.0) \
-        + foxes.utils.geom2d.ClosedPolygon(np.array(
-    [[0, 0], [0, 1600], [1000, 1800], [900, -200]], dtype=np.float64)) 
+    boundary = foxes.utils.geom2d.Circle(
+        [0.0, 0.0], 1000.0
+    ) + foxes.utils.geom2d.ClosedPolygon(
+        np.array([[0, 0], [0, 1600], [1000, 1800], [900, -200]], dtype=np.float64)
+    )
 
     farm = foxes.WindFarm(boundary=boundary)
-    farm.add_turbine(foxes.Turbine(
-        xy=np.array([0.0, 0.0]),
-        turbine_models=["layout_opt", "kTI_02", ttype.name]
-    ))
+    farm.add_turbine(
+        foxes.Turbine(
+            xy=np.array([0.0, 0.0]), turbine_models=["layout_opt", "kTI_02", ttype.name]
+        )
+    )
 
     states = foxes.input.states.SingleStateStates(
         ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
@@ -103,11 +105,8 @@ if __name__ == "__main__":
         progress_bar=False,
         verbosity=1,
     ) as runner:
-
         problem = RegularLayoutOptProblem(
-            "layout_opt", 
-            algo, min_spacing=args.min_dist,
-            runner=runner
+            "layout_opt", algo, min_spacing=args.min_dist, runner=runner
         )
         problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
@@ -123,7 +122,7 @@ if __name__ == "__main__":
                 seed=None,
             ),
             setup_pars=dict(),
-            term_pars=('n_gen', args.n_gen),
+            term_pars=("n_gen", args.n_gen),
         )
         solver.initialize()
         solver.print_info()

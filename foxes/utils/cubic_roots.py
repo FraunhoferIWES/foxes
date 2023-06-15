@@ -16,22 +16,23 @@ def cubic_roots(a0, a1, a2, a3=None):
 
     Parameters
     ----------
-    a0 : numpy.ndarray
+    a0: numpy.ndarray
         The coefficients a[0]
-    a1 : numpy.ndarray
+    a1: numpy.ndarray
         The coefficients a[1]
-    a2 : numpy.ndarray
+    a2: numpy.ndarray
         The coefficients a[2]
-    a3 : numpy.ndarray
+    a3: numpy.ndarray
         The coefficients a[3], or None for ones
 
     Returns
     -------
-    roots : numpy.ndarray
+    roots: numpy.ndarray
         The real roots of the polynomial,
         shape: (n_a0, 3). If one root only
         the two last columns will be np.nan
 
+    :group: utils
 
     """
 
@@ -53,7 +54,6 @@ def cubic_roots(a0, a1, a2, a3=None):
 
     sel = Q == 0.0
     if np.any(sel):
-
         o = out[sel, 0]
 
         sel2 = R == 0.0
@@ -67,7 +67,6 @@ def cubic_roots(a0, a1, a2, a3=None):
 
     sel = D <= 0.0
     if np.any(sel):
-
         # Three real roots
         theta = np.arccos(R[sel] / np.sqrt(-Q3[sel]))
         sqrt_Q = np.sqrt(-Q[sel])
@@ -100,7 +99,6 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
 
     N = len(a0)
     for n in range(N):
-
         c0 = a0[n]
         c1 = a1[n]
         c2 = a2[n]
@@ -112,7 +110,6 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
         rts = rts[~np.isnan(rts)]
 
         for x in rts:
-
             f = c0 + c1 * x + c2 * x**2 + c3 * x**3
             ok = np.abs(f) <= tol
 
@@ -126,7 +123,6 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
 
 
 if __name__ == "__main__":
-
     N = 100
     a0 = np.random.uniform(-10.0, 10.0, N)
     a1 = np.random.uniform(-10.0, 10.0, N)

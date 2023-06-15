@@ -9,35 +9,47 @@ class JensenWake(TopHatWakeModel):
     """
     The Jensen wake model.
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-
     Attributes
     ----------
-    k : float, optional
+    k: float, optional
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
+    k_var: str
+        The variable name for k
+
+    :group: models.wake_models.wind
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999):
+    def __init__(self, superposition, k=None, ct_max=0.9999, k_var=FV.K):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        k: float, optional
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data.
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.WS: superposition}, ct_max=ct_max)
 
-        setattr(self, FV.K, k)
+        self.k_var = k_var
+        setattr(self, k_var, k)
 
     def __repr__(self):
+        k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"(k={self.k}, sp={self.superpositions[FV.WS]})"
+        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
@@ -48,15 +60,15 @@ class JensenWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
+        n_points: int
             The number of wake evaluation points
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -72,27 +84,27 @@ class JensenWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        r : numpy.ndarray
+        r: numpy.ndarray
             The radial values for each x value, shape:
             (n_states, n_points, n_r_per_x, 2)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
 
         Returns
         -------
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_states, n_points)
 
         """
@@ -100,7 +112,7 @@ class JensenWake(TopHatWakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         R = fdata[FV.D][st_sel][:, None] / 2
-        k = self.get_data(FV.K, fdata, st_sel)
+        k = self.get_data(self.k_var, fdata, st_sel)
 
         if isinstance(k, np.ndarray):
             k = k[:, None]
@@ -115,29 +127,29 @@ class JensenWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_sp_sel,)
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_sp_sel,)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_sp_sel,)
 
         Returns
         -------
-        cl_del : dict
+        cl_del: dict
             The centre line wake deltas. Key: variable name str,
             varlue: numpy.ndarray, shape: (n_sp_sel,)
 

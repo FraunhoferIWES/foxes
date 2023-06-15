@@ -7,6 +7,7 @@ from .geom2d import AreaUnion, ClosedPolygon
 
 try:
     import geopandas as gpd
+
     IMPORT_GPD_OK = True
 except ImportError:
     gpd = None
@@ -14,10 +15,12 @@ except ImportError:
 
 try:
     import utm
+
     IMPORT_UTM_OK = True
 except ImportError:
     utm = None
     IMPORT_UTM_OK = False
+
 
 def check_import_gpd():
     """
@@ -31,6 +34,7 @@ def check_import_gpd():
         print("  conda install -c conda-forge geopandas\n")
         raise ImportError("Failed to import geopandas")
 
+
 def check_import_utm():
     """
     Checks if library import worked,
@@ -43,26 +47,30 @@ def check_import_utm():
         print("  conda install -c conda-forge utm\n")
         raise ImportError("Failed to import utm")
 
+
 def read_shp(fname, **kwargs):
     """
     Read a shape file
 
     Parameters
     ----------
-    fname : str
+    fname: str
         Path to the .shp file
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for geopandas.read_file()
-    
+
     Returns
     -------
-    data : geopandas.GeoDataFrame
+    data: geopandas.GeoDataFrame
         The data frame in WSG84
+
+    :group: utils
 
     """
     check_import_gpd()
-    gpdf=gpd.read_file(fname, **kwargs)
-    return gpdf.to_crs("EPSG:4326") # Convert to WGS84
+    gpdf = gpd.read_file(fname, **kwargs)
+    return gpdf.to_crs("EPSG:4326")  # Convert to WGS84
+
 
 def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
     """
@@ -70,40 +78,43 @@ def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
 
     Parameters
     ----------
-    iname : str
+    iname: str
         Path to the input .shp file
-    oname : str
+    oname: str
         Path to the output .csv file
-    in_kwargs : dict
+    in_kwargs: dict
         Additional parameters for geopandas.read_file()
-    out_kwargs : dict
+    out_kwargs: dict
         Additional parameters for geopandas to_csv()
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 = silent
+
+    :group: utils
 
     """
     if verbosity > 0:
         print("Reading file", ifile)
 
     gpdf = read_shp(ifile, **in_kwargs)
-    
+
     if verbosity > 0:
         print("Writing file", ofile)
-    
+
     gpdf.to_csv(ofile, **out_kwargs)
 
     return gpdf
+
 
 def _extract_poly_coords(geom):
     """
     Helper function for shapefile reading
     """
-    if geom.geom_type == 'Polygon':
+    if geom.geom_type == "Polygon":
         exterior_coords = geom.exterior.coords[:]
         interior_coords = []
         for interior in geom.interiors:
             interior_coords.append(interior.coords[:])
-    elif geom.geom_type == 'MultiPolygon':
+    elif geom.geom_type == "MultiPolygon":
         exterior_coords = []
         interior_coords = []
         for part in geom.geoms:
@@ -111,50 +122,53 @@ def _extract_poly_coords(geom):
             exterior_coords.append(epe)
             interior_coords.append(epi)
     else:
-        raise ValueError('Unhandled geometry type: ' + repr(geom.type))
+        raise ValueError("Unhandled geometry type: " + repr(geom.type))
     return exterior_coords, interior_coords
 
+
 def read_shp_polygons(
-        fname, 
-        names=None, 
-        name_col="Name", 
-        geom_col="geometry",
-        to_utm=True,
-        ret_utm_zone=False,
-        **kwargs
-    ):
+    fname,
+    names=None,
+    name_col="Name",
+    geom_col="geometry",
+    to_utm=True,
+    ret_utm_zone=False,
+    **kwargs,
+):
     """
     Reads the polygon points from a shp file.
 
     Parameters
     ----------
-    fname : str
+    fname: str
         Path to the .shp file
-    names : list: of str, optinal
+    names: list: of str, optinal
         The names of the polygons to be extracted. All by
         default
-    name_col : int
+    name_col: int
         Column that contains the area names
-    geom_col : str
+    geom_col: str
         The geometry column
-    to_utm : bool or str, optional
+    to_utm: bool or str, optional
         Convert to UTM coordinates. If str, then UTM zone
         plus letter, e.g. "32U"
-    ret_utm_zone : bool
+    ret_utm_zone: bool
         Return UTM zone plus letter as str
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for geopandas.read_shp()
 
     Returns
     -------
-    point_dict_exterior : dict
+    point_dict_exterior: dict
         Dict with list of array of points. Key: area name,
         Value: list:np.ndarray, shape of latter: (n_points, 2)
-    point_dict_interior : dict
+    point_dict_interior: dict
         Dict with list of array of points. Key: area name,
         Value: list:np.ndarray, shape of latter: (n_points, 2)
-    utm_zone_str : str, optional
+    utm_zone_str: str, optional
         The utem zone plus letter as str, e.g. "32U"
+
+    :group: utils
 
     """
 
@@ -174,9 +188,11 @@ def read_shp_polygons(
     interior = Dict()
     names = pnames if names is None else names
     for name in names:
-        if name == name:    # exclude nan values 
+        if name == name:  # exclude nan values
             if not name in pnames:
-                raise KeyError(f"Name '{name}' not found in file '{fname}'. Names: {pnames}")
+                raise KeyError(
+                    f"Name '{name}' not found in file '{fname}'. Names: {pnames}"
+                )
 
             a = pdf.loc[pnames.index(name), geom_col]
             epe, epi = _extract_poly_coords(a)
@@ -185,7 +201,11 @@ def read_shp_polygons(
                 nonlocal utmz, utml
                 utm_poly = np.zeros_like(poly)
                 utm_poly[:, 0], utm_poly[:, 1], utmz, utml = utm.from_latlon(
-                    poly[:, 1], poly[:, 0], force_zone_number=utmz, force_zone_letter=utml)
+                    poly[:, 1],
+                    poly[:, 0],
+                    force_zone_number=utmz,
+                    force_zone_letter=utml,
+                )
                 return utm_poly
 
             def _to_numpy(data):
@@ -195,14 +215,15 @@ def read_shp_polygons(
                     out = np.array(data, dtype=FC.DTYPE)
                     return _to_utm(out) if apply_utm else out
                 return [_to_numpy(d) for d in data]
-            
+
             exterior[name] = _to_numpy(epe)
             interior[name] = _to_numpy(epi)
 
     if ret_utm_zone:
         return exterior, interior, f"{utmz}{utml}"
     else:
-        return exterior, interior      
+        return exterior, interior
+
 
 def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
     """
@@ -210,19 +231,21 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
 
     Parameters
     ----------
-    args : tuple, optional
+    args: tuple, optional
         Arguments for read_shp_polygons()
-    ret_utm_zone : bool
+    ret_utm_zone: bool
         Return UTM zone plus letter as str
-    kwargs : dict, optional
+    kwargs: dict, optional
         Keyword arguments for read_shp_polygons()
-    
+
     Returns
     -------
-    geom : foxes.tools.geom2D.AreaGeometry 
+    geom: foxes.tools.geom2D.AreaGeometry
         The geometry object
-    utm_zone_str : str, optional
+    utm_zone_str: str, optional
         The utem zone plus letter as str, e.g. "32U"
+
+    :group: utils
 
     """
 
@@ -243,7 +266,7 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
 
     gext = _create_geom(exint[0])
     gint = _create_geom(exint[1])
-    geom = gext-gint if gint is not None else gext
+    geom = gext - gint if gint is not None else gext
 
     if ret_utm_zone:
         return geom, exint[2]
@@ -252,17 +275,19 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
 
 
 if __name__ == "__main__":
-
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument("shp_file", help="The input .shp file")
     parser.add_argument("-n", "--names", help="Area names", default=None, nargs="+")
-    parser.add_argument("--no_utm", help="switch off conversion to UTM", action="store_true")
+    parser.add_argument(
+        "--no_utm", help="switch off conversion to UTM", action="store_true"
+    )
     args = parser.parse_args()
 
     g = shp2geom2d(args.shp_file, to_utm=not args.no_utm, names=args.names)
 
     import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots()
     g.add_to_figure(ax)
     plt.show()

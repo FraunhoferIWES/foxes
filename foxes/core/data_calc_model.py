@@ -2,10 +2,11 @@ import numpy as np
 import xarray as xr
 from abc import abstractmethod
 from dask.distributed import progress
+from dask.diagnostics import ProgressBar
 
 from .model import Model
 from .data import Data
-import foxes.variables as FV
+from foxes.utils.runners import DaskRunner
 import foxes.constants as FC
 
 
@@ -22,6 +23,8 @@ class DataCalcModel(Model):
     For each individual data chunk the `calculate`
     function is called.
 
+    :group: core
+
     """
 
     @abstractmethod
@@ -34,16 +37,16 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : foxes.core.Data
+        data: tuple of foxes.core.Data
             The input data
-        **parameters : dict, optional
+        parameters: dict, optional
             The calculation parameters
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray
 
@@ -72,7 +75,6 @@ class DataCalcModel(Model):
         # reconstruct original data:
         data = []
         for hvars in dvars:
-
             v2l = {v: lvars.index(v) for v in hvars if v in lvars}
             v2e = {v: evars.index(v) for v in hvars if v in evars}
 
@@ -147,30 +149,32 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : tuple of xarray.Dataset
+        data: tuple of xarray.Dataset
             The input data
         out_vars: list of str
             The calculation output variables
-        loop_dims : array_like of str
+        loop_dims: array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
-        out_core_vars : list of str
+        out_core_vars: list of str
             The core dimensions of the output data, use
-            `FV.VARS` for variables dimension (required)
-        **calc_pars : dict, optional
+            `FC.VARS` for variables dimension (required)
+        calc_pars: dict, optional
             Additional arguments for the `calculate` function
 
         Returns
         -------
-        results : xarray.Dataset
+        results: xarray.Dataset
             The calculation results
 
         """
         # check:
         if not self.initialized:
-            raise ValueError(f"DataCalcModel '{self.name}': run_calculation called for uninitialized model")
+            raise ValueError(
+                f"DataCalcModel '{self.name}': run_calculation called for uninitialized model"
+            )
 
         # prepare:
         loopd = set(loop_dims)
@@ -184,7 +188,6 @@ class DataCalcModel(Model):
         edims = []
         dvars = []
         for ds in data:
-
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
             ldims += [ds[v].dims for v in hvarsl]
@@ -208,16 +211,16 @@ class DataCalcModel(Model):
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
 
         # setup dask options:
-        dargs = dict(output_sizes={FV.VARS: len(out_vars)})
-        if FV.TURBINE in loopd and FV.TURBINE not in ldims.values():
-            dargs["output_sizes"][FV.TURBINE] = algo.n_turbines
-        if FV.VARS not in out_core_vars:
+        dargs = dict(output_sizes={FC.VARS: len(out_vars)})
+        if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
+            dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
+        if FC.VARS not in out_core_vars:
             raise ValueError(
-                f"Model '{self.name}': Expecting '{FV.VARS}' in out_core_vars, got {out_core_vars}"
+                f"Model '{self.name}': Expecting '{FC.VARS}' in out_core_vars, got {out_core_vars}"
             )
 
         # setup arguments for wrapper function:
-        out_dims = loop_dims + list(set(out_core_vars).difference([FV.VARS]))
+        out_dims = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
             algo=algo,
             dvars=dvars,
@@ -246,16 +249,10 @@ class DataCalcModel(Model):
         )
 
         # reorganize results Dataset:
-        results = (
-            results.assign_coords({FV.VARS: out_vars}).to_dataset(dim=FV.VARS).persist()
-        )
+        results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
 
-        # try to show progress bar:
-        if algo.verbosity > 0:
-            try:
-                progress(results)
-            except ValueError:
-                pass
+        if DaskRunner.is_distributed() and len(ProgressBar.active):
+            progress(results.persist())
 
         # update data by calculation results:
         return results.compute()

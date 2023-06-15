@@ -8,23 +8,29 @@ class Thrust2Ct(TurbineModel):
     """
     Calculates ct from thrust force data.
 
-    Parameters
-    ----------
-    thrust_var : str
-        Name of the thrust variable
-    var_ws_ct : str
-        The wind speed variable for ct lookup
-
     Attributes
     ----------
-    thrust_var : str
+    thrust_var: str
         Name of the thrust variable
-    WSCT : str
+    WSCT: str
         The wind speed variable for ct lookup
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, thrust_var=FV.T, var_ws_ct=FV.REWS2):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        thrust_var: str
+            Name of the thrust variable
+        var_ws_ct: str
+            The wind speed variable for ct lookup
+
+        """
         super().__init__()
         self.thrust_var = thrust_var
         self.WSCT = var_ws_ct
@@ -35,12 +41,12 @@ class Thrust2Ct(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -55,19 +61,19 @@ class Thrust2Ct(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

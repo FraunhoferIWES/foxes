@@ -8,6 +8,8 @@ class AreaGeometry(metaclass=ABCMeta):
     """
     Abstract base class for closed 2D geometries.
 
+    :group: utils.geom2d
+
     """
 
     @abstractmethod
@@ -17,7 +19,7 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -30,7 +32,7 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -43,17 +45,17 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -67,12 +69,12 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -91,22 +93,21 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """
         if fill_mode is not None:
-
             if "Nx" in pars_distance or "Ny" in pars_distance:
                 Nx = pars_distance.pop("Nx")
                 Ny = pars_distance.pop("Ny")
@@ -197,7 +198,7 @@ class AreaGeometry(metaclass=ABCMeta):
 
         Returns
         -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
+        inverted: foxes.utils.geom2d.InvertedAreaGeometry
             The inverted geometry
 
         """
@@ -222,14 +223,20 @@ class InvertedAreaGeometry(AreaGeometry):
     """
     Base class for inverted geometries.
 
-    Parameters
-    ----------
-    geometry : geom2d.AreaGeometry
-        The original geometry
+    :group: utils.geom2d
 
     """
 
     def __init__(self, geometry):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        geometry: geom2d.AreaGeometry
+            The original geometry
+
+        """
         self._geometry = geometry
 
     def p_min(self):
@@ -238,7 +245,7 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -263,7 +270,7 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -288,17 +295,17 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -311,12 +318,12 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -335,17 +342,17 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """
@@ -366,7 +373,7 @@ class InvertedAreaGeometry(AreaGeometry):
 
         Returns
         -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
+        inverted: foxes.utils.geom2d.InvertedAreaGeometry
             The inverted geometry
 
         """
@@ -377,19 +384,25 @@ class AreaUnion(AreaGeometry):
     """
     The union of area geometries.
 
-    Parameters
-    ----------
-    geometries : list of geom2d.AreaGeometry
-        The geometries
-
     Attributes
     ----------
-    geometries : list of geom2d.AreaGeometry
+    geometries: list of geom2d.AreaGeometry
         The geometries
+
+    :group: utils.geom2d
 
     """
 
     def __init__(self, geometries):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        geometries: list of geom2d.AreaGeometry
+            The geometries
+
+        """
         self.geometries = geometries
 
     def p_min(self):
@@ -398,7 +411,7 @@ class AreaUnion(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -417,7 +430,7 @@ class AreaUnion(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -436,17 +449,17 @@ class AreaUnion(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -459,7 +472,6 @@ class AreaUnion(AreaGeometry):
         pins = np.zeros(n_pts, dtype=bool)
         nerst = np.zeros((n_pts, 2), dtype=np.float64) if return_nearest else None
         for g in self.geometries:
-
             res = g.points_distance(points, return_nearest)
             ins = g.points_inside(points)
             d = res[0] if return_nearest else res
@@ -497,12 +509,12 @@ class AreaUnion(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -528,17 +540,17 @@ class AreaUnion(AreaGeometry):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """
@@ -566,7 +578,7 @@ class AreaUnion(AreaGeometry):
 
         Returns
         -------
-        inverted : foxes.utils.geom2d.InvertedAreaGeometry
+        inverted: foxes.utils.geom2d.InvertedAreaGeometry
             The inverted geometry
 
         """
@@ -585,14 +597,20 @@ class InvertedAreaUnion(InvertedAreaGeometry):
     """
     Inversion of a union of areas
 
-    Parameters
-    ----------
-    union : geom2d.AreaUnion
-        The original area union geometry
+    :group: utils.geom2d
 
     """
 
     def __init__(self, union):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        union: geom2d.AreaUnion
+            The original area union geometry
+
+        """
         super().__init__(union)
 
     def p_min(self):
@@ -601,7 +619,7 @@ class InvertedAreaUnion(InvertedAreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -629,7 +647,7 @@ class InvertedAreaUnion(InvertedAreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -656,12 +674,18 @@ class AreaIntersection(AreaGeometry):
     """
     The intersection of area geometries.
 
-    Parameters
-    ----------
-    geometries : list of geom2d.AreaGeometry
-        The geometries
+    :group: utils.geom2d
 
     """
 
     def __new__(cls, geometries):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        geometries: list of geom2d.AreaGeometry
+            The geometries
+
+        """
         return AreaUnion([g.inverse() for g in geometries]).inverse()

@@ -10,18 +10,29 @@ class DataBook:
 
     Parameters
     ----------
-    data_book : DataBook, optional
+    data_book: DataBook, optional
         A data book to start from
 
     Attributes
     ----------
-    dbase : dict
+    dbase: dict
         The data base. Key: context str,
         value: dict (file name str to pathlib.Path)
+
+    :group: utils
 
     """
 
     def __init__(self, data_book=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_book: DataBook, optional
+            A data book to start from
+
+        """
         self.dbase = {}
         if data_book is not None:
             for c, d in data_book.items():
@@ -34,11 +45,11 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
-        package : str or package
+        package: str or package
             The package, must contain init file
-        file_sfx : list of str
+        file_sfx: list of str
             File endings to include
 
         """
@@ -75,11 +86,11 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
-        package : str or package
+        package: str or package
             The package, must contain init.py` file
-        file_mane : str
+        file_mane: str
             The file name
 
         """
@@ -100,9 +111,9 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
-        file_paths : list of str
+        file_paths: list of str
             The file paths
 
         """
@@ -124,9 +135,9 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
-        file_path : str
+        file_path: str
             The file path
 
         """
@@ -138,20 +149,20 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
-        file_name : str
+        file_name: str
             The file name
-        check_raw : bool
+        check_raw: bool
             Check if `file_name` exists as given, and in
             that case return the path
-        errors : bool
+        errors: bool
             Flag for raising KeyError, otherwise return None,
             if context of file_name not found
 
         Returns
         -------
-        path : pathlib.Path
+        path: pathlib.Path
             The path
 
         """
@@ -187,12 +198,12 @@ class DataBook:
 
         Parameters
         ----------
-        context : str
+        context: str
             The context
 
         Returns
         -------
-        keys : list of str
+        keys: list of str
             The data keys
 
         """

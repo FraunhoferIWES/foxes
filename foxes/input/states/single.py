@@ -9,41 +9,47 @@ class SingleStateStates(States):
     """
     A single uniform state.
 
-    Parameters
-    ----------
-    ws : float
-        The wind speed
-    wd : float
-        The wind direction
-    ti : float, optional
-        The TI value
-    rho : float, optional
-        The air density
-    profiles : dict, optional
-        Key: output variable name str, Value: str or dict
-        or `foxes.core.VerticalProfile`
-    profdata : dict, optional
-        Additional data for profiles
-
     Attributes
     ----------
-    ws : float
+    ws: float
         The wind speed
-    wd : float
+    wd: float
         The wind direction
-    ti : float
+    ti: float
         The TI value
-    rho : float
+    rho: float
         The air density
-    profdicts : dict
+    profdicts: dict
         Key: output variable name str, Value: str or dict
         or `foxes.core.VerticalProfile`
-    profdata : dict,
+    profdata: dict,
         Additional data for profiles
+
+    :group: input.states
 
     """
 
     def __init__(self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        ws: float
+            The wind speed
+        wd: float
+            The wind direction
+        ti: float, optional
+            The TI value
+        rho: float, optional
+            The air density
+        profiles: dict, optional
+            Key: output variable name str, Value: str or dict
+            or `foxes.core.VerticalProfile`
+        profdata: dict, optional
+            Additional data for profiles
+
+        """
         super().__init__()
         self.ws = ws
         self.wd = wd
@@ -64,14 +70,14 @@ class SingleStateStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -114,12 +120,12 @@ class SingleStateStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -140,12 +146,12 @@ class SingleStateStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -160,18 +166,18 @@ class SingleStateStates(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
@@ -194,9 +200,9 @@ class SingleStateStates(States):
                 (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
             )
 
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
         if len(self._profiles):
-            z = pdata[FV.POINTS][:, :, 2]
+            z = pdata[FC.POINTS][:, :, 2]
             for k, v in self.profdata.items():
                 pdata[k] = v
             for v, p in self._profiles.items():

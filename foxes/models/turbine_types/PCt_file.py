@@ -8,56 +8,33 @@ from foxes.data import PCTCURVE, parse_Pct_file_name
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class PCtFile(TurbineType):
     """
     Calculate power and ct by interpolating
     from power-ct-curve data file (or pandas DataFrame).
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        The file path, static name, or data
-    col_ws : str
-        The wind speed column
-    col_P : str
-        The power column
-    col_ct : str
-        The ct column
-    rho: float, optional
-        The air densitiy for which the data is valid
-        or None for no correction
-    p_ct: float
-        The exponent for yaw dependency of ct
-    p_P: float
-        The exponent for yaw dependency of P
-    var_ws_ct : str
-        The wind speed variable for ct lookup
-    var_ws_P : str
-        The wind speed variable for power lookup
-    pd_file_read_pars : dict
-        Parameters for pandas file reading
-    paramerers : dict, optional
-        Additional parameters for TurbineType class
-
     Attributes
     ----------
-    source : str or pandas.DataFrame
+    source: str or pandas.DataFrame
         The file path, static name, or data
-    col_ws : str
+    col_ws: str
         The wind speed column
-    col_P : str
+    col_P: str
         The power column
-    col_ct : str
+    col_ct: str
         The ct column
     rho: float
         The air densitiy for which the data is valid
         or None for no correction
-    WSCT : str
+    WSCT: str
         The wind speed variable for ct lookup
-    WSP : str
+    WSP: str
         The wind speed variable for power lookup
-    rpars : dict, optional
+    rpars: dict, optional
         Parameters for pandas file reading
+
+    :group: models.turbine_types
 
     """
 
@@ -75,6 +52,36 @@ class PCtFile(TurbineType):
         pd_file_read_pars={},
         **parameters,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            The file path, static name, or data
+        col_ws: str
+            The wind speed column
+        col_P: str
+            The power column
+        col_ct: str
+            The ct column
+        rho: float, optional
+            The air densitiy for which the data is valid
+            or None for no correction
+        p_ct: float
+            The exponent for yaw dependency of ct
+        p_P: float
+            The exponent for yaw dependency of P
+        var_ws_ct: str
+            The wind speed variable for ct lookup
+        var_ws_P: str
+            The wind speed variable for power lookup
+        pd_file_read_pars: dict
+            Parameters for pandas file reading
+        parameters: dict, optional
+            Additional parameters for TurbineType class
+
+        """
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)
             pars.update(parameters)
@@ -100,12 +107,12 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -123,14 +130,14 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -158,7 +165,9 @@ class PCtFile(TurbineType):
         if self.P_nominal is None:
             self.P_nominal = np.max(self.data_P) / FC.P_UNITS[self.P_unit]
             if verbosity > 0:
-                print(f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}")
+                print(
+                    f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
+                )
 
         return super().initialize(algo, verbosity)
 
@@ -171,19 +180,19 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -193,7 +202,6 @@ class PCtFile(TurbineType):
 
         # apply air density correction:
         if self.rho is not None:
-
             # correct wind speed by air density, such
             # that in the partial load region the
             # correct value is reconstructed:
@@ -204,7 +212,6 @@ class PCtFile(TurbineType):
 
         # in yawed case, calc yaw corrected wind speed:
         if FV.YAWM in fdata and (self.p_P is not None or self.p_ct is not None):
-
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:
@@ -240,9 +247,9 @@ class PCtFile(TurbineType):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

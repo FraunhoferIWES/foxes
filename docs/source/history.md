@@ -237,6 +237,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.3.4-alpha
 
+- Installation:
+  - `foxes` now supports Python 3.11
 - Input:
   - New layout input option: `add_from_df`, adding turbines from a pandas DataFrame
   - New interface to [windIO](https://github.com/IEAWindTask37/windIO) case yaml files
@@ -248,5 +250,43 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Introducing `P_UNITS`, used in turbine types and output evaluation
 - States:
   - Bug fixed in `FieldDataNC` with loading multiple files
+- Core:
+  - Improved `DataCalcModel`: Now cleaner treatment of runs with `progress_bar=False`. Also now slimmer for `distributed` scheduler
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.4](https://github.com/FraunhoferIWES/foxes/commits/v0.3.4)
+
+## v0.3.5-alpha
+
+- General:
+  - Moving identifier-type entries from `foxes.variables` to `foxes.constants`
+- Models:
+  - New wake superposition model `ProductSuperposition`, computing factorized wake deltas
+  - New turbine model: `RotorCentreCalc`, calculates data at rotor centre, irrespective of rotor model
+- Bug fixes:
+  - Bug fixed that caused problems when restarting the `SectorManagement` turbine model, e.g. for flow plots
+- Documentation:
+  - Completely new style, fixing issues with incomplete API entries
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
+
+## v0.4.0
+
+- Models:
+  - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
+  - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
+- Utils:
+  - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
+- Examples:
+  - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
+- Optimization:
+  - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
+- Documentation:
+  - Improved API docu, now based on `python-apigen`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)
+
+## v0.4.1
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)

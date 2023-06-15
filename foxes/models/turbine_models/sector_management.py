@@ -4,38 +4,19 @@ import pandas as pd
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class SectorManagement(TurbineModel):
     """
     Changes variables based on variable range conditions.
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        The file path or data
-    range_vars : list of str
-        The variables for which (min, max) ranges
-        are specified in the data
-    target_vars : list of str
-        The variables that change if range variables
-        are within specified ranges
-    col_tinds : str, optional
-        The turbine index column name in the data
-    col_tnames : str, optional
-        The turbine name column name in the data
-    colmap : dict
-        Mapping from expected to existing
-        column names
-    var_periods : dict
-        Periods for periodic variables
-    pd_file_read_pars : dict
-        Parameters for pandas file reading
-
     Attributes
     ----------
-    source : str or pandas.DataFrame
+    source: str or pandas.DataFrame
         The file path or data
+
+    :group: models.turbine_models
 
     """
 
@@ -50,6 +31,32 @@ class SectorManagement(TurbineModel):
         var_periods={FV.WD: 360.0, FV.AMB_WD: 360.0},
         pd_file_read_pars={},
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            The file path or data
+        range_vars: list of str
+            The variables for which (min, max) ranges
+            are specified in the data
+        target_vars: list of str
+            The variables that change if range variables
+            are within specified ranges
+        col_tinds: str, optional
+            The turbine index column name in the data
+        col_tnames: str, optional
+            The turbine name column name in the data
+        colmap: dict
+            Mapping from expected to existing
+            column names
+        var_periods: dict
+            Periods for periodic variables
+        pd_file_read_pars: dict
+            Parameters for pandas file reading
+
+        """
         super().__init__()
 
         self.source = data_source
@@ -64,6 +71,7 @@ class SectorManagement(TurbineModel):
 
         self._rdata = None
         self._tdata = None
+        self._trbs = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -77,14 +85,14 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -97,23 +105,23 @@ class SectorManagement(TurbineModel):
                 print(f"{self.name}: Reading file {self.source}")
             data = PandasFileHelper.read_file(self.source, **self._rpars)
 
-        if self._col_i is not None and self._col_t is None:
-            data.reset_index(inplace=True)
-        elif self._col_i is None and self._col_t is not None:
-            tnames = algo.farm.turbine_names
-            inds = [tnames.index(name) for name in data[self._col_t]]
-            data[FV.TURBINE] = inds
-            self._col_i = FV.TURBINE
-        else:
-            raise KeyError(
-                f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
-            )
-        self._trbs = data[self._col_i].to_numpy()
+        if self._trbs is None:
+            if self._col_i is not None and self._col_t is None:
+                data.reset_index(inplace=True)
+            elif self._col_i is None and self._col_t is not None:
+                tnames = algo.farm.turbine_names
+                inds = [tnames.index(name) for name in data[self._col_t]]
+                data[FC.TURBINE] = inds
+                self._col_i = FC.TURBINE
+            else:
+                raise KeyError(
+                    f"{self.name}: Please either specify 'col_tinds' or 'col_tnames'"
+                )
+            self._trbs = data[self._col_i].to_numpy()
         n_trbs = len(self._trbs)
 
         self._rcols = []
         for v in self._rvars:
-
             col_vmin = f"{v}_min"
             col_vmin = self._colmap.get(col_vmin, col_vmin)
             if col_vmin not in data.columns:
@@ -155,12 +163,12 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -175,19 +183,19 @@ class SectorManagement(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

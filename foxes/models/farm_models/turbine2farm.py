@@ -9,19 +9,25 @@ class Turbine2FarmModel(FarmModel):
     into farm models, simply by selecting
     all turbines.
 
-    Parameters
-    ----------
-    turbine_model : foxes.core.TurbineModel
-        The turbine model
-
     Attributes
     ----------
-    turbine_model : foxes.core.TurbineModel
+    turbine_model: foxes.core.TurbineModel
         The turbine model
+
+    :group: models.farm_models
 
     """
 
     def __init__(self, turbine_model):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        turbine_model: foxes.core.TurbineModel
+            The turbine model
+
+        """
         super().__init__()
         self.turbine_model = turbine_model
 
@@ -40,14 +46,14 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -64,12 +70,12 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -84,18 +90,18 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        **parameters : dict, optional
+        **parameters: dict, optional
             Init parameters forwarded to the turbine model
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -109,9 +115,9 @@ class Turbine2FarmModel(FarmModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

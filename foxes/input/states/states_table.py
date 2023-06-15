@@ -13,49 +13,30 @@ class StatesTable(States):
     """
     States from a `pandas.DataFrame` or a pandas readable file.
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        Either path to a file or data
-    output_vars : list of str
-        The output variables
-    var2col : dict
-        Mapping from variable names to data column names
-    fixed_vars : dict
-        Fixed uniform variable values, instead of
-        reading from data
-    profiles : dict
-        Key: output variable name str, Value: str or dict
-        or `foxes.core.VerticalProfile`
-    pd_read_pars : dict
-        pandas file reading parameters
-    states_sel : slice or range or list of int, optional
-        States subset selection
-    states_loc : list, optional
-        State index selection via pandas loc function
-
     Attributes
     ----------
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         Either path to a file or data
-    ovars : list of str
+    ovars: list of str
         The output variables
-    var2col : dict
+    var2col: dict
         Mapping from variable names to data column names
-    fixed_vars : dict
+    fixed_vars: dict
         Fixed uniform variable values, instead of
         reading from data
-    profdicts : dict
+    profdicts: dict
         Key: output variable name str, Value: str or dict
         or `foxes.core.VerticalProfile`
-    rpars : dict
+    rpars: dict
         pandas file reading parameters
-    states_sel : slice or range or list of int
+    states_sel: slice or range or list of int
         States subset selection
-    states_loc : list
+    states_loc: list
         State index selection via pandas loc function
-    RDICT : dict
+    RDICT: dict
         Default pandas file reading parameters
+
+    :group: input.states
 
     """
 
@@ -72,6 +53,31 @@ class StatesTable(States):
         states_sel=None,
         states_loc=None,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            Either path to a file or data
+        output_vars: list of str
+            The output variables
+        var2col: dict
+            Mapping from variable names to data column names
+        fixed_vars: dict
+            Fixed uniform variable values, instead of
+            reading from data
+        profiles: dict
+            Key: output variable name str, Value: str or dict
+            or `foxes.core.VerticalProfile`
+        pd_read_pars: dict
+            pandas file reading parameters
+        states_sel: slice or range or list of int, optional
+            States subset selection
+        states_loc: list, optional
+            State index selection via pandas loc function
+
+        """
         super().__init__()
 
         self.data_source = data_source
@@ -84,7 +90,9 @@ class StatesTable(States):
         self.states_loc = states_loc
 
         if self.states_loc is not None and self.states_sel is not None:
-            raise ValueError(f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one")
+            raise ValueError(
+                f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one"
+            )
 
         self._weights = None
         self._N = None
@@ -96,13 +104,13 @@ class StatesTable(States):
 
         Parameters
         ----------
-        states_sel : slice or range or list of int, optional
+        states_sel: slice or range or list of int, optional
             States subset selection
-        states_loc : list, optional
+        states_loc: list, optional
             State index selection via pandas loc function
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         if self.initialized:
             if algo is None:
@@ -112,7 +120,7 @@ class StatesTable(States):
             self.finalize(algo, verbosity)
         self.states_sel = states_sel
         self.states_loc = states_loc
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -125,14 +133,14 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -214,11 +222,12 @@ class StatesTable(States):
         idata = super().initialize(algo, verbosity)
         self._update_idata(algo, idata)
         idata["coords"][self.VARS] = self._tvars
-        idata["data_vars"][self.DATA] = ((FV.STATE, self.VARS), data.to_numpy())
+        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
 
-        algo.update_idata(list(self._profiles.values()),
-            idata=idata, verbosity=verbosity)
-            
+        algo.update_idata(
+            list(self._profiles.values()), idata=idata, verbosity=verbosity
+        )
+
         return idata
 
     def size(self):
@@ -239,24 +248,24 @@ class StatesTable(States):
 
         Returns
         -------
-        indices : array_like
+        indices: array_like
             The index labels of states, or None for default integers
 
         """
         return self._inds
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -268,12 +277,12 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights, shape: (n_states, n_turbines)
 
         """
@@ -288,23 +297,23 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        z = pdata[FV.POINTS][:, :, 2]
+        z = pdata[FC.POINTS][:, :, 2]
 
         for i, v in enumerate(self._tvars):
             pdata[v][:] = mdata[self.DATA][:, i, None]
@@ -324,9 +333,9 @@ class StatesTable(States):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """
@@ -340,6 +349,9 @@ class StatesTable(States):
 class Timeseries(StatesTable):
     """
     Timeseries states data.
+
+    :group: input.states
+
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}

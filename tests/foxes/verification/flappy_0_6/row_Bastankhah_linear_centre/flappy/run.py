@@ -8,7 +8,6 @@ import flappy as fl
 from flappy.config.variables import variables as FV
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-o", "--ofile", help="The output file name", default="results.csv.gz"

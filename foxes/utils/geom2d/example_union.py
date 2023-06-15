@@ -6,7 +6,6 @@ from .polygon import ClosedPolygon
 from .area_geometry import AreaUnion
 
 if __name__ == "__main__":
-
     boundary = (
         ClosedPolygon(
             np.array([[0, 0], [0, 1200], [1000, 800], [900, -200]], dtype=np.float64)
