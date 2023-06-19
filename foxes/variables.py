@@ -18,6 +18,11 @@ D = "D"
 :group: foxes.variables
 """
 
+XY = "xy"
+""" The vector (x, y)
+:group: foxes.variables
+"""
+
 XYH = "xyh"
 """ The vector (x, y, height)
 :group: foxes.variables

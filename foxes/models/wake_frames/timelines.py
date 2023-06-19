@@ -65,18 +65,15 @@ class Timelines(WakeFrame):
         idata = super().initialize(algo, verbosity)
         
         if verbosity > 0:
-            print(f"{self.name}: Pre-calculating streamlines")
-            pbar = tqdm(total=algo.n_states)
+            print(f"{self.name}: Pre-calculating ambient wind vectors")
         
         # get and check times:
         times = np.asarray(algo.states.index())
         if not np.issubdtype(times.dtype, np.datetime64):
             raise TypeError(f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}")
-        
-        # set initial coordinates to rotor centres:
-        data = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
-        for ti, t in enumerate(algo.farm.turbines):
-            data[:, ti, :2] = t.xy
+
+        # calculate horizontal wind vector in all states:
+        self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
             
         # prepare mdata:
         mdata = algo.idata_mem[algo.states.name]["data_vars"]
@@ -89,34 +86,18 @@ class Timelines(WakeFrame):
         fdata = Data({}, {}, loop_dims=[FC.STATE])
         
         # prepare pdata:
-        pdata = {v: np.zeros((algo.n_states, algo.n_turbines), dtype=FC.DTYPE) 
+        pdata = {v: np.zeros((algo.n_states, 1), dtype=FC.DTYPE) 
                  for v in algo.states.output_point_vars(algo)}
-        pdata[FC.POINTS] = data
+        pdata[FC.POINTS] = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
         pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
         pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         
-        # calculate streamlines:
-        for si in range(1, algo.n_states):
-            
-            # reduced data by selecting single state:
-            hmdata, hpdata = algo.states.reduce_states([si], [mdata, pdata])
-            hpdata[FC.POINTS][0] = data[si-1, None]
-                    
-            # calculate next point:
-            res = algo.states.calculate(algo, hmdata, fdata, hpdata)
-            uv = wd2uv(res[FV.WD], res[FV.WS])
-            dt = ( times[si] - times[si-1] ).astype('timedelta64[s]').item().total_seconds()
-            data[si, :, :2] = data[si-1, :, :2] + dt * uv[0, :]
-            
-            if verbosity > 0:
-                pbar.update()
-                
-        if verbosity > 0:
-            pbar.close()
-        
-        self.DATA = self.var("data")
-        idata["data_vars"][self.DATA] = ((FC.STATE, FC.TURBINE, FV.XYH), data)
+        # calculate:      
+        res = algo.states.calculate(algo, mdata, fdata, pdata)
+        dt = ( times[1:] - times[:-1] ).astype('timedelta64[s]').astype(FC.ITYPE)
+        self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, :2] * dt[:, None]
+        self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
         
         return idata
 
@@ -218,6 +199,11 @@ class Timelines(WakeFrame):
 
         """
 
+        # DUMMY, TODO:
+        out = np.zeros((mdata.n_states, algo.n_turbines), dtype=FC.ITYPE)
+        out[:] = np.arange(algo.n_turbines)[None, :]
+        return out
+
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
@@ -269,10 +255,60 @@ class Timelines(WakeFrame):
         n_states = mdata.n_states
         n_points = points.shape[1]
         stsel = (np.arange(n_states), states_source_turbine)
-        sxyh = mdata[self.DATA][stsel]
-        wcoos = np.full((n_states, n_points, 3), dtype=FC.DTYPE)
-        print(stsel)
-        print(sxyh)
+        rxyz = fdata[FV.TXYH][stsel]
+        raxis = wd2uv(fdata[FV.WD][stsel])
+        D = fdata[FV.D][stsel]
+
+        wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
+        wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
+        wcoosx = wcoos[:, :, 0]
+
+        i0 = np.argwhere(algo.states.index() == mdata[FC.STATE][0])[0][0]
+        i1 = i0 + mdata.n_states
+        dxy = self._dxy#[:i1]
+
+        trace = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE) # x, y, length
+        trace[:, :, :2] = points[:, :, :2] - rxyz[:, None, :2]
+        done = np.zeros((n_states, n_points), dtype=bool)
+        del rxyz
+
+        steps = 0
+        while not np.all(done):
+
+            trace0 = trace.copy()
+
+            j0 = max(i0-steps, 0)
+            j1 = max(i1-steps, j0)
+            n = j1 - j0
+            if n < 0:
+                break
+
+            si = np.s_[-n:]
+            sj = np.s_[j0:j1]
+            delta = dxy[sj][:, None, :]
+            trace[si][:, :, :2] -= delta
+            trace[si][:, :, 2] += np.linalg.norm(delta, axis=-1)
+
+            steps += 1
+
+        print("HERE", steps)
+        quit()
+
+
+
+        
+        print("HELLP", trace.shape,dxy.shape)
+        quit()
+
+
+        sdist = np.zeros(i0, dtype=FC.DTYPE)
+        for i in range(i0):
+            sdist[i] = np.linalg.norm(np.sum(self._dxy[i:i0], axis=0))
+        sel = sdist < 1e4
+        sdist = sdist[sel]
+        print(self._dxy)
+        quit()
+        print(s, sdist.shape, sdist)
         quit()
         
         
