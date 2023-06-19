@@ -262,18 +262,41 @@ class Timelines(WakeFrame):
         wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
         wcoosx = wcoos[:, :, 0]
+        wcoosy = wcoos[:, :, 1]
 
         i0 = np.argwhere(algo.states.index() == mdata[FC.STATE][0])[0][0]
         i1 = i0 + mdata.n_states
-        dxy = self._dxy#[:i1]
+        dxy = self._dxy[:i1]
 
-        trace = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE) # x, y, length
-        trace[:, :, :2] = points[:, :, :2] - rxyz[:, None, :2]
-        done = np.zeros((n_states, n_points), dtype=bool)
+        trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE) # x, y
+        trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
+        trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE) 
+        trace_si = np.full((n_states, n_points), i0, dtype=FC.ITYPE) 
         del rxyz
+        
+        print("HH",trace_p.shape,raxis.shape)
+        wcoosx[:] = np.einsum('spd,sd->sp', trace_p, raxis)
+        
+        while True:
+            
+            sel = (trace_si >= 0) & np.isnan(wcoosy)
+            if np.any(sel):
+                
+                delta = dxy[trace_si[sel]]
+                trace_p[sel] -= delta
+                trace_l[sel] += np.linalg.norm(delta, axis=-1)
+
+                x0 = wcoosx[sel]
+                x = np.einsum('sd,sd->s', trace_p[sel], raxis[sel])
+                print("HERE")
+                quit()
+                
+            else:
+                break
 
         steps = 0
-        while not np.all(done):
+        
+        while np.all(done):
 
             trace0 = trace.copy()
 
