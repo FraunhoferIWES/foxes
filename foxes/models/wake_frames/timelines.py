@@ -98,6 +98,15 @@ class Timelines(WakeFrame):
         dt = ( times[1:] - times[:-1] ).astype('timedelta64[s]').astype(FC.ITYPE)
         self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, :2] * dt[:, None]
         self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
+
+        """ DEBUG
+        import matplotlib.pyplot as plt
+        xy = np.array([np.sum(self._dxy[:n], axis=0) for n in range(len(self._dxy))])
+        print(xy)
+        plt.plot(xy[:, 0], xy[:, 1])
+        plt.show()
+        quit()
+        """
         
         return idata
 
@@ -256,30 +265,35 @@ class Timelines(WakeFrame):
         n_points = points.shape[1]
         stsel = (np.arange(n_states), states_source_turbine)
         rxyz = fdata[FV.TXYH][stsel]
-        raxis = wd2uv(fdata[FV.WD][stsel])
-        D = fdata[FV.D][stsel]
 
-        wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
-        wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
-        wcoosx = wcoos[:, :, 0]
-        wcoosy = wcoos[:, :, 1]
+        raxis = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        raxis[:] = wd2uv(fdata[FV.WD][stsel])[:, None, :]
+        saxis = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        saxis[:, :, 0] = -raxis[:, :, 1]
+        saxis[:, :, 1] = raxis[:, :, 0]
+
+        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        D[:] = fdata[FV.D][stsel][:, None]
 
         i0 = np.argwhere(algo.states.index() == mdata[FC.STATE][0])[0][0]
         i1 = i0 + mdata.n_states
         dxy = self._dxy[:i1]
 
-        trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE) # x, y
+        trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
         trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE) 
-        trace_si = np.full((n_states, n_points), i0, dtype=FC.ITYPE) 
-        del rxyz
+        trace_si = np.full((n_states, n_points), i1-1, dtype=FC.ITYPE) 
         
-        print("HH",trace_p.shape,raxis.shape)
-        wcoosx[:] = np.einsum('spd,sd->sp', trace_p, raxis)
+        wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
+        wcoosx = wcoos[:, :, 0]
+        wcoosy = wcoos[:, :, 1]
+        wcoos[:, :, 0] = np.einsum('spd,spd->sp', trace_p, raxis)
+        wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
+        del rxyz
         
         while True:
             
-            sel = (trace_si >= 0) & np.isnan(wcoosy)
+            sel = (trace_si >= 0) & np.isnan(wcoos[:, :, 1])
             if np.any(sel):
                 
                 delta = dxy[trace_si[sel]]
@@ -288,33 +302,33 @@ class Timelines(WakeFrame):
 
                 x0 = wcoosx[sel]
                 x = np.einsum('sd,sd->s', trace_p[sel], raxis[sel])
-                print("HERE")
-                quit()
+                y = np.einsum('sd,sd->s', trace_p[sel], saxis[sel])
+
+                seln = (x0 >= 0) & (x <= 0) & (np.abs(y) <= 5*D[sel])
+                if np.any(seln):
+
+                    x[seln] += trace_l[sel][seln]
+                    wcoosx[sel] = x
+
+                    wcy = wcoosy[sel]
+                    wcy[seln] = y[seln]
+                    wcoosy[sel] = wcy
+                    del wcy
+
+                else:
+                    wcoosx[sel] = x
+                
+                trace_si[sel] -= 1
+
+
+                    
+
                 
             else:
                 break
 
-        steps = 0
-        
-        while np.all(done):
-
-            trace0 = trace.copy()
-
-            j0 = max(i0-steps, 0)
-            j1 = max(i1-steps, j0)
-            n = j1 - j0
-            if n < 0:
-                break
-
-            si = np.s_[-n:]
-            sj = np.s_[j0:j1]
-            delta = dxy[sj][:, None, :]
-            trace[si][:, :, :2] -= delta
-            trace[si][:, :, 2] += np.linalg.norm(delta, axis=-1)
-
-            steps += 1
-
-        print("HERE", steps)
+        print("HERE")
+        print(trace_si)
         quit()
 
 
