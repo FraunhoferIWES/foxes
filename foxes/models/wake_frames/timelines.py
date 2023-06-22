@@ -272,12 +272,6 @@ class Timelines(WakeFrame):
         stsel = (np.arange(n_states), states_source_turbine)
         rxyz = fdata[FV.TXYH][stsel]
 
-        raxis = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
-        raxis[:] = wd2uv(fdata[FV.WD][stsel])[:, None, :]
-        saxis = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
-        saxis[:, :, 0] = -raxis[:, :, 1]
-        saxis[:, :, 1] = raxis[:, :, 0]
-
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][stsel][:, None]
 
@@ -322,16 +316,19 @@ class Timelines(WakeFrame):
                 if np.any(seln):
 
                     htrp = trp[seln]
+                    raxis = delta[seln]
+                    raxis = raxis / np.linalg.norm(raxis, axis=-1)[:, None]
+                    saxis = np.concatenate([-raxis[:, 1, None], raxis[:, 0, None]], axis=1)
 
                     wcx = wcoosx[sel]
-                    wcx[seln] = np.einsum('sd,sd->s', htrp, raxis[sel][seln]) + trace_l[sel][seln]
+                    wcx[seln] = np.einsum('sd,sd->s', htrp, raxis) + trace_l[sel][seln]
                     wcoosx[sel] = wcx
-                    del wcx
+                    del wcx, raxis
 
                     wcy = wcoosy[sel]
-                    wcy[seln] = np.einsum('sd,sd->s', htrp, saxis[sel][seln])
+                    wcy[seln] = np.einsum('sd,sd->s', htrp, saxis)
                     wcoosy[sel] = wcy
-                    del wcy
+                    del wcy, saxis
 
                     # DEBUG
                     #ax.scatter(htrp[:,0], htrp[:, 1], color="red", s=5)
@@ -358,7 +355,6 @@ class Timelines(WakeFrame):
         plt.show()
         plt.close()
         """
-        
         
         return wcoos
 
