@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import interpn
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
@@ -15,6 +16,8 @@ class Timelines(WakeFrame):
 
     Attributes
     ----------
+    max_wake_length: float
+        The maximal wake length
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -23,18 +26,21 @@ class Timelines(WakeFrame):
 
     """
 
-    def __init__(self, cl_ipars={}):
+    def __init__(self, max_wake_length=2e4, cl_ipars={}):
         """
         Constructor.
 
         Parameters
         ----------
+        max_wake_length: float
+            The maximal wake length
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
 
         """
         super().__init__()
+        self.max_wake_length = max_wake_length
         self.cl_ipars = cl_ipars
 
     def initialize(self, algo, verbosity=0):
@@ -290,67 +296,71 @@ class Timelines(WakeFrame):
         wcoos[:, :, 0] = np.einsum('spd,spd->sp', trace_p, raxis)
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
         del rxyz
+
         
+        """ DEBUG
+        fig, ax = plt.subplots()
+        ax.scatter(fdata[FV.X][0], fdata[FV.Y][0])
+        """
+
         while True:
             
-            sel = (trace_si >= 0) & np.isnan(wcoos[:, :, 1])
+            sel = (trace_si >= 0) & np.isnan(wcoos[:, :, 1]) & (trace_l < self.max_wake_length)
             if np.any(sel):
                 
                 delta = dxy[trace_si[sel]]
+                dmag = np.linalg.norm(delta, axis=-1)
+
                 trace_p[sel] -= delta
-                trace_l[sel] += np.linalg.norm(delta, axis=-1)
+                trace_l[sel] += dmag
 
                 x0 = wcoosx[sel]
-                x = np.einsum('sd,sd->s', trace_p[sel], raxis[sel])
-                y = np.einsum('sd,sd->s', trace_p[sel], saxis[sel])
+                trp = trace_p[sel]
+                x = np.einsum('sd,sd->s', trp, raxis[sel])
+                dist = np.linalg.norm(trp, axis=-1)
 
-                seln = (x0 >= 0) & (x <= 0) & (np.abs(y) <= 5*D[sel])
+                seln = (dist < dmag+1e-12) & (x0 >= -1e-12) & (x <= 1e-12)
+
                 if np.any(seln):
+
+                    # DEBUG
+                    #ax.scatter(trp[seln][:,0], trp[seln][:, 1], color="red", s=5)
 
                     x[seln] += trace_l[sel][seln]
                     wcoosx[sel] = x
 
                     wcy = wcoosy[sel]
-                    wcy[seln] = y[seln]
+                    wcy[seln] = np.einsum('sd,sd->s', trp[seln], saxis[sel][seln])
                     wcoosy[sel] = wcy
                     del wcy
 
+                    trs = trace_si[sel]
+                    trs[seln] -= 1
+                    trace_si[sel] = trs
+                    del trs
+
                 else:
-                    wcoosx[sel] = x
-                
-                trace_si[sel] -= 1
+                    wcoosx[sel] = x     
+                    trace_si[sel] -= 1
 
+                """ DEBUG
+                ax.scatter(trp[:,0], trp[:, 1], color="black", s=1, alpha=0.3)
+                for pi in range(len(trp)):
+                    if trp[pi,0] > -3000 and trp[pi,0] < 10000 and trp[pi,1] > -3000 and trp[pi,1] < 10000:
+                        ax.add_artist(plt.Circle(trp[pi],dmag[pi], color="gray", clip_on=False, fill=False))
+                """
 
-                    
-
-                
             else:
                 break
 
-        print("HERE")
-        print(trace_si)
-        quit()
-
-
-
-        
-        print("HELLP", trace.shape,dxy.shape)
-        quit()
-
-
-        sdist = np.zeros(i0, dtype=FC.DTYPE)
-        for i in range(i0):
-            sdist[i] = np.linalg.norm(np.sum(self._dxy[i:i0], axis=0))
-        sel = sdist < 1e4
-        sdist = sdist[sel]
-        print(self._dxy)
-        quit()
-        print(s, sdist.shape, sdist)
-        quit()
-        
+        """ DEBUG
+        ax.set_xlim(np.min(fdata[FV.X][0])-3000,np.max(fdata[FV.X][0])+2000)
+        ax.set_ylim(np.min(fdata[FV.Y][0])-3000,np.max(fdata[FV.Y][0])+2000)
+        plt.show()
+        plt.close()
+        """
         
         return wcoos
-
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
