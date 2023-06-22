@@ -287,17 +287,16 @@ class Timelines(WakeFrame):
 
         trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
-        trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE) 
-        trace_si = np.full((n_states, n_points), i1-1, dtype=FC.ITYPE) 
-        
+        trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
+        trace_si = np.full((n_states, n_points), i1-1, dtype=FC.ITYPE)
+
         wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
         wcoosx = wcoos[:, :, 0]
         wcoosy = wcoos[:, :, 1]
-        wcoos[:, :, 0] = np.einsum('spd,spd->sp', trace_p, raxis)
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
         del rxyz
 
-        
         """ DEBUG
         fig, ax = plt.subplots()
         ax.scatter(fdata[FV.X][0], fdata[FV.Y][0])
@@ -305,7 +304,7 @@ class Timelines(WakeFrame):
 
         while True:
             
-            sel = (trace_si >= 0) & np.isnan(wcoos[:, :, 1]) & (trace_l < self.max_wake_length)
+            sel = (trace_si >= 0) & (trace_l < self.max_wake_length)
             if np.any(sel):
                 
                 delta = dxy[trace_si[sel]]
@@ -314,36 +313,36 @@ class Timelines(WakeFrame):
                 trace_p[sel] -= delta
                 trace_l[sel] += dmag
 
-                x0 = wcoosx[sel]
                 trp = trace_p[sel]
-                x = np.einsum('sd,sd->s', trp, raxis[sel])
-                dist = np.linalg.norm(trp, axis=-1)
 
-                seln = (dist < dmag+1e-12) & (x0 >= -1e-12) & (x <= 1e-12)
+                d0 = trace_d[sel]
+                d = np.linalg.norm(trp, axis=-1)
 
+                seln = (d < d0)
                 if np.any(seln):
 
-                    # DEBUG
-                    #ax.scatter(trp[seln][:,0], trp[seln][:, 1], color="red", s=5)
+                    htrp = trp[seln]
 
-                    x[seln] += trace_l[sel][seln]
-                    wcoosx[sel] = x
+                    wcx = wcoosx[sel]
+                    wcx[seln] = np.einsum('sd,sd->s', htrp, raxis[sel][seln]) + trace_l[sel][seln]
+                    wcoosx[sel] = wcx
+                    del wcx
 
                     wcy = wcoosy[sel]
-                    wcy[seln] = np.einsum('sd,sd->s', trp[seln], saxis[sel][seln])
+                    wcy[seln] = np.einsum('sd,sd->s', htrp, saxis[sel][seln])
                     wcoosy[sel] = wcy
                     del wcy
 
-                    trs = trace_si[sel]
-                    trs[seln] -= 1
-                    trace_si[sel] = trs
-                    del trs
+                    # DEBUG
+                    #ax.scatter(htrp[:,0], htrp[:, 1], color="red", s=5)
 
-                else:
-                    wcoosx[sel] = x     
-                    trace_si[sel] -= 1
+                    d0[seln] = d[seln]
+                    trace_d[sel] = d0
+                    del htrp
 
-                """ DEBUG
+                trace_si[sel] -= 1
+
+                """ DEBUG 
                 ax.scatter(trp[:,0], trp[:, 1], color="black", s=1, alpha=0.3)
                 for pi in range(len(trp)):
                     if trp[pi,0] > -3000 and trp[pi,0] < 10000 and trp[pi,1] > -3000 and trp[pi,1] < 10000:
@@ -353,12 +352,13 @@ class Timelines(WakeFrame):
             else:
                 break
 
-        """ DEBUG
+        """ DEBUG 
         ax.set_xlim(np.min(fdata[FV.X][0])-3000,np.max(fdata[FV.X][0])+2000)
         ax.set_ylim(np.min(fdata[FV.Y][0])-3000,np.max(fdata[FV.Y][0])+2000)
         plt.show()
         plt.close()
         """
+        
         
         return wcoos
 
