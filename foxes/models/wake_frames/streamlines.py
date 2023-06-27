@@ -288,7 +288,7 @@ class Streamlines(WakeFrame):
         order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
         for si in range(n_states):
             order[si] = np.lexsort(keys=coosx[si])
-
+        
         return order
 
     def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):

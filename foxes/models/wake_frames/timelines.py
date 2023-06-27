@@ -21,12 +21,15 @@ class Timelines(WakeFrame):
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
+    dt_min: float, optional
+        The delta t value in minutes, 
+        if not from timeseries data
 
     :group: models.wake_frames
 
     """
 
-    def __init__(self, max_wake_length=2e4, cl_ipars={}):
+    def __init__(self, max_wake_length=2e4, cl_ipars={}, dt_min=None):
         """
         Constructor.
 
@@ -37,11 +40,15 @@ class Timelines(WakeFrame):
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
+        dt_min: float, optional
+            The delta t value in minutes, 
+            if not from timeseries data
 
         """
         super().__init__()
         self.max_wake_length = max_wake_length
         self.cl_ipars = cl_ipars
+        self.dt_min = dt_min
 
     def initialize(self, algo, verbosity=0):
         """
@@ -75,8 +82,15 @@ class Timelines(WakeFrame):
         
         # get and check times:
         times = np.asarray(algo.states.index())
-        if not np.issubdtype(times.dtype, np.datetime64):
-            raise TypeError(f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}")
+        if self.dt_min is None:
+            if not np.issubdtype(times.dtype, np.datetime64):
+                raise TypeError(f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}")
+            elif len(times) == 1:
+                raise KeyError(f"{self.name}: Expecting 'dt_min' for single step timeseries")
+            dt = ( times[1:] - times[:-1] ).astype('timedelta64[s]').astype(FC.ITYPE)
+        else:
+            n = max(len(times)-1, 1)
+            dt = np.full(n, self.dt_min*60, dtype='timedelta64[s]').astype(FC.ITYPE)
 
         # calculate horizontal wind vector in all states:
         self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
@@ -98,12 +112,14 @@ class Timelines(WakeFrame):
         pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
         pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
         pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-        
+
         # calculate:      
         res = algo.states.calculate(algo, mdata, fdata, pdata)
-        dt = ( times[1:] - times[:-1] ).astype('timedelta64[s]').astype(FC.ITYPE)
-        self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, :2] * dt[:, None]
-        self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
+        if len(dt) == 1:
+            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, :2] * dt[:, None]
+        else:
+            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, :2] * dt[:, None]
+            self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
 
         """ DEBUG
         import matplotlib.pyplot as plt
@@ -115,81 +131,6 @@ class Timelines(WakeFrame):
         """
         
         return idata
-
-    def _calc_coos(self, algo, mdata, fdata, points, tcase=False):
-        """
-        Helper function, calculates streamline coordinates
-        for given points.
-        """
-
-        # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
-        n_points = points.shape[1]
-        n_spts = int(mdata[self.CNTR])
-        data = mdata[self.DATA]
-        spts = data[..., :3]
-        sn = data[..., 3:6]
-
-        # find minimal distances to existing streamline points:
-        # n_states, n_turbines, n_points, n_spts
-        dists = np.linalg.norm(
-            points[:, None, :, None] - spts[:, :, None, :n_spts], axis=-1
-        )
-        if tcase:
-            for ti in range(n_turbines):
-                dists[:, ti, ti] = 1e20
-        inds = np.argmin(dists, axis=3)
-        dists = np.take_along_axis(dists, inds[:, :, :, None], axis=3)[..., 0]
-        done = inds < n_spts - 1
-
-        # calc streamline points, as many as needed:
-        maxl = np.nanmax(data[:, :, n_spts - 1, 6])
-        while maxl + self.step <= self.max_length and not np.all(done):
-            # print("CALC STREAMLINES, TODO", np.sum(~done))
-
-            # add next streamline point:
-            newpts, data, n_spts = self._add_next_point(algo, mdata, fdata)
-
-            # evaluate distance:
-            d = np.linalg.norm(points[:, None] - newpts[:, :, None], axis=-1)
-            if tcase:
-                for ti in range(n_turbines):
-                    d[:, ti, ti] = 1e20
-            sel = d < dists
-            if np.any(sel):
-                dists[sel] = d[sel]
-                inds[sel] = n_spts - 1
-
-            # rotation:
-            done = inds < n_spts - 1
-            maxl = np.nanmax(data[:, :, n_spts - 1, 6])
-            del newpts
-
-        # shrink to size:
-        mdata[self.DATA] = data[:, :, :n_spts]
-        del data, spts, sn
-
-        # select streamline points:
-        # n_states, n_turbines, n_points, 7
-        data = np.take_along_axis(
-            mdata[self.DATA][:, :, :, None], inds[:, :, None, :, None], axis=2
-        )[:, :, 0]
-        spts = data[..., :3]
-        sn = data[..., 3:6]
-        slen = data[..., 6]
-
-        # calculate coordinates:
-        coos = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
-        delta = points[:, None] - spts
-        nx = sn
-        nz = np.array([0.0, 0.0, 1.0], dtype=FC.DTYPE)[None, None, None, :]
-        ny = np.cross(nz, nx, axis=-1)
-        coos[..., 0] = slen + np.einsum("stpd,stpd->stp", delta, nx)
-        coos[..., 1] = np.einsum("stpd,stpd->stp", delta, ny)
-        coos[..., 2] = delta[..., 2]
-
-        return coos
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -214,24 +155,17 @@ class Timelines(WakeFrame):
 
         """
 
-        # DUMMY, TODO:
-        out = np.zeros((mdata.n_states, algo.n_turbines), dtype=FC.ITYPE)
-        out[:] = np.arange(algo.n_turbines)[None, :]
-        return out
-
         # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
-        sxyh = mdata[self.DATA]
-        
-        print("HERE")
-        print(sxyh)
-        print(sxyh.shape)
-        quit()
-        
+        n_states = fdata.n_states
+        n_turbines = algo.n_turbines
+        points = fdata[FV.TXYH]
+
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
-        coosx = self._calc_coos(algo, mdata, fdata, fdata[FV.TXYH], tcase=True)[..., 0]
+        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
+        for ti in range(n_turbines):
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, 
+                                                  np.full(n_states, ti), points)[..., 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -291,11 +225,6 @@ class Timelines(WakeFrame):
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
         del rxyz
 
-        """ DEBUG
-        fig, ax = plt.subplots()
-        ax.scatter(fdata[FV.X][0], fdata[FV.Y][0])
-        """
-
         while True:
             
             sel = (trace_si >= 0) & (trace_l < self.max_wake_length)
@@ -330,32 +259,15 @@ class Timelines(WakeFrame):
                     wcoosy[sel] = wcy
                     del wcy, saxis
 
-                    # DEBUG
-                    #ax.scatter(htrp[:,0], htrp[:, 1], color="red", s=5)
-
                     d0[seln] = d[seln]
                     trace_d[sel] = d0
                     del htrp
 
                 trace_si[sel] -= 1
 
-                """ DEBUG 
-                ax.scatter(trp[:,0], trp[:, 1], color="black", s=1, alpha=0.3)
-                for pi in range(len(trp)):
-                    if trp[pi,0] > -3000 and trp[pi,0] < 10000 and trp[pi,1] > -3000 and trp[pi,1] < 10000:
-                        ax.add_artist(plt.Circle(trp[pi],dmag[pi], color="gray", clip_on=False, fill=False))
-                """
-
             else:
                 break
 
-        """ DEBUG 
-        ax.set_xlim(np.min(fdata[FV.X][0])-3000,np.max(fdata[FV.X][0])+2000)
-        ax.set_ylim(np.min(fdata[FV.Y][0])-3000,np.max(fdata[FV.Y][0])+2000)
-        plt.show()
-        plt.close()
-        """
-        
         return wcoos
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
@@ -383,24 +295,5 @@ class Timelines(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        # calculate long enough streamlines:
-        xmax = np.max(x)
-        self._ensure_min_length(algo, mdata, fdata, xmax)
 
-        # get streamline points:
-        n_states, n_points = x.shape
-        data = mdata[self.DATA][range(n_states), states_source_turbine]
-        spts = data[:, :, :3]
-        n_spts = spts.shape[1]
-        xs = self.step * np.arange(n_spts)
-
-        # interpolate to x of interest:
-        qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
-        qts[:, :, 0] = np.arange(n_states)[:, None]
-        qts[:, :, 1] = x
-        qts = qts.reshape(n_states * n_points, 2)
-        ipars = dict(bounds_error=False, fill_value=0.0)
-        ipars.update(self.cl_ipars)
-        results = interpn((np.arange(n_states), xs), spts, qts, **ipars)
-
-        return results.reshape(n_states, n_points, 3)
+        raise NotImplementedError
