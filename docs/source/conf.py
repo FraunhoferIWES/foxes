@@ -46,12 +46,12 @@ extensions = [
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
-    # "sphinx.ext.autosummary",
+    #"sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    # "sphinx.ext.napoleon",
+    #"sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    # "sphinx.ext.inheritance_diagram",
+    #"sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
 ]
@@ -63,8 +63,8 @@ intersphinx_mapping = {
 }
 
 # Add any paths that contain templates here, relative to this directory.
-# templates_path = ["_templates"]
-# autosummary_generate = False
+#templates_path = ["_templates"]
+#autosummary_generate = False
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -88,18 +88,18 @@ exclude_patterns = [
     # ipynb checkpoints
     "notebooks/.ipynb_checkpoints/*.ipynb",
     "build/*",
-    # "_templates/*",
+    #"_templates/*",
     # DEBUG
-    # "examples.rst",
-    # "notebooks/*",
-    # "notebooks/layout_opt.ipynb,"
-    # "api.rst"
+    #"examples.rst",
+    #"notebooks/*",
+    #"notebooks/layout_opt.ipynb,"
+    #"api.rst"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-# autosummary_generate = True
+#autosummary_generate = True
 napolean_use_rtype = False
 
 # -- Options for sphinxcontrib.email ------------------------------------------
@@ -200,21 +200,24 @@ html_theme = "sphinx_immaterial"
 html_theme_options = {
     # TOC options
     #'navigation_depth': 2,  # only show 2 levels on left sidebar
-    # "collapse_navigation": False,  # don't allow sidebar to collapse,
+    #"collapse_navigation": False,  # don't allow sidebar to collapse,
     "site_url": "https://fraunhoferiwes.github.io/foxes.docs/index.html",
     "repo_url": "https://github.com/FraunhoferIWES/foxes",
-    "icon": {"repo": "fontawesome/brands/github", "edit": "material/file-edit-outline"},
-    "palette": {"primary": "teal"},
+    "icon": {
+        "repo": "fontawesome/brands/github",
+        "edit": "material/file-edit-outline"
+    },
+    "palette": { "primary": "teal" },
     "toc_title_is_page_title": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+#html_static_path = ["_static"]
 
 # custom.css is inside one of the html_static_path folders (e.g. _static)
-# html_css_files = ["custom.css"]
+#html_css_files = ["custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.

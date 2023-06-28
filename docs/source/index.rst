@@ -36,6 +36,11 @@ Contents
     .. toctree::
         :maxdepth: 2
     
+        citation
+
+    .. toctree::
+        :maxdepth: 2
+    
         installation
 
     .. toctree::
