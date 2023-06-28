@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import WakeModel
-from foxes.utils import uv2wd
+from foxes.utils import uv2wd, wd2wdvec, wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -76,11 +76,39 @@ class RHB(WakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        wake_deltas[FV.WD] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
 
     def contribute_to_wake_deltas(
         self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas):
+        """
+        Calculate the contribution to the wake deltas
+        by this wake model.
+
+        Modifies wake_deltas on the fly.
+
+        Parameters
+        ----------
+        algo : foxes.core.Algorithm
+            The calculation algorithm
+        mdata : foxes.core.Data
+            The model data
+        fdata : foxes.core.Data
+            The farm data
+        states_source_turbine : numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        wake_coos : numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
+        wake_deltas : dict
+            The wake deltas, are being modified on the fly.
+            Key: Variable name str, for which the
+            wake delta applies, values: numpy.ndarray with
+            shape (n_states, n_points, ...). wake_deltas[FV.WS] holds
+            UV data here, not WS.
+
+        """
     
         # get x, y and z
         x = wake_coos[:, :, 0]
@@ -122,7 +150,7 @@ class RHB(WakeModel):
 
         # define rankine half body shape (page 3)
         RHB_shape = np.cos(theta) -(2/m) * np.pi * ws * (r_sph*np.sin(theta))**2
-
+      
         # stagnation point condition
         xs  = -np.sqrt(m / (4 * np.pi * ws)) 
 
@@ -133,31 +161,16 @@ class RHB(WakeModel):
             # apply selection
             xyz = wake_coos[sp_sel] 
             m = m[sp_sel]
+            a = a[sp_sel]
 
             # calc velocity components
             vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
             uv = vel_factor[:, None] * xyz[:, :2]
 
-            # adding wind direction linearly:
-            wake_deltas[FV.WD][sp_sel] += uv2wd(uv, axis=-1)
-
-            wake_deltas[FV.WS][sp_sel] -= np.linalg.norm(uv, axis=-1)
-
-            # adding to wind speed deltas via superposition model
-            """
-            wake_deltas[FV.WS] = self.superp.calc_wakes_plus_wake(
-                algo,
-                mdata,
-                fdata,
-                states_source_turbine,
-                sp_sel,
-                FV.WS,
-                wake_deltas[FV.WS],
-                np.linalg.norm(uv, axis=-1),
-            )
-            """
+            wake_deltas[FV.WS][sp_sel] = uv
             
-        return wake_deltas
+
+        return wake_deltas # wake_deltas[FV.WS] is UV data
 
     def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
         """
@@ -184,11 +197,21 @@ class RHB(WakeModel):
             numpy.ndarray with shape (n_states, n_points) afterwards
 
         """
-        return
-        wake_deltas[FV.WS] = self.superp.calc_final_wake_delta(
-            algo, mdata, fdata, FV.WS, amb_results[FV.WS], wake_deltas[FV.WS]
-        )
 
+        # calc ambient wind vector
+        wind_vec = wd2uv(amb_results[FV.WD], amb_results[FV.WS])
+
+        # add ambient result to wake deltas
+        total_uv = wind_vec + wake_deltas[FV.WS]
+
+        #
+        new_wd = uv2wd(total_uv) 
+        new_ws = np.linalg.norm(total_uv, axis=-1)
+        wake_deltas[FV.WS] = new_ws - amb_results[FV.WS]
+        wake_deltas[FV.WD] = new_wd - amb_results[FV.WD]
+
+        return 
+        
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

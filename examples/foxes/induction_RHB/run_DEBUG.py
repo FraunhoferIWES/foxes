@@ -165,10 +165,19 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=5, xspace=200.0, yspace=200.0,)
+    g = o.gen_states_fig_xy(args.var, resolution=5,levels=25, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
+        quiver_n=4,xspace=120.0, yspace=120.0)
     fig = next(g)
-    plt.show()
     plt.savefig("RHB_horizontal_flow.png")
+    plt.show()
+    
     plt.close(fig)
 
+  # vertical flow plot
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xz(args.var, resolution=2, xspace=200.0, xmin=-100, zmax=200.0, levels=10,
+                             x_direction=np.mod(args.wd, 360.0))
+    fig = next(g)
+    plt.show()
+    #plt.savefig("RHB_vertical_flow.png")
     print()
