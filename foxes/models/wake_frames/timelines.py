@@ -241,7 +241,7 @@ class Timelines(WakeFrame):
                 d0 = trace_d[sel]
                 d = np.linalg.norm(trp, axis=-1)
 
-                seln = (d < d0) & (d < 2*dmag)
+                seln = (d <= d0) & (d <= 2*dmag)
                 if np.any(seln):
 
                     htrp = trp[seln]

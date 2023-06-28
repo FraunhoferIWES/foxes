@@ -39,14 +39,14 @@ if __name__ == "__main__":
         "--chunksize_points",
         help="The maximal chunk size for points",
         type=int,
-        default=8000,
+        default=5000,
     )
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Jensen_linear_k007"],
+        default=["Bastankhah_linear_k004"],
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="timelines")
@@ -137,87 +137,62 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
+        
         time0 = time.time()
         farm_results = runner.run(algo.calc_farm)
         time1 = time.time()
 
-    print("\nCalc time =", time1 - time0, "\n")
+        print("\nCalc time =", time1 - time0, "\n")
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    o.add_capacity(algo)
-    o.add_capacity(algo, ambient=True)
-    o.add_efficiency()
+        o = foxes.output.FarmResultsEval(farm_results)
+        o.add_capacity(algo)
+        o.add_capacity(algo, ambient=True)
+        o.add_efficiency()
 
-    print("\nFarm results:\n")
-    print(farm_results)
+        print("\nFarm results:\n")
+        print(farm_results)
 
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:\n")
-    print(
-        farm_df[
-            [
-                FV.X,
-                FV.Y,
-                FV.WD,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.EFF,
+        # state-turbine results
+        farm_df = farm_results.to_dataframe()
+        print("\nFarm results data:\n")
+        print(
+            farm_df[
+                [
+                    FV.X,
+                    FV.Y,
+                    FV.WD,
+                    FV.AMB_REWS,
+                    FV.REWS,
+                    FV.AMB_TI,
+                    FV.TI,
+                    FV.AMB_P,
+                    FV.P,
+                    FV.EFF,
+                ]
             ]
-        ]
-    )
-    print()
+        )
+        print()
 
-    # results by turbine
-    turbine_results = o.reduce_states(
-        {
-            FV.AMB_P: "mean",
-            FV.P: "mean",
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
-            FV.EFF: "mean",
-        }
-    )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
-        algo=algo, annual=True, ambient=True
-    )
-    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
-    print("\nResults by turbine:\n")
-    print(turbine_results)
+        fig, ax = plt.subplots(figsize=(8, 8))
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        ims = []
+        for fig, im in o.gen_states_fig_xy(
+            FV.WS,
+            resolution=50,
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+            quiver_n=35,
+            xspace=1000,
+            yspace=1000,
+            fig=fig,
+            ax=ax,
+            ret_im=True,
+            animated=True,
+        ):
+            ims.append(im)
 
-    # power results
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
-
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    ims = []
-    for fig, im in o.gen_states_fig_xy(
-        FV.WS,
-        resolution=10,
-        quiver_pars=dict(angles="xy", scale_units="xy", scale=0.022),
-        quiver_n=70,
-        xspace=1000,
-        yspace=1000,
-        fig=fig,
-        ax=ax,
-        ret_im=True,
-        animated=True,
-    ):
-        ims.append(im)
-
-    ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True,
-                                repeat_delay=1000)
-    fpath = "~/ani.mp4"
-    print("Writing file", fpath)
-    ani.save(filename=fpath, writer="ffmpeg")
-    plt.close(fig)
+        ani = animation.ArtistAnimation(fig, ims, interval=200, blit=True,
+                                    repeat_delay=2000)
+    
+        fpath = "ani.gif"
+        print("Writing file", fpath)
+        ani.save(filename=fpath, writer="pillow")

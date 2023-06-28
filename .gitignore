@@ -136,6 +136,7 @@ log.*
 docs/source/_*
 scratch/
 *.swp
+*.gif
 
 # exceptions:
 
