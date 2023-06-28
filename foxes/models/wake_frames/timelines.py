@@ -219,7 +219,7 @@ class Timelines(WakeFrame):
         trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
         trace_si = np.full((n_states, n_points), i1-1, dtype=FC.ITYPE)
 
-        wcoos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
+        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoosx = wcoos[:, :, 0]
         wcoosy = wcoos[:, :, 1]
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
@@ -241,7 +241,7 @@ class Timelines(WakeFrame):
                 d0 = trace_d[sel]
                 d = np.linalg.norm(trp, axis=-1)
 
-                seln = (d < d0)
+                seln = (d < d0) & (d < 2*dmag)
                 if np.any(seln):
 
                     htrp = trp[seln]
