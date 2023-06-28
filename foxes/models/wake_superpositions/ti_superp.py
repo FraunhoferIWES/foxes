@@ -2,7 +2,6 @@ import numpy as np
 
 from foxes.core import WakeSuperposition
 
-
 class TISuperposition(WakeSuperposition):
     """
     A collection of superpositions for TI.

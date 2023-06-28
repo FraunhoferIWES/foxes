@@ -75,6 +75,28 @@ class DistSlicedWakeModel(WakeModel):
 
         return idata
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set()
+        for s in self.superp.values():
+            vrs.update(s.input_farm_vars(algo))
+
+        return list(vrs)
+    
     @abstractmethod
     def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
         """

@@ -69,6 +69,26 @@ class BastankhahWake(GaussianWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set(super().input_farm_vars(algo))
+        vrs.update([FV.CT, FV.D, self.k_var])
+        return list(vrs)
+    
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.

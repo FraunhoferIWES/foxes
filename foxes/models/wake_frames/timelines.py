@@ -264,6 +264,8 @@ class Timelines(WakeFrame):
 
             else:
                 break
+        
+        mdata[FC.POINT_STATES_SELS] = trace_si
 
         return wcoos
 

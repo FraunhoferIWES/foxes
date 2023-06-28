@@ -71,6 +71,10 @@ TMODEL_SELS = "tmodel_sels"
 :group: foxes.constants
 """
 
+POINT_STATES_SELS = "pstates_sels"
+"""Identifier for states per point selections
+:group: foxes.constants
+"""
 
 DTYPE = np.float64
 """ Default data type for floats

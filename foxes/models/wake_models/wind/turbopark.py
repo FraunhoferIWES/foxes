@@ -67,6 +67,26 @@ class TurbOParkWake(GaussianWakeModel):
         s += f"(A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set(super().input_farm_vars(algo))
+        vrs.update([FV.AMB_TI, FV.CT, FV.D])
+        return list(vrs)
+    
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.
@@ -277,6 +297,26 @@ class TurbOParkWakeIX(GaussianWakeModel):
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set(super().input_farm_vars(algo))
+        vrs.update([FV.CT, FV.D, self.ti_var])
+        return list(vrs)
+    
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.

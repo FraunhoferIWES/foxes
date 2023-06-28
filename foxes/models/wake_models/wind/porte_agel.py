@@ -65,6 +65,24 @@ class PorteAgelModel(Model):
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return [FV.REWS, FV.D, FV.CT, FV.PA_ALPHA, FV.PA_BETA]
+    
     @property
     def pars(self):
         """
@@ -379,6 +397,27 @@ class PorteAgelWake(DistSlicedWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set(super().input_farm_vars(algo))
+        vrs.update(self.model.input_farm_vars(algo))
+        vrs.update([self.k_var, FV.YAWM])
+        return list(vrs)
+    
     def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
         """
         Initialize wake delta storage.

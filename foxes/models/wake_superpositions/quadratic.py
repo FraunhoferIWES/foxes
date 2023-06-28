@@ -15,12 +15,14 @@ class QuadraticSuperposition(WakeSuperposition):
     ----------
     scalings: dict or number or str
         The scaling rules
+    svars: list of str
+        The scaling variables
 
     :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scalings):
+    def __init__(self, scalings, svars=None):
         """
         Constructor.
 
@@ -32,10 +34,42 @@ class QuadraticSuperposition(WakeSuperposition):
             - `source_turbine`: Scale by source turbine value of variable
             - `source_turbine_amb`: Scale by source turbine ambient value of variable
             - `source_turbine_<var>`: Scale by source turbine value of variable <var>
+        svars: list of str, optional
+            The scaling variables
 
         """
         super().__init__()
         self.scalings = scalings
+        self.svars = svars
+
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        if self.svars is not None:
+            return self.svars
+        elif isinstance(self.scalings, dict):
+            return list(self.scalings.keys())
+        elif (
+            isinstance(self.scalings, str)
+            and len(self.scalings) > 15
+            and self.scalings[:15] == "source_turbine_"
+        ):
+            return [self.scalings[15:]]
+        else:
+            raise ValueError(f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'")
 
     def initialize(self, algo, verbosity=0):
         """

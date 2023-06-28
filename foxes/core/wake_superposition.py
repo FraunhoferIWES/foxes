@@ -16,6 +16,24 @@ class WakeSuperposition(Model):
 
     """
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return []
+
     @abstractmethod
     def calc_wakes_plus_wake(
         self,

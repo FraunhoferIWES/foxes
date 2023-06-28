@@ -1,9 +1,7 @@
 import numpy as np
-import numbers
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class ProductSuperposition(WakeSuperposition):

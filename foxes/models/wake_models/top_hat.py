@@ -32,6 +32,26 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         super().__init__(superpositions)
         self.ct_max = ct_max
 
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        vrs = set(super().input_farm_vars(algo))
+        vrs.update([FV.CT])
+        return list(vrs)
+    
     @abstractmethod
     def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
         """
