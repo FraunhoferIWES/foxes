@@ -1,22 +1,48 @@
-cff-version: 1.2.0
-title: Farm Optimization and eXtended yield Evaluation Software
-message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
-type: software
+cff-version: "1.2.0"
 authors:
-  - given-names: Jonas
-    family-names: Schmidt
-    email: jonas.schmidt@iwes.fraunhofer.de
-    affiliation: Fraunhofer IWES
-repository-code: 'https://github.com/FraunhoferIWES/foxes'
-url: 'https://fraunhoferiwes.github.io/foxes.docs/index.html'
-abstract: >-
-  The software FOXES is a modular wind farm simulation and
-  wake modelling toolbox which is based on engineering wake
-  models.
-keywords:
-  - Wind farms
-  - Wake modelling
-  - Wind farm optimization
-license: MIT
+- family-names: Schmidt
+  given-names: Jonas
+  orcid: "https://orcid.org/0000-0002-8191-8141"
+- family-names: Vollmer
+  given-names: Lukas
+- family-names: Dörenkämper
+  given-names: Martin
+  orcid: "https://orcid.org/0000-0002-0210-5733"
+- family-names: Stoevesandt
+  given-names: Bernhard
+  orcid: "https://orcid.org/0000-0001-6626-1084"
+contact:
+- family-names: Schmidt
+  given-names: Jonas
+  orcid: "https://orcid.org/0000-0002-8191-8141"
+doi: 10.5281/zenodo.8027929
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Schmidt
+    given-names: Jonas
+    orcid: "https://orcid.org/0000-0002-8191-8141"
+  - family-names: Vollmer
+    given-names: Lukas
+  - family-names: Dörenkämper
+    given-names: Martin
+    orcid: "https://orcid.org/0000-0002-0210-5733"
+  - family-names: Stoevesandt
+    given-names: Bernhard
+    orcid: "https://orcid.org/0000-0001-6626-1084"
+  date-published: 2023-06-28
+  doi: 10.21105/joss.05464
+  issn: 2475-9066
+  issue: 86
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 5464
+  title: "FOXES: Farm Optimization and eXtended yield Evaluation
+    Software"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.05464"
+  volume: 8
+title: "FOXES: Farm Optimization and eXtended yield Evaluation Software"
+
