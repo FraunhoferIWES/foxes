@@ -41,8 +41,8 @@ calculates wind farm results such as power production or wind turbine wake effec
 input data can be a timeseries or statistical data like wind speed histograms, wind roses or any other 
 distribution. Uniform inflow fields are supported as well as horizontal profiles and three dimensional
 flow fields from other sources, for example wind fields from mesoscale weather models or wind
-atlases [@newa]. Typical applications are wind farm optimization, e.g. layout optimization or wake steering;
-wind farm pre and post construction analyses; wake model studies, comparison and validation; 
+atlases [@newa]. Typical applications are wind farm optimization (e.g., layout optimization or wake steering),
+wind farm pre- and post-construction analyses; wake model studies, comparison and validation; 
 and wind farm simulations invoking complex model interactions.
 
 # Statement of need
