@@ -1,6 +1,6 @@
-# foxes example: _timeseries_
+# foxes example: _timelines_
 
-Evaluation of a wind farm for a time series of uniform wind and TI states.
+Shows dynamic wake development for timeseries states input.
 
 ## Check options
 Check options by
