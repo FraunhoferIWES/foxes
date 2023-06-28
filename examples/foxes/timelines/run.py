@@ -82,9 +82,6 @@ if __name__ == "__main__":
         help="The timestep of the input timeseries or data in minutes",
         default=60 * 24 * 365,  # default is one year
     )
-    parser.add_argument(
-        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
-    )
     args = parser.parse_args()
 
     cks = (
@@ -120,8 +117,7 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure())
 
-    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
-    algo = Algo(
+    algo = foxes.algorithms.Iterative2(
         mbook,
         farm,
         states=states,
@@ -173,6 +169,8 @@ if __name__ == "__main__":
         )
         print()
 
+        """
+
         fig, ax = plt.subplots(figsize=(8, 8))
         o = foxes.output.FlowPlots2D(algo, farm_results)
         ims = []
@@ -196,3 +194,5 @@ if __name__ == "__main__":
         fpath = "ani.gif"
         print("Writing file", fpath)
         ani.save(filename=fpath, writer="pillow")
+
+        """

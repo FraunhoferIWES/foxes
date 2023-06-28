@@ -139,6 +139,7 @@ class Model(metaclass=ABCMeta):
         upcast=None,
         data_prio=False,
         accept_none=False,
+        algo=None,
     ):
         """
         Getter for a data entry in either the given
@@ -161,8 +162,19 @@ class Model(metaclass=ABCMeta):
             First search the data source, then the object
         accept_none: bool
             Do not throw an error if data entry is None or np.nan
+        algo: foxes.core.Algorithm, optional
+            The algorithm, for lookup in case of state-point lookup
 
         """
+
+        if (
+            algo is not None 
+            and hasattr(algo, "prev_farm_results")
+            and upcast == "points" 
+            and FC.POINT_STATES_SELS in data
+        ):
+            
+
 
         sources = ("data", "self") if data_prio else ("self", "data")
 
