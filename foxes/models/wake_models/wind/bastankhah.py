@@ -68,28 +68,8 @@ class BastankhahWake(GaussianWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
-
-    def input_farm_vars(self, algo):
-        """
-        The variables which are needed for running
-        the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        input_vars: list of str
-            The input variable names
-
-        """
-        vrs = set(super().input_farm_vars(algo))
-        vrs.update([FV.CT, FV.D, self.k_var])
-        return list(vrs)
     
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -103,8 +83,8 @@ class BastankhahWake(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -113,7 +93,7 @@ class BastankhahWake(GaussianWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
     def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
         """

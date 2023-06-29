@@ -167,15 +167,6 @@ class Model(metaclass=ABCMeta):
 
         """
 
-        if (
-            algo is not None 
-            and hasattr(algo, "prev_farm_results")
-            and upcast == "points" 
-            and FC.POINT_STATES_SELS in data
-        ):
-            
-
-
         sources = ("data", "self") if data_prio else ("self", "data")
 
         out = None

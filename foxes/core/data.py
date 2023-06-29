@@ -95,3 +95,38 @@ class Data(Dict):
             self[FV.X] = self[FV.TXYH][:, :, 0]
             self[FV.Y] = self[FV.TXYH][:, :, 1]
             self[FV.H] = self[FV.TXYH][:, :, 2]
+
+    @classmethod
+    def from_points(
+        cls, 
+        points, 
+        data={}, 
+        dims={},  
+        name="pdata",
+        ):
+        """
+        Create from points
+        
+        Parameters
+        ----------
+        points: np.ndarray
+            The points, shape: (n_states, n_points, 3)
+        data: dict
+            The initial data to be stored
+        dims: dict
+            The dimensions tuples, same or subset
+            of data keys
+        name: str
+            The data container name
+        
+        Returns
+        -------
+        pdata: Data
+            The data object
+
+        """
+        if len(points.shape) != 3 or points.shape[2] != 3:
+            raise ValueError(f"Expecting points shape (n_states, n_points, 3), got {points.shape}")
+        data[FC.POINTS] = points
+        dims[FC.POINTS] = (FC.STATE, FC.POINT, FV.XYH)
+        return Data(data, dims, [FC.STATE, FC.POINT], name)

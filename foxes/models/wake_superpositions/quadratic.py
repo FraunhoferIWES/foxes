@@ -104,6 +104,7 @@ class QuadraticSuperposition(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        pdata,
         states_source_turbine,
         sel_sp,
         variable,
@@ -121,6 +122,8 @@ class QuadraticSuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -207,7 +210,14 @@ class QuadraticSuperposition(WakeSuperposition):
             )
 
     def calc_final_wake_delta(
-        self, algo, mdata, fdata, variable, amb_results, wake_delta
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        variable,
+        amb_results, 
+        wake_delta,
     ):
         """
         Calculate the final wake delta after adding all
@@ -221,6 +231,8 @@ class QuadraticSuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray

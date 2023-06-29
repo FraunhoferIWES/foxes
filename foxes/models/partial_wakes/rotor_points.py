@@ -1,7 +1,6 @@
 import numpy as np
 
-from foxes.core import PartialWakesModel
-import foxes.variables as FV
+from foxes.core import PartialWakesModel, Data
 import foxes.constants as FC
 
 
@@ -53,7 +52,6 @@ class RotorPoints(PartialWakesModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.WPOINTS = self.var("WPOINTS")
 
         idata = super().initialize(algo, verbosity)
         algo.update_idata(algo.rotor_model, idata=idata, verbosity=verbosity)
@@ -101,19 +99,27 @@ class RotorPoints(PartialWakesModel):
         -------
         wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data 
 
         """
-        mdata[self.WPOINTS] = self.get_wake_points(algo, mdata, fdata)
-        n_points = mdata[self.WPOINTS].shape[1]
+        points = self.get_wake_points(algo, mdata, fdata)
+        pdata = Data.from_points(points=points)
 
         wake_deltas = {}
         for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
 
-        return wake_deltas
+        return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -127,6 +133,8 @@ class RotorPoints(PartialWakesModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
@@ -135,18 +143,24 @@ class RotorPoints(PartialWakesModel):
             `new_wake_deltas` function
 
         """
-        points = mdata[self.WPOINTS]
         wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
+            algo, mdata, fdata, pdata, states_source_turbine
         )
 
         for w in self.wake_models:
             w.contribute_to_wake_deltas(
-                algo, mdata, fdata, states_source_turbine, wcoos, wake_deltas
+                algo, mdata, fdata, pdata, states_source_turbine, wcoos, wake_deltas
             )
 
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        wake_deltas, 
+        states_turbine, 
+        update_amb_res=False,
     ):
         """
         Updates the farm data according to the wake
@@ -161,6 +175,8 @@ class RotorPoints(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
@@ -188,7 +204,7 @@ class RotorPoints(PartialWakesModel):
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
 
         for v in wres.keys():
             if v in wake_deltas:

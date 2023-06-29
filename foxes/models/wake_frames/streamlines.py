@@ -291,7 +291,7 @@ class Streamlines(WakeFrame):
         
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
@@ -303,22 +303,24 @@ class Streamlines(WakeFrame):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points: numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
         wake_coos: numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
 
         """
 
         # prepare:
         n_states = mdata.n_states
         stsel = (np.arange(n_states), states_source_turbine)
+        points = pdata[FC.POINTS]
         pid = id(points)
 
         # initialize storage:

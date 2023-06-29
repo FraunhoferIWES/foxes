@@ -64,24 +64,6 @@ class PorteAgelModel(Model):
         self.ct_max = ct_max
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
-
-    def input_farm_vars(self, algo):
-        """
-        The variables which are needed for running
-        the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        input_vars: list of str
-            The input variable names
-
-        """
-        return [FV.REWS, FV.D, FV.CT, FV.PA_ALPHA, FV.PA_BETA]
     
     @property
     def pars(self):
@@ -396,29 +378,8 @@ class PorteAgelWake(DistSlicedWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
-
-    def input_farm_vars(self, algo):
-        """
-        The variables which are needed for running
-        the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        input_vars: list of str
-            The input variable names
-
-        """
-        vrs = set(super().input_farm_vars(algo))
-        vrs.update(self.model.input_farm_vars(algo))
-        vrs.update([self.k_var, FV.YAWM])
-        return list(vrs)
     
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -432,8 +393,8 @@ class PorteAgelWake(DistSlicedWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -442,9 +403,18 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
+    def calc_wakes_spsel_x_yz(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata, 
+        states_source_turbine, 
+        x, 
+        yz,
+        ):
         """
         Calculate wake deltas.
 
@@ -456,6 +426,8 @@ class PorteAgelWake(DistSlicedWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -475,6 +447,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
+        
         # prepare:
         n_states = mdata.n_states
         n_points = x.shape[1]

@@ -166,6 +166,7 @@ class RotorModel(FarmDataModel):
         algo,
         mdata,
         fdata,
+        pdata,
         rpoint_results,
         weights,
         states_turbine=None,
@@ -188,6 +189,8 @@ class RotorModel(FarmDataModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         rpoint_results: dict
             The results at rotor points. Keys: variable str.
             Values: numpy.ndarray, shape if `states_turbine`

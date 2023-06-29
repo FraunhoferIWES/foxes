@@ -148,12 +148,27 @@ class Mapped(PartialWakesModel):
         -------
         wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data 
 
         """
-        return [pw.new_wake_deltas(algo, mdata, fdata) for pw in self._pwakes]
+        wdeltas = []
+        pdatas = []
+        for pw in self._pwakes:
+            w, p = pw.new_wake_deltas(algo, mdata, fdata)
+            wdeltas.append(w)
+            pdatas.append(p)
+
+        return wdeltas, pdatas
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -167,6 +182,8 @@ class Mapped(PartialWakesModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
@@ -177,11 +194,18 @@ class Mapped(PartialWakesModel):
         """
         for pwi, pw in enumerate(self._pwakes):
             pw.contribute_to_wake_deltas(
-                algo, mdata, fdata, states_source_turbine, wake_deltas[pwi]
+                algo, mdata, fdata, pdata[pwi], states_source_turbine, wake_deltas[pwi]
             )
 
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=True
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        wake_deltas, 
+        states_turbine, 
+        update_amb_res=False,
     ):
         """
         Updates the farm data according to the wake
@@ -196,6 +220,8 @@ class Mapped(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
@@ -210,7 +236,8 @@ class Mapped(PartialWakesModel):
         """
         for pwi, pw in enumerate(self._pwakes):
             pw.evaluate_results(
-                algo, mdata, fdata, wake_deltas[pwi], states_turbine, update_amb_res
+                algo, mdata, fdata, pdata[pwi], wake_deltas[pwi], 
+                states_turbine, update_amb_res
             )
 
     def finalize(self, algo, verbosity=0):

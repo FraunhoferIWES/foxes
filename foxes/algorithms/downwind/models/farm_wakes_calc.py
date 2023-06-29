@@ -88,14 +88,13 @@ class FarmWakesCalculation(FarmDataModel):
         n_order = torder.shape[1]
         n_states = mdata.n_states
 
-        wdeltas = self.pwakes.new_wake_deltas(algo, mdata, fdata)
-
+        wdeltas, pdata = self.pwakes.new_wake_deltas(algo, mdata, fdata)
         for oi in range(n_order):
             o = torder[:, oi]
 
             if oi > 0:
                 self.pwakes.evaluate_results(
-                    algo, mdata, fdata, wdeltas, states_turbine=o
+                    algo, mdata, fdata, pdata, wdeltas, states_turbine=o
                 )
 
                 trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
@@ -107,6 +106,6 @@ class FarmWakesCalculation(FarmDataModel):
                 fdata.update(res)
 
             if oi < n_order - 1:
-                self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, o, wdeltas)
+                self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, pdata, o, wdeltas)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
