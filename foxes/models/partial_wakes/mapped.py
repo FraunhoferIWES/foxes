@@ -205,7 +205,6 @@ class Mapped(PartialWakesModel):
         pdata,
         wake_deltas, 
         states_turbine, 
-        update_amb_res=False,
     ):
         """
         Updates the farm data according to the wake
@@ -230,14 +229,12 @@ class Mapped(PartialWakesModel):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res: bool
-            Flag for updating ambient results
 
         """
         for pwi, pw in enumerate(self._pwakes):
             pw.evaluate_results(
                 algo, mdata, fdata, pdata[pwi], wake_deltas[pwi], 
-                states_turbine, update_amb_res
+                states_turbine, update_amb_res=True
             )
 
     def finalize(self, algo, verbosity=0):

@@ -71,14 +71,9 @@ class PartialGrid(PartialDistSlicedWake):
         """
 
         # evaluate grid rotor:
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        n_rpoints = self.grotor.n_rotor_points()
-        n_points = n_turbines * n_rpoints
         wcoos = self.wake_frame.get_wake_coos(
             algo, mdata, fdata, pdata, states_source_turbine
         )
-        del points
 
         # evaluate wake models:
         for w in self.wake_models:

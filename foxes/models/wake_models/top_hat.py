@@ -34,14 +34,14 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     
     @abstractmethod
     def calc_wake_radius(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata,
-        states_source_turbine, 
-        x, 
-        ct,
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata,
+            states_source_turbine, 
+            x, 
+            ct,
         ):
         """
         Calculate the wake radius, depending on x only (not r).
@@ -78,17 +78,17 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     @abstractmethod
     def calc_centreline_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata,
-        states_source_turbine, 
-        sp_sel, 
-        x, 
-        wake_r, 
-        ct,
-    ):
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata,
+            states_source_turbine, 
+            sp_sel, 
+            x, 
+            wake_r, 
+            ct,
+        ):
         """
         Calculate centre line results of wake deltas.
 
@@ -126,14 +126,14 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         pass
 
     def calc_wakes_spsel_x_r(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata,
-        states_source_turbine, 
-        x, 
-        r,
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata,
+            states_source_turbine, 
+            x, 
+            r,
         ):
         """
         Calculate wake deltas.

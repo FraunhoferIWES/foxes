@@ -77,14 +77,14 @@ class DistSlicedWakeModel(WakeModel):
     
     @abstractmethod
     def calc_wakes_spsel_x_yz(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata, 
-        states_source_turbine, 
-        x, 
-        yz,
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata, 
+            states_source_turbine, 
+            x, 
+            yz,
         ):
         """
         Calculate wake deltas.

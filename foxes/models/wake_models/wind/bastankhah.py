@@ -92,10 +92,17 @@ class BastankhahWake(GaussianWakeModel):
             shape (n_states, n_points, ...)
 
         """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((mdata.n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
+    def calc_amplitude_sigma_spsel(
+            self,
+            algo, 
+            mdata, 
+            fdata, 
+            pdata,
+            states_source_turbine, 
+            x,
+        ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -108,6 +115,8 @@ class BastankhahWake(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -124,9 +133,10 @@ class BastankhahWake(GaussianWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
+        
         # prepare:
         n_states = mdata.n_states
-        n_points = x.shape[1]
+        n_points = pdata.n_points
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:

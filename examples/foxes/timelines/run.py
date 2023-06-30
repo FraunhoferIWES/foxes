@@ -169,8 +169,6 @@ if __name__ == "__main__":
         )
         print()
 
-        """
-
         fig, ax = plt.subplots(figsize=(8, 8))
         o = foxes.output.FlowPlots2D(algo, farm_results)
         ims = []
@@ -195,4 +193,3 @@ if __name__ == "__main__":
         print("Writing file", fpath)
         ani.save(filename=fpath, writer="pillow")
 
-        """

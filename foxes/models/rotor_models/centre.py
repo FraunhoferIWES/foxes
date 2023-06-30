@@ -128,7 +128,7 @@ class CentreRotor(RotorModel):
             return super().eval_rpoint_results(
                 algo, mdata, fdata, rpoint_results, weights, states_turbine
             )
-
+        
         n_states = mdata.n_states
         n_turbines = algo.n_turbines
 
@@ -198,3 +198,4 @@ class CentreRotor(RotorModel):
                 del res
             if copy_to_ambient and v in FV.var2amb:
                 fdata[FV.var2amb[v]] = fdata[v].copy()
+        

@@ -155,14 +155,14 @@ class Timelines(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        points = fdata[FV.TXYH]
+        pdata = Data.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, 
-                                                  np.full(n_states, ti), points)[..., 0]
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, pdata,
+                                                  np.full(n_states, ti))[..., 0]
 
         # derive turbine order:
         # TODO: Remove loop over states

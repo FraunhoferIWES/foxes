@@ -90,3 +90,6 @@ def test():
     sel = chk[var] >= 1e-5
     print(f"\nCHECKING {var}\n", delta.loc[sel])
     assert (chk[var] < 1e-5).all()
+
+if __name__ == "__main__":
+    test()

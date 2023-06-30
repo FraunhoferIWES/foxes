@@ -295,6 +295,7 @@ class PartialAxiwake(PartialWakesModel):
             Flag for updating ambient results
 
         """
+
         weights = self.get_data(FC.RWEIGHTS, mdata)
         amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
         rpoints = self.get_data(FC.RPOINTS, mdata)

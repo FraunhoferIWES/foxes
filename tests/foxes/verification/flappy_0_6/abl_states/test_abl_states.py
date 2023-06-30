@@ -81,3 +81,6 @@ def test():
     assert (chk[FV.AMB_P] < 1e-3).all()
     assert (chk[FV.WS] < 1e-5).all()
     assert (chk[FV.P] < 1e-3).all()
+
+if __name__ == "__main__":
+    test()

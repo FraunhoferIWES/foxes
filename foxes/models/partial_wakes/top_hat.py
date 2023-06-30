@@ -106,7 +106,7 @@ class PartialTopHat(PartialWakesModel):
             The evaluation point data 
 
         """
-        pdata = Data(points=fdata[FV.TXYH])
+        pdata = Data.from_points(points=fdata[FV.TXYH])
 
         wake_deltas = {}
         for w in self.wake_models:
@@ -160,7 +160,6 @@ class PartialTopHat(PartialWakesModel):
             mdata[self.WCOOS_X] = wcoos[:, :, 0]
             mdata[self.WCOOS_R] = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
             wcoos[:, :, 1:3] = 0
-            del points
         else:
             wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             wcoos[:, :, 0] = mdata[self.WCOOS_X]
