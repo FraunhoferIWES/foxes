@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.variables as FV
+import foxes.constants as FC
 from foxes.utils import delta_wd
 
 
@@ -57,8 +58,10 @@ class YAW2YAWM(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        yaw = self.get_data(FV.YAW, fdata, st_sel)
-        wd = self.get_data(FV.WD, fdata, st_sel)
+        yaw = self.get_data(FV.YAW, FC.STATE_TURBINE, lookup="f", 
+                            fdata=fdata, upcast=True)[st_sel]
+        wd = self.get_data(FV.WD, FC.STATE_TURBINE, lookup="f", 
+                            fdata=fdata, upcast=True)[st_sel]
 
         yawm = fdata[FV.YAWM]
         yawm[st_sel] = delta_wd(wd, yaw)

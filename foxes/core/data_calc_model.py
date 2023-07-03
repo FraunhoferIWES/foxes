@@ -110,6 +110,13 @@ class DataCalcModel(Model):
             data[-1] = Data(odata, odims, loop_dims)
         del odims, odata
 
+        # link chunk state indices from mdata to fdata and pdata:
+        if FC.STATE in data[0]:
+            if len(data) > 1:
+                data[1][FC.STATE] = data[0][FC.STATE]
+            if len(data) > 2:
+                data[2][FC.STATE] = data[0][FC.STATE]
+
         # run model calculation:
         results = self.calculate(algo, *data, **calc_pars)
 

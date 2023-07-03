@@ -77,7 +77,7 @@ class RotorPoints(PartialWakesModel):
             All rotor points, shape: (n_states, n_points, 3)
 
         """
-        rpoints = self.get_data(FC.RPOINTS, mdata)
+        rpoints = mdata[FC.RPOINTS]
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
         return rpoints.reshape(n_states, n_turbines * n_rpoints, 3)
 
@@ -189,9 +189,9 @@ class RotorPoints(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        weights = self.get_data(FC.RWEIGHTS, mdata)
-        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FC.RPOINTS, mdata)
+        weights = mdata[FC.RWEIGHTS]
+        amb_res = mdata[FC.AMB_RPOINT_RESULTS]
+        rpoints = mdata[FC.RPOINTS]
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wres = {}

@@ -133,14 +133,10 @@ class TurbOParkWake(GaussianWakeModel):
 
         """
 
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
-
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct = self.get_data(FV.CT, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -151,13 +147,15 @@ class TurbOParkWake(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = fdata[FV.D][st_sel][:, None]
+            D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                                fdata=fdata, pdata=pdata, upcast=True,
+                                states_source_turbine=states_source_turbine)
             D = D[sp_sel]
 
             # get TI:
-            ati = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            ati[:] = fdata[FV.AMB_TI][st_sel][:, None]
+            ati = self.get_data(FV.AMB_TI, FC.STATE_POINT, lookup="f", algo=algo, 
+                                fdata=fdata, pdata=pdata, upcast=True,
+                                states_source_turbine=states_source_turbine)
             ati = ati[sp_sel]
 
             # calculate sigma:
@@ -354,14 +352,10 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         """
 
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
-
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct = self.get_data(FV.CT, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -372,8 +366,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = fdata[FV.D][st_sel][:, None]
+            D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                                fdata=fdata, pdata=pdata, upcast=True,
+                                states_source_turbine=states_source_turbine)
             D = D[sp_sel]
 
             # calculate sigma:

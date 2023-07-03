@@ -133,15 +133,11 @@ class BastankhahWake(GaussianWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-        
-        # prepare:
-        n_states = mdata.n_states
-        n_points = pdata.n_points
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = self.get_data(FV.CT, fdata)[st_sel][:, None]
+        ct = self.get_data(FV.CT, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -152,13 +148,15 @@ class BastankhahWake(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
+            D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                                fdata=fdata, pdata=pdata, upcast=True,
+                                states_source_turbine=states_source_turbine)
             D = D[sp_sel]
 
             # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+            k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                                fdata=fdata, pdata=pdata, upcast=True,
+                                states_source_turbine=states_source_turbine)
             k = k[sp_sel]
 
             # calculate sigma:

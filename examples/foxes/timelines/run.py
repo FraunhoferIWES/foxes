@@ -169,8 +169,6 @@ if __name__ == "__main__":
         )
         print()
 
-        quit()
-
         fig, ax = plt.subplots(figsize=(8, 8))
         o = foxes.output.FlowPlots2D(algo, farm_results)
         ims = []

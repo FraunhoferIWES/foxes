@@ -183,15 +183,16 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get D:
-        D = fdata[FV.D][st_sel][:, None]
+        D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         # get k:
-        k = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         # calculate:
         sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))

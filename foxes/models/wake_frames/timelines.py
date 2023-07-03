@@ -217,7 +217,7 @@ class Timelines(WakeFrame):
         trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = np.arange(n_states)[:, None]
+        trace_si[:] = np.arange(n_states)[:, None] + 1
 
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoosx = wcoos[:, :, 0]
@@ -227,9 +227,11 @@ class Timelines(WakeFrame):
 
         while True:
             
-            sel = (trace_si >= 0) & (trace_l < self.max_wake_length)
+            sel = (trace_si > 0) & (trace_l < self.max_wake_length)
             if np.any(sel):
-                
+
+                trace_si[sel] -= 1
+
                 delta = dxy[trace_si[sel]]
                 dmag = np.linalg.norm(delta, axis=-1)
 
@@ -239,6 +241,7 @@ class Timelines(WakeFrame):
                 trp = trace_p[sel]
                 d0 = trace_d[sel]
                 d = np.linalg.norm(trp, axis=-1)
+                trace_d[sel] = d
 
                 seln = (d <= np.minimum(d0, 2*dmag))
                 if np.any(seln):
@@ -257,9 +260,6 @@ class Timelines(WakeFrame):
                     wcy[seln] = np.einsum('sd,sd->s', htrp, saxis)
                     wcoosy[sel] = wcy
                     del wcy, saxis, htrp
-
-                trace_si[sel] -= 1
-                trace_d[sel] = d
 
             else:
                 break

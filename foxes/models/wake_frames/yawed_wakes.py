@@ -125,28 +125,24 @@ class YawedWakes(WakeFrame):
         """
         return self.base_frame.calc_order(algo, mdata, fdata)
 
-    def _update_y(self, mdata, fdata, states_source_turbine, x, y):
+    def _update_y(self, algo, mdata, fdata, pdata, states_source_turbine, x, y):
         """
         Helper function for y deflection
         """
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get gamma:
-        gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][
-            :, None
-        ]
+        gamma = self.get_data(FV.YAWM, FC.STATE_POINT, lookup="fs", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         gamma *= np.pi / 180
 
         # get k:
-        k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         # run model calculation:
-        self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
+        self.model.calc_data(algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k)
 
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
@@ -212,7 +208,7 @@ class YawedWakes(WakeFrame):
         y = xyz[:, :, 1]
 
         # apply deflection:
-        self._update_y(mdata, fdata, states_source_turbine, x, y)
+        self._update_y(algo, mdata, fdata, pdata, states_source_turbine, x, y)
 
         return xyz
 
@@ -259,7 +255,7 @@ class YawedWakes(WakeFrame):
         del nx, nz
 
         y = np.zeros_like(x)
-        self._update_y(mdata, fdata, states_source_turbine, x, y)
+        self._update_y(algo, mdata, fdata, None, states_source_turbine, x, y)
 
         points += y[:, :, None] * ny
 

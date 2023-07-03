@@ -185,7 +185,9 @@ class Model(metaclass=ABCMeta):
             sources = [s for s in [mdata, fdata, pdata, algo, self] if s is not None]
             for s in sources:
                 try:
-                    return getattr(s, a)
+                    out = getattr(s, a)
+                    if out is not None:
+                        return out
                 except AttributeError:
                     pass
             raise KeyError(f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?")
@@ -206,24 +208,26 @@ class Model(metaclass=ABCMeta):
             # lookup self:
             if s == "s" and hasattr(self, variable):
 
-                if upcast:
+                a = getattr(self, variable)
+
+                if a is not None and upcast:
                     if target == FC.STATE_TURBINE:
                         out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-                        out[:] = getattr(self, variable)
+                        out[:] = a
                     elif target == FC.STATE_POINT:
                         out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
-                        out[:] = getattr(self, variable)
+                        out[:] = a
                     else:
                         raise KeyError(f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT")
                 
                 else:
-                    out = getattr(self, variable)
+                    out = a
 
             # lookup mdata:
             elif (
                 s == "m" and mdata is not None and variable in mdata
                 and len(mdata.dims[variable]) > 1
-                and mdata.dims[variable][:2] == dims
+                and tuple(mdata.dims[variable][:2]) == dims
             ):
                 out = mdata[variable]
             
@@ -231,7 +235,7 @@ class Model(metaclass=ABCMeta):
             elif (
                 s == "f" and fdata is not None and variable in fdata
                 and len(fdata.dims[variable]) > 1
-                and fdata.dims[variable][:2] == (FC.STATE, FC.TURBINE)
+                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
             ):
                 # direct fdata:
                 if target == FC.STATE_TURBINE:
@@ -255,7 +259,7 @@ class Model(metaclass=ABCMeta):
                         if not np.all(states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]):
                             raise ValueError(f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}")
 
-                        i0 = _geta("states_i0")
+                        i0 = np.argwhere(algo.states.index() == _geta("states_i0"))[0][0]
                         sp = pdata[FC.STATES_SEL]
                         sel = np.min(sp) < i0
                         if np.any(sel):
@@ -279,14 +283,17 @@ class Model(metaclass=ABCMeta):
             elif (
                 s == "p" and pdata is not None and variable in pdata
                 and len(pdata.dims[variable]) > 1
-                and pdata.dims[variable][:2] == dims
+                and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
+            
+            if out is not None:
+                break
 
         # check for None:
         if not accept_none:
             try:
-                if np.all(np.isnan(np.atleast_1d(out))):
+                if out is None or np.all(np.isnan(np.atleast_1d(out))):
                     raise ValueError(
                         f"Model '{self.name}': Variable '{variable}' requested but not provided."
                     )

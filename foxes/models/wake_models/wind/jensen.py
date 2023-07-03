@@ -119,14 +119,14 @@ class JensenWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_points)
 
         """
-        n_states = mdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
-        R = fdata[FV.D][st_sel][:, None] / 2
-        k = self.get_data(self.k_var, fdata, st_sel)
-
-        if isinstance(k, np.ndarray):
-            k = k[:, None]
+        R = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)/2
+        
+        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         return R + k * x
 

@@ -137,14 +137,11 @@ class IECTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get k:
-        k = self.get_data(self.k_var, fdata, st_sel, data_prio=False)
-        if isinstance(k, np.ndarray):
-            k = k[:, None]
+        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         # calculate:
         radius = k * x
@@ -197,19 +194,17 @@ class IECTIWake(TopHatWakeModel):
             varlue: numpy.ndarray, shape: (n_sp_sel,)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        n_points = sp_sel.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # read D from extra data:
-        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        D[:] = fdata[FV.D][st_sel][:, None]
+        D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         D = D[sp_sel]
 
         # get ws:
-        ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ws[:] = fdata[FV.REWS][st_sel][:, None]
+        ws = self.get_data(FV.REWS, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         ws = ws[sp_sel]
 
         # calculate wind deficit:

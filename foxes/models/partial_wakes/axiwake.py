@@ -296,9 +296,9 @@ class PartialAxiwake(PartialWakesModel):
 
         """
 
-        weights = self.get_data(FC.RWEIGHTS, mdata)
-        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FC.RPOINTS, mdata)
+        weights = mdata[FC.RWEIGHTS]
+        amb_res = mdata[FC.AMB_RPOINT_RESULTS]
+        rpoints = mdata[FC.RPOINTS]
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
 
         wres = {}
