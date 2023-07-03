@@ -264,7 +264,11 @@ class Timelines(WakeFrame):
             else:
                 break
         
-        mdata[FC.POINT_STATES_SELS] = trace_si
+        # turbines that cause wake:
+        pdata.add(FC.STATE_SOURCE_TURBINE, states_source_turbine, (FC.STATE,))
+
+        # states that cause wake for each target point:
+        pdata.add(FC.STATES_SEL, trace_si, (FC.STATE, FC.POINT))
 
         return wcoos
 

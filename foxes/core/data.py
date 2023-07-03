@@ -45,7 +45,7 @@ class Data(Dict):
             The data container name
 
         """
-        super().__init__(name="data")
+        super().__init__(name=name)
 
         self.update(data)
         self.dims = dims
@@ -53,31 +53,70 @@ class Data(Dict):
 
         self.sizes = {}
         for v, d in data.items():
-            dim = dims[v]
+            self.__run_entry_checks(v, d, dims[v])
+        
+        self.__auto_update()
+    
+    @property
+    def n_states(self):
+        """
+        The number of states
+        
+        Returns
+        -------
+        int:
+            The number of states
 
-            # remove axes of size 1, added by dask for extra loop dimensions:
-            if len(dim) != len(d.shape):
-                for li, l in enumerate(loop_dims):
-                    if d.shape[li] == 1 and (len(dim) < li + 1 or dim[li] != l):
-                        self[v] = np.squeeze(d, axis=li)
+        """
+        return self.sizes[FC.STATE] if FC.STATE in self.sizes else None
 
-            for ci, c in enumerate(dim):
-                if c not in self.sizes:
-                    self.sizes[c] = self[v].shape[ci]
-                elif self.sizes[c] != self[v].shape[ci]:
-                    raise ValueError(
-                        f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {self[v].shape[ci]} in shape {self[v].shape}"
-                    )
+    @property
+    def n_turbines(self):
+        """
+        The number of turbines
+        
+        Returns
+        -------
+        int:
+            The number of turbines
 
-        if FC.STATE in self.sizes:
-            self.n_states = self.sizes[FC.STATE]
-        if FC.TURBINE in self.sizes:
-            self.n_turbines = self.sizes[FC.TURBINE]
-        if FC.POINT in self.sizes:
-            self.n_points = self.sizes[FC.POINT]
+        """
+        return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
+
+    @property
+    def n_points(self):
+        """
+        The number of points
+        
+        Returns
+        -------
+        int:
+            The number of points
+
+        """
+        return self.sizes[FC.POINT] if FC.POINT in self.sizes else None
+
+    @property
+    def states_i0(self):
+        """
+        The index of the first state
+        
+        Returns
+        -------
+        int:
+            The index of the first state
+
+        """
+        return self[FC.STATE][0] if FC.STATE in self else None
+
+    def __auto_update(self):
+
+        data = self
+        dims = self.dims
 
         if (
-            FV.X in data
+            FV.TXYH not in data
+            and FV.X in data
             and FV.Y in data
             and FV.H in data
             and dims[FV.X] == (FC.STATE, FC.TURBINE)
@@ -95,6 +134,41 @@ class Data(Dict):
             self[FV.X] = self[FV.TXYH][:, :, 0]
             self[FV.Y] = self[FV.TXYH][:, :, 1]
             self[FV.H] = self[FV.TXYH][:, :, 2]
+
+    def __run_entry_checks(self, name, data, dims):
+
+        # remove axes of size 1, added by dask for extra loop dimensions:
+        if len(dims) != len(data.shape):
+            for li, l in enumerate(self.loop_dims):
+                if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
+                    self[name] = np.squeeze(data, axis=li)
+
+        for ci, c in enumerate(dims):
+            if c not in self.sizes:
+                self.sizes[c] = self[name].shape[ci]
+            elif self.sizes[c] != self[name].shape[ci]:
+                raise ValueError(
+                    f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
+                )
+            
+    def add(self, name, data, dims):
+        """
+        Add data entry
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        data: np.ndarray
+            The data
+        dims: tuple of str
+            The dimensions
+        
+        """
+        self[name] = data
+        self.dims[name] = dims
+        self.__run_entry_checks(name, data, dims)
+        self.__auto_update()
 
     @classmethod
     def from_points(

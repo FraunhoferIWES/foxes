@@ -71,8 +71,23 @@ TMODEL_SELS = "tmodel_sels"
 :group: foxes.constants
 """
 
-POINT_STATES_SELS = "pstates_sels"
-"""Identifier for states per point selections
+STATES_SEL = "states_sel"
+"""Identifier for states selection
+:group: foxes.constants
+"""
+
+STATE_SOURCE_TURBINE = "state_source_turbine"
+"""Identifier for the source turbines per state
+:group: foxes.constants
+"""
+
+STATE_TURBINE = "state-turbine"
+"""Identifier for state-turbine dimensions
+:group: foxes.constants
+"""
+
+STATE_POINT = "state-point"
+"""Identifier for state-point dimensions
 :group: foxes.constants
 """
 

@@ -134,77 +134,156 @@ class Model(metaclass=ABCMeta):
     def get_data(
         self,
         variable,
-        data,
-        st_sel=None,
-        upcast=None,
-        data_prio=False,
+        target,
+        lookup="smfp",
+        mdata=None,
+        fdata=None,
+        pdata=None,
+        states_source_turbine=None,
+        upcast=False,
         accept_none=False,
         algo=None,
     ):
         """
-        Getter for a data entry in either the given
-        data source, or the model object.
+        Getter for a data entry in the model object
+        or provided data sources
 
         Parameters
         ----------
         variable: str
             The variable, serves as data key
-        data: dict
-            The data source
-        st_sel: numpy.ndarray of bool, optional
-            If given, get the specified state-turbine subset
-        upcast: str, optional
-            Either 'farm' or 'points', broadcasts potential
-            scalar data to numpy.ndarray with dimensions
-            (n_states, n_turbines) or (n_states, n_points),
-            respectively
+        target: str, optional
+            The dimensions identifier for the output, e.g 
+            FC.STATE_TURBINE, FC.STATE_POINT
+        lookup: str
+            The order of data sources. Combination of:
+            's' for self,
+            'm' for mdata,
+            'f' for fdata,
+            'p' for pdata
+        mdata: foxes.core.Data, optional
+            The model data
+        fdata: foxes.core.Data, optional
+            The farm data
+        pdata: foxes.core.Data, optional
+            The evaluation point data
+        states_source_turbine: numpy.ndarray, optional
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        upcast: bool, optional
+            Upcast array to dims if data is scalar
         data_prio: bool
             First search the data source, then the object
         accept_none: bool
             Do not throw an error if data entry is None or np.nan
         algo: foxes.core.Algorithm, optional
-            The algorithm, for lookup in case of state-point lookup
+            The algorithm, needed for data from previous iteration
 
         """
 
-        sources = ("data", "self") if data_prio else ("self", "data")
-
-        out = None
-        for s in sources:
-            if s == "self":
+        def _geta(a):
+            sources = [s for s in [mdata, fdata, pdata, algo, self] if s is not None]
+            for s in sources:
                 try:
-                    out = getattr(self, variable)
+                    return getattr(s, a)
                 except AttributeError:
                     pass
-            else:
-                try:
-                    out = data[variable]
-                except KeyError:
-                    pass
-            if out is not None:
-                break
+            raise KeyError(f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?")
 
-        if out is None:
-            raise KeyError(
-                f"Model '{self.name}': Variable '{variable}' neither found in data {sorted(list(data.keys()))} nor among attributes"
-            )
+        n_states = _geta("n_states")
+        if target == FC.STATE_TURBINE:
+            n_turbines = _geta("n_turbines")
+            dims = (FC.STATE, FC.TURBINE)
+        elif target == FC.STATE_POINT:
+            n_points = _geta("n_points")
+            dims = (FC.STATE, FC.POINT)
+        else:
+            raise KeyError(f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}")
+    
+        out = None
+        for s in lookup:
 
-        if upcast is not None and not isinstance(out, np.ndarray):
-            if upcast == "farm":
-                out = np.full((data.n_states, data.n_turbines), out)
-            elif upcast == "points":
-                out = np.full((data.n_states, data.n_points), out)
-            else:
-                raise ValueError(
-                    f"Model '{self.name}': Illegal upcast '{upcast}', select 'farm' or 'points'"
-                )
+            # lookup self:
+            if s == "s" and hasattr(self, variable):
 
-        if st_sel is not None:
-            try:
-                out = out[st_sel]
-            except TypeError:
-                pass
+                if upcast:
+                    if target == FC.STATE_TURBINE:
+                        out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                        out[:] = getattr(self, variable)
+                    elif target == FC.STATE_POINT:
+                        out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+                        out[:] = getattr(self, variable)
+                    else:
+                        raise KeyError(f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT")
+                
+                else:
+                    out = getattr(self, variable)
 
+            # lookup mdata:
+            elif (
+                s == "m" and mdata is not None and variable in mdata
+                and len(mdata.dims[variable]) > 1
+                and mdata.dims[variable][:2] == dims
+            ):
+                out = mdata[variable]
+            
+            # lookup fdata:
+            elif (
+                s == "f" and fdata is not None and variable in fdata
+                and len(fdata.dims[variable]) > 1
+                and fdata.dims[variable][:2] == (FC.STATE, FC.TURBINE)
+            ):
+                # direct fdata:
+                if target == FC.STATE_TURBINE:
+                    out = fdata[variable]
+                
+                # translate state-turbine to state-point data:
+                elif (
+                    target == FC.STATE_POINT
+                    and states_source_turbine is not None
+                ):
+                    # from fdata, uniform for points:
+                    st_sel = (np.arange(n_states), states_source_turbine)
+                    out = np.zeros((n_states, n_points),  dtype=FC.DTYPE)
+                    out[:] = fdata[variable][st_sel][:, None]
+
+                    # from previous iteration, if requested:
+                    if (
+                        pdata is not None
+                        and FC.STATES_SEL in pdata
+                    ):
+                        if not np.all(states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]):
+                            raise ValueError(f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}")
+
+                        i0 = _geta("states_i0")
+                        sp = pdata[FC.STATES_SEL]
+                        sel = np.min(sp) < i0
+                        if np.any(sel):
+
+                            if (
+                                algo is None
+                                or not hasattr(algo, "prev_farm_results")
+                            ):
+                                raise KeyError(f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm")
+
+                            prev_fdata = getattr(algo, "prev_farm_results")
+                            if prev_fdata is None:
+                                out[sel] = 0
+                            else:
+                                st = np.zeros_like(sp)
+                                st[:] = states_source_turbine[:, None]
+                                out[sel] = prev_fdata[variable][sp[sel], st[sel]]
+                                del st
+
+            # lookup pdata:
+            elif (
+                s == "p" and pdata is not None and variable in pdata
+                and len(pdata.dims[variable]) > 1
+                and pdata.dims[variable][:2] == dims
+            ):
+                out = pdata[variable]
+
+        # check for None:
         if not accept_none:
             try:
                 if np.all(np.isnan(np.atleast_1d(out))):
@@ -213,6 +292,7 @@ class Model(metaclass=ABCMeta):
                     )
             except TypeError:
                 pass
+
         return out
 
     @classmethod
