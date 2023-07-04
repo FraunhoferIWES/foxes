@@ -107,8 +107,18 @@ class FlowPlots2D(Output):
         hax.autoscale_view()
         hax.set_xlabel(xlabel)
         hax.set_ylabel(ylabel)
-        hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
+
+        ttl = None
+        if animated:
+            if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
+                t = np.datetime_as_string(s, unit='m').replace("T", " ")
+            else:
+                t = s
+            ttl = hax.text(0.5, 1.02, f"State {t}", backgroundcolor='w',
+                transform=hax.transAxes, ha="center", animated=True)
+        else:
+            hax.set_title(title if title is not None else f"State {s}")
 
         if invert_axis == "x":
             hax.invert_xaxis()
@@ -129,7 +139,7 @@ class FlowPlots2D(Output):
         if ret_state:
             out.append(si)
         if ret_im:
-            out.append((im, qv) if qv is not None else (im,))
+            out.append([i for i in [im, qv, ttl] if i is not None])
         if ret_state or ret_im:
             out = tuple(out)
 
@@ -1007,8 +1017,11 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", z =  {int(np.round(z_pos))} m"
+            if title is None:
+                ttl = f"State {s}"
+                ttl += f", z =  {int(np.round(z_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,
@@ -1253,9 +1266,12 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", x direction = {x_direction}°"
-            ttl += f", y =  {int(np.round(y_pos))} m"
+            if title is None:
+                ttl = f"State {s}"
+                ttl += f", x direction = {x_direction}°"
+                ttl += f", y =  {int(np.round(y_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,

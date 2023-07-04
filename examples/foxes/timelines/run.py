@@ -12,6 +12,7 @@ from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--animation", help="Write flow animation file", action="store_true")
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
@@ -107,7 +108,7 @@ if __name__ == "__main__":
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base=np.array([0.0, 0.0]),
-        step_vectors=np.array([[3000.0, 0], [0, 4000.0]]),
+        step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
         turbine_models=args.tmodels + [ttype.name],
     )
@@ -169,30 +170,41 @@ if __name__ == "__main__":
             ]
         )
         print()
-        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.AMB_CT, FV.CT]].describe())
-        print()
+        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.AMB_CT, FV.CT, FV.EFF]].describe())
 
-        fig, ax = plt.subplots(figsize=(8, 8))
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        ims = []
-        for fig, im in o.gen_states_fig_xy(
-            FV.WS,
-            resolution=50,
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-            quiver_n=35,
-            xspace=1000,
-            yspace=1000,
-            fig=fig,
-            ax=ax,
-            ret_im=True,
-            animated=True,
-        ):
-            ims.append(im)
+        # power results
+        P0 = o.calc_mean_farm_power(ambient=True)
+        P = o.calc_mean_farm_power()
+        print(f"\nFarm power        : {P/1000:.1f} MW")
+        print(f"Farm ambient power: {P0/1000:.1f} MW")
+        print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
 
-        ani = animation.ArtistAnimation(fig, ims, interval=200, blit=True,
-                                    repeat_delay=2000)
-    
-        fpath = "ani.gif"
-        print("Writing file", fpath)
-        ani.save(filename=fpath, writer="pillow")
+        if args.animation:
+
+            print("\nCalculating animation")
+
+            fig, ax = plt.subplots(figsize=(8, 7))
+            o = foxes.output.FlowPlots2D(algo, farm_results)
+            ims = []
+            for si, (fig, im) in enumerate(o.gen_states_fig_xy(
+                FV.WS,
+                resolution=30,
+                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                quiver_n=35,
+                xmax=5000,
+                ymax=5000,
+                fig=fig,
+                ax=ax,
+                ret_im=True,
+                title="",
+                animated=True,
+            )):
+                ims.append(im)
+
+            ani = animation.ArtistAnimation(fig, ims, interval=200, blit=True,
+                                        repeat_delay=2000)
+        
+            fpath = "ani.gif"
+            print("Writing file", fpath)
+            ani.save(filename=fpath, writer="pillow")
 
