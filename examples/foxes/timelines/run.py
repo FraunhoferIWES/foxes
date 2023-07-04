@@ -126,6 +126,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
+        verbosity=0
     )
 
     with DaskRunner(
@@ -167,6 +168,8 @@ if __name__ == "__main__":
                 ]
             ]
         )
+        print()
+        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.AMB_CT, FV.CT]].describe())
         print()
 
         fig, ax = plt.subplots(figsize=(8, 8))

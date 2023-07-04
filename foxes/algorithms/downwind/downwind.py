@@ -234,6 +234,20 @@ class Downwind(Algorithm):
 
         return mlist, calc_pars
 
+    def _run_farm_calc(self, mlist, *data, **kwargs):
+        """ Helper function for running the main farm calculation """
+        self.print(
+            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
+        )
+        farm_results = mlist.run_calculation(
+            self, *data, out_vars=self.farm_vars, **kwargs
+        )
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+        if FV.ORDER in farm_results:
+            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+        
+        return farm_results
+
     def calc_farm(
         self,
         vars_to_amb=None,
@@ -293,12 +307,7 @@ class Downwind(Algorithm):
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
-        farm_results = mlist.run_calculation(
-            self, models_data, out_vars=self.farm_vars, parameters=calc_pars
-        )
-        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in farm_results:
-            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+        farm_results = self._run_farm_calc(mlist, models_data, parameters=calc_pars)
         del models_data
 
         # finalize models:

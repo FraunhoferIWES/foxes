@@ -261,7 +261,7 @@ class Model(metaclass=ABCMeta):
 
                         i0 = np.argwhere(algo.states.index() == _geta("states_i0"))[0][0]
                         sp = pdata[FC.STATES_SEL]
-                        sel = np.min(sp) < i0
+                        sel = (sp < i0)
                         if np.any(sel):
 
                             if (
@@ -276,7 +276,7 @@ class Model(metaclass=ABCMeta):
                             else:
                                 st = np.zeros_like(sp)
                                 st[:] = states_source_turbine[:, None]
-                                out[sel] = prev_fdata[variable][sp[sel], st[sel]]
+                                out[sel] = prev_fdata[variable].to_numpy()[sp[sel], st[sel]]
                                 del st
 
             # lookup pdata:

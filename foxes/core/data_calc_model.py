@@ -67,10 +67,16 @@ class DataCalcModel(Model):
         out_vars,
         out_dims,
         calc_pars,
+        init_vars,
     ):
         """
         Wrapper that mitigates between apply_ufunc and `calculate`.
         """
+
+        n_prev = len(init_vars)
+        if n_prev:
+            prev = ldata[:n_prev]
+            ldata = ldata[n_prev:]
 
         # reconstruct original data:
         data = []
@@ -80,7 +86,6 @@ class DataCalcModel(Model):
 
             hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
             hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-
             data.append(Data(hdata, hdims, loop_dims))
 
             del hdata, hdims, v2l, v2e
@@ -98,7 +103,9 @@ class DataCalcModel(Model):
         # add zero output data arrays:
         odims = {v: out_dims for v in out_vars}
         odata = {
-            v: np.full(oshape, np.nan, dtype=FC.DTYPE)
+            v: np.full(oshape, np.nan, dtype=FC.DTYPE) 
+            if v not in init_vars 
+            else prev[init_vars.index(v)]
             for v in out_vars
             if v not in data[-1]
         }
@@ -146,7 +153,8 @@ class DataCalcModel(Model):
         return data
 
     def run_calculation(
-        self, algo, *data, out_vars, loop_dims, out_core_vars, **calc_pars
+        self, algo, *data, out_vars, loop_dims, out_core_vars, 
+        initial_results=None, **calc_pars,
     ):
         """
         Starts the model calculation in parallel, via
@@ -170,6 +178,8 @@ class DataCalcModel(Model):
             `FC.VARS` for variables dimension (required)
         calc_pars: dict, optional
             Additional arguments for the `calculate` function
+        initial_results: xarray.Dataset, optional
+            Initial results
 
         Returns
         -------
@@ -194,6 +204,15 @@ class DataCalcModel(Model):
         evars = []
         edims = []
         dvars = []
+        ivars = []
+        idims = []
+        if initial_results is not None:
+            ds = initial_results
+            hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
+            ldata += [ds[v] for v in hvarsl]
+            idims += [ds[v].dims for v in hvarsl]
+            ivars += hvarsl
+
         for ds in data:
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
@@ -240,14 +259,16 @@ class DataCalcModel(Model):
             out_vars=out_vars,
             out_dims=out_dims,
             calc_pars=calc_pars,
+            init_vars=ivars,
         )
 
         # run parallel computation:
+        iidims = [[c for c in d if c not in loopd] for d in idims]
         icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
             self._wrap_calc,
             *ldata,
-            input_core_dims=icdims,
+            input_core_dims=iidims+icdims,
             output_core_dims=[out_core_vars],
             output_dtypes=[FC.DTYPE],
             dask="parallelized",
