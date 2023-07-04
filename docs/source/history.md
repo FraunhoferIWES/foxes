@@ -287,6 +287,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.1
 
-
+- Algorithms:
+  - Improved: `Iterative` now iterates through outer loop instead of within chunk
+- Models:
+  - New wake frame: `Timelines`, propagates wakes for spatially uniform time series
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)
