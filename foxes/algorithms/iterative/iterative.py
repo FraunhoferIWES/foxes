@@ -66,16 +66,23 @@ class Iterative(Downwind):
         it = 0
         while it < self.max_it:
 
-            self.print("\nALGO: IT =", it, vlim=-1)
+            self.print("\nALGO: IT =", it, vlim=0)
 
             self.prev_farm_results = fres
             fres = super().calc_farm(**kwargs)
 
-            it += 1
-
-            if self.conv_crit.check_converged(self, self.prev_farm_results, fres, 
-                                              verbosity=self.verbosity):
-                self.print("\nALGO: Converged.\n", vlim=-1)
+            conv = self.conv_crit.check_converged(self, self.prev_farm_results, fres, 
+                                              verbosity=self.verbosity)
+            
+            if it > 0 and self.verbosity >= 0:
+                self.print("\nALGO: Convergence results", vlim=0)
+                for v, d in self.conv_crit.get_deltas().items():
+                    self.print(f"  Delta {v}: {d:.6f}", vlim=0)
+            
+            if conv:
+                self.print("\nALGO: Converged.\n", vlim=0)
                 break
+
+            it += 1
 
         return fres

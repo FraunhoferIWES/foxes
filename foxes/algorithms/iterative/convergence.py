@@ -52,6 +52,19 @@ class ConvCrit(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def get_deltas(self):
+        """
+        Get the most recent evaluation deltas.
+        
+        Returns
+        -------
+        deltas: dict
+            The most recent evaluation deltas
+
+        """
+        pass
+
 class ConvCritList(ConvCrit):
     """
     A list of convergence criteria
@@ -113,11 +126,27 @@ class ConvCritList(ConvCrit):
             Convergence flag, true if converged
 
         """
+        self._failed = None
         for c in self.crits:
             if not c.check_converged(algo, prev_results, results, verbosity):
+                self._failed = c
                 return False
 
         return True
+
+    def get_deltas(self):
+        """
+        Get the most recent evaluation deltas.
+        
+        Returns
+        -------
+        deltas: dict
+            The most recent evaluation deltas
+
+        """
+        if self._failed is not None:
+            return self._failed.get_deltas()
+        return {}
 
 class ConvVarDelta(ConvCrit):
     """
@@ -155,6 +184,8 @@ class ConvVarDelta(ConvCrit):
         else:
             self.wd_vars = wd_vars
         
+        self._deltas = {}
+        
     def check_converged(self, algo, prev_results, results, verbosity=0):
         """
         Check convergence criteria.
@@ -185,13 +216,15 @@ class ConvVarDelta(ConvCrit):
             print(f"\n{self.name}: Convergence check")
 
         ok = True
+        self._deltas = {}
         for v, lim in self.limits.items():
             x0 = prev_results[v].to_numpy()
             x = results[v].to_numpy()
             if v in self.wd_vars:
-                check = np.max(np.abs(delta_wd(x0, x)))
+                self._deltas[v] = np.max(np.abs(delta_wd(x0, x)))
             else:
-                check = np.max(np.abs(x - x0))
+                self._deltas[v] = np.max(np.abs(x - x0))
+            check = self._deltas[v]
             ok = ok and (check <= lim)
 
             if verbosity > 0:
@@ -201,6 +234,18 @@ class ConvVarDelta(ConvCrit):
                 break
 
         return ok
+
+    def get_deltas(self):
+        """
+        Get the most recent evaluation deltas.
+        
+        Returns
+        -------
+        deltas: dict
+            The most recent evaluation deltas
+
+        """
+        return self._deltas
 
 class DefaultConv(ConvVarDelta):
     """

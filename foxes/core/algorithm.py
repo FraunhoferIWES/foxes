@@ -74,7 +74,7 @@ class Algorithm(Model):
 
         self._idata_mem = Dict()
 
-    def print(self, *args, vlim=0, **kwargs):
+    def print(self, *args, vlim=1, **kwargs):
         """
         Print function, based on verbosity.
 
@@ -86,9 +86,9 @@ class Algorithm(Model):
             Keyword arguments for the print function
         vlim: int
             The verbosity limit
-            
+
         """
-        if self.verbosity > vlim:
+        if self.verbosity >= vlim:
             print(*args, **kwargs)
 
     def __get_sizes(self, idata, mtype):
