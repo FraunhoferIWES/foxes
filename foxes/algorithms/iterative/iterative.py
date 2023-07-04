@@ -1,73 +1,81 @@
 from foxes.algorithms.downwind.downwind import Downwind
-from .models import DefaultConv, LoopRunner, FarmWakesCalculation
 
+from .convergence import DefaultConv
 
 class Iterative(Downwind):
     """
-    Iterative algorithm that repeats the
-    downwind calculation until convergence
-    has been achieved
-
-    Parameters
-    ----------
-    args : tuple, optional
-        Arguments for the Downwind algorithm
-    conv : foxes.algorithm.iterative.models.ConvCrit
-        The convergence criteria
-    max_its : int, optional
-        Set the maximal number of iterations, None means
-        number of turbines + 1
-    conv_error : bool
-        Throw error if not converging
-    kwargs : dict, optional
-        Keyword arguments for the Downwind algorithm
-
+    Iterative calculation of farm data.
+    
     Attributes
     ----------
-    conv : foxes.algorithm.iterative.convergence.ConvCrit
+    max_it: int
+        The maximal number of iterations
+    conv_crit: foxes.algorithms.iterative.ConvCrit
         The convergence criteria
-    max_its : int
-        Set the maximal number of iterations, None means
-        number of turbines + 1
-    conv_error : bool
-        Throw error if not converging
 
     """
 
-    FarmWakesCalculation = FarmWakesCalculation
+    def __init__(self, *args, max_it=None, conv_crit=None, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for Downwind
+        max_it: int, optional
+            The maximal number of iterations
+        conv_crit: foxes.algorithms.iterative.ConvCrit, optional
+            The convergence criteria
+        kwargs: dict, optional
+            Keyword arguments for Downwind
+        
+        """
 
-    def __init__(
-        self, *args, conv=DefaultConv(), max_its=None, conv_error=True, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-        self.conv = conv
-        self.max_its = max_its
-        self.conv_error = conv_error
+        verbosity=int(kwargs.pop("verbosity", 1)) - 1
+        super().__init__(*args, verbosity=verbosity, **kwargs)
 
-    def _collect_farm_models(
+        self.max_it = 2*self.farm.n_turbines if max_it is None else max_it
+        self.conv_crit = DefaultConv() if conv_crit is None else conv_crit
+
+    def _run_farm_calc(self, mlist, *data, **kwargs):
+        """ Helper function for running the main farm calculation """
+        return super()._run_farm_calc(mlist, *data, **kwargs,
+                                      initial_results=self.prev_farm_results)
+    
+    def calc_farm(
         self,
-        vars_to_amb,
-        calc_parameters,
-        ambient,
+        **kwargs
     ):
         """
-        Helper function that creates model list
+        Calculate farm data.
+
+        Parameters
+        ----------
+        kwargs: dict, optional
+            Arguments for calc_farm in the base class.
+
+        Returns
+        -------
+        farm_results : xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+
         """
-        # get models from Downwind algorithm:
-        mlist, calc_pars = super()._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient
-        )
+        fres = None
+        it = 0
+        while it < self.max_it:
 
-        # wrap the models into a loop:
-        mlist = LoopRunner(
-            self.conv,
-            mlist.models,
-            max_its=self.max_its,
-            conv_error=self.conv_error,
-            verbosity=self.verbosity - 1,
-        )
+            self.print("\nALGO: IT =", it, vlim=-1)
 
-        # flag only the last model as wake relevant:
-        mlist.model_wflag[-1] = True
+            self.prev_farm_results = fres
+            fres = super().calc_farm(**kwargs)
 
-        return mlist, calc_pars
+            it += 1
+
+            if self.conv_crit.check_converged(self, self.prev_farm_results, fres, 
+                                              verbosity=self.verbosity):
+                self.print("\nALGO: Converged.\n", vlim=-1)
+                break
+
+        return fres

@@ -118,7 +118,7 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure())
 
-    algo = foxes.algorithms.Iterative2(
+    algo = foxes.algorithms.Iterative(
         mbook,
         farm,
         states=states,
@@ -127,7 +127,6 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
-        verbosity=0
     )
 
     with DaskRunner(
