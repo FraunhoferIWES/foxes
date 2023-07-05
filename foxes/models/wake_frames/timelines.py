@@ -106,7 +106,7 @@ class Timelines(WakeFrame):
         pdata = {v: np.zeros((algo.n_states, 1), dtype=FC.DTYPE) 
                  for v in algo.states.output_point_vars(algo)}
         pdata[FC.POINTS] = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
         pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
 

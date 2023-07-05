@@ -214,6 +214,7 @@ class ConvVarDelta(ConvCrit):
 
         if verbosity > 0:
             print(f"\n{self.name}: Convergence check")
+            L = max([len(v) for v in self.limits.keys()])
 
         ok = True
         self._deltas = {}
@@ -229,7 +230,7 @@ class ConvVarDelta(ConvCrit):
 
             if verbosity > 0:
                 r = "FAILED" if check > lim else "OK"
-                print(f"  {v}: delta = {check}, lim = {lim}  --  {r}")
+                print(f"  {v:<{L}}: delta = {check:.3e}, lim = {lim:.3e}  --  {r}")
             elif not ok:
                 break
 
@@ -259,7 +260,6 @@ class DefaultConv(ConvVarDelta):
         super().__init__(
             {
                 FV.REWS: 1e-5,
-                FV.WD: 1e-4,
                 FV.TI: 1e-6,
             }
         )

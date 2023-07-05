@@ -394,7 +394,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}"
             )
-        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FV.XYH), points)
+        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FC.XYH), points)
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)

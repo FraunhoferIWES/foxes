@@ -279,9 +279,9 @@ class PartialDistSlicedWake(PartialWakesModel):
             Flag for updating ambient results
 
         """
-        amb_res = mdata[FC.AMB_RPOINT_RESULTS]
-        rpoints = mdata[FC.RPOINTS]
-        rweights = mdata[FC.RWEIGHTS]
+        rweights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
+        amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
+        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
         wweights = self.grotor.rotor_point_weights()
         n_wpoints = self.grotor.n_rotor_points()
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
@@ -314,7 +314,7 @@ class PartialDistSlicedWake(PartialWakesModel):
                 wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
                 wres[v] = np.einsum("sp,p->s", wres[v], rweights)
             wres[v] = wres[v][:, None]
-        del amb_res, uv
+        del uv
 
         wdel = {}
         for v, d in wake_deltas.items():
@@ -328,7 +328,9 @@ class PartialDistSlicedWake(PartialWakesModel):
             if v in wake_deltas:
                 wres[v] += wdel[v]
                 if update_amb_res:
-                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                    amb_res[v][st_sel] = wres[v]
+                    if FC.AMB_RPOINT_RESULTS not in mdata:
+                        mdata[FC.AMB_RPOINT_RESULTS] = amb_res
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

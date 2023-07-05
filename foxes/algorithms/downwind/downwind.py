@@ -1,10 +1,9 @@
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList
-import foxes.algorithms.downwind.models as dm
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
-
+from . import models as dm
 
 class Downwind(Algorithm):
     """
@@ -204,9 +203,9 @@ class Downwind(Algorithm):
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1].update(
-            {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-        )
-
+                {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
+            )
+        
         # 4) calculate turbine order:
         mlist.models.append(dm.CalcOrder())
         mlist.models[-1].name = "calc_order"
@@ -316,7 +315,6 @@ class Downwind(Algorithm):
             self.print("\n")
             self.finalize_model(mlist)
             self.finalize()
-        print("HERE DWND CLN",self.keep_models)
         self.cleanup()
 
         if ambient:

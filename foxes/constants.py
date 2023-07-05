@@ -1,5 +1,10 @@
 import numpy as np
 
+XYH = "xyh"
+""" The vector (x, y, height)
+:group: foxes.variables
+"""
+
 FARM = "farm"
 """ Wind farm identifier
 :group: foxes.constants

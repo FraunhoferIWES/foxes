@@ -142,7 +142,7 @@ class Mapped(PartialWakesModel):
 
         """
         super().keep(algo)
-        for pw in self._pwakes.values():
+        for pw in self._pwakes:
             pw.keep(algo)
 
     def new_wake_deltas(self, algo, mdata, fdata):

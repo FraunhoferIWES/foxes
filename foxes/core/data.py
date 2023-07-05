@@ -152,18 +152,19 @@ class Data(Dict):
     def __run_entry_checks(self, name, data, dims):
 
         # remove axes of size 1, added by dask for extra loop dimensions:
-        if len(dims) != len(data.shape):
-            for li, l in enumerate(self.loop_dims):
-                if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
-                    self[name] = np.squeeze(data, axis=li)
+        if dims is not None:
+            if len(dims) != len(data.shape):
+                for li, l in enumerate(self.loop_dims):
+                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
+                        self[name] = np.squeeze(data, axis=li)
 
-        for ci, c in enumerate(dims):
-            if c not in self.sizes:
-                self.sizes[c] = self[name].shape[ci]
-            elif self.sizes[c] != self[name].shape[ci]:
-                raise ValueError(
-                    f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
-                )
+            for ci, c in enumerate(dims):
+                if c not in self.sizes:
+                    self.sizes[c] = self[name].shape[ci]
+                elif self.sizes[c] != self[name].shape[ci]:
+                    raise ValueError(
+                        f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
+                    )
             
     def add(self, name, data, dims):
         """
@@ -216,5 +217,5 @@ class Data(Dict):
         if len(points.shape) != 3 or points.shape[2] != 3:
             raise ValueError(f"Expecting points shape (n_states, n_points, 3), got {points.shape}")
         data[FC.POINTS] = points
-        dims[FC.POINTS] = (FC.STATE, FC.POINT, FV.XYH)
+        dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
         return Data(data, dims, [FC.STATE, FC.POINT], name)

@@ -140,7 +140,7 @@ class Streamlines(WakeFrame):
         # calculate next tangential vector:
         svars = algo.states.output_point_vars(algo)
         pdata = {FC.POINTS: newpts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdata.update(
             {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars}
         )

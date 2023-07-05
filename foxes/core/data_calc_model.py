@@ -8,7 +8,7 @@ from .model import Model
 from .data import Data
 from foxes.utils.runners import DaskRunner
 import foxes.constants as FC
-
+import foxes.variables as FV
 
 class DataCalcModel(Model):
     """
@@ -105,10 +105,20 @@ class DataCalcModel(Model):
         odata = {
             v: np.full(oshape, np.nan, dtype=FC.DTYPE) 
             if v not in init_vars 
-            else prev[init_vars.index(v)]
+            else prev[init_vars.index(v)].copy()
             for v in out_vars
             if v not in data[-1]
         }
+        if (n_prev and FV.TXYH not in odata
+            and FV.X in odata and FV.X in odata
+            and FV.Y in odata and FV.H in odata):
+            txyh = np.zeros((data[0].n_states, data[0].n_turbines, 3), dtype=FC.DTYPE)
+            txyh[..., 0] = odata[FV.X]
+            txyh[..., 1] = odata[FV.Y]
+            txyh[..., 2] = odata[FV.H]
+            odata[FV.TXYH] = txyh
+            odims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
+            del txyh
         if len(data) == 1:
             data.append(Data(odata, odims, loop_dims))
         else:
@@ -119,10 +129,8 @@ class DataCalcModel(Model):
 
         # link chunk state indices from mdata to fdata and pdata:
         if FC.STATE in data[0]:
-            if len(data) > 1:
-                data[1][FC.STATE] = data[0][FC.STATE]
-            if len(data) > 2:
-                data[2][FC.STATE] = data[0][FC.STATE]
+            for d in data[1:]:
+                d[FC.STATE] = data[0][FC.STATE]
 
         # run model calculation:
         results = self.calculate(algo, *data, **calc_pars)
