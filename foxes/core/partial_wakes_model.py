@@ -73,6 +73,22 @@ class PartialWakesModel(Model):
 
         return idata
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        for w in self.wake_models:
+            w.keep(algo)
+        self.wake_frame.keep(algo)
+
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
         """

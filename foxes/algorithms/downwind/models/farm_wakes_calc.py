@@ -55,11 +55,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         self.pwakes = algo.partial_wakes_model
-
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.pwakes, idata=idata, verbosity=verbosity)
-
-        return idata
+        return super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata):
         """ "

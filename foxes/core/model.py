@@ -37,6 +37,19 @@ class Model(metaclass=ABCMeta):
     def __repr__(self):
         t = type(self).__name__
         return f"{self.name} ({t})"
+    
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        algo.keep_models.add(self.name)
 
     @property
     def model_id(self):

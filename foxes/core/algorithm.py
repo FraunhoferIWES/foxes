@@ -32,14 +32,14 @@ class Algorithm(Model):
         The verbosity level, 0 means silent
     dbook: foxes.DataBook
         The data book, or None for default
-    keep_models: list of str
+    keep_models: set of str
         Keep these models data in memory and do not finalize them
 
     :group: core
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=[]):
+    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=set()):
         """
         Constructor.
 
@@ -56,7 +56,7 @@ class Algorithm(Model):
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
-        keep_models: list of str
+        keep_models: set of str
             Keep these models data in memory and do not finalize them
 
         """
@@ -73,6 +73,7 @@ class Algorithm(Model):
         self.keep_models = keep_models
 
         self._idata_mem = Dict()
+        self._idata_cl = Dict()
 
     def print(self, *args, vlim=1, **kwargs):
         """
@@ -171,6 +172,11 @@ class Algorithm(Model):
             )
         return xrdata
 
+    def chunked(self, ds):
+        return ds.chunk(
+                chunks={c: v for c, v in self.chunks.items() if c in ds.coords}
+            ) if self.chunks is not None else ds
+
     def initialize(self):
         """
         Initializes the algorithm.
@@ -216,6 +222,8 @@ class Algorithm(Model):
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
                 self._idata_mem[m.name] = hidata
+                if m.name != self.name and m.name not in self.keep_models:
+                    self._idata_cl[m.name] = m
 
                 pr = False
                 if isinstance(m, FarmController):
@@ -239,6 +247,17 @@ class Algorithm(Model):
 
             if pr:
                 print(f"-- {m.name}: Finished sub-model initialization -- ")
+
+    def cleanup(self):
+        """
+        Cleanup after calculation
+        """
+        mnames = list(self._idata_cl.keys())
+        for mname in mnames:
+            m = self._idata_cl[mname]
+            if m.initialized and mname not in self._idata_mem:
+                self.finalize_model(m, self.verbosity)
+                del self._idata_cl[mname]
 
     @property
     def idata_mem(self):
@@ -331,10 +350,10 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Algorithm '{self.name}': get_models_data called before initialization"
                 )
-            idata = self._idata_mem.pop(self.name)
+            idata = self._idata_mem.get(self.name)
             mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
             for mname in mnames:
-                if mname in self.keep_models:
+                if mname in self.keep_models or mname == self.name:
                     hidata = self._idata_mem.get(mname)
                 else:
                     hidata = self._idata_mem.pop(mname)

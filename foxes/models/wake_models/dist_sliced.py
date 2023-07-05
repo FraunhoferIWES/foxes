@@ -74,7 +74,22 @@ class DistSlicedWakeModel(WakeModel):
         algo.update_idata(list(self.superp.values()), idata=idata, verbosity=verbosity)
 
         return idata
-    
+
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        for v in self.superp.values():
+            v.keep(algo)
+
     @abstractmethod
     def calc_wakes_spsel_x_yz(
             self, 
