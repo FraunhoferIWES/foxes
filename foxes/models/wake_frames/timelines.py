@@ -208,7 +208,7 @@ class Timelines(WakeFrame):
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][stsel][:, None]
 
-        i0 = np.argwhere(algo.states.index() == mdata.states_i0)[0][0]
+        i0 = mdata.states_i0(counter=True, algo=algo)
         i1 = i0 + mdata.n_states
         dxy = self._dxy[:i1]
 

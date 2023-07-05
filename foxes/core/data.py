@@ -96,18 +96,32 @@ class Data(Dict):
         """
         return self.sizes[FC.POINT] if FC.POINT in self.sizes else None
 
-    @property
-    def states_i0(self):
+    def states_i0(self, counter=False, algo=None):
         """
-        The index of the first state
+        Get the state counter for first state in chunk
+
+        Parameters
+        ----------
+        counter: bool
+            Return the state counter instead of the index
+        algo: foxes.core.Algorithm, optional
+            The algorithm, required for state counter
         
         Returns
         -------
         int:
-            The index of the first state
+            The state counter for first state in chunk
+            or the corresponding index
 
         """
-        return self[FC.STATE][0] if FC.STATE in self else None
+        if FC.STATE not in self:
+            return None
+        elif counter:
+            if algo is None:
+                raise KeyError(f"{self.name}: Missing algo for deducing state counter")
+            return np.argwhere(algo.states.index() == self[FC.STATE][0])[0][0]
+        else:
+            return self[FC.STATE][0]
 
     def __auto_update(self):
 

@@ -197,12 +197,17 @@ class Model(metaclass=ABCMeta):
         def _geta(a):
             sources = [s for s in [mdata, fdata, pdata, algo, self] if s is not None]
             for s in sources:
-                try:
-                    out = getattr(s, a)
+                if a == "states_i0":
+                    out = s.states_i0(counter=True, algo=algo)
                     if out is not None:
                         return out
-                except AttributeError:
-                    pass
+                else:
+                    try:
+                        out = getattr(s, a)
+                        if out is not None:
+                            return out
+                    except AttributeError:
+                        pass
             raise KeyError(f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?")
 
         n_states = _geta("n_states")
@@ -272,7 +277,7 @@ class Model(metaclass=ABCMeta):
                         if not np.all(states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]):
                             raise ValueError(f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}")
 
-                        i0 = np.argwhere(algo.states.index() == _geta("states_i0"))[0][0]
+                        i0 = _geta("states_i0")
                         sp = pdata[FC.STATES_SEL]
                         sel = (sp < i0)
                         if np.any(sel):
