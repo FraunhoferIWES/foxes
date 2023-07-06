@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # define arguments and options:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=2
+        "-nt", "--n_t", help="The number of turbines", type=int, default=1
     )
     parser.add_argument(
         "-l",
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         default="NREL-5MW-D126-H90.csv",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_K1", "kTI_K2"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument(
         "-w",
@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
     #############################################
     # OVERWRITE ARGS FOR DEBUGGING HERE #
-    args.wakes = ["RHB_linear"]#, "Jensen_linear_k007"]
-    args.n_t = 1
+    #args.wakes = ["RHB_linear"]#, "Jensen_linear_k007"]
+    #args.n_t = 2
     #############################################
 
     # create model book
@@ -163,15 +163,21 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-    # horizontal flow plot
+    # horizontal flow contour plot with wind direction
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xy(args.var, resolution=5,levels=25, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
         quiver_n=4,xspace=120.0, yspace=120.0)
     fig = next(g)
+    plt.savefig("RHB_horizontal_flow_wd.png")
+    plt.show()
+    plt.close(fig)
+
+    # horizontal flow plot
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xy(args.var, resolution= 2, xspace=200.0, yspace=200.0)
+    fig = next(g)
     plt.savefig("RHB_horizontal_flow.png")
     plt.show()
-    
-    plt.close(fig)
 
   # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
