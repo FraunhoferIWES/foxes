@@ -182,9 +182,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # set timestep for debugging
-    args.timestep = 30
-
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
