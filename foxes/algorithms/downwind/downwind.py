@@ -169,7 +169,6 @@ class Downwind(Algorithm):
 
     def _collect_farm_models(
         self,
-        vars_to_amb,
         calc_parameters,
         ambient,
     ):
@@ -218,7 +217,7 @@ class Downwind(Algorithm):
 
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
-        mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
+        mlist.models.append(dm.SetAmbFarmResults())
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -232,7 +231,7 @@ class Downwind(Algorithm):
         self.update_idata(mlist)
 
         # update variables:
-        self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self)
+        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
         return mlist, calc_pars
 
@@ -241,8 +240,7 @@ class Downwind(Algorithm):
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
-        farm_results = mlist.run_calculation(self, *data, 
-                                             out_vars=self.farm_vars, **kwargs)
+        farm_results = mlist.run_calculation(self, *data, out_vars=self.farm_vars, **kwargs)
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
             farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
@@ -251,7 +249,6 @@ class Downwind(Algorithm):
 
     def calc_farm(
         self,
-        vars_to_amb=None,
         calc_parameters={},
         persist=True,
         finalize=True,
@@ -263,9 +260,6 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        vars_to_amb : list of str, optional
-            Variables for which ambient variables should
-            be stored. None means all.
         calc_parameters : dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -294,9 +288,7 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # collect models:
-        mlist, calc_pars = self._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient
-        )
+        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
 
         # get input model data:
         models_data = self.get_models_data()

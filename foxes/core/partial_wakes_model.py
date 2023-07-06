@@ -157,7 +157,7 @@ class PartialWakesModel(Model):
         pdata,
         wake_deltas, 
         states_turbine, 
-        update_amb_res=False,
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -182,8 +182,9 @@ class PartialWakesModel(Model):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res: bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
         pass

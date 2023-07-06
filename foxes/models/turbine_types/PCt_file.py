@@ -228,8 +228,8 @@ class PCtFile(TurbineType):
             del yawm, cosm
 
         out = {
-            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSCT])),
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSP])),
+            FV.P: fdata[FV.P],
+            FV.CT: fdata[FV.CT],
         }
 
         out[FV.P][st_sel] = np.interp(

@@ -57,7 +57,6 @@ class Iterative(Downwind):
 
     def _collect_farm_models(
         self,
-        vars_to_amb,
         calc_parameters,
         ambient,
     ):
@@ -68,7 +67,7 @@ class Iterative(Downwind):
         if self._it == 0:
 
             mlist, calc_pars = super()._collect_farm_models(
-                vars_to_amb, calc_parameters, ambient=False)
+                                calc_parameters, ambient=False)
             
             #calc_pars[mlist.models.index(self.rotor_model)].update(
             #    {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}

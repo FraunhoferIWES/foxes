@@ -251,8 +251,8 @@ class PCtFromTwo(TurbineType):
             del yawm, cosm
 
         out = {
-            FV.P: fdata.get(FV.P, np.zeros_like(fdata[self.WSP])),
-            FV.CT: fdata.get(FV.CT, np.zeros_like(fdata[self.WSCT])),
+            FV.P: fdata[FV.P],
+            FV.CT: fdata[FV.CT],
         }
         out[FV.P][st_sel] = np.interp(
             rews3, self._data_ws_P, self._data_P, left=0.0, right=0.0

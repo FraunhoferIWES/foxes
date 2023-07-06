@@ -280,7 +280,7 @@ class PartialAxiwake(PartialWakesModel):
         pdata,
         wake_deltas, 
         states_turbine, 
-        update_amb_res=False,
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -305,15 +305,19 @@ class PartialAxiwake(PartialWakesModel):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res: bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
 
         weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
-        amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
         rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
+
+        amb_res_in = amb_res is not None
+        if not amb_res_in:
+            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata) 
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)
@@ -329,10 +333,8 @@ class PartialAxiwake(PartialWakesModel):
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
-                if update_amb_res:
+                if amb_res_in:
                     amb_res[v][st_sel] = wres[v]
-                    if FC.AMB_RPOINT_RESULTS not in mdata:
-                        mdata[FC.AMB_RPOINT_RESULTS] = amb_res
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

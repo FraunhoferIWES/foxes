@@ -6,11 +6,6 @@ class SetAmbFarmResults(FarmDataModel):
     """
     This model copies farm data results to ambient results.
 
-    Parameters
-    ----------
-    vars_to_amb : list of str, optional
-        The variables to be copied, or `None` for all
-
     Attributes
     ----------
     vars : list of str
@@ -18,9 +13,12 @@ class SetAmbFarmResults(FarmDataModel):
 
     """
 
-    def __init__(self, vars_to_amb=None):
+    def __init__(self):
+        """
+        Constructor.
+        """
         super().__init__()
-        self.vars = vars_to_amb
+        self.vars = None
 
     def output_farm_vars(self, algo):
         """
@@ -39,7 +37,6 @@ class SetAmbFarmResults(FarmDataModel):
         """
         if self.vars is None:
             self.vars = set([v for v in algo.farm_vars if v in FV.var2amb])
-            self.vars -= set(algo.rotor_model.output_farm_vars(algo))
         return [FV.var2amb[v] for v in self.vars]
 
     def calculate(self, algo, mdata, fdata):

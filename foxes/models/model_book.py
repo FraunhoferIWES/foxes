@@ -171,6 +171,7 @@ class ModelBook:
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
         self.wake_frames["timelines_1s"] = fm.wake_frames.Timelines(dt_min=1/60)
         self.wake_frames["timelines_10s"] = fm.wake_frames.Timelines(dt_min=1/6)
+        self.wake_frames["timelines_30s"] = fm.wake_frames.Timelines(dt_min=0.5)
         self.wake_frames["timelines_1min"] = fm.wake_frames.Timelines(dt_min=1)
         self.wake_frames["timelines_10min"] = fm.wake_frames.Timelines(dt_min=10)
         self.wake_frames["timelines_30min"] = fm.wake_frames.Timelines(dt_min=30)

@@ -8,7 +8,7 @@ from foxes.models.partial_wakes.distsliced import PartialDistSlicedWake
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
-
+import foxes.constants as FC
 
 class Mapped(PartialWakesModel):
     """
@@ -220,6 +220,7 @@ class Mapped(PartialWakesModel):
         pdata,
         wake_deltas, 
         states_turbine, 
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -244,12 +245,19 @@ class Mapped(PartialWakesModel):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
+        if amb_res is None:
+            ares = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata).copy()
+            amb_res = {v: d.copy() for v, d in ares.items()}
+
         for pwi, pw in enumerate(self._pwakes):
             pw.evaluate_results(
                 algo, mdata, fdata, pdata[pwi], wake_deltas[pwi], 
-                states_turbine, update_amb_res=True
+                states_turbine, amb_res=amb_res
             )
 
     def finalize(self, algo, verbosity=0):
