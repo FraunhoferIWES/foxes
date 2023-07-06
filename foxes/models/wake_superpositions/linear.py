@@ -21,12 +21,14 @@ class LinearSuperposition(WakeSuperposition):
     lim_high: dict
         Higher limits of the final wake deltas. Key: variable str,
         value: float
+    svars: list of str
+        The scaling vafriables
 
     :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scalings, lim_low=None, lim_high=None):
+    def __init__(self, scalings, lim_low=None, lim_high=None, svars=None):
         """
         Constructor.
 
@@ -44,6 +46,8 @@ class LinearSuperposition(WakeSuperposition):
         lim_high: dict, optional
             Higher limits of the final wake deltas. Key: variable str,
             value: float
+        svars: list of str, optional
+            The scaling vafriables
 
         """
         super().__init__()
@@ -51,12 +55,43 @@ class LinearSuperposition(WakeSuperposition):
         self.scalings = scalings
         self.lim_low = lim_low
         self.lim_high = lim_high
+        self.svars = svars
+
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        if self.svars is not None:
+            return self.svars
+        elif isinstance(self.scalings, dict):
+            return list(self.scalings.keys())
+        elif (
+            isinstance(self.scalings, str)
+            and len(self.scalings) > 15
+            and self.scalings[:15] == "source_turbine_"
+        ):
+            return [self.scalings[15:]]
+        else:
+            raise ValueError(f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'")
 
     def calc_wakes_plus_wake(
         self,
         algo,
         mdata,
         fdata,
+        pdata,
         states_source_turbine,
         sel_sp,
         variable,
@@ -74,6 +109,8 @@ class LinearSuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -152,7 +189,14 @@ class LinearSuperposition(WakeSuperposition):
             )
 
     def calc_final_wake_delta(
-        self, algo, mdata, fdata, variable, amb_results, wake_delta
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        variable,
+        amb_results, 
+        wake_delta,
     ):
         """
         Calculate the final wake delta after adding all
@@ -166,6 +210,8 @@ class LinearSuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray

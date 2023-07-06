@@ -2,7 +2,6 @@ import numpy as np
 
 from foxes.core import WakeSuperposition
 
-
 class TISuperposition(WakeSuperposition):
     """
     A collection of superpositions for TI.
@@ -42,6 +41,7 @@ class TISuperposition(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        pdata,
         states_source_turbine,
         sel_sp,
         variable,
@@ -59,6 +59,8 @@ class TISuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -78,6 +80,7 @@ class TISuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
+
         # superposition of every turbines efect at each target point
         # linear ti delta:
         if self.ti_superp == "linear":
@@ -100,7 +103,14 @@ class TISuperposition(WakeSuperposition):
         return wake_delta
 
     def calc_final_wake_delta(
-        self, algo, mdata, fdata, variable, amb_results, wake_delta
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        variable,
+        amb_results, 
+        wake_delta,
     ):
         """
         Calculate the final wake delta after adding all
@@ -114,6 +124,8 @@ class TISuperposition(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray

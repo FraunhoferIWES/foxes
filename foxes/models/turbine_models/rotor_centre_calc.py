@@ -115,7 +115,7 @@ class RotorCentreCalc(TurbineModel):
         """
         # prepare point data:
         pdata = {FC.POINTS: fdata[FV.TXYH]}
-        dims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        dims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         for v in self.calc_vars.values():
             pdata[v] = np.zeros_like(pdata[FC.POINTS][:, :, 0])
             dims[v] = (FC.STATE, FC.POINT)

@@ -138,6 +138,19 @@ class PointDataModelList(PointDataModel):
         """
         self.models.append(model)
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        algo.keep_models.update([self.name] + [m.name for m in self.models])
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.

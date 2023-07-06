@@ -65,6 +65,7 @@ class FlowPlots2D(Output):
         ret_im,
         quiv=None,
         invert_axis=None,
+        animated=False,
     ):
         """
         Helper function for image creation
@@ -87,26 +88,37 @@ class FlowPlots2D(Output):
         # raw data image:
         if levels is None:
             im = hax.pcolormesh(
-                x_pos, y_pos, zz, vmin=vmin, vmax=vmax, shading="auto", cmap=cmap
+                x_pos, y_pos, zz, vmin=vmin, vmax=vmax, shading="auto", cmap=cmap, animated=animated,
             )
 
         # contour plot:
         else:
-            im = hax.contourf(x_pos, y_pos, zz, levels, vmax=vmax, vmin=vmin, cmap=cmap)
+            im = hax.contourf(x_pos, y_pos, zz, levels, vmax=vmax, vmin=vmin, cmap=cmap, animated=animated,)
 
+        qv = None
         if quiv is not None and quiv[0] is not None:
             n, pars, wd, ws = quiv
             uv = wd2uv(wd[si], ws[si])
             u = uv[:, 0].reshape([N_x, N_y]).T[::n, ::n]
             v = uv[:, 1].reshape([N_x, N_y]).T[::n, ::n]
-            hax.quiver(x_pos[::n], y_pos[::n], u, v, **pars)
+            qv = hax.quiver(x_pos[::n], y_pos[::n], u, v, animated=animated, **pars)
             del n, pars, u, v, uv
 
         hax.autoscale_view()
         hax.set_xlabel(xlabel)
         hax.set_ylabel(ylabel)
-        hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
+
+        ttl = None
+        if animated:
+            if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
+                t = np.datetime_as_string(s, unit='m').replace("T", " ")
+            else:
+                t = s
+            ttl = hax.text(0.5, 1.02, f"State {t}", backgroundcolor='w',
+                transform=hax.transAxes, ha="center", animated=True)
+        else:
+            hax.set_title(title if title is not None else f"State {s}")
 
         if invert_axis == "x":
             hax.invert_xaxis()
@@ -127,7 +139,7 @@ class FlowPlots2D(Output):
         if ret_state:
             out.append(si)
         if ret_im:
-            out.append(im)
+            out.append([i for i in [im, qv, ttl] if i is not None])
         if ret_state or ret_im:
             out = tuple(out)
 
@@ -162,6 +174,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -223,6 +236,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -233,8 +248,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -337,6 +353,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
+            animated=animated
         )
 
         return out
@@ -372,6 +389,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -437,6 +455,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -447,8 +467,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -567,6 +588,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
+            animated=animated,
         )
 
         return out
@@ -602,6 +624,7 @@ class FlowPlots2D(Output):
         verbosity=1,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -667,6 +690,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -677,8 +702,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -795,6 +821,7 @@ class FlowPlots2D(Output):
             ret_state,
             ret_im,
             invert_axis="x",
+            animated=animated,
         )
 
         return out
@@ -829,6 +856,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -892,6 +920,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -902,8 +932,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -986,8 +1017,11 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", z =  {int(np.round(z_pos))} m"
+            if title is None:
+                ttl = f"State {s}"
+                ttl += f", z =  {int(np.round(z_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,
@@ -1014,6 +1048,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
+                animated=animated,
             )
 
             yield out
@@ -1050,6 +1085,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -1117,6 +1153,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -1127,8 +1165,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -1227,9 +1266,12 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", x direction = {x_direction}°"
-            ttl += f", y =  {int(np.round(y_pos))} m"
+            if title is None:
+                ttl = f"State {s}"
+                ttl += f", x direction = {x_direction}°"
+                ttl += f", y =  {int(np.round(y_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,
@@ -1256,6 +1298,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
+                animated=animated
             )
 
             yield out
@@ -1292,6 +1335,7 @@ class FlowPlots2D(Output):
         verbosity=1,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -1359,6 +1403,8 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool, optional
             Flag for image return
+        animated: bool
+            Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -1369,8 +1415,9 @@ class FlowPlots2D(Output):
             The figure object
         si: int, optional
             The state index
-        im: matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, atplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -1498,6 +1545,7 @@ class FlowPlots2D(Output):
                 ret_im,
                 quiv=quiv,
                 invert_axis="x",
+                animated=animated,
             )
 
             yield out

@@ -18,11 +18,6 @@ D = "D"
 :group: foxes.variables
 """
 
-XYH = "xyh"
-""" The vector (x, y, height)
-:group: foxes.variables
-"""
-
 TXYH = "txyh"
 """ The turbine rotor centre coordinate 
 vector (x, y, height)

@@ -70,7 +70,7 @@ class IECTIWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -84,8 +84,8 @@ class IECTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -94,9 +94,18 @@ class IECTIWake(TopHatWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.TI] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.TI] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
+    def calc_wake_radius(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        x, 
+        ct,
+        ):
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -108,6 +117,8 @@ class IECTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -126,14 +137,11 @@ class IECTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get k:
-        k = self.get_data(self.k_var, fdata, st_sel, data_prio=False)
-        if isinstance(k, np.ndarray):
-            k = k[:, None]
+        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
 
         # calculate:
         radius = k * x
@@ -141,7 +149,16 @@ class IECTIWake(TopHatWakeModel):
         return radius
 
     def calc_centreline_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        sp_sel, 
+        x, 
+        wake_r, 
+        ct,
     ):
         """
         Calculate centre line results of wake deltas.
@@ -154,6 +171,8 @@ class IECTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -175,19 +194,17 @@ class IECTIWake(TopHatWakeModel):
             varlue: numpy.ndarray, shape: (n_sp_sel,)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        n_points = sp_sel.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # read D from extra data:
-        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        D[:] = fdata[FV.D][st_sel][:, None]
+        D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         D = D[sp_sel]
 
         # get ws:
-        ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ws[:] = fdata[FV.REWS][st_sel][:, None]
+        ws = self.get_data(FV.REWS, FC.STATE_POINT, lookup="f", algo=algo, 
+                            fdata=fdata, pdata=pdata, upcast=True,
+                            states_source_turbine=states_source_turbine)
         ws = ws[sp_sel]
 
         # calculate wind deficit:

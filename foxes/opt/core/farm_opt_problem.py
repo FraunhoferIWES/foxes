@@ -196,7 +196,7 @@ class FarmOptProblem(Problem):
         """
         if exclude is None:
             exclude = [self._org_states_name]
-        self.algo.keep_models.append(self._org_states_name)
+        self.algo.keep_models.add(self._org_states_name)
         for mname, idata in self.algo.idata_mem.items():
             if mname not in exclude and self.name not in mname:
                 keep = True
@@ -208,7 +208,7 @@ class FarmOptProblem(Problem):
                     if not keep:
                         break
                 if keep:
-                    self.algo.keep_models.append(mname)
+                    self.algo.keep_models.add(mname)
 
     def initialize(self, drop_vars=[FC.STATE], exclude=None, verbosity=1):
         """

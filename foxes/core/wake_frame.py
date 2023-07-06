@@ -49,7 +49,7 @@ class WakeFrame(Model):
         pass
 
     @abstractmethod
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
@@ -61,11 +61,11 @@ class WakeFrame(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points: numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
@@ -167,7 +167,7 @@ class WakeFrame(Model):
 
         # run ambient calculation:
         pdata = {FC.POINTS: pts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdata.update(
             {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
         )

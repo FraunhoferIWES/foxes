@@ -1,5 +1,10 @@
 import numpy as np
 
+XYH = "xyh"
+""" The vector (x, y, height)
+:group: foxes.variables
+"""
+
 FARM = "farm"
 """ Wind farm identifier
 :group: foxes.constants
@@ -71,6 +76,25 @@ TMODEL_SELS = "tmodel_sels"
 :group: foxes.constants
 """
 
+STATES_SEL = "states_sel"
+"""Identifier for states selection
+:group: foxes.constants
+"""
+
+STATE_SOURCE_TURBINE = "state_source_turbine"
+"""Identifier for the source turbines per state
+:group: foxes.constants
+"""
+
+STATE_TURBINE = "state-turbine"
+"""Identifier for state-turbine dimensions
+:group: foxes.constants
+"""
+
+STATE_POINT = "state-point"
+"""Identifier for state-point dimensions
+:group: foxes.constants
+"""
 
 DTYPE = np.float64
 """ Default data type for floats

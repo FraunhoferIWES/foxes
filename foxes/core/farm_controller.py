@@ -52,6 +52,21 @@ class FarmController(FarmDataModel):
 
         self.pars = pars
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        self.pre_rotor_models.keep(algo)
+        self.post_rotor_models.keep(algo)
+        
     def set_pars(self, model_name, init_pars, calc_pars, final_pars):
         """
         Set parameters for a turbine model

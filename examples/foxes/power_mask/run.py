@@ -72,7 +72,7 @@ def run_foxes(args):
 
     # run calculation with power mask:
 
-    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+    farm_results = algo.calc_farm()
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
@@ -90,7 +90,7 @@ def run_foxes(args):
     models.remove("set_Pmax")
     models.remove("PMask")
 
-    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+    farm_results = algo.calc_farm()
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])

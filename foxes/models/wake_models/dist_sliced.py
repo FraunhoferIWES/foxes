@@ -75,8 +75,32 @@ class DistSlicedWakeModel(WakeModel):
 
         return idata
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        for v in self.superp.values():
+            v.keep(algo)
+
     @abstractmethod
-    def calc_wakes_spsel_x_yz(self, algo, mdata, fdata, states_source_turbine, x, yz):
+    def calc_wakes_spsel_x_yz(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata, 
+            states_source_turbine, 
+            x, 
+            yz,
+        ):
         """
         Calculate wake deltas.
 
@@ -88,6 +112,8 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -110,7 +136,14 @@ class DistSlicedWakeModel(WakeModel):
         pass
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata, 
+        states_source_turbine, 
+        wake_coos, 
+        wake_deltas,
     ):
         """
         Calculate the contribution to the wake deltas
@@ -126,6 +159,8 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -143,7 +178,7 @@ class DistSlicedWakeModel(WakeModel):
         yz = wake_coos[:, :, None, 1:3]
 
         wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
-            algo, mdata, fdata, states_source_turbine, x, yz
+            algo, mdata, fdata, pdata, states_source_turbine, x, yz
         )
 
         for v, hdel in wdeltas.items():
@@ -158,6 +193,7 @@ class DistSlicedWakeModel(WakeModel):
                 algo,
                 mdata,
                 fdata,
+                pdata,
                 states_source_turbine,
                 sp_sel,
                 v,
@@ -165,7 +201,15 @@ class DistSlicedWakeModel(WakeModel):
                 hdel[:, 0],
             )
 
-    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
+    def finalize_wake_deltas(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata,
+            amb_results, 
+            wake_deltas,
+        ):
         """
         Finalize the wake calculation.
 
@@ -179,6 +223,8 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
@@ -192,7 +238,7 @@ class DistSlicedWakeModel(WakeModel):
         """
         for v, s in self.superp.items():
             wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
+                algo, mdata, fdata, pdata, v, amb_results[v], wake_deltas[v]
             )
 
     def finalize(self, algo, verbosity=0):

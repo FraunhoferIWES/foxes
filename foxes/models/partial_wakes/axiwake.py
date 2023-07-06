@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import PartialWakesModel
+from foxes.core import PartialWakesModel, Data
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.utils.two_circles import calc_area
 import foxes.variables as FV
@@ -93,6 +93,20 @@ class PartialAxiwake(PartialWakesModel):
 
         return idata
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        self.rotor_model.keep(algo)
+        
     def new_wake_deltas(self, algo, mdata, fdata):
         """
         Creates new initial wake deltas, filled
@@ -111,17 +125,26 @@ class PartialAxiwake(PartialWakesModel):
         -------
         wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data 
 
         """
-        n_points = fdata.n_turbines
+        pdata = Data.from_points(points=fdata[FV.TXYH])
+
         wake_deltas = {}
         for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
 
-        return wake_deltas
+        return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -135,6 +158,8 @@ class PartialAxiwake(PartialWakesModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
@@ -150,7 +175,7 @@ class PartialAxiwake(PartialWakesModel):
 
         # calc coordinates to rotor centres:
         wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, fdata[FV.TXYH]
+            algo, mdata, fdata, pdata, states_source_turbine
         )
 
         # prepare x and r coordinates:
@@ -222,7 +247,7 @@ class PartialAxiwake(PartialWakesModel):
         # evaluate wake models:
         for w in self.wake_models:
             wdeltas, sp_sel = w.calc_wakes_spsel_x_r(
-                algo, mdata, fdata, states_source_turbine, x, r
+                algo, mdata, fdata, pdata, states_source_turbine, x, r
             )
 
             for v, wdel in wdeltas.items():
@@ -239,6 +264,7 @@ class PartialAxiwake(PartialWakesModel):
                     algo,
                     mdata,
                     fdata,
+                    pdata,
                     states_source_turbine,
                     sp_sel,
                     v,
@@ -247,7 +273,14 @@ class PartialAxiwake(PartialWakesModel):
                 )
 
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        wake_deltas, 
+        states_turbine, 
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -262,6 +295,8 @@ class PartialAxiwake(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
@@ -270,32 +305,36 @@ class PartialAxiwake(PartialWakesModel):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res: bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
-        weights = self.get_data(FC.RWEIGHTS, mdata)
-        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FC.RPOINTS, mdata)
+
+        weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
+        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
+
+        amb_res_in = amb_res is not None
+        if not amb_res_in:
+            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata) 
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-        del amb_res
 
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
 
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
-                if update_amb_res:
-                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                if amb_res_in:
+                    amb_res[v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(

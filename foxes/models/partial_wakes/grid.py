@@ -39,7 +39,13 @@ class PartialGrid(PartialDistSlicedWake):
             )
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        pdata,
+        states_source_turbine, 
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -53,6 +59,8 @@ class PartialGrid(PartialDistSlicedWake):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
@@ -61,21 +69,14 @@ class PartialGrid(PartialDistSlicedWake):
             `new_wake_deltas` function
 
         """
+
         # evaluate grid rotor:
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        n_rpoints = self.grotor.n_rotor_points()
-        n_points = n_turbines * n_rpoints
-        points = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(
-            n_states, n_points, 3
-        )
         wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
+            algo, mdata, fdata, pdata, states_source_turbine
         )
-        del points
 
         # evaluate wake models:
         for w in self.wake_models:
             w.contribute_to_wake_deltas(
-                algo, mdata, fdata, states_source_turbine, wcoos, wake_deltas
+                algo, mdata, fdata, pdata, states_source_turbine, wcoos, wake_deltas
             )

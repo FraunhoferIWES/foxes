@@ -46,7 +46,7 @@ def run_foxes(args):
 
     time0 = time.time()
 
-    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+    farm_results = algo.calc_farm()
 
     time1 = time.time()
     print("\nCalc time =", time1 - time0, "\n")
@@ -181,9 +181,6 @@ if __name__ == "__main__":
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
     args = parser.parse_args()
-
-    # set timestep for debugging
-    args.timestep = 30
 
     with DaskRunner(
         scheduler=args.scheduler,
