@@ -213,7 +213,8 @@ class PartialAxiwake(PartialWakesModel):
             r[sel] = 0.5 * (R2[:, 1:] + R2[:, :-1])
 
             hA = calc_area(R1, R2, Rsel)
-            hA = hA[:, 1:] - hA[:, :-1]
+            hA = hA[:, 1:] - hA[:, :-1] + 1e-15
+
             weights[sel] = hA / np.sum(hA, axis=-1)[:, None]
             del hA, Rsel, Dsel, R1, R2
 

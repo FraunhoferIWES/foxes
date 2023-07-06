@@ -55,16 +55,14 @@ class Model(metaclass=ABCMeta):
             The mdata, fdata or pdata object
 
         """
-        da = data[name]
-        di = data.dims[name] if name in data.dims else None
-
         i0 = data.states_i0(counter=True, algo=algo)
         if i0 not in self._store:
             self._store[i0] = Data(data={}, dims={}, 
                                    loop_dims=data.loop_dims, 
                                    name=f"{self.name}_{i0}")
         
-        self._store[i0].add(name, da, di)
+        self._store[i0][name] = data[name]
+        self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
 
     def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
         """

@@ -295,5 +295,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New test: `consistency/iterative`, checks if iterative algorithm gives same result
 - Examples:
   - New example: `timelines`, demonstrates the usage of the `Timelines` wake frame
+- Notebooks:
+  - New notebook: `timelines.ipynb`, showing how to use the `Timelines` wake frame in a notebook
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)

@@ -20,7 +20,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="timeseries_1000.csv",
+        default="timeseries_1000.csv.gz",
     )
     parser.add_argument(
         "-t",
@@ -196,6 +196,7 @@ if __name__ == "__main__":
                 ax=ax,
                 ret_im=True,
                 title="",
+                runner=runner,
                 animated=True,
             )):
                 ims.append(im)
