@@ -8,7 +8,7 @@ import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
-def calc(mbook, farm, states, wakes, points, args):
+def calc(runner, mbook, farm, states, wakes, points, args):
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     algo = foxes.algorithms.Downwind(
@@ -23,126 +23,12 @@ def calc(mbook, farm, states, wakes, points, args):
         verbosity=0,
     )
 
-    farm_results = algo.calc_farm()
-    point_results = algo.calc_points(farm_results, points[None, :])
+    farm_results = runner.run(algo.calc_farm)
+    point_results = runner.run(algo.calc_points, args=(farm_results, points[None, :]))
 
     mbook.finalize(algo, verbosity=0)
 
     return point_results[args.var].to_numpy()
-
-
-def run_foxes(args):
-    mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
-    mbook.turbine_types[ttype.name] = ttype
-    D = ttype.D
-    H = ttype.H
-
-    models = args.tmodels + [ttype.name]
-    if args.ct is not None:
-        mbook.turbine_models["set_ct"] = foxes.models.turbine_models.SetFarmVars()
-        mbook.turbine_models["set_ct"].add_var(FV.CT, args.ct)
-        models.append("set_ct")
-
-    states = foxes.input.states.SingleStateStates(
-        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
-    )
-
-    farm = foxes.WindFarm()
-    farm.add_turbine(
-        foxes.Turbine(
-            xy=np.array([0.0, 0.0]),
-            turbine_models=models,
-        )
-    )
-
-    #  y lines:
-
-    print("\nCalculating y lines\n")
-
-    xlist = np.array(args.dists_D) * D
-    ylist = np.arange(-args.span_y, args.span_y + args.step, args.step) * D
-    nd = len(args.dists_D)
-    nx = len(xlist)
-    ny = len(ylist)
-    points = np.zeros((nd, ny, 3))
-    points[:, :, 2] = args.height if args.height is not None else H
-    points[:, :, 0] = xlist[:, None]
-    points[:, :, 1] = ylist[None, :]
-    points = points.reshape(nd * ny, 3)
-
-    ncols = min(args.plot_cols, nd)
-    nrows = int(nd / ncols)
-    while nrows * ncols < nd:
-        nrows += 1
-
-    figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
-    fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
-
-    for wake in args.wakes:
-        wakes = [wake] + args.ewakes
-        print("Calculating:", wakes)
-
-        results = calc(mbook, farm, states, wakes, points, args).reshape(nd, ny)
-
-        for di, d in enumerate(args.dists_D):
-            if nrows == 1 or ncols == 1:
-                ax = axs[di]
-            else:
-                xi = int(di / ncols)
-                yi = di % ncols
-                ax = axs[xi, yi]
-
-            if args.deficit:
-                dfz = (args.ws - results[di]) / args.ws
-                ax.plot(ylist / D, dfz, label=wake)
-                ax.set_ylabel("WS deficit")
-            else:
-                ax.plot(ylist / D, results[di], label=wake)
-                ax.set_ylabel(args.var)
-
-            ax.set_title(f"x = {d} D")
-            ax.set_xlabel("y/D")
-            ax.grid()
-
-    ax.legend(loc="best")
-    plt.show()
-    plt.close(fig)
-
-    # x line:
-
-    print("\nCalculating x line\n")
-
-    xlist = np.arange(-1, args.dists_D[-1] + args.step, args.step) * D
-    nx = len(xlist)
-    points = np.zeros((nx, 3))
-    points[:, 2] = args.height if args.height is not None else H
-    points[:, 0] = xlist
-
-    figsize = (args.plot_cols * args.figsize_scale, args.figsize_scale)
-    fig, ax = plt.subplots(figsize=figsize)
-
-    for wake in args.wakes:
-        wakes = [wake] + args.ewakes
-        print("Calculating:", wakes)
-
-        results = calc(mbook, farm, states, wakes, points, args)
-
-        if args.deficit:
-            dfz = (args.ws - results[0]) / args.ws
-            ax.plot(xlist / D, dfz, label=wake)
-            ax.set_ylabel("WS deficit")
-        else:
-            ax.plot(xlist / D, results[0], label=wake)
-            ax.set_ylabel(args.var)
-
-        ax.set_title(f"y = 0")
-        ax.set_xlabel("x/D")
-        ax.legend(loc="best")
-        ax.grid()
-
-    plt.show()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -235,9 +121,118 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    mbook = foxes.models.ModelBook()
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
+    mbook.turbine_types[ttype.name] = ttype
+    D = ttype.D
+    H = ttype.H
+
+    models = args.tmodels + [ttype.name]
+    if args.ct is not None:
+        mbook.turbine_models["set_ct"] = foxes.models.turbine_models.SetFarmVars()
+        mbook.turbine_models["set_ct"].add_var(FV.CT, args.ct)
+        models.append("set_ct")
+
+    states = foxes.input.states.SingleStateStates(
+        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
+    )
+
+    farm = foxes.WindFarm()
+    farm.add_turbine(
+        foxes.Turbine(
+            xy=np.array([0.0, 0.0]),
+            turbine_models=models,
+        )
+    )
+
+    #  y lines:
+
+    print("\nCalculating y lines\n")
+
+    xlist = np.array(args.dists_D) * D
+    ylist = np.arange(-args.span_y, args.span_y + args.step, args.step) * D
+    nd = len(args.dists_D)
+    nx = len(xlist)
+    ny = len(ylist)
+    points = np.zeros((nd, ny, 3))
+    points[:, :, 2] = args.height if args.height is not None else H
+    points[:, :, 0] = xlist[:, None]
+    points[:, :, 1] = ylist[None, :]
+    points = points.reshape(nd * ny, 3)
+
+    ncols = min(args.plot_cols, nd)
+    nrows = int(nd / ncols)
+    while nrows * ncols < nd:
+        nrows += 1
+
+    figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
+    fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        runner.run(run_foxes, args=(args,))
+        
+        for wake in args.wakes:
+            wakes = [wake] + args.ewakes
+            print("Calculating:", wakes)
+
+            results = calc(runner, mbook, farm, states, wakes, points, args).reshape(nd, ny)
+
+            for di, d in enumerate(args.dists_D):
+                if nrows == 1 or ncols == 1:
+                    ax = axs[di]
+                else:
+                    xi = int(di / ncols)
+                    yi = di % ncols
+                    ax = axs[xi, yi]
+
+                if args.deficit:
+                    dfz = (args.ws - results[di]) / args.ws
+                    ax.plot(ylist / D, dfz, label=wake)
+                    ax.set_ylabel("WS deficit")
+                else:
+                    ax.plot(ylist / D, results[di], label=wake)
+                    ax.set_ylabel(args.var)
+
+                ax.set_title(f"x = {d} D")
+                ax.set_xlabel("y/D")
+                ax.grid()
+
+        ax.legend(loc="best")
+        plt.show()
+        plt.close(fig)
+
+        # x line:
+
+        print("\nCalculating x line\n")
+
+        xlist = np.arange(-1, args.dists_D[-1] + args.step, args.step) * D
+        nx = len(xlist)
+        points = np.zeros((nx, 3))
+        points[:, 2] = args.height if args.height is not None else H
+        points[:, 0] = xlist
+
+        figsize = (args.plot_cols * args.figsize_scale, args.figsize_scale)
+        fig, ax = plt.subplots(figsize=figsize)
+
+        for wake in args.wakes:
+            wakes = [wake] + args.ewakes
+            print("Calculating:", wakes)
+
+            results = calc(runner, mbook, farm, states, wakes, points, args)
+
+            if args.deficit:
+                dfz = (args.ws - results[0]) / args.ws
+                ax.plot(xlist / D, dfz, label=wake)
+                ax.set_ylabel("WS deficit")
+            else:
+                ax.plot(xlist / D, results[0], label=wake)
+                ax.set_ylabel(args.var)
+
+            ax.set_title(f"y = 0")
+            ax.set_xlabel("x/D")
+            ax.legend(loc="best")
+            ax.grid()
+
+    plt.show()

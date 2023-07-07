@@ -18,12 +18,14 @@ class FlowPlots2D(Output):
         The algorithm for point calculation
     farm_results: xarray.Dataset
         The farm results
+    runner: foxes.utils.runners.Runner, optional
+        The runner
 
     :group: output
 
     """
 
-    def __init__(self, algo, farm_results):
+    def __init__(self, algo, farm_results, runner=None):
         """
         Constructor.
 
@@ -33,10 +35,13 @@ class FlowPlots2D(Output):
             The algorithm for point calculation
         farm_results: xarray.Dataset
             The farm results
+        runner: foxes.utils.runners.Runner, optional
+            The runner
 
         """
         self.algo = algo
         self.fres = farm_results
+        self.runner = runner
 
     def _get_fig(
         self,
@@ -145,17 +150,17 @@ class FlowPlots2D(Output):
 
         return out
 
-    def _calc_point_results(self, verbosity, g_pts, runner, **kwargs):
+    def _calc_point_results(self, verbosity, g_pts, **kwargs):
 
         """ Helper function for point data calculation """
         averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
         if averb is not None:
             self.algo.verbosity = verbosity
-        if runner is None:
+        if self.runner is None:
             point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
         else:
             kwargs["points"] = g_pts
-            point_results = runner.run(self.algo.calc_points, args=(self.fres,), kwargs=kwargs)
+            point_results = self.runner.run(self.algo.calc_points, args=(self.fres,), kwargs=kwargs)
         if averb is not None:
             self.algo.verbosity = averb
         
@@ -191,7 +196,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -255,8 +259,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -319,7 +321,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        data = self._calc_point_results(verbosity, g_pts, runner, **kwargs)[var].to_numpy()
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -402,7 +404,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -470,8 +471,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -549,7 +548,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        data = self._calc_point_results(verbosity, g_pts, runner, **kwargs)[var].to_numpy()
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -633,7 +632,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -701,8 +699,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -780,7 +776,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        data = self._calc_point_results(verbosity, g_pts, runner, **kwargs)[var].to_numpy()
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -864,7 +860,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -930,8 +925,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -994,7 +987,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self._calc_point_results(verbosity, g_pts, runner, **kwargs)
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
         data = point_results[var].to_numpy()
         quiv = (
             None
@@ -1091,7 +1084,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -1161,8 +1153,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -1240,7 +1230,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self._calc_point_results(verbosity, g_pts, runner, **kwargs)
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
         data = point_results[var].to_numpy()
         quiv = (
             None
@@ -1339,7 +1329,6 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         animated=False,
-        runner=None,
         **kwargs,
     ):
         """
@@ -1409,8 +1398,6 @@ class FlowPlots2D(Output):
             Flag for image return
         animated: bool
             Switch for usage for an animation
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
@@ -1488,7 +1475,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self._calc_point_results(verbosity, g_pts, runner, **kwargs)
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
         data = point_results[var].to_numpy()
         quiv = (
             None

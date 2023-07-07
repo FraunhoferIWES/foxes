@@ -9,55 +9,6 @@ import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
-def run_foxes(args, states):
-    cks = (
-        None
-        if args.nodask
-        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
-    )
-
-    mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
-    mbook.turbine_types[ttype.name] = ttype
-
-    farm = foxes.WindFarm()
-    N = int(args.n_turbines**0.5)
-    foxes.input.farm_layout.add_grid(
-        farm,
-        xy_base=np.array([500.0, 500.0]),
-        step_vectors=np.array([[500.0, 0], [0, 500.0]]),
-        steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
-    )
-
-    algo = foxes.algorithms.Downwind(
-        mbook,
-        farm,
-        states=states,
-        rotor_model=args.rotor,
-        wake_models=args.wakes,
-        wake_frame=args.wake_frame,
-        partial_wakes_model=args.pwakes,
-        chunks=cks,
-    )
-
-    time0 = time.time()
-
-    farm_results = algo.calc_farm()
-
-    time1 = time.time()
-    print("\nCalc time =", time1 - time0, "\n")
-
-    print(farm_results)
-
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
-
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    o.get_mean_fig_xy(FV.WS, resolution=10)
-    plt.show()
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_pattern", help="The search pattern for input *.nc files")
@@ -128,9 +79,54 @@ if __name__ == "__main__":
         pre_load=not args.no_pre_load,
     )
 
+    cks = (
+        None
+        if args.nodask
+        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
+    )
+
+    mbook = foxes.models.ModelBook()
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
+    mbook.turbine_types[ttype.name] = ttype
+
+    farm = foxes.WindFarm()
+    N = int(args.n_turbines**0.5)
+    foxes.input.farm_layout.add_grid(
+        farm,
+        xy_base=np.array([500.0, 500.0]),
+        step_vectors=np.array([[500.0, 0], [0, 500.0]]),
+        steps=(N, N),
+        turbine_models=args.tmodels + [ttype.name],
+    )
+
+    algo = foxes.algorithms.Downwind(
+        mbook,
+        farm,
+        states=states,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame=args.wake_frame,
+        partial_wakes_model=args.pwakes,
+        chunks=cks,
+    )
+
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        runner.run(run_foxes, args=(args, states))
+        
+        time0 = time.time()
+        farm_results = runner.run(algo.calc_farm)
+        time1 = time.time()
+
+        print("\nCalc time =", time1 - time0, "\n")
+
+        print(farm_results)
+
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+        o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+        o.get_mean_fig_xy(FV.WS, resolution=10)
+        plt.show()

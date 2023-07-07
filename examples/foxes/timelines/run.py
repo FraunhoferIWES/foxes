@@ -127,7 +127,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
-        verbosity=2
+        verbosity=1
     )
 
     with DaskRunner(
@@ -184,7 +184,7 @@ if __name__ == "__main__":
             print("\nCalculating animation")
 
             fig, ax = plt.subplots(figsize=(8, 7))
-            o = foxes.output.FlowPlots2D(algo, farm_results)
+            o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
             ims = []
             for si, (fig, im) in enumerate(o.gen_states_fig_xy(
                 FV.WS,
@@ -197,7 +197,6 @@ if __name__ == "__main__":
                 ax=ax,
                 ret_im=True,
                 title=None,
-                runner=runner,
                 animated=True,
             )):
                 ims.append(im)
