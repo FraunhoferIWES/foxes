@@ -12,7 +12,9 @@ from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--animation", help="Write flow animation file", action="store_true")
+    parser.add_argument(
+        "-a", "--animation", help="Write flow animation file", action="store_true"
+    )
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
@@ -100,7 +102,7 @@ if __name__ == "__main__":
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
-        #states_sel=range(20,30)
+        # states_sel=range(20,30)
     )
 
     farm = foxes.WindFarm()
@@ -127,7 +129,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
-        verbosity=1
+        verbosity=1,
     )
 
     with DaskRunner(
@@ -135,7 +137,6 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        
         time0 = time.time()
         farm_results = runner.run(algo.calc_farm)
         time1 = time.time()
@@ -180,30 +181,32 @@ if __name__ == "__main__":
         print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
 
         if args.animation:
-
             print("\nCalculating animation")
 
             fig, ax = plt.subplots(figsize=(8, 7))
             o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
             ims = []
-            for si, (fig, im) in enumerate(o.gen_states_fig_xy(
-                FV.WS,
-                resolution=30,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                quiver_n=35,
-                xmax=5000,
-                ymax=5000,
-                fig=fig,
-                ax=ax,
-                ret_im=True,
-                title=None,
-                animated=True,
-            )):
+            for si, (fig, im) in enumerate(
+                o.gen_states_fig_xy(
+                    FV.WS,
+                    resolution=30,
+                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                    quiver_n=35,
+                    xmax=5000,
+                    ymax=5000,
+                    fig=fig,
+                    ax=ax,
+                    ret_im=True,
+                    title=None,
+                    animated=True,
+                )
+            ):
                 ims.append(im)
 
-            ani = animation.ArtistAnimation(fig, ims, interval=200, blit=True,
-                                        repeat_delay=2000)
-        
+            ani = animation.ArtistAnimation(
+                fig, ims, interval=200, blit=True, repeat_delay=2000
+            )
+
             fpath = "ani.gif"
             print("Writing file", fpath)
             ani.save(filename=fpath, writer="pillow")

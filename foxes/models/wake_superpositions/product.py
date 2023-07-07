@@ -98,13 +98,13 @@ class ProductSuperposition(WakeSuperposition):
         return wake_delta
 
     def calc_final_wake_delta(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
         variable,
-        amb_results, 
+        amb_results,
         wake_delta,
     ):
         """

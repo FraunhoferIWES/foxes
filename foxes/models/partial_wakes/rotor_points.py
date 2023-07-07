@@ -69,7 +69,7 @@ class RotorPoints(PartialWakesModel):
         wake_deltas: dict
             Keys: Variable name str, values: any
         pdata: foxes.core.Data
-            The evaluation point data 
+            The evaluation point data
 
         """
         points = self.get_wake_points(algo, mdata, fdata)
@@ -82,12 +82,12 @@ class RotorPoints(PartialWakesModel):
         return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
+        states_source_turbine,
         wake_deltas,
     ):
         """
@@ -122,13 +122,13 @@ class RotorPoints(PartialWakesModel):
             )
 
     def evaluate_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        wake_deltas, 
-        states_turbine, 
+        wake_deltas,
+        states_turbine,
         amb_res=None,
     ):
         """
@@ -165,7 +165,9 @@ class RotorPoints(PartialWakesModel):
 
         amb_res_in = amb_res is not None
         if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata) 
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)

@@ -4,10 +4,11 @@ from foxes.core import FarmDataModelList
 import foxes.variables as FV
 from . import models as im
 
+
 class Iterative(Downwind):
     """
     Iterative calculation of farm data.
-    
+
     Attributes
     ----------
     max_it: int
@@ -16,12 +17,13 @@ class Iterative(Downwind):
         The convergence criteria
 
     """
+
     FarmWakesCalculation = im.FarmWakesCalculation
 
     def __init__(self, *args, max_it=None, conv_crit=None, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -32,27 +34,27 @@ class Iterative(Downwind):
             The convergence criteria
         kwargs: dict, optional
             Keyword arguments for Downwind
-        
+
         """
 
-        verbosity=int(kwargs.pop("verbosity", 1)) - 1
+        verbosity = int(kwargs.pop("verbosity", 1)) - 1
         super().__init__(*args, verbosity=verbosity, **kwargs)
 
-        self.max_it = 2*self.farm.n_turbines if max_it is None else max_it
+        self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = im.DefaultConv() if conv_crit is None else conv_crit
         self._it = None
         self._mlist = None
-    
+
     @property
     def iterations(self):
         """
         The current iteration number
-        
+
         Returns
         -------
         it: int
             The current iteration number
-            
+
         """
         return self._it
 
@@ -64,16 +66,16 @@ class Iterative(Downwind):
         """
         Helper function that creates model list
         """
-        
-        if self._it == 0:
 
+        if self._it == 0:
             mlist, calc_pars = super()._collect_farm_models(
-                                calc_parameters, ambient=False)
-            
-            #calc_pars[mlist.models.index(self.rotor_model)].update(
+                calc_parameters, ambient=False
+            )
+
+            # calc_pars[mlist.models.index(self.rotor_model)].update(
             #    {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-            #)
-            
+            # )
+
             mdls = [
                 self.states,
                 self.rotor_model,
@@ -100,9 +102,18 @@ class Iterative(Downwind):
 
         # initialize models:
         self.update_idata(mlist)
-        
+
         # update variables:
-        self.farm_vars = [FV.X, FV.Y, FV.H, FV.D, FV.WEIGHT, FV.ORDER, FV.WD, FV.YAW] + mlist.output_farm_vars(self)
+        self.farm_vars = [
+            FV.X,
+            FV.Y,
+            FV.H,
+            FV.D,
+            FV.WEIGHT,
+            FV.ORDER,
+            FV.WD,
+            FV.YAW,
+        ] + mlist.output_farm_vars(self)
         self.farm_vars += [FV.var2amb[v] for v in self.farm_vars if v in FV.var2amb]
         self.farm_vars = sorted(list(set(self.farm_vars)))
 
@@ -111,16 +122,15 @@ class Iterative(Downwind):
         return mlist, calc_pars
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
-        """ Helper function for running the main farm calculation """
-        ir = None if self.prev_farm_results is None \
+        """Helper function for running the main farm calculation"""
+        ir = (
+            None
+            if self.prev_farm_results is None
             else self.chunked(self.prev_farm_results)
+        )
         return super()._run_farm_calc(mlist, *data, initial_results=ir, **kwargs)
-    
-    def calc_farm(
-        self,
-        finalize=True,
-        **kwargs
-    ):
+
+    def calc_farm(self, finalize=True, **kwargs):
         """
         Calculate farm data.
 
@@ -141,7 +151,6 @@ class Iterative(Downwind):
         fres = None
         self._it = -1
         while self._it < self.max_it:
-
             self._it += 1
 
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
@@ -149,9 +158,10 @@ class Iterative(Downwind):
             self.prev_farm_results = fres
             fres = super().calc_farm(finalize=False, **kwargs)
 
-            conv = self.conv_crit.check_converged(self, self.prev_farm_results, fres, 
-                                              verbosity=self.verbosity+1)
-            
+            conv = self.conv_crit.check_converged(
+                self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
+            )
+
             if conv:
                 self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
                 break

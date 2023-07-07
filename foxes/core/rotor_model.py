@@ -55,9 +55,12 @@ class RotorModel(FarmDataModel):
             The output variable names
 
         """
-        return list(set(self.calc_vars + [
-            FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb
-        ]))
+        return list(
+            set(
+                self.calc_vars
+                + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
+            )
+        )
 
     @abstractmethod
     def n_rotor_points(self):
@@ -228,7 +231,6 @@ class RotorModel(FarmDataModel):
         wd = None
         vdone = []
         for v in self.calc_vars:
-
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)

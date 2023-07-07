@@ -60,6 +60,7 @@ def calc(runner, args, rotor, sdata, pwake, cks):
 
     return farm_results, D
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
@@ -157,7 +158,6 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         if len(args.rotors) == 1:
             for pwake in args.pwakes:
                 farm_results, D = calc(runner, args, args.rotors[0], sdata, pwake, cks)
@@ -198,9 +198,7 @@ if __name__ == "__main__":
                     label=f"{rotor}, {pwake}",
                 )
 
-                title = (
-                    "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
-                )
+                title = "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
 
         else:
             raise ValueError(
@@ -215,4 +213,3 @@ if __name__ == "__main__":
     ax.set_ylabel(vlab)
     ax.legend()
     plt.show()
-

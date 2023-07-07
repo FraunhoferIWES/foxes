@@ -69,7 +69,9 @@ class QuadraticSuperposition(WakeSuperposition):
         ):
             return [self.scalings[15:]]
         else:
-            raise ValueError(f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'")
+            raise ValueError(
+                f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'"
+            )
 
     def initialize(self, algo, verbosity=0):
         """
@@ -210,13 +212,13 @@ class QuadraticSuperposition(WakeSuperposition):
             )
 
     def calc_final_wake_delta(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
         variable,
-        amb_results, 
+        amb_results,
         wake_delta,
     ):
         """

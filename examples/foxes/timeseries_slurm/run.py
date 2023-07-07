@@ -124,7 +124,6 @@ if __name__ == "__main__":
     }
 
     with DaskRunner(scheduler="slurm", cluster_args=cluster_args) as runner:
-
         time0 = time.time()
         farm_results = runner.run(algo.calc_farm)
         time1 = time.time()

@@ -10,6 +10,7 @@ from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 import foxes.constants as FC
 
+
 class Mapped(PartialWakesModel):
     """
     Partial wake models depending on the wake model (type).
@@ -164,7 +165,7 @@ class Mapped(PartialWakesModel):
         wake_deltas: dict
             Keys: Variable name str, values: any
         pdata: foxes.core.Data
-            The evaluation point data 
+            The evaluation point data
 
         """
         wdeltas = []
@@ -177,12 +178,12 @@ class Mapped(PartialWakesModel):
         return wdeltas, pdatas
 
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
+        states_source_turbine,
         wake_deltas,
     ):
         """
@@ -213,13 +214,13 @@ class Mapped(PartialWakesModel):
             )
 
     def evaluate_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        wake_deltas, 
-        states_turbine, 
+        wake_deltas,
+        states_turbine,
         amb_res=None,
     ):
         """
@@ -251,13 +252,20 @@ class Mapped(PartialWakesModel):
 
         """
         if amb_res is None:
-            ares = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata).copy()
+            ares = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            ).copy()
             amb_res = {v: d.copy() for v, d in ares.items()}
 
         for pwi, pw in enumerate(self._pwakes):
             pw.evaluate_results(
-                algo, mdata, fdata, pdata[pwi], wake_deltas[pwi], 
-                states_turbine, amb_res=amb_res
+                algo,
+                mdata,
+                fdata,
+                pdata[pwi],
+                wake_deltas[pwi],
+                states_turbine,
+                amb_res=amb_res,
             )
 
     def finalize(self, algo, verbosity=0):

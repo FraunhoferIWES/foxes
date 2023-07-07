@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import PointDataModel
 import foxes.variables as FV
 
+
 class TKE2TI(PointDataModel):
     """
     Calculates TI from TKE, using TI = sqrt( 3/2 * TKE) / WS

@@ -54,14 +54,14 @@ class Data(Dict):
         self.sizes = {}
         for v, d in data.items():
             self.__run_entry_checks(v, d, dims[v])
-        
+
         self.__auto_update()
-    
+
     @property
     def n_states(self):
         """
         The number of states
-        
+
         Returns
         -------
         int:
@@ -74,7 +74,7 @@ class Data(Dict):
     def n_turbines(self):
         """
         The number of turbines
-        
+
         Returns
         -------
         int:
@@ -87,7 +87,7 @@ class Data(Dict):
     def n_points(self):
         """
         The number of points
-        
+
         Returns
         -------
         int:
@@ -106,7 +106,7 @@ class Data(Dict):
             Return the state counter instead of the index
         algo: foxes.core.Algorithm, optional
             The algorithm, required for state counter
-        
+
         Returns
         -------
         int:
@@ -124,7 +124,6 @@ class Data(Dict):
             return self[FC.STATE][0]
 
     def __auto_update(self):
-
         data = self
         dims = self.dims
 
@@ -150,7 +149,6 @@ class Data(Dict):
             self[FV.H] = self[FV.TXYH][:, :, 2]
 
     def __run_entry_checks(self, name, data, dims):
-
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:
             if len(dims) != len(data.shape):
@@ -165,11 +163,11 @@ class Data(Dict):
                     raise ValueError(
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
                     )
-            
+
     def add(self, name, data, dims):
         """
         Add data entry
-        
+
         Parameters
         ----------
         name: str
@@ -178,7 +176,7 @@ class Data(Dict):
             The data
         dims: tuple of str
             The dimensions
-        
+
         """
         self[name] = data
         self.dims[name] = dims
@@ -187,15 +185,15 @@ class Data(Dict):
 
     @classmethod
     def from_points(
-        cls, 
-        points, 
-        data={}, 
-        dims={},  
+        cls,
+        points,
+        data={},
+        dims={},
         name="pdata",
-        ):
+    ):
         """
         Create from points
-        
+
         Parameters
         ----------
         points: np.ndarray
@@ -207,7 +205,7 @@ class Data(Dict):
             of data keys
         name: str
             The data container name
-        
+
         Returns
         -------
         pdata: Data
@@ -215,7 +213,9 @@ class Data(Dict):
 
         """
         if len(points.shape) != 3 or points.shape[2] != 3:
-            raise ValueError(f"Expecting points shape (n_states, n_points, 3), got {points.shape}")
+            raise ValueError(
+                f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
+            )
         data[FC.POINTS] = points
         dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
         return Data(data, dims, [FC.STATE, FC.POINT], name)

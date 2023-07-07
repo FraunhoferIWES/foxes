@@ -16,7 +16,7 @@ def test():
     cases = [
         (foxes.algorithms.Downwind, "rotor_wd"),
         (foxes.algorithms.Iterative, "rotor_wd"),
-        (foxes.algorithms.Iterative, "rotor_wd_farmo")
+        (foxes.algorithms.Iterative, "rotor_wd_farmo"),
     ]
     lims = {FV.REWS: 1e-8, FV.P: 1e-6}
 

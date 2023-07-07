@@ -93,12 +93,28 @@ class FlowPlots2D(Output):
         # raw data image:
         if levels is None:
             im = hax.pcolormesh(
-                x_pos, y_pos, zz, vmin=vmin, vmax=vmax, shading="auto", cmap=cmap, animated=animated,
+                x_pos,
+                y_pos,
+                zz,
+                vmin=vmin,
+                vmax=vmax,
+                shading="auto",
+                cmap=cmap,
+                animated=animated,
             )
 
         # contour plot:
         else:
-            im = hax.contourf(x_pos, y_pos, zz, levels, vmax=vmax, vmin=vmin, cmap=cmap, animated=animated,)
+            im = hax.contourf(
+                x_pos,
+                y_pos,
+                zz,
+                levels,
+                vmax=vmax,
+                vmin=vmin,
+                cmap=cmap,
+                animated=animated,
+            )
 
         qv = None
         if quiv is not None and quiv[0] is not None:
@@ -117,11 +133,19 @@ class FlowPlots2D(Output):
         ttl = None
         if animated and title is None:
             if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
-                t = np.datetime_as_string(s, unit='m').replace("T", " ")
+                t = np.datetime_as_string(s, unit="m").replace("T", " ")
             else:
                 t = s
-            ttl = hax.text(0.5, 1.02, f"State {t}", backgroundcolor='w',
-                transform=hax.transAxes, ha="center", animated=True, clip_on=False)
+            ttl = hax.text(
+                0.5,
+                1.02,
+                f"State {t}",
+                backgroundcolor="w",
+                transform=hax.transAxes,
+                ha="center",
+                animated=True,
+                clip_on=False,
+            )
         else:
             hax.set_title(title if title is not None else f"State {s}")
 
@@ -151,8 +175,7 @@ class FlowPlots2D(Output):
         return out
 
     def _calc_point_results(self, verbosity, g_pts, **kwargs):
-
-        """ Helper function for point data calculation """
+        """Helper function for point data calculation"""
         averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
         if averb is not None:
             self.algo.verbosity = verbosity
@@ -160,10 +183,12 @@ class FlowPlots2D(Output):
             point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
         else:
             kwargs["points"] = g_pts
-            point_results = self.runner.run(self.algo.calc_points, args=(self.fres,), kwargs=kwargs)
+            point_results = self.runner.run(
+                self.algo.calc_points, args=(self.fres,), kwargs=kwargs
+            )
         if averb is not None:
             self.algo.verbosity = averb
-        
+
         return point_results
 
     def get_mean_fig_xy(
@@ -367,7 +392,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
-            animated=animated
+            animated=animated,
         )
 
         return out
@@ -1291,7 +1316,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
-                animated=animated
+                animated=animated,
             )
 
             yield out

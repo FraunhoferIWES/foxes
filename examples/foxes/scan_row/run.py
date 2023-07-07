@@ -109,7 +109,6 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         time0 = time.time()
         farm_results = runner.run(algo.calc_farm)
         time1 = time.time()
@@ -180,9 +179,7 @@ if __name__ == "__main__":
 
             time0 = time.time()
 
-            point_results = runner.run(algo.calc_points, args=(
-                farm_results, points)
-            )
+            point_results = runner.run(algo.calc_points, args=(farm_results, points))
 
             time1 = time.time()
             print("\nCalc time =", time1 - time0, "\n")

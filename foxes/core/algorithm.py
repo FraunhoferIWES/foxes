@@ -173,9 +173,11 @@ class Algorithm(Model):
         return xrdata
 
     def chunked(self, ds):
-        return ds.chunk(
-                chunks={c: v for c, v in self.chunks.items() if c in ds.coords}
-            ) if self.chunks is not None else ds
+        return (
+            ds.chunk(chunks={c: v for c, v in self.chunks.items() if c in ds.coords})
+            if self.chunks is not None
+            else ds
+        )
 
     def initialize(self):
         """

@@ -58,10 +58,12 @@ class YAW2YAWM(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        yaw = self.get_data(FV.YAW, FC.STATE_TURBINE, lookup="f", 
-                            fdata=fdata, upcast=True)[st_sel]
-        wd = self.get_data(FV.WD, FC.STATE_TURBINE, lookup="f", 
-                            fdata=fdata, upcast=True)[st_sel]
+        yaw = self.get_data(
+            FV.YAW, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
+        )[st_sel]
+        wd = self.get_data(
+            FV.WD, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
+        )[st_sel]
 
         yawm = fdata[FV.YAWM]
         yawm[st_sel] = delta_wd(wd, yaw)

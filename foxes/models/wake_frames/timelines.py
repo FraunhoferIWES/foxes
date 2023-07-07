@@ -19,7 +19,7 @@ class Timelines(WakeFrame):
         Interpolation parameters for centre line
         point interpolation
     dt_min: float, optional
-        The delta t value in minutes, 
+        The delta t value in minutes,
         if not from timeseries data
 
     :group: models.wake_frames
@@ -38,7 +38,7 @@ class Timelines(WakeFrame):
             Interpolation parameters for centre line
             point interpolation
         dt_min: float, optional
-            The delta t value in minutes, 
+            The delta t value in minutes,
             if not from timeseries data
 
         """
@@ -71,46 +71,52 @@ class Timelines(WakeFrame):
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
-        """              
+        """
         idata = super().initialize(algo, verbosity)
-        
+
         if verbosity > 0:
             print(f"{self.name}: Pre-calculating ambient wind vectors")
-        
+
         # get and check times:
         times = np.asarray(algo.states.index())
         if self.dt_min is None:
             if not np.issubdtype(times.dtype, np.datetime64):
-                raise TypeError(f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}")
+                raise TypeError(
+                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
+                )
             elif len(times) == 1:
-                raise KeyError(f"{self.name}: Expecting 'dt_min' for single step timeseries")
-            dt = ( times[1:] - times[:-1] ).astype('timedelta64[s]').astype(FC.ITYPE)
+                raise KeyError(
+                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
+                )
+            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
         else:
-            n = max(len(times)-1, 1)
-            dt = np.full(n, self.dt_min*60, dtype='timedelta64[s]').astype(FC.ITYPE)
+            n = max(len(times) - 1, 1)
+            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
 
         # calculate horizontal wind vector in all states:
         self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-            
+
         # prepare mdata:
         mdata = algo.idata_mem[algo.states.name]["data_vars"]
         mdict = {v: d[1] for v, d in mdata.items()}
         mdims = {v: d[0] for v, d in mdata.items()}
         mdata = Data(mdict, mdims, loop_dims=[FC.STATE])
         del mdict, mdims
-        
+
         # prepare fdata:
         fdata = Data({}, {}, loop_dims=[FC.STATE])
-        
+
         # prepare pdata:
-        pdata = {v: np.zeros((algo.n_states, 1), dtype=FC.DTYPE) 
-                 for v in algo.states.output_point_vars(algo)}
+        pdata = {
+            v: np.zeros((algo.n_states, 1), dtype=FC.DTYPE)
+            for v in algo.states.output_point_vars(algo)
+        }
         pdata[FC.POINTS] = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
         pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
         pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
 
-        # calculate:      
+        # calculate:
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         if len(dt) == 1:
             self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, :2] * dt[:, None]
@@ -126,7 +132,7 @@ class Timelines(WakeFrame):
         plt.show()
         quit()
         """
-        
+
         return idata
 
     def calc_order(self, algo, mdata, fdata):
@@ -161,8 +167,9 @@ class Timelines(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, pdata,
-                                                  np.full(n_states, ti))[..., 0]
+            coosx[:, ti, :] = self.get_wake_coos(
+                algo, mdata, fdata, pdata, np.full(n_states, ti)
+            )[..., 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -226,10 +233,8 @@ class Timelines(WakeFrame):
         del rxyz
 
         while True:
-            
             sel = (trace_si > 0) & (trace_l < self.max_wake_length)
             if np.any(sel):
-
                 trace_si[sel] -= 1
 
                 delta = dxy[trace_si[sel]]
@@ -243,27 +248,28 @@ class Timelines(WakeFrame):
                 d = np.linalg.norm(trp, axis=-1)
                 trace_d[sel] = d
 
-                seln = (d <= np.minimum(d0, 2*dmag))
+                seln = d <= np.minimum(d0, 2 * dmag)
                 if np.any(seln):
-
                     htrp = trp[seln]
                     raxis = delta[seln]
                     raxis = raxis / np.linalg.norm(raxis, axis=-1)[:, None]
-                    saxis = np.concatenate([-raxis[:, 1, None], raxis[:, 0, None]], axis=1)
+                    saxis = np.concatenate(
+                        [-raxis[:, 1, None], raxis[:, 0, None]], axis=1
+                    )
 
                     wcx = wcoosx[sel]
-                    wcx[seln] = np.einsum('sd,sd->s', htrp, raxis) + trace_l[sel][seln]
+                    wcx[seln] = np.einsum("sd,sd->s", htrp, raxis) + trace_l[sel][seln]
                     wcoosx[sel] = wcx
                     del wcx, raxis
 
                     wcy = wcoosy[sel]
-                    wcy[seln] = np.einsum('sd,sd->s', htrp, saxis)
+                    wcy[seln] = np.einsum("sd,sd->s", htrp, saxis)
                     wcoosy[sel] = wcy
                     del wcy, saxis, htrp
 
             else:
                 break
-        
+
         # turbines that cause wake:
         pdata.add(FC.STATE_SOURCE_TURBINE, states_source_turbine, (FC.STATE,))
 

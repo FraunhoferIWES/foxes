@@ -85,10 +85,10 @@ class FarmWakesCalculation(FarmDataModel):
         n_states = mdata.n_states
 
         def _evaluate(algo, mdata, fdata, pdata, wdeltas, o):
-            
-            self.pwakes.evaluate_results(algo, mdata, fdata, pdata, 
-                                        wdeltas, states_turbine=o)  
-            
+            self.pwakes.evaluate_results(
+                algo, mdata, fdata, pdata, wdeltas, states_turbine=o
+            )
+
             trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
             np.put_along_axis(trbs, o[:, None], True, axis=1)
 
@@ -105,6 +105,8 @@ class FarmWakesCalculation(FarmDataModel):
                 _evaluate(algo, mdata, fdata, pdata, wdeltas, o)
 
             if oi < n_order - 1:
-                self.pwakes.contribute_to_wake_deltas(algo, mdata, fdata, pdata, o, wdeltas)
+                self.pwakes.contribute_to_wake_deltas(
+                    algo, mdata, fdata, pdata, o, wdeltas
+                )
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -175,14 +175,15 @@ class Streamlines(WakeFrame):
         inds = np.full((n_states, n_turbines, n_points), -1, dtype=FC.ITYPE)
         dists = np.full((n_states, n_turbines, n_points), np.nan, dtype=FC.DTYPE)
         for pi in range(n_points):
-
             hdists = np.linalg.norm(
                 points[:, None, pi, None] - spts[:, :, :n_spts], axis=-1
             )
             if tcase:
                 hdists[:, pi] = np.inf
             inds[:, :, pi] = np.argmin(hdists, axis=2)
-            dists[:, :, pi] = np.take_along_axis(hdists, inds[:, :, pi, None], axis=2)[..., 0]
+            dists[:, :, pi] = np.take_along_axis(hdists, inds[:, :, pi, None], axis=2)[
+                ..., 0
+            ]
             done[:, :, pi] = inds[:, :, pi] < n_spts - 1
             del hdists
 
@@ -288,7 +289,7 @@ class Streamlines(WakeFrame):
         order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
         for si in range(n_states):
             order[si] = np.lexsort(keys=coosx[si])
-        
+
         return order
 
     def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):

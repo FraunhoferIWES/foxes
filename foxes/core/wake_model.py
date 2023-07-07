@@ -39,13 +39,13 @@ class WakeModel(Model):
 
     @abstractmethod
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata, 
-        states_source_turbine, 
-        wake_coos, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_coos,
         wake_deltas,
     ):
         """
@@ -80,14 +80,14 @@ class WakeModel(Model):
         pass
 
     def finalize_wake_deltas(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            pdata,
-            amb_results, 
-            wake_deltas,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        amb_results,
+        wake_deltas,
+    ):
         """
         Finalize the wake calculation.
 

@@ -39,12 +39,12 @@ class PartialGrid(PartialDistSlicedWake):
             )
 
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
+        states_source_turbine,
         wake_deltas,
     ):
         """

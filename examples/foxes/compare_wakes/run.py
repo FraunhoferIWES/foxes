@@ -30,6 +30,7 @@ def calc(runner, mbook, farm, states, wakes, points, args):
 
     return point_results[args.var].to_numpy()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -172,12 +173,13 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        
         for wake in args.wakes:
             wakes = [wake] + args.ewakes
             print("Calculating:", wakes)
 
-            results = calc(runner, mbook, farm, states, wakes, points, args).reshape(nd, ny)
+            results = calc(runner, mbook, farm, states, wakes, points, args).reshape(
+                nd, ny
+            )
 
             for di, d in enumerate(args.dists_D):
                 if nrows == 1 or ncols == 1:

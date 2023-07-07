@@ -109,19 +109,19 @@ class PartialWakesModel(Model):
         wake_deltas: dict
             Keys: Variable name str, values: any
         pdata: foxes.core.Data
-            The evaluation point data 
+            The evaluation point data
 
         """
         pass
 
     @abstractmethod
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
+        states_source_turbine,
         wake_deltas,
     ):
         """
@@ -150,13 +150,13 @@ class PartialWakesModel(Model):
 
     @abstractmethod
     def evaluate_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        wake_deltas, 
-        states_turbine, 
+        wake_deltas,
+        states_turbine,
         amb_res=None,
     ):
         """

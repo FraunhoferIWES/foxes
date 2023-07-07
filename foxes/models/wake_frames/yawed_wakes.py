@@ -131,18 +131,34 @@ class YawedWakes(WakeFrame):
         """
 
         # get gamma:
-        gamma = self.get_data(FV.YAWM, FC.STATE_POINT, lookup="fs", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        gamma = self.get_data(
+            FV.YAWM,
+            FC.STATE_POINT,
+            lookup="fs",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         gamma *= np.pi / 180
 
         # get k:
-        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        k = self.get_data(
+            self.k_var,
+            FC.STATE_POINT,
+            lookup="sf",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # run model calculation:
-        self.model.calc_data(algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k)
+        self.model.calc_data(
+            algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k
+        )
 
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)

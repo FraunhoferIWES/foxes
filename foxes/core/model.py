@@ -5,6 +5,7 @@ from itertools import count
 import foxes.constants as FC
 from .data import Data
 
+
 class Model(metaclass=ABCMeta):
     """
     Base class for all models.
@@ -57,10 +58,10 @@ class Model(metaclass=ABCMeta):
         """
         i0 = data.states_i0(counter=True, algo=algo)
         if i0 not in self._store:
-            self._store[i0] = Data(data={}, dims={}, 
-                                   loop_dims=data.loop_dims, 
-                                   name=f"{self.name}_{i0}")
-        
+            self._store[i0] = Data(
+                data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
+            )
+
         self._store[i0][name] = data[name]
         self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
 
@@ -94,10 +95,7 @@ class Model(metaclass=ABCMeta):
             return (data[name], data.dims[name]) if ret_dims else data[name]
 
         i0 = data.states_i0(counter=True, algo=algo)
-        if not safe or (
-            i0 in self._store 
-            and name in self._store[i0]
-        ):
+        if not safe or (i0 in self._store and name in self._store[i0]):
             if ret_dims:
                 return self._store[i0][name], self._store[i0].dims[name]
             else:
@@ -234,7 +232,7 @@ class Model(metaclass=ABCMeta):
         variable: str
             The variable, serves as data key
         target: str, optional
-            The dimensions identifier for the output, e.g 
+            The dimensions identifier for the output, e.g
             FC.STATE_TURBINE, FC.STATE_POINT
         lookup: str
             The order of data sources. Combination of:
@@ -276,7 +274,9 @@ class Model(metaclass=ABCMeta):
                             return out
                     except AttributeError:
                         pass
-            raise KeyError(f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?")
+            raise KeyError(
+                f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?"
+            )
 
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
@@ -286,14 +286,14 @@ class Model(metaclass=ABCMeta):
             n_points = _geta("n_points")
             dims = (FC.STATE, FC.POINT)
         else:
-            raise KeyError(f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}")
-    
+            raise KeyError(
+                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}"
+            )
+
         out = None
         for s in lookup:
-
             # lookup self:
             if s == "s" and hasattr(self, variable):
-
                 a = getattr(self, variable)
 
                 if a is not None and upcast:
@@ -304,57 +304,59 @@ class Model(metaclass=ABCMeta):
                         out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
                         out[:] = a
                     else:
-                        raise KeyError(f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT")
-                
+                        raise KeyError(
+                            f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT"
+                        )
+
                 else:
                     out = a
 
             # lookup mdata:
             elif (
-                s == "m" and mdata is not None and variable in mdata
+                s == "m"
+                and mdata is not None
+                and variable in mdata
                 and len(mdata.dims[variable]) > 1
                 and tuple(mdata.dims[variable][:2]) == dims
             ):
                 out = mdata[variable]
-            
+
             # lookup fdata:
             elif (
-                s == "f" and fdata is not None and variable in fdata
+                s == "f"
+                and fdata is not None
+                and variable in fdata
                 and len(fdata.dims[variable]) > 1
                 and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
             ):
                 # direct fdata:
                 if target == FC.STATE_TURBINE:
                     out = fdata[variable]
-                
+
                 # translate state-turbine to state-point data:
-                elif (
-                    target == FC.STATE_POINT
-                    and states_source_turbine is not None
-                ):
+                elif target == FC.STATE_POINT and states_source_turbine is not None:
                     # from fdata, uniform for points:
                     st_sel = (np.arange(n_states), states_source_turbine)
-                    out = np.zeros((n_states, n_points),  dtype=FC.DTYPE)
+                    out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
                     out[:] = fdata[variable][st_sel][:, None]
 
                     # from previous iteration, if requested:
-                    if (
-                        pdata is not None
-                        and FC.STATES_SEL in pdata
-                    ):
-                        if not np.all(states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]):
-                            raise ValueError(f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}")
+                    if pdata is not None and FC.STATES_SEL in pdata:
+                        if not np.all(
+                            states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]
+                        ):
+                            raise ValueError(
+                                f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}"
+                            )
 
                         i0 = _geta("states_i0")
                         sp = pdata[FC.STATES_SEL]
-                        sel = (sp < i0)
+                        sel = sp < i0
                         if np.any(sel):
-
-                            if (
-                                algo is None
-                                or not hasattr(algo, "prev_farm_results")
-                            ):
-                                raise KeyError(f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm")
+                            if algo is None or not hasattr(algo, "prev_farm_results"):
+                                raise KeyError(
+                                    f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
+                                )
 
                             prev_fdata = getattr(algo, "prev_farm_results")
                             if prev_fdata is None:
@@ -362,17 +364,21 @@ class Model(metaclass=ABCMeta):
                             else:
                                 st = np.zeros_like(sp)
                                 st[:] = states_source_turbine[:, None]
-                                out[sel] = prev_fdata[variable].to_numpy()[sp[sel], st[sel]]
+                                out[sel] = prev_fdata[variable].to_numpy()[
+                                    sp[sel], st[sel]
+                                ]
                                 del st
 
             # lookup pdata:
             elif (
-                s == "p" and pdata is not None and variable in pdata
+                s == "p"
+                and pdata is not None
+                and variable in pdata
                 and len(pdata.dims[variable]) > 1
                 and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
-            
+
             if out is not None:
                 break
 
@@ -393,20 +399,20 @@ class Model(metaclass=ABCMeta):
         """
         Modifies the given objects by selecting a
         subset of states.
-        
+
         Parameters
         ----------
         sel_states: list of int
             The states selection
         objs: list of foxes.core.Data
             The objects, e.g. [mdata, fdata, pdata]
-            
+
         Returns
         -------
         mobjs: list of foxes.core.Data
             The modified objects with reduced
             states dimension
-            
+
         """
         out = []
         for o in objs:
@@ -414,9 +420,6 @@ class Model(metaclass=ABCMeta):
                 v: d[sel_states] if o.dims[v][0] == FC.STATE else d
                 for v, d in o.items()
             }
-            out.append(
-                Data(data, o.dims, loop_dims=o.loop_dims, name=o.name)
-            )
-                
+            out.append(Data(data, o.dims, loop_dims=o.loop_dims, name=o.name))
+
         return out
-    

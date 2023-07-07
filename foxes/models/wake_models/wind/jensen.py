@@ -79,15 +79,15 @@ class JensenWake(TopHatWakeModel):
         wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
     def calc_wake_radius(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
-        x, 
+        states_source_turbine,
+        x,
         ct,
-        ):
+    ):
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -120,26 +120,43 @@ class JensenWake(TopHatWakeModel):
 
         """
 
-        R = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)/2
-        
-        k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        R = (
+            self.get_data(
+                FV.D,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
+            / 2
+        )
+
+        k = self.get_data(
+            self.k_var,
+            FC.STATE_POINT,
+            lookup="sf",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         return R + k * x
 
     def calc_centreline_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
-        sp_sel, 
-        x, 
-        wake_r, 
+        states_source_turbine,
+        sp_sel,
+        x,
+        wake_r,
         ct,
     ):
         """

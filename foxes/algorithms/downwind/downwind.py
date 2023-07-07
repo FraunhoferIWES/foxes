@@ -5,6 +5,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as dm
 
+
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -202,9 +203,9 @@ class Downwind(Algorithm):
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1].update(
-                {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-            )
-        
+            {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
+        )
+
         # 4) calculate turbine order:
         mlist.models.append(dm.CalcOrder())
         mlist.models[-1].name = "calc_order"
@@ -236,15 +237,17 @@ class Downwind(Algorithm):
         return mlist, calc_pars
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
-        """ Helper function for running the main farm calculation """
+        """Helper function for running the main farm calculation"""
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
-        farm_results = mlist.run_calculation(self, *data, out_vars=self.farm_vars, **kwargs)
+        farm_results = mlist.run_calculation(
+            self, *data, out_vars=self.farm_vars, **kwargs
+        )
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
             farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
-        
+
         return farm_results
 
     def calc_farm(
@@ -496,7 +499,7 @@ class Downwind(Algorithm):
             out_vars=vars,
             parameters=calc_pars,
         )
-        
+
         del models_data, farm_results, point_data
 
         # finalize models:
@@ -513,7 +516,7 @@ class Downwind(Algorithm):
         if chunked_results:
             point_results = self.chunked(point_results)
 
-        return point_results 
+        return point_results
 
     def finalize(self, clear_mem=False):
         """
@@ -526,8 +529,8 @@ class Downwind(Algorithm):
 
         """
         if clear_mem:
-            self.keep_models= set()
-            
+            self.keep_models = set()
+
         mdls = [
             self.states,
             self.rotor_model,

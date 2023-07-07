@@ -143,7 +143,6 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         # run calculation with power mask:
 
         farm_results = runner.run(algo.calc_farm)

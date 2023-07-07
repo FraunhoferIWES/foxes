@@ -10,6 +10,7 @@ from foxes.utils.runners import DaskRunner
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class DataCalcModel(Model):
     """
     Abstract base class for models with
@@ -103,15 +104,20 @@ class DataCalcModel(Model):
         # add zero output data arrays:
         odims = {v: out_dims for v in out_vars}
         odata = {
-            v: np.full(oshape, np.nan, dtype=FC.DTYPE) 
-            if v not in init_vars 
+            v: np.full(oshape, np.nan, dtype=FC.DTYPE)
+            if v not in init_vars
             else prev[init_vars.index(v)].copy()
             for v in out_vars
             if v not in data[-1]
         }
-        if (n_prev and FV.TXYH not in odata
-            and FV.X in odata and FV.X in odata
-            and FV.Y in odata and FV.H in odata):
+        if (
+            n_prev
+            and FV.TXYH not in odata
+            and FV.X in odata
+            and FV.X in odata
+            and FV.Y in odata
+            and FV.H in odata
+        ):
             txyh = np.zeros((data[0].n_states, data[0].n_turbines, 3), dtype=FC.DTYPE)
             txyh[..., 0] = odata[FV.X]
             txyh[..., 1] = odata[FV.Y]
@@ -161,8 +167,14 @@ class DataCalcModel(Model):
         return data
 
     def run_calculation(
-        self, algo, *data, out_vars, loop_dims, out_core_vars, 
-        initial_results=None, **calc_pars,
+        self,
+        algo,
+        *data,
+        out_vars,
+        loop_dims,
+        out_core_vars,
+        initial_results=None,
+        **calc_pars,
     ):
         """
         Starts the model calculation in parallel, via
@@ -276,7 +288,7 @@ class DataCalcModel(Model):
         results = xr.apply_ufunc(
             self._wrap_calc,
             *ldata,
-            input_core_dims=iidims+icdims,
+            input_core_dims=iidims + icdims,
             output_core_dims=[out_core_vars],
             output_dtypes=[FC.DTYPE],
             dask="parallelized",

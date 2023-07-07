@@ -18,15 +18,15 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
 
     @abstractmethod
     def calc_wakes_spsel_x_r(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            pdata,
-            states_source_turbine, 
-            x, 
-            r,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        r,
+    ):
         """
         Calculate wake deltas.
 
@@ -62,15 +62,15 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         pass
 
     def calc_wakes_spsel_x_yz(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            pdata, 
-            states_source_turbine, 
-            x, 
-            yz,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        yz,
+    ):
         """
         Calculate wake deltas.
 

@@ -66,7 +66,7 @@ class FarmController(FarmDataModel):
         super().keep(algo)
         self.pre_rotor_models.keep(algo)
         self.post_rotor_models.keep(algo)
-        
+
     def set_pars(self, model_name, init_pars, calc_pars, final_pars):
         """
         Set parameters for a turbine model

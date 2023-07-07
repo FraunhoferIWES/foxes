@@ -4,6 +4,7 @@ from foxes.core import TurbineModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class YAWM2YAW(TurbineModel):
     """
     Calculates absolute yaw (i.e. YAWM) from delta
@@ -56,10 +57,12 @@ class YAWM2YAW(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        yawm = self.get_data(FV.YAWM, FC.STATE_TURBINE, lookup="f", 
-                            fdata=fdata, upcast=True)[st_sel]
-        wd = self.get_data(FV.WD, FC.STATE_TURBINE, lookup="f", 
-                            fdata=fdata, upcast=True)[st_sel]
+        yawm = self.get_data(
+            FV.YAWM, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
+        )[st_sel]
+        wd = self.get_data(
+            FV.WD, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
+        )[st_sel]
 
         yaw = fdata[FV.YAW]
         yaw[st_sel] = np.mod(wd + yawm, 360.0)

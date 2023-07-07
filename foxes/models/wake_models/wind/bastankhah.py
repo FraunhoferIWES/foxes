@@ -68,7 +68,7 @@ class BastankhahWake(GaussianWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
-    
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -95,14 +95,14 @@ class BastankhahWake(GaussianWakeModel):
         wake_deltas[FV.WS] = np.zeros((mdata.n_states, pdata.n_points), dtype=FC.DTYPE)
 
     def calc_amplitude_sigma_spsel(
-            self,
-            algo, 
-            mdata, 
-            fdata, 
-            pdata,
-            states_source_turbine, 
-            x,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -135,9 +135,16 @@ class BastankhahWake(GaussianWakeModel):
         """
 
         # get ct:
-        ct = self.get_data(FV.CT, FC.STATE_POINT, lookup="f", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -148,15 +155,29 @@ class BastankhahWake(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = self.get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            D = self.get_data(
+                FV.D,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             D = D[sp_sel]
 
             # get k:
-            k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            k = self.get_data(
+                self.k_var,
+                FC.STATE_POINT,
+                lookup="sf",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             k = k[sp_sel]
 
             # calculate sigma:

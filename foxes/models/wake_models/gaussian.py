@@ -14,14 +14,14 @@ class GaussianWakeModel(AxisymmetricWakeModel):
 
     @abstractmethod
     def calc_amplitude_sigma_spsel(
-            self,
-            algo, 
-            mdata, 
-            fdata, 
-            pdata,
-            states_source_turbine, 
-            x,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -55,15 +55,15 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         pass
 
     def calc_wakes_spsel_x_r(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            pdata,
-            states_source_turbine, 
-            x, 
-            r,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        r,
+    ):
         """
         Calculate wake deltas.
 
@@ -104,5 +104,5 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         for v in amsi.keys():
             ampld, sigma = amsi[v]
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
-        
+
         return wdeltas, sp_sel

@@ -186,7 +186,9 @@ class LookupTable(TurbineModel):
         """
         indata = {
             v: xr.DataArray(
-                self.get_data(v, FC.STATE_TURBINE, lookup="fs", fdata=fdata, upcast=True)[st_sel],
+                self.get_data(
+                    v, FC.STATE_TURBINE, lookup="fs", fdata=fdata, upcast=True
+                )[st_sel],
                 dims=["_z"],
             )
             for v in self.input_vars

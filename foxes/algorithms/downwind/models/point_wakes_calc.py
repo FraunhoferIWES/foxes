@@ -128,7 +128,9 @@ class PointWakesCalculation(PointDataModel):
             wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, pdata, o)
 
             for w in wmodels:
-                w.contribute_to_wake_deltas(algo, mdata, fdata, pdata, o, wcoos, wdeltas)
+                w.contribute_to_wake_deltas(
+                    algo, mdata, fdata, pdata, o, wcoos, wdeltas
+                )
 
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in wmodels:

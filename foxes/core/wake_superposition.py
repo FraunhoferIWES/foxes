@@ -65,13 +65,13 @@ class WakeSuperposition(Model):
 
     @abstractmethod
     def calc_final_wake_delta(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
         variable,
-        amb_results, 
+        amb_results,
         wake_delta,
     ):
         """

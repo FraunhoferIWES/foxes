@@ -64,7 +64,7 @@ class PorteAgelModel(Model):
         self.ct_max = ct_max
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
-    
+
     @property
     def pars(self):
         """
@@ -125,39 +125,80 @@ class PorteAgelModel(Model):
         )
 
         # get D:
-        D = super().get_data(FV.D, FC.STATE_POINT, lookup="f", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        D = super().get_data(
+            FV.D,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # get ct:
-        ct = super().get_data(FV.CT, FC.STATE_POINT, lookup="f", algo=algo, 
-                            fdata=fdata, pdata=pdata, upcast=True,
-                            states_source_turbine=states_source_turbine)
+        ct = super().get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
         if np.any(sp_sel):
-
             # get ws:
-            ws = super().get_data(FV.REWS, FC.STATE_POINT, lookup="f", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            ws = super().get_data(
+                FV.REWS,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
 
             # get TI:
-            ti = super().get_data(FV.TI, FC.STATE_POINT, lookup="f", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            ti = super().get_data(
+                FV.TI,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
 
             # get alpha:
-            alpha = super().get_data(FV.PA_ALPHA, FC.STATE_POINT, lookup="fs", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            alpha = super().get_data(
+                FV.PA_ALPHA,
+                FC.STATE_POINT,
+                lookup="fs",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
 
             # get beta:
-            beta = super().get_data(FV.PA_BETA, FC.STATE_POINT, lookup="fs", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            beta = super().get_data(
+                FV.PA_BETA,
+                FC.STATE_POINT,
+                lookup="fs",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
 
             # apply filter:
             x = x[sp_sel]
@@ -383,7 +424,7 @@ class PorteAgelWake(DistSlicedWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
-    
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -411,15 +452,15 @@ class PorteAgelWake(DistSlicedWakeModel):
         wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
     def calc_wakes_spsel_x_yz(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        pdata, 
-        states_source_turbine, 
-        x, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
         yz,
-        ):
+    ):
         """
         Calculate wake deltas.
 
@@ -452,7 +493,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-        
+
         # prepare:
         n_states = mdata.n_states
         n_points = x.shape[1]
@@ -461,20 +502,35 @@ class PorteAgelWake(DistSlicedWakeModel):
 
         # calculate model data:
         if not self.model.has_data(mdata, states_source_turbine, x):
-
             # get gamma:
-            gamma = self.get_data(FV.YAWM, FC.STATE_POINT, lookup="fs", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            gamma = self.get_data(
+                FV.YAWM,
+                FC.STATE_POINT,
+                lookup="fs",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             gamma *= np.pi / 180
 
             # get k:
-            k = self.get_data(self.k_var, FC.STATE_POINT, lookup="sf", algo=algo, 
-                                fdata=fdata, pdata=pdata, upcast=True,
-                                states_source_turbine=states_source_turbine)
+            k = self.get_data(
+                self.k_var,
+                FC.STATE_POINT,
+                lookup="sf",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
 
             # run calculation:
-            self.model.calc_data(algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k)
+            self.model.calc_data(
+                algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k
+            )
 
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)

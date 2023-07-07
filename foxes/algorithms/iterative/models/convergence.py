@@ -4,6 +4,7 @@ import numpy as np
 import foxes.variables as FV
 from foxes.utils import delta_wd
 
+
 class ConvCrit(metaclass=ABCMeta):
     """
     Abstract base class for convergence criteria
@@ -14,10 +15,11 @@ class ConvCrit(metaclass=ABCMeta):
         The convergence criteria name
 
     """
+
     def __init__(self, name=None):
-        """ 
+        """
         Constructor.
-        
+
         Parameters
         ----------
         name: str, optional
@@ -56,7 +58,7 @@ class ConvCrit(metaclass=ABCMeta):
     def get_deltas(self):
         """
         Get the most recent evaluation deltas.
-        
+
         Returns
         -------
         deltas: dict
@@ -64,6 +66,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         """
         pass
+
 
 class ConvCritList(ConvCrit):
     """
@@ -79,7 +82,7 @@ class ConvCritList(ConvCrit):
     def __init__(self, crits=[], name=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         crits: list of ConvCrit
@@ -137,7 +140,7 @@ class ConvCritList(ConvCrit):
     def get_deltas(self):
         """
         Get the most recent evaluation deltas.
-        
+
         Returns
         -------
         deltas: dict
@@ -147,6 +150,7 @@ class ConvCritList(ConvCrit):
         if self._failed is not None:
             return self._failed.get_deltas()
         return {}
+
 
 class ConvVarDelta(ConvCrit):
     """
@@ -165,7 +169,7 @@ class ConvVarDelta(ConvCrit):
     def __init__(self, limits, wd_vars=None, name=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         limits: dict
@@ -183,9 +187,9 @@ class ConvVarDelta(ConvCrit):
             self.wd_vars = [FV.WD, FV.AMB_WD, FV.YAW, FV.AMB_YAW]
         else:
             self.wd_vars = wd_vars
-        
+
         self._deltas = {}
-        
+
     def check_converged(self, algo, prev_results, results, verbosity=0):
         """
         Check convergence criteria.
@@ -239,7 +243,7 @@ class ConvVarDelta(ConvCrit):
     def get_deltas(self):
         """
         Get the most recent evaluation deltas.
-        
+
         Returns
         -------
         deltas: dict
@@ -247,6 +251,7 @@ class ConvVarDelta(ConvCrit):
 
         """
         return self._deltas
+
 
 class DefaultConv(ConvVarDelta):
     """

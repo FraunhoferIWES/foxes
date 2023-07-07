@@ -121,7 +121,7 @@ class PartialDistSlicedWake(PartialWakesModel):
         super().keep(algo)
         self.rotor_model.keep(algo)
         self.grotor.keep(algo)
-        
+
     def new_wake_deltas(self, algo, mdata, fdata):
         """
         Creates new initial wake deltas, filled
@@ -141,7 +141,7 @@ class PartialDistSlicedWake(PartialWakesModel):
         wake_deltas: dict
             Keys: Variable name str, values: any
         pdata: foxes.core.Data
-            The evaluation point data 
+            The evaluation point data
 
         """
 
@@ -160,12 +160,12 @@ class PartialDistSlicedWake(PartialWakesModel):
         return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        states_source_turbine, 
+        states_source_turbine,
         wake_deltas,
     ):
         """
@@ -207,7 +207,7 @@ class PartialDistSlicedWake(PartialWakesModel):
         )
         yz = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
         del wcoos
-        
+
         # evaluate wake models:
         for w in self.wake_models:
             wdeltas, sp_sel = w.calc_wakes_spsel_x_yz(
@@ -243,13 +243,13 @@ class PartialDistSlicedWake(PartialWakesModel):
                 )
 
     def evaluate_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
         pdata,
-        wake_deltas, 
-        states_turbine, 
+        wake_deltas,
+        states_turbine,
         amb_res=None,
     ):
         """
@@ -286,7 +286,9 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         amb_res_in = amb_res is not None
         if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata) 
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wweights = self.grotor.rotor_point_weights()
         n_wpoints = self.grotor.n_rotor_points()
