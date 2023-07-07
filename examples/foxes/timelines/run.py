@@ -20,7 +20,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="timeseries_1000.csv.gz",
+        default="timeseries_100.csv.gz",
     )
     parser.add_argument(
         "-t",
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
+        verbosity=2
     )
 
     with DaskRunner(
@@ -195,7 +196,7 @@ if __name__ == "__main__":
                 fig=fig,
                 ax=ax,
                 ret_im=True,
-                title="",
+                title=None,
                 runner=runner,
                 animated=True,
             )):
@@ -207,4 +208,3 @@ if __name__ == "__main__":
             fpath = "ani.gif"
             print("Writing file", fpath)
             ani.save(filename=fpath, writer="pillow")
-

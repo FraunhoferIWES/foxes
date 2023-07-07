@@ -110,13 +110,13 @@ class FlowPlots2D(Output):
         hax.set_aspect("equal", adjustable="box")
 
         ttl = None
-        if animated:
+        if animated and title is None:
             if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
                 t = np.datetime_as_string(s, unit='m').replace("T", " ")
             else:
                 t = s
             ttl = hax.text(0.5, 1.02, f"State {t}", backgroundcolor='w',
-                transform=hax.transAxes, ha="center", animated=True)
+                transform=hax.transAxes, ha="center", animated=True, clip_on=False)
         else:
             hax.set_title(title if title is not None else f"State {s}")
 
@@ -1022,7 +1022,7 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            if title is None:
+            if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"
             else:
@@ -1269,7 +1269,7 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            if title is None:
+            if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", x direction = {x_direction}°"
                 ttl += f", y =  {int(np.round(y_pos))} m"

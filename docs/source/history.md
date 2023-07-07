@@ -297,5 +297,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New example: `timelines`, demonstrates the usage of the `Timelines` wake frame
 - Notebooks:
   - New notebook: `timelines.ipynb`, showing how to use the `Timelines` wake frame in a notebook
+- Data:
+  - New states data `timeseries_100.csv.gz`, a short timeseries with timestep 1 min, varying wind direction only
+- Output:
+  - Improved: `flow_plots_2d` functions now include the optional argument `runner`, for computing plots with the chosen parallelization settings
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)

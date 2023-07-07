@@ -525,6 +525,9 @@ class Downwind(Algorithm):
             Clear idata memory, including keep_models entries
 
         """
+        if clear_mem:
+            self.keep_models= set()
+            
         mdls = [
             self.states,
             self.rotor_model,

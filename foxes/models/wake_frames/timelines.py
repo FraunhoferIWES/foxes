@@ -9,7 +9,7 @@ import foxes.constants as FC
 
 class Timelines(WakeFrame):
     """
-    Streamline following wakes for timeseries based data
+    Dynamic wakes for spatially uniform timeseries states.
 
     Attributes
     ----------

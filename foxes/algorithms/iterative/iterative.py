@@ -41,6 +41,7 @@ class Iterative(Downwind):
         self.max_it = 2*self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = im.DefaultConv() if conv_crit is None else conv_crit
         self._it = None
+        self._mlist = None
     
     @property
     def iterations(self):
@@ -105,6 +106,8 @@ class Iterative(Downwind):
         self.farm_vars += [FV.var2amb[v] for v in self.farm_vars if v in FV.var2amb]
         self.farm_vars = sorted(list(set(self.farm_vars)))
 
+        self._mlist = mlist
+
         return mlist, calc_pars
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
@@ -115,6 +118,7 @@ class Iterative(Downwind):
     
     def calc_farm(
         self,
+        finalize=True,
         **kwargs
     ):
         """
@@ -122,6 +126,8 @@ class Iterative(Downwind):
 
         Parameters
         ----------
+        finalize : bool
+            Flag for finalization after calculation
         kwargs: dict, optional
             Arguments for calc_farm in the base class.
 
@@ -149,5 +155,13 @@ class Iterative(Downwind):
             if conv:
                 self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
                 break
+
+        # finalize models:
+        if finalize:
+            self.print("\n")
+            self.finalize_model(self._mlist)
+            self.finalize()
+        self.cleanup()
+        self._mlist = None
 
         return fres
