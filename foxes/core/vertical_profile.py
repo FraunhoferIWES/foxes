@@ -9,7 +9,7 @@ class VerticalProfile(Model):
     Abstract base class for vertical profiles.
 
     :group: core
-    
+
     """
 
     @abstractmethod

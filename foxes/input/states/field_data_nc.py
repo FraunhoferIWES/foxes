@@ -76,7 +76,7 @@ class FieldDataNC(States):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or xarray.Dataset

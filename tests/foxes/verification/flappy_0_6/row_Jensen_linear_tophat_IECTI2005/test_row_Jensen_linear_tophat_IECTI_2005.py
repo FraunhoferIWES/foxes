@@ -116,3 +116,7 @@ def test():
     print(fdata.loc[sel])
     print(chk.loc[sel])
     assert (chk[var] < 3e-5).all()
+
+
+if __name__ == "__main__":
+    test()

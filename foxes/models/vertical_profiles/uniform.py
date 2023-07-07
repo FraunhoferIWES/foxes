@@ -11,14 +11,15 @@ class UniformProfile(VerticalProfile):
     ----------
     var: float
         The value
-    
+
     :group: models.vertical_profiles
 
     """
+
     def __init__(self, variable):
         """
         Constructor
-        
+
         Parameters
         ----------
         variable: float

@@ -24,7 +24,7 @@ class kTI(TurbineModel):
     def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
         """
         Constructor.
-        
+
         Parameters
         ----------
         kTI: float, optional
@@ -51,7 +51,10 @@ class kTI(TurbineModel):
         setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
-        return super().__repr__() + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        return (
+            super().__repr__()
+            + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        )
 
     def output_farm_vars(self, algo):
         """
@@ -96,9 +99,15 @@ class kTI(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        kTI = self.get_data(FV.KTI, fdata, st_sel)
-        kb = self.get_data(FV.KB, fdata, st_sel)
-        ti = self.get_data(self.ti_var, fdata, st_sel)
+        kTI = self.get_data(
+            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
+        kb = self.get_data(
+            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
+        ti = self.get_data(
+            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
 
         k = fdata.get(
             self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)

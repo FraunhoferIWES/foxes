@@ -51,7 +51,7 @@ class ModelBook:
         values: foxes.core.WakeModel
     sources: foxes.utils.Dict
         All sources dict
-    
+
     :group: foxes
 
     """
@@ -110,12 +110,14 @@ class ModelBook:
             yaw2yawm=fm.turbine_models.YAW2YAWM(),
             yawm2yaw=fm.turbine_models.YAWM2YAW(),
         )
-        self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc({
-            f"{FV.WD}_HH": FV.WD,
-            f"{FV.WS}_HH": FV.WS,
-            f"{FV.TI}_HH": FV.TI,
-            f"{FV.RHO}_HH": FV.RHO,
-        })
+        self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(
+            {
+                f"{FV.WD}_HH": FV.WD,
+                f"{FV.WS}_HH": FV.WS,
+                f"{FV.TI}_HH": FV.TI,
+                f"{FV.RHO}_HH": FV.RHO,
+            }
+        )
 
         self.farm_models = Dict(
             name="farm_models",
@@ -166,6 +168,17 @@ class ModelBook:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
                 base_frame=fm.wake_frames.Streamlines(step=s)
             )
+        self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+        self.wake_frames["timelines_1s"] = fm.wake_frames.Timelines(dt_min=1 / 60)
+        self.wake_frames["timelines_10s"] = fm.wake_frames.Timelines(dt_min=1 / 6)
+        self.wake_frames["timelines_30s"] = fm.wake_frames.Timelines(dt_min=0.5)
+        self.wake_frames["timelines_1min"] = fm.wake_frames.Timelines(dt_min=1)
+        self.wake_frames["timelines_10min"] = fm.wake_frames.Timelines(dt_min=10)
+        self.wake_frames["timelines_30min"] = fm.wake_frames.Timelines(dt_min=30)
+        self.wake_frames["timelines_60min"] = fm.wake_frames.Timelines(dt_min=60)
+        self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
+            max_wake_length=1000.0
+        )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",

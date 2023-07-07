@@ -12,7 +12,7 @@ class FarmVarsProblem(FarmOptProblem):
     farm variables.
 
     :group: opt.core
-    
+
     """
 
     def initialize(self, pre_rotor_vars, post_rotor_vars, verbosity=1, **kwargs):

@@ -22,7 +22,7 @@ class Circle(AreaGeometry):
     def __init__(self, centre, radius):
         """
         Cobnstructor.
-        
+
         Parameters
         ----------
         centre: numpy.ndarray

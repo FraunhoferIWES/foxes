@@ -1,9 +1,10 @@
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList
-import foxes.algorithms.downwind.models as dm
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
+from . import models as dm
+
 
 class Downwind(Algorithm):
     """
@@ -41,7 +42,7 @@ class Downwind(Algorithm):
         e.g. `{"state": 1000}` for chunks of 1000 states
     dbook : foxes.DataBook, optional
         The data book, or None for default
-    keep_models : list of str
+    keep_models : set of str
         Keep these models data in memory and do not finalize them
     verbosity : int
         The verbosity level, 0 means silent
@@ -81,7 +82,7 @@ class Downwind(Algorithm):
         farm_controller="basic_ctrl",
         chunks={FC.STATE: 1000},
         dbook=None,
-        keep_models=[],
+        keep_models=set(),
         verbosity=1,
     ):
         super().__init__(mbook, farm, chunks, verbosity, dbook, keep_models)
@@ -169,7 +170,6 @@ class Downwind(Algorithm):
 
     def _collect_farm_models(
         self,
-        vars_to_amb,
         calc_parameters,
         ambient,
     ):
@@ -218,7 +218,7 @@ class Downwind(Algorithm):
 
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
-        mlist.models.append(dm.SetAmbFarmResults(vars_to_amb))
+        mlist.models.append(dm.SetAmbFarmResults())
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -228,27 +228,41 @@ class Downwind(Algorithm):
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
+        # initialize models:
+        self.update_idata(mlist)
+
         # update variables:
-        self.farm_vars = [FV.WEIGHT] + mlist.output_farm_vars(self)
+        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
         return mlist, calc_pars
 
+    def _run_farm_calc(self, mlist, *data, **kwargs):
+        """Helper function for running the main farm calculation"""
+        self.print(
+            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
+        )
+        farm_results = mlist.run_calculation(
+            self, *data, out_vars=self.farm_vars, **kwargs
+        )
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+        if FV.ORDER in farm_results:
+            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+
+        return farm_results
+
     def calc_farm(
         self,
-        vars_to_amb=None,
         calc_parameters={},
         persist=True,
         finalize=True,
         ambient=False,
+        chunked_results=False,
     ):
         """
         Calculate farm data.
 
         Parameters
         ----------
-        vars_to_amb : list of str, optional
-            Variables for which ambient variables should
-            be stored. None means all.
         calc_parameters : dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
@@ -259,6 +273,8 @@ class Downwind(Algorithm):
             Flag for finalization after calculation
         ambient : bool
             Flag for ambient instead of waked calculation
+        chunked_results: bool
+            Flag for chunked results
 
         Returns
         -------
@@ -275,12 +291,9 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # collect models:
-        mlist, calc_pars = self._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient
-        )
+        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
 
-        # initialize models and get input model data:
-        self.update_idata(mlist)
+        # get input model data:
         models_data = self.get_models_data()
         if persist:
             models_data = models_data.persist()
@@ -289,15 +302,7 @@ class Downwind(Algorithm):
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
-        self.print(
-            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
-        )
-        farm_results = mlist.run_calculation(
-            self, models_data, out_vars=self.farm_vars, parameters=calc_pars
-        )
-        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in farm_results:
-            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+        farm_results = self._run_farm_calc(mlist, models_data, parameters=calc_pars)
         del models_data
 
         # finalize models:
@@ -305,10 +310,14 @@ class Downwind(Algorithm):
             self.print("\n")
             self.finalize_model(mlist)
             self.finalize()
+        self.cleanup()
 
         if ambient:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
             farm_results = farm_results.drop_vars(dvars)
+
+        if chunked_results:
+            farm_results = self.chunked(farm_results)
 
         return farm_results
 
@@ -367,6 +376,9 @@ class Downwind(Algorithm):
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
+        # initialize models:
+        self.update_idata(mlist)
+
         return mlist, calc_pars
 
     def calc_points(
@@ -381,6 +393,7 @@ class Downwind(Algorithm):
         persist_pdata=False,
         finalize=True,
         ambient=False,
+        chunked_results=False,
     ):
         """
         Calculate data at a given set of points.
@@ -413,6 +426,8 @@ class Downwind(Algorithm):
             Flag for finalization after calculation
         ambient : bool
             Flag for ambient instead of waked calculation
+        chunked_results: bool
+            Flag for chunked results
 
         Returns
         -------
@@ -432,13 +447,12 @@ class Downwind(Algorithm):
         # welcome:
         self._print_deco("calc_points", n_points=points.shape[1])
 
-        # collect models:
+        # collect models and initialize:
         mlist, calc_pars = self._collect_point_models(
             vars, vars_to_amb, calc_parameters, point_models, ambient
         )
 
-        # initialize models and get input model data:
-        self.update_idata(mlist)
+        # get input model data:
         models_data = self.get_models_data()
         if persist_mdata:
             models_data = models_data.persist()
@@ -448,7 +462,7 @@ class Downwind(Algorithm):
 
         # chunk farm results:
         if self.chunks is not None:
-            farm_results = farm_results.chunk(chunks={FC.STATE: self.chunks[FC.STATE]})
+            farm_results = self.chunked(farm_results)
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
@@ -485,17 +499,22 @@ class Downwind(Algorithm):
             out_vars=vars,
             parameters=calc_pars,
         )
+
         del models_data, farm_results, point_data
 
         # finalize models:
         if finalize:
             self.print("\n")
-            mlist.finalize(self, self.verbosity)
+            self.finalize_model(mlist, self.verbosity)
             self.finalize()
+        self.cleanup()
 
         if ambient:
             dvars = [v for v in point_results.data_vars.keys() if v in FV.var2amb]
             point_results = point_results.drop_vars(dvars)
+
+        if chunked_results:
+            point_results = self.chunked(point_results)
 
         return point_results
 
@@ -509,6 +528,9 @@ class Downwind(Algorithm):
             Clear idata memory, including keep_models entries
 
         """
+        if clear_mem:
+            self.keep_models = set()
+
         mdls = [
             self.states,
             self.rotor_model,

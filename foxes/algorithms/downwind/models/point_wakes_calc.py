@@ -2,6 +2,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.core import PointDataModel
 
+
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
@@ -111,13 +112,12 @@ class PointWakesCalculation(PointDataModel):
         """
         torder = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order = torder.shape[1]
-        points = pdata[FC.POINTS]
 
         wdeltas = {}
         wmodels = []
         for w in algo.wake_models:
             hdeltas = {}
-            w.init_wake_deltas(algo, mdata, fdata, pdata.n_points, hdeltas)
+            w.init_wake_deltas(algo, mdata, fdata, pdata, hdeltas)
             if len(set(self.pvars).intersection(hdeltas.keys())):
                 wdeltas.update(hdeltas)
                 wmodels.append(w)
@@ -125,14 +125,16 @@ class PointWakesCalculation(PointDataModel):
 
         for oi in range(n_order):
             o = torder[:, oi]
-            wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, o, points)
+            wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, pdata, o)
 
             for w in wmodels:
-                w.contribute_to_wake_deltas(algo, mdata, fdata, o, wcoos, wdeltas)
+                w.contribute_to_wake_deltas(
+                    algo, mdata, fdata, pdata, o, wcoos, wdeltas
+                )
 
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in wmodels:
-            w.finalize_wake_deltas(algo, mdata, fdata, amb_res, wdeltas)
+            w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
 
         for v in self.pvars:
             if v in wdeltas:

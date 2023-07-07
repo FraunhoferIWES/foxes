@@ -8,11 +8,11 @@ class WakeModel(Model):
     Abstract base class for wake models.
 
     :group: core
-    
+
     """
 
     @abstractmethod
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -26,8 +26,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -39,7 +39,14 @@ class WakeModel(Model):
 
     @abstractmethod
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_coos,
+        wake_deltas,
     ):
         """
         Calculate the contribution to the wake deltas
@@ -55,6 +62,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -70,7 +79,15 @@ class WakeModel(Model):
         """
         pass
 
-    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
+    def finalize_wake_deltas(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        amb_results,
+        wake_deltas,
+    ):
         """
         Finalize the wake calculation.
 
@@ -84,6 +101,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)

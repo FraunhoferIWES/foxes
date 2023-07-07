@@ -5,6 +5,7 @@ from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
 
+
 class FarmController(FarmDataModel):
     """
     Analyses selected turbine models and handles their call.
@@ -27,13 +28,13 @@ class FarmController(FarmDataModel):
         under their respecitve name
 
     :group: core
-    
+
     """
 
     def __init__(self, pars={}):
         """
         Constructor.
-        
+
         Parameters
         ----------
         pars: dict
@@ -50,6 +51,21 @@ class FarmController(FarmDataModel):
         self.post_rotor_models = None
 
         self.pars = pars
+
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        self.pre_rotor_models.keep(algo)
+        self.post_rotor_models.keep(algo)
 
     def set_pars(self, model_name, init_pars, calc_pars, final_pars):
         """

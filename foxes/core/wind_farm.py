@@ -10,7 +10,7 @@ class WindFarm:
         The wind turbines
     boundary: foxes.utils.geom2d.AreaGeometry, optional
         The wind farm boundary
-    
+
     :group: foxes
 
     """

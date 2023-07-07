@@ -34,7 +34,7 @@ class SetUniformData(PointDataModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame or dict

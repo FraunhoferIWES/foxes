@@ -6,10 +6,11 @@ import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
-
     # define arguments:
     parser = argparse.ArgumentParser()
-    parser.add_argument("P_percent", help="Power percent choice, applied to all states", type=float)
+    parser.add_argument(
+        "P_percent", help="Power percent choice, applied to all states", type=float
+    )
     parser.add_argument(
         "-s",
         "--states",
@@ -74,17 +75,21 @@ if __name__ == "__main__":
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     mbook = foxes.models.ModelBook()
-    mbook.turbine_types["ttypeDH"] = foxes.models.turbine_types.NullType(D=args.D, H=args.H)
+    mbook.turbine_types["ttypeDH"] = foxes.models.turbine_types.NullType(
+        D=args.D, H=args.H
+    )
 
     mbook.turbine_models["lookup"] = foxes.models.turbine_models.LookupTable(
         "curtail_to_power.csv",
         input_vars=[FV.REWS, "P_percent"],
         output_vars=[FV.P, FV.CT],
         varmap={
-            FV.REWS: "wind", "P_percent": "powerPercent",
-            FV.P: "GenPower", FV.CT: "ct"
+            FV.REWS: "wind",
+            "P_percent": "powerPercent",
+            FV.P: "GenPower",
+            FV.CT: "ct",
         },
-        P_percent = args.P_percent
+        P_percent=args.P_percent,
     )
 
     states = foxes.input.states.StatesTable(

@@ -62,7 +62,7 @@ def add_from_csv(
         The verbosity level, 0 = silent
     turbine_parameters: dict, optional
         Additional parameters are forwarded to the WindFarm.add_turbine().
-    
+
     :group: input.farm_layout
 
     """

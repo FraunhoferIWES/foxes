@@ -8,7 +8,76 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
-def run_foxes(args):
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-nt", "--n_t", help="The number of turbines", type=int, default=5
+    )
+    parser.add_argument(
+        "-s",
+        "--states",
+        help="The timeseries input file (path or static)",
+        default="states.csv",
+    )
+    parser.add_argument(
+        "-t",
+        "--turbine_file",
+        help="The P-ct-curve csv file (path or static)",
+        default="NREL-5MW-D126-H90.csv",
+    )
+    parser.add_argument(
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
+    )
+    parser.add_argument(
+        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
+    )
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument(
+        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+    )
+    parser.add_argument(
+        "-f", "--pmax_file", help="The max_P csv file", default="power_mask.csv"
+    )
+    parser.add_argument(
+        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
+    )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument(
+        "-w",
+        "--wakes",
+        help="The wake models",
+        default=["Jensen_linear_k007"],
+        nargs="+",
+    )
+    parser.add_argument(
+        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
+    )
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        help="The number of workers for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-tw",
+        "--threads_per_worker",
+        help="The number of threads per worker for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-sl",
+        "--show_layout",
+        help="Flag for showing layout figure",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+    )
+    args = parser.parse_args()
+
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     print("\nReading file", args.pmax_file)
@@ -69,27 +138,32 @@ def run_foxes(args):
         verbosity=0,
     )
 
-    # run calculation with power mask:
+    with DaskRunner(
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
+    ) as runner:
+        # run calculation with power mask:
 
-    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+        farm_results = runner.run(algo.calc_farm)
 
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+        o = foxes.output.FarmResultsEval(farm_results)
+        P0 = o.calc_mean_farm_power(ambient=True)
+        P = o.calc_mean_farm_power()
+        print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
 
-    o1 = foxes.output.StateTurbineMap(farm_results)
+        o1 = foxes.output.StateTurbineMap(farm_results)
 
-    # run calculation without power mask:
+        # run calculation without power mask:
 
-    mbook.finalize(algo)
-    models.remove("set_Pmax")
-    models.remove("PMask")
+        mbook.finalize(algo)
+        models.remove("set_Pmax")
+        models.remove("PMask")
 
-    farm_results = algo.calc_farm(vars_to_amb=[FV.REWS, FV.P])
+        farm_results = runner.run(algo.calc_farm)
 
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
@@ -163,80 +237,3 @@ def run_foxes(args):
         vmax=1.0,
     )
     plt.show()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=5
-    )
-    parser.add_argument(
-        "-s",
-        "--states",
-        help="The timeseries input file (path or static)",
-        default="states.csv",
-    )
-    parser.add_argument(
-        "-t",
-        "--turbine_file",
-        help="The P-ct-curve csv file (path or static)",
-        default="NREL-5MW-D126-H90.csv",
-    )
-    parser.add_argument(
-        "-dx", "--deltax", help="The turbine distance in x", type=float, default=500.0
-    )
-    parser.add_argument(
-        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
-    )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
-    parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
-    )
-    parser.add_argument(
-        "-f", "--pmax_file", help="The max_P csv file", default="power_mask.csv"
-    )
-    parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
-    )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument(
-        "-w",
-        "--wakes",
-        help="The wake models",
-        default=["Jensen_linear_k007"],
-        nargs="+",
-    )
-    parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
-    )
-    parser.add_argument(
-        "-n",
-        "--n_workers",
-        help="The number of workers for distributed run",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "-tw",
-        "--threads_per_worker",
-        help="The number of threads per worker for distributed run",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "-sl",
-        "--show_layout",
-        help="Flag for showing layout figure",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
-    )
-    args = parser.parse_args()
-
-    with DaskRunner(
-        scheduler=args.scheduler,
-        n_workers=args.n_workers,
-        threads_per_worker=args.threads_per_worker,
-    ) as runner:
-        runner.run(run_foxes, args=(args,))

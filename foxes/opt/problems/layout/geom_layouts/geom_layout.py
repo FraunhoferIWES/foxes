@@ -26,7 +26,7 @@ class GeomLayout(Problem):
         The diameter of circle fully within boundary
     calc_valid: bool
         Evaluate validity
-    
+
     :group: opt.problems.layout.geom_layouts
 
     """
@@ -41,7 +41,7 @@ class GeomLayout(Problem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         boundary: foxes.utils.geom2d.AreaGeometry

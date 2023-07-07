@@ -76,3 +76,7 @@ def test():
 
     assert chk[FV.WS] < 1e-5
     assert chk[FV.P] < 1e-3
+
+
+if __name__ == "__main__":
+    test()

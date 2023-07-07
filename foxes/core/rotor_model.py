@@ -7,6 +7,7 @@ from .farm_data_model import FarmDataModel
 from .data import Data
 from foxes.utils import wd2uv, uv2wd
 
+
 class RotorModel(FarmDataModel):
     """
     Abstract base class of rotor models.
@@ -28,7 +29,7 @@ class RotorModel(FarmDataModel):
     def __init__(self, calc_vars):
         """
         Constructor.
-        
+
         Parameters
         ----------
         calc_vars: list of str
@@ -54,9 +55,12 @@ class RotorModel(FarmDataModel):
             The output variable names
 
         """
-        return self.calc_vars + [
-            FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb
-        ]
+        return list(
+            set(
+                self.calc_vars
+                + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
+            )
+        )
 
     @abstractmethod
     def n_rotor_points(self):
@@ -227,9 +231,6 @@ class RotorModel(FarmDataModel):
         wd = None
         vdone = []
         for v in self.calc_vars:
-            if v not in fdata:
-                fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
-
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
@@ -358,6 +359,11 @@ class RotorModel(FarmDataModel):
 
         if rpoints is None:
             rpoints = mdata.get(FC.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
+        if store_rpoints:
+            mdata[FC.RPOINTS] = rpoints
+            mdata.dims[FC.RPOINTS] = (FC.STATE, FC.TURBINE, FC.RPOINT, FC.XYH)
+            self.data_to_store(FC.RPOINTS, algo, mdata)
+
         if states_turbine is not None:
             n_states = mdata.n_states
             stsel = (np.arange(n_states), states_turbine)
@@ -367,18 +373,15 @@ class RotorModel(FarmDataModel):
 
         if weights is None:
             weights = mdata.get(FC.RWEIGHTS, self.rotor_point_weights())
-
-        if store_rpoints:
-            mdata[FC.RPOINTS] = rpoints
-            mdata.dims[FC.RPOINTS] = (FC.STATE, FC.TURBINE, FC.RPOINT, FV.XYH)
         if store_rweights:
             mdata[FC.RWEIGHTS] = weights
             mdata.dims[FC.RWEIGHTS] = (FC.RPOINT,)
+            self.data_to_store(FC.RWEIGHTS, algo, mdata)
 
         svars = algo.states.output_point_vars(algo)
         points = rpoints.reshape(n_states, n_points, 3)
         pdata = {FC.POINTS: points}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdata.update(
             {v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars}
         )
@@ -396,6 +399,7 @@ class RotorModel(FarmDataModel):
 
         if store_amb_res:
             mdata[FC.AMB_RPOINT_RESULTS] = rpoint_results
+            self.data_to_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
 
         self.eval_rpoint_results(
             algo,

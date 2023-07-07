@@ -26,7 +26,7 @@ class Calculator(TurbineModel):
     def __init__(self, in_vars, out_vars, func, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         in_vars: list of str

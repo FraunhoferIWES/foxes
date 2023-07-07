@@ -37,7 +37,7 @@ class FarmOptProblem(Problem):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         name: str
@@ -196,7 +196,7 @@ class FarmOptProblem(Problem):
         """
         if exclude is None:
             exclude = [self._org_states_name]
-        self.algo.keep_models.append(self._org_states_name)
+        self.algo.keep_models.add(self._org_states_name)
         for mname, idata in self.algo.idata_mem.items():
             if mname not in exclude and self.name not in mname:
                 keep = True
@@ -208,7 +208,7 @@ class FarmOptProblem(Problem):
                     if not keep:
                         break
                 if keep:
-                    self.algo.keep_models.append(mname)
+                    self.algo.keep_models.add(mname)
 
     def initialize(self, drop_vars=[FC.STATE], exclude=None, verbosity=1):
         """
@@ -325,7 +325,9 @@ class FarmOptProblem(Problem):
         if self.points is None:
             return farm_results
         else:
-            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, self.points))
+            point_results = self.runner.run(
+                self.algo.calc_points, args=(farm_results, self.points)
+            )
             return farm_results, point_results
 
     def apply_population(self, vars_int, vars_float):
@@ -360,9 +362,11 @@ class FarmOptProblem(Problem):
             n_pop = farm_results["n_pop"].values
             n_states, n_points = self.points.shape[:2]
             pop_points = np.zeros((n_pop, n_states, n_points, 3), dtype=FC.DTYPE)
-            pop_points[:] = self.points[None, :, : , :]
-            pop_points = pop_points.reshape(n_pop*n_states, n_points, 3)
-            point_results = self.runner.run(self.algo.calc_points, args=(farm_results, pop_points))
+            pop_points[:] = self.points[None, :, :, :]
+            pop_points = pop_points.reshape(n_pop * n_states, n_points, 3)
+            point_results = self.runner.run(
+                self.algo.calc_points, args=(farm_results, pop_points)
+            )
             return farm_results, point_results
 
     def add_to_layout_figure(self, ax, **kwargs):

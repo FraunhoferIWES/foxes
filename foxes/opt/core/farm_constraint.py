@@ -15,7 +15,7 @@ class FarmConstraint(Constraint):
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem

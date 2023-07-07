@@ -4,6 +4,7 @@ from foxes.core import TurbineModel, Data
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class RotorCentreCalc(TurbineModel):
     """
     Calculates data at the rotor centre
@@ -13,7 +14,7 @@ class RotorCentreCalc(TurbineModel):
     calc_vars: dict
         The variables that are calculated by the model,
         keys: var names, values: rotor var names
-        
+
     :group: models.turbine_models
 
     """
@@ -21,7 +22,7 @@ class RotorCentreCalc(TurbineModel):
     def __init__(self, calc_vars):
         """
         Constructor.
-        
+
         Parameters
         ----------
         calc_vars: dict
@@ -30,7 +31,7 @@ class RotorCentreCalc(TurbineModel):
 
         """
         super().__init__()
-        
+
         if isinstance(calc_vars, dict):
             self.calc_vars = calc_vars
         else:
@@ -68,7 +69,7 @@ class RotorCentreCalc(TurbineModel):
         algo.update_idata(self._wcalc, idata=idata, verbosity=verbosity)
 
         return idata
-        
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -114,7 +115,7 @@ class RotorCentreCalc(TurbineModel):
         """
         # prepare point data:
         pdata = {FC.POINTS: fdata[FV.TXYH]}
-        dims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        dims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         for v in self.calc_vars.values():
             pdata[v] = np.zeros_like(pdata[FC.POINTS][:, :, 0])
             dims[v] = (FC.STATE, FC.POINT)
@@ -122,7 +123,7 @@ class RotorCentreCalc(TurbineModel):
             name=f"{self.name}_pdata",
             data=pdata,
             dims=dims,
-            loop_dims=[FC.STATE, FC.POINT]
+            loop_dims=[FC.STATE, FC.POINT],
         )
         del dims
 
@@ -135,7 +136,7 @@ class RotorCentreCalc(TurbineModel):
 
         # run wake calculation:
         res = self._wcalc.calculate(algo, mdata, fdata, pdata)
-        
+
         # extract results:
         out = {v: fdata[v] for v in self.calc_vars.keys()}
         for v in out.keys():
@@ -157,4 +158,3 @@ class RotorCentreCalc(TurbineModel):
         """
         algo.finalize_model(self._wcalc, verbosity)
         super().finalize(algo, verbosity)
-        

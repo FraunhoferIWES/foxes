@@ -3,6 +3,7 @@ from abc import abstractmethod
 from .data_calc_model import DataCalcModel
 import foxes.constants as FC
 
+
 class FarmDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
@@ -15,7 +16,7 @@ class FarmDataModel(DataCalcModel):
         running the rotor model.
 
     :group: core
-    
+
     """
 
     def __init__(self, pre_rotor=False):
@@ -130,7 +131,7 @@ class FarmDataModelList(FarmDataModel):
     ----------
     models: list of foxes.core.FarmDataModel
         The model list
-    
+
     :group: core
 
     """
@@ -138,7 +139,7 @@ class FarmDataModelList(FarmDataModel):
     def __init__(self, models=[]):
         """
         Constructor.
-        
+
         Parameters
         ----------
         models: list of foxes.core.FarmDataModel
@@ -159,6 +160,19 @@ class FarmDataModelList(FarmDataModel):
 
         """
         self.models.append(model)
+
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        algo.keep_models.update([self.name] + [m.name for m in self.models])
 
     def output_farm_vars(self, algo):
         """

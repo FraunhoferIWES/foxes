@@ -9,7 +9,7 @@ class ABLLogStableWsProfile(VerticalProfile):
     The stable ABL wind speed log profile.
 
     :group: models.vertical_profiles
-    
+
     """
 
     def input_vars(self):

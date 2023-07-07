@@ -14,7 +14,7 @@ class ABLLogWsProfile(VerticalProfile):
     (neutral: mol = None or mol = 0)
 
     :group: models.vertical_profiles
-    
+
     """
 
     def input_vars(self):

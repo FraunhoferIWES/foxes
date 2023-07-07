@@ -3,13 +3,14 @@ from abc import abstractmethod
 from .data_calc_model import DataCalcModel
 import foxes.constants as FC
 
+
 class PointDataModel(DataCalcModel):
     """
     Abstract base class for models that modify
     point based data.
 
     :group: core
-    
+
     """
 
     @abstractmethod
@@ -115,7 +116,7 @@ class PointDataModelList(PointDataModel):
     def __init__(self, models=[]):
         """
         Constructor.
-        
+
         Parameters
         ----------
         models: list of foxes.core.PointDataModel
@@ -136,6 +137,19 @@ class PointDataModelList(PointDataModel):
 
         """
         self.models.append(model)
+
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        algo.keep_models.update([self.name] + [m.name for m in self.models])
 
     def output_point_vars(self, algo):
         """

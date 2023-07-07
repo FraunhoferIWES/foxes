@@ -9,11 +9,19 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     Abstract base class for Gaussian wake models.
 
     :group: models.wake_models
-    
+
     """
 
     @abstractmethod
-    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
+    def calc_amplitude_sigma_spsel(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -26,6 +34,8 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -44,7 +54,16 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         """
         pass
 
-    def calc_wakes_spsel_x_r(self, algo, mdata, fdata, states_source_turbine, x, r):
+    def calc_wakes_spsel_x_r(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        r,
+    ):
         """
         Calculate wake deltas.
 
@@ -56,6 +75,8 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -63,7 +84,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The x values, shape: (n_states, n_points)
         r: numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x)
+            (n_states, n_points, n_r_per_x, 2)
 
         Returns
         -------
@@ -76,7 +97,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
 
         """
         amsi, sp_sel = self.calc_amplitude_sigma_spsel(
-            algo, mdata, fdata, states_source_turbine, x
+            algo, mdata, fdata, pdata, states_source_turbine, x
         )
         wdeltas = {}
         rsel = r[sp_sel]

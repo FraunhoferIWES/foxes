@@ -31,10 +31,12 @@ class BastankhahWake(GaussianWakeModel):
 
     """
 
-    def __init__(self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K):
+    def __init__(
+        self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K
+    ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict
@@ -67,7 +69,7 @@ class BastankhahWake(GaussianWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -81,8 +83,8 @@ class BastankhahWake(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -90,10 +92,17 @@ class BastankhahWake(GaussianWakeModel):
             shape (n_states, n_points, ...)
 
         """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((mdata.n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
+    def calc_amplitude_sigma_spsel(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
@@ -106,6 +115,8 @@ class BastankhahWake(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -122,14 +133,18 @@ class BastankhahWake(GaussianWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = self.get_data(FV.CT, fdata)[st_sel][:, None]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -140,13 +155,29 @@ class BastankhahWake(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = self.get_data(FV.D, fdata)[st_sel][:, None]
+            D = self.get_data(
+                FV.D,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             D = D[sp_sel]
 
             # get k:
-            k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+            k = self.get_data(
+                self.k_var,
+                FC.STATE_POINT,
+                lookup="sf",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             k = k[sp_sel]
 
             # calculate sigma:

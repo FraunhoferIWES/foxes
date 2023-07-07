@@ -6,6 +6,7 @@ from foxes.utils import PandasFileHelper
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class SectorManagement(TurbineModel):
     """
     Changes variables based on variable range conditions.
@@ -32,7 +33,7 @@ class SectorManagement(TurbineModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame

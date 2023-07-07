@@ -22,7 +22,7 @@ class Thrust2Ct(TurbineModel):
     def __init__(self, thrust_var=FV.T, var_ws_ct=FV.REWS2):
         """
         Constructor.
-        
+
         Parameters
         ----------
         thrust_var: str
@@ -80,7 +80,7 @@ class Thrust2Ct(TurbineModel):
         """
         ct = fdata[FV.CT]
 
-        T = self.get_data(self.thrust_var, fdata, st_sel)
+        T = fdata[self.thrust_var][st_sel]
         rho = fdata[FV.RHO][st_sel]
         A = np.pi * (fdata[FV.D][st_sel] / 2) ** 2
         ws = fdata[self.WSCT][st_sel]

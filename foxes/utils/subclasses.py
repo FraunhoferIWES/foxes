@@ -12,7 +12,7 @@ def all_subclasses(cls):
     -------
     list of class:
         The derived classes
-    
+
     :group: utils
 
     """

@@ -17,7 +17,7 @@ def logz(height, z0):
     -------
     lz: float
         The log factor
-    
+
     :group: utils.abl.neutral
 
     """
@@ -45,7 +45,7 @@ def ustar(ws_ref, h_ref, z0, kappa=0.41):
     -------
     ustar: float
         The friction velocity
-    
+
     :group: utils.abl.neutral
 
     """
@@ -72,7 +72,7 @@ def calc_ws(height, z0, ustar, kappa=0.41):
     -------
     ws: float
         The wind speed
-    
+
     :group: utils.abl.neutral
 
     """

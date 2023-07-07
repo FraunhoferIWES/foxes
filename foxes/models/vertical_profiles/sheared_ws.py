@@ -8,9 +8,9 @@ import foxes.variables as FV
 class ShearedProfile(VerticalProfile):
     """
     A wind shear profile, based on a shear exponent.
-    
+
     :group: models.vertical_profiles
-    
+
     """
 
     def input_vars(self):
@@ -22,7 +22,7 @@ class ShearedProfile(VerticalProfile):
         -------
         vars: list of str
             The variable names
-            
+
         """
         return [FV.WS, FV.H, FV.SHEAR]
 

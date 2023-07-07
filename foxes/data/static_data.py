@@ -15,7 +15,7 @@ class StaticData(DataBook):
     this directory.
 
     :group: foxes
-    
+
     """
 
     def __init__(self):

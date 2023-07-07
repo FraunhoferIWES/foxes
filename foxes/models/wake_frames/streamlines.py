@@ -23,7 +23,7 @@ class Streamlines(WakeFrame):
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
-    
+
     :group: models.wake_frames
 
     """
@@ -31,7 +31,7 @@ class Streamlines(WakeFrame):
     def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
         """
         Constructor.
-        
+
         Parameters
         ----------
         step: float
@@ -140,7 +140,7 @@ class Streamlines(WakeFrame):
         # calculate next tangential vector:
         svars = algo.states.output_point_vars(algo)
         pdata = {FC.POINTS: newpts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
+        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
         pdata.update(
             {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars}
         )
@@ -170,16 +170,22 @@ class Streamlines(WakeFrame):
         sn = data[..., 3:6]
 
         # find minimal distances to existing streamline points:
-        # n_states, n_turbines, n_points, n_spts
-        dists = np.linalg.norm(
-            points[:, None, :, None] - spts[:, :, None, :n_spts], axis=-1
-        )
-        if tcase:
-            for ti in range(n_turbines):
-                dists[:, ti, ti] = 1e20
-        inds = np.argmin(dists, axis=3)
-        dists = np.take_along_axis(dists, inds[:, :, :, None], axis=3)[..., 0]
-        done = inds < n_spts - 1
+        # (loop over target points, since otherwise this blows memory)
+        done = np.zeros((n_states, n_turbines, n_points), dtype=bool)
+        inds = np.full((n_states, n_turbines, n_points), -1, dtype=FC.ITYPE)
+        dists = np.full((n_states, n_turbines, n_points), np.nan, dtype=FC.DTYPE)
+        for pi in range(n_points):
+            hdists = np.linalg.norm(
+                points[:, None, pi, None] - spts[:, :, :n_spts], axis=-1
+            )
+            if tcase:
+                hdists[:, pi] = np.inf
+            inds[:, :, pi] = np.argmin(hdists, axis=2)
+            dists[:, :, pi] = np.take_along_axis(hdists, inds[:, :, pi, None], axis=2)[
+                ..., 0
+            ]
+            done[:, :, pi] = inds[:, :, pi] < n_spts - 1
+            del hdists
 
         # calc streamline points, as many as needed:
         maxl = np.nanmax(data[:, :, n_spts - 1, 6])
@@ -206,7 +212,7 @@ class Streamlines(WakeFrame):
 
         # shrink to size:
         mdata[self.DATA] = data[:, :, :n_spts]
-        del data, spts, sn
+        del data, spts, sn, dists, done
 
         # select streamline points:
         # n_states, n_turbines, n_points, 7
@@ -286,7 +292,7 @@ class Streamlines(WakeFrame):
 
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
@@ -298,22 +304,24 @@ class Streamlines(WakeFrame):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points: numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
         wake_coos: numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
 
         """
 
         # prepare:
         n_states = mdata.n_states
         stsel = (np.arange(n_states), states_source_turbine)
+        points = pdata[FC.POINTS]
         pid = id(points)
 
         # initialize storage:

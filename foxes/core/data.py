@@ -11,7 +11,7 @@ class Data(Dict):
 
     Used during the calculation of single chunks,
     usually for numpy data (not xarray data).
-        
+
     Attributes
     ----------
     dims: dict
@@ -24,13 +24,13 @@ class Data(Dict):
         The dimension sizes
 
     :group: core
-    
+
     """
 
     def __init__(self, data, dims, loop_dims, name="data"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data: dict
@@ -45,7 +45,7 @@ class Data(Dict):
             The data container name
 
         """
-        super().__init__(name="data")
+        super().__init__(name=name)
 
         self.update(data)
         self.dims = dims
@@ -53,31 +53,83 @@ class Data(Dict):
 
         self.sizes = {}
         for v, d in data.items():
-            dim = dims[v]
+            self.__run_entry_checks(v, d, dims[v])
 
-            # remove axes of size 1, added by dask for extra loop dimensions:
-            if len(dim) != len(d.shape):
-                for li, l in enumerate(loop_dims):
-                    if d.shape[li] == 1 and (len(dim) < li + 1 or dim[li] != l):
-                        self[v] = np.squeeze(d, axis=li)
+        self.__auto_update()
 
-            for ci, c in enumerate(dim):
-                if c not in self.sizes:
-                    self.sizes[c] = self[v].shape[ci]
-                elif self.sizes[c] != self[v].shape[ci]:
-                    raise ValueError(
-                        f"Inconsistent size for data entry '{v}', dimension '{c}': Expecting {self.sizes[c]}, found {self[v].shape[ci]} in shape {self[v].shape}"
-                    )
+    @property
+    def n_states(self):
+        """
+        The number of states
 
-        if FC.STATE in self.sizes:
-            self.n_states = self.sizes[FC.STATE]
-        if FC.TURBINE in self.sizes:
-            self.n_turbines = self.sizes[FC.TURBINE]
-        if FC.POINT in self.sizes:
-            self.n_points = self.sizes[FC.POINT]
+        Returns
+        -------
+        int:
+            The number of states
+
+        """
+        return self.sizes[FC.STATE] if FC.STATE in self.sizes else None
+
+    @property
+    def n_turbines(self):
+        """
+        The number of turbines
+
+        Returns
+        -------
+        int:
+            The number of turbines
+
+        """
+        return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
+
+    @property
+    def n_points(self):
+        """
+        The number of points
+
+        Returns
+        -------
+        int:
+            The number of points
+
+        """
+        return self.sizes[FC.POINT] if FC.POINT in self.sizes else None
+
+    def states_i0(self, counter=False, algo=None):
+        """
+        Get the state counter for first state in chunk
+
+        Parameters
+        ----------
+        counter: bool
+            Return the state counter instead of the index
+        algo: foxes.core.Algorithm, optional
+            The algorithm, required for state counter
+
+        Returns
+        -------
+        int:
+            The state counter for first state in chunk
+            or the corresponding index
+
+        """
+        if FC.STATE not in self:
+            return None
+        elif counter:
+            if algo is None:
+                raise KeyError(f"{self.name}: Missing algo for deducing state counter")
+            return np.argwhere(algo.states.index() == self[FC.STATE][0])[0][0]
+        else:
+            return self[FC.STATE][0]
+
+    def __auto_update(self):
+        data = self
+        dims = self.dims
 
         if (
-            FV.X in data
+            FV.TXYH not in data
+            and FV.X in data
             and FV.Y in data
             and FV.H in data
             and dims[FV.X] == (FC.STATE, FC.TURBINE)
@@ -95,3 +147,75 @@ class Data(Dict):
             self[FV.X] = self[FV.TXYH][:, :, 0]
             self[FV.Y] = self[FV.TXYH][:, :, 1]
             self[FV.H] = self[FV.TXYH][:, :, 2]
+
+    def __run_entry_checks(self, name, data, dims):
+        # remove axes of size 1, added by dask for extra loop dimensions:
+        if dims is not None:
+            if len(dims) != len(data.shape):
+                for li, l in enumerate(self.loop_dims):
+                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
+                        self[name] = np.squeeze(data, axis=li)
+
+            for ci, c in enumerate(dims):
+                if c not in self.sizes:
+                    self.sizes[c] = self[name].shape[ci]
+                elif self.sizes[c] != self[name].shape[ci]:
+                    raise ValueError(
+                        f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
+                    )
+
+    def add(self, name, data, dims):
+        """
+        Add data entry
+
+        Parameters
+        ----------
+        name: str
+            The data name
+        data: np.ndarray
+            The data
+        dims: tuple of str
+            The dimensions
+
+        """
+        self[name] = data
+        self.dims[name] = dims
+        self.__run_entry_checks(name, data, dims)
+        self.__auto_update()
+
+    @classmethod
+    def from_points(
+        cls,
+        points,
+        data={},
+        dims={},
+        name="pdata",
+    ):
+        """
+        Create from points
+
+        Parameters
+        ----------
+        points: np.ndarray
+            The points, shape: (n_states, n_points, 3)
+        data: dict
+            The initial data to be stored
+        dims: dict
+            The dimensions tuples, same or subset
+            of data keys
+        name: str
+            The data container name
+
+        Returns
+        -------
+        pdata: Data
+            The data object
+
+        """
+        if len(points.shape) != 3 or points.shape[2] != 3:
+            raise ValueError(
+                f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
+            )
+        data[FC.POINTS] = points
+        dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
+        return Data(data, dims, [FC.STATE, FC.POINT], name)

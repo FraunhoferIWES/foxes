@@ -24,7 +24,7 @@ class HalfPlane(AreaGeometry):
     def __init__(self, centre, n):
         """
         Constructor.
-        
+
         Parameters
         ----------
         centre: numpy.ndarray

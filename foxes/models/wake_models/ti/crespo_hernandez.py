@@ -8,7 +8,7 @@ import foxes.constants as FC
 class CrespoHernandezTIWake(TopHatWakeModel):
     """
     The Crespo and Hernandez TI empirical correlation
-    
+
     Source: https://doi.org/10.1016/0167-6105(95)00033-X
 
     For the wake diameter we use Eqns. (17), (15), (4), (5) from
@@ -57,11 +57,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
-        k_var=FV.K
+        k_var=FV.K,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict
@@ -116,7 +116,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -130,8 +130,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        n_points: int
-            The number of wake evaluation points
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
@@ -140,9 +140,18 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.TI] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.TI] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
+    def calc_wake_radius(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        ct,
+    ):
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -154,6 +163,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -172,15 +183,30 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get D:
-        D = fdata[FV.D][st_sel][:, None]
+        D = self.get_data(
+            FV.D,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # get k:
-        k = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+        k = self.get_data(
+            self.k_var,
+            FC.STATE_POINT,
+            lookup="sf",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # calculate:
         sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))
@@ -191,7 +217,16 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         return radius
 
     def calc_centreline_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        sp_sel,
+        x,
+        wake_r,
+        ct,
     ):
         """
         Calculate centre line results of wake deltas.
@@ -204,6 +239,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)

@@ -5,6 +5,7 @@ from foxes.opt.core.farm_objective import FarmObjective
 from foxes import variables as FV
 import foxes.constants as FC
 
+
 class FarmVarObjective(FarmObjective):
     """
     Objectives based on farm variables.
@@ -42,7 +43,7 @@ class FarmVarObjective(FarmObjective):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
@@ -262,7 +263,7 @@ class MaxFarmPower(FarmVarObjective):
         The name of the objective function
     kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
-    
+
     :group: opt.objectives
 
     """
@@ -303,7 +304,7 @@ class MinimalMaxTI(FarmVarObjective):
         The name of the objective function
     kwargs: dict, optional
         Additional parameters for `FarmVarObjective`
-    
+
     :group: opt.objectives
 
     """

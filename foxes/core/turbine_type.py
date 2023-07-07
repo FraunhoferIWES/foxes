@@ -29,7 +29,7 @@ class TurbineType(TurbineModel):
     def __init__(self, name=None, D=None, H=None, P_nominal=None, P_unit="kW"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         name: str, optional

@@ -1,12 +1,10 @@
 # Citation
 
-Please cite the JOSS paper `"FOXES: Farm Optimization and eXtended yield
-Evaluation Software"` 
+Please cite the JOSS paper [FOXES: Farm Optimization and eXtended yield
+Evaluation Software](https://doi.org/10.21105/joss.05464). 
 
- [![DOI](https://joss.theoj.org/papers/10.21105/joss.05464/status.svg)](https://doi.org/10.21105/joss.05464)
-
- Bibtex:
- ```
+Bibtex:
+```
 @article{
     Schmidt2023, 
     author = {Jonas Schmidt and Lukas Vollmer and Martin Dörenkämper and Bernhard Stoevesandt}, 
@@ -20,4 +18,4 @@ Evaluation Software"`
     pages = {5464}, 
     journal = {Journal of Open Source Software} 
 }
- ```
+```

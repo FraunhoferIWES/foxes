@@ -42,7 +42,7 @@ class TableFactors(TurbineModel):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         data_source: str or pandas.DataFrame

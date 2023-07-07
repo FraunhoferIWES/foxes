@@ -17,7 +17,7 @@ class PartialWakesModel(Model):
         The wake model selection
     wake_frame: foxes.core.WakeFrame, optional
         The wake frame
-    
+
     :group: core
 
     """
@@ -25,7 +25,7 @@ class PartialWakesModel(Model):
     def __init__(self, wake_models=None, wake_frame=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         wake_models: list of foxes.core.WakeModel
@@ -73,6 +73,22 @@ class PartialWakesModel(Model):
 
         return idata
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        for w in self.wake_models:
+            w.keep(algo)
+        self.wake_frame.keep(algo)
+
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -92,13 +108,21 @@ class PartialWakesModel(Model):
         -------
         wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data
 
         """
         pass
 
     @abstractmethod
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -112,6 +136,8 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
@@ -124,7 +150,14 @@ class PartialWakesModel(Model):
 
     @abstractmethod
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        wake_deltas,
+        states_turbine,
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -139,6 +172,8 @@ class PartialWakesModel(Model):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
+        pdata: foxes.core.Data
+            The evaluation point data
         wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
@@ -147,8 +182,9 @@ class PartialWakesModel(Model):
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res: bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
         pass

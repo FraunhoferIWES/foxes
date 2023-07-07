@@ -32,7 +32,7 @@ def area(r1, r2, d):
     -------
     area: float or numpy.ndarray
         The intersectional area
-    
+
     :group: utils.two_circles
 
     """
@@ -76,7 +76,7 @@ def calc_area(r1, r2, d):
     -------
     area: numpy.ndarray
         The intersectional area
-    
+
     :group: utils.two_circles
 
     """

@@ -9,7 +9,7 @@ import foxes.constants as FC
 class TopHatWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for top-hat wake models.
-    
+
     :group: models.wake_models
 
     """
@@ -17,7 +17,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     def __init__(self, superpositions, ct_max=0.9999):
         """
         Constructor.
-        
+
         Parameters
         ----------
         superpositions: dict
@@ -33,7 +33,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         self.ct_max = ct_max
 
     @abstractmethod
-    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
+    def calc_wake_radius(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        ct,
+    ):
         """
         Calculate the wake radius, depending on x only (not r).
 
@@ -45,6 +54,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -67,7 +78,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     @abstractmethod
     def calc_centreline_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        sp_sel,
+        x,
+        wake_r,
+        ct,
     ):
         """
         Calculate centre line results of wake deltas.
@@ -80,6 +100,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -103,7 +125,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         pass
 
-    def calc_wakes_spsel_x_r(self, algo, mdata, fdata, states_source_turbine, x, r):
+    def calc_wakes_spsel_x_r(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        r,
+    ):
         """
         Calculate wake deltas.
 
@@ -115,6 +146,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
         states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
@@ -142,7 +175,9 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         ct[:] = fdata[FV.CT][st_sel][:, None]
         ct[ct > self.ct_max] = self.ct_max
 
-        wake_r = self.calc_wake_radius(algo, mdata, fdata, states_source_turbine, x, ct)
+        wake_r = self.calc_wake_radius(
+            algo, mdata, fdata, pdata, states_source_turbine, x, ct
+        )
 
         wdeltas = {}
         sp_sel = (ct > 0.0) & (x > 1e-5) & np.any(r < wake_r[:, :, None], axis=2)
@@ -153,7 +188,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             wake_r = wake_r[sp_sel]
 
             cl_del = self.calc_centreline_wake_deltas(
-                algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+                algo, mdata, fdata, pdata, states_source_turbine, sp_sel, x, wake_r, ct
             )
 
             nsel = r >= wake_r[:, None]

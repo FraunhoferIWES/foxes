@@ -26,7 +26,7 @@ def create_random_abl_states(
         nan if exceeded (i.e., neutral stratification)
     normalize: bool
         Normalize weights to 1
-        
+
     Returns
     -------
     data: pandas.DataFrame

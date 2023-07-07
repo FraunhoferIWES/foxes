@@ -8,7 +8,7 @@ class FarmModel(FarmDataModel):
     application to a subset of turbines).
 
     :group: core
-    
+
     """
 
     pass

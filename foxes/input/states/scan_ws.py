@@ -17,7 +17,7 @@ class ScanWS(States):
         The TI value
     rho: float
         The air density
-    
+
     :group: input.states
 
     """

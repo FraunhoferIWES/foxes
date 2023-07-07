@@ -13,14 +13,15 @@ class OMaxN(Objective):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, name="maxN"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         name: str
             The constraint name
@@ -119,14 +120,15 @@ class OMinN(OMaxN):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, name="ominN"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         name: str
             The constraint name
@@ -146,14 +148,15 @@ class OFixN(Objective):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, N, name="ofixN"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         N: int
             The number of turbines
@@ -257,14 +260,15 @@ class MaxGridSpacing(Objective):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, name="max_dxdy"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         name: str
             The constraint name
@@ -366,14 +370,15 @@ class MaxDensity(Objective):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, dfactor=1, min_dist=None, name="max_density"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         dfactor: float
             Delta factor for grid spacing
@@ -520,14 +525,15 @@ class MeMiMaDist(Objective):
     :group: opt.problems.layout.geom_layouts.objectives
 
     """
+
     def __init__(self, problem, scale=500.0, c1=1, c2=1, c3=1, name="MiMaMean"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         problem: foxes.opt.FarmOptProblem
-            The underlying geometrical layout 
+            The underlying geometrical layout
             optimization problem
         scale: float
             The distance scale

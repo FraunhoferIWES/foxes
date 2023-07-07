@@ -36,7 +36,7 @@ def add_grid(
         The verbosity level, 0 = silent
     turbine_parameters: dict, optional
         Parameters forwarded to `foxes.core.Turbine`
-    
+
     :group: input.farm_layout
 
     """

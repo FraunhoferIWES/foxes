@@ -32,8 +32,8 @@ def test():
 
     mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
         wname2pwake={
-            "Bastankhah_linear": ("PartialAxiwake", dict(n=6)),
-            "CrespoHernandez_quadratic": ("PartialTopHat", {}),
+            "Bastankhah_quadratic": ("PartialAxiwake", dict(n=6)),
+            "CrespoHernandez_max": ("PartialTopHat", {}),
         }
     )
 
@@ -89,7 +89,8 @@ def test():
     df[FV.AMB_WS] = df["AMB_REWS"]
 
     delta = df - fdata
-    print(delta)
+    print(df)
+    print(delta[[FV.WS, FV.TI]])
 
     chk = delta.abs()
     print(chk.max())
@@ -109,3 +110,7 @@ def test():
     print(fdata.loc[sel])
     print(chk.loc[sel])
     assert (chk[var] < 3e-4).all()
+
+
+if __name__ == "__main__":
+    test()

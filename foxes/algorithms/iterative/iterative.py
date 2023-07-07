@@ -1,73 +1,177 @@
 from foxes.algorithms.downwind.downwind import Downwind
-from .models import DefaultConv, LoopRunner, FarmWakesCalculation
+
+from foxes.core import FarmDataModelList
+import foxes.variables as FV
+from . import models as im
 
 
 class Iterative(Downwind):
     """
-    Iterative algorithm that repeats the
-    downwind calculation until convergence
-    has been achieved
-
-    Parameters
-    ----------
-    args : tuple, optional
-        Arguments for the Downwind algorithm
-    conv : foxes.algorithm.iterative.models.ConvCrit
-        The convergence criteria
-    max_its : int, optional
-        Set the maximal number of iterations, None means
-        number of turbines + 1
-    conv_error : bool
-        Throw error if not converging
-    kwargs : dict, optional
-        Keyword arguments for the Downwind algorithm
+    Iterative calculation of farm data.
 
     Attributes
     ----------
-    conv : foxes.algorithm.iterative.convergence.ConvCrit
+    max_it: int
+        The maximal number of iterations
+    conv_crit: foxes.algorithms.iterative.ConvCrit
         The convergence criteria
-    max_its : int
-        Set the maximal number of iterations, None means
-        number of turbines + 1
-    conv_error : bool
-        Throw error if not converging
 
     """
 
-    FarmWakesCalculation = FarmWakesCalculation
+    FarmWakesCalculation = im.FarmWakesCalculation
 
-    def __init__(
-        self, *args, conv=DefaultConv(), max_its=None, conv_error=True, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-        self.conv = conv
-        self.max_its = max_its
-        self.conv_error = conv_error
+    def __init__(self, *args, max_it=None, conv_crit=None, **kwargs):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for Downwind
+        max_it: int, optional
+            The maximal number of iterations
+        conv_crit: foxes.algorithms.iterative.ConvCrit, optional
+            The convergence criteria
+        kwargs: dict, optional
+            Keyword arguments for Downwind
+
+        """
+
+        verbosity = int(kwargs.pop("verbosity", 1)) - 1
+        super().__init__(*args, verbosity=verbosity, **kwargs)
+
+        self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
+        self.conv_crit = im.DefaultConv() if conv_crit is None else conv_crit
+        self._it = None
+        self._mlist = None
+
+    @property
+    def iterations(self):
+        """
+        The current iteration number
+
+        Returns
+        -------
+        it: int
+            The current iteration number
+
+        """
+        return self._it
 
     def _collect_farm_models(
         self,
-        vars_to_amb,
         calc_parameters,
         ambient,
     ):
         """
         Helper function that creates model list
         """
-        # get models from Downwind algorithm:
-        mlist, calc_pars = super()._collect_farm_models(
-            vars_to_amb, calc_parameters, ambient
-        )
 
-        # wrap the models into a loop:
-        mlist = LoopRunner(
-            self.conv,
-            mlist.models,
-            max_its=self.max_its,
-            conv_error=self.conv_error,
-            verbosity=self.verbosity - 1,
-        )
+        if self._it == 0:
+            mlist, calc_pars = super()._collect_farm_models(
+                calc_parameters, ambient=False
+            )
 
-        # flag only the last model as wake relevant:
-        mlist.model_wflag[-1] = True
+            # calc_pars[mlist.models.index(self.rotor_model)].update(
+            #    {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
+            # )
+
+            mdls = [
+                self.states,
+                self.rotor_model,
+                self.farm_controller,
+                self.wake_frame,
+                self.partial_wakes_model,
+            ] + self.wake_models
+
+            self.keep_models.update([self.name, f"{self.name}_calc", "calc_wakes"])
+            for m in mdls:
+                m.keep(self)
+
+            return mlist, calc_pars
+
+        # prepare:
+        calc_pars = []
+        mlist = FarmDataModelList(models=[])
+        mlist.name = f"{self.name}_calc"
+
+        # add model that calculates wake effects:
+        mlist.models.append(self.FarmWakesCalculation())
+        mlist.models[-1].name = "calc_wakes"
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+        # initialize models:
+        self.update_idata(mlist)
+
+        # update variables:
+        self.farm_vars = [
+            FV.X,
+            FV.Y,
+            FV.H,
+            FV.D,
+            FV.WEIGHT,
+            FV.ORDER,
+            FV.WD,
+            FV.YAW,
+        ] + mlist.output_farm_vars(self)
+        self.farm_vars += [FV.var2amb[v] for v in self.farm_vars if v in FV.var2amb]
+        self.farm_vars = sorted(list(set(self.farm_vars)))
+
+        self._mlist = mlist
 
         return mlist, calc_pars
+
+    def _run_farm_calc(self, mlist, *data, **kwargs):
+        """Helper function for running the main farm calculation"""
+        ir = (
+            None
+            if self.prev_farm_results is None
+            else self.chunked(self.prev_farm_results)
+        )
+        return super()._run_farm_calc(mlist, *data, initial_results=ir, **kwargs)
+
+    def calc_farm(self, finalize=True, **kwargs):
+        """
+        Calculate farm data.
+
+        Parameters
+        ----------
+        finalize : bool
+            Flag for finalization after calculation
+        kwargs: dict, optional
+            Arguments for calc_farm in the base class.
+
+        Returns
+        -------
+        farm_results : xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+
+        """
+        fres = None
+        self._it = -1
+        while self._it < self.max_it:
+            self._it += 1
+
+            self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
+
+            self.prev_farm_results = fres
+            fres = super().calc_farm(finalize=False, **kwargs)
+
+            conv = self.conv_crit.check_converged(
+                self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
+            )
+
+            if conv:
+                self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
+                break
+
+        # finalize models:
+        if finalize:
+            self.print("\n")
+            self.finalize_model(self._mlist)
+            self.finalize()
+        self.cleanup()
+        self._mlist = None
+
+        return fres

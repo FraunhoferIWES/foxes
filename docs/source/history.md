@@ -284,3 +284,23 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved API docu, now based on `python-apigen`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)
+
+## v0.4.1
+
+- Algorithms:
+  - Improved: `Iterative` now iterates through outer loop instead of within chunk
+- Models:
+  - New wake frame: `Timelines`, propagates wakes for spatially uniform time series
+- Tests:
+  - New test: `consistency/iterative`, checks if iterative algorithm gives same result
+- Examples:
+  - New example: `timelines`, demonstrates the usage of the `Timelines` wake frame
+  - Improved: All examples were update for the correct usage of the `DaskRunner`
+- Notebooks:
+  - New notebook: `timelines.ipynb`, showing how to use the `Timelines` wake frame in a notebook
+- Data:
+  - New states data `timeseries_100.csv.gz`, a short timeseries with timestep 1 min, varying wind direction only
+- Output:
+  - Improved: `FlowPlots2D` now has the optional argument `runner`, for computing plots with the chosen parallelization settings
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)
