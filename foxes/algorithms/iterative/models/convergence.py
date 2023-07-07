@@ -14,6 +14,8 @@ class ConvCrit(metaclass=ABCMeta):
     name: str, optional
         The convergence criteria name
 
+    :group: algorithms.iterative.models
+
     """
 
     def __init__(self, name=None):
@@ -76,6 +78,8 @@ class ConvCritList(ConvCrit):
     ----------
     crits: list of ConvCrit
         The criteria
+    
+    :group: algorithms.iterative.models
 
     """
 
@@ -163,6 +167,8 @@ class ConvVarDelta(ConvCrit):
         values: float values
     wd_vars: list of str
         The wind direction type variables (unit deg)
+    
+    :group: algorithms.iterative.models
 
     """
 
@@ -256,6 +262,9 @@ class ConvVarDelta(ConvCrit):
 class DefaultConv(ConvVarDelta):
     """
     Default convergence criteria.
+
+    :group: algorithms.iterative.models
+
     """
 
     def __init__(self):

@@ -7,27 +7,33 @@ class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
 
-    Parameters
-    ----------
-    point_vars : list of str, optional
-        The variables of interest
-    emodels : foxes.core.PointDataModelList, optional
-        The extra evaluation models
-    emodels_cpars : list of dict, optional
-        The calculation parameters for extra models
-
     Attributes
     ----------
-    point_vars : list of str
+    point_vars: list of str
         The variables of interest
-    emodels : foxes.core.PointDataModelList
+    emodels: foxes.core.PointDataModelList
         The extra evaluation models
-    emodels_cpars : list of dict
+    emodels_cpars: list of dict
         The calculation parameters for extra models
+
+    :group: algorithms.downwind.models
 
     """
 
     def __init__(self, point_vars=None, emodels=None, emodels_cpars=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        point_vars: list of str, optional
+            The variables of interest
+        emodels: foxes.core.PointDataModelList, optional
+            The extra evaluation models
+        emodels_cpars: list of dict, optional
+            The calculation parameters for extra models
+
+        """
         super().__init__()
         self._pvars = point_vars
         self.emodels = emodels
@@ -45,14 +51,14 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -74,12 +80,12 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -94,18 +100,18 @@ class PointWakesCalculation(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 

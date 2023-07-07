@@ -16,6 +16,8 @@ class Iterative(Downwind):
     conv_crit: foxes.algorithms.iterative.ConvCrit
         The convergence criteria
 
+    :group: algorithms.iterative
+
     """
 
     FarmWakesCalculation = im.FarmWakesCalculation
@@ -136,14 +138,14 @@ class Iterative(Downwind):
 
         Parameters
         ----------
-        finalize : bool
+        finalize: bool
             Flag for finalization after calculation
         kwargs: dict, optional
             Arguments for calc_farm in the base class.
 
         Returns
         -------
-        farm_results : xarray.Dataset
+        farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
 

@@ -14,55 +14,24 @@ class Downwind(Algorithm):
     that is calculated by the provided `TurbineOrder`
     object.
 
-    Parameters
-    ----------
-    mbook : foxes.ModelBook
-        The model book
-    farm : foxes.WindFarm
-        The wind farm
-    states : foxes.core.States
-        The ambient states
-    wake_models : list of str
-        The wake models, applied to all turbines.
-        Will be looked up in the model book
-    rotor_model : str
-        The rotor model, for all turbines. Will be
-        looked up in the model book
-    wake_frame : str
-        The wake frame. Will be looked up in the
-        model book
-    partial_wakes_model : str
-        The partial wakes model. Will be
-        looked up in the model book
-    farm_controller : str
-        The farm controller. Will be
-        looked up in the model book
-    chunks : dict
-        The chunks choice for running in parallel with dask,
-        e.g. `{"state": 1000}` for chunks of 1000 states
-    dbook : foxes.DataBook, optional
-        The data book, or None for default
-    keep_models : set of str
-        Keep these models data in memory and do not finalize them
-    verbosity : int
-        The verbosity level, 0 means silent
-
     Attributes
     ----------
-    states : foxes.core.States
+    states: foxes.core.States
         The ambient states
-    wake_models : list of foxes.core.WakeModel
+    wake_models: list of foxes.core.WakeModel
         The wake models, applied to all turbines
-    rotor_model : foxes.core.RotorModel
+    rotor_model: foxes.core.RotorModel
         The rotor model, for all turbines
-    wake_frame : foxes.core.WakeFrame
+    wake_frame: foxes.core.WakeFrame
         The wake frame
-    partial_wakes_model : foxes.core.PartialWakesModel
+    partial_wakes_model: foxes.core.PartialWakesModel
         The partial wakes model
-    farm_controller : foxes.core.FarmController
+    farm_controller: foxes.core.FarmController
         The farm controller
-    n_states : int
+    n_states: int
         The number of states
+
+   :group: algorithms.downwind
 
     """
 
@@ -85,6 +54,43 @@ class Downwind(Algorithm):
         keep_models=set(),
         verbosity=1,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        mbook: foxes.ModelBook
+            The model book
+        farm: foxes.WindFarm
+            The wind farm
+        states: foxes.core.States
+            The ambient states
+        wake_models: list of str
+            The wake models, applied to all turbines.
+            Will be looked up in the model book
+        rotor_model: str
+            The rotor model, for all turbines. Will be
+            looked up in the model book
+        wake_frame: str
+            The wake frame. Will be looked up in the
+            model book
+        partial_wakes_model: str
+            The partial wakes model. Will be
+            looked up in the model book
+        farm_controller: str
+            The farm controller. Will be
+            looked up in the model book
+        chunks: dict
+            The chunks choice for running in parallel with dask,
+            e.g. `{"state": 1000}` for chunks of 1000 states
+        dbook: foxes.DataBook, optional
+            The data book, or None for default
+        keep_models: set of str
+            Keep these models data in memory and do not finalize them
+        verbosity: int
+            The verbosity level, 0 means silent
+
+        """
         super().__init__(mbook, farm, chunks, verbosity, dbook, keep_models)
 
         self.states = states
@@ -117,13 +123,13 @@ class Downwind(Algorithm):
         self.print(f"\n{deco}")
         self.print(f"  Running {self.name}: {func_name}")
         self.print(deco)
-        self.print(f"  n_states  : {self.n_states}")
+        self.print(f"  n_states : {self.n_states}")
         self.print(f"  n_turbines: {self.n_turbines}")
         if n_points is not None:
-            self.print(f"  n_points  : {n_points}")
+            self.print(f"  n_points : {n_points}")
         self.print(deco)
-        self.print(f"  states    : {self.states}")
-        self.print(f"  rotor     : {self.rotor_model}")
+        self.print(f"  states   : {self.states}")
+        self.print(f"  rotor    : {self.rotor_model}")
         self.print(f"  controller: {self.farm_controller}")
         self.print(f"  partialwks: {self.partial_wakes_model}")
         self.print(f"  wake frame: {self.wake_frame}")
@@ -263,22 +269,22 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        calc_parameters : dict
+        calc_parameters: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        persist : bool
+        persist: bool
             Switch for forcing dask to load all model data
             into memory
-        finalize : bool
+        finalize: bool
             Flag for finalization after calculation
-        ambient : bool
+        ambient: bool
             Flag for ambient instead of waked calculation
         chunked_results: bool
             Flag for chunked results
 
         Returns
         -------
-        farm_results : xarray.Dataset
+        farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
@@ -400,38 +406,38 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        farm_results : xarray.Dataset
+        farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        points : numpy.ndarray
+        points: numpy.ndarray
             The points of interest, shape: (n_states, n_points, 3)
-        vars : list of str, optional
+        vars: list of str, optional
             The variables that should be kept in the output,
             or `None` for all
-        vars_to_amb : list of str, optional
+        vars_to_amb: list of str, optional
             Variables for which ambient variables should
             be stored. None means all.
-        point_models : str or foxes.core.PointDataModel
+        point_models: str or foxes.core.PointDataModel
             Additional point models to be executed
-        calc_parameters : dict
+        calc_parameters: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        persist_mdata : bool
+        persist_mdata: bool
             Switch for forcing dask to load all model data
             into memory
-        persist_fdata : bool
+        persist_fdata: bool
             Switch for forcing dask to load all farm data
             into memory
-        finalize : bool
+        finalize: bool
             Flag for finalization after calculation
-        ambient : bool
+        ambient: bool
             Flag for ambient instead of waked calculation
         chunked_results: bool
             Flag for chunked results
 
         Returns
         -------
-        point_results : xarray.Dataset
+        point_results: xarray.Dataset
             The point results. The calculated variables have
             dimensions (state, point)
 
@@ -524,7 +530,7 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        clear_mem : bool
+        clear_mem: bool
             Clear idata memory, including keep_models entries
 
         """
