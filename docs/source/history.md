@@ -304,3 +304,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `FlowPlots2D` now has the optional argument `runner`, for computing plots with the chosen parallelization settings
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)
+
+## v0.4.2
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)
