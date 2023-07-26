@@ -82,7 +82,7 @@ class Animator:
             if verbosity > 1:
                 print(f"  Frame {si}")
 
-            any = False
+            harts = []
             for g in self.generators:
 
                 try:
@@ -97,15 +97,16 @@ class Animator:
                     elif fig is not self.fig:
                         raise ValueError(f"Wrong figure returned by generator {g}")
                     
-                    arts.append(artists)
-                    any = True
+                    harts += [a for a in artists]
 
                 except StopIteration:
                     pass
 
-            if not any:
+            if len(harts):
+                arts.append(harts)
+                si += 1
+            else:
                 break
-            si += 1
 
         if verbosity > 1:
             print("Done.")

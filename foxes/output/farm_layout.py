@@ -127,6 +127,8 @@ class FarmLayoutOutput(Output):
         normalize_D=False,
         ret_im=False,
         bargs={},
+        anno_delx=0,
+        anno_dely=0,
         **kwargs,
     ):
         """
@@ -159,6 +161,10 @@ class FarmLayoutOutput(Output):
             Flag for returned image object
         bargs: dict
             Arguments for boundary plotting
+        anno_delx: float
+            The annotation delta x
+        anno_dely: float
+            The annotation delta y
         kwargs: dict, optional
             Parameters forwarded to `matplotlib.pyplot.scatter`
 
@@ -232,10 +238,10 @@ class FarmLayoutOutput(Output):
 
             if annotate == 1:
                 for i, txt in enumerate(n):
-                    ax.annotate(int(txt), (x[i], y[i]), size=fontsize)
+                    ax.annotate(int(txt), (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
             elif annotate == 2:
                 for i, t in enumerate(self.farm.turbines):
-                    ax.annotate(t.name, (x[i], y[i]), size=fontsize)
+                    ax.annotate(t.name, (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}
