@@ -307,5 +307,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.2
 
+- Output:
+  - New: `Animator`, creates animations based on generators that yield lists of artists
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)

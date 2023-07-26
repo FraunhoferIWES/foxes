@@ -2,7 +2,6 @@ import time
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 import foxes
 import foxes.variables as FV
@@ -184,9 +183,10 @@ if __name__ == "__main__":
             print("\nCalculating animation")
 
             fig, ax = plt.subplots(figsize=(8, 7))
+            anim = foxes.output.Animator(fig)
+
             o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-            ims = []
-            for si, (fig, im) in enumerate(
+            anim.add_generator(
                 o.gen_states_fig_xy(
                     FV.WS,
                     resolution=30,
@@ -200,12 +200,9 @@ if __name__ == "__main__":
                     title=None,
                     animated=True,
                 )
-            ):
-                ims.append(im)
-
-            ani = animation.ArtistAnimation(
-                fig, ims, interval=200, blit=True, repeat_delay=2000
             )
+
+            ani = anim.animate()
 
             fpath = "ani.gif"
             print("Writing file", fpath)
