@@ -90,9 +90,12 @@ exclude_patterns = [
     "build/*",
     # "_templates/*",
     # DEBUG
-    "examples.rst",
-    "notebooks/*",
-    # "notebooks/layout_opt.ipynb,"
+    #"examples.rst",
+    #"notebooks/*",
+    #"notebooks/layout_opt.ipynb",
+    #"notebooks/timelines.ipynb",
+    #"notebooks/heterogeneous.ipynb",
+    #"notebooks/timeseries.ipynb",
     # "api.rst"
 ]
 
@@ -167,7 +170,6 @@ nbsphinx_output_prompt = "Out[%s]:"
 
 # Options for loading require.js
 # nbsphinx_requirejs_options = {'async': 'async'}
-
 mathjax3_config = {
     "TeX": {"equationNumbers": {"autoNumber": "AMS", "useLabelIds": True}},
 }

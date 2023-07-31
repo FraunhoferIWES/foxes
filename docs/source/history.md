@@ -309,7 +309,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Bug fixes:
   - Fix of bug that slowed down `TurbOParkIX` by considering all TI wakes instead of only source turbine wake during integration
+  - Fix of bug that prevented plotly wind roses to be shown in the documentation
 - Output:
   - New: `Animator`, creates animations based on generators that yield lists of artists
+- Examples:
+  - Improved: `timelines` now includes turbine REWS signal in animations
+- Notebooks:
+  - Improved: `timelines.ipynb` now includes turbine REWS signal in animations
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)
