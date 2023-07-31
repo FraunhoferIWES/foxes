@@ -307,7 +307,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.2
 
--  Bug fixes:
+- Bug fixes:
   - Fix of bug that slowed down `TurbOParkIX` by considering all TI wakes instead of only source turbine wake during integration
 - Output:
   - New: `Animator`, creates animations based on generators that yield lists of artists
