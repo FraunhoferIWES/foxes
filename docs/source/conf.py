@@ -90,8 +90,8 @@ exclude_patterns = [
     "build/*",
     # "_templates/*",
     # DEBUG
-    #"examples.rst",
-    #"notebooks/*",
+    "examples.rst",
+    "notebooks/*",
     #"notebooks/layout_opt.ipynb",
     #"notebooks/timelines.ipynb",
     #"notebooks/heterogeneous.ipynb",

@@ -3,7 +3,7 @@ from foxes.core import PointDataModel, PointDataModelList
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
-from . import models as dm
+from . import models as mdls
 
 
 class Downwind(Algorithm):
@@ -35,9 +35,23 @@ class Downwind(Algorithm):
 
     """
 
-    FarmWakesCalculation = dm.FarmWakesCalculation
-    PointWakesCalculation = dm.point_wakes_calc.PointWakesCalculation
-    SetAmbPointResults = dm.set_amb_point_results.SetAmbPointResults
+    @classmethod
+    def get_model(cls, name):
+        """
+        Get the algorithm specific model
+        
+        Parameters
+        ----------
+        name: str
+            The model name
+        
+        Returns
+        -------
+        model: foxes.core.model
+            The model
+        
+        """
+        return getattr(mdls, name)
 
     def __init__(
         self,
@@ -213,7 +227,7 @@ class Downwind(Algorithm):
         )
 
         # 4) calculate turbine order:
-        mlist.models.append(dm.CalcOrder())
+        mlist.models.append(self.get_model("CalcOrder")())
         mlist.models[-1].name = "calc_order"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -224,13 +238,13 @@ class Downwind(Algorithm):
 
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
-        mlist.models.append(dm.SetAmbFarmResults())
+        mlist.models.append(self.get_model("SetAmbFarmResults")())
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 7) calculate wake effects:
         if not ambient:
-            mlist.models.append(self.FarmWakesCalculation())
+            mlist.models.append(self.get_model("FarmWakesCalculation")())
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -371,14 +385,16 @@ class Downwind(Algorithm):
 
         # 2) transfer ambient results:
         mlist.models.append(
-            dm.SetAmbPointResults(point_vars=vars, vars_to_amb=vars_to_amb)
+            self.get_model("SetAmbPointResults")(
+                point_vars=vars, vars_to_amb=vars_to_amb)
         )
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
         if not ambient:
-            mlist.models.append(dm.PointWakesCalculation(vars, emodels, emodels_cpars))
+            mlist.models.append(self.get_model("PointWakesCalculation")(
+                vars, emodels, emodels_cpars))
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 

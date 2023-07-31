@@ -13,6 +13,12 @@ class FarmWakesCalculation(FarmDataModel):
 
     """
 
+    def __init__(self):
+        """
+        Constructor.
+        """
+        super().__init__()
+        
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

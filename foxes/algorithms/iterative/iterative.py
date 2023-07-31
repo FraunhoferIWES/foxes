@@ -2,7 +2,7 @@ from foxes.algorithms.downwind.downwind import Downwind
 
 from foxes.core import FarmDataModelList
 import foxes.variables as FV
-from . import models as im
+from . import models as mdls
 
 
 class Iterative(Downwind):
@@ -20,7 +20,26 @@ class Iterative(Downwind):
 
     """
 
-    FarmWakesCalculation = im.FarmWakesCalculation
+    @classmethod
+    def get_model(cls, name):
+        """
+        Get the algorithm specific model
+        
+        Parameters
+        ----------
+        name: str
+            The model name
+        
+        Returns
+        -------
+        model: foxes.core.model
+            The model
+        
+        """
+        try:
+            return getattr(mdls, name)
+        except AttributeError:
+            return super().get_model(name)
 
     def __init__(self, *args, max_it=None, conv_crit=None, **kwargs):
         """
@@ -43,7 +62,7 @@ class Iterative(Downwind):
         super().__init__(*args, verbosity=verbosity, **kwargs)
 
         self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
-        self.conv_crit = im.DefaultConv() if conv_crit is None else conv_crit
+        self.conv_crit = self.get_model("DefaultConv")() if conv_crit is None else conv_crit
         self._it = None
         self._mlist = None
 
@@ -98,7 +117,7 @@ class Iterative(Downwind):
         mlist.name = f"{self.name}_calc"
 
         # add model that calculates wake effects:
-        mlist.models.append(self.FarmWakesCalculation())
+        mlist.models.append(self.get_model("FarmWakesCalculation")())
         mlist.models[-1].name = "calc_wakes"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 

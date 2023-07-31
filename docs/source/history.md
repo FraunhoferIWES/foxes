@@ -310,6 +310,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Bug fixes:
   - Fix of bug that slowed down `TurbOParkIX` by considering all TI wakes instead of only source turbine wake during integration
   - Fix of bug that prevented plotly wind roses to be shown in the documentation
+  - Fix in docu that excluded the algorithm models from the API
 - Output:
   - New: `Animator`, creates animations based on generators that yield lists of artists
 - Examples:
