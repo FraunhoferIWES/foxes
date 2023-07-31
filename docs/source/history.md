@@ -319,3 +319,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `timelines.ipynb` now includes turbine REWS signal in animations
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)
+
+## v0.4.3
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)
