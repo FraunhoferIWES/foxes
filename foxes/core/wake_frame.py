@@ -114,6 +114,7 @@ class WakeFrame(Model):
         variables,
         x,
         dx,
+        wake_models=None,
         **ipars,
     ):
         """
@@ -137,6 +138,8 @@ class WakeFrame(Model):
             shape: (n_states, n_points)
         dx: float
             The step size of the integral
+        wake_models: list of foxes.core.WakeModels
+            The wake models to consider, default: from algo
         ipars: dict, optional
             Additional interpolation parameters
 
@@ -166,20 +169,18 @@ class WakeFrame(Model):
         )
 
         # run ambient calculation:
-        pdata = {FC.POINTS: pts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        pdata.update(
-            {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
+        pdata = Data.from_points(
+            pts,
+            data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
+            dims={v: (FC.STATE, FC.POINT) for v in vrs}
         )
-        pdims.update({v: (FC.STATE, FC.POINT) for v in vrs})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
         amb2var = algo.SetAmbPointResults()
         amb2var.initialize(algo, verbosity=0)
         res = amb2var.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
-        del pdims, res, amb2var
+        del res, amb2var
 
         # find out if all vars ambient:
         ambient = True
@@ -190,9 +191,9 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.PointWakesCalculation(vrs)
+            wcalc = algo.PointWakesCalculation(vrs, wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
-            res = wcalc.calculate(algo, mdata, fdata, pdata)
+            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=states_source_turbine)
             pdata.update(res)
             del wcalc, res
 

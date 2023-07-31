@@ -138,7 +138,7 @@ class FlowPlots2D(Output):
                 t = s
             ttl = hax.text(
                 0.5,
-                1.02,
+                1.05,
                 f"State {t}",
                 backgroundcolor="w",
                 transform=hax.transAxes,
@@ -270,7 +270,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -278,9 +278,9 @@ class FlowPlots2D(Output):
             Index of the turbine from which to take the weight
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -295,7 +295,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """
@@ -482,7 +482,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -490,9 +490,9 @@ class FlowPlots2D(Output):
             Index of the turbine from which to take the weight
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -507,7 +507,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """
@@ -710,7 +710,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -718,9 +718,9 @@ class FlowPlots2D(Output):
             Index of the turbine from which to take the weight
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -735,7 +735,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """
@@ -934,7 +934,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -944,9 +944,9 @@ class FlowPlots2D(Output):
             Parameters for plt.quiver
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -961,7 +961,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """
@@ -1162,7 +1162,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -1172,9 +1172,9 @@ class FlowPlots2D(Output):
             Parameters for plt.quiver
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -1189,7 +1189,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """
@@ -1407,7 +1407,7 @@ class FlowPlots2D(Output):
             The figure object
         ax: plt.Axes, optional
             The figure axes
-        add_bar: bool, optional
+        add_bar: bool
             Add a color bar
         cmap: str, optional
             The colormap
@@ -1417,9 +1417,9 @@ class FlowPlots2D(Output):
             Parameters for plt.quiver
         verbosity: int, optional
             The verbosity level
-        ret_state: bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im: bool, optional
+        ret_im: bool
             Flag for image return
         animated: bool
             Switch for usage for an animation
@@ -1434,7 +1434,7 @@ class FlowPlots2D(Output):
         si: int, optional
             The state index
         im: tuple, optional
-            The image objects, atplotlib.collections.QuadMesh
+            The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
 
         """

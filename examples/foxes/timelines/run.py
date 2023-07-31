@@ -2,7 +2,6 @@ import time
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 import foxes
 import foxes.variables as FV
@@ -102,7 +101,7 @@ if __name__ == "__main__":
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
-        # states_sel=range(20,30)
+        #states_sel=range(20,30)
     )
 
     farm = foxes.WindFarm()
@@ -183,11 +182,13 @@ if __name__ == "__main__":
         if args.animation:
             print("\nCalculating animation")
 
-            fig, ax = plt.subplots(figsize=(8, 7))
-            o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-            ims = []
-            for si, (fig, im) in enumerate(
-                o.gen_states_fig_xy(
+            fig, axs = plt.subplots(2, 1, figsize=(5.2,7), 
+                                    gridspec_kw={'height_ratios': [3, 1]})
+
+            anim = foxes.output.Animator(fig)
+            of = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+            anim.add_generator(
+                of.gen_states_fig_xy(
                     FV.WS,
                     resolution=30,
                     quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
@@ -195,17 +196,29 @@ if __name__ == "__main__":
                     xmax=5000,
                     ymax=5000,
                     fig=fig,
-                    ax=ax,
+                    ax=axs[0],
                     ret_im=True,
                     title=None,
                     animated=True,
                 )
-            ):
-                ims.append(im)
-
-            ani = animation.ArtistAnimation(
-                fig, ims, interval=200, blit=True, repeat_delay=2000
             )
+            anim.add_generator(
+                o.gen_stdata(
+                    turbines=[4, 7],
+                    variable=FV.REWS,
+                    fig=fig,
+                    ax=axs[1],
+                    ret_im=True,
+                    legloc="upper left",
+                    animated=True,
+                )
+            )
+
+            ani = anim.animate()
+
+            lo = foxes.output.FarmLayoutOutput(farm)
+            lo.get_figure(fig=fig, ax=axs[0], title="", annotate=1,  
+                          anno_delx=-120, anno_dely=-60, alpha=0)
 
             fpath = "ani.gif"
             print("Writing file", fpath)

@@ -301,12 +301,13 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.sbeta_factor = sbeta_factor
         self.ti_var = ti_var
         self.ipars = ipars
+        self._tiwakes = None
 
     def __repr__(self):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
-
+    
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -332,6 +333,17 @@ class TurbOParkWakeIX(GaussianWakeModel):
         """
         n_states = mdata.n_states
         wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+
+        # find TI wake models:
+        self._tiwakes = []
+        for w in algo.wake_models:
+            if w is not self:
+                wdel = {}
+                w.init_wake_deltas(algo, mdata, fdata, pdata, wdel)
+                if self.ti_var in wdel:
+                    self._tiwakes.append(w)
+        if len(self._tiwakes) == 0:
+            raise KeyError(f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}")
 
     def calc_amplitude_sigma_spsel(
         self,
@@ -412,7 +424,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
-            # get TI by integratiion along centre line:
+            # get TI by integration along centre line:
             ti_ix = algo.wake_frame.calc_centreline_integral(
                 algo,
                 mdata,
@@ -421,6 +433,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 [self.ti_var],
                 x,
                 dx=self.dx,
+                wake_models=self._tiwakes,
                 **self.ipars,
             )[:, :, 0]
 
@@ -451,3 +464,18 @@ class TurbOParkWakeIX(GaussianWakeModel):
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
         return {FV.WS: (ampld, sigma)}, sp_sel
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        self._tiwakes = None
+        super().finalize(algo, verbosity)

@@ -90,9 +90,12 @@ exclude_patterns = [
     "build/*",
     # "_templates/*",
     # DEBUG
-    # "examples.rst",
-    # "notebooks/*",
-    # "notebooks/layout_opt.ipynb,"
+    #"examples.rst",
+    #"notebooks/*",
+    #"notebooks/layout_opt.ipynb",
+    #"notebooks/timelines.ipynb",
+    #"notebooks/heterogeneous.ipynb",
+    #"notebooks/timeseries.ipynb",
     # "api.rst"
 ]
 
@@ -167,7 +170,6 @@ nbsphinx_output_prompt = "Out[%s]:"
 
 # Options for loading require.js
 # nbsphinx_requirejs_options = {'async': 'async'}
-
 mathjax3_config = {
     "TeX": {"equationNumbers": {"autoNumber": "AMS", "useLabelIds": True}},
 }
@@ -305,6 +307,11 @@ epub_exclude_files = ["search.html"]
 python_apigen_modules = {
     "foxes.variables": "_foxes/variables/",
     "foxes.constants": "_foxes/constants/",
+    "foxes.algorithms": "_algorithms/",
+    "foxes.algorithms.downwind": "_algorithms/downwind/",
+    "foxes.algorithms.downwind.models": "_algorithms/downwind/models/",
+    "foxes.algorithms.iterative": "_algorithms/iterative/",
+    "foxes.algorithms.iterative.models": "_algorithms/iterative/models/",
     "foxes.core": "_core/",
     "foxes.data": "_data/",
     "foxes.input.farm_layout": "_input/farm_layout/",

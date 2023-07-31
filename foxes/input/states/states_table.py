@@ -316,7 +316,11 @@ class StatesTable(States):
         z = pdata[FC.POINTS][:, :, 2]
 
         for i, v in enumerate(self._tvars):
-            pdata[v][:] = mdata[self.DATA][:, i, None]
+            if v in pdata:
+                pdata[v][:] = mdata[self.DATA][:, i, None]
+            else:
+                pdata[v] = mdata[self.DATA][:, i, None]
+                pdata.dims[v] = (FC.STATE, FC.POINT)
 
         for v, f in self.fixed_vars.items():
             pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE)
