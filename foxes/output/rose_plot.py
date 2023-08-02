@@ -20,7 +20,7 @@ class RosePlotOutput(Output):
     results: pandas.DataFrame
         The calculation results (farm or points)
 
-    :group: output
+   :group: output
 
     """
 
@@ -107,7 +107,7 @@ class RosePlotOutput(Output):
         wd_var=FV.AMB_WD,
         turbine=None,
         point=None,
-        legend=None,
+        start0=False,
     ):
         """
         Get pandas DataFrame with wind rose data.
@@ -130,20 +130,21 @@ class RosePlotOutput(Output):
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
-        legend: str, optional
-            The data legend string
+        start0: bool
+            Flag for starting the first sector at
+            zero degrees instead of minus half width
 
         Returns
         -------
-        pd.DataFrame :
+        pd.DataFrame:
             The wind rose data
 
         """
 
         dwd = 360.0 / sectors
         wds = np.arange(0.0, 360.0, dwd)
-        wdb = np.arange(-dwd / 2, 360.0, dwd)
-        lgd = legend if legend is not None else var
+        wdb = np.append(wds, 360) if start0 else np.arange(-dwd / 2, 360.0, dwd)
+        lgd = f"interval_{var}"
 
         data = self.results[[wd_var, FV.WEIGHT]].copy()
         data[lgd] = self.results[var]
@@ -164,13 +165,29 @@ class RosePlotOutput(Output):
 
         data["wd"] = uv2wd(data[["u", "v"]].to_numpy())
         data.drop(["u", "v"], axis=1, inplace=True)
-        data.loc[data["wd"] > 360.0 - dwd / 2, "wd"] -= 360.0
+        if not start0:
+            data.loc[data["wd"] > 360.0 - dwd / 2, "wd"] -= 360.0
 
         data[wd_var] = pd.cut(data["wd"], wdb, labels=wds)
         data[lgd] = pd.cut(data[lgd], var_bins, right=False, include_lowest=True)
 
         grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd])
         data = grp.sum().reset_index()
+
+        data[wd_var] = data[wd_var].astype(np.float64)
+        data[lgd] = list(data[lgd])
+        if start0:
+            data[wd_var] += dwd/2
+
+        ii = pd.IntervalIndex(data[lgd])
+        data[var] = ii.mid
+        data[f"bin_min_{var}"] = ii.left
+        data[f"bin_max_{var}"] = ii.right
+        data[f"bin_min_{wd_var}"] = data[wd_var] - dwd/2
+        data[f"bin_max_{wd_var}"] = data[wd_var] + dwd/2
+
+        data = data[[wd_var, var, f"bin_min_{wd_var}", f"bin_max_{wd_var}", 
+                     f"bin_min_{wd_var}", f"bin_max_{wd_var}", lgd, "frequency"]]
 
         return data
 
@@ -187,6 +204,8 @@ class RosePlotOutput(Output):
         legend=None,
         layout_dict={},
         title_dict={},
+        start0=False,
+        ret_data=False,
     ):
         """
         Creates px figure object
@@ -215,11 +234,18 @@ class RosePlotOutput(Output):
             Optional parameters for the px figure layout
         title_dict: dict, optional
             Optional parameters for the px title layout
+        start0: bool
+            Flag for starting the first sector at
+            zero degrees instead of minus half width
+        ret_data: bool
+            Flag for returning wind rose data
 
         Returns
         -------
-        px.Figure :
+        fig: px.Figure
             The rose plot figure
+        data: pd.DataFrame, optional
+            The wind rose data
 
         """
 
@@ -237,15 +263,17 @@ class RosePlotOutput(Output):
             wd_var=wd_var,
             turbine=turbine,
             point=point,
-            legend=lg,
+            start0=start0,
         )
 
         cols = px.colors.sequential.__dict__.keys()
         cols = [c for c in cols if isinstance(px.colors.sequential.__dict__[c], list)]
         cmap = px.colors.sequential.__dict__[cols[cols.index(cmap)]]
 
+        intv = f"interval_{var}"
         fig = px.bar_polar(
-            wrdata, r="frequency", theta=wd_var, color=lg, color_discrete_sequence=cmap
+            wrdata, r="frequency", theta=wd_var, color=intv, color_discrete_sequence=cmap,
+            labels={intv: lg}
         )
 
         tdict = dict(xanchor="center", yanchor="top", x=0.5, y=0.97)
@@ -256,7 +284,10 @@ class RosePlotOutput(Output):
 
         fig = fig.update_layout(title={"text": ttl, **tdict}, **ldict)
 
-        return fig
+        if ret_data:
+            return fig, wrdata
+        else:
+            return fig
 
     def write_figure(
         self,
@@ -272,6 +303,8 @@ class RosePlotOutput(Output):
         legend=None,
         layout_dict={},
         title_dict={},
+        start0=False,
+        ret_data=False,
     ):
         """
         Write rose plot to file
@@ -302,10 +335,20 @@ class RosePlotOutput(Output):
             Optional parameters for the px figure layout
         title_dict: dict, optional
             Optional parameters for the px title layout
+        start0: bool
+            Flag for starting the first sector at
+            zero degrees instead of minus half width
+        ret_data: bool
+            Flag for returning wind rose data
+
+        Returns
+        -------
+        data: pd.DataFrame, optional
+            The wind rose data
 
         """
 
-        fig = self.get_figure(
+        r = self.get_figure(
             sectors=sectors,
             var=var,
             var_bins=var_bins,
@@ -317,9 +360,14 @@ class RosePlotOutput(Output):
             legend=legend,
             layout_dict=layout_dict,
             title_dict=title_dict,
+            start0=start0,
+            ret_data=ret_data,
         )
-
-        fig.write_image(file_name)
+        if ret_data:
+            r[0].write_image(file_name)
+            return r[1]
+        else:
+            r.write_image(file_name)
 
 
 class StatesRosePlotOutput(RosePlotOutput):
@@ -335,7 +383,7 @@ class StatesRosePlotOutput(RosePlotOutput):
     mbook: foxes.models.ModelBook, optional
         The model book
 
-    :group: output
+   :group: output
 
     """
 

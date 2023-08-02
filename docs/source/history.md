@@ -322,5 +322,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.3
 
+- Output:
+  - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)
