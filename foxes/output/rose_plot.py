@@ -185,9 +185,11 @@ class RosePlotOutput(Output):
         data[f"bin_max_{var}"] = ii.right
         data[f"bin_min_{wd_var}"] = data[wd_var] - dwd/2
         data[f"bin_max_{wd_var}"] = data[wd_var] + dwd/2
+        data["sector"] = (data[wd_var]/dwd).astype(int)
 
-        data = data[[wd_var, var, f"bin_min_{wd_var}", f"bin_max_{wd_var}", 
-                     f"bin_min_{wd_var}", f"bin_max_{wd_var}", lgd, "frequency"]]
+        data = data[[wd_var, var, "sector", f"bin_min_{wd_var}", f"bin_max_{wd_var}", 
+                     f"bin_min_{var}", f"bin_max_{var}", lgd, "frequency"]]
+        data.index.name = "bin"
 
         return data
 
