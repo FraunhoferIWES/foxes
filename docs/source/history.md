@@ -324,5 +324,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
+- Bug fixes:
+  - Fixed bug with `windio` input that resulted in wrong wind rose weights
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)

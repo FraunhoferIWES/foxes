@@ -48,7 +48,7 @@ class CpCtFromTwo(PCtFromTwo):
         pd_file_read_pars_ct:  dict
             Parameters for pandas ct file reading
         parameters: dict, optional
-            Additional parameters for PCtFile class
+            Additional parameters for PCtFromTwo class
 
         """
         if not isinstance(data_source_cp, pd.DataFrame) or not isinstance(
