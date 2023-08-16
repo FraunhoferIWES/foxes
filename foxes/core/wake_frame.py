@@ -176,7 +176,7 @@ class WakeFrame(Model):
         )
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
-        amb2var = algo.SetAmbPointResults()
+        amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0)
         res = amb2var.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
@@ -191,7 +191,7 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.PointWakesCalculation(vrs, wake_models=wake_models)
+            wcalc = algo.get_model("PointWakesCalculation")(vrs, wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
             res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=states_source_turbine)
             pdata.update(res)
