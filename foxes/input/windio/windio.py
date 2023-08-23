@@ -90,7 +90,8 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     for v, d in wres.items():
         if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
             _to_data(v, d["data"], d["dims"])
-    data[:, :, names.index("probability")] *= sec_prob
+    if sec_prob is not None and "probability" in names:
+        data[:, :, names.index("probability")] *= sec_prob
     
     n_vars = len(names)
     data = data.reshape(n, n_vars)
