@@ -8,6 +8,7 @@ from .model import Model
 from .data import Data
 from foxes.utils.runners import DaskRunner
 import foxes.constants as FC
+import foxes.variables as FV
 
 
 class DataCalcModel(Model):
@@ -23,6 +24,8 @@ class DataCalcModel(Model):
     For each individual data chunk the `calculate`
     function is called.
 
+    :group: core
+
     """
 
     @abstractmethod
@@ -35,16 +38,16 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : foxes.core.Data
+        data: tuple of foxes.core.Data
             The input data
-        **parameters : dict, optional
+        parameters: dict, optional
             The calculation parameters
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray
 
@@ -65,10 +68,16 @@ class DataCalcModel(Model):
         out_vars,
         out_dims,
         calc_pars,
+        init_vars,
     ):
         """
         Wrapper that mitigates between apply_ufunc and `calculate`.
         """
+
+        n_prev = len(init_vars)
+        if n_prev:
+            prev = ldata[:n_prev]
+            ldata = ldata[n_prev:]
 
         # reconstruct original data:
         data = []
@@ -78,7 +87,6 @@ class DataCalcModel(Model):
 
             hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
             hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-
             data.append(Data(hdata, hdims, loop_dims))
 
             del hdata, hdims, v2l, v2e
@@ -97,9 +105,26 @@ class DataCalcModel(Model):
         odims = {v: out_dims for v in out_vars}
         odata = {
             v: np.full(oshape, np.nan, dtype=FC.DTYPE)
+            if v not in init_vars
+            else prev[init_vars.index(v)].copy()
             for v in out_vars
             if v not in data[-1]
         }
+        if (
+            n_prev
+            and FV.TXYH not in odata
+            and FV.X in odata
+            and FV.X in odata
+            and FV.Y in odata
+            and FV.H in odata
+        ):
+            txyh = np.zeros((data[0].n_states, data[0].n_turbines, 3), dtype=FC.DTYPE)
+            txyh[..., 0] = odata[FV.X]
+            txyh[..., 1] = odata[FV.Y]
+            txyh[..., 2] = odata[FV.H]
+            odata[FV.TXYH] = txyh
+            odims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
+            del txyh
         if len(data) == 1:
             data.append(Data(odata, odims, loop_dims))
         else:
@@ -107,6 +132,11 @@ class DataCalcModel(Model):
             odims.update(data[-1].dims)
             data[-1] = Data(odata, odims, loop_dims)
         del odims, odata
+
+        # link chunk state indices from mdata to fdata and pdata:
+        if FC.STATE in data[0]:
+            for d in data[1:]:
+                d[FC.STATE] = data[0][FC.STATE]
 
         # run model calculation:
         results = self.calculate(algo, *data, **calc_pars)
@@ -137,7 +167,14 @@ class DataCalcModel(Model):
         return data
 
     def run_calculation(
-        self, algo, *data, out_vars, loop_dims, out_core_vars, **calc_pars
+        self,
+        algo,
+        *data,
+        out_vars,
+        loop_dims,
+        out_core_vars,
+        initial_results=None,
+        **calc_pars,
     ):
         """
         Starts the model calculation in parallel, via
@@ -147,24 +184,26 @@ class DataCalcModel(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        *data : tuple of xarray.Dataset
+        data: tuple of xarray.Dataset
             The input data
         out_vars: list of str
             The calculation output variables
-        loop_dims : array_like of str
+        loop_dims: array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
-        out_core_vars : list of str
+        out_core_vars: list of str
             The core dimensions of the output data, use
             `FC.VARS` for variables dimension (required)
-        **calc_pars : dict, optional
+        calc_pars: dict, optional
             Additional arguments for the `calculate` function
+        initial_results: xarray.Dataset, optional
+            Initial results
 
         Returns
         -------
-        results : xarray.Dataset
+        results: xarray.Dataset
             The calculation results
 
         """
@@ -185,6 +224,15 @@ class DataCalcModel(Model):
         evars = []
         edims = []
         dvars = []
+        ivars = []
+        idims = []
+        if initial_results is not None:
+            ds = initial_results
+            hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
+            ldata += [ds[v] for v in hvarsl]
+            idims += [ds[v].dims for v in hvarsl]
+            ivars += hvarsl
+
         for ds in data:
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
@@ -231,14 +279,16 @@ class DataCalcModel(Model):
             out_vars=out_vars,
             out_dims=out_dims,
             calc_pars=calc_pars,
+            init_vars=ivars,
         )
 
         # run parallel computation:
+        iidims = [[c for c in d if c not in loopd] for d in idims]
         icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
             self._wrap_calc,
             *ldata,
-            input_core_dims=icdims,
+            input_core_dims=iidims + icdims,
             output_core_dims=[out_core_vars],
             output_dtypes=[FC.DTYPE],
             dask="parallelized",

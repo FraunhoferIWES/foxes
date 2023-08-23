@@ -10,29 +10,18 @@ class SetUniformData(PointDataModel):
     """
     Set uniform data (can be state dependent)
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame or dict
-        Either a file name, or a data frame, both assuming
-        state dependent data. Or a dict for state independent
-        uniform data (i.e., scalars)
-    output_vars : list of str
-        The variables to be written
-    var2col : dict
-        Mapping from variable names to data column names
-    pd_read_pars : dict
-        pandas file reading parameters
-
     Attributes
     ----------
-    data_source : str or pandas.DataFrame or dict
+    data_source: str or pandas.DataFrame or dict
         Either a file name, or a data frame, both assuming
         state dependent data. Or a dict for state independent
         uniform data (i.e., scalars)
-    ovars : list of str
+    ovars: list of str
         The variables to be written
-    var2col : dict
+    var2col: dict
         Mapping from variable names to data column names
+
+    :group: models.point_models
 
     """
 
@@ -43,6 +32,23 @@ class SetUniformData(PointDataModel):
         var2col={},
         pd_read_pars={},
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame or dict
+            Either a file name, or a data frame, both assuming
+            state dependent data. Or a dict for state independent
+            uniform data (i.e., scalars)
+        output_vars: list of str
+            The variables to be written
+        var2col: dict
+            Mapping from variable names to data column names
+        pd_read_pars: dict
+            pandas file reading parameters
+
+        """
         self.data_source = data_source
         self.ovars = output_vars
         self.var2col = var2col
@@ -61,14 +67,14 @@ class SetUniformData(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -103,12 +109,12 @@ class SetUniformData(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -123,18 +129,18 @@ class SetUniformData(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 

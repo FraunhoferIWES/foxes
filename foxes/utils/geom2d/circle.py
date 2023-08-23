@@ -8,23 +8,29 @@ class Circle(AreaGeometry):
     """
     This class represents the area of a circle.
 
-    Parameters
-    ----------
-    centre : numpy.ndarray
-        The centre point, shape: (2,)
-    radius : float
-        The radius
-
     Attributes
     ----------
-    centre : numpy.ndarray
+    centre: numpy.ndarray
         The centre point, shape: (2,)
-    radius : float
+    radius: float
         The radius
+
+    :group: utils.geom2d
 
     """
 
     def __init__(self, centre, radius):
+        """
+        Cobnstructor.
+
+        Parameters
+        ----------
+        centre: numpy.ndarray
+            The centre point, shape: (2,)
+        radius: float
+            The radius
+
+        """
         self.centre = np.array(centre, dtype=np.float64)
         self.radius = radius
 
@@ -34,7 +40,7 @@ class Circle(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The minimal (x,y) point, shape = (2,)
 
         """
@@ -46,7 +52,7 @@ class Circle(AreaGeometry):
 
         Returns
         -------
-        p_min : numpy.ndarray
+        p_min: numpy.ndarray
             The maximal (x,y) point, shape = (2,)
 
         """
@@ -58,17 +64,17 @@ class Circle(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
-        return_nearest : bool
+        return_nearest: bool
             Flag for return of the nearest point on bundary
 
         Returns
         -------
-        dist : numpy.ndarray
+        dist: numpy.ndarray
             The smallest distances to the boundary,
             shape: (n_points,)
-        p_nearest : numpy.ndarray, optional
+        p_nearest: numpy.ndarray, optional
             The nearest points on the boundary, if
             return_nearest is True, shape: (n_points, 2)
 
@@ -97,12 +103,12 @@ class Circle(AreaGeometry):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The probe points, shape (n_points, 2)
 
         Returns
         -------
-        inside : numpy.ndarray
+        inside: numpy.ndarray
             True if point is inside, shape: (n_points,)
 
         """
@@ -117,17 +123,17 @@ class Circle(AreaGeometry):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        show_boundary : bool
+        show_boundary: bool
             Add the boundary line to the image
-        fill_mode : str, optional
+        fill_mode: str, optional
             Fill the area. Options:
             dist, dist_inside, dist_outside, inside_<color>,
             outside_<color>
-        pars_boundary : dict
+        pars_boundary: dict
             Parameters for boundary plotting command
-        pars_distance : dict
+        pars_distance: dict
             Parameters for distance plotting command
 
         """

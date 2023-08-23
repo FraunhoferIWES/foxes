@@ -6,21 +6,21 @@ class SetAmbFarmResults(FarmDataModel):
     """
     This model copies farm data results to ambient results.
 
-    Parameters
-    ----------
-    vars_to_amb : list of str, optional
-        The variables to be copied, or `None` for all
-
     Attributes
     ----------
-    vars : list of str
+    vars: list of str
         The variables to be copied, or `None` for all
+    
+    :group: algorithms.downwind.models
 
     """
 
-    def __init__(self, vars_to_amb=None):
+    def __init__(self):
+        """
+        Constructor.
+        """
         super().__init__()
-        self.vars = vars_to_amb
+        self.vars = None
 
     def output_farm_vars(self, algo):
         """
@@ -28,18 +28,17 @@ class SetAmbFarmResults(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
         if self.vars is None:
             self.vars = set([v for v in algo.farm_vars if v in FV.var2amb])
-            self.vars -= set(algo.rotor_model.output_farm_vars(algo))
         return [FV.var2amb[v] for v in self.vars]
 
     def calculate(self, algo, mdata, fdata):
@@ -51,16 +50,16 @@ class SetAmbFarmResults(FarmDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

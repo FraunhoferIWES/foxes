@@ -11,25 +11,67 @@ class MaxSuperposition(WakeSuperposition):
     Maximum supersposition of wake model results,
     optionally rescaled.
 
-    Parameters
-    ----------
-    scalings : dict or number or str
-        Scaling rules. If `dict`, key: variable name str,
-        value: number or str. If `str`:
-        - `source_turbine`: Scale by source turbine value of variable
-        - `source_turbine_amb`: Scale by source turbine ambient value of variable
-        - `source_turbine_<var>`: Scale by source turbine value of variable <var>
-
     Attributes
     ----------
-    scalings : dict or number or str
+    scalings: dict or number or str
         The scaling rules
+    svars: list of str
+        The scaling variables
+
+    :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scalings):
+    def __init__(self, scalings, svars=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        scalings: dict or number or str
+            Scaling rules. If `dict`, key: variable name str,
+            value: number or str. If `str`:
+            - `source_turbine`: Scale by source turbine value of variable
+            - `source_turbine_amb`: Scale by source turbine ambient value of variable
+            - `source_turbine_<var>`: Scale by source turbine value of variable <var>
+        svars: list of str, optional
+            The scaling variables
+
+        """
         super().__init__()
         self.scalings = scalings
+        self.svars = svars
+
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        if self.svars is not None:
+            return self.svars
+        elif isinstance(self.scalings, dict):
+            return list(self.scalings.keys())
+        elif (
+            isinstance(self.scalings, str)
+            and len(self.scalings) > 15
+            and self.scalings[:15] == "source_turbine_"
+        ):
+            return [self.scalings[15:]]
+        else:
+            raise ValueError(
+                f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'"
+            )
 
     def initialize(self, algo, verbosity=0):
         """
@@ -43,14 +85,14 @@ class MaxSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -64,6 +106,7 @@ class MaxSuperposition(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        pdata,
         states_source_turbine,
         sel_sp,
         variable,
@@ -75,28 +118,30 @@ class MaxSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sel_sp : numpy.ndarray of bool
+        sel_sp: numpy.ndarray of bool
             The selection of points, shape: (n_states, n_points)
-        variable : str
+        variable: str
             The variable name for which the wake deltas applies
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The original wake deltas, shape: (n_states, n_points)
-        wake_model_result : numpy.ndarray
+        wake_model_result: numpy.ndarray
             The new wake deltas of the selected points,
             shape: (n_sel_sp,)
 
         Returns
         -------
-        wdelta : numpy.ndarray
+        wdelta: numpy.ndarray
             The updated wake deltas, shape: (n_states, n_points)
 
         """
@@ -173,7 +218,14 @@ class MaxSuperposition(WakeSuperposition):
             )
 
     def calc_final_wake_delta(
-        self, algo, mdata, fdata, variable, amb_results, wake_delta
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        variable,
+        amb_results,
+        wake_delta,
     ):
         """
         Calculate the final wake delta after adding all
@@ -181,22 +233,24 @@ class MaxSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        variable : str
+        pdata: foxes.core.Data
+            The evaluation point data
+        variable: str
             The variable name for which the wake deltas applies
-        amb_results : numpy.ndarray
+        amb_results: numpy.ndarray
             The ambient results, shape: (n_states, n_points)
-        wake_delta : numpy.ndarray
+        wake_delta: numpy.ndarray
             The wake deltas, shape: (n_states, n_points)
 
         Returns
         -------
-        final_wake_delta : numpy.ndarray
+        final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
             results by simple plus operation. Shape: (n_states, n_points)
 

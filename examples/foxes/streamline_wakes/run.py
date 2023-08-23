@@ -9,79 +9,6 @@ import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
 
-def run_foxes(args):
-    cks = (
-        None
-        if args.nodask
-        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
-    )
-
-    mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
-    mbook.turbine_types[ttype.name] = ttype
-
-    states = foxes.input.states.FieldDataNC(
-        args.file_pattern,
-        states_coord="state",
-        x_coord="x",
-        y_coord="y",
-        h_coord="h",
-        time_format=None,
-        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2ncvar={FV.WS: "ws", FV.WD: "wd"},
-        fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
-        pre_load=not args.no_pre_load,
-        bounds_error=False,
-    )
-
-    farm = foxes.WindFarm()
-    N = int(args.n_turbines**0.5)
-    foxes.input.farm_layout.add_grid(
-        farm,
-        xy_base=np.array([500.0, 500.0]),
-        step_vectors=np.array([[500.0, 0], [0, 500.0]]),
-        steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
-    )
-
-    algo = foxes.algorithms.Downwind(
-        mbook,
-        farm,
-        states=states,
-        rotor_model=args.rotor,
-        wake_models=args.wakes,
-        wake_frame=args.wake_frame,
-        partial_wakes_model=args.pwakes,
-        chunks=cks,
-        keep_models=[states.name, args.wake_frame, ttype.name],
-    )
-
-    time0 = time.time()
-
-    farm_results = algo.calc_farm()
-
-    time1 = time.time()
-    print("\nCalc time =", time1 - time0, "\n")
-
-    print(farm_results, "\n")
-
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
-
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    for fig in o.gen_states_fig_xy(
-        FV.WS,
-        resolution=10,
-        figsize=(8, 8),
-        quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
-        quiver_n=15,
-        xspace=1000,
-        yspace=1000,
-    ):
-        plt.show()
-        plt.close(fig)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -149,9 +76,77 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    cks = (
+        None
+        if args.nodask
+        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
+    )
+
+    mbook = foxes.models.ModelBook()
+    ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
+    mbook.turbine_types[ttype.name] = ttype
+
+    states = foxes.input.states.FieldDataNC(
+        args.file_pattern,
+        states_coord="state",
+        x_coord="x",
+        y_coord="y",
+        h_coord="h",
+        time_format=None,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2ncvar={FV.WS: "ws", FV.WD: "wd"},
+        fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
+        pre_load=not args.no_pre_load,
+        bounds_error=False,
+    )
+
+    farm = foxes.WindFarm()
+    N = int(args.n_turbines**0.5)
+    foxes.input.farm_layout.add_grid(
+        farm,
+        xy_base=np.array([500.0, 500.0]),
+        step_vectors=np.array([[500.0, 0], [0, 500.0]]),
+        steps=(N, N),
+        turbine_models=args.tmodels + [ttype.name],
+    )
+
+    algo = foxes.algorithms.Downwind(
+        mbook,
+        farm,
+        states=states,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame=args.wake_frame,
+        partial_wakes_model=args.pwakes,
+        chunks=cks,
+        keep_models=[states.name, args.wake_frame, ttype.name],
+    )
+
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        runner.run(run_foxes, args=(args,))
+        time0 = time.time()
+        farm_results = runner.run(algo.calc_farm)
+        time1 = time.time()
+
+        print("\nCalc time =", time1 - time0, "\n")
+
+        print(farm_results, "\n")
+
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+        o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+        for fig in o.gen_states_fig_xy(
+            FV.WS,
+            resolution=10,
+            figsize=(8, 8),
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
+            quiver_n=15,
+            xspace=1000,
+            yspace=1000,
+        ):
+            plt.show()
+            plt.close(fig)

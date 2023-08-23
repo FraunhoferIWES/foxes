@@ -8,7 +8,8 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.utils.runners import DaskRunner
 
-def calc(args, rotor, sdata, pwake, cks):
+
+def calc(runner, args, rotor, sdata, pwake, cks):
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -55,92 +56,9 @@ def calc(args, rotor, sdata, pwake, cks):
     )
 
     print(f"\nCalculating rotor = {rotor}, pwake = {pwake}")
-    farm_results = algo.calc_farm()
+    farm_results = runner.run(algo.calc_farm)
 
     return farm_results, D
-
-
-def run_foxes(args):
-    cks = None if args.nodask else {FC.STATE: args.chunksize}
-
-    ws = args.ws
-    var = args.var
-    swks = ", ".join(args.wakes)
-    ttl0 = f"ws$_0$ = {ws} m, ti$_0$ = {args.ti}"
-
-    varn = 1
-    vlab = var
-    if var in [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]:
-        varn = ws
-        vlab = f"{var}/ws$_0$"
-
-    Ny = int((args.ymax - args.ymin) // args.ystep)
-    sdata = pd.DataFrame(index=range(Ny + 1))
-    sdata.index.name = "state"
-    sdata["ws"] = args.ws
-    sdata["wd"] = args.wd
-    sdata["ti"] = args.ti
-    sdata["rho"] = args.rho
-    sdata["y"] = np.linspace(args.ymin, args.ymax, Ny + 1)
-
-    fig, ax = plt.subplots(figsize=(10, 4))
-    if len(args.rotors) == 1:
-        for pwake in args.pwakes:
-            farm_results, D = calc(args, args.rotors[0], sdata, pwake, cks)
-
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=pwake,
-            )
-
-            title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
-
-    elif len(args.pwakes) == 1:
-        for rotor in args.rotors:
-            farm_results, D = calc(args, rotor, sdata, args.pwakes[0], cks)
-
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=rotor,
-            )
-
-            title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
-
-    elif len(args.rotors) == len(args.pwakes):
-        for rotor, pwake in zip(args.rotors, args.pwakes):
-            farm_results, D = calc(args, rotor, sdata, pwake, cks)
-
-            ax.plot(
-                farm_results[FV.Y][:, 1] / D,
-                farm_results[var][:, 1] / varn,
-                linewidth=2,
-                alpha=0.6,
-                label=f"{rotor}, {pwake}",
-            )
-
-            title = (
-                "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
-            )
-
-    else:
-        raise ValueError(
-            f"Please either give one rotor, or one pwake, or same number of both"
-        )
-
-    if args.title is not None:
-        title = args.title
-
-    ax.set_title(title)
-    ax.set_xlabel("y/D")
-    ax.set_ylabel(vlab)
-    ax.legend()
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -212,9 +130,86 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    cks = None if args.nodask else {FC.STATE: args.chunksize}
+
+    ws = args.ws
+    var = args.var
+    swks = ", ".join(args.wakes)
+    ttl0 = f"ws$_0$ = {ws} m, ti$_0$ = {args.ti}"
+
+    varn = 1
+    vlab = var
+    if var in [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]:
+        varn = ws
+        vlab = f"{var}/ws$_0$"
+
+    Ny = int((args.ymax - args.ymin) // args.ystep)
+    sdata = pd.DataFrame(index=range(Ny + 1))
+    sdata.index.name = "state"
+    sdata["ws"] = args.ws
+    sdata["wd"] = args.wd
+    sdata["ti"] = args.ti
+    sdata["rho"] = args.rho
+    sdata["y"] = np.linspace(args.ymin, args.ymax, Ny + 1)
+
+    fig, ax = plt.subplots(figsize=(10, 4))
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        runner.run(run_foxes, args=(args,))
+        if len(args.rotors) == 1:
+            for pwake in args.pwakes:
+                farm_results, D = calc(runner, args, args.rotors[0], sdata, pwake, cks)
+
+                ax.plot(
+                    farm_results[FV.Y][:, 1] / D,
+                    farm_results[var][:, 1] / varn,
+                    linewidth=2,
+                    alpha=0.6,
+                    label=pwake,
+                )
+
+                title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
+
+        elif len(args.pwakes) == 1:
+            for rotor in args.rotors:
+                farm_results, D = calc(runner, args, rotor, sdata, args.pwakes[0], cks)
+
+                ax.plot(
+                    farm_results[FV.Y][:, 1] / D,
+                    farm_results[var][:, 1] / varn,
+                    linewidth=2,
+                    alpha=0.6,
+                    label=rotor,
+                )
+
+                title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
+
+        elif len(args.rotors) == len(args.pwakes):
+            for rotor, pwake in zip(args.rotors, args.pwakes):
+                farm_results, D = calc(runner, args, rotor, sdata, pwake, cks)
+
+                ax.plot(
+                    farm_results[FV.Y][:, 1] / D,
+                    farm_results[var][:, 1] / varn,
+                    linewidth=2,
+                    alpha=0.6,
+                    label=f"{rotor}, {pwake}",
+                )
+
+                title = "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
+
+        else:
+            raise ValueError(
+                f"Please either give one rotor, or one pwake, or same number of both"
+            )
+
+    if args.title is not None:
+        title = args.title
+
+    ax.set_title(title)
+    ax.set_xlabel("y/D")
+    ax.set_ylabel(vlab)
+    ax.legend()
+    plt.show()

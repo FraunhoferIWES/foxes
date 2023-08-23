@@ -13,6 +13,8 @@ class CentreRotor(RotorModel):
     Evaluates states at a single point, located
     at the rotor centre.
 
+    :group: models.rotor_models
+
     """
 
     def n_rotor_points(self):
@@ -21,7 +23,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        n_rpoints : int
+        n_rpoints: int
             The number of rotor points
 
         """
@@ -40,7 +42,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        dpoints : numpy.ndarray
+        dpoints: numpy.ndarray
             The design points, shape: (n_points, 3)
 
         """
@@ -52,7 +54,7 @@ class CentreRotor(RotorModel):
 
         Returns
         -------
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The weights of the rotor points,
             add to one, shape: (n_rpoints,)
 
@@ -65,16 +67,16 @@ class CentreRotor(RotorModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The rotor points, shape:
             (n_states, n_turbines, n_rpoints, 3)
 
@@ -102,22 +104,22 @@ class CentreRotor(RotorModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        rpoint_results : dict
+        rpoint_results: dict
             The results at rotor points. Keys: variable str.
             Values: numpy.ndarray, shape if `states_turbine`
             is None: (n_states, n_turbines, n_rpoints).
             Else: (n_states, 1, n_rpoints)
-        weights : numpy.ndarray
+        weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
         states_turbine: numpy.ndarray of int, optional
             The turbine indices, one per state. Shape: (n_states,)
-        copy_to_ambient : bool, optional
+        copy_to_ambient: bool, optional
             If `True`, the fdata results are copied to ambient
             variables after calculation
 

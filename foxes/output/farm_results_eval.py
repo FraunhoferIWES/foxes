@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from cycler import cycler
+import matplotlib.pyplot as plt
 
 from .output import Output
 import foxes.variables as FV
@@ -13,19 +15,25 @@ class FarmResultsEval(Output):
     This sums over turbines and/or states,
     given the state-turbine farm_calc results.
 
-    Parameters
-    ----------
-    farm_results : xarray.Dataset
-        The farm results
-
     Attributes
     ----------
-    results : xarray.Dataset
+    results: xarray.Dataset
         The farm results
+
+    :group: output
 
     """
 
     def __init__(self, farm_results):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        farm_results: xarray.Dataset
+            The farm results
+
+        """
         self.results = farm_results
 
     def weinsum(self, rhs, *vars):
@@ -37,17 +45,17 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        rhs : str
+        rhs: str
             The right-hand side of the einsum expression.
             Convention: 's' for states, 't' for turbines
-        vars : tuple of str or np.ndarray
+        vars: tuple of str or np.ndarray
             The variables mentioned in the expression,
             but without the obligatory weights that will
             be added at the end
 
         Returns
         -------
-        result : np.ndarray
+        result: np.ndarray
             The results array
 
         """
@@ -87,14 +95,14 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars_op : dict
+        vars_op: dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
             are: sum, mean, min, max.
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per turbine
 
         """
@@ -132,14 +140,14 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars_op : dict
+        vars_op: dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
             are: sum, mean, min, max.
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per state
 
         """
@@ -174,12 +182,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        states_op : dict
+        states_op: dict
             The states contraction operations.
             Key: str, the variable name. Value:
             str, the operation, choices are:
             sum, mean, min, max.
-        turbines_op : dict
+        turbines_op: dict
             The turbines contraction operations.
             Key: str, the variable name. Value:
             str, the operation, choices are:
@@ -187,7 +195,7 @@ class FarmResultsEval(Output):
 
         Returns
         -------
-        data : dict
+        data: dict
             The fully contracted results
 
         """
@@ -224,12 +232,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per turbine
 
         """
@@ -243,12 +251,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per turbine
 
         """
@@ -273,12 +281,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per state
 
         """
@@ -290,12 +298,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The results per state
 
         """
@@ -307,12 +315,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : dict
+        data: dict
             The fully contracted results
 
         """
@@ -325,12 +333,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        vars : list of str
+        vars: list of str
             The variables
 
         Returns
         -------
-        data : dict
+        data: dict
             The fully contracted results
 
         """
@@ -343,12 +351,12 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        ambient : bool
+        ambient: bool
             Flag for ambient power
 
         Returns
         -------
-        data : float
+        data: float
             The mean wind farm power
 
         """
@@ -370,18 +378,18 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm, optional
+        algo: foxes.core.Algorithm, optional
             The algorithm, for P_nominal lookup
-        annual : bool, optional
+        annual: bool, optional
             Flag for returing annual results, by default False
-        ambient : bool, optional
+        ambient: bool, optional
             Flag for ambient power, by default False
-        hours : int, optional
+        hours: int, optional
             The duration time in hours, if not timeseries states
-        delta_t : np.datetime64, optional
+        delta_t: np.datetime64, optional
             The time delta step in case of time series data,
             by default automatically determined
-        P_unit_W : float
+        P_unit_W: float
             The power unit in Watts, 1000 for kW. Looked up
             in algorithm if not given
 
@@ -441,13 +449,13 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm, optional
+        algo: foxes.core.Algorithm, optional
             The algorithm, for nominal power calculation
-        P_nom : list of float, optional
+        P_nom: list of float, optional
             Nominal power values for each turbine, if algo not given
-        ambient : bool, optional
+        ambient: bool, optional
             Flag for calculating ambient capacity, by default False
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -485,22 +493,22 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        turbine_yield : pandas.DataFrame, optional
+        turbine_yield: pandas.DataFrame, optional
             Yield values by turbine
-        power_uncert : float, optional
+        power_uncert: float, optional
             Uncertainty in the power value. Triggers
             P75 and P90 outputs
-        kwargs : dict, optional
+        kwargs: dict, optional
             Parameters for calc_turbine_yield(). Apply if
             turbine_yield is not given
 
         Returns
         -------
-        farm_yield : float
+        farm_yield: float
             Farm yield result, same unit as turbine yield
-        P75 : float, optional
+        P75: float, optional
             The P75 value, same unit as turbine yield
-        P90 : float, optional
+        P90: float, optional
             The P90 value, same unit as turbine yield
 
         """
@@ -523,7 +531,7 @@ class FarmResultsEval(Output):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -539,10 +547,85 @@ class FarmResultsEval(Output):
 
         Returns
         -------
-        eff : float
+        eff: float
             The farm efficiency
 
         """
         P = self.calc_mean_farm_power()
         P0 = self.calc_mean_farm_power(ambient=True) + 1e-14
         return P / P0
+
+    def gen_stdata(
+            self, 
+            turbines, 
+            variable, 
+            fig=None, 
+            ax=None, 
+            figsize=None,
+            legloc="lower right",
+            animated=True,
+            ret_im=True,
+        ):
+        """
+        Generates state-turbine data,
+        intended to be used in animations
+
+        Parameters
+        ----------
+        turbines: list of int
+            The turbines for which to scatter data
+        variable: str
+            The variable name
+        fig: plt.Figure, optional
+            The figure object
+        ax: plt.Axes, optional
+            The figure axes
+        figsize: tuple, optional
+            The figsize for plt.Figure
+        legloc: str
+            The legend location
+        animated: bool
+            Flag for animated output
+        ret_im: bool
+            Flag for image return,
+
+        Yields
+        ------
+        fig: matplotlib.Figure
+            The figure object
+        im: List of matplotlib.collections.PathCollection, optional
+            The scatter artists
+
+        """
+
+        if fig is None:
+            hfig = plt.figure(figsize=figsize)
+        else:
+            hfig = fig
+        if ax is None:
+            hax = hfig.add_subplot(111)
+        else:
+            hax = ax
+
+        hax.set_xlabel(f"State")
+        hax.set_ylabel(variable)
+        cc = cycler(color='bgrcmyk') 
+        
+        data = self.results[variable].to_numpy()
+        hasl = set()
+        for si in range(len(data)):
+
+            im = []
+            hax.set_prop_cycle(cc)
+            for ti in turbines:
+                lbl = None if ti in hasl else f"Turbine {ti}"
+                im += hax.plot(range(si), data[:si, ti], label=lbl,
+                                animated=animated)
+                hasl.add(ti)
+
+            hax.legend(loc=legloc)
+
+            if ret_im:
+                yield hfig, im
+            else:
+                yield hfig

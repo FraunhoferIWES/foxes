@@ -9,20 +9,26 @@ class FarmObjective(Objective):
     Abstract base class for foxes wind farm
     objective functions.
 
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    name : str
-        The name of the objective function
-    sel_turbines : list of int, optional
-        The selected turbines
-    kwargs : dict, optional
-        Additional parameters for `iwopy.Objective`
+    :group: opt.core
 
     """
 
     def __init__(self, problem, name, sel_turbines=None, **kwargs):
+        """
+        Constraints.
+
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        name: str
+            The name of the objective function
+        sel_turbines: list of int, optional
+            The selected turbines
+        kwargs: dict, optional
+            Additional parameters for `iwopy.Objective`
+
+        """
         super().__init__(problem, name, **kwargs)
         self._sel_turbines = sel_turbines
 
@@ -75,7 +81,7 @@ class FarmObjective(Objective):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The figure axis
 
         """

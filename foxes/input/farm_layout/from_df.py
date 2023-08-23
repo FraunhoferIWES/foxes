@@ -12,14 +12,16 @@ def add_from_df(
 
     Parameters
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         The input csv file or data source
-    args : tuple, optional
+    args: tuple, optional
         Additional parameters for add_from_csv()
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for add_from_csv()
+
+    :group: input.farm_layout
 
     """
     add_from_csv(farm, data_source, *args, **kwargs)

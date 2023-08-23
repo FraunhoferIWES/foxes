@@ -2,7 +2,7 @@ import numpy as np
 
 
 def area(r1, r2, d):
-    """ "
+    """
     Calculates the intersection of two
     circles with radii r1, r2 and a centre
     point distance d.
@@ -20,18 +20,20 @@ def area(r1, r2, d):
 
     Parameters
     ----------
-    r1 : float or numpy.ndarray
+    r1: float or numpy.ndarray
         The radius of circle 1
-    r2 : float or numpy.ndarray
+    r2: float or numpy.ndarray
         The radius of circle 2
-    d : float or numpy.ndarray
+    d: float or numpy.ndarray
         The distance between the centre points
         of the two circles
 
     Returns
     -------
-    area : float or numpy.ndarray
+    area: float or numpy.ndarray
         The intersectional area
+
+    :group: utils.two_circles
 
     """
     d1 = (r1**2 - r2**2 + d**2) / (2 * d)
@@ -62,18 +64,20 @@ def calc_area(r1, r2, d):
 
     Parameters
     ----------
-    r1 : numpy.ndarray
+    r1: numpy.ndarray
         The radius of circle 1
-    r2 : numpy.ndarray
+    r2: numpy.ndarray
         The radius of circle 2
-    d : numpy.ndarray
+    d: numpy.ndarray
         The distance between the centre points
         of the two circles
 
     Returns
     -------
-    area : numpy.ndarray
+    area: numpy.ndarray
         The intersectional area
+
+    :group: utils.two_circles
 
     """
 

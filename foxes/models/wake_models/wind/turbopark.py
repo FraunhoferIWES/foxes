@@ -11,43 +11,49 @@ class TurbOParkWake(GaussianWakeModel):
 
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    A : float
-        The wake growth parameter A.
-    sbeta_factor : float
-        Factor multiplying sbeta
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-    c1 : float
-        Factor from Frandsen turbulence model
-    c2 : float
-        Factor from Frandsen turbulence model
-
     Attributes
     ----------
-    A : float
+    A: float
         The wake growth parameter A.
-    sbeta_factor : float
+    sbeta_factor: float
         Factor multiplying sbeta
-    ct_max : float
+    ct_max: float
         The maximal value for ct, values beyond will be limited
         to this number
-    c1 : float
+    c1: float
         Factor from Frandsen turbulence model
-    c2 : float
+    c2: float
         Factor from Frandsen turbulence model
+
+    :group: models.wake_models.wind
 
     """
 
     def __init__(
         self, superposition, A, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        A: float
+            The wake growth parameter A.
+        sbeta_factor: float
+            Factor multiplying sbeta
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        c1: float
+            Factor from Frandsen turbulence model
+        c2: float
+            Factor from Frandsen turbulence model
+
+        """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.A = A
@@ -61,7 +67,7 @@ class TurbOParkWake(GaussianWakeModel):
         s += f"(A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -69,15 +75,15 @@ class TurbOParkWake(GaussianWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
-            The number of wake evaluation points
-        wake_deltas : dict
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -85,45 +91,59 @@ class TurbOParkWake(GaussianWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
+    def calc_amplitude_sigma_spsel(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        amsi : tuple
+        amsi: tuple
             The amplitude and sigma, both numpy.ndarray
             with shape (n_sp_sel,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -134,13 +154,29 @@ class TurbOParkWake(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = fdata[FV.D][st_sel][:, None]
+            D = self.get_data(
+                FV.D,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             D = D[sp_sel]
 
             # get TI:
-            ati = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            ati[:] = fdata[FV.AMB_TI][st_sel][:, None]
+            ati = self.get_data(
+                FV.AMB_TI,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             ati = ati[sp_sel]
 
             # calculate sigma:
@@ -203,42 +239,23 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    dx : float
-        The step size of the integral
-    A : float, optional
-        The wake growth parameter A.
-    sbeta_factor : float
-        Factor multiplying sbeta
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-    ti_var :  str
-        The TI variable
-    ipars : dict, optional
-        Additional parameters for centreline integration
-
-
     Attributes
     ----------
-    dx : float
+    dx: float
         The step size of the integral
-    A : float
+    A: float
         The wake growth parameter A.
-    sbeta_factor : float
+    sbeta_factor: float
         Factor multiplying sbeta
-    ct_max : float
+    ct_max: float
         The maximal value for ct, values beyond will be limited
         to this number
-    ti_var :  str
+    ti_var:  str
         The TI variable
-    ipars : dict
+    ipars: dict
         Additional parameters for centreline integration
+
+    :group: models.wake_models.wind
 
     """
 
@@ -252,6 +269,30 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ti_var=FV.TI,
         **ipars,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        dx: float
+            The step size of the integral
+        A: float, optional
+            The wake growth parameter A.
+        sbeta_factor: float
+            Factor multiplying sbeta
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        ti_var:  str
+            The TI variable
+        ipars: dict, optional
+            Additional parameters for centreline integration
+
+        """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.dx = dx
@@ -260,13 +301,14 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.sbeta_factor = sbeta_factor
         self.ti_var = ti_var
         self.ipars = ipars
+        self._tiwakes = None
 
     def __repr__(self):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
-
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -274,15 +316,15 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
-            The number of wake evaluation points
-        wake_deltas : dict
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -290,45 +332,70 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_amplitude_sigma_spsel(self, algo, mdata, fdata, states_source_turbine, x):
+        # find TI wake models:
+        self._tiwakes = []
+        for w in algo.wake_models:
+            if w is not self:
+                wdel = {}
+                w.init_wake_deltas(algo, mdata, fdata, pdata, wdel)
+                if self.ti_var in wdel:
+                    self._tiwakes.append(w)
+        if len(self._tiwakes) == 0:
+            raise KeyError(f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}")
+
+    def calc_amplitude_sigma_spsel(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+    ):
         """
         Calculate the amplitude and the sigma,
         both depend only on x (not on r).
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
         Returns
         -------
-        amsi : tuple
+        amsi: tuple
             The amplitude and sigma, both numpy.ndarray
             with shape (n_sp_sel,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
@@ -339,8 +406,16 @@ class TurbOParkWakeIX(GaussianWakeModel):
             ct = ct[sp_sel]
 
             # get D:
-            D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            D[:] = fdata[FV.D][st_sel][:, None]
+            D = self.get_data(
+                FV.D,
+                FC.STATE_POINT,
+                lookup="f",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                upcast=True,
+                states_source_turbine=states_source_turbine,
+            )
             D = D[sp_sel]
 
             # calculate sigma:
@@ -349,7 +424,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
-            # get TI by integratiion along centre line:
+            # get TI by integration along centre line:
             ti_ix = algo.wake_frame.calc_centreline_integral(
                 algo,
                 mdata,
@@ -358,6 +433,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 [self.ti_var],
                 x,
                 dx=self.dx,
+                wake_models=self._tiwakes,
                 **self.ipars,
             )[:, :, 0]
 
@@ -388,3 +464,18 @@ class TurbOParkWakeIX(GaussianWakeModel):
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
         return {FV.WS: (ampld, sigma)}, sp_sel
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        self._tiwakes = None
+        super().finalize(algo, verbosity)

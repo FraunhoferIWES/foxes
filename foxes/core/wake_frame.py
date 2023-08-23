@@ -7,6 +7,7 @@ from .model import Model
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -17,6 +18,8 @@ class WakeFrame(Model):
 
     They are also responsible for the calculation of
     the turbine evaluation order.
+
+    :group: core
 
     """
 
@@ -30,43 +33,43 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
         pass
 
     @abstractmethod
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
 
@@ -80,21 +83,21 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -111,6 +114,7 @@ class WakeFrame(Model):
         variables,
         x,
         dx,
+        wake_models=None,
         **ipars,
     ):
         """
@@ -118,28 +122,30 @@ class WakeFrame(Model):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        variables : list of str
+        variables: list of str
             The variables to be integrated
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates of the upper integral bounds,
             shape: (n_states, n_points)
-        dx : float
+        dx: float
             The step size of the integral
-        ipars : dict, optional
+        wake_models: list of foxes.core.WakeModels
+            The wake models to consider, default: from algo
+        ipars: dict, optional
             Additional interpolation parameters
 
         Returns
         -------
-        results : numpy.ndarray
+        results: numpy.ndarray
             The integration results, shape: (n_states, n_points, n_vars)
 
         """
@@ -163,20 +169,18 @@ class WakeFrame(Model):
         )
 
         # run ambient calculation:
-        pdata = {FC.POINTS: pts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FV.XYH)}
-        pdata.update(
-            {v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs}
+        pdata = Data.from_points(
+            pts,
+            data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
+            dims={v: (FC.STATE, FC.POINT) for v in vrs}
         )
-        pdims.update({v: (FC.STATE, FC.POINT) for v in vrs})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
-        amb2var = algo.SetAmbPointResults()
+        amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0)
         res = amb2var.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
-        del pdims, res, amb2var
+        del res, amb2var
 
         # find out if all vars ambient:
         ambient = True
@@ -187,9 +191,9 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.PointWakesCalculation(vrs)
+            wcalc = algo.get_model("PointWakesCalculation")(vrs, wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
-            res = wcalc.calculate(algo, mdata, fdata, pdata)
+            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=states_source_turbine)
             pdata.update(res)
             del wcalc, res
 

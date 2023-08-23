@@ -3,7 +3,6 @@ import pandas as pd
 
 from foxes.opt.core import FarmVarsProblem
 from foxes.models.turbine_models import SetFarmVars
-import foxes.variables as FV
 import foxes.constants as FC
 
 
@@ -11,16 +10,22 @@ class OptFarmVars(FarmVarsProblem):
     """
     Optimize a selection of farm variables.
 
-    Parameters
-    ----------
-    args : tuple, optional
-        Arguments for `FarmVarsProblem`
-    kwargs : dict, optional
-        Keyword arguments for `FarmVarsProblem`
+    :group: opt.problems
 
     """
 
     def __init__(self, *args, **kwargs):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for `FarmVarsProblem`
+        kwargs: dict, optional
+            Keyword arguments for `FarmVarsProblem`
+
+        """
         super().__init__(*args, **kwargs)
         self._vars = None
 
@@ -41,33 +46,29 @@ class OptFarmVars(FarmVarsProblem):
 
         Parameters
         ----------
-        name : str
+        name: str
             The foxes farm variable name
-        typ : type
+        typ: type
             The variable type, either float or int
-        init : float or int
+        init: float or int
             The initial value
-        min : float or int
+        min: float or int
             The min value
-        max : float or int
+        max: float or int
             The max value
-        level : str
+        level: str
             Choices: uniform, state, turbine, state-turbine
-        sel : numpy.ndarray, optional
+        sel: numpy.ndarray, optional
             States/turbines/state-turbine selection,
             depending on the level
-        pre_rotor : bool
+        pre_rotor: bool
             Apply this variable before rotor model
-        model_key : str, optional
+        model_key: str, optional
             Creates sub-model which can then be placed in the
             turbine model list. Repeated keys are added to the
             same turbine model
 
         """
-        if not hasattr(FV, name):
-            raise ValueError(
-                f"Problem '{self.name}': Name '{name}' is not a foxes variable."
-            )
         if typ is not float and typ is not int:
             raise TypeError(
                 f"Problem '{self.name}': Expecting float or int, got type '{type(typ).__name__}'"
@@ -240,9 +241,9 @@ class OptFarmVars(FarmVarsProblem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for super class init
 
         """
@@ -283,7 +284,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the int variables
 
         """
@@ -304,7 +305,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial int values, shape: (n_vars_int,)
 
         """
@@ -327,7 +328,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal int values, shape: (n_vars_int,)
 
         """
@@ -350,7 +351,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal int values, shape: (n_vars_int,)
 
         """
@@ -371,7 +372,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -392,7 +393,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
@@ -415,7 +416,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
@@ -438,7 +439,7 @@ class OptFarmVars(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
@@ -459,16 +460,16 @@ class OptFarmVars(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_vars_int,)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_vars_float,)
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
@@ -519,18 +520,18 @@ class OptFarmVars(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
-        n_states : int
+        n_states: int
             The number of original (non-pop) states
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)

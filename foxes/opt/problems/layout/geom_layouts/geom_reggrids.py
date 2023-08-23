@@ -13,39 +13,24 @@ class GeomRegGrids(Problem):
     This optimization problem does not involve
     wind farms.
 
-    Parameters
-    ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
-        The boundary geometry
-    min_dist : float
-        The minimal distance between points
-    n_grids : int
-        The number of grids
-    n_max : int, optional
-        The maximal number of points
-    n_row_max : int, optional
-        The maximal number of points in a row
-    max_dist : float, optional
-        The maximal distance between points
-    D : float, optional
-        The diameter of circle fully within boundary
-
     Attributes
     ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
+    boundary: foxes.utils.geom2d.AreaGeometry
         The boundary geometry
-    min_dist : float
+    min_dist: float
         The minimal distance between points
-    n_grids : int
+    n_grids: int
         The number of grids
-    n_max : int
+    n_max: int
         The maximal number of points
-    n_row_max : int
+    n_row_max: int
         The maximal number of points in a row
-    max_dist : float
+    max_dist: float
         The maximal distance between points
-    D : float
+    D: float
         The diameter of circle fully within boundary
+
+    :group: opt.problems.layout.geom_layouts
 
     """
 
@@ -59,6 +44,27 @@ class GeomRegGrids(Problem):
         max_dist=None,
         D=None,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        boundary: foxes.utils.geom2d.AreaGeometry
+            The boundary geometry
+        min_dist: float
+            The minimal distance between points
+        n_grids: int
+            The number of grids
+        n_max: int, optional
+            The maximal number of points
+        n_row_max: int, optional
+            The maximal number of points in a row
+        max_dist: float, optional
+            The maximal distance between points
+        D: float, optional
+            The diameter of circle fully within boundary
+
+        """
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -83,7 +89,7 @@ class GeomRegGrids(Problem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -128,7 +134,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the int variables
 
         """
@@ -140,7 +146,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial int values, shape: (n_vars_int,)
 
         """
@@ -154,7 +160,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal int values, shape: (n_vars_int,)
 
         """
@@ -168,7 +174,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal int values, shape: (n_vars_int,)
 
         """
@@ -180,7 +186,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -194,7 +200,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
@@ -213,7 +219,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
@@ -232,7 +238,7 @@ class GeomRegGrids(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
@@ -250,14 +256,14 @@ class GeomRegGrids(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
@@ -332,14 +338,14 @@ class GeomRegGrids(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
@@ -422,22 +428,22 @@ class GeomRegGrids(Problem):
 
         Parameters
         ----------
-        xy : numpy.ndarary, optional
+        xy: numpy.ndarary, optional
             The xy coordinate array, shape: (n_points, 2)
-        valid : numpy.ndarray, optional
+        valid: numpy.ndarray, optional
             Boolean array of validity, shape: (n_points,)
-        ax : pyplot.Axis, optional
+        ax: pyplot.Axis, optional
             The figure axis
-        title : str, optional
+        title: str, optional
             The figure title
-        true_circle : bool
+        true_circle: bool
             Draw points as circles with diameter self.D
-        bars : dict, optional
+        bars: dict, optional
             The boundary plot arguments
 
         Returns
         -------
-        ax : pyplot.Axis
+        ax: pyplot.Axis
             The figure axis
 
         """

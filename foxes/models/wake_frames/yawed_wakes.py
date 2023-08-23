@@ -13,37 +13,22 @@ class YawedWakes(WakeFrame):
 
     Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
 
-    Parameters
-    ----------
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data, by default None
-    ct_max : float, optional
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
-    alpha : float, optional
-        model parameter used to determine onset of far wake region
-    beta : float, optional
-        model parameter used to determine onset of far wake region
-    base_frame : foxes.core.WakeFrame
-        The wake frame from which to start
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    model : PorteAgelModel
+    model: PorteAgelModel
         The model for computing common data
-    K : float
+    K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    YAWM : float
+    YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    base_frame : foxes.core.WakeFrame
+    base_frame: foxes.core.WakeFrame
         The wake frame from which to start
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.wake_frames
 
     """
 
@@ -56,6 +41,27 @@ class YawedWakes(WakeFrame):
         base_frame=RotorWD(),
         k_var=FV.K,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        k: float, optional
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data, by default None
+        ct_max: float, optional
+            The maximal value for ct, values beyond will be limited
+            to this number, by default 0.9999
+        alpha: float, optional
+            model parameter used to determine onset of far wake region
+        beta: float, optional
+            model parameter used to determine onset of far wake region
+        base_frame: foxes.core.WakeFrame
+            The wake frame from which to start
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__()
 
         self.base_frame = base_frame
@@ -77,14 +83,14 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -104,43 +110,55 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
         return self.base_frame.calc_order(algo, mdata, fdata)
 
-    def _update_y(self, mdata, fdata, states_source_turbine, x, y):
+    def _update_y(self, algo, mdata, fdata, pdata, states_source_turbine, x, y):
         """
         Helper function for y deflection
         """
-        # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get gamma:
-        gamma = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        gamma[:] = self.get_data(FV.YAWM, fdata, upcast="farm", data_prio=True)[st_sel][
-            :, None
-        ]
+        gamma = self.get_data(
+            FV.YAWM,
+            FC.STATE_POINT,
+            lookup="fs",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         gamma *= np.pi / 180
 
         # get k:
-        k = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        k[:] = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+        k = self.get_data(
+            self.k_var,
+            FC.STATE_POINT,
+            lookup="sf",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # run model calculation:
-        self.model.calc_data(mdata, fdata, states_source_turbine, x, gamma, k)
+        self.model.calc_data(
+            algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k
+        )
 
         # select targets:
         sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
@@ -172,39 +190,41 @@ class YawedWakes(WakeFrame):
             # apply deflection:
             y[sp_sel] -= ydef
 
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
 
         """
+
         # get unyawed results:
         xyz = self.base_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
+            algo, mdata, fdata, pdata, states_source_turbine
         )
         x = xyz[:, :, 0]
         y = xyz[:, :, 1]
 
         # apply deflection:
-        self._update_y(mdata, fdata, states_source_turbine, x, y)
+        self._update_y(algo, mdata, fdata, pdata, states_source_turbine, x, y)
 
         return xyz
 
@@ -215,21 +235,21 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -251,7 +271,7 @@ class YawedWakes(WakeFrame):
         del nx, nz
 
         y = np.zeros_like(x)
-        self._update_y(mdata, fdata, states_source_turbine, x, y)
+        self._update_y(algo, mdata, fdata, None, states_source_turbine, x, y)
 
         points += y[:, :, None] * ny
 
@@ -263,9 +283,9 @@ class YawedWakes(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """

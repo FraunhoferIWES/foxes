@@ -10,27 +10,33 @@ class SetXYHD(TurbineModel):
     Sets basic turbine data, from
     turbine object to farm data.
 
-    Parameters
-    ----------
-    set_XY : bool
-        Flag for (x,y) data
-    set_H : bool
-        Flag for height data
-    set_D : bool
-        Flag for rotor diameter data
-
     Attributes
     ----------
-    set_XY : bool
+    set_XY: bool
         Flag for (x,y) data
-    set_H : bool
+    set_H: bool
         Flag for height data
-    set_D : bool
+    set_D: bool
         Flag for rotor diameter data
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, set_XY=True, set_H=True, set_D=True):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        set_XY: bool
+            Flag for (x,y) data
+        set_H: bool
+            Flag for height data
+        set_D: bool
+            Flag for rotor diameter data
+
+        """
         super().__init__()
 
         self.set_XY = set_XY
@@ -43,12 +49,12 @@ class SetXYHD(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -71,19 +77,19 @@ class SetXYHD(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 

@@ -7,23 +7,29 @@ class WakeDeltas(PointDataModel):
     This point model simply subtracts ambient results
     from waked results.
 
-    Parameters
-    ----------
-    vars : list of str
-        The variables
-    normalize : bool
-        Divide resulting deltas by ambient values
-
     Attributes
     ----------
-    vars : list of str
+    vars: list of str
         The variables
-    normalize : bool
+    normalize: bool
         Divide resulting deltas by ambient values
+
+    :group: models.point_models
 
     """
 
     def __init__(self, vars, normalize=False):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        vars: list of str
+            The variables
+        normalize: bool
+            Divide resulting deltas by ambient values
+
+        """
         super().__init__()
         self.vars = vars
         self.normalize = normalize
@@ -34,12 +40,12 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -54,18 +60,18 @@ class WakeDeltas(PointDataModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        pdata : foxes.core.Data
+        pdata: foxes.core.Data
             The point data
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_points)
 

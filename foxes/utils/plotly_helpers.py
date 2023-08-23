@@ -10,6 +10,8 @@ def show_plotly_fig(fig):
     Reference:
     https://stackoverflow.com/questions/53570384/plotly-how-to-make-a-standalone-plot-in-a-window
 
+    :group: utils
+
     """
     buf = io.BytesIO()
     pio.write_image(fig, buf)

@@ -15,33 +15,19 @@ class TableFactors(TurbineModel):
     The column names are expected to be numbers
     that represent the col_var variable.
 
-    Parameters
-    ----------
-    data_source : str or pandas.DataFrame
-        Either path to a file or data
-    row_var : str
-        The row-wise variable
-    col_var : str
-        The column-wise variable
-    output_vars : list of str
-        The variables onto which the factors
-        are multiplied
-    pd_file_read_pars : dict
-        Parameters for pandas file reading
-    ipars : dict, optional
-        Parameters for scipy.interpolate.interpn
-
     Attributes
     ----------
-    data_source : str or pandas.DataFrame
+    data_source: str or pandas.DataFrame
         Either path to a file or data
-    row_var : str
+    row_var: str
         The row-wise variable
-    col_var : str
+    col_var: str
         The column-wise variable
-    ovars : list of str
+    ovars: list of str
         The variables onto which the factors
         are multiplied
+
+    :group: models.turbine_models
 
     """
 
@@ -54,6 +40,26 @@ class TableFactors(TurbineModel):
         pd_file_read_pars={},
         **ipars,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            Either path to a file or data
+        row_var: str
+            The row-wise variable
+        col_var: str
+            The column-wise variable
+        output_vars: list of str
+            The variables onto which the factors
+            are multiplied
+        pd_file_read_pars: dict
+            Parameters for pandas file reading
+        ipars: dict, optional
+            Parameters for scipy.interpolate.interpn
+
+        """
         super().__init__()
 
         self.data_source = data_source
@@ -72,12 +78,12 @@ class TableFactors(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -95,14 +101,14 @@ class TableFactors(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -132,19 +138,19 @@ class TableFactors(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
@@ -159,9 +165,9 @@ class TableFactors(TurbineModel):
                 (self._rvals, self._cvals), self._data, qts, **self._ipars
             )
         except ValueError as e:
-            print(f"\nDATA        : ({self.row_var}, {self.col_var})")
+            print(f"\nDATA       : ({self.row_var}, {self.col_var})")
             print(
-                f"DATA BOUNDS : ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})"
+                f"DATA BOUNDS: ({np.min(self._rvals)}, {np.min(self._cvals)}) -- ({np.max(self._rvals)}, {np.max(self._cvals)})"
             )
             print(
                 f"VALUE BOUNDS: ({np.min(qts[:, 0]):.4f}, {np.min(qts[:, 1]):.4f}) -- ({np.max(qts[:, 0]):.4f}, {np.max(qts[:, 1]):.4f})\n"

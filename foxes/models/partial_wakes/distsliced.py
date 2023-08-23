@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import PartialWakesModel
+from foxes.core import PartialWakesModel, Data
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.models.rotor_models.grid import GridRotor
 from foxes.utils import wd2uv, uv2wd
@@ -16,31 +16,37 @@ class PartialDistSlicedWake(PartialWakesModel):
     The evaluations are optinally done on a grid rotor
     that can differ from the algorithm's rotor model.
 
-    Parameters
-    ----------
-    n : int, optional
-        The `GridRotor`'s `n` parameter
-    wake_models : list of foxes.core.WakeModel, optional
-        The wake models, default are the ones from the algorithm
-    wake_frame : foxes.core.WakeFrame, optional
-        The wake frame, default is the one from the algorithm
-    rotor_model : foxes.core.RotorModel, optional
-        The rotor model, default is the one from the algorithm
-    **kwargs : dict, optional
-        Additional parameters for the `GridRotor`
-
     Attributes
     ----------
-    rotor_model : foxes.core.RotorModel
+    rotor_model: foxes.core.RotorModel
         The rotor model, default is the one from the algorithm
-    grotor : foxes.models.rotor_models.GridRotor
+    grotor: foxes.models.rotor_models.GridRotor
         The grid rotor model
+
+    :group: models.partial_wakes
 
     """
 
     def __init__(
         self, n=None, wake_models=None, wake_frame=None, rotor_model=None, **kwargs
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        n: int, optional
+            The `GridRotor`'s `n` parameter
+        wake_models: list of foxes.core.WakeModel, optional
+            The wake models, default are the ones from the algorithm
+        wake_frame: foxes.core.WakeFrame, optional
+            The wake frame, default is the one from the algorithm
+        rotor_model: foxes.core.RotorModel, optional
+            The rotor model, default is the one from the algorithm
+        kwargs: dict, optional
+            Additional parameters for the `GridRotor`
+
+        """
         super().__init__(wake_models, wake_frame)
 
         self.rotor_model = rotor_model
@@ -66,14 +72,14 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -101,6 +107,21 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         return idata
 
+    def keep(self, algo):
+        """
+        Add model and all sub models to
+        the keep_models list
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+        super().keep(algo)
+        self.rotor_model.keep(algo)
+        self.grotor.keep(algo)
+
     def new_wake_deltas(self, algo, mdata, fdata):
         """
         Creates new initial wake deltas, filled
@@ -108,29 +129,44 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        wake_deltas : dict
+        wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data
 
         """
+
+        n_states = fdata.n_states
         n_rpoints = self.grotor.n_rotor_points()
         n_points = fdata.n_turbines * n_rpoints
+        points = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(
+            n_states, n_points, 3
+        )
+        pdata = Data.from_points(points=points)
+
         wake_deltas = {}
         for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
 
-        return wake_deltas
+        return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -138,47 +174,44 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray of int
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
 
         """
-        # calc coordinates to rotor centres:
-        wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, fdata[FV.TXYH]
-        )
 
-        # get x coordinates:
-        x = wcoos[:, :, 0]
-        del wcoos
+        # calc x-coordinates of rotor centres:
+        hpdata = Data.from_points(points=fdata[FV.TXYH])
+        x = self.wake_frame.get_wake_coos(
+            algo, mdata, fdata, hpdata, states_source_turbine
+        )[:, :, 0]
 
         # evaluate grid rotor:
         n_states = fdata.n_states
         n_turbines = fdata.n_turbines
         n_rpoints = self.grotor.n_rotor_points()
-        n_points = n_turbines * n_rpoints
-        points = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(
-            n_states, n_points, 3
-        )
+        n_points = fdata.n_turbines * n_rpoints
         wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
+            algo, mdata, fdata, pdata, states_source_turbine
         )
         yz = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
-        del points, wcoos
+        del wcoos
 
         # evaluate wake models:
         for w in self.wake_models:
             wdeltas, sp_sel = w.calc_wakes_spsel_x_yz(
-                algo, mdata, fdata, states_source_turbine, x, yz
+                algo, mdata, fdata, hpdata, states_source_turbine, x, yz
             )
 
             wsps = np.zeros((n_states, n_turbines, n_rpoints), dtype=bool)
@@ -201,6 +234,7 @@ class PartialDistSlicedWake(PartialWakesModel):
                     algo,
                     mdata,
                     fdata,
+                    hpdata,
                     states_source_turbine,
                     wsps,
                     v,
@@ -209,7 +243,14 @@ class PartialDistSlicedWake(PartialWakesModel):
                 )
 
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        wake_deltas,
+        states_turbine,
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -217,28 +258,38 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas : Any
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
-        states_turbine : numpy.ndarray of int
+        states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res : bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
-        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FC.RPOINTS, mdata)
-        rweights = self.get_data(FC.RWEIGHTS, mdata)
+        rweights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
+        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
+        n_states, n_turbines, n_rpoints, __ = rpoints.shape
+
+        amb_res_in = amb_res is not None
+        if not amb_res_in:
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
+
         wweights = self.grotor.rotor_point_weights()
         n_wpoints = self.grotor.n_rotor_points()
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
@@ -271,21 +322,21 @@ class PartialDistSlicedWake(PartialWakesModel):
                 wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
                 wres[v] = np.einsum("sp,p->s", wres[v], rweights)
             wres[v] = wres[v][:, None]
-        del amb_res, uv
+        del uv
 
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, n_wpoints)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
         for v in wdel.keys():
             wdel[v] = np.einsum("sp,p->s", wdel[v], wweights)[:, None]
 
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
-                if update_amb_res:
-                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                if amb_res_in:
+                    amb_res[v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(
@@ -298,9 +349,9 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

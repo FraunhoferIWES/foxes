@@ -14,31 +14,20 @@ class GeomLayout(Problem):
     This optimization problem does not involve
     wind farms.
 
-    Parameters
-    ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
-        The boundary geometry
-    n_turbines : int
-        The number of turbines in the layout
-    min_dist : float, optional
-        The minimal distance between points
-    D : float, optional
-        The diameter of circle fully within boundary
-    calc_valid : bool, optional
-        Evaluate validity
-
     Attributes
     ----------
-    boundary : foxes.utils.geom2d.AreaGeometry
+    boundary: foxes.utils.geom2d.AreaGeometry
         The boundary geometry
-    n_turbines : int
+    n_turbines: int
         The number of turbines in the layout
-    min_dist : float
+    min_dist: float
         The minimal distance between points
-    D : float
+    D: float
         The diameter of circle fully within boundary
-    calc_valid : bool
+    calc_valid: bool
         Evaluate validity
+
+    :group: opt.problems.layout.geom_layouts
 
     """
 
@@ -50,6 +39,23 @@ class GeomLayout(Problem):
         D=None,
         calc_valid=None,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        boundary: foxes.utils.geom2d.AreaGeometry
+            The boundary geometry
+        n_turbines: int
+            The number of turbines in the layout
+        min_dist: float, optional
+            The minimal distance between points
+        D: float, optional
+            The diameter of circle fully within boundary
+        calc_valid: bool, optional
+            Evaluate validity
+
+        """
         super().__init__(name="geom_reg_grids")
 
         self.boundary = boundary
@@ -69,7 +75,7 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -82,7 +88,7 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -94,7 +100,7 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
@@ -119,7 +125,7 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
@@ -135,7 +141,7 @@ class GeomLayout(Problem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
@@ -149,14 +155,14 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
@@ -187,14 +193,14 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
 
@@ -230,22 +236,22 @@ class GeomLayout(Problem):
 
         Parameters
         ----------
-        xy : numpy.ndarary, optional
+        xy: numpy.ndarary, optional
             The xy coordinate array, shape: (n_points, 2)
-        valid : numpy.ndarray, optional
+        valid: numpy.ndarray, optional
             Boolean array of validity, shape: (n_points,)
-        ax : pyplot.Axis, optional
+        ax: pyplot.Axis, optional
             The figure axis
-        title : str, optional
+        title: str, optional
             The figure title
-        true_circle : bool
+        true_circle: bool
             Draw points as circles with diameter self.D
-        bars : dict, optional
+        bars: dict, optional
             The boundary plot arguments
 
         Returns
         -------
-        ax : pyplot.Axis
+        ax: pyplot.Axis
             The figure axis
 
         """

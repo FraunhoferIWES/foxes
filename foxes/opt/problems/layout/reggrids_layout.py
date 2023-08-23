@@ -16,34 +16,17 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
     Note that this problem has both int and float variables
     (mixed problem).
 
-    Parameters
-    ----------
-    name : str
-        The problem's name
-    algo : foxes.core.Algorithm
-        The algorithm
-    min_dist : float
-        The minimal distance between points
-    n_grids : int
-        The number of grids
-    n_row_max : int, optional
-        The maximal number of points in a row
-    max_dist : float, optional
-        The maximal distance between points
-    runner : foxes.core.Runner, optional
-        The runner for running the algorithm
-    kwargs : dict, optional
-        Additional parameters for `FarmVarsProblem`
-
     Attributes
     ----------
-    min_spacing : float
+    min_spacing: float
         The minimal turbine spacing
-    n_grids : int
+    n_grids: int
         The number of grids
-    max_n_row : int
+    max_n_row: int
         The maximal number of turbines per
         grid and row
+
+    :group: opt.problems.layout
 
     """
 
@@ -58,6 +41,29 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
         runner=None,
         **kwargs,
     ):
+        """
+        Constraints.
+
+        Parameters
+        ----------
+        name: str
+            The problem's name
+        algo: foxes.core.Algorithm
+            The algorithm
+        min_dist: float
+            The minimal distance between points
+        n_grids: int
+            The number of grids
+        n_row_max: int, optional
+            The maximal number of points in a row
+        max_dist: float, optional
+            The maximal distance between points
+        runner: foxes.core.Runner, optional
+            The runner for running the algorithm
+        kwargs: dict, optional
+            Additional parameters for `FarmVarsProblem`
+
+        """
         super().__init__(name, algo, runner, **kwargs)
 
         b = algo.farm.boundary
@@ -77,9 +83,9 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for super class init
 
         """
@@ -113,7 +119,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the int variables
 
         """
@@ -125,7 +131,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial int values, shape: (n_vars_int,)
 
         """
@@ -139,7 +145,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal int values, shape: (n_vars_int,)
 
         """
@@ -153,7 +159,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal int values, shape: (n_vars_int,)
 
         """
@@ -165,7 +171,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -177,7 +183,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
@@ -191,7 +197,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
@@ -205,7 +211,7 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
@@ -221,9 +227,9 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         """
@@ -252,9 +258,9 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float,)
 
         """
@@ -280,16 +286,16 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_vars_int,)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_vars_float,)
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
@@ -324,18 +330,18 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
-        n_states : int
+        n_states: int
             The number of original (non-pop) states
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)
@@ -374,21 +380,21 @@ class RegGridsLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The optimal integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The optimal float variable values, shape: (n_vars_float,)
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        objs : np.array
+        objs: np.array
             The objective function values, shape: (n_objectives,)
-        cons : np.array
+        cons: np.array
             The constraints values, shape: (n_constraints,)
 
         """

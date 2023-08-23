@@ -12,25 +12,36 @@ class FlowPlots2D(Output):
     """
     Class for horizontal or vertical 2D flow plots
 
-    Parameters
-    ----------
-    algo : foxes.Algorithm
-        The algorithm for point calculation
-    farm_results : xarray.Dataset
-        The farm results
-
     Attributes
     ----------
-    algo : foxes.Algorithm
+    algo: foxes.Algorithm
         The algorithm for point calculation
-    farm_results : xarray.Dataset
+    farm_results: xarray.Dataset
         The farm results
+    runner: foxes.utils.runners.Runner, optional
+        The runner
+
+    :group: output
 
     """
 
-    def __init__(self, algo, farm_results):
+    def __init__(self, algo, farm_results, runner=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        algo: foxes.Algorithm
+            The algorithm for point calculation
+        farm_results: xarray.Dataset
+            The farm results
+        runner: foxes.utils.runners.Runner, optional
+            The runner
+
+        """
         self.algo = algo
         self.fres = farm_results
+        self.runner = runner
 
     def _get_fig(
         self,
@@ -59,6 +70,7 @@ class FlowPlots2D(Output):
         ret_im,
         quiv=None,
         invert_axis=None,
+        animated=False,
     ):
         """
         Helper function for image creation
@@ -81,26 +93,61 @@ class FlowPlots2D(Output):
         # raw data image:
         if levels is None:
             im = hax.pcolormesh(
-                x_pos, y_pos, zz, vmin=vmin, vmax=vmax, shading="auto", cmap=cmap
+                x_pos,
+                y_pos,
+                zz,
+                vmin=vmin,
+                vmax=vmax,
+                shading="auto",
+                cmap=cmap,
+                animated=animated,
             )
 
         # contour plot:
         else:
-            im = hax.contourf(x_pos, y_pos, zz, levels, vmax=vmax, vmin=vmin, cmap=cmap)
+            im = hax.contourf(
+                x_pos,
+                y_pos,
+                zz,
+                levels,
+                vmax=vmax,
+                vmin=vmin,
+                cmap=cmap,
+                animated=animated,
+            )
 
+        qv = None
         if quiv is not None and quiv[0] is not None:
             n, pars, wd, ws = quiv
             uv = wd2uv(wd[si], ws[si])
             u = uv[:, 0].reshape([N_x, N_y]).T[::n, ::n]
             v = uv[:, 1].reshape([N_x, N_y]).T[::n, ::n]
-            hax.quiver(x_pos[::n], y_pos[::n], u, v, **pars)
+            qv = hax.quiver(x_pos[::n], y_pos[::n], u, v, animated=animated, **pars)
             del n, pars, u, v, uv
 
         hax.autoscale_view()
         hax.set_xlabel(xlabel)
         hax.set_ylabel(ylabel)
-        hax.set_title(title if title is not None else f"State {s}")
         hax.set_aspect("equal", adjustable="box")
+
+        ttl = None
+        if animated and title is None:
+            if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
+                t = np.datetime_as_string(s, unit="m").replace("T", " ")
+            else:
+                t = s
+            ttl = hax.text(
+                0.5,
+                1.05,
+                f"State {t}",
+                backgroundcolor="w",
+                transform=hax.transAxes,
+                ha="center",
+                animated=True,
+                clip_on=False,
+            )
+        else:
+            hax.set_title(title if title is not None else f"State {s}")
 
         if invert_axis == "x":
             hax.invert_xaxis()
@@ -121,11 +168,28 @@ class FlowPlots2D(Output):
         if ret_state:
             out.append(si)
         if ret_im:
-            out.append(im)
+            out.append([i for i in [im, qv, ttl] if i is not None])
         if ret_state or ret_im:
             out = tuple(out)
 
         return out
+
+    def _calc_point_results(self, verbosity, g_pts, **kwargs):
+        """Helper function for point data calculation"""
+        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
+        if averb is not None:
+            self.algo.verbosity = verbosity
+        if self.runner is None:
+            point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
+        else:
+            kwargs["points"] = g_pts
+            point_results = self.runner.run(
+                self.algo.calc_points, args=(self.fres,), kwargs=kwargs
+            )
+        if averb is not None:
+            self.algo.verbosity = averb
+
+        return point_results
 
     def get_mean_fig_xy(
         self,
@@ -156,6 +220,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -163,72 +228,75 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        ylabel : str
+        ylabel: str
             The y axis label
-        z : float
+        z: float
             The z coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_xy : float, optional
+        normalize_xy: float, optional
             Divide x and y by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -278,14 +346,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
-        if averb is not None:
-            self.algo.verbosity = verbosity
-        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
-        if averb is not None:
-            self.algo.verbosity = averb
-        data = point_results[var].to_numpy()
-        del point_results
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -331,6 +392,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
+            animated=animated,
         )
 
         return out
@@ -366,6 +428,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -373,76 +436,79 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        y : float
+        y: float
             The y coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_x : float, optional
+        normalize_x: float, optional
             Divide x by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -507,14 +573,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
-        if averb is not None:
-            self.algo.verbosity = verbosity
-        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
-        if averb is not None:
-            self.algo.verbosity = averb
-        data = point_results[var].to_numpy()
-        del point_results
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -561,6 +620,7 @@ class FlowPlots2D(Output):
             vlabel,
             ret_state,
             ret_im,
+            animated=animated,
         )
 
         return out
@@ -596,6 +656,7 @@ class FlowPlots2D(Output):
         verbosity=1,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -603,76 +664,79 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        ylabel : str
+        ylabel: str
             The y axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        x : float
+        x: float
             The x coordinate of the plane
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_y : float, optional
+        normalize_y: float, optional
             Divide y by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        weight_turbine : int, optional
+        weight_turbine: int, optional
             Index of the turbine from which to take the weight
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -737,11 +801,7 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        point_results = self.algo.calc_points(
-            self.fres, points=g_pts, verbosity=verbosity, **kwargs
-        )
-        data = point_results[var].to_numpy()
-        del point_results
+        data = self._calc_point_results(verbosity, g_pts, **kwargs)[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -789,6 +849,7 @@ class FlowPlots2D(Output):
             ret_state,
             ret_im,
             invert_axis="x",
+            animated=animated,
         )
 
         return out
@@ -823,6 +884,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -830,74 +892,77 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        ylabel : str
+        ylabel: str
             The y axis label
-        z : float
+        z: float
             The z coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        yspace : float
+        yspace: float
             The extra space in y direction, before and after wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_xy : float, optional
+        normalize_xy: float, optional
             Divide x and y by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at each `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -947,13 +1012,8 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
-        if averb is not None:
-            self.algo.verbosity = verbosity
-        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
-        if averb is not None:
-            self.algo.verbosity = averb
-        data = point_results[var].values
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
+        data = point_results[var].to_numpy()
         quiv = (
             None
             if quiver_n is None
@@ -980,8 +1040,11 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", z =  {int(np.round(z_pos))} m"
+            if not animated and title is None:
+                ttl = f"State {s}"
+                ttl += f", z =  {int(np.round(z_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,
@@ -1008,6 +1071,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
+                animated=animated,
             )
 
             yield out
@@ -1044,6 +1108,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -1051,78 +1116,81 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        xmin : float
+        xmin: float
             The min x coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        xmax : float
+        xmax: float
             The max x coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        xlabel : str
+        xlabel: str
             The x axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        y : float
+        y: float
             The y coordinate of the plane
-        xspace : float
+        xspace: float
             The extra space in x direction, before and after wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_x : float, optional
+        normalize_x: float, optional
             Divide x by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at ech `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -1187,13 +1255,8 @@ class FlowPlots2D(Output):
             print("Grid pts =", n_pts)
 
         # calculate point results:
-        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
-        if averb is not None:
-            self.algo.verbosity = verbosity
-        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
-        if averb is not None:
-            self.algo.verbosity = averb
-        data = point_results[var].values
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
+        data = point_results[var].to_numpy()
         quiv = (
             None
             if quiver_n is None
@@ -1221,9 +1284,12 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", x direction = {x_direction}°"
-            ttl += f", y =  {int(np.round(y_pos))} m"
+            if not animated and title is None:
+                ttl = f"State {s}"
+                ttl += f", x direction = {x_direction}°"
+                ttl += f", y =  {int(np.round(y_pos))} m"
+            else:
+                ttl = title
 
             out = self._get_fig(
                 var,
@@ -1250,6 +1316,7 @@ class FlowPlots2D(Output):
                 ret_state,
                 ret_im,
                 quiv,
+                animated=animated,
             )
 
             yield out
@@ -1286,6 +1353,7 @@ class FlowPlots2D(Output):
         verbosity=1,
         ret_state=False,
         ret_im=False,
+        animated=False,
         **kwargs,
     ):
         """
@@ -1293,78 +1361,81 @@ class FlowPlots2D(Output):
 
         Parameters
         ----------
-        var : str
+        var: str
             The variable name
-        resolution : float
+        resolution: float
             The resolution in m
-        x_direction : float
+        x_direction: float
             The direction of the x axis, 0 = north
-        ymin : float
+        ymin: float
             The min y coordinate, or None for automatic
-        zmin : float
+        zmin: float
             The min z coordinate
-        ymax : float
+        ymax: float
             The max y coordinate, or None for automatic
-        zmax : float
+        zmax: float
             The max z coordinate, or None for automatic
-        ylabel : str
+        ylabel: str
             The y axis label
-        zlabel : str
+        zlabel: str
             The z axis label
-        x : float
+        x: float
             The x coordinate of the plane
-        yspace : float
+        yspace: float
             The extra space in y direction, left and right of wind farm
-        zspace : float
+        zspace: float
             The extra space in z direction, below and above wind farm
-        levels : int
+        levels: int
             The number of levels for the contourf plot, or None for pure image
-        var_min : float
+        var_min: float
             Minimum variable value
-        var_max : float
+        var_max: float
             Maximum variable value
-        figsize : tuple
+        figsize: tuple
             The figsize for plt.Figure
-        normalize_y : float, optional
+        normalize_y: float, optional
             Divide y by this value
-        normalize_z : float, optional
+        normalize_z: float, optional
             Divide z by this value
-        normalize_var : float, optional
+        normalize_var: float, optional
             Divide the variable by this value
-        title : str, optional
+        title: str, optional
             The title
-        vlabel : str, optional
+        vlabel: str, optional
             The variable label
-        fig : plt.Figure, optional
+        fig: plt.Figure, optional
             The figure object
-        ax : plt.Axes, optional
+        ax: plt.Axes, optional
             The figure axes
-        add_bar : bool, optional
+        add_bar: bool
             Add a color bar
-        cmap : str, optional
+        cmap: str, optional
             The colormap
-        quiver_n : int, optional
+        quiver_n: int, optional
             Place a vector at ech `n`th point
-        quiver_pars : dict, optional
+        quiver_pars: dict, optional
             Parameters for plt.quiver
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level
-        ret_state : bool, optional
+        ret_state: bool
             Flag for state index return
-        ret_im : bool, optional
+        ret_im: bool
             Flag for image return
-        kwargs : dict, optional
+        animated: bool
+            Switch for usage for an animation
+        kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
         Yields
         ------
-        fig : matplotlib.Figure
+        fig: matplotlib.Figure
             The figure object
-        si : int, optional
+        si: int, optional
             The state index
-        im : matplotlib.collections.QuadMesh or matplotlib.QuadContourSet, optional
-            The image object
+        im: tuple, optional
+            The image objects, matplotlib.collections.QuadMesh
+            or matplotlib.QuadContourSet
 
         """
 
@@ -1428,13 +1499,9 @@ class FlowPlots2D(Output):
             print("Dim YZ   =", N_y, N_z)
             print("Grid pts =", n_pts)
 
-        averb = None if verbosity == self.algo.verbosity else self.algo.verbosity
-        if averb is not None:
-            self.algo.verbosity = verbosity
-        point_results = self.algo.calc_points(self.fres, points=g_pts, **kwargs)
-        if averb is not None:
-            self.algo.verbosity = averb
-        data = point_results[var].values
+        # calculate point results:
+        point_results = self._calc_point_results(verbosity, g_pts, **kwargs)
+        data = point_results[var].to_numpy()
         quiv = (
             None
             if quiver_n is None
@@ -1492,6 +1559,7 @@ class FlowPlots2D(Output):
                 ret_im,
                 quiv=quiv,
                 invert_axis="x",
+                animated=animated,
             )
 
             yield out

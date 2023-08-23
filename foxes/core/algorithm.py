@@ -19,41 +19,47 @@ class Algorithm(Model):
     calculations, and contain the calculation functions
     which are meant to be called from top level code.
 
-    Parameters
-    ----------
-    mbook : foxes.ModelBook
-        The model book
-    farm : foxes.WindFarm
-        The wind farm
-    chunks : dict
-        The chunks choice for running in parallel with dask,
-        e.g. `{"state": 1000}` for chunks of 1000 states
-    verbosity : int
-        The verbosity level, 0 means silent
-    dbook : foxes.DataBook, optional
-        The data book, or None for default
-    keep_models : list of str
-        Keep these models data in memory and do not finalize them
-
     Attributes
     ----------
-    mbook : foxes.ModelBook
+    mbook: foxes.models.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    chunks : dict
+    chunks: dict
         The chunks choice for running in parallel with dask,
         e.g. `{"state": 1000}` for chunks of 1000 states
-    verbosity : int
+    verbosity: int
         The verbosity level, 0 means silent
-    dbook : foxes.DataBook
+    dbook: foxes.DataBook
         The data book, or None for default
-    keep_models : list of str
+    keep_models: set of str
         Keep these models data in memory and do not finalize them
+
+    :group: core
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=[]):
+    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=set()):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        mbook: foxes.models.ModelBook
+            The model book
+        farm: foxes.WindFarm
+            The wind farm
+        chunks: dict
+            The chunks choice for running in parallel with dask,
+            e.g. `{"state": 1000}` for chunks of 1000 states
+        verbosity: int
+            The verbosity level, 0 means silent
+        dbook: foxes.DataBook, optional
+            The data book, or None for default
+        keep_models: set of str
+            Keep these models data in memory and do not finalize them
+
+        """
         super().__init__()
 
         self.name = type(self).__name__
@@ -67,12 +73,23 @@ class Algorithm(Model):
         self.keep_models = keep_models
 
         self._idata_mem = Dict()
+        self._idata_cl = Dict()
 
-    def print(self, *args, **kwargs):
+    def print(self, *args, vlim=1, **kwargs):
         """
         Print function, based on verbosity.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for the print function
+        kwargs: dict, optional
+            Keyword arguments for the print function
+        vlim: int
+            The verbosity limit
+
         """
-        if self.verbosity > 0:
+        if self.verbosity >= vlim:
             print(*args, **kwargs)
 
     def __get_sizes(self, idata, mtype):
@@ -155,6 +172,13 @@ class Algorithm(Model):
             )
         return xrdata
 
+    def chunked(self, ds):
+        return (
+            ds.chunk(chunks={c: v for c, v in self.chunks.items() if c in ds.coords})
+            if self.chunks is not None
+            else ds
+        )
+
     def initialize(self):
         """
         Initializes the algorithm.
@@ -167,12 +191,12 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        models : foxes.core.Model or list of foxes.core.Model
+        models: foxes.core.Model or list of foxes.core.Model
             The models to initialize
-        idata : dict, optional
+        idata: dict, optional
             The idata dictionary to be updated, else only add
             to idata memory
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level, 0 = silent
 
         """
@@ -200,6 +224,8 @@ class Algorithm(Model):
                 self.print(f"Initializing model '{m.name}'")
                 hidata = m.initialize(self, verbosity)
                 self._idata_mem[m.name] = hidata
+                if m.name != self.name and m.name not in self.keep_models:
+                    self._idata_cl[m.name] = m
 
                 pr = False
                 if isinstance(m, FarmController):
@@ -223,6 +249,17 @@ class Algorithm(Model):
 
             if pr:
                 print(f"-- {m.name}: Finished sub-model initialization -- ")
+
+    def cleanup(self):
+        """
+        Cleanup after calculation
+        """
+        mnames = list(self._idata_cl.keys())
+        for mname in mnames:
+            m = self._idata_cl[mname]
+            if m.initialized and mname not in self._idata_mem:
+                self.finalize_model(m, self.verbosity)
+                del self._idata_cl[mname]
 
     @property
     def idata_mem(self):
@@ -298,7 +335,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        idata : dict, optional
+        idata: dict, optional
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`.
@@ -315,10 +352,10 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Algorithm '{self.name}': get_models_data called before initialization"
                 )
-            idata = self._idata_mem.pop(self.name)
+            idata = self._idata_mem.get(self.name)
             mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
             for mname in mnames:
-                if mname in self.keep_models:
+                if mname in self.keep_models or mname == self.name:
                     hidata = self._idata_mem.get(mname)
                 else:
                     hidata = self._idata_mem.pop(mname)
@@ -334,9 +371,9 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The points, shape: (n_states, n_points, 3)
-        states_indices : array_like, optional
+        states_indices: array_like, optional
             The indices of the states dimension
 
         Returns
@@ -359,7 +396,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}"
             )
-        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FV.XYH), points)
+        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FC.XYH), points)
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
@@ -371,10 +408,10 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        model : foxes.core.Model
+        model: foxes.core.Model
             The model to be finalized, if not in the
             keep_models list
-        verbosity : int, optional
+        verbosity: int, optional
             The verbosity level, 0 = silent
 
         """
@@ -414,7 +451,7 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        clear_mem : bool
+        clear_mem: bool
             Clear idata memory, including keep_models entries
 
         """
@@ -430,11 +467,11 @@ class Algorithm(Model):
 
         Parameters
         ----------
-        algo_type : str
+        algo_type: str
             The selected derived class name
-        args : tuple, optional
+        args: tuple, optional
             Additional parameters for the constructor
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for the constructor
 
         """

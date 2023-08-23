@@ -12,16 +12,18 @@ class PandasFileHelper:
 
     Attributes
     ----------
-    DEFAULT_READING_PARAMETERS : dict
+    DEFAULT_READING_PARAMETERS: dict
         Default parameters for file reading
         for the supported file formats
-    DEFAULT_WRITING_PARAMETERS : dict
+    DEFAULT_WRITING_PARAMETERS: dict
         Default parameters for file writing
         for the supported file formats
-    DATA_FILE_FORMAT : list:str
+    DATA_FILE_FORMAT: list:str
         The supported file formats for data export
-    DEFAULT_FORMAT_DICT : dict
+    DEFAULT_FORMAT_DICT: dict
         Default column formatting
+
+    :group: utils
 
     """
 
@@ -80,9 +82,9 @@ class PandasFileHelper:
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             The path to the file
-        **kwargs : dict, optional
+        **kwargs: dict, optional
             Parameters forwarded to the pandas reading method.
 
         Returns
@@ -124,14 +126,14 @@ class PandasFileHelper:
 
         Parameters
         ----------
-        data : pandas.DataFrame
+        data: pandas.DataFrame
             The data
-        file_path : str
+        file_path: str
             The path to the file
-        format_dict : dict
+        format_dict: dict
             Dictionary with format entries for
             columns, e.g. '{:.4f}'
-        **kwargs : dict, optional
+        **kwargs: dict, optional
             Parameters forwarded to the pandas writing method.
 
         """

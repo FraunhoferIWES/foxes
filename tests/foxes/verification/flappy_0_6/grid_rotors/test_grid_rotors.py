@@ -120,3 +120,7 @@ def test():
         assert (chk[var] < 1.51).all()
 
         print()
+
+
+if __name__ == "__main__":
+    test()

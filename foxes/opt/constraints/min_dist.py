@@ -4,25 +4,11 @@ from foxes.opt.core.farm_constraint import FarmConstraint
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class MinDistConstraint(FarmConstraint):
     """
     Turbines must keep at least a minimal
     spatial distance.
-
-    Parameters
-    ----------
-    problem : foxes.opt.FarmOptProblem
-        The underlying optimization problem
-    min_dist : float
-        The minimal distance
-    min_dist_unit : str
-        The minimal distance unit, either m or D
-    name : str
-        The name of the constraint
-    sel_turbines : list of int, optional
-        The selected turbines
-    kwargs : dict, optional
-        Additional parameters for `iwopy.Constraint`
 
     Attributes
     ----------
@@ -30,10 +16,12 @@ class MinDistConstraint(FarmConstraint):
         The wind farm
     sel_turbines: list
         The selected turbines
-    min_dist : float
+    min_dist: float
         The minimal distance
-    min_dist_unit : str
+    min_dist_unit: str
         The minimal distance unit, either m or D
+
+    :group: opt.constraints
 
     """
 
@@ -46,6 +34,25 @@ class MinDistConstraint(FarmConstraint):
         sel_turbines=None,
         **kwargs,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        problem: foxes.opt.FarmOptProblem
+            The underlying optimization problem
+        min_dist: float
+            The minimal distance
+        min_dist_unit: str
+            The minimal distance unit, either m or D
+        name: str
+            The name of the constraint
+        sel_turbines: list of int, optional
+            The selected turbines
+        kwargs: dict, optional
+            Additional parameters for `iwopy.Constraint`
+
+        """
         self.min_dist = min_dist
         self.min_dist_unit = min_dist_unit
 
@@ -62,7 +69,7 @@ class MinDistConstraint(FarmConstraint):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """
@@ -101,7 +108,7 @@ class MinDistConstraint(FarmConstraint):
 
         Returns
         -------
-        deps : numpy.ndarray of bool
+        deps: numpy.ndarray of bool
             The dependencies of components on function
             variables, shape: (n_components, n_vars_float)
 
@@ -122,19 +129,19 @@ class MinDistConstraint(FarmConstraint):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_sel_components,)
 
         """
@@ -177,19 +184,19 @@ class MinDistConstraint(FarmConstraint):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float)
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        components : list of int, optional
+        components: list of int, optional
             The selected components or None for all
 
         Returns
         -------
-        values : np.array
+        values: np.array
             The component values, shape: (n_pop, n_sel_components)
 
         """

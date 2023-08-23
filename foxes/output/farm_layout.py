@@ -13,37 +13,43 @@ class FarmLayoutOutput(Output):
     """
     Plot the farm layout
 
-    Parameters
-    ----------
-    farm : foxes.WindFarm
-        The wind farm
-    farm_results : xarray.Dataset, optional
-        The wind farm calculation results
-    from_results : bool, optional
-        Flag for coordinates from results data
-    results_state : int, optional
-        The state index, for from_res
-    D : float, optional
-        The rotor diameter, if not from data
-
     Attributes
     ----------
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    fres : xarray.Dataset
+    fres: xarray.Dataset
         The wind farm calculation results
-    from_res : bool
+    from_res: bool
         Flag for coordinates from results data
-    results_state : int
+    results_state: int
         The state index, for from_res
-    D : float
+    D: float
         The rotor diameter, if not from data
+
+    :group: output
 
     """
 
     def __init__(
         self, farm, farm_results=None, from_results=False, results_state=None, D=None
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        farm: foxes.WindFarm
+            The wind farm
+        farm_results: xarray.Dataset, optional
+            The wind farm calculation results
+        from_results: bool, optional
+            Flag for coordinates from results data
+        results_state: int, optional
+            The state index, for from_res
+        D: float, optional
+            The rotor diameter, if not from data
+
+        """
         self.farm = farm
         self.fres = farm_results
         self.from_res = from_results
@@ -121,6 +127,8 @@ class FarmLayoutOutput(Output):
         normalize_D=False,
         ret_im=False,
         bargs={},
+        anno_delx=0,
+        anno_dely=0,
         **kwargs,
     ):
         """
@@ -128,39 +136,43 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
-        color_by : str, optional
+        color_by: str, optional
             Set scatter color by variable results.
             Use "mean_REWS" etc for means, also
             min, max, sum. All wrt states
-        fontsize : int, optional
+        fontsize: int, optional
             Size of the turbine numbers
-        figsize : tuple, optional
+        figsize: tuple, optional
             The figsize for plt.Figure
-        annotate : int, optional
+        annotate: int, optional
             Turbine index printing, Choices:
             0 = No annotation
             1 = Turbine indices
             2 = Turbine names
-        title : str, optional
+        title: str, optional
             The plot title, or None for automatic
-        fig : matplotlib.pyplot.Figure, optional
+        fig: matplotlib.pyplot.Figure, optional
             The figure object to which to add
-        ax : matplotlib.pyplot.Axis, optional
+        ax: matplotlib.pyplot.Axis, optional
             The axis object, to which to add
-        normalize_D : bool
+        normalize_D: bool
             Normalize x, y wrt rotor diameter
-        ret_im : bool
+        ret_im: bool
             Flag for returned image object
-        bargs : dict
+        bargs: dict
             Arguments for boundary plotting
-        kwargs : dict, optional
+        anno_delx: float
+            The annotation delta x
+        anno_dely: float
+            The annotation delta y
+        kwargs: dict, optional
             Parameters forwarded to `matplotlib.pyplot.scatter`
 
         Returns
         -------
-        ax : matplotlib.pyplot.Axis
+        ax: matplotlib.pyplot.Axis
             The axis object
-        im : matplotlib.pyplot.PathCollection, optional
+        im: matplotlib.pyplot.PathCollection, optional
             The image object
 
         """
@@ -226,10 +238,10 @@ class FarmLayoutOutput(Output):
 
             if annotate == 1:
                 for i, txt in enumerate(n):
-                    ax.annotate(int(txt), (x[i], y[i]), size=fontsize)
+                    ax.annotate(int(txt), (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
             elif annotate == 2:
                 for i, t in enumerate(self.farm.turbines):
-                    ax.annotate(t.name, (x[i], y[i]), size=fontsize)
+                    ax.annotate(t.name, (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}
@@ -274,10 +286,10 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             The file into which to plot, or None
             for default
-        fontsize : int
+        fontsize: int
             Size of the turbine numbers
 
         """
@@ -296,7 +308,7 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             The file into which to plot, or None
             for default
 
@@ -313,7 +325,7 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             The file into which to plot, or None
             for default
 
@@ -342,7 +354,7 @@ class FarmLayoutOutput(Output):
 
         Parameters
         ----------
-        file_path : str
+        file_path: str
             The file into which to plot, or None
             for default
 

@@ -268,3 +268,63 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Completely new style, fixing issues with incomplete API entries
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.3.5](https://github.com/FraunhoferIWES/foxes/commits/v0.3.5)
+
+## v0.4.0
+
+- Models:
+  - Improved: New option to specify wake growth variable name, such that multiple `kTI` models could be used, resulting in different `k`'s for different wake models
+  - New turbine model: `LookupTable`, interpolates data based on a multi-dimensional lookup table
+- Utils:
+  - Improved `DaskRunner`: Now supports clusters that run the Slurm queueing system
+- Examples:
+  - New: `timeseries_slurm`, shows how to run foxes on a HPC with Slurm queueing system
+- Optimization:
+  - Improved: `foxes.opt` is now able to optimize for flow variables (at selected points in space) in addition to turbine variables
+- Documentation:
+  - Improved API docu, now based on `python-apigen`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.0](https://github.com/FraunhoferIWES/foxes/commits/v0.4.0)
+
+## v0.4.1
+
+- Algorithms:
+  - Improved: `Iterative` now iterates through outer loop instead of within chunk
+- Models:
+  - New wake frame: `Timelines`, propagates wakes for spatially uniform time series
+- Tests:
+  - New test: `consistency/iterative`, checks if iterative algorithm gives same result
+- Examples:
+  - New example: `timelines`, demonstrates the usage of the `Timelines` wake frame
+  - Improved: All examples were update for the correct usage of the `DaskRunner`
+- Notebooks:
+  - New notebook: `timelines.ipynb`, showing how to use the `Timelines` wake frame in a notebook
+- Data:
+  - New states data `timeseries_100.csv.gz`, a short timeseries with timestep 1 min, varying wind direction only
+- Output:
+  - Improved: `FlowPlots2D` now has the optional argument `runner`, for computing plots with the chosen parallelization settings
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.1](https://github.com/FraunhoferIWES/foxes/commits/v0.4.1)
+
+## v0.4.2
+
+- Bug fixes:
+  - Fix of bug that slowed down `TurbOParkIX` by considering all TI wakes instead of only source turbine wake during integration
+  - Fix of bug that prevented plotly wind roses to be shown in the documentation
+  - Fix in docu that excluded the algorithm models from the API
+- Output:
+  - New: `Animator`, creates animations based on generators that yield lists of artists
+- Examples:
+  - Improved: `timelines` now includes turbine REWS signal in animations
+- Notebooks:
+  - Improved: `timelines.ipynb` now includes turbine REWS signal in animations
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)
+
+## v0.4.3
+
+- Output:
+  - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
+- Bug fixes:
+  - Fixed bug with `windio` input that resulted in wrong wind rose weights
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)

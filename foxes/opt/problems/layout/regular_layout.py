@@ -12,21 +12,12 @@ class RegularLayoutOptProblem(FarmVarsProblem):
     Places turbines on a regular grid and optimizes
     its parameters.
 
-    Parameters
-    ----------
-    name : str
-        The problem's name
-    algo : foxes.core.Algorithm
-        The algorithm
-    min_spacing : float
-        The minimal turbine spacing
-    kwargs : dict, optional
-        Additional parameters for `FarmVarsProblem`
-
     Attributes
     ----------
-    min_spacing : float
+    min_spacing: float
         The minimal turbine spacing
+
+    :group: opt.problems.layout
 
     """
 
@@ -43,6 +34,21 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         min_spacing,
         **kwargs,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        name: str
+            The problem's name
+        algo: foxes.core.Algorithm
+            The algorithm
+        min_spacing: float
+            The minimal turbine spacing
+        kwargs: dict, optional
+            Additional parameters for `FarmVarsProblem`
+
+        """
         super().__init__(name, algo, **kwargs)
         self.min_spacing = min_spacing
 
@@ -52,9 +58,9 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for super class init
 
         """
@@ -120,7 +126,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of the float variables
 
         """
@@ -138,7 +144,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Initial float values, shape: (n_vars_float,)
 
         """
@@ -152,7 +158,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Minimal float values, shape: (n_vars_float,)
 
         """
@@ -172,7 +178,7 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Returns
         -------
-        values : numpy.ndarray
+        values: numpy.ndarray
             Maximal float values, shape: (n_vars_float,)
 
         """
@@ -190,16 +196,16 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_vars_int,)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_vars_float,)
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
@@ -240,18 +246,18 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
-        n_states : int
+        n_states: int
             The number of original (non-pop) states
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)
@@ -309,21 +315,21 @@ class RegularLayoutOptProblem(FarmVarsProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The optimal integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The optimal float variable values, shape: (n_vars_float,)
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        problem_results : Any
+        problem_results: Any
             The results of the variable application
             to the problem
-        objs : np.array
+        objs: np.array
             The objective function values, shape: (n_objectives,)
-        cons : np.array
+        cons: np.array
             The constraints values, shape: (n_constraints,)
 
         """

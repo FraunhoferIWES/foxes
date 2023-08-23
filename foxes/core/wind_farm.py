@@ -2,23 +2,29 @@ class WindFarm:
     """
     The wind farm.
 
-    Parameters
-    ----------
-    name : str
-        The wind farm name
-
     Attributes
     ----------
-    name : str
+    name: str
         The wind farm name
-    turbines : list of foxes.core.Turbine
+    turbines: list of foxes.core.Turbine
         The wind turbines
-    boundary : foxes.utils.geom2d.AreaGeometry, optional
+    boundary: foxes.utils.geom2d.AreaGeometry, optional
         The wind farm boundary
+
+    :group: foxes
 
     """
 
     def __init__(self, name="wind_farm", boundary=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        name: str
+            The wind farm name
+
+        """
         self.name = name
         self.turbines = []
         self.boundary = boundary
@@ -29,9 +35,9 @@ class WindFarm:
 
         Parameters
         ----------
-        turbine : foxes.core.Turbine
+        turbine: foxes.core.Turbine
             The wind turbine
-        verbosity : int
+        verbosity: int
             The output verbosity, 0 = silent
 
         """
@@ -52,7 +58,7 @@ class WindFarm:
 
         Returns
         -------
-        n_turbines : int
+        n_turbines: int
             The total number of turbines
 
         """
@@ -65,7 +71,7 @@ class WindFarm:
 
         Returns
         -------
-        names : list of str
+        names: list of str
             The names of all turbines
 
         """

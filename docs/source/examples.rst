@@ -1,5 +1,10 @@
 Examples
---------
+========
+
+The following examples are jupyter notebooks, 
+available in the `notebooks <https://github.com/FraunhoferIWES/foxes/tree/main/notebooks>`_
+folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github repository.
+
     .. toctree::
         notebooks/overview
         notebooks/model_book
@@ -12,3 +17,4 @@ Examples
         notebooks/power_mask
         notebooks/yawed_wake
         notebooks/layout_opt
+        notebooks/timelines

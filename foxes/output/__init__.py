@@ -9,3 +9,4 @@ from .rose_plot import RosePlotOutput, StatesRosePlotOutput
 from .results_writer import ResultsWriter
 from .state_turbine_map import StateTurbineMap
 from .turbine_type_curves import TurbineTypeCurves
+from .animation import Animator

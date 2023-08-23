@@ -8,69 +8,39 @@ import foxes.constants as FC
 class CrespoHernandezTIWake(TopHatWakeModel):
     """
     The Crespo and Hernandez TI empirical correlation
+
     Source: https://doi.org/10.1016/0167-6105(95)00033-X
 
     For the wake diameter we use Eqns. (17), (15), (4), (5) from
             doi:10.1088/1742-6596/625/1/012039
 
-    Parameters
-    ----------
-    superpositions : dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    k : float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
-    use_ambti : bool
-        Flag for using ambient TI instead of local
-        wake corrected TI
-    sbeta_factor : float
-        Factor multiplying sbeta
-    near_wake_D : float, optional
-        The near wake distance in units of D,
-        calculated from TI and ct if not given here
-    ct_max : float
-        The maximal value for ct, values beyond will be limited
-        to this number
-    a_near : float
-        Model parameter
-    a_far : float
-        Model parameter
-    e1 : float
-        Model parameter
-    e2 : float
-        Model parameter
-    e3 : float
-        Model parameter
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    k : float
+    k: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
-    a_near : float
+    a_near: float
         Model parameter
-    a_far : float
+    a_far: float
         Model parameter
-    e1 : float
+    e1: float
         Model parameter
-    e2 : float
+    e2: float
         Model parameter
-    e3 : float
+    e3: float
         Model parameter
-    use_ambti : bool
+    use_ambti: bool
         Flag for using ambient TI instead of local
         wake corrected TI
-    sbeta_factor : float
+    sbeta_factor: float
         Factor multiplying sbeta
-    near_wake_D : float
+    near_wake_D: float
         The near wake distance in units of D,
         calculated from TI and ct if None
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.wake_models.ti
 
     """
 
@@ -87,8 +57,45 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
-        k_var=FV.K
+        k_var=FV.K,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        superpositions: dict
+            The superpositions. Key: variable name str,
+            value: The wake superposition model name,
+            will be looked up in model book
+        k: float, optional
+            The wake growth parameter k. If not given here
+            it will be searched in the farm data.
+        use_ambti: bool
+            Flag for using ambient TI instead of local
+            wake corrected TI
+        sbeta_factor: float
+            Factor multiplying sbeta
+        near_wake_D: float, optional
+            The near wake distance in units of D,
+            calculated from TI and ct if not given here
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        a_near: float
+            Model parameter
+        a_far: float
+            Model parameter
+        e1: float
+            Model parameter
+        e2: float
+            Model parameter
+        e3: float
+            Model parameter
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
 
         self.a_near = a_near
@@ -109,7 +116,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -117,15 +124,15 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
-            The number of wake evaluation points
-        wake_deltas : dict
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -133,47 +140,73 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.TI] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.TI] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
-    def calc_wake_radius(self, algo, mdata, fdata, states_source_turbine, x, ct):
+    def calc_wake_radius(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        x,
+        ct,
+    ):
         """
         Calculate the wake radius, depending on x only (not r).
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        r : numpy.ndarray
+        r: numpy.ndarray
             The radial values for each x value, shape:
             (n_states, n_points, n_r_per_x, 2)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
 
         Returns
         -------
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_states, n_points)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get D:
-        D = fdata[FV.D][st_sel][:, None]
+        D = self.get_data(
+            FV.D,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # get k:
-        k = self.get_data(self.k_var, fdata, upcast="farm")[st_sel][:, None]
+        k = self.get_data(
+            self.k_var,
+            FC.STATE_POINT,
+            lookup="sf",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # calculate:
         sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))
@@ -184,36 +217,47 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         return radius
 
     def calc_centreline_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, sp_sel, x, wake_r, ct
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        sp_sel,
+        x,
+        wake_r,
+        ct,
     ):
         """
         Calculate centre line results of wake deltas.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        sp_sel : numpy.ndarray of bool
+        sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The x values, shape: (n_sp_sel,)
-        wake_r : numpy.ndarray
+        wake_r: numpy.ndarray
             The wake radii, shape: (n_sp_sel,)
-        ct : numpy.ndarray
+        ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_sp_sel,)
 
         Returns
         -------
-        cl_del : dict
+        cl_del: dict
             The centre line wake deltas. Key: variable name str,
             varlue: numpy.ndarray, shape: (n_sp_sel,)
 

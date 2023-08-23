@@ -6,23 +6,29 @@ class SetAmbPointResults(PointDataModel):
     """
     This model copies point results to ambient results.
 
-    Parameters
-    ----------
-    point_vars : list of str, optional
-        The point variables to be treated
-    vars_to_amb : list of str, optional
-        The variables to be copied to output
-
     Attributes
     ----------
-    pvars : list of str
+    pvars: list of str
         The point variables to be treated
-    vars : list of str
+    vars: list of str
         The variables to be copied to output
+    
+    :group: algorithms.downwind.models
 
     """
 
     def __init__(self, point_vars=None, vars_to_amb=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        point_vars: list of str, optional
+            The point variables to be treated
+        vars_to_amb: list of str, optional
+            The variables to be copied to output
+
+        """
         super().__init__()
         self._pvars = point_vars
         self._vars = vars_to_amb

@@ -18,12 +18,12 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
 
     Parameters
     ----------
-    res_yaml : str
+    res_yaml: str
         Path to the yaml file
-    fixed_vars : dict
+    fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional arguments for StatesTable
 
     Returns
@@ -48,9 +48,10 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     data[:, :, 0] = wd[:, None]
     data[:, :, 1] = ws[None, :]
     names = ["wind_direction", "wind_speed"]
+    sec_prob = None
 
     def _to_data(v, d, dims):
-        nonlocal data, names
+        nonlocal data, names, sec_prob
         hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
         if len(dims) == 0:
             hdata[:, :, 0] = FC.DTYPE(d)
@@ -72,8 +73,11 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             raise ValueError(
                 f"Can not accept more than two dimensions, got {dims} for data '{v}'"
             )
-        data = np.append(data, hdata, axis=2)
-        names.append(v)
+        if v == "sector_probability":
+            sec_prob = hdata[:, :, 0].copy()
+        else:
+            data = np.append(data, hdata, axis=2)
+            names.append(v)
 
     vmap = {
         "wind_direction": FV.WD,
@@ -84,9 +88,11 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     }
 
     for v, d in wres.items():
-        if v in vmap and isinstance(d, dict):
+        if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
             _to_data(v, d["data"], d["dims"])
-
+    if sec_prob is not None and "probability" in names:
+        data[:, :, names.index("probability")] *= sec_prob
+    
     n_vars = len(names)
     data = data.reshape(n, n_vars)
 
@@ -96,7 +102,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
 
     ovars = {v: v for v in data.columns if v != FV.WEIGHT}
     ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
-
+    
     return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
 
 
@@ -106,14 +112,14 @@ def read_site(site_yaml, **kwargs):
 
     Parameters
     ----------
-    site_yaml : str
+    site_yaml: str
         Path to the yaml file
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional arguments for read_resource
 
     Returns
     -------
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
 
     """
@@ -136,22 +142,22 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     Parameters
     ----------
-    farm_yaml : str
+    farm_yaml: str
         Path to the yaml file
-    mbook : foxes.ModelBook, optional
+    mbook: foxes.ModelBook, optional
         The model book to start from
-    layout : str or int
+    layout: str or int
         The layout choice
-    turbine_models : list of str
+    turbine_models: list of str
         Additional turbine models
-    kwargs : dict, optional
+    kwargs: dict, optional
         Additional parameters for add_from_df()
 
     Returns
     -------
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
 
     """
@@ -221,25 +227,25 @@ def read_anlyses(
 
     Parameters
     ----------
-    analyses : dict
+    analyses: dict
         The analyses sub-dict of the case
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
-    keymap : dict
+    keymap: dict
         Translation from windio to foxes keywords
-    algo_type : str
+    algo_type: str
         The default algorithm class name
-    algo_pars : dict, optional
+    algo_pars: dict, optional
         Additional parameters for the algorithm
         constructor
 
     Returns
     -------
-    algo : foxes.core.Algorithm
+    algo: foxes.core.Algorithm
         The algorithm
 
     """
@@ -257,25 +263,27 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
 
     Parameters
     ----------
-    case_yaml : str
+    case_yaml: str
         Path to the yaml file
-    site_pars : dict
+    site_pars: dict
         Additional arguments for read_site
-    farm_pars : dict
+    farm_pars: dict
         Additional arguments for read_farm
-    ana_pars : dict
+    ana_pars: dict
         Additional arguments for read_analyses
 
     Returns
     -------
-    mbook : foxes.ModelBook
+    mbook: foxes.ModelBook
         The model book
-    farm : foxes.WindFarm
+    farm: foxes.WindFarm
         The wind farm
-    states : foxes.states.States
+    states: foxes.states.States
         The states object
-    algo : foxes.core.Algorithm
+    algo: foxes.core.Algorithm
         The algorithm
+
+    :group: input.windio
 
     """
     case_yaml = Path(case_yaml)

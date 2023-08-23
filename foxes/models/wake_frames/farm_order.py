@@ -14,19 +14,25 @@ class FarmOrder(WakeFrame):
     only gives correct calculation results when used
     in an iterative algorithm.
 
-    Parameters
-    ----------
-    base_frame : foxes.core.WakeFrame
-        The wake frame from which to start
-
     Attributes
     ----------
-    base_frame : foxes.core.WakeFrame
+    base_frame: foxes.core.WakeFrame
         The wake frame from which to start
+
+    :group: models.wake_frames
 
     """
 
     def __init__(self, base_frame=RotorWD()):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        base_frame: foxes.core.WakeFrame
+            The wake frame from which to start
+
+        """
         super().__init__()
         self.base_frame = base_frame
 
@@ -42,14 +48,14 @@ class FarmOrder(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -69,16 +75,16 @@ class FarmOrder(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        order : numpy.ndarray
+        order: numpy.ndarray
             The turbine order, shape: (n_states, n_turbines)
 
         """
@@ -87,32 +93,33 @@ class FarmOrder(WakeFrame):
 
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, states_source_turbine, points):
+    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        points : numpy.ndarray
-            The evaluation points, shape: (n_states, n_points, 3)
 
         Returns
         -------
-        wake_coos : numpy.ndarray
-            The wake coordinates, shape: (n_states, n_points, 3)
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
 
         """
         return self.base_frame.get_wake_coos(
-            algo, mdata, fdata, states_source_turbine, points
+            algo, mdata, fdata, pdata, states_source_turbine
         )
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
@@ -122,21 +129,21 @@ class FarmOrder(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        x : numpy.ndarray
+        x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
         Returns
         -------
-        points : numpy.ndarray
+        points: numpy.ndarray
             The centreline points, shape: (n_states, n_points, 3)
 
         """
@@ -150,9 +157,9 @@ class FarmOrder(WakeFrame):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         """

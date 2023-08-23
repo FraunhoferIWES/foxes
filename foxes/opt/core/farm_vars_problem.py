@@ -10,6 +10,9 @@ class FarmVarsProblem(FarmOptProblem):
     """
     Abstract base class for models that optimize
     farm variables.
+
+    :group: opt.core
+
     """
 
     def initialize(self, pre_rotor_vars, post_rotor_vars, verbosity=1, **kwargs):
@@ -18,15 +21,15 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        pre_rotor_vars : list of str or dict
+        pre_rotor_vars: list of str or dict
             The pre_rotor farm variables. If dict, then
             key: sub-model str, value: var names as list of str
-        post_rotor_vars : list of str or dict
+        post_rotor_vars: list of str or dict
             The post_rotor farm variables. If dict, then
             key: sub-model str, value: var names as list of str
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
-        kwargs : dict, optional
+        kwargs: dict, optional
             Additional parameters for super class init
 
         """
@@ -81,16 +84,16 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_vars_int,)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_vars_float,)
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_states, n_sel_turbines)
@@ -105,18 +108,18 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : numpy.ndarray
+        vars_int: numpy.ndarray
             The integer optimization variable values,
             shape: (n_pop, n_vars_int)
-        vars_float : numpy.ndarray
+        vars_float: numpy.ndarray
             The float optimization variable values,
             shape: (n_pop, n_vars_float)
-        n_states : int
+        n_states: int
             The number of original (non-pop) states
 
         Returns
         -------
-        farm_vars : dict
+        farm_vars: dict
             The foxes farm variables. Key: var name,
             value: numpy.ndarray with values, shape:
             (n_pop, n_states, n_sel_turbines)
@@ -134,9 +137,9 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_vars_float,)
 
         """
@@ -177,9 +180,9 @@ class FarmVarsProblem(FarmOptProblem):
 
         Parameters
         ----------
-        vars_int : np.array
+        vars_int: np.array
             The integer variable values, shape: (n_pop, n_vars_int,)
-        vars_float : np.array
+        vars_float: np.array
             The float variable values, shape: (n_pop, n_vars_float,)
 
         """

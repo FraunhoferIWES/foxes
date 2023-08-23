@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import PartialWakesModel
+from foxes.core import PartialWakesModel, Data
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.utils.two_circles import calc_area
 import foxes.variables as FV
@@ -14,23 +14,29 @@ class PartialTopHat(PartialWakesModel):
     The wake effect is weighted by the overlap of
     the wake circle and the rotor disc circle.
 
-    Parameters
-    ----------
-    wake_models : list of foxes.core.WakeModel, optional
-        The wake models, default are the ones from the algorithm
-    wake_frame : foxes.core.WakeFrame, optional
-        The wake frame, default is the one from the algorithm
-    rotor_model : foxes.core.RotorModel, optional
-        The rotor model, default is the one from the algorithm
-
     Attributes
     ----------
-    rotor_model : foxes.core.RotorModel
+    rotor_model: foxes.core.RotorModel
         The rotor model, default is the one from the algorithm
+
+    :group: models.partial_wakes
 
     """
 
     def __init__(self, wake_models=None, wake_frame=None, rotor_model=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        wake_models: list of foxes.core.WakeModel, optional
+            The wake models, default are the ones from the algorithm
+        wake_frame: foxes.core.WakeFrame, optional
+            The wake frame, default is the one from the algorithm
+        rotor_model: foxes.core.RotorModel, optional
+            The rotor model, default is the one from the algorithm
+
+        """
         super().__init__(wake_models, wake_frame)
         self.rotor_model = rotor_model
 
@@ -46,14 +52,14 @@ class PartialTopHat(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
@@ -78,26 +84,19 @@ class PartialTopHat(PartialWakesModel):
 
         return idata
 
-    def get_wake_points(self, algo, mdata, fdata):
+    def keep(self, algo):
         """
-        Get the wake calculation points.
+        Add model and all sub models to
+        the keep_models list
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        mdata : foxes.core.Data
-            The model data
-        fdata : foxes.core.Data
-            The farm data
-
-        Returns
-        -------
-        rpoints : numpy.ndarray
-            All rotor points, shape: (n_states, n_points, 3)
+        algo: foxes.core.Algorithm
+            The algorithm
 
         """
-        return fdata[FV.TXYH]
+        super().keep(algo)
+        self.rotor_model.keep(algo)
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -106,28 +105,37 @@ class PartialTopHat(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
 
         Returns
         -------
-        wake_deltas : dict
+        wake_deltas: dict
             Keys: Variable name str, values: any
+        pdata: foxes.core.Data
+            The evaluation point data
 
         """
-        n_points = fdata.n_turbines
+        pdata = Data.from_points(points=fdata[FV.TXYH])
+
         wake_deltas = {}
         for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, n_points, wake_deltas)
+            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
 
-        return wake_deltas
+        return wake_deltas, pdata
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_deltas
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_deltas,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -135,16 +143,18 @@ class PartialTopHat(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray of int
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray of int
             For each state, one turbine index corresponding
             to the wake causing turbine. Shape: (n_states,)
-        wake_deltas : Any
+        wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
 
@@ -157,15 +167,13 @@ class PartialTopHat(PartialWakesModel):
             self.WCOOS_ID not in mdata
             or mdata[self.WCOOS_ID] != states_source_turbine[0]
         ):
-            points = self.get_wake_points(algo, mdata, fdata)
             wcoos = self.wake_frame.get_wake_coos(
-                algo, mdata, fdata, states_source_turbine, points
+                algo, mdata, fdata, pdata, states_source_turbine
             )
             mdata[self.WCOOS_ID] = states_source_turbine[0]
             mdata[self.WCOOS_X] = wcoos[:, :, 0]
             mdata[self.WCOOS_R] = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
             wcoos[:, :, 1:3] = 0
-            del points
         else:
             wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             wcoos[:, :, 0] = mdata[self.WCOOS_X]
@@ -182,7 +190,7 @@ class PartialTopHat(PartialWakesModel):
 
             for w in self.wake_models:
                 wr = w.calc_wake_radius(
-                    algo, mdata, fdata, states_source_turbine, x, ct
+                    algo, mdata, fdata, pdata, states_source_turbine, x, ct
                 )
 
                 sel_sp = sel0 & (wr > R - D / 2)
@@ -192,7 +200,15 @@ class PartialTopHat(PartialWakesModel):
                     hwr = wr[sel_sp]
 
                     clw = w.calc_centreline_wake_deltas(
-                        algo, mdata, fdata, states_source_turbine, sel_sp, hx, hwr, hct
+                        algo,
+                        mdata,
+                        fdata,
+                        pdata,
+                        states_source_turbine,
+                        sel_sp,
+                        hx,
+                        hwr,
+                        hct,
                     )
                     del hx, hct
 
@@ -213,6 +229,7 @@ class PartialTopHat(PartialWakesModel):
                             algo,
                             mdata,
                             fdata,
+                            pdata,
                             states_source_turbine,
                             sel_sp,
                             v,
@@ -221,7 +238,14 @@ class PartialTopHat(PartialWakesModel):
                         )
 
     def evaluate_results(
-        self, algo, mdata, fdata, wake_deltas, states_turbine, update_amb_res=False
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        wake_deltas,
+        states_turbine,
+        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -229,47 +253,54 @@ class PartialTopHat(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas : Any
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
-        states_turbine : numpy.ndarray of int
+        states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
             Shape: (n_states,)
-        update_amb_res : bool
-            Flag for updating ambient results
+        amb_res: dict, optional
+            Ambient states results. Keys: var str, values:
+            numpy.ndarray of shape (n_states, n_points)
 
         """
-        weights = self.get_data(FC.RWEIGHTS, mdata)
-        amb_res = self.get_data(FC.AMB_RPOINT_RESULTS, mdata)
-        rpoints = self.get_data(FC.RPOINTS, mdata)
+        weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
+        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
         n_states, n_turbines, n_rpoints, __ = rpoints.shape
+
+        amb_res_in = amb_res is not None
+        if not amb_res_in:
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-        del amb_res
 
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
         for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
 
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wdel[v]
-                if update_amb_res:
-                    mdata[FC.AMB_RPOINT_RESULTS][v][st_sel] = wres[v]
+                if amb_res_in:
+                    amb_res[v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]
 
         self.rotor_model.eval_rpoint_results(
@@ -282,9 +313,9 @@ class PartialTopHat(PartialWakesModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level
 
         """

@@ -10,32 +10,38 @@ class kTI(TurbineModel):
     Calculates the wake model parameter `k`
     as a linear function of `TI`.
 
-    Parameters
-    ----------
-    kTI : float, optional
-        Uniform value for `kTI`. If not given it
-        will be searched in farm data
-    kb : float, optional
-        Uniform value for `kb`. If not given it
-        will be searched in farm data, and zero by default
-    ti_var : str
-        The `TI` variable name
-    ti_val : float, optional
-        The uniform value of `TI`. If not given it
-        will be searched in farm data
-    k_var : str
-        The variable name for k
-
     Attributes
     ----------
-    ti_var : str
+    ti_var: str
         The `TI` variable name
-    k_var : str
+    k_var: str
         The variable name for k
+
+    :group: models.turbine_models
 
     """
 
     def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        kTI: float, optional
+            Uniform value for `kTI`. If not given it
+            will be searched in farm data
+        kb: float, optional
+            Uniform value for `kb`. If not given it
+            will be searched in farm data, and zero by default
+        ti_var: str
+            The `TI` variable name
+        ti_val: float, optional
+            The uniform value of `TI`. If not given it
+            will be searched in farm data
+        k_var: str
+            The variable name for k
+
+        """
         super().__init__()
 
         self.ti_var = ti_var
@@ -45,7 +51,10 @@ class kTI(TurbineModel):
         setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
-        return super().__repr__() + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        return (
+            super().__repr__()
+            + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+        )
 
     def output_farm_vars(self, algo):
         """
@@ -53,12 +62,12 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
 
         Returns
         -------
-        output_vars : list of str
+        output_vars: list of str
             The output variable names
 
         """
@@ -73,26 +82,32 @@ class kTI(TurbineModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        st_sel : numpy.ndarray of bool
+        st_sel: numpy.ndarray of bool
             The state-turbine selection,
             shape: (n_states, n_turbines)
 
         Returns
         -------
-        results : dict
+        results: dict
             The resulting data, keys: output variable str.
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        kTI = self.get_data(FV.KTI, fdata, st_sel)
-        kb = self.get_data(FV.KB, fdata, st_sel)
-        ti = self.get_data(self.ti_var, fdata, st_sel)
+        kTI = self.get_data(
+            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
+        kb = self.get_data(
+            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
+        ti = self.get_data(
+            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        )[st_sel]
 
         k = fdata.get(
             self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
