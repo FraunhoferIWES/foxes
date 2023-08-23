@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import WakeModel
-from foxes.utils import uv2wd, wd2wdvec, wd2uv
+from foxes.utils import uv2wd, wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -13,7 +13,6 @@ class RHB(WakeModel):
     Techincal Paper, Frazer-Nash Consultancy, 2019
 
     """
-    
     
     def __init__(self, superposition, ct_max=0.9999):
         super().__init__()
@@ -76,8 +75,9 @@ class RHB(WakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
-        wake_deltas[FV.WD] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        wake_deltas["UV"] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
     def contribute_to_wake_deltas(
         self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas):
@@ -105,8 +105,7 @@ class RHB(WakeModel):
             The wake deltas, are being modified on the fly.
             Key: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...). wake_deltas[FV.WS] holds
-            UV data here, not WS.
+            shape (n_states, n_points, ...). 
 
         """
     
@@ -165,11 +164,8 @@ class RHB(WakeModel):
 
             # calc velocity components
             vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
-            uv = vel_factor[:, None] * xyz[:, :2]
-
-            wake_deltas[FV.WS][sp_sel] = uv
+            wake_deltas["UV"][sp_sel] = vel_factor[:, None] * xyz[:, :2]
             
-
         return wake_deltas # wake_deltas[FV.WS] is UV data
 
     def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
@@ -201,16 +197,14 @@ class RHB(WakeModel):
         # calc ambient wind vector
         wind_vec = wd2uv(amb_results[FV.WD], amb_results[FV.WS])
 
-        # add ambient result to wake deltas
-        total_uv = wind_vec + wake_deltas[FV.WS]
+        # add ambient result to wake deltas, remove UV:
+        total_uv = wind_vec + wake_deltas.pop("UV")
 
-        #
+        # deduce WS and WD deltas:
         new_wd = uv2wd(total_uv) 
         new_ws = np.linalg.norm(total_uv, axis=-1)
-        wake_deltas[FV.WS] = new_ws - amb_results[FV.WS]
-        wake_deltas[FV.WD] = new_wd - amb_results[FV.WD]
-
-        return 
+        wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
+        wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
         
     def finalize(self, algo, verbosity=0):
         """
