@@ -51,7 +51,7 @@ class RHB(WakeModel):
 
         return idata
     
-    def init_wake_deltas(self, algo, mdata, fdata, n_points, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -59,15 +59,15 @@ class RHB(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        n_points : int
-            The number of wake evaluation points
-        wake_deltas : dict
+        pdata: foxes.core.Data
+            The evaluation point data
+        wake_deltas: dict
             The wake deltas storage, add wake deltas
             on the fly. Keys: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
@@ -75,12 +75,21 @@ class RHB(WakeModel):
 
         """
         n_states = mdata.n_states
+        n_points = pdata.n_points
         wake_deltas["UV"] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
     def contribute_to_wake_deltas(
-        self, algo, mdata, fdata, states_source_turbine, wake_coos, wake_deltas):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wake_coos,
+        wake_deltas,
+    ):
         """
         Calculate the contribution to the wake deltas
         by this wake model.
@@ -89,23 +98,25 @@ class RHB(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        states_source_turbine : numpy.ndarray
+        pdata: foxes.core.Data
+            The evaluation point data
+        states_source_turbine: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
-        wake_coos : numpy.ndarray
+        wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
-        wake_deltas : dict
-            The wake deltas, are being modified on the fly.
+        wake_deltas: dict
+            The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...). 
+            shape (n_states, n_points, ...)
 
         """
     
@@ -121,17 +132,41 @@ class RHB(WakeModel):
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = self.get_data(FV.CT, fdata)[st_sel]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
         ct[ct > self.ct_max] = self.ct_max
 
         # get ws:
-        ws = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ws[:] = self.get_data(FV.REWS, fdata)[st_sel]
+        ws = self.get_data(
+            FV.REWS,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # get D
-        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        D[:] = self.get_data(FV.D, fdata)[st_sel]
+        D = self.get_data(
+            FV.D,
+            FC.STATE_POINT,
+            lookup="f",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            upcast=True,
+            states_source_turbine=states_source_turbine,
+        )
 
         # find a (page 6)
         a = 0.5 * (1-np.sqrt(1-ct))
@@ -168,7 +203,15 @@ class RHB(WakeModel):
             
         return wake_deltas # wake_deltas[FV.WS] is UV data
 
-    def finalize_wake_deltas(self, algo, mdata, fdata, amb_results, wake_deltas):
+    def finalize_wake_deltas(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        amb_results,
+        wake_deltas,
+    ):
         """
         Finalize the wake calculation.
 
@@ -176,16 +219,18 @@ class RHB(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata : foxes.core.Data
+        mdata: foxes.core.Data
             The model data
-        fdata : foxes.core.Data
+        fdata: foxes.core.Data
             The farm data
-        amb_results : dict
+        pdata: foxes.core.Data
+            The evaluation point data
+        amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
-        wake_deltas : dict
+        wake_deltas: dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the wake delta
             applies, values: numpy.ndarray with shape
