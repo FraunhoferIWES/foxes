@@ -26,7 +26,7 @@ class UniformProfile(VerticalProfile):
             The value
 
         """
-        super().__init__(self)
+        super().__init__()
         self.var = variable
 
     def input_vars(self):

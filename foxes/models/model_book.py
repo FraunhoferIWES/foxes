@@ -214,6 +214,12 @@ class ModelBook:
             ti_quadratic=fm.wake_superpositions.TISuperposition(
                 ti_superp="quadratic", superp_to_amb="quadratic"
             ),
+            ti_cubic=fm.wake_superpositions.TISuperposition(
+                ti_superp="power_3", superp_to_amb="quadratic"
+            ),
+            ti_quartic=fm.wake_superpositions.TISuperposition(
+                ti_superp="power_4", superp_to_amb="quadratic"
+            ),
             ti_max=fm.wake_superpositions.TISuperposition(
                 ti_superp="max", superp_to_amb="quadratic"
             ),
@@ -258,6 +264,16 @@ class ModelBook:
                 f"Bastankhah_{s}_k004"
             ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=s)
 
+            self.wake_models[f"Bastankhah0_{s}"] = fm.wake_models.wind.BastankhahWake(
+                superposition=s, sbeta_factor=0.2
+            )
+            self.wake_models[
+                f"Bastankhah0_{s}_k002"
+            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s, sbeta_factor=0.2)
+            self.wake_models[
+                f"Bastankhah0_{s}_k004"
+            ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=s, sbeta_factor=0.2)
+
             self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
                 superposition=s
             )
@@ -285,7 +301,7 @@ class ModelBook:
                         f"TurbOParkIX_{s}_A{a}_dx{d}"
                     ] = fm.wake_models.wind.TurbOParkWakeIX(A=A, superposition=s, dx=dx)
 
-        slist = ["ti_linear", "ti_quadratic", "ti_max"]
+        slist = ["ti_linear", "ti_quadratic", "ti_cubic", "ti_quartic", "ti_max"]
         for s in slist:
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}"

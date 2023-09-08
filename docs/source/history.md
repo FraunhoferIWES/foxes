@@ -324,6 +324,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
+- Models:
+  - New vertical profile: `DataProfile`, data based profile from file or pandas DataFrame
+  - Improved ti superposition: Now supporting n-th power superposition
+  - Improved wake model `TurbOParkIX`: New option for consideration of all wakes in ti integral
 - Bug fixes:
   - Fixed bug with `windio` input that resulted in wrong wind rose weights
 
