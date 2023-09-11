@@ -51,6 +51,8 @@ class FieldDataNC(States):
         The datetime parsing format string
     sel: dict
         Subset selection via xr.Dataset.sel()
+    isel: dict
+        Subset selection via xr.Dataset.isel()
 
     :group: input.states
 
@@ -72,6 +74,7 @@ class FieldDataNC(States):
         fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
+        isel=None,
         verbosity=1,
     ):
         """
@@ -111,6 +114,8 @@ class FieldDataNC(States):
             The datetime parsing format string
         sel: dict, optional
             Subset selection via xr.Dataset.sel()
+        isel: dict, optional
+            Subset selection via xr.Dataset.isel()
         verbosity: int
             Verbosity level for pre_load file reading
 
@@ -130,6 +135,7 @@ class FieldDataNC(States):
         self.fill_value = fill_value
         self.time_format = time_format
         self.sel = sel
+        self.isel = isel
 
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
@@ -166,7 +172,11 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                dss = ds if self.sel is None else ds.sel(self.sel)
+                dss = ds 
+                if sel is not None:
+                    ds = ds.sel(self.sel)
+                if isel is not None:
+                    ds = ds.isel(self.isel)       
                 if pre_load:
                     self.data_source = dss.load()
                 else:
