@@ -170,16 +170,16 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                dss = ds 
-                if sel is not None:
-                    dss = ds.sel(self.sel)
-                if isel is not None:
-                    dss = ds.isel(self.isel)      
-                if pre_load:
-                    self.data_source = dss.load()
-                else:
-                    self.data_source = dss
-                self._get_inds(dss)
+                self.data_source = ds
+        
+        if sel is not None:
+            self.data_source = self.data_source.sel(self.sel)
+        if isel is not None:
+            self.data_source = self.data_source.isel(self.isel)      
+        if pre_load:
+            self.data_source.load()
+
+        self._get_inds(self.data_source)
 
     def _get_inds(self, ds):
         """

@@ -159,7 +159,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = np.max(x)
+        xmax = np.nanmax(x)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1
