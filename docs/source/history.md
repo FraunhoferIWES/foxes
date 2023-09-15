@@ -330,5 +330,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved wake model `TurbOParkIX`: New option for consideration of all wakes in ti integral
 - Bug fixes:
   - Fixed bug with `windio` input that resulted in wrong wind rose weights
+  - Fixed bug with `FlowPlots2D` with value bounds in contour plots
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)
