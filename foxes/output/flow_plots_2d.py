@@ -105,11 +105,15 @@ class FlowPlots2D(Output):
 
         # contour plot:
         else:
+            if vmax is not None and vmin is not None and not isinstance(levels, list):
+                lvls = np.linspace(vmin, vmax, levels+1)
+            else:
+                lvls = levels
             im = hax.contourf(
                 x_pos,
                 y_pos,
                 zz,
-                levels,
+                levels=lvls,
                 vmax=vmax,
                 vmin=vmin,
                 cmap=cmap,
@@ -353,8 +357,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -580,8 +584,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -808,8 +812,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -1027,8 +1031,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -1270,8 +1274,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -1515,8 +1519,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.min(data)
-        vmax = var_max if var_max is not None else np.max(data)
+        vmin = var_min if var_min is not None else np.nanmin(data)
+        vmax = var_max if var_max is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var

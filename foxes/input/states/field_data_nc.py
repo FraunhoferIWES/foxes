@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pathlib import Path
-from scipy.interpolate import RegularGridInterpolator
-from copy import deepcopy
+from scipy.interpolate import interpn
 
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd
@@ -49,8 +47,10 @@ class FieldDataNC(States):
         Fill value in case of exceeding bounds, if no bounds error
     time_format: str
         The datetime parsing format string
-    sel: dict
-        Subset selection via xr.Dataset.sel()
+    interp_nans: bool
+        Linearly interpolate nan values
+    interpn_pars: dict, optional
+        Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
 
@@ -68,11 +68,12 @@ class FieldDataNC(States):
         h_coord="height",
         pre_load=True,
         weight_ncvar=None,
-        bounds_error=True,
-        fill_value=None,
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
+        isel=None,
+        interp_nans=False,
         verbosity=1,
+        **interpn_pars
     ):
         """
         Constructor.
@@ -103,16 +104,18 @@ class FieldDataNC(States):
             initialization
         weight_ncvar: str, optional
             Name of the weight data variable in the nc file(s)
-        bounds_error: bool
-            Flag for raising errors if bounds are exceeded
-        fill_value: number, optional
-            Fill value in case of exceeding bounds, if no bounds error
         time_format: str
             The datetime parsing format string
         sel: dict, optional
             Subset selection via xr.Dataset.sel()
+        isel: dict, optional
+            Subset selection via xr.Dataset.isel()
+        interp_nans: bool
+            Linearly interpolate nan values
         verbosity: int
             Verbosity level for pre_load file reading
+        interpn_pars: dict, optional
+            Additional parameters for scipy.interpolate.interpn
 
         """
         super().__init__()
@@ -126,10 +129,11 @@ class FieldDataNC(States):
         self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
         self.pre_load = pre_load
-        self.bounds_error = bounds_error
-        self.fill_value = fill_value
         self.time_format = time_format
         self.sel = sel
+        self.isel = isel
+        self.interpn_pars = interpn_pars
+        self.interp_nans = interp_nans
 
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
@@ -166,12 +170,16 @@ class FieldDataNC(States):
                 coords="minimal",
                 compat="override",
             ) as ds:
-                dss = ds if self.sel is None else ds.sel(self.sel)
-                if pre_load:
-                    self.data_source = dss.load()
-                else:
-                    self.data_source = dss
-                self._get_inds(dss)
+                self.data_source = ds
+        
+        if sel is not None:
+            self.data_source = self.data_source.sel(self.sel)
+        if isel is not None:
+            self.data_source = self.data_source.isel(self.isel)      
+        if pre_load:
+            self.data_source.load()
+
+        self._get_inds(self.data_source)
 
     def _get_inds(self, ds):
         """
@@ -264,6 +272,23 @@ class FieldDataNC(States):
 
         return data
 
+    def output_point_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        output_vars: list of str
+            The output variable names
+
+        """
+        return self.ovars
+    
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -448,6 +473,9 @@ class FieldDataNC(States):
             data = self._get_data(ds, verbosity=0)
 
             del ds
+        n_h = len(h)
+        n_y = len(y)
+        n_x = len(x)
 
         # translate WS, WD into U, V:
         if FV.WD in self.ovars and FV.WS in self.ovars:
@@ -457,7 +485,8 @@ class FieldDataNC(States):
                 if FV.WS in self._dkys
                 else self.fixed_vars[FV.WS]
             )
-            data[..., :2] = wd2uv(wd, ws, axis=-1)
+            wdwsi = [self._dkys[FV.WD], self._dkys[FV.WS]]
+            data[..., wdwsi] = wd2uv(wd, ws, axis=-1)
             del ws, wd
 
         # prepare points:
@@ -466,14 +495,28 @@ class FieldDataNC(States):
         pts[:, :, 3] = sts[:, None]
         pts = pts.reshape(n_states * n_pts, 4)
         pts = np.flip(pts, axis=1)
+        gvars = (sts, h, y, x)
+
+        # interpolate nan values:
+        if self.interp_nans and np.any(np.isnan(data)):
+            df = pd.DataFrame(
+                index=pd.MultiIndex.from_product(
+                    gvars, names=["state", "height", "y", "x"]),
+                data={
+                    v: data[..., vi].reshape(n_states*n_h*n_y*n_x)
+                    for v, vi in self._dkys.items()
+                }
+            )
+            df.interpolate(axis=0, method="linear", limit_direction="forward", inplace=True)
+            df.interpolate(axis=0, method="linear", limit_direction="backward", inplace=True)
+            data = df.to_numpy().reshape(n_states, n_h, n_y, n_x, self._n_dvars)
+            del df
 
         # interpolate:
-        gvars = (sts, h, y, x)
-        iterp = RegularGridInterpolator(
-            gvars, data, bounds_error=self.bounds_error, fill_value=self.fill_value
-        )
         try:
-            data = iterp(pts).reshape(n_states, n_pts, self._n_dvars)
+            data = interpn(
+                gvars, data, pts, **self.interpn_pars
+            ).reshape(n_states, n_pts, self._n_dvars)
         except ValueError as e:
             print(f"\n\nStates '{self.name}': Interpolation error")
             print("INPUT VARS: (state, heights, y, x)")
@@ -484,12 +527,31 @@ class FieldDataNC(States):
                 "EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T]
             )
             raise e
-        del pts, iterp, x, y, h, gvars
+        del pts, x, y, h, gvars
+
+        # interpolate nan values:
+        if self.interp_nans and np.any(np.isnan(data)):
+            df = pd.DataFrame(
+                index=pd.MultiIndex.from_product(
+                    (sts, range(n_pts)), names=["state", "point"]),
+                data={
+                    v: data[:, :, vi].reshape(n_states*n_pts)
+                    for v, vi in self._dkys.items()
+                }
+            )
+            df["x"] = points[:, :, 0].reshape(n_states*n_pts)
+            df["y"] = points[:, :, 1].reshape(n_states*n_pts)
+            df = df.reset_index().set_index(["state", "x", "y"])
+            df.interpolate(axis=0, method="linear", limit_direction="forward", inplace=True)
+            df.interpolate(axis=0, method="linear", limit_direction="backward", inplace=True)
+            df = df.reset_index().drop(["x", "y"], axis=1).set_index(["state", "point"])
+            data = df.to_numpy().reshape(n_states, n_pts, self._n_dvars)
+            del df
 
         # set output:
         out = {}
         if FV.WD in self.ovars and FV.WS in self.ovars:
-            uv = data[..., :2]
+            uv = data[..., wdwsi]
             out[FV.WS] = np.linalg.norm(uv, axis=-1)
             out[FV.WD] = uv2wd(uv, axis=-1)
             del uv

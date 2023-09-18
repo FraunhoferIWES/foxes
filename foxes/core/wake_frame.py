@@ -115,6 +115,7 @@ class WakeFrame(Model):
         x,
         dx,
         wake_models=None,
+        self_wake=True,
         **ipars,
     ):
         """
@@ -140,6 +141,8 @@ class WakeFrame(Model):
             The step size of the integral
         wake_models: list of foxes.core.WakeModels
             The wake models to consider, default: from algo
+        self_wake: bool
+            Flag for considering only wake from states_source_turbine
         ipars: dict, optional
             Additional interpolation parameters
 
@@ -156,7 +159,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = np.max(x)
+        xmax = np.nanmax(x)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1
@@ -176,7 +179,7 @@ class WakeFrame(Model):
         )
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
-        amb2var = algo.SetAmbPointResults()
+        amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0)
         res = amb2var.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
@@ -191,9 +194,10 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.PointWakesCalculation(vrs, wake_models=wake_models)
+            wcalc = algo.get_model("PointWakesCalculation")(vrs, wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
-            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=states_source_turbine)
+            wsrc = states_source_turbine if self_wake else None
+            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)
             pdata.update(res)
             del wcalc, res
 

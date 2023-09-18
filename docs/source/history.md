@@ -319,3 +319,17 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `timelines.ipynb` now includes turbine REWS signal in animations
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.2](https://github.com/FraunhoferIWES/foxes/commits/v0.4.2)
+
+## v0.4.3
+
+- Output:
+  - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
+- Models:
+  - New vertical profile: `DataProfile`, data based profile from file or pandas DataFrame
+  - Improved ti superposition: Now supporting n-th power superposition
+  - Improved wake model `TurbOParkIX`: New option for consideration of all wakes in ti integral
+- Bug fixes:
+  - Fixed bug with `windio` input that resulted in wrong wind rose weights
+  - Fixed bug with `FlowPlots2D` with value bounds in contour plots
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)

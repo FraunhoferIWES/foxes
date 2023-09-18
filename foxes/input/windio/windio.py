@@ -48,9 +48,10 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     data[:, :, 0] = wd[:, None]
     data[:, :, 1] = ws[None, :]
     names = ["wind_direction", "wind_speed"]
+    sec_prob = None
 
     def _to_data(v, d, dims):
-        nonlocal data, names
+        nonlocal data, names, sec_prob
         hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
         if len(dims) == 0:
             hdata[:, :, 0] = FC.DTYPE(d)
@@ -72,8 +73,11 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             raise ValueError(
                 f"Can not accept more than two dimensions, got {dims} for data '{v}'"
             )
-        data = np.append(data, hdata, axis=2)
-        names.append(v)
+        if v == "sector_probability":
+            sec_prob = hdata[:, :, 0].copy()
+        else:
+            data = np.append(data, hdata, axis=2)
+            names.append(v)
 
     vmap = {
         "wind_direction": FV.WD,
@@ -84,9 +88,11 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
     }
 
     for v, d in wres.items():
-        if v in vmap and isinstance(d, dict):
+        if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
             _to_data(v, d["data"], d["dims"])
-
+    if sec_prob is not None and "probability" in names:
+        data[:, :, names.index("probability")] *= sec_prob
+    
     n_vars = len(names)
     data = data.reshape(n, n_vars)
 
@@ -96,7 +102,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
 
     ovars = {v: v for v in data.columns if v != FV.WEIGHT}
     ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
-
+    
     return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
 
 
