@@ -333,3 +333,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fixed bug with `FlowPlots2D` with value bounds in contour plots
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)
+
+## v0.4.4
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.4](https://github.com/FraunhoferIWES/foxes/commits/v0.4.4)
