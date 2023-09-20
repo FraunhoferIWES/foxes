@@ -149,3 +149,5 @@ POP = "pop"
 """ Population identifier
 :group: foxes.constants
 """
+
+TEST = "test"
