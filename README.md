@@ -110,12 +110,27 @@ The last line makes sure that all your code changes are included whenever import
 
 ## Installation via conda
 
+### Preparation
+
+It is strongly recommend to use the `libmamba` solver instead of the default solver.
+Install it once by
+
+```console
+conda install conda-libmamba-solver -n base -c conda-forge
+```
+
+You can choose to set this to be your default solver by
+
+```console
+conda config --set solver libmamba
+```
+
 ### Virtual Python environment
 
 First create a new `conda` environment, for example called `foxes`, by
 
 ```console
-conda create -c conda-forge --name foxes
+conda create -n foxes -c conda-forge
 ```
 
 Then activate the environment every time you work with `foxes`, by
@@ -137,21 +152,29 @@ The `conda` installation commands below should be executed within the active `fo
 The `foxes` package is available on the channel [conda-forge](https://anaconda.org/conda-forge/foxes). You can install the latest version by
 
 ```console
-conda install -c conda-forge foxes
+conda install foxes -c conda-forge --solver=libmamba
 ```
+
+The `--solver=libmamba` is not necessary if you have set the `libmamba` solver as
+your default, see above.
 
 ### Developers
 
-For developers using `conda`, we recommend first installing foxes, then removing only the `foxes` package while keeping the dependencies, and then adding `foxes` again from a git using `conda develop`:
+For developers using `conda`, we recommend first installing foxes as described above, then removing only the `foxes` package while keeping the dependencies, and then adding `foxes` again from a git using `conda develop`:
 
 ```console
-conda install -c conda-forge foxes conda-build
+conda install foxes conda-build -c conda-forge --solver=libmamba
 conda remove foxes --force
 git clone https://github.com/FraunhoferIWES/foxes.git
 cd foxes
 conda develop .
 ```
-The last line makes sure that all your code changes are included whenever importing `foxes`. Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
+
+The last line makes sure that all your code changes are included whenever importing `foxes`.
+Not that the `--solver=libmamba` is not necessary if you have set the `libmamba` solver as
+your default, see above.
+
+Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
 ## Usage
 
