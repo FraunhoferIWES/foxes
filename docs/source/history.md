@@ -336,5 +336,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.4
 
+- Testing automated publishing to PyPi via workflow
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.4](https://github.com/FraunhoferIWES/foxes/commits/v0.4.4)
+## v0.4.5
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
+
