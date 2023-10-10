@@ -298,6 +298,35 @@ class Algorithm(Model):
 
             self._idata_mem.update(newk)
 
+    def get_models_idata(self):
+        """
+        Collect the idata from all models.
+        
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`.
+
+        """
+        if not self.initialized:
+            raise ValueError(
+                f"Algorithm '{self.name}': get_models_idata called before initialization"
+            )
+        
+        idata = self._idata_mem.get(self.name)
+        mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
+        for mname in mnames:
+            if mname in self.keep_models or mname == self.name:
+                hidata = self._idata_mem.get(mname)
+            else:
+                hidata = self._idata_mem.pop(mname)
+            idata["coords"].update(hidata["coords"])
+            idata["data_vars"].update(hidata["data_vars"])
+        
+        return idata
+
     def get_models_data(self, idata=None):
         """
         Creates xarray from model input data.
@@ -317,16 +346,7 @@ class Algorithm(Model):
 
         """
         if idata is None:
-            if not self.initialized:
-                raise ValueError(
-                    f"Algorithm '{self.name}': get_models_data called before initialization"
-                )
-            idata = {"coords": {}, "data_vars": {}}
-            for k, hidata in self._idata_mem.items():
-                if len(k) < 3 or k[:2] != "__":
-                    idata["coords"].update(hidata["coords"])
-                    idata["data_vars"].update(hidata["data_vars"])
-
+            idata = self.get_models_idata()
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)
 

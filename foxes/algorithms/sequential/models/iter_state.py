@@ -25,6 +25,33 @@ class IterStates(States):
         """
         self.states = states
 
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        This includes loading all required data from files. The model
+        should return all array type data as part of the idata return
+        dictionary (and not store it under self, for memory reasons). This
+        data will then be chunked and provided as part of the mdata object
+        during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        return self.states.initialize(algo, verbosity)
+    
     def __iter__(self):
         """ Initialize use as iterator """
         self._inds = self.states.index()
@@ -100,7 +127,7 @@ class IterStates(States):
         return self.states.output_point_vars(algo)
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

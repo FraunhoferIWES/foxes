@@ -1,8 +1,8 @@
 from foxes.algorithms.downwind.downwind import Downwind
 
 import foxes.variables as FV
+import foxes.constants as FC
 from . import models as mdls
-
 
 class Sequential(Downwind):
     """
@@ -11,6 +11,14 @@ class Sequential(Downwind):
     This is of use for the evaluation in simulation
     environments that do not support multi-state computations,
     like FMUs.
+
+    Attributes
+    ----------
+    ambient: bool
+        Flag for ambient calculation
+    calc_pars: dict
+        Parameters for model calculation.
+        Key: model name str, value: parameter dict
 
     :group: algorithms.sequential
 
@@ -37,25 +45,64 @@ class Sequential(Downwind):
         except AttributeError:
             return super().get_model(name)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self, 
+            mbook, 
+            farm, 
+            states, 
+            *args, 
+            ambient=False, 
+            calc_pars={},
+            **kwargs,
+        ):
         """
         Constructor.
 
         Parameters
         ----------
+        mbook: foxes.ModelBook
+            The model book
+        farm: foxes.WindFarm
+            The wind farm
+        states: foxes.core.States
+            The ambient states
         args: tuple, optional
             Arguments for Downwind
+        ambient: bool
+            Flag for ambient calculation
+        calc_pars: dict
+            Parameters for model calculation.
+            Key: model name str, value: parameter dict
         kwargs: dict, optional
             Keyword arguments for Downwind
 
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            mbook,
+            farm,
+            mdls.IterStates(states),
+            *args, 
+            **kwargs
+        )
+        self.ambient = ambient
+        self.calc_pars = calc_pars
     
     def __iter__(self):
         """ Initialize use as iterator """
-        self._iters = mdls.IterStates(self.states)
-        self._iters.initialize(self, self.verbosity)
-        self._siter = iter(self._iters)
+
+        # get models and model data:
+        self._mlist, self._calc_pars = self._collect_farm_models(self.calc_pars, self.ambient)
+        self._mdata = self.get_models_idata()
+        
+        # setup states iterator:
+        self._siter = iter(self.states)
+
+        if self.verbosity > 0:
+            s = "\n".join([f'  {v}: {d.dtype}, shape {d.shape}' 
+                           for v, d in self._mdata['data_vars'].items()])
+            self.print("\nInput data:\n\n", s, "\n")
+            self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+
         return self
     
     def __next__(self):
@@ -64,18 +111,20 @@ class Sequential(Downwind):
             si, sind, weight = next(self._siter)
             return si, sind, weight
         else:
-            self._iters.finalize(self, self.verbosity)
-            del self._iters, self._siter
+            del self._siter, self._mdata, self._mlist, self._calc_pars
             raise StopIteration
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
+
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
         farm_results = mlist.run_calculation(
             self, *data, out_vars=self.farm_vars, **kwargs
         )
+
+
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
             farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
