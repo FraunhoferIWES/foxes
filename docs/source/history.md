@@ -342,6 +342,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Algorithms:
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
+- Models:
+  - New rotor model: `LevelRotor`, calculates the REWS from different height levels
+  - New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
