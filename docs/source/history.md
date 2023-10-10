@@ -340,6 +340,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.5
 
+- New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
+
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
