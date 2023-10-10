@@ -1,6 +1,5 @@
 from foxes.algorithms.downwind.downwind import Downwind
 
-from foxes.core import FarmDataModelList
 import foxes.variables as FV
 from . import models as mdls
 
@@ -51,6 +50,23 @@ class Sequential(Downwind):
 
         """
         super().__init__(*args, **kwargs)
+    
+    def __iter__(self):
+        """ Initialize use as iterator """
+        self._iters = mdls.IterStates(self.states)
+        self._iters.initialize(self, self.verbosity)
+        self._siter = iter(self._iters)
+        return self
+    
+    def __next__(self):
+        """ Evaluate the next state """
+        if self._si < self.states.size():
+            si, sind, weight = next(self._siter)
+            return si, sind, weight
+        else:
+            self._iters.finalize(self, self.verbosity)
+            del self._iters, self._siter
+            raise StopIteration
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
