@@ -77,6 +77,9 @@ class ModelBook:
             self.rotor_models[f"grid{n**2}"] = fm.rotor_models.GridRotor(
                 calc_vars=rvars, n=n, reduce=True
             )
+            self.rotor_models[f"level{n}"] = fm.rotor_models.LevelRotor(
+                calc_vars=rvars, n=n, reduce=True
+            )
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
