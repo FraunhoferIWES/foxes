@@ -340,6 +340,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.5
 
+- Algorithms:
+  - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
