@@ -17,12 +17,14 @@ class SequentialIter:
         The underlying states
     points: numpy.ndarray
         The points of interest, shape: (n_states, n_points, 3)
+    store: bool
+        Flag for storing state results
 
     :group: algorithms.sequential.models
 
     """
 
-    def __init__(self, algo, points=None):
+    def __init__(self, algo, points=None, store=True):
         """
         Constructor.
         
@@ -32,11 +34,14 @@ class SequentialIter:
             The algorithm
         points: numpy.ndarray, optional
             The points of interest, shape: (n_states, n_points, 3)
+        store: bool
+            Flag for storing state results
 
         """
         self.algo = algo
         self.states = algo.states.states
         self.points = points
+        self.store = store
 
         self._i = None
 
@@ -70,24 +75,28 @@ class SequentialIter:
                 name="mdata",
             )
 
-            self._fdata = Data(
-                data={v: np.zeros((self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE) for v in self.algo.farm_vars},
-                dims={v: (FC.STATE, FC.TURBINE) for v in self.algo.farm_vars},
-                loop_dims=[FC.STATE],
-                name="fdata",
-            )
+            if self.store:
+                self._fdata = Data(
+                    data={v: np.zeros((self.algo.n_states, self.algo.n_turbines), dtype=FC.DTYPE) for v in self.algo.farm_vars},
+                    dims={v: (FC.STATE, FC.TURBINE) for v in self.algo.farm_vars},
+                    loop_dims=[FC.STATE],
+                    name="fdata",
+                )
 
             if self.points is not None:
+
                 self._plist, self._calc_pars_p = self.algo._collect_point_models(ambient=self.algo.ambient)
-                n_points = self.points.shape[1]
-                pvars = self._plist.output_point_vars(self.algo)
-                self.algo.print(f"\nOutput point variables:", ", ".join(pvars), "\n")
-                self._pdata = Data.from_points(
-                    self.points,
-                    data={v: np.zeros((self.algo.n_states, n_points), dtype=FC.DTYPE) for v in pvars},
-                    dims={v: (FC.STATE, FC.POINT) for v in pvars},
-                    name="pdata",
-                )
+                self._pvars = self._plist.output_point_vars(self.algo)
+                self.algo.print(f"\nOutput point variables:", ", ".join(self._pvars), "\n")
+
+                if self.store:
+                    n_points = self.points.shape[1]
+                    self._pdata = Data.from_points(
+                        self.points,
+                        data={v: np.zeros((self.algo.n_states, n_points), dtype=FC.DTYPE) for v in self._pvars},
+                        dims={v: (FC.STATE, FC.POINT) for v in self._pvars},
+                        name="pdata",
+                    )
         
         return self
     
@@ -110,33 +119,40 @@ class SequentialIter:
             )
 
             fdata = Data(
-                data={v: d[self._i, None] for v, d in self._fdata.items()},
-                dims={v: d for v, d in self._fdata.dims.items()},
+                data={v: np.zeros((1, self.algo.n_turbines), dtype=FC.DTYPE) for v in self.algo.farm_vars},
+                dims={v: (FC.STATE, FC.TURBINE) for v in self.algo.farm_vars},
                 loop_dims=[FC.STATE],
                 name="fdata",
             )
             
             fres = self._mlist.calculate(self.algo, mdata, fdata, parameters=self._calc_pars)
             fres[FV.WEIGHT] = self.weight[None, :]
-            for v, d in fres.items():
-                self._fdata[v][self._i] = d[0]
+
+            if self.store:
+                for v, d in fres.items():
+                    self._fdata[v][self._i] = d[0]
+            else:
+                self._fdata = fdata
             
             if self.points is None:
                 self._i += 1
                 return fres
             
             else:
-                pdata = Data(
-                    data={v: d[self._i, None] if self._pdata.dims[v][0] == FC.STATE else d
-                        for v, d in self._pdata.items()},
-                    dims={v: d for v, d in self._pdata.dims.items()},
-                    loop_dims=[FC.STATE],
+                n_points = self.points.shape[1]
+                pdata = Data.from_points(
+                    self.points[self.counter, None],
+                    data={v: np.zeros((1, n_points), dtype=FC.DTYPE) for v in self._pvars},
+                    dims={v: (FC.STATE, FC.POINT) for v in self._pvars},
                     name="pdata",
                 )
 
                 pres = self._plist.calculate(self.algo, mdata, fdata, pdata, parameters=self._calc_pars_p)
-                for v, d in pres.items():
-                    self._pdata[v][self._i] = d[0]
+                if self.store:
+                    for v, d in pres.items():
+                        self._pdata[v][self._i] = d[0]
+                else:
+                    self._pdata = pdata
 
                 self._i += 1
                 return fres, pres
@@ -255,6 +271,9 @@ class SequentialIter:
 
         """
 
+        if not self.store:
+            raise ValueError(f"farm_results not stored, maybe you were looking for cur_farm_results?")
+
         results = Dataset(
             coords={FC.STATE: self._inds, FC.TURBINE: np.arange(self.algo.n_turbines)},
             data_vars={v: (self._fdata.dims[v], d) for v, d in self._fdata.items()}
@@ -278,9 +297,10 @@ class SequentialIter:
 
         """
 
+        i = self.counter if self.store else 0
         results = Dataset(
             coords={FC.STATE: [self.index], FC.TURBINE: np.arange(self.algo.n_turbines)},
-            data_vars={v: (self._fdata.dims[v], d[self.counter, None]) for v, d in self._fdata.items()}
+            data_vars={v: (self._fdata.dims[v], d[i, None]) for v, d in self._fdata.items()}
         )
 
         results[FC.TNAME] = ((FC.TURBINE,), self.algo.farm.turbine_names)
@@ -301,6 +321,9 @@ class SequentialIter:
 
         """
 
+        if not self.store:
+            raise ValueError(f"point_results not stored, maybe you were looking for cur_point_results?")
+        
         n_points = self.points.shape[1]
         results = Dataset(
             coords={
@@ -327,6 +350,8 @@ class SequentialIter:
         """
 
         n_points = self.points.shape[1]
+        i = self.counter if self.store else 0
+        
         results = Dataset(
             coords={
                 FC.STATE: [self.index], 
@@ -334,7 +359,7 @@ class SequentialIter:
                 FC.POINT: np.arange(n_points),
                 FC.XYH: np.arange(3),
             },
-            data_vars={v: (self._pdata.dims[v], d[self.counter, None]) for v, d in self._pdata.items()},
+            data_vars={v: (self._pdata.dims[v], d[i, None]) for v, d in self._pdata.items()},
         )
 
         return results
