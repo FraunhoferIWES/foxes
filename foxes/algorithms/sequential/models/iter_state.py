@@ -62,8 +62,14 @@ class IterStates(States):
     def __next__(self):
         """ Evaluate the next state """
         if self._si < len(self._inds):
+
+            
+            
+            result = self._si, self._inds[self._si], self._weights[self._si]
+
             self._si += 1
-            return self._si, self._inds[self._si], self._weights[self._si]
+            return result
+        
         else:
             del self._inds, self._weights, self._si
             raise StopIteration

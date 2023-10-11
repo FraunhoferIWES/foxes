@@ -4,6 +4,38 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
 
+class FarmCalcIter:
+    """
+    An iterator for farm calculations.
+    """
+    def __init__(self, algo):
+        self.algo = algo
+
+    def __iter__(self):
+        """ Initialize the iterator """
+
+        # get models and model data:
+        self._mlist, self._calc_pars = self.algo._collect_farm_models(self.algo.calc_pars, self.algo.ambient)
+        self._mdata = self.algo.get_models_idata()
+
+        # setup states iterator:
+        self._siter = iter(self.algo.states)
+
+        if self.verbosity > 0:
+            s = "\n".join([f'  {v}: {d.dtype}, shape {d.shape}' 
+                           for v, d in self._mdata['data_vars'].items()])
+            self.print("\nInput data:\n\n", s, "\n")
+            self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+
+    def __next__(self):
+        """ Evaluate the next state """
+        if self._si < self.states.size():
+            si, sind, weight = next(self._siter)
+            return si, sind, weight
+        else:
+            del self._siter, self._mdata, self._mlist, self._calc_pars
+            raise StopIteration
+        
 class Sequential(Downwind):
     """
     A sequential calculation of states without chunking.
@@ -86,14 +118,22 @@ class Sequential(Downwind):
         )
         self.ambient = ambient
         self.calc_pars = calc_pars
-    
-    def __iter__(self):
-        """ Initialize use as iterator """
+
+    def farm_calc_iter(self):
+        """
+        Prepares the iteration.
+
+        Returns
+        -------
+        iter: FarmCalcIter
+            The iterator object
+
+        """
 
         # get models and model data:
         self._mlist, self._calc_pars = self._collect_farm_models(self.calc_pars, self.ambient)
         self._mdata = self.get_models_idata()
-        
+
         # setup states iterator:
         self._siter = iter(self.states)
 
@@ -104,15 +144,11 @@ class Sequential(Downwind):
             self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
 
         return self
+
+    def __iter__(self):
+        return self.farm_calc_iter()
     
-    def __next__(self):
-        """ Evaluate the next state """
-        if self._si < self.states.size():
-            si, sind, weight = next(self._siter)
-            return si, sind, weight
-        else:
-            del self._siter, self._mdata, self._mlist, self._calc_pars
-            raise StopIteration
+
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
