@@ -81,7 +81,6 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
-        chunks=None,
     )
 
     points = np.random.uniform(0, 1000, (N,5,3))
