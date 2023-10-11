@@ -59,8 +59,9 @@ class DummyStates(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        super().initialize(algo, verbosity)
-        idata = self.states.initialize(algo, verbosity)
+
+        idata = super().initialize(algo, verbosity)
+        algo.update_idata(self.states, idata=idata, verbosity=verbosity)
         self._size = self.states.size()
         return idata
 
