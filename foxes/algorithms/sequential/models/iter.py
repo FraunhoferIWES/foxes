@@ -96,8 +96,8 @@ class SequentialIter:
         if self._i < len(self._inds):
 
             self.algo.states._size = 1
-            self.algo.states._indx = self.index
-            self.algo.states._weight = self.weight
+            self.algo.states._indx = self._inds[self._i]
+            self.algo.states._weight = self._weights[self._i]
 
             mdata = Data(
                 data={v: d[self._i, None] if self._mdata.dims[v][0] == FC.STATE else d
@@ -151,6 +151,19 @@ class SequentialIter:
             raise StopIteration
 
     @property
+    def size(self):
+        """
+        The total number of iteration steps
+        
+        Returns
+        -------
+        s: int
+            The total number of iteration steps
+        
+        """
+        return self.states.size()
+
+    @property
     def counter(self):
         """
         The current index counter
@@ -174,7 +187,7 @@ class SequentialIter:
             The current index
 
         """
-        return self._inds[self._i] if self._i is not None else None
+        return self.algo.states._indx if self._i is not None else None
 
     @property
     def weight(self):
@@ -187,7 +200,7 @@ class SequentialIter:
             The current weight array, shape: (n_turbines,)
 
         """
-        return self._weights[self._i] if self._i is not None else None
+        return self.algo.states._weight if self._i is not None else None
     
     @property
     def mdata(self):
