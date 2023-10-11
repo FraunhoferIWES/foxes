@@ -51,6 +51,7 @@ class SequentialIter:
             self._inds = self.states.index()
             self._weights = self.states.weights(self.algo)
             self._i = 0
+            self._counter = 0
 
             self._mlist, self._calc_pars = self.algo._collect_farm_models(self.algo.calc_pars, self.algo.ambient)
             self._mdata = self.algo.get_models_idata()
@@ -95,6 +96,7 @@ class SequentialIter:
 
         if self._i < len(self._inds):
 
+            self._counter = self._i
             self.algo.states._size = 1
             self.algo.states._indx = self._inds[self._i]
             self.algo.states._weight = self._weights[self._i]
@@ -174,7 +176,7 @@ class SequentialIter:
             The current index counter
 
         """
-        return self._i
+        return self._counter if self._i is not None else None
 
     @property
     def index(self):
@@ -239,7 +241,7 @@ class SequentialIter:
             The current point data
 
         """
-        return self._pdata
+        return self._pdata if self.points is not None and self._i is not None else None
     
     @property
     def farm_results(self):
@@ -265,6 +267,29 @@ class SequentialIter:
         return results
 
     @property
+    def cur_farm_results(self):
+        """
+        The current farm results
+        
+        Returns
+        -------
+        results: xarray.Dataset
+            The current farm results
+
+        """
+
+        results = Dataset(
+            coords={FC.STATE: [self.index], FC.TURBINE: np.arange(self.algo.n_turbines)},
+            data_vars={v: (self._fdata.dims[v], d[self.counter, None]) for v, d in self._fdata.items()}
+        )
+
+        results[FC.TNAME] = ((FC.TURBINE,), self.algo.farm.turbine_names)
+        if FV.ORDER in results:
+            results[FV.ORDER] = results[FV.ORDER].astype(FC.ITYPE)
+
+        return results
+    
+    @property
     def point_results(self):
         """
         The overall point results
@@ -285,6 +310,31 @@ class SequentialIter:
                 FC.XYH: np.arange(3),
             },
             data_vars={v: (self._pdata.dims[v], d) for v, d in self._pdata.items()},
+        )
+
+        return results
+
+    @property
+    def cur_point_results(self):
+        """
+        The current point results
+        
+        Returns
+        -------
+        results: xarray.Dataset
+            The current point results
+
+        """
+
+        n_points = self.points.shape[1]
+        results = Dataset(
+            coords={
+                FC.STATE: [self.index], 
+                FC.TURBINE: np.arange(self.algo.n_turbines), 
+                FC.POINT: np.arange(n_points),
+                FC.XYH: np.arange(3),
+            },
+            data_vars={v: (self._pdata.dims[v], d[self.counter, None]) for v, d in self._pdata.items()},
         )
 
         return results
