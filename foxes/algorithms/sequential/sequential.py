@@ -86,6 +86,7 @@ class Sequential(Downwind):
         )
         self.ambient = ambient
         self.calc_pars = calc_pars
+        self.keep_models.add(self.states.name)
     
     def iter(self, *args, **kwargs):
         """

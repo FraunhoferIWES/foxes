@@ -1,6 +1,6 @@
-# foxes example: _timeseries_
+# foxes example: _sequential_
 
-Evaluation of a wind farm for a time series of uniform wind and TI states.
+An example for a sequential time series evaluation.
 
 ## Check options
 Check options by
