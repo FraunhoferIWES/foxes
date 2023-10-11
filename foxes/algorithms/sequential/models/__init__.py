@@ -1,1 +1,2 @@
-from .iter_state import IterStates
+from .iter import SequentialIter
+from .dummy import DummyStates
