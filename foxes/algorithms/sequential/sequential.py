@@ -82,6 +82,7 @@ class Sequential(Downwind):
             farm,
             mdls.DummyStates(states),
             *args, 
+            chunks=None,
             **kwargs
         )
         self.ambient = ambient

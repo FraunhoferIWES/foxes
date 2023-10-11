@@ -77,7 +77,7 @@ class SequentialIter:
             )
 
             if self.points is not None:
-                self._plist, self._calc_pars_p = self.algo._collect_point_models()
+                self._plist, self._calc_pars_p = self.algo._collect_point_models(ambient=self.algo.ambient)
                 n_points = self.points.shape[1]
                 pvars = self._plist.output_point_vars(self.algo)
                 self.algo.print(f"\nOutput point variables:", ", ".join(pvars), "\n")
