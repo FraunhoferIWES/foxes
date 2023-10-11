@@ -111,7 +111,8 @@ if __name__ == "__main__":
         chunks=cks,
     )
     aiter = algo.iter()
-    next(aiter)
+    for r in aiter:
+        print(r)
     print(aiter.farm_results)
     quit()
 

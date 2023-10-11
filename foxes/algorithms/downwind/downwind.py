@@ -358,11 +358,11 @@ class Downwind(Algorithm):
 
     def _collect_point_models(
         self,
-        vars,
-        vars_to_amb,
-        calc_parameters,
-        point_models,
-        ambient,
+        vars=None,
+        vars_to_amb=None,
+        calc_parameters={},
+        point_models=None,
+        ambient=False,
     ):
         """
         Helper function that creates model list
