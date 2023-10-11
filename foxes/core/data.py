@@ -148,6 +148,8 @@ class Data(Dict):
             self[FV.Y] = self[FV.TXYH][:, :, 1]
             self[FV.H] = self[FV.TXYH][:, :, 2]
 
+            self.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
+
     def __run_entry_checks(self, name, data, dims):
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:

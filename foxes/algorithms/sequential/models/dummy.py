@@ -2,14 +2,17 @@
 
 from foxes.core.states import States
 
-class IterStates(States):
+class DummyStates(States):
     """
-    A states iterator
+    Dummy states for iteration, just serving
+    as a structural placeholder
     
     Parameters
     ----------
     states: foxes.core.States
         The original states set
+    
+    :group: algorithms.sequential.models
 
     """
 
@@ -23,7 +26,13 @@ class IterStates(States):
             The original states set
         
         """
+        super().__init__()
         self.states = states
+
+        # updated by SequentialIter:
+        self._size = states.size()
+        self._weight = None
+        self._indx = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -50,29 +59,10 @@ class IterStates(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        return self.states.initialize(algo, verbosity)
-    
-    def __iter__(self):
-        """ Initialize use as iterator """
-        self._inds = self.states.index()
-        self._weights = self.states.weights()
-        self._si = 0
-        return self
-    
-    def __next__(self):
-        """ Evaluate the next state """
-        if self._si < len(self._inds):
-
-            
-            
-            result = self._si, self._inds[self._si], self._weights[self._si]
-
-            self._si += 1
-            return result
-        
-        else:
-            del self._inds, self._weights, self._si
-            raise StopIteration
+        super().initialize(algo, verbosity)
+        idata = self.states.initialize(algo, verbosity)
+        self._size = self.states.size()
+        return idata
 
     def size(self):
         """
@@ -84,7 +74,7 @@ class IterStates(States):
             The total number of states
 
         """
-        return 1
+        return self._size
 
     def index(self):
         """
@@ -96,7 +86,7 @@ class IterStates(States):
             The index labels of states, or None for default integers
 
         """
-        return [self._inds[self._si]]
+        return [self._indx] if self._size == 1 else self.states.index()
     
     def weights(self, algo):
         """
@@ -113,7 +103,7 @@ class IterStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return self._weights[self._si, None, :]
+        return self._weight[None, :] if self._size == 1 else self.states.weights()
     
     def output_point_vars(self, algo):
         """
@@ -157,4 +147,4 @@ class IterStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        TODO
+        return self.states.calculate(algo, mdata, fdata, pdata)
