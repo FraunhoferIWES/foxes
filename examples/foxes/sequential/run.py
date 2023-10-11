@@ -87,10 +87,10 @@ if __name__ == "__main__":
     points = np.random.uniform(0, 1000, (N,5,3))
     aiter = algo.iter(points=points)
     for r in aiter:
-        print(r)
+        print(aiter.index)
     
     print("\nFarm results:\n")
     print(aiter.farm_results)
 
-    print("\Point results:\n")
+    print("\nPoint results:\n")
     print(aiter.point_results)
