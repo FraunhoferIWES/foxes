@@ -76,7 +76,8 @@ class RHB(WakeModel):
         """
         n_states = mdata.n_states
         n_points = pdata.n_points
-        wake_deltas["UV"] = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        wake_deltas["U"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        wake_deltas["V"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
@@ -199,9 +200,10 @@ class RHB(WakeModel):
 
             # calc velocity components
             vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
-            wake_deltas["UV"][sp_sel] = vel_factor[:, None] * xyz[:, :2]
+            wake_deltas["U"][sp_sel] = (vel_factor[:, None] * xyz[:, :2])[:,0]
+            wake_deltas["V"][sp_sel] = (vel_factor[:, None] * xyz[:, :2])[:,1]
             
-        return wake_deltas # wake_deltas[FV.WS] is UV data
+        return wake_deltas 
 
     def finalize_wake_deltas(
         self,
@@ -242,9 +244,9 @@ class RHB(WakeModel):
         # calc ambient wind vector
         wind_vec = wd2uv(amb_results[FV.WD], amb_results[FV.WS])
 
-        # add ambient result to wake deltas, remove UV:
-        total_uv = wind_vec + wake_deltas.pop("UV")
-
+        # add ambient result to wake deltas   
+        total_uv = wind_vec + np.stack((wake_deltas['U'], wake_deltas['V']), axis=2)
+        
         # deduce WS and WD deltas:
         new_wd = uv2wd(total_uv) 
         new_ws = np.linalg.norm(total_uv, axis=-1)
