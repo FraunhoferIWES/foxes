@@ -237,7 +237,7 @@ class RHB(WakeModel):
                     wake_deltas[v],
                     hdel[:, 0],
                 )
-                
+
         return wake_deltas 
 
     def finalize_wake_deltas(
@@ -283,6 +283,7 @@ class RHB(WakeModel):
         total_uv = wind_vec + np.stack((wake_deltas['U'], wake_deltas['V']), axis=2)
         
         # deduce WS and WD deltas:
+        # this does the job of calc_final_wake_delta, done here as not in parent class of RHB
         new_wd = uv2wd(total_uv) 
         new_ws = np.linalg.norm(total_uv, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
