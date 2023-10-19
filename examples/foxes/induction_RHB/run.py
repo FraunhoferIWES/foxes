@@ -59,7 +59,7 @@ if __name__ == "__main__":
     #args.wakes = ["RHB_linear", "Jensen_linear_k007"]
     args.wakes = ["RHB_linear"]
     #args.wakes = ["Jensen_linear_k007"]
-    args.n_t = 2
+    args.n_t = 1
     args.iterative = False
     #############################################
 
