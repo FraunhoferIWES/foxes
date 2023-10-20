@@ -56,11 +56,15 @@ if __name__ == "__main__":
 
     #############################################
     # OVERWRITE ARGS FOR DEBUGGING HERE #
-    #args.wakes = ["RHB_linear", "Jensen_linear_k007"]
+    #args.wakes = ["RHB_linear", "Bastankhah_linear_k004"]
+    #args.wakes = ["Bastankhah_linear_k004"]
     args.wakes = ["RHB_linear"]
     #args.wakes = ["Jensen_linear_k007"]
-    args.n_t = 1
+    args.n_t = 6
     args.iterative = False
+    args.deltax = 200
+    args.deltay = 100
+    args.wd = 240
     #############################################
 
     # create model book

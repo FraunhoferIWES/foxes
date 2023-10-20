@@ -51,7 +51,6 @@ class RHB(WakeModel):
 
         return idata
     
-    ## BELINDA added keep as not contained in any parent class of RHB
     def keep(self, algo):
         """
         Add model and all sub models to
@@ -216,28 +215,8 @@ class RHB(WakeModel):
 
             # calc velocity components
             vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
-            wake_deltas["U"][sp_sel] = (vel_factor[:, None] * xyz[:, :2])[:,0]
-            wake_deltas["V"][sp_sel] = (vel_factor[:, None] * xyz[:, :2])[:,1]
-            
-            # BELINDA tried populating wake deltas WS and WD for calc_wakes_plus_wake below
-            # but this causes error in WD and doens't generate wake for first turbine anyway
-            #wake_deltas['WS'] = np.linalg.norm((wake_deltas['U'], wake_deltas['V']), axis=0)
-            #wake_deltas['WD'] = uv2wd(np.stack((wake_deltas['U'], wake_deltas['V']), axis=2))
-
-            ## BELINDA added call calc_wakes_plus_wake method as not included in parent class of RHB
-            ## but then commented out again after checking resulting WD. This messes it up.
-            # for v, hdel in wake_deltas.items():
-            #     wake_deltas[v] = self.superp.calc_wakes_plus_wake(
-            #         algo,
-            #         mdata,
-            #         fdata,
-            #         pdata,
-            #         states_source_turbine,
-            #         sp_sel,
-            #         v,
-            #         wake_deltas[v],
-            #         hdel[:, 0],
-            #     )
+            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,0]
+            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,1]
 
         return wake_deltas 
 
