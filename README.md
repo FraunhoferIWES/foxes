@@ -112,14 +112,13 @@ The last line makes sure that all your code changes are included whenever import
 
 ### Preparation
 
-It is strongly recommend to use the `libmamba` solver instead of the default solver.
-Install it once by
+It is strongly recommend to use the `libmamba` dependency solver instead of the default solver. Install it once by
 
 ```console
 conda install conda-libmamba-solver -n base -c conda-forge
 ```
 
-You can choose to set this to be your default solver by
+We recommend that you set this to be your default solver, by
 
 ```console
 conda config --set solver libmamba
@@ -155,8 +154,7 @@ The `foxes` package is available on the channel [conda-forge](https://anaconda.o
 conda install foxes -c conda-forge --solver=libmamba
 ```
 
-The `--solver=libmamba` is not necessary if you have set the `libmamba` solver as
-your default, see above.
+The `--solver=libmamba` is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.
 
 ### Developers
 
@@ -170,9 +168,7 @@ cd foxes
 conda develop .
 ```
 
-The last line makes sure that all your code changes are included whenever importing `foxes`.
-Not that the `--solver=libmamba` is not necessary if you have set the `libmamba` solver as
-your default, see above.
+The last line makes sure that all your code changes are included whenever importing `foxes`. The `--solver=libmamba` is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.
 
 Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
@@ -185,10 +181,10 @@ import foxes
 
 states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
 
-mbook = foxes.ModelBook("NREL-5MW-D126-H90.csv")
+mbook = foxes.ModelBook()
 
 farm = foxes.WindFarm()
-foxes.input.farm_layout.add_from_file(farm,"test_farm_67.csv",turbine_models=["Pct"])
+foxes.input.farm_layout.add_from_file(farm, "test_farm_67.csv", turbine_models=["NREL5MW"])
 
 algo = foxes.algorithms.Downwind(mbook, farm, states, ["Jensen_linear_k007"])
 farm_results = algo.calc_farm()
