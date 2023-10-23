@@ -54,7 +54,7 @@ class PartialTopHat(PartialWakesModel):
         """
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
-            
+
         super().initialize(algo, verbosity)
 
         for w in self.wake_models:
@@ -70,12 +70,12 @@ class PartialTopHat(PartialWakesModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return super().sub_models() + [self.rotor_model]
 

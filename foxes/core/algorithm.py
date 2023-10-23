@@ -174,7 +174,7 @@ class Algorithm(Model):
         Initializes the algorithm.
         """
         super().initialize(self, self.verbosity)
-        
+
     @property
     def idata_mem(self):
         """
@@ -187,11 +187,11 @@ class Algorithm(Model):
 
         """
         return self._idata_mem
-    
+
     def store_model_data(self, model, idata, force=False):
         """
         Store model data
-        
+
         Parameters
         ----------
         model: foxes.core.Model
@@ -212,7 +212,7 @@ class Algorithm(Model):
     def get_model_data(self, model):
         """
         Gets model data from memory
-        
+
         Parameters
         ----------
         model: foxes.core.Model
@@ -223,17 +223,19 @@ class Algorithm(Model):
         try:
             return self._idata_mem[mname]
         except KeyError:
-            raise KeyError(f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self._idata_mem.keys()))}")
+            raise KeyError(
+                f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self._idata_mem.keys()))}"
+            )
 
     def del_model_data(self, model):
         """
         Remove stored model data
-        
+
         Parameters
         ----------
         model: foxes.core.Model
             The model
-        
+
         """
         mname = f"{type(model).__name__}_{model.name}"
         try:

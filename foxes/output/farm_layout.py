@@ -238,10 +238,14 @@ class FarmLayoutOutput(Output):
 
             if annotate == 1:
                 for i, txt in enumerate(n):
-                    ax.annotate(int(txt), (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
+                    ax.annotate(
+                        int(txt), (x[i] + anno_delx, y[i] + anno_dely), size=fontsize
+                    )
             elif annotate == 2:
                 for i, t in enumerate(self.farm.turbines):
-                    ax.annotate(t.name, (x[i]+anno_delx, y[i]+anno_dely), size=fontsize)
+                    ax.annotate(
+                        t.name, (x[i] + anno_delx, y[i] + anno_dely), size=fontsize
+                    )
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}

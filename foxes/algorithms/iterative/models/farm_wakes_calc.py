@@ -10,7 +10,7 @@ class FarmWakesCalculation(FarmDataModel):
     This model calculates wakes effects on farm data.
 
     :group: algorithms.iterative.models
-    
+
     """
 
     def output_farm_vars(self, algo):
@@ -31,7 +31,7 @@ class FarmWakesCalculation(FarmDataModel):
         ovars = deepcopy(algo.rotor_model.output_farm_vars(algo))
         ovars += algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -46,16 +46,16 @@ class FarmWakesCalculation(FarmDataModel):
         """
         self.pwakes = algo.partial_wakes_model
         super().initialize(algo, verbosity, force=True)
-        
+
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return []
 

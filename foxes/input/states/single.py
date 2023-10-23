@@ -58,21 +58,29 @@ class SingleStateStates(States):
         self.profdicts = profiles
         self.profdata = profdata
 
-        if ws is None and wd is None and ti is None and rho is None and not len(profiles):
-            raise KeyError(f"Expecting at least one parameter: ws, wd, ti, rho, profiles")
+        if (
+            ws is None
+            and wd is None
+            and ti is None
+            and rho is None
+            and not len(profiles)
+        ):
+            raise KeyError(
+                f"Expecting at least one parameter: ws, wd, ti, rho, profiles"
+            )
 
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return list(self._profiles.values())
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -201,7 +209,7 @@ class SingleStateStates(States):
             )
 
         if len(self._profiles):
-            z = pdata[FC.POINTS][:, :, 2]          
+            z = pdata[FC.POINTS][:, :, 2]
             for k, v in self.profdata.items():
                 pdata[k] = v
             for v, p in self._profiles.items():

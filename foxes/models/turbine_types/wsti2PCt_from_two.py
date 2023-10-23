@@ -42,7 +42,7 @@ class WsTI2PCtFromTwo(TurbineType):
         Parameters for scipy.interpolate.interpn()
     rho: float
         The air densitiy for which the data is valid
-        or None for no correction    
+        or None for no correction
 
     :group: models.turbine_types
 
@@ -74,7 +74,7 @@ class WsTI2PCtFromTwo(TurbineType):
             The file path for the ct curve, static name, or data
         rho: float, optional
             The air densitiy for which the data is valid
-            or None for no correction        
+            or None for no correction
         p_ct: float
             The exponent for yaw dependency of ct
         p_P: float
@@ -145,7 +145,7 @@ class WsTI2PCtFromTwo(TurbineType):
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters
@@ -262,7 +262,7 @@ class WsTI2PCtFromTwo(TurbineType):
                 # correct value is reconstructed:
                 rho = fdata[FV.RHO][st_sel]
                 qts[:, 0] *= (self.rho / rho) ** (1.0 / 3.0)
-                del rho            
+                del rho
 
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_P is not None:
@@ -312,7 +312,7 @@ class WsTI2PCtFromTwo(TurbineType):
                 rho = fdata[FV.RHO][st_sel]
                 qts[:, 0] *= (self.rho / rho) ** 0.5
                 del rho
-            
+
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_ct is not None:
                 # calculate corrected wind speed wsc,

@@ -22,7 +22,9 @@ class PointWakesCalculation(PointDataModel):
 
     """
 
-    def __init__(self, point_vars=None, emodels=None, emodels_cpars=None, wake_models=None):
+    def __init__(
+        self, point_vars=None, emodels=None, emodels_cpars=None, wake_models=None
+    ):
         """
         Constructor.
 
@@ -47,15 +49,15 @@ class PointWakesCalculation(PointDataModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self.emodels] if self.emodels is not None else []
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -73,7 +75,6 @@ class PointWakesCalculation(PointDataModel):
             algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
         )
 
-
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -90,20 +91,20 @@ class PointWakesCalculation(PointDataModel):
 
         """
         return self.pvars
-    
+
     def contribute_to_wake_deltas(
-            self, 
-            algo,
-            mdata, 
-            fdata, 
-            pdata, 
-            states_source_turbine,
-            wmodels,
-            wdeltas,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wmodels,
+        wdeltas,
+    ):
         """
         Contribute to wake deltas from source turbines
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -124,15 +125,17 @@ class PointWakesCalculation(PointDataModel):
             Key: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
             shape (n_states, n_points, ...)
-            
+
         """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, pdata, states_source_turbine)
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, pdata, states_source_turbine
+        )
 
         for w in wmodels:
             w.contribute_to_wake_deltas(
                 algo, mdata, fdata, pdata, states_source_turbine, wcoos, wdeltas
             )
-    
+
     def calculate(self, algo, mdata, fdata, pdata, states_source_turbine=None):
         """ "
         The main model calculation.
@@ -179,10 +182,13 @@ class PointWakesCalculation(PointDataModel):
         if states_source_turbine is None:
             for oi in range(n_order):
                 o = torder[:, oi]
-                self.contribute_to_wake_deltas(algo, mdata, fdata, pdata, o, wmodels, wdeltas)
+                self.contribute_to_wake_deltas(
+                    algo, mdata, fdata, pdata, o, wmodels, wdeltas
+                )
         else:
-            self.contribute_to_wake_deltas(algo, mdata, fdata, pdata, states_source_turbine, 
-                                           wmodels, wdeltas)
+            self.contribute_to_wake_deltas(
+                algo, mdata, fdata, pdata, states_source_turbine, wmodels, wdeltas
+            )
 
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in wmodels:

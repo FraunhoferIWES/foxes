@@ -73,7 +73,7 @@ class FieldDataNC(States):
         isel=None,
         interp_nans=False,
         verbosity=1,
-        **interpn_pars
+        **interpn_pars,
     ):
         """
         Constructor.
@@ -171,11 +171,11 @@ class FieldDataNC(States):
                 compat="override",
             ) as ds:
                 self.data_source = ds
-        
+
         if sel is not None:
             self.data_source = self.data_source.sel(self.sel)
         if isel is not None:
-            self.data_source = self.data_source.isel(self.isel)      
+            self.data_source = self.data_source.isel(self.isel)
         if pre_load:
             self.data_source.load()
 
@@ -288,13 +288,13 @@ class FieldDataNC(States):
 
         """
         return self.ovars
-    
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters
@@ -498,22 +498,27 @@ class FieldDataNC(States):
         if self.interp_nans and np.any(np.isnan(data)):
             df = pd.DataFrame(
                 index=pd.MultiIndex.from_product(
-                    gvars, names=["state", "height", "y", "x"]),
+                    gvars, names=["state", "height", "y", "x"]
+                ),
                 data={
-                    v: data[..., vi].reshape(n_states*n_h*n_y*n_x)
+                    v: data[..., vi].reshape(n_states * n_h * n_y * n_x)
                     for v, vi in self._dkys.items()
-                }
+                },
             )
-            df.interpolate(axis=0, method="linear", limit_direction="forward", inplace=True)
-            df.interpolate(axis=0, method="linear", limit_direction="backward", inplace=True)
+            df.interpolate(
+                axis=0, method="linear", limit_direction="forward", inplace=True
+            )
+            df.interpolate(
+                axis=0, method="linear", limit_direction="backward", inplace=True
+            )
             data = df.to_numpy().reshape(n_states, n_h, n_y, n_x, self._n_dvars)
             del df
 
         # interpolate:
         try:
-            data = interpn(
-                gvars, data, pts, **self.interpn_pars
-            ).reshape(n_states, n_pts, self._n_dvars)
+            data = interpn(gvars, data, pts, **self.interpn_pars).reshape(
+                n_states, n_pts, self._n_dvars
+            )
         except ValueError as e:
             print(f"\n\nStates '{self.name}': Interpolation error")
             print("INPUT VARS: (state, heights, y, x)")
@@ -530,17 +535,22 @@ class FieldDataNC(States):
         if self.interp_nans and np.any(np.isnan(data)):
             df = pd.DataFrame(
                 index=pd.MultiIndex.from_product(
-                    (sts, range(n_pts)), names=["state", "point"]),
+                    (sts, range(n_pts)), names=["state", "point"]
+                ),
                 data={
-                    v: data[:, :, vi].reshape(n_states*n_pts)
+                    v: data[:, :, vi].reshape(n_states * n_pts)
                     for v, vi in self._dkys.items()
-                }
+                },
             )
-            df["x"] = points[:, :, 0].reshape(n_states*n_pts)
-            df["y"] = points[:, :, 1].reshape(n_states*n_pts)
+            df["x"] = points[:, :, 0].reshape(n_states * n_pts)
+            df["y"] = points[:, :, 1].reshape(n_states * n_pts)
             df = df.reset_index().set_index(["state", "x", "y"])
-            df.interpolate(axis=0, method="linear", limit_direction="forward", inplace=True)
-            df.interpolate(axis=0, method="linear", limit_direction="backward", inplace=True)
+            df.interpolate(
+                axis=0, method="linear", limit_direction="forward", inplace=True
+            )
+            df.interpolate(
+                axis=0, method="linear", limit_direction="backward", inplace=True
+            )
             df = df.reset_index().drop(["x", "y"], axis=1).set_index(["state", "point"])
             data = df.to_numpy().reshape(n_states, n_pts, self._n_dvars)
             del df

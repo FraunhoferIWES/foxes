@@ -165,7 +165,9 @@ class RotorPoints(PartialWakesModel):
 
         amb_res_in = amb_res is not None
         if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)

@@ -37,12 +37,12 @@ class Turbine2FarmModel(FarmModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self.turbine_model]
 

@@ -24,17 +24,17 @@ class Iterative(Downwind):
     def get_model(cls, name):
         """
         Get the algorithm specific model
-        
+
         Parameters
         ----------
         name: str
             The model name
-        
+
         Returns
         -------
         model: foxes.core.model
             The model
-        
+
         """
         try:
             return getattr(mdls, name)
@@ -62,7 +62,9 @@ class Iterative(Downwind):
         super().__init__(*args, verbosity=verbosity, **kwargs)
 
         self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
-        self.conv_crit = self.get_model("DefaultConv")() if conv_crit is None else conv_crit
+        self.conv_crit = (
+            self.get_model("DefaultConv")() if conv_crit is None else conv_crit
+        )
         self._it = None
         self._mlist = None
 
@@ -90,15 +92,15 @@ class Iterative(Downwind):
 
         if self._it == 0:
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
-                calc_parameters, ambient=ambient,
+                calc_parameters,
+                ambient=ambient,
             )
             return self._mlist0, self._calc_pars0
-        
+
         elif ambient:
             return self._mlist0, self._calc_pars0
 
         else:
-
             # prepare:
             calc_pars = []
             mlist = FarmDataModelList(models=[])

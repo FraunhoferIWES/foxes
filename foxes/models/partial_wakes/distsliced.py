@@ -76,7 +76,7 @@ class PartialDistSlicedWake(PartialWakesModel):
             self.rotor_model = algo.rotor_model
         if self.grotor is None:
             self.grotor = self.rotor_model
-            
+
         super().initialize(algo, verbosity)
 
         for w in self.wake_models:
@@ -91,15 +91,15 @@ class PartialDistSlicedWake(PartialWakesModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return super().sub_models() + [self.rotor_model, self.grotor]
-    
+
     def new_wake_deltas(self, algo, mdata, fdata):
         """
         Creates new initial wake deltas, filled
@@ -264,7 +264,9 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         amb_res_in = amb_res is not None
         if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wweights = self.grotor.rotor_point_weights()
         n_wpoints = self.grotor.n_rotor_points()

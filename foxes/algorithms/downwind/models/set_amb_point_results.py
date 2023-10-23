@@ -12,7 +12,7 @@ class SetAmbPointResults(PointDataModel):
         The point variables to be treated
     vars: list of str
         The variables to be copied to output
-    
+
     :group: algorithms.downwind.models
 
     """

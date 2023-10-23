@@ -84,7 +84,7 @@ class Mapped(PartialWakesModel):
         """
         self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
         self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
-        
+
         pws = {}
         for w in self.wake_models:
             pdat = None
@@ -120,12 +120,12 @@ class Mapped(PartialWakesModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return super().sub_models() + self._pwakes
 

@@ -82,25 +82,25 @@ class Model(metaclass=ABCMeta):
 
         """
         return self.__initialized
-    
+
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return []
-    
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters
@@ -135,7 +135,6 @@ class Model(metaclass=ABCMeta):
 
         """
         if not self.initialized:
-
             pr = False
             for m in self.sub_models():
                 if not m.initialized:
@@ -145,11 +144,11 @@ class Model(metaclass=ABCMeta):
                     m.initialize(algo, verbosity)
             if pr:
                 print(f"<< {self.name}: Finished sub-model initialization << ")
-                
+
             if verbosity > 0:
                 print(f"Initializing model '{self.name}'")
             algo.store_model_data(self, self.load_data(algo, verbosity), force)
-            
+
             self.__initialized = True
 
     def finalize(self, algo, verbosity=0):
@@ -165,7 +164,6 @@ class Model(metaclass=ABCMeta):
 
         """
         if self.initialized:
-        
             pr = False
             for m in self.sub_models():
                 if verbosity > 1 and not pr:
@@ -178,7 +176,7 @@ class Model(metaclass=ABCMeta):
             if verbosity > 0:
                 print(f"Finalizing model '{self.name}'")
             algo.del_model_data(self)
-            
+
             self._store = {}
             self.__initialized = False
 
@@ -361,8 +359,8 @@ class Model(metaclass=ABCMeta):
         if not accept_none and out is None:
             raise ValueError(
                 f"Model '{self.name}': Variable '{variable}' is requested but not found."
-            )     
-        
+            )
+
         # check for nan:
         elif not accept_nan:
             try:
@@ -436,7 +434,6 @@ class Model(metaclass=ABCMeta):
                 return self._store[i0][name]
         else:
             return (None, None) if ret_dims else None
-
 
     '''
     @classmethod

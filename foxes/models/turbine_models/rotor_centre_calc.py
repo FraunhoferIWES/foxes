@@ -52,16 +52,16 @@ class RotorCentreCalc(TurbineModel):
         pvars = list(self.calc_vars.values())
         self._wcalc = algo.PointWakesCalculation(point_vars=pvars)
         super().initialize(algo, verbosity)
-        
+
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self._wcalc]
 

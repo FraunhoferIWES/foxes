@@ -152,26 +152,26 @@ class StatesTable(States):
         self._tvars -= set(self.fixed_vars.keys())
         self._tvars = list(self._tvars)
         super().initialize(algo, verbosity)
-        
+
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of str
             Names of all sub models
-        
+
         """
 
         return list(self._profiles.values())
-    
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters

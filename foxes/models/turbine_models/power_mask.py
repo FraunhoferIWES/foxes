@@ -76,7 +76,7 @@ class PowerMask(TurbineModel):
 
         """
         super().initialize(algo, verbosity)
-        
+
         self._P_rated = []
         for t in algo.farm_controller.turbine_types:
             Pnom = FC.DTYPE(t.P_nominal)

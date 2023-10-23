@@ -313,7 +313,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
-        
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -349,7 +349,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 if self.ti_var in wdel:
                     self._tiwakes.append(w)
         if self.ti_var not in FV.amb2var and len(self._tiwakes) == 0:
-            raise KeyError(f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}")
+            raise KeyError(
+                f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}"
+            )
 
     def calc_amplitude_sigma_spsel(
         self,

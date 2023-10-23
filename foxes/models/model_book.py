@@ -272,10 +272,14 @@ class ModelBook:
             )
             self.wake_models[
                 f"Bastankhah0_{s}_k002"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=s, sbeta_factor=0.2)
+            ] = fm.wake_models.wind.BastankhahWake(
+                k=0.02, superposition=s, sbeta_factor=0.2
+            )
             self.wake_models[
                 f"Bastankhah0_{s}_k004"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=s, sbeta_factor=0.2)
+            ] = fm.wake_models.wind.BastankhahWake(
+                k=0.04, superposition=s, sbeta_factor=0.2
+            )
 
             self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
                 superposition=s

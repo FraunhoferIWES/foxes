@@ -8,30 +8,30 @@ from . import models as mdls
 
 class Downwind(Algorithm):
     """
-    The downwind algorithm.
+     The downwind algorithm.
 
-    The turbines are evaluated once, in the order
-    that is calculated by the provided `TurbineOrder`
-    object.
+     The turbines are evaluated once, in the order
+     that is calculated by the provided `TurbineOrder`
+     object.
 
-    Attributes
-    ----------
-    states: foxes.core.States
-        The ambient states
-    wake_models: list of foxes.core.WakeModel
-        The wake models, applied to all turbines
-    rotor_model: foxes.core.RotorModel
-        The rotor model, for all turbines
-    wake_frame: foxes.core.WakeFrame
-        The wake frame
-    partial_wakes_model: foxes.core.PartialWakesModel
-        The partial wakes model
-    farm_controller: foxes.core.FarmController
-        The farm controller
-    n_states: int
-        The number of states
+     Attributes
+     ----------
+     states: foxes.core.States
+         The ambient states
+     wake_models: list of foxes.core.WakeModel
+         The wake models, applied to all turbines
+     rotor_model: foxes.core.RotorModel
+         The rotor model, for all turbines
+     wake_frame: foxes.core.WakeFrame
+         The wake frame
+     partial_wakes_model: foxes.core.PartialWakesModel
+         The partial wakes model
+     farm_controller: foxes.core.FarmController
+         The farm controller
+     n_states: int
+         The number of states
 
-   :group: algorithms.downwind
+    :group: algorithms.downwind
 
     """
 
@@ -39,17 +39,17 @@ class Downwind(Algorithm):
     def get_model(cls, name):
         """
         Get the algorithm specific model
-        
+
         Parameters
         ----------
         name: str
             The model name
-        
+
         Returns
         -------
         model: foxes.core.model
             The model
-        
+
         """
         return getattr(mdls, name)
 
@@ -170,17 +170,17 @@ class Downwind(Algorithm):
     def all_models(self, with_states=True):
         """
         Return all models
-        
+
         Parameters
         ----------
         with_states: bool
             Flag for including states
-        
+
         Returns
         -------
         mdls: list of foxes.core.Model
             The list of models
-        
+
         """
         mdls = [self.states] if with_states else []
         mdls += [
@@ -191,7 +191,7 @@ class Downwind(Algorithm):
         ] + self.wake_models
 
         return mdls
-    
+
     def initialize(self):
         """
         Initializes the algorithm.
@@ -401,15 +401,17 @@ class Downwind(Algorithm):
         # 2) transfer ambient results:
         mlist.models.append(
             self.get_model("SetAmbPointResults")(
-                point_vars=vars, vars_to_amb=vars_to_amb)
+                point_vars=vars, vars_to_amb=vars_to_amb
+            )
         )
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
         if not ambient:
-            mlist.models.append(self.get_model("PointWakesCalculation")(
-                vars, emodels, emodels_cpars))
+            mlist.models.append(
+                self.get_model("PointWakesCalculation")(vars, emodels, emodels_cpars)
+            )
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 

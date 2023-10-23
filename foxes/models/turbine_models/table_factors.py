@@ -102,7 +102,7 @@ class TableFactors(TurbineModel):
 
         """
         super().initialize(algo, verbosity)
-        
+
         if isinstance(self.data_source, pd.DataFrame):
             self._data = self.data_source
         else:

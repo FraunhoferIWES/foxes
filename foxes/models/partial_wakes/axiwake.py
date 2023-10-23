@@ -78,12 +78,12 @@ class PartialAxiwake(PartialWakesModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return super().sub_models() + [self.rotor_model]
 
@@ -298,7 +298,9 @@ class PartialAxiwake(PartialWakesModel):
 
         amb_res_in = amb_res is not None
         if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
+            amb_res = algo.rotor_model.from_data_or_store(
+                FC.AMB_RPOINT_RESULTS, algo, mdata
+            )
 
         wres = {}
         st_sel = (np.arange(n_states), states_turbine)

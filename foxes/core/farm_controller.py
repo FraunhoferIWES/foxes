@@ -55,12 +55,12 @@ class FarmController(FarmDataModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [
             self.pre_rotor_models,
@@ -269,7 +269,7 @@ class FarmController(FarmDataModel):
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters
@@ -367,4 +367,3 @@ class FarmController(FarmDataModel):
         super().finalize(algo, verbosity)
         self.turbine_model_names = None
         self.turbine_model_sels = None
-        

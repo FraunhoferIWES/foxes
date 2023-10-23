@@ -65,7 +65,7 @@ class States(PointDataModel):
         Load and/or create all model data that is subject to chunking.
 
         Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided 
+        data returned here will automatically be chunked and then provided
         as part of the mdata object during calculations.
 
         Parameters
@@ -84,7 +84,7 @@ class States(PointDataModel):
 
         """
         idata = super().load_data(algo, verbosity)
-        
+
         sinds = self.index()
         if sinds is not None:
             idata["coords"][FC.STATE] = sinds
@@ -178,15 +178,15 @@ class ExtendedStates(States):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self.pmodels]
-    
+
     def size(self):
         """
         The total number of states.

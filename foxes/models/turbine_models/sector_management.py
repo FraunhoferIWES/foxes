@@ -86,7 +86,7 @@ class SectorManagement(TurbineModel):
 
         """
         super().initialize(algo, verbosity)
-        
+
         if isinstance(self.source, pd.DataFrame):
             data = self.source
         else:

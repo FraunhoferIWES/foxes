@@ -18,7 +18,7 @@ class FarmWakesCalculation(FarmDataModel):
         Constructor.
         """
         super().__init__()
-        
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -41,15 +41,15 @@ class FarmWakesCalculation(FarmDataModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self.pwakes]
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.

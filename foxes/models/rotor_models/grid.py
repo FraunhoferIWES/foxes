@@ -69,7 +69,7 @@ class GridRotor(RotorModel):
 
         """
         super().initialize(algo, verbosity)
-        
+
         N = self.n * self.n
         delta = 2.0 / self.n
         x = [-1.0 + (i + 0.5) * delta for i in range(self.n)]

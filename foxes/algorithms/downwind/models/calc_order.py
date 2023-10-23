@@ -6,7 +6,7 @@ class CalcOrder(FarmDataModel):
     """
     This model calculates the turbine evaluation
     order, via wake frames.
-    
+
     :group: algorithms.downwind.models
 
     """
@@ -14,15 +14,15 @@ class CalcOrder(FarmDataModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return [self._wframe]
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.

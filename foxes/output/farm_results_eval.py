@@ -556,16 +556,16 @@ class FarmResultsEval(Output):
         return P / P0
 
     def gen_stdata(
-            self, 
-            turbines, 
-            variable, 
-            fig=None, 
-            ax=None, 
-            figsize=None,
-            legloc="lower right",
-            animated=True,
-            ret_im=True,
-        ):
+        self,
+        turbines,
+        variable,
+        fig=None,
+        ax=None,
+        figsize=None,
+        legloc="lower right",
+        animated=True,
+        ret_im=True,
+    ):
         """
         Generates state-turbine data,
         intended to be used in animations
@@ -609,18 +609,16 @@ class FarmResultsEval(Output):
 
         hax.set_xlabel(f"State")
         hax.set_ylabel(variable)
-        cc = cycler(color='bgrcmyk') 
-        
+        cc = cycler(color="bgrcmyk")
+
         data = self.results[variable].to_numpy()
         hasl = set()
         for si in range(len(data)):
-
             im = []
             hax.set_prop_cycle(cc)
             for ti in turbines:
                 lbl = None if ti in hasl else f"Turbine {ti}"
-                im += hax.plot(range(si), data[:si, ti], label=lbl,
-                                animated=animated)
+                im += hax.plot(range(si), data[:si, ti], label=lbl, animated=animated)
                 hasl.add(ti)
 
             hax.legend(loc=legloc)

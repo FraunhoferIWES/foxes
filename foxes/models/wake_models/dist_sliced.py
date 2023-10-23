@@ -44,15 +44,15 @@ class DistSlicedWakeModel(WakeModel):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return list(self.superp.values())
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.

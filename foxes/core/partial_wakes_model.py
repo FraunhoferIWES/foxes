@@ -43,15 +43,15 @@ class PartialWakesModel(Model):
     def sub_models(self):
         """
         List of all sub-models
-        
+
         Returns
         -------
         smdls: list of foxes.core.Model
             Names of all sub models
-        
+
         """
         return self.wake_models + [self.wake_frame]
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
