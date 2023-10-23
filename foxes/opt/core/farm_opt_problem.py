@@ -178,50 +178,12 @@ class FarmOptProblem(Problem):
         t = tvr.split("_")
         return t[0], int(t[1])
 
-    def _update_keep_models(self, drop_vars, exclude=None, verbosity=1):
-        """
-        Updates algo.keep_models during initialization
-
-        Parameters
-        ----------
-        drop_vars: list of str
-            Variables that decide about dropping model
-            from algo.keep_models
-        exclude: list of str, optional
-            The model names to be excluded, default
-            is original states and problem model names
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        if exclude is None:
-            exclude = [self._org_states_name]
-        self.algo.keep_models.add(self._org_states_name)
-        for mname, idata in self.algo.idata_mem.items():
-            if mname not in exclude and self.name not in mname:
-                keep = True
-                for d in idata["data_vars"].values():
-                    for dropv in drop_vars:
-                        if dropv in d[0]:
-                            keep = False
-                            break
-                    if not keep:
-                        break
-                if keep:
-                    self.algo.keep_models.add(mname)
-
-    def initialize(self, drop_vars=[FC.STATE], exclude=None, verbosity=1):
+    def initialize(self, verbosity=1):
         """
         Initialize the object.
 
         Parameters
         ----------
-        drop_vars: list of str
-            Variables that decide about dropping model
-            from algo.keep_models
-        exclude: list of str, optional
-            The model names to be excluded, default
-            is original states and problem model names
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -237,9 +199,6 @@ class FarmOptProblem(Problem):
         self._org_states_name = self.algo.states.name
         self._org_n_states = self.algo.n_states
 
-        # keep models that do not contain state related data,
-        # and always the original states:
-        self._update_keep_models(drop_vars, exclude, verbosity)
         self.algo.finalize()
 
         self._count = 0

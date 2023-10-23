@@ -38,15 +38,13 @@ class PopStates(States):
         self.states = states
         self.n_pop = n_pop
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided 
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -66,16 +64,8 @@ class PopStates(States):
         self.STATE0 = self.var(FC.STATE + "0")
         self.SMAP = self.var("SMAP")
 
-        idata = super().initialize(algo, verbosity)
-        self._update_idata(algo, idata)
-
-        if not self.states.name in algo._idata_mem:
-            raise KeyError(
-                f"States idata '{self.states.name}' not found in algo idata memory"
-            )
-        else:
-            idata0 = algo._idata_mem[self.states.name]
-
+        idata = super().load_data(algo, verbosity)
+        idata0 = algo.get_model_data(self.states)
         for cname, coord in idata0["coords"].items():
             if cname != FC.STATE:
                 idata["coords"][cname] = coord
@@ -101,6 +91,22 @@ class PopStates(States):
             del idata["coords"][self.STATE0]
 
         return idata
+
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if not self.states.initialized:
+            self.states.initialize(algo, verbosity)
+        super().initialize(algo, verbosity)
 
     def size(self):
         """

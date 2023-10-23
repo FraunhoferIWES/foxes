@@ -107,6 +107,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
+        verbosity=1,
     )
 
     # calculate farm results
@@ -164,7 +165,7 @@ if __name__ == "__main__":
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
-
+    
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xy(args.var, resolution=10)

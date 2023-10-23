@@ -313,7 +313,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
-    
+        
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -484,5 +484,5 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The verbosity level, 0 = silent
 
         """
-        self._tiwakes = None
         super().finalize(algo, verbosity)
+        self._tiwakes = None
