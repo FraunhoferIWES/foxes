@@ -41,6 +41,18 @@ class DistSlicedWakeModel(WakeModel):
         super().__init__()
         self.superpositions = superpositions
 
+    def sub_models(self):
+        """
+        List of all sub-models
+        
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+        
+        """
+        return list(self.superp.values())
+        
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -69,26 +81,7 @@ class DistSlicedWakeModel(WakeModel):
         self.superp = {
             v: algo.mbook.wake_superpositions[s] for v, s in self.superpositions.items()
         }
-
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(list(self.superp.values()), idata=idata, verbosity=verbosity)
-
-        return idata
-
-    def keep(self, algo):
-        """
-        Add model and all sub models to
-        the keep_models list
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-
-        """
-        super().keep(algo)
-        for v in self.superp.values():
-            v.keep(algo)
+        super().initialize(algo, verbosity)
 
     @abstractmethod
     def calc_wakes_spsel_x_yz(
@@ -240,19 +233,3 @@ class DistSlicedWakeModel(WakeModel):
             wake_deltas[v] = s.calc_final_wake_delta(
                 algo, mdata, fdata, pdata, v, amb_results[v], wake_deltas[v]
             )
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        for s in self.superp.values():
-            s.finalize(algo, verbosity)
-        super().finalize(algo, verbosity)

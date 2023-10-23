@@ -57,12 +57,6 @@ class LevelRotor(RotorModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -70,14 +64,9 @@ class LevelRotor(RotorModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
+        
         delta = 2.0 / self.n
         y = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
         x = np.zeros(self.n,dtype=FC.DTYPE)
@@ -110,8 +99,6 @@ class LevelRotor(RotorModel):
             self.dpoints[:, 1] = x
             self.dpoints[:, 2] = y
             self.weights = np.ones(self.n, dtype=FC.DTYPE) / self.n
-
-        return super().initialize(algo, verbosity)
 
     def n_rotor_points(self):
         """

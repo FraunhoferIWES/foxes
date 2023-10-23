@@ -161,18 +161,17 @@ class FarmDataModelList(FarmDataModel):
         """
         self.models.append(model)
 
-    def keep(self, algo):
+    def sub_models(self):
         """
-        Add model and all sub models to
-        the keep_models list
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-
+        List of all sub-models
+        
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+        
         """
-        algo.keep_models.update([self.name] + [m.name for m in self.models])
+        return self.models
 
     def output_farm_vars(self, algo):
         """
@@ -193,38 +192,6 @@ class FarmDataModelList(FarmDataModel):
         for m in self.models:
             ovars += m.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        idata = super().initialize(algo, verbosity)
-
-        # done by algo.update_idata
-        # algo.update_idata(self.models, idata=idata, verbosity=verbosity)
-
-        return idata
 
     def calculate(self, algo, mdata, fdata, parameters=[]):
         """
@@ -268,21 +235,3 @@ class FarmDataModelList(FarmDataModel):
             fdata.update(res)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 means silent
-
-        """
-        for m in self.models:
-            if m.initialized:
-                algo.finalize_model(m, verbosity)
-
-        super().finalize(algo, verbosity)

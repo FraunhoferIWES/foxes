@@ -138,15 +138,13 @@ class PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided 
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -192,7 +190,7 @@ class PCtFromTwo(TurbineType):
                     f"Turbine type '{self.name}': Setting P_nominal = {self.P_nominal:.2f} {self.P_unit}"
                 )
 
-        return super().initialize(algo, verbosity)
+        return super().load_data(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
@@ -275,5 +273,5 @@ class PCtFromTwo(TurbineType):
             The verbosity level
 
         """
-        del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct
         super().finalize(algo, verbosity)
+        del self._data_ws_P, self._data_ws_ct, self._data_P, self._data_ct

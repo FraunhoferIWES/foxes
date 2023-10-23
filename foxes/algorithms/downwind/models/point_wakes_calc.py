@@ -44,15 +44,21 @@ class PointWakesCalculation(PointDataModel):
         self.emodels_cpars = emodels_cpars
         self.wake_models = wake_models
 
+    def sub_models(self):
+        """
+        List of all sub-models
+        
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+        
+        """
+        return [self.emodels] if self.emodels is not None else []
+        
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -61,23 +67,12 @@ class PointWakesCalculation(PointDataModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
         self.pvars = (
             algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
         )
 
-        idata = super().initialize(algo, verbosity)
-        if self.emodels is not None:
-            algo.update_idata(self.emodels, idata=idata, verbosity=verbosity)
-
-        return idata
 
     def output_point_vars(self, algo):
         """

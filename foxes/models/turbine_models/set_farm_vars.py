@@ -70,15 +70,13 @@ class SetFarmVars(TurbineModel):
         """
         return self.vars
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided 
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -95,7 +93,7 @@ class SetFarmVars(TurbineModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().initialize(algo, verbosity)
+        idata = super().load_data(algo, verbosity)
 
         for i, v in enumerate(self.vars):
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)

@@ -11,15 +11,21 @@ class CalcOrder(FarmDataModel):
 
     """
 
+    def sub_models(self):
+        """
+        List of all sub-models
+        
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+        
+        """
+        return [self._wframe]
+        
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -28,18 +34,9 @@ class CalcOrder(FarmDataModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(algo.wake_frame, idata=idata, verbosity=verbosity)
-
-        return idata
+        self._wframe = algo.wake_frame
+        super().initialize(algo, verbosity)
 
     def output_farm_vars(self, algo):
         """
@@ -81,4 +78,4 @@ class CalcOrder(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        return {FV.ORDER: algo.wake_frame.calc_order(algo, mdata, fdata)}
+        return {FV.ORDER: self._wframe.calc_order(algo, mdata, fdata)}
