@@ -106,6 +106,7 @@ class SequentialIter:
         if self._i < len(self._inds):
 
             self._counter = self._i
+            self.algo.states._counter = self._i
             self.algo.states._size = 1
             self.algo.states._indx = self._inds[self._i]
             self.algo.states._weight = self._weights[self._i]
@@ -162,6 +163,7 @@ class SequentialIter:
             del self._mdata
 
             self._i = None
+            self.algo.states._counter = None
             self.algo.states._size = len(self._inds)
             self.algo.states._indx = self._inds
             self.algo.states._weight = self._weights

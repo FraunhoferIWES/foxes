@@ -171,17 +171,23 @@ class ModelBook:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
                 base_frame=fm.wake_frames.Streamlines(step=s)
             )
+        dtlist = [
+            ("1s", 1/60),
+            ("10s", 1/6),
+            ("30s", 0.5),
+            ("1min", 1),
+            ("10min", 10),
+            ("30min", 30),
+        ]
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
-        self.wake_frames["timelines_1s"] = fm.wake_frames.Timelines(dt_min=1 / 60)
-        self.wake_frames["timelines_10s"] = fm.wake_frames.Timelines(dt_min=1 / 6)
-        self.wake_frames["timelines_30s"] = fm.wake_frames.Timelines(dt_min=0.5)
-        self.wake_frames["timelines_1min"] = fm.wake_frames.Timelines(dt_min=1)
-        self.wake_frames["timelines_10min"] = fm.wake_frames.Timelines(dt_min=10)
-        self.wake_frames["timelines_30min"] = fm.wake_frames.Timelines(dt_min=30)
-        self.wake_frames["timelines_60min"] = fm.wake_frames.Timelines(dt_min=60)
+        for s, t in dtlist:
+            self.wake_frames[f"timelines_{s}"] = fm.wake_frames.Timelines(dt_min=t)
         self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
             max_wake_length=1000.0
         )
+        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
+        for s, t in dtlist:
+            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(dt_min=t)
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
