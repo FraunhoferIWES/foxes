@@ -33,6 +33,7 @@ class DummyStates(States):
         self._size = states.size()
         self._weight = None
         self._indx = None
+        self._counter = None
 
     def sub_models(self):
         """
@@ -86,6 +87,19 @@ class DummyStates(States):
 
         """
         return [self._indx] if self._size == 1 else self.states.index()
+
+    @property
+    def counter(self):
+        """
+        The current index counter
+        
+        Returns
+        -------
+        i: int
+            The current index counter
+
+        """
+        return self._counter
     
     def weights(self, algo):
         """

@@ -1,7 +1,5 @@
 from foxes.algorithms.downwind.downwind import Downwind
 
-import foxes.variables as FV
-import foxes.constants as FC
 from . import models as mdls
        
 class Sequential(Downwind):
