@@ -92,7 +92,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             _to_data(v, d["data"], d["dims"])
     if sec_prob is not None and "probability" in names:
         data[:, :, names.index("probability")] *= sec_prob
-    
+
     n_vars = len(names)
     data = data.reshape(n, n_vars)
 
@@ -102,7 +102,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
 
     ovars = {v: v for v in data.columns if v != FV.WEIGHT}
     ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
-    
+
     return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
 
 

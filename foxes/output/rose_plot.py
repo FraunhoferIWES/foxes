@@ -13,14 +13,14 @@ from .output import Output
 
 class RosePlotOutput(Output):
     """
-    Class for rose plot creation
+     Class for rose plot creation
 
-    Attributes
-    ----------
-    results: pandas.DataFrame
-        The calculation results (farm or points)
+     Attributes
+     ----------
+     results: pandas.DataFrame
+         The calculation results (farm or points)
 
-   :group: output
+    :group: output
 
     """
 
@@ -177,18 +177,29 @@ class RosePlotOutput(Output):
         data[wd_var] = data[wd_var].astype(np.float64)
         data[lgd] = list(data[lgd])
         if start0:
-            data[wd_var] += dwd/2
+            data[wd_var] += dwd / 2
 
         ii = pd.IntervalIndex(data[lgd])
         data[var] = ii.mid
         data[f"bin_min_{var}"] = ii.left
         data[f"bin_max_{var}"] = ii.right
-        data[f"bin_min_{wd_var}"] = data[wd_var] - dwd/2
-        data[f"bin_max_{wd_var}"] = data[wd_var] + dwd/2
-        data["sector"] = (data[wd_var]/dwd).astype(int)
+        data[f"bin_min_{wd_var}"] = data[wd_var] - dwd / 2
+        data[f"bin_max_{wd_var}"] = data[wd_var] + dwd / 2
+        data["sector"] = (data[wd_var] / dwd).astype(int)
 
-        data = data[[wd_var, var, "sector", f"bin_min_{wd_var}", f"bin_max_{wd_var}", 
-                     f"bin_min_{var}", f"bin_max_{var}", lgd, "frequency"]]
+        data = data[
+            [
+                wd_var,
+                var,
+                "sector",
+                f"bin_min_{wd_var}",
+                f"bin_max_{wd_var}",
+                f"bin_min_{var}",
+                f"bin_max_{var}",
+                lgd,
+                "frequency",
+            ]
+        ]
         data.index.name = "bin"
 
         return data
@@ -274,8 +285,12 @@ class RosePlotOutput(Output):
 
         intv = f"interval_{var}"
         fig = px.bar_polar(
-            wrdata, r="frequency", theta=wd_var, color=intv, color_discrete_sequence=cmap,
-            labels={intv: lg}
+            wrdata,
+            r="frequency",
+            theta=wd_var,
+            color=intv,
+            color_discrete_sequence=cmap,
+            labels={intv: lg},
         )
 
         tdict = dict(xanchor="center", yanchor="top", x=0.5, y=0.97)
@@ -374,18 +389,18 @@ class RosePlotOutput(Output):
 
 class StatesRosePlotOutput(RosePlotOutput):
     """
-    Class for rose plot creation directly from states
+     Class for rose plot creation directly from states
 
-    Parameters
-    ----------
-    states: foxes.core.States
-        The states from which to compute the wind rose
-    point: numpy.ndarray
-        The evaluation point, shape: (3,)
-    mbook: foxes.models.ModelBook, optional
-        The model book
+     Parameters
+     ----------
+     states: foxes.core.States
+         The states from which to compute the wind rose
+     point: numpy.ndarray
+         The evaluation point, shape: (3,)
+     mbook: foxes.models.ModelBook, optional
+         The model book
 
-   :group: output
+    :group: output
 
     """
 

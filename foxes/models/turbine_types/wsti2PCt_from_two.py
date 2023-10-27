@@ -42,7 +42,7 @@ class WsTI2PCtFromTwo(TurbineType):
         Parameters for scipy.interpolate.interpn()
     rho: float
         The air densitiy for which the data is valid
-        or None for no correction    
+        or None for no correction
 
     :group: models.turbine_types
 
@@ -74,7 +74,7 @@ class WsTI2PCtFromTwo(TurbineType):
             The file path for the ct curve, static name, or data
         rho: float, optional
             The air densitiy for which the data is valid
-            or None for no correction        
+            or None for no correction
         p_ct: float
             The exponent for yaw dependency of ct
         p_P: float
@@ -140,15 +140,13 @@ class WsTI2PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -195,7 +193,7 @@ class WsTI2PCtFromTwo(TurbineType):
         self._ti_ct = np.sort(data.columns.to_numpy())
         self._ct = data[self._ti_ct].to_numpy(FC.DTYPE)
 
-        return super().initialize(algo, verbosity)
+        return super().load_data(algo, verbosity)
 
     def _bounds_info(self, target, qts):
         """Helper function for printing bounds info"""
@@ -264,7 +262,7 @@ class WsTI2PCtFromTwo(TurbineType):
                 # correct value is reconstructed:
                 rho = fdata[FV.RHO][st_sel]
                 qts[:, 0] *= (self.rho / rho) ** (1.0 / 3.0)
-                del rho            
+                del rho
 
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_P is not None:
@@ -314,7 +312,7 @@ class WsTI2PCtFromTwo(TurbineType):
                 rho = fdata[FV.RHO][st_sel]
                 qts[:, 0] *= (self.rho / rho) ** 0.5
                 del rho
-            
+
             # apply yaw corrections:
             if FV.YAWM in fdata and self.p_ct is not None:
                 # calculate corrected wind speed wsc,

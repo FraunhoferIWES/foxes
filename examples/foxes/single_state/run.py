@@ -107,6 +107,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
+        verbosity=1,
     )
 
     # calculate farm results

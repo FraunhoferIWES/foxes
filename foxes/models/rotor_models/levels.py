@@ -8,7 +8,7 @@ class LevelRotor(RotorModel):
     """
     The weighted regular rotor level model, composed of
     of n points between lower and upper blade tip.
-    Calculates a height-dependent REWS 
+    Calculates a height-dependent REWS
 
     Attributes
     ----------
@@ -57,12 +57,6 @@ class LevelRotor(RotorModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -70,17 +64,12 @@ class LevelRotor(RotorModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
+
         delta = 2.0 / self.n
         y = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
-        x = np.zeros(self.n,dtype=FC.DTYPE)
+        x = np.zeros(self.n, dtype=FC.DTYPE)
 
         self.dpoints = np.zeros([self.n, 3], dtype=FC.DTYPE)
         self.dpoints[:, 1] = x
@@ -88,19 +77,17 @@ class LevelRotor(RotorModel):
 
         if self.reduce:
             self.weights = np.zeros((self.n), dtype=FC.DTYPE)
-            hx = np.linspace(1,-1,self.nint)
+            hx = np.linspace(1, -1, self.nint)
 
             for i in range(0, self.n):
                 d = delta / self.nint
-                hy = [
-                    y[i] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)
-                ]
+                hy = [y[i] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)]
                 pts = np.zeros((self.nint, self.nint, 2), dtype=FC.DTYPE)
                 pts[:, :, 0], pts[:, :, 1] = np.meshgrid(hx, hy, indexing="ij")
 
                 d = np.linalg.norm(pts, axis=2)
                 self.weights[i] = np.sum(d <= 1.0) / self.nint**2
-            
+
             sel = self.weights > 0.0
             self.dpoints = self.dpoints[sel]
             self.weights = self.weights[sel]
@@ -110,8 +97,6 @@ class LevelRotor(RotorModel):
             self.dpoints[:, 1] = x
             self.dpoints[:, 2] = y
             self.weights = np.ones(self.n, dtype=FC.DTYPE) / self.n
-
-        return super().initialize(algo, verbosity)
 
     def n_rotor_points(self):
         """

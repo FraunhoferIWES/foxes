@@ -2,7 +2,6 @@ import numpy as np
 from copy import deepcopy
 
 import foxes.variables as FV
-import foxes.constants as FC
 from foxes.core import FarmDataModel
 
 
@@ -11,7 +10,7 @@ class FarmWakesCalculation(FarmDataModel):
     This model calculates wakes effects on farm data.
 
     :group: algorithms.iterative.models
-    
+
     """
 
     def output_farm_vars(self, algo):
@@ -37,12 +36,6 @@ class FarmWakesCalculation(FarmDataModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -50,16 +43,21 @@ class FarmWakesCalculation(FarmDataModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
         self.pwakes = algo.partial_wakes_model
-        return super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=True)
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return []
 
     def calculate(self, algo, mdata, fdata):
         """ "

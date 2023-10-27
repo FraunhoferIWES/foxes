@@ -92,7 +92,7 @@ class TISuperposition(WakeSuperposition):
             wake_delta[sel_sp] += wake_model_result**2
 
         # power_N delta:
-        elif len(self.ti_superp) > 6 and  self.ti_superp[:6] == "power_":
+        elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
             N = int(self.ti_superp[6:])
             wake_delta[sel_sp] += wake_model_result**N
 
@@ -152,9 +152,9 @@ class TISuperposition(WakeSuperposition):
                 return wake_delta
             elif self.ti_superp == "quadratic":
                 return np.sqrt(wake_delta)
-            elif len(self.ti_superp) > 6 and  self.ti_superp[:6] == "power_":
+            elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
                 N = int(self.ti_superp[6:])
-                return wake_delta**(1/N)
+                return wake_delta ** (1 / N)
             else:
                 raise ValueError(
                     f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, power_N, max"
@@ -166,9 +166,9 @@ class TISuperposition(WakeSuperposition):
                 return np.sqrt(wake_delta**2 + amb_results**2) - amb_results
             elif self.ti_superp == "quadratic":
                 return np.sqrt(wake_delta + amb_results**2) - amb_results
-            elif len(self.ti_superp) > 6 and  self.ti_superp[:6] == "power_":
+            elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
                 N = int(self.ti_superp[6:])
-                return np.sqrt(wake_delta**(2/N) + amb_results**2) - amb_results
+                return np.sqrt(wake_delta ** (2 / N) + amb_results**2) - amb_results
             else:
                 raise ValueError(
                     f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, power_N, max"

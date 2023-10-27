@@ -93,12 +93,6 @@ class TableFactors(TurbineModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -106,14 +100,9 @@ class TableFactors(TurbineModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
+
         if isinstance(self.data_source, pd.DataFrame):
             self._data = self.data_source
         else:
@@ -126,8 +115,6 @@ class TableFactors(TurbineModel):
         self._rvals = self._data.index.to_numpy(FC.DTYPE)
         self._cvals = self._data.columns.to_numpy(FC.DTYPE)
         self._data = self._data.to_numpy(FC.DTYPE)
-
-        return super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "

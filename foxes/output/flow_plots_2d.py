@@ -106,7 +106,7 @@ class FlowPlots2D(Output):
         # contour plot:
         else:
             if vmax is not None and vmin is not None and not isinstance(levels, list):
-                lvls = np.linspace(vmin, vmax, levels+1)
+                lvls = np.linspace(vmin, vmax, levels + 1)
             else:
                 lvls = levels
             im = hax.contourf(

@@ -115,7 +115,6 @@ class RegularLayoutOptProblem(FarmVarsProblem):
         super().initialize(
             pre_rotor_vars=[FV.X, FV.Y, FC.VALID],
             post_rotor_vars=[],
-            drop_vars=[FC.STATE, FC.TURBINE],
             verbosity=verbosity,
             **kwargs,
         )

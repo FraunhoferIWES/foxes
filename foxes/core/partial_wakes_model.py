@@ -40,15 +40,21 @@ class PartialWakesModel(Model):
         self._wmodels = wake_models
         self._wframe = wake_frame
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return self.wake_models + [self.wake_frame]
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -57,37 +63,10 @@ class PartialWakesModel(Model):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
         self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
         self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
-
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.wake_models, idata=idata, verbosity=verbosity)
-
-        return idata
-
-    def keep(self, algo):
-        """
-        Add model and all sub models to
-        the keep_models list
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-
-        """
-        super().keep(algo)
-        for w in self.wake_models:
-            w.keep(algo)
-        self.wake_frame.keep(algo)
+        super().initialize(algo, verbosity)
 
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):

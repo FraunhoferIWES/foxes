@@ -8,30 +8,30 @@ from . import models as mdls
 
 class Downwind(Algorithm):
     """
-    The downwind algorithm.
+     The downwind algorithm.
 
-    The turbines are evaluated once, in the order
-    that is calculated by the provided `TurbineOrder`
-    object.
+     The turbines are evaluated once, in the order
+     that is calculated by the provided `TurbineOrder`
+     object.
 
-    Attributes
-    ----------
-    states: foxes.core.States
-        The ambient states
-    wake_models: list of foxes.core.WakeModel
-        The wake models, applied to all turbines
-    rotor_model: foxes.core.RotorModel
-        The rotor model, for all turbines
-    wake_frame: foxes.core.WakeFrame
-        The wake frame
-    partial_wakes_model: foxes.core.PartialWakesModel
-        The partial wakes model
-    farm_controller: foxes.core.FarmController
-        The farm controller
-    n_states: int
-        The number of states
+     Attributes
+     ----------
+     states: foxes.core.States
+         The ambient states
+     wake_models: list of foxes.core.WakeModel
+         The wake models, applied to all turbines
+     rotor_model: foxes.core.RotorModel
+         The rotor model, for all turbines
+     wake_frame: foxes.core.WakeFrame
+         The wake frame
+     partial_wakes_model: foxes.core.PartialWakesModel
+         The partial wakes model
+     farm_controller: foxes.core.FarmController
+         The farm controller
+     n_states: int
+         The number of states
 
-   :group: algorithms.downwind
+    :group: algorithms.downwind
 
     """
 
@@ -39,17 +39,17 @@ class Downwind(Algorithm):
     def get_model(cls, name):
         """
         Get the algorithm specific model
-        
+
         Parameters
         ----------
         name: str
             The model name
-        
+
         Returns
         -------
         model: foxes.core.model
             The model
-        
+
         """
         return getattr(mdls, name)
 
@@ -65,7 +65,6 @@ class Downwind(Algorithm):
         farm_controller="basic_ctrl",
         chunks={FC.STATE: 1000},
         dbook=None,
-        keep_models=set(),
         verbosity=1,
     ):
         """
@@ -99,13 +98,11 @@ class Downwind(Algorithm):
             e.g. `{"state": 1000}` for chunks of 1000 states
         dbook: foxes.DataBook, optional
             The data book, or None for default
-        keep_models: set of str
-            Keep these models data in memory and do not finalize them
         verbosity: int
             The verbosity level, 0 means silent
 
         """
-        super().__init__(mbook, farm, chunks, verbosity, dbook, keep_models)
+        super().__init__(mbook, farm, chunks, verbosity, dbook)
 
         self.states = states
         self.n_states = None
@@ -167,8 +164,33 @@ class Downwind(Algorithm):
         Initialize states, if needed.
         """
         if not self.states.initialized:
-            self.update_idata(self.states)
+            self.states.initialize(self, self.verbosity)
             self.n_states = self.states.size()
+
+    def all_models(self, with_states=True):
+        """
+        Return all models
+
+        Parameters
+        ----------
+        with_states: bool
+            Flag for including states
+
+        Returns
+        -------
+        mdls: list of foxes.core.Model
+            The list of models
+
+        """
+        mdls = [self.states] if with_states else []
+        mdls += [
+            self.rotor_model,
+            self.farm_controller,
+            self.wake_frame,
+            self.partial_wakes_model,
+        ] + self.wake_models
+
+        return mdls
 
     def initialize(self):
         """
@@ -179,14 +201,8 @@ class Downwind(Algorithm):
 
         self.init_states()
 
-        mdls = [
-            self.rotor_model,
-            self.farm_controller,
-            self.wake_frame,
-            self.partial_wakes_model,
-        ] + self.wake_models
-
-        self.update_idata(mdls)
+        for m in self.all_models(with_states=False):
+            m.initialize(self, self.verbosity)
 
     def _collect_farm_models(
         self,
@@ -249,7 +265,7 @@ class Downwind(Algorithm):
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # initialize models:
-        self.update_idata(mlist)
+        mlist.initialize(self, self.verbosity)
 
         # update variables:
         self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
@@ -328,9 +344,8 @@ class Downwind(Algorithm):
         # finalize models:
         if finalize:
             self.print("\n")
-            self.finalize_model(mlist)
+            mlist.finalize(self, self.verbosity)
             self.finalize()
-        self.cleanup()
 
         if ambient:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
@@ -386,20 +401,22 @@ class Downwind(Algorithm):
         # 2) transfer ambient results:
         mlist.models.append(
             self.get_model("SetAmbPointResults")(
-                point_vars=vars, vars_to_amb=vars_to_amb)
+                point_vars=vars, vars_to_amb=vars_to_amb
+            )
         )
         mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
         if not ambient:
-            mlist.models.append(self.get_model("PointWakesCalculation")(
-                vars, emodels, emodels_cpars))
+            mlist.models.append(
+                self.get_model("PointWakesCalculation")(vars, emodels, emodels_cpars)
+            )
             mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # initialize models:
-        self.update_idata(mlist)
+        mlist.initialize(self, self.verbosity)
 
         return mlist, calc_pars
 
@@ -527,9 +544,8 @@ class Downwind(Algorithm):
         # finalize models:
         if finalize:
             self.print("\n")
-            self.finalize_model(mlist, self.verbosity)
+            mlist.finalize(self, self.verbosity)
             self.finalize()
-        self.cleanup()
 
         if ambient:
             dvars = [v for v in point_results.data_vars.keys() if v in FV.var2amb]
@@ -547,21 +563,10 @@ class Downwind(Algorithm):
         Parameters
         ----------
         clear_mem: bool
-            Clear idata memory, including keep_models entries
+            Clear idata memory
 
         """
-        if clear_mem:
-            self.keep_models = set()
-
-        mdls = [
-            self.states,
-            self.rotor_model,
-            self.farm_controller,
-            self.wake_frame,
-            self.partial_wakes_model,
-        ] + self.wake_models
-
-        for m in mdls:
-            self.finalize_model(m)
+        for m in self.all_models():
+            m.finalize(self, self.verbosity)
 
         super().finalize(clear_mem)

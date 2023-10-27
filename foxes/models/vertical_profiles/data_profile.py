@@ -24,8 +24,15 @@ class DataProfile(VerticalProfile):
 
     """
 
-    def __init__(self, data_source, variable, col_z=None, col_var=None, pd_read_pars={},
-                 **interp_pars):
+    def __init__(
+        self,
+        data_source,
+        variable,
+        col_z=None,
+        col_var=None,
+        pd_read_pars={},
+        **interp_pars
+    ):
         """
         Constructor
 
@@ -65,7 +72,7 @@ class DataProfile(VerticalProfile):
                 self.data_z = data.index.to_numpy()
             else:
                 self.data_z = data[col_z].to_numpy()
-        
+
         if not np.all(np.diff(self.data_z) > 0):
             inds = np.argsort(self.data_z)
             self.data_z = self.data_z[inds]

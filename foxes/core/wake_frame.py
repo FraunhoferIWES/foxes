@@ -175,7 +175,7 @@ class WakeFrame(Model):
         pdata = Data.from_points(
             pts,
             data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
-            dims={v: (FC.STATE, FC.POINT) for v in vrs}
+            dims={v: (FC.STATE, FC.POINT) for v in vrs},
         )
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
@@ -194,7 +194,9 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.get_model("PointWakesCalculation")(vrs, wake_models=wake_models)
+            wcalc = algo.get_model("PointWakesCalculation")(
+                vrs, wake_models=wake_models
+            )
             wcalc.initialize(algo, verbosity=0)
             wsrc = states_source_turbine if self_wake else None
             res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)

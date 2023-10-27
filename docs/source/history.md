@@ -348,3 +348,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
 
+## v0.5
+
+- Core:
+  - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
+
+

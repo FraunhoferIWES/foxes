@@ -2,12 +2,8 @@ import numpy as np
 import xarray as xr
 
 from .model import Model
-from .farm_data_model import FarmDataModelList
-from .point_data_model import PointDataModelList
-from .farm_controller import FarmController
 from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
-import foxes.variables as FV
 import foxes.constants as FC
 
 
@@ -32,14 +28,12 @@ class Algorithm(Model):
         The verbosity level, 0 means silent
     dbook: foxes.DataBook
         The data book, or None for default
-    keep_models: set of str
-        Keep these models data in memory and do not finalize them
 
     :group: core
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None, keep_models=set()):
+    def __init__(self, mbook, farm, chunks, verbosity, dbook=None):
         """
         Constructor.
 
@@ -56,8 +50,6 @@ class Algorithm(Model):
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
-        keep_models: set of str
-            Keep these models data in memory and do not finalize them
 
         """
         super().__init__()
@@ -70,10 +62,8 @@ class Algorithm(Model):
         self.n_states = None
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
-        self.keep_models = keep_models
 
         self._idata_mem = Dict()
-        self._idata_cl = Dict()
 
     def print(self, *args, vlim=1, **kwargs):
         """
@@ -183,83 +173,7 @@ class Algorithm(Model):
         """
         Initializes the algorithm.
         """
-        self._idata_mem[self.name] = super().initialize(self, self.verbosity)
-
-    def update_idata(self, models, idata=None, verbosity=None):
-        """
-        Add to idata memory, optionally update and return idata object.
-
-        Parameters
-        ----------
-        models: foxes.core.Model or list of foxes.core.Model
-            The models to initialize
-        idata: dict, optional
-            The idata dictionary to be updated, else only add
-            to idata memory
-        verbosity: int, optional
-            The verbosity level, 0 = silent
-
-        """
-        if idata is None and not self.initialized:
-            raise ValueError(
-                f"Algorithm '{self.name}': update_idata called before initialization"
-            )
-
-        verbosity = self.verbosity if verbosity is None else verbosity
-
-        if not isinstance(models, list) and not isinstance(models, tuple):
-            models = [models]
-
-        for m in models:
-            pr = False
-            if m.initialized:
-                try:
-                    hidata = self._idata_mem[m.name]
-                except KeyError:
-                    raise KeyError(
-                        f"Model '{m.name}' initialized but not found in idata memory"
-                    )
-
-            else:
-                self.print(f"Initializing model '{m.name}'")
-                hidata = m.initialize(self, verbosity)
-                self._idata_mem[m.name] = hidata
-                if m.name != self.name and m.name not in self.keep_models:
-                    self._idata_cl[m.name] = m
-
-                pr = False
-                if isinstance(m, FarmController):
-                    if verbosity > 1:
-                        print(f"-- {m.name}: Starting sub-model initialization -- ")
-                        pr = True
-                    self.update_idata(m.pre_rotor_models, idata, verbosity)
-                    self.update_idata(m.post_rotor_models, idata, verbosity)
-                elif isinstance(m, FarmDataModelList) or isinstance(
-                    m, PointDataModelList
-                ):
-                    if verbosity > 1:
-                        print(f"-- {m.name}: Starting sub-model initialization -- ")
-                        pr = True
-                    for mm in m.models:
-                        self.update_idata(mm, idata, verbosity)
-
-            if idata is not None:
-                idata["coords"].update(hidata["coords"])
-                idata["data_vars"].update(hidata["data_vars"])
-
-            if pr:
-                print(f"-- {m.name}: Finished sub-model initialization -- ")
-
-    def cleanup(self):
-        """
-        Cleanup after calculation
-        """
-        mnames = list(self._idata_cl.keys())
-        for mname in mnames:
-            m = self._idata_cl[mname]
-            if m.initialized and mname not in self._idata_mem:
-                self.finalize_model(m, self.verbosity)
-                del self._idata_cl[mname]
+        super().initialize(self, self.verbosity)
 
     @property
     def idata_mem(self):
@@ -273,6 +187,61 @@ class Algorithm(Model):
 
         """
         return self._idata_mem
+
+    def store_model_data(self, model, idata, force=False):
+        """
+        Store model data
+
+        Parameters
+        ----------
+        model: foxes.core.Model
+            The model
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        force: bool
+            Overwrite existing data
+
+        """
+        mname = f"{type(model).__name__}_{model.name}"
+        if not force and mname in self._idata_mem:
+            raise KeyError(f"Attempt to overwrite stored data for model '{mname}'")
+        self._idata_mem[mname] = idata
+
+    def get_model_data(self, model):
+        """
+        Gets model data from memory
+
+        Parameters
+        ----------
+        model: foxes.core.Model
+            The model
+
+        """
+        mname = f"{type(model).__name__}_{model.name}"
+        try:
+            return self._idata_mem[mname]
+        except KeyError:
+            raise KeyError(
+                f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self._idata_mem.keys()))}"
+            )
+
+    def del_model_data(self, model):
+        """
+        Remove stored model data
+
+        Parameters
+        ----------
+        model: foxes.core.Model
+            The model
+
+        """
+        mname = f"{type(model).__name__}_{model.name}"
+        try:
+            del self._idata_mem[mname]
+        except KeyError:
+            raise KeyError(f"Attempt to delete data of model '{mname}', but not stored")
 
     def update_n_turbines(self):
         """
@@ -377,7 +346,16 @@ class Algorithm(Model):
 
         """
         if idata is None:
-            idata = self.get_models_idata()
+            if not self.initialized:
+                raise ValueError(
+                    f"Algorithm '{self.name}': get_models_data called before initialization"
+                )
+            idata = {"coords": {}, "data_vars": {}}
+            for k, hidata in self._idata_mem.items():
+                if len(k) < 3 or k[:2] != "__":
+                    idata["coords"].update(hidata["coords"])
+                    idata["data_vars"].update(hidata["data_vars"])
+
         sizes = self.__get_sizes(idata, "models")
         return self.__get_xrdata(idata, sizes)
 
@@ -417,50 +395,6 @@ class Algorithm(Model):
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)
 
-    def finalize_model(self, model, verbosity=None):
-        """
-        Call the finalization routine of the model,
-        if not to be kept.
-
-        Parameters
-        ----------
-        model: foxes.core.Model
-            The model to be finalized, if not in the
-            keep_models list
-        verbosity: int, optional
-            The verbosity level, 0 = silent
-
-        """
-        verbosity = self.verbosity if verbosity is None else verbosity
-
-        pr = False
-        if isinstance(model, FarmController):
-            if verbosity > 1:
-                print(f"Finalizing model '{model.name}'")
-                print(f"-- {model.name}: Starting sub-model finalization -- ")
-                pr = True
-            self.finalize_model(model.pre_rotor_models, verbosity)
-            self.finalize_model(model.post_rotor_models, verbosity)
-        elif isinstance(model, FarmDataModelList) or isinstance(
-            model, PointDataModelList
-        ):
-            if verbosity > 1:
-                print(f"Finalizing model '{model.name}'")
-                print(f"-- {model.name}: Starting sub-model finalization -- ")
-                pr = True
-            for m in model.models:
-                self.finalize_model(m, verbosity)
-
-        if model.initialized and model.name not in self.keep_models:
-            if not pr and verbosity > 0:
-                print(f"Finalizing model '{model.name}'")
-            model.finalize(self, verbosity)
-            if model.name in self._idata_mem:
-                del self._idata_mem[model.name]
-
-        if pr:
-            print(f"-- {model.name}: Finished sub-model finalization -- ")
-
     def finalize(self, clear_mem=False):
         """
         Finalizes the algorithm.
@@ -468,13 +402,12 @@ class Algorithm(Model):
         Parameters
         ----------
         clear_mem: bool
-            Clear idata memory, including keep_models entries
+            Clear idata memory
 
         """
+        super().finalize(self, self.verbosity)
         if clear_mem:
             self._idata_mem = Dict()
-        if self.initialized:
-            super().finalize(self, self.verbosity)
 
     @classmethod
     def new(cls, algo_type, *args, **kwargs):

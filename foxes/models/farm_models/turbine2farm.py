@@ -34,35 +34,17 @@ class Turbine2FarmModel(FarmModel):
     def __repr__(self):
         return f"{type(self).__name__}({self.turbine_model})"
 
-    def initialize(self, algo, verbosity=0):
+    def sub_models(self):
         """
-        Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        List of all sub-models
 
         Returns
         -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        smdls: list of foxes.core.Model
+            Names of all sub models
 
         """
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.turbine_model, idata=idata, verbosity=verbosity)
-
-        return idata
+        return [self.turbine_model]
 
     def output_farm_vars(self, algo):
         """
@@ -108,19 +90,3 @@ class Turbine2FarmModel(FarmModel):
         """
         s = np.ones((algo.n_states, algo.n_turbines), dtype=bool)
         return self.turbine_model.calculate(algo, mdata, fdata, st_sel=s, **parameters)
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        if self.turbine_model.initialized:
-            algo.finalize_model(self.turbine_model, verbosity)
-        super().finalize(algo, verbosity)

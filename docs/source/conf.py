@@ -46,12 +46,12 @@ extensions = [
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
-    #"sphinx.ext.autosummary",
+    # "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     # "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    #"sphinx.ext.inheritance_diagram",
+    # "sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
 ]
@@ -90,12 +90,12 @@ exclude_patterns = [
     "build/*",
     # "_templates/*",
     # DEBUG
-    #"examples.rst",
-    #"notebooks/*",
-    #"notebooks/layout_opt.ipynb",
-    #"notebooks/timelines.ipynb",
-    #"notebooks/heterogeneous.ipynb",
-    #"notebooks/timeseries.ipynb",
+    # "examples.rst",
+    # "notebooks/*",
+    # "notebooks/layout_opt.ipynb",
+    # "notebooks/timelines.ipynb",
+    # "notebooks/heterogeneous.ipynb",
+    # "notebooks/timeseries.ipynb",
     # "api.rst"
 ]
 

@@ -51,12 +51,6 @@ class Timelines(WakeFrame):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -64,15 +58,8 @@ class Timelines(WakeFrame):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        idata = super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity)
 
         if verbosity > 0:
             print(f"{self.name}: Pre-calculating ambient wind vectors")
@@ -97,7 +84,7 @@ class Timelines(WakeFrame):
         self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
 
         # prepare mdata:
-        mdata = algo.idata_mem[algo.states.name]["data_vars"]
+        mdata = algo.get_model_data(algo.states)["data_vars"]
         mdict = {v: d[1] for v, d in mdata.items()}
         mdims = {v: d[0] for v, d in mdata.items()}
         mdata = Data(mdict, mdims, loop_dims=[FC.STATE])
@@ -132,8 +119,6 @@ class Timelines(WakeFrame):
         plt.show()
         quit()
         """
-
-        return idata
 
     def calc_order(self, algo, mdata, fdata):
         """ "
