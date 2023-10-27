@@ -190,10 +190,11 @@ class SeqDynamicWakes(WakeFrame):
         del dists
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][stsel][0, None, 2]
+        p = self._traces_p[tri, tindx, :2]
         nx = self._traces_v[tri, tindx, :2]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-        wcoos[0, :, 0] = np.einsum('pd,pd->p', points[0, :, :2], nx) + self._traces_l[tri, tindx]
-        wcoos[0, :, 1] = np.einsum('pd,pd->p', points[0, :, :2], ny)
+        wcoos[0, :, 0] = np.einsum('pd,pd->p', points[0, :, :2] - p, nx) + self._traces_l[tri, tindx]
+        wcoos[0, :, 1] = np.einsum('pd,pd->p', points[0, :, :2] - p, ny)
         
         return wcoos
 
