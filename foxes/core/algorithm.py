@@ -300,31 +300,26 @@ class Algorithm(Model):
 
     def get_models_idata(self):
         """
-        Collect the idata from all models.
+        Returns idata object of models
         
         Returns
         -------
-        idata: dict
+        idata: dict, optional
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`.
-
+            Take algorithm's idata object by default.
+        
         """
         if not self.initialized:
             raise ValueError(
                 f"Algorithm '{self.name}': get_models_idata called before initialization"
             )
-        
-        idata = self._idata_mem.get(self.name)
-        mnames = [mname for mname in self._idata_mem.keys() if mname[:2] != "__"]
-        for mname in mnames:
-            if mname in self.keep_models or mname == self.name:
-                hidata = self._idata_mem.get(mname)
-            else:
-                hidata = self._idata_mem.pop(mname)
-            idata["coords"].update(hidata["coords"])
-            idata["data_vars"].update(hidata["data_vars"])
-        
+        idata = {"coords": {}, "data_vars": {}}
+        for k, hidata in self._idata_mem.items():
+            if len(k) < 3 or k[:2] != "__":
+                idata["coords"].update(hidata["coords"])
+                idata["data_vars"].update(hidata["data_vars"])
         return idata
 
     def get_models_data(self, idata=None):

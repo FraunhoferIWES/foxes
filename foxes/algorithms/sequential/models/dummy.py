@@ -34,15 +34,21 @@ class DummyStates(States):
         self._weight = None
         self._indx = None
 
-    def initialize(self, algo, verbosity=0):
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.states]
+    
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -50,20 +56,12 @@ class DummyStates(States):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        force: bool
+            Overwrite existing data
 
         """
-
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.states, idata=idata, verbosity=verbosity)
+        super().initialize(algo, verbosity, force)
         self._size = self.states.size()
-        return idata
 
     def size(self):
         """
@@ -104,7 +102,7 @@ class DummyStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return self._weight[None, :] if self._size == 1 else self.states.weights()
+        return self._weight[None, :] if self._size == 1 else self.states.weights(algo)
     
     def output_point_vars(self, algo):
         """
