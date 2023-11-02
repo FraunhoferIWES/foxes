@@ -348,6 +348,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5
 
+- Dependencies:
+  - Dropping support for Python 3.7, due to `netcdf4` dependency
 - Core:
   - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
 
