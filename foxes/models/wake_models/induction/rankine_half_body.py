@@ -50,22 +50,7 @@ class RHB(WakeModel):
         algo.update_idata([self.superp], idata=idata, verbosity=verbosity)
 
         return idata
-    
-    def keep(self, algo):
-        """
-        Add model and all sub models to
-        the keep_models list
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-
-        """
-        super().keep(algo)
-        for v in self.superp.values():
-            v.keep(algo)
-    
+       
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -206,6 +191,7 @@ class RHB(WakeModel):
 
         # select targets
         sp_sel = (ct > 0) & ( ( RHB_shape < -1 ) | ( x < xs ) )
+    
         if np.any(sp_sel):
 
             # apply selection

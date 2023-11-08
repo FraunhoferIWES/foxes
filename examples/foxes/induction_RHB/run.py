@@ -54,18 +54,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    #############################################
-    # OVERWRITE ARGS FOR DEBUGGING HERE #
-    #args.wakes = ["RHB_linear", "Bastankhah_linear_k004"]
-    #args.wakes = ["Bastankhah_linear_k004"]
-    args.wakes = ["RHB_linear"]
-    #args.wakes = ["Jensen_linear_k007"]
-    args.n_t = 6
-    args.iterative = False
-    args.deltax = 200
-    args.deltay = 100
-    args.wd = 240
-    #############################################
 
     # create model book
     mbook = foxes.ModelBook()
@@ -162,20 +150,12 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-    # horizontal flow contour plot with wind direction
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=5,levels=25, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
-        quiver_n=4,xspace=120.0, yspace=120.0)
-    fig = next(g)
-    plt.savefig("RHB_horizontal_flow_wd.png")
-    plt.show()
-    plt.close(fig)
+
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution= 2, xspace=200.0, yspace=200.0)
+    g = o.gen_states_fig_xy(args.var, resolution=2, xspace=200.0, yspace=200.0)
     fig = next(g)
-    plt.savefig("RHB_horizontal_flow.png")
     plt.show()
 
   # vertical flow plot
@@ -184,5 +164,4 @@ if __name__ == "__main__":
                              x_direction=np.mod(args.wd, 360.0))
     fig = next(g)
     plt.show()
-    #plt.savefig("RHB_vertical_flow.png")
-    print()
+
