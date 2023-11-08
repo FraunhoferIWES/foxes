@@ -356,6 +356,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
 - Algorithms:
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
+- Output:
+  - New sub package: `output.flow_plots_2d` is now a package instead of a module
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
 

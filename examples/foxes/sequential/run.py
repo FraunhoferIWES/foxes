@@ -11,6 +11,9 @@ from foxes.utils.runners import DaskRunner
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-a", "--animation", help="Write flow animation file", action="store_true"
+    )
+    parser.add_argument(
         "-l",
         "--layout",
         help="The wind farm layout file (path or static)",
@@ -49,6 +52,31 @@ if __name__ == "__main__":
         help="Flag for showing layout figure",
         action="store_true",
     )
+    parser.add_argument(
+        "-cp",
+        "--chunksize_points",
+        help="The maximal chunk size for points",
+        type=int,
+        default=5000,
+    )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument(
+        "-n",
+        "--n_workers",
+        help="The number of workers for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-tw",
+        "--threads_per_worker",
+        help="The number of threads per worker for distributed run",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+    )
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -81,15 +109,80 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
+        chunks={FC.STATE: None, FC.POINT: args.chunksize_points}
     )
 
     points = np.random.uniform(0, 1000, (N,5,3))
-    aiter = algo.iter(points=points)
-    for r in aiter:
-        print(aiter.index)
-    
-    print("\nFarm results:\n")
-    print(aiter.farm_results)
 
-    print("\nPoint results:\n")
-    print(aiter.point_results)
+    with DaskRunner(
+        scheduler=args.scheduler,
+        n_workers=args.n_workers,
+        threads_per_worker=args.threads_per_worker,
+    ) as runner:
+        
+
+        
+        aiter = algo.iter(points=points)
+        for r in aiter:
+            print(aiter.index)
+        
+        print("\nFarm results:\n")
+        print(aiter.farm_results)
+
+        print("\nPoint results:\n")
+        print(aiter.point_results)
+
+        
+
+        if args.animation:
+            print("\nCalculating animation")
+
+            fig, axs = plt.subplots(
+                2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
+            )
+
+            anim = foxes.output.Animator(fig)
+            of = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+            anim.add_generator(
+                of.gen_states_fig_xy(
+                    FV.WS,
+                    resolution=30,
+                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                    quiver_n=35,
+                    xmax=5000,
+                    ymax=5000,
+                    fig=fig,
+                    ax=axs[0],
+                    ret_im=True,
+                    title=None,
+                    animated=True,
+                )
+            )
+            anim.add_generator(
+                o.gen_stdata(
+                    turbines=[4, 7],
+                    variable=FV.REWS,
+                    fig=fig,
+                    ax=axs[1],
+                    ret_im=True,
+                    legloc="upper left",
+                    animated=True,
+                )
+            )
+
+            ani = anim.animate()
+
+            lo = foxes.output.FarmLayoutOutput(farm)
+            lo.get_figure(
+                fig=fig,
+                ax=axs[0],
+                title="",
+                annotate=1,
+                anno_delx=-120,
+                anno_dely=-60,
+                alpha=0,
+            )
+
+            fpath = "ani.gif"
+            print("Writing file", fpath)
+            ani.save(filename=fpath, writer="pillow")

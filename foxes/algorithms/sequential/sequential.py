@@ -1,4 +1,5 @@
 from foxes.algorithms.downwind.downwind import Downwind
+import foxes.constants as FC
 
 from . import models as mdls
        
@@ -51,6 +52,7 @@ class Sequential(Downwind):
             *args, 
             ambient=False, 
             calc_pars={},
+            chunks={FC.STATE: None, FC.POINT: 10000},
             **kwargs,
         ):
         """
@@ -80,7 +82,7 @@ class Sequential(Downwind):
             farm,
             mdls.DummyStates(states),
             *args, 
-            chunks=None,
+            chunks=chunks,
             **kwargs
         )
         self.ambient = ambient

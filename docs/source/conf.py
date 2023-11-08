@@ -318,6 +318,7 @@ python_apigen_modules = {
     "foxes.input.states": "_input/states/",
     "foxes.input.windio": "_input/windio/",
     "foxes.output": "_output/",
+    "foxes.output.flow_plots_2d": "_output/flow_plots_2d/",
     "foxes.models.model_book": "_models/model_book/",
     "foxes.models.farm_controllers": "_models/farm_controllers/",
     "foxes.models.farm_models": "_models/farm_models/",

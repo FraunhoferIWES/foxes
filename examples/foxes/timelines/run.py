@@ -78,12 +78,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
-    parser.add_argument(
-        "-ts",
-        "--timestep",
-        help="The timestep of the input timeseries or data in minutes",
-        default=60 * 24 * 365,  # default is one year
-    )
     args = parser.parse_args()
 
     cks = (
