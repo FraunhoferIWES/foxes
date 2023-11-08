@@ -220,9 +220,7 @@ class Downwind(Algorithm):
 
         # 0) set XHYD:
         m = fm.turbine_models.SetXYHD()
-        m.name = "set_xyhd_tm"
         mlist.models.append(t2f(m))
-        mlist.models[-1].name = "set_xyhd"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 1) run pre-rotor turbine models via farm controller:
@@ -232,7 +230,7 @@ class Downwind(Algorithm):
 
         # 2) calculate yaw from wind direction at rotor centre:
         mlist.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
-        mlist.models[-1].name = "calc_yaw"
+        mlist.models[-1].name = "calc_yaw_" + mlist.models[-1].name
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calculate ambient rotor results:
@@ -244,7 +242,6 @@ class Downwind(Algorithm):
 
         # 4) calculate turbine order:
         mlist.models.append(self.get_model("CalcOrder")())
-        mlist.models[-1].name = "calc_order"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 5) run post-rotor turbine models via farm controller:
@@ -255,13 +252,11 @@ class Downwind(Algorithm):
         # 6) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(self.get_model("SetAmbFarmResults")())
-        mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 7) calculate wake effects:
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
-            mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # initialize models:
@@ -404,7 +399,6 @@ class Downwind(Algorithm):
                 point_vars=vars, vars_to_amb=vars_to_amb
             )
         )
-        mlist.models[-1].name = "set_amb_results"
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
@@ -412,7 +406,6 @@ class Downwind(Algorithm):
             mlist.models.append(
                 self.get_model("PointWakesCalculation")(vars, emodels, emodels_cpars)
             )
-            mlist.models[-1].name = "calc_wakes"
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # initialize models:

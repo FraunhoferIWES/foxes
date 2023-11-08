@@ -165,6 +165,7 @@ class PointWakesCalculation(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+
         torder = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order = torder.shape[1]
         wake_models = algo.wake_models if self.wake_models is None else self.wake_models
@@ -193,7 +194,7 @@ class PointWakesCalculation(PointDataModel):
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas}
         for w in wmodels:
             w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
-
+        import numpy as np
         for v in self.pvars:
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]

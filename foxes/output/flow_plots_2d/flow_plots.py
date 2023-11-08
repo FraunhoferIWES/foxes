@@ -1,7 +1,6 @@
 import numpy as np
 
 from foxes.output import Output
-from foxes.utils import wd2uv
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -89,31 +88,31 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        xmin: float
+        xmin: float, optional
             The min x coordinate, or None for automatic
-        ymin: float
+        ymin: float, optional
             The min y coordinate, or None for automatic
-        xmax: float
+        xmax: float, optional
             The max x coordinate, or None for automatic
-        ymax: float
+        ymax: float, optional
             The max y coordinate, or None for automatic
-        xlabel: str
+        xlabel: str, optional
             The x axis label
-        ylabel: str
+        ylabel: str, optional
             The y axis label
-        z: float
+        z: float, optional
             The z coordinate of the plane
-        xspace: float
+        xspace: float, optional
             The extra space in x direction, before and after wind farm
-        yspace: float
+        yspace: float, optional
             The extra space in y direction, before and after wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_xy: float, optional
             Divide x and y by this value
@@ -254,33 +253,33 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        x_direction: float
+        x_direction: float, optional
             The direction of the x axis, 0 = north
-        xmin: float
+        xmin: float, optional
             The min x coordinate, or None for automatic
-        zmin: float
+        zmin: float, optional
             The min z coordinate
-        xmax: float
+        xmax: float, optional
             The max x coordinate, or None for automatic
-        zmax: float
+        zmax: float, optional
             The max z coordinate, or None for automatic
-        xlabel: str
+        xlabel: str, optional
             The x axis label
-        zlabel: str
+        zlabel: str, optional
             The z axis label
-        y: float
+        y: float, optional
             The y coordinate of the plane
-        xspace: float
+        xspace: float, optional
             The extra space in x direction, before and after wind farm
-        zspace: float
+        zspace: float, optional
             The extra space in z direction, below and above wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_x: float, optional
             Divide x by this value
@@ -424,33 +423,33 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        x_direction: float
+        x_direction: float, optional
             The direction of the x axis, 0 = north
-        ymin: float
+        ymin: float, optional
             The min y coordinate, or None for automatic
-        zmin: float
+        zmin: float, optional
             The min z coordinate
-        ymax: float
+        ymax: float, optional
             The max y coordinate, or None for automatic
-        zmax: float
+        zmax: float, optional
             The max z coordinate, or None for automatic
-        ylabel: str
+        ylabel: str, optional
             The y axis label
-        zlabel: str
+        zlabel: str, optional
             The z axis label
-        x: float
+        x: float, optional
             The x coordinate of the plane
-        yspace: float
+        yspace: float, optional
             The extra space in y direction, before and after wind farm
-        zspace: float
+        zspace: float, optional
             The extra space in z direction, below and above wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_y: float, optional
             Divide y by this value
@@ -594,31 +593,31 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        xmin: float
+        xmin: float, optional
             The min x coordinate, or None for automatic
-        ymin: float
+        ymin: float, optional
             The min y coordinate, or None for automatic
-        xmax: float
+        xmax: float, optional
             The max x coordinate, or None for automatic
-        ymax: float
+        ymax: float, optional
             The max y coordinate, or None for automatic
-        xlabel: str
+        xlabel: str, optional
             The x axis label
-        ylabel: str
+        ylabel: str, optional
             The y axis label
-        z: float
+        z: float, optional
             The z coordinate of the plane
-        xspace: float
+        xspace: float, optional
             The extra space in x direction, before and after wind farm
-        yspace: float
+        yspace: float, optional
             The extra space in y direction, before and after wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_xy: float, optional
             Divide x and y by this value
@@ -780,33 +779,33 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        x_direction: float
+        x_direction: float, optional
             The direction of the x axis, 0 = north
-        xmin: float
+        xmin: float, optional
             The min x coordinate, or None for automatic
-        zmin: float
+        zmin: float, optional
             The min z coordinate
-        xmax: float
+        xmax: float, optional
             The max x coordinate, or None for automatic
-        zmax: float
+        zmax: float, optional
             The max z coordinate, or None for automatic
-        xlabel: str
+        xlabel: str, optional
             The x axis label
-        zlabel: str
+        zlabel: str, optional
             The z axis label
-        y: float
+        y: float, optional
             The y coordinate of the plane
-        xspace: float
+        xspace: float, optional
             The extra space in x direction, before and after wind farm
-        zspace: float
+        zspace: float, optional
             The extra space in z direction, below and above wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_x: float, optional
             Divide x by this value
@@ -972,33 +971,33 @@ class FlowPlots2D(Output):
             The variable name
         resolution: float
             The resolution in m
-        x_direction: float
+        x_direction: float, optional
             The direction of the x axis, 0 = north
-        ymin: float
+        ymin: float, optional
             The min y coordinate, or None for automatic
-        zmin: float
+        zmin: float, optional
             The min z coordinate
-        ymax: float
+        ymax: float, optional
             The max y coordinate, or None for automatic
-        zmax: float
+        zmax: float, optional
             The max z coordinate, or None for automatic
-        ylabel: str
+        ylabel: str, optional
             The y axis label
-        zlabel: str
+        zlabel: str, optional
             The z axis label
-        x: float
+        x: float, optional
             The x coordinate of the plane
-        yspace: float
+        yspace: float, optional
             The extra space in y direction, left and right of wind farm
-        zspace: float
+        zspace: float, optional
             The extra space in z direction, below and above wind farm
-        levels: int
+        levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float
+        var_min: float, optional
             Minimum variable value
-        var_max: float
+        var_max: float, optional
             Maximum variable value
-        figsize: tuple
+        figsize: tuple, optional
             The figsize for plt.Figure
         normalize_y: float, optional
             Divide y by this value

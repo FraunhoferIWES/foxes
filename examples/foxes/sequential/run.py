@@ -91,9 +91,20 @@ if __name__ == "__main__":
         states_sel=range(100),
     )
 
+    """
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
         farm, args.layout, turbine_models=args.tmodels + [ttype.name]
+    )
+    """
+    farm = foxes.WindFarm()
+    N = 3
+    foxes.input.farm_layout.add_grid(
+        farm,
+        xy_base=np.array([0.0, 0.0]),
+        step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
+        steps=(N, N),
+        turbine_models=args.tmodels + [ttype.name],
     )
 
     if args.show_layout:
@@ -112,7 +123,7 @@ if __name__ == "__main__":
         chunks={FC.STATE: None, FC.POINT: args.chunksize_points}
     )
 
-    points = np.random.uniform(0, 1000, (N,5,3))
+    #points = np.random.uniform(0, 1000, (N,5,3))
 
     with DaskRunner(
         scheduler=args.scheduler,
@@ -120,62 +131,48 @@ if __name__ == "__main__":
         threads_per_worker=args.threads_per_worker,
     ) as runner:
         
+        # in case of animation, add a plugin that creates the images:
+        plugins = []
+        if args.animation:
+            fig, ax = plt.subplots()
+            anigen = foxes.output.SeqFlowAnimationPlugin(
+                orientation="xy",
+                var=FV.WS,
+                resolution=30,
+                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                quiver_n=35,
+                xmax=5000,
+                ymax=5000,
+                fig=fig,
+                ax=ax,
+                ret_im=True,
+                title=None,
+                animated=True,
+            )
+            plugins = [anigen]
 
-        
-        aiter = algo.iter(points=points)
+        # run all states sequentially:
+        aiter = algo.iter(plugins=plugins)
         for r in aiter:
             print(aiter.index)
         
         print("\nFarm results:\n")
         print(aiter.farm_results)
 
-        print("\nPoint results:\n")
-        print(aiter.point_results)
-
-        
+        #print("\nPoint results:\n")
+        #print(aiter.point_results)
 
         if args.animation:
             print("\nCalculating animation")
 
-            fig, axs = plt.subplots(
-                2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
-            )
-
             anim = foxes.output.Animator(fig)
-            of = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-            anim.add_generator(
-                of.gen_states_fig_xy(
-                    FV.WS,
-                    resolution=30,
-                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                    quiver_n=35,
-                    xmax=5000,
-                    ymax=5000,
-                    fig=fig,
-                    ax=axs[0],
-                    ret_im=True,
-                    title=None,
-                    animated=True,
-                )
-            )
-            anim.add_generator(
-                o.gen_stdata(
-                    turbines=[4, 7],
-                    variable=FV.REWS,
-                    fig=fig,
-                    ax=axs[1],
-                    ret_im=True,
-                    legloc="upper left",
-                    animated=True,
-                )
-            )
-
+            anim.add_generator(anigen.gen_images())
             ani = anim.animate()
 
             lo = foxes.output.FarmLayoutOutput(farm)
             lo.get_figure(
                 fig=fig,
-                ax=axs[0],
+                ax=ax,
                 title="",
                 annotate=1,
                 anno_delx=-120,
@@ -186,3 +183,4 @@ if __name__ == "__main__":
             fpath = "ani.gif"
             print("Writing file", fpath)
             ani.save(filename=fpath, writer="pillow")
+            

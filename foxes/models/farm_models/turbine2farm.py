@@ -30,6 +30,7 @@ class Turbine2FarmModel(FarmModel):
         """
         super().__init__()
         self.turbine_model = turbine_model
+        self.name = turbine_model.name + "_t2f"
 
     def __repr__(self):
         return f"{type(self).__name__}({self.turbine_model})"

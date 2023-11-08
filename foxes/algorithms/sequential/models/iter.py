@@ -19,12 +19,14 @@ class SequentialIter:
         The points of interest, shape: (n_states, n_points, 3)
     store: bool
         Flag for storing state results
+    plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+        The plugins, updated with every iteration
 
     :group: algorithms.sequential.models
 
     """
 
-    def __init__(self, algo, points=None, store=True):
+    def __init__(self, algo, points=None, store=True, plugins=[]):
         """
         Constructor.
         
@@ -36,12 +38,15 @@ class SequentialIter:
             The points of interest, shape: (n_states, n_points, 3)
         store: bool
             Flag for storing state results
+        plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
+            The plugins, updated with every iteration
 
         """
         self.algo = algo
         self.states = algo.states.states
         self.points = points
         self.store = store
+        self.plugins = plugins
 
         self._i = None
 
@@ -98,6 +103,9 @@ class SequentialIter:
                         name="pdata",
                     )
         
+            for p in self.plugins:
+                p.initialize(self)
+
         return self
     
     def __next__(self):
@@ -134,8 +142,20 @@ class SequentialIter:
                     self._fdata[v][self._i] = d[0]
             else:
                 self._fdata = fdata
-            
+
+            fres = Dataset(
+                coords={FC.STATE: [self.index], FC.TURBINE: np.arange(self.algo.n_turbines)},
+                data_vars={v: ((FC.STATE, FC.TURBINE), d) for v, d in fres.items()}
+            )
+            fres[FC.TNAME] = ((FC.TURBINE,), self.algo.farm.turbine_names)
+            if FV.ORDER in fres:
+                fres[FV.ORDER] = fres[FV.ORDER].astype(FC.ITYPE)
+
             if self.points is None:
+
+                for p in self.plugins:
+                    p.update(self, fres)
+
                 self._i += 1
                 return fres
             
@@ -149,11 +169,20 @@ class SequentialIter:
                 )
 
                 pres = self._plist.calculate(self.algo, mdata, fdata, pdata, parameters=self._calc_pars_p)
+
                 if self.store:
                     for v, d in pres.items():
                         self._pdata[v][self._i] = d[0]
                 else:
                     self._pdata = pdata
+                
+                pres = Dataset(
+                    coords={FC.STATE: [self.index], FC.POINT: np.arange(n_points)},
+                    data_vars={v: ((FC.STATE, FC.POINT), d) for v, d in pres.items()}
+                )
+
+                for p in self.plugins:
+                    p.update(self, fres, pres)
 
                 self._i += 1
                 return fres, pres
@@ -167,6 +196,9 @@ class SequentialIter:
             self.algo.states._size = len(self._inds)
             self.algo.states._indx = self._inds
             self.algo.states._weight = self._weights
+
+            for p in self.plugins:
+                p.finalize(self)
 
             raise StopIteration
 
