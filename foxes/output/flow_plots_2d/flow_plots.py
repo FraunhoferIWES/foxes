@@ -61,8 +61,8 @@ class FlowPlots2D(Output):
         xspace=500.0,
         yspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_xy=None,
         normalize_var=None,
@@ -108,9 +108,9 @@ class FlowPlots2D(Output):
             The extra space in y direction, before and after wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -170,8 +170,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)[None]
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -225,8 +225,8 @@ class FlowPlots2D(Output):
         xspace=500.0,
         zspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_x=None,
         normalize_z=None,
@@ -275,9 +275,9 @@ class FlowPlots2D(Output):
             The extra space in z direction, below and above wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -339,8 +339,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)[None]
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -395,8 +395,8 @@ class FlowPlots2D(Output):
         yspace=500.0,
         zspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_y=None,
         normalize_z=None,
@@ -445,9 +445,9 @@ class FlowPlots2D(Output):
             The extra space in z direction, below and above wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -509,8 +509,8 @@ class FlowPlots2D(Output):
         data = np.einsum("s,sp->p", weights, data)[None]
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -565,8 +565,8 @@ class FlowPlots2D(Output):
         xspace=500.0,
         yspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_xy=None,
         normalize_var=None,
@@ -613,9 +613,9 @@ class FlowPlots2D(Output):
             The extra space in y direction, before and after wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -687,8 +687,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -750,8 +750,8 @@ class FlowPlots2D(Output):
         xspace=500.0,
         zspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_x=None,
         normalize_z=None,
@@ -801,9 +801,9 @@ class FlowPlots2D(Output):
             The extra space in z direction, below and above wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -877,8 +877,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var
@@ -942,8 +942,8 @@ class FlowPlots2D(Output):
         yspace=500.0,
         zspace=500.0,
         levels=None,
-        var_min=None,
-        var_max=None,
+        vmin=None,
+        vmax=None,
         figsize=None,
         normalize_y=None,
         normalize_z=None,
@@ -993,9 +993,9 @@ class FlowPlots2D(Output):
             The extra space in z direction, below and above wind farm
         levels: int, optional
             The number of levels for the contourf plot, or None for pure image
-        var_min: float, optional
+        vmin: float, optional
             Minimum variable value
-        var_max: float, optional
+        vmax: float, optional
             Maximum variable value
         figsize: tuple, optional
             The figsize for plt.Figure
@@ -1067,8 +1067,8 @@ class FlowPlots2D(Output):
         del point_results
 
         # find data min max:
-        vmin = var_min if var_min is not None else np.nanmin(data)
-        vmax = var_max if var_max is not None else np.nanmax(data)
+        vmin = vmin if vmin is not None else np.nanmin(data)
+        vmax = vmax if vmax is not None else np.nanmax(data)
         if normalize_var is not None:
             vmin /= normalize_var
             vmax /= normalize_var

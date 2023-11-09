@@ -138,13 +138,15 @@ if __name__ == "__main__":
             anigen = foxes.output.SeqFlowAnimationPlugin(
                 orientation="xy",
                 var=FV.WS,
-                resolution=30,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                quiver_n=35,
+                resolution=10,
+                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.04),
+                quiver_n=101,
                 xmax=5000,
                 ymax=5000,
                 fig=fig,
                 ax=ax,
+                vmin=0,
+                vmax=15,
                 ret_im=True,
                 title=None,
                 animated=True,
@@ -152,7 +154,7 @@ if __name__ == "__main__":
             plugins = [anigen]
 
         # run all states sequentially:
-        aiter = algo.iter(plugins=plugins)
+        aiter = algo.iter(plugins=plugins) # ,points=points)
         for r in aiter:
             print(aiter.index)
         
@@ -167,7 +169,7 @@ if __name__ == "__main__":
 
             anim = foxes.output.Animator(fig)
             anim.add_generator(anigen.gen_images())
-            ani = anim.animate()
+            ani = anim.animate(interval=700)
 
             lo = foxes.output.FarmLayoutOutput(farm)
             lo.get_figure(
@@ -178,6 +180,7 @@ if __name__ == "__main__":
                 anno_delx=-120,
                 anno_dely=-60,
                 alpha=0,
+                s=10,
             )
 
             fpath = "ani.gif"

@@ -85,7 +85,6 @@ The wake frame models. They define the curves along which the wakes
 propagate.
 
     .. python-apigen-group:: models.wake_frames
-    .. python-apigen-group:: models.wake_frames.sequential
 
 foxes.models.wake_models
 ------------------------
