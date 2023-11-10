@@ -1,9 +1,9 @@
-from foxes.algorithms.sequential import SequentialIterPlugin
+from foxes.algorithms.sequential import SequentialPlugin
 import matplotlib.pyplot as plt
 
 from .flow_plots import FlowPlots2D
 
-class SeqFlowAnimationPlugin(SequentialIterPlugin):
+class SeqFlowAnimationPlugin(SequentialPlugin):
     """
     Plugin for creating data for a 2D flow animation 
     during sequential iterations
@@ -46,36 +46,36 @@ class SeqFlowAnimationPlugin(SequentialIterPlugin):
         self.pars = pars
         #self.pars["animated"] = True
 
-    def initialize(self, iter):
+    def initialize(self, algo):
         """
         Initialize data based on the intial iterator
         
         Parameters
         ----------
-        iter: foxes.algorithms.sequential.models.SequentialIter
-            The initialized iterator
+        algo: foxes.algorithms.sequential.Sequential
+            The current sequetial algorithm
         
         """
-        super().initialize(iter)
+        super().initialize(algo)
         self._data = []
 
-    def update(self, iter, fres, pres=None):
+    def update(self, algo, fres, pres=None):
         """
         Updates data based on current iteration
         
         Parameters
         ----------
-        iter: foxes.algorithms.sequential.models.SequentialIter
-            The latest iterator
+        algo: foxes.algorithms.sequential.Sequential
+            The latest sequetial algorithm
         fres: xarray.Dataset
-            The current farm results
+            The latest farm results
         pres: xarray.Dataset, optional
-            The current point results
+            The latest point results
         
         """
-        super().update(iter, fres, pres)
+        super().update(algo, fres, pres)
 
-        o = FlowPlots2D(iter.algo, fres, self.runner)
+        o = FlowPlots2D(algo, fres, self.runner)
 
         if self.orientation == "xy":
             self._data.append(next(o.gen_states_fig_xy(**self.pars)))

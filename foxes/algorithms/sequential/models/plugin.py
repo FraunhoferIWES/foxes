@@ -1,12 +1,12 @@
-class SequentialIterPlugin:
+class SequentialPlugin:
     """
     Base class for plugins that are
     updated with each sequential iteration
 
     Parameters
     ----------
-    iter: foxes.algorithms.sequential.models.SequentialIter
-        The current iterator
+    algo: foxes.algorithms.sequential.Sequential
+        The sequetial algorithm
     
     :group: algorithms.sequential.models
 
@@ -16,44 +16,44 @@ class SequentialIterPlugin:
         """
         Constructor.
         """
-        self.iter = None
+        self.algo = None
 
-    def initialize(self, iter):
+    def initialize(self, algo):
         """
         Initialize data based on the intial iterator
         
         Parameters
         ----------
-        iter: foxes.algorithms.sequential.models.SequentialIter
-            The initialized iterator
+        algo: foxes.algorithms.sequential.Sequential
+            The current sequetial algorithm
         
         """
-        self.iter = iter
+        self.algo = algo
 
-    def update(self, iter, fres, pres=None):
+    def update(self, algo, fres, pres=None):
         """
         Updates data based on current iteration
         
         Parameters
         ----------
-        iter: foxes.algorithms.sequential.models.SequentialIter
-            The latest iterator
+        algo: foxes.algorithms.sequential.Sequential
+            The latest sequetial algorithm
         fres: xarray.Dataset
-            The current farm results
+            The latest farm results
         pres: xarray.Dataset, optional
-            The current point results
+            The latest point results
         
         """
-        self.iter = iter
+        self.algo = algo
     
-    def finalize(self, iter):
+    def finalize(self, algo):
         """
         Finalize data based on the final iterator
         
         Parameters
         ----------
-        iter: foxes.algorithms.sequential.models.SequentialIter
-            The final iterator
+        algo: foxes.algorithms.sequential.Sequential
+            The final sequetial algorithm
         
         """
-        self.iter = None
+        self.algo = None

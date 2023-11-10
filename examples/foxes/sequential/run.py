@@ -20,12 +20,6 @@ if __name__ == "__main__":
         default="test_farm_67.csv",
     )
     parser.add_argument(
-        "-s",
-        "--states",
-        help="The timeseries input file (path or static)",
-        default="timeseries_3000.csv.gz",
-    )
-    parser.add_argument(
         "-t",
         "--turbine_file",
         help="The P-ct-curve csv file (path or static)",
@@ -85,10 +79,10 @@ if __name__ == "__main__":
 
     N = 100
     states = foxes.input.states.Timeseries(
-        data_source=args.states,
+        data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(100),
+        states_sel=range(100, 200),
     )
 
     """
@@ -123,6 +117,27 @@ if __name__ == "__main__":
         chunks={FC.STATE: None, FC.POINT: args.chunksize_points}
     )
 
+    # in case of animation, add a plugin that creates the images:
+    if args.animation:
+        fig, ax = plt.subplots()
+        anigen = foxes.output.SeqFlowAnimationPlugin(
+            orientation="xy",
+            var=FV.WS,
+            resolution=10,
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.04),
+            quiver_n=101,
+            xmax=5000,
+            ymax=5000,
+            fig=fig,
+            ax=ax,
+            vmin=0,
+            vmax=15,
+            ret_im=True,
+            title=None,
+            animated=True,
+        )
+        algo.plugins.append(anigen)
+
     #points = np.random.uniform(0, 1000, (N,5,3))
 
     with DaskRunner(
@@ -130,60 +145,38 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-        
-        # in case of animation, add a plugin that creates the images:
-        plugins = []
-        if args.animation:
-            fig, ax = plt.subplots()
-            anigen = foxes.output.SeqFlowAnimationPlugin(
-                orientation="xy",
-                var=FV.WS,
-                resolution=10,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.04),
-                quiver_n=101,
-                xmax=5000,
-                ymax=5000,
-                fig=fig,
-                ax=ax,
-                vmin=0,
-                vmax=15,
-                ret_im=True,
-                title=None,
-                animated=True,
-            )
-            plugins = [anigen]
 
         # run all states sequentially:
-        aiter = algo.iter(plugins=plugins) # ,points=points)
-        for r in aiter:
-            print(aiter.index)
+        for r in algo:
+            print(algo.index)
         
         print("\nFarm results:\n")
-        print(aiter.farm_results)
+        print(algo.farm_results)
 
         #print("\nPoint results:\n")
-        #print(aiter.point_results)
+        #print(algo.point_results)
 
-        if args.animation:
-            print("\nCalculating animation")
 
-            anim = foxes.output.Animator(fig)
-            anim.add_generator(anigen.gen_images())
-            ani = anim.animate(interval=700)
+    if args.animation:
+        print("\nCalculating animation")
 
-            lo = foxes.output.FarmLayoutOutput(farm)
-            lo.get_figure(
-                fig=fig,
-                ax=ax,
-                title="",
-                annotate=1,
-                anno_delx=-120,
-                anno_dely=-60,
-                alpha=0,
-                s=10,
-            )
+        anim = foxes.output.Animator(fig)
+        anim.add_generator(anigen.gen_images())
+        ani = anim.animate(interval=700)
 
-            fpath = "ani.gif"
-            print("Writing file", fpath)
-            ani.save(filename=fpath, writer="pillow")
+        lo = foxes.output.FarmLayoutOutput(farm)
+        lo.get_figure(
+            fig=fig,
+            ax=ax,
+            title="",
+            annotate=1,
+            anno_delx=-120,
+            anno_dely=-60,
+            alpha=0,
+            s=10,
+        )
+
+        fpath = "ani.gif"
+        print("Writing file", fpath)
+        ani.save(filename=fpath, writer="pillow")
             

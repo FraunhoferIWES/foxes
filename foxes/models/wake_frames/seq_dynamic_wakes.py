@@ -166,7 +166,7 @@ class SeqDynamicWakes(WakeFrame):
 
         # transport wakes that originate from previous time steps:
         if counter > 0:
-            dxyz = self._traces_v[:counter, tindx]
+            dxyz = self._traces_v[:counter, tindx] * self._dt[:counter, None]
             self._traces_p[:counter, tindx] += dxyz
             self._traces_l[:counter, tindx] += np.linalg.norm(dxyz, axis=-1)
                         
@@ -191,7 +191,8 @@ class SeqDynamicWakes(WakeFrame):
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][stsel][0, None, 2]
         delp = points[0, :, :2] - self._traces_p[tri, tindx, :2]
-        nx = self._traces_v[tri, tindx, :2]
+        nx = self._traces_v[tri, tindx, :2] 
+        nx /= np.linalg.norm(nx, axis=1)[:, None]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
         wcoos[0, :, 0] = np.einsum('pd,pd->p', delp, nx) + self._traces_l[tri, tindx]
         wcoos[0, :, 1] = np.einsum('pd,pd->p', delp, ny)
