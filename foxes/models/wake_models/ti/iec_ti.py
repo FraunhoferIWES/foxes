@@ -142,7 +142,7 @@ class IECTIWake(TopHatWakeModel):
         k = self.get_data(
             self.k_var,
             FC.STATE_POINT,
-            lookup="sf",
+            lookup="sw",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -206,7 +206,7 @@ class IECTIWake(TopHatWakeModel):
         D = self.get_data(
             FV.D,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -219,7 +219,7 @@ class IECTIWake(TopHatWakeModel):
         ws = self.get_data(
             FV.REWS,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,

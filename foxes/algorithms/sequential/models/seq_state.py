@@ -1,8 +1,6 @@
-
-
 from foxes.core.states import States
 
-class DummyStates(States):
+class SeqState(States):
     """
     Dummy states for iteration, just serving
     as a structural placeholder

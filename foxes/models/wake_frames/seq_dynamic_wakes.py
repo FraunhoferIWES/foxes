@@ -80,7 +80,7 @@ class SeqDynamicWakes(WakeFrame):
         self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_l = np.zeros((algo.n_states, algo.n_turbines), dtype=FC.DTYPE)
-
+    
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.
@@ -172,17 +172,17 @@ class SeqDynamicWakes(WakeFrame):
                         
         # compute wind vectors at wake traces:
         # TODO: dz from U_z is missing here
-        pdata = {
+        hpdata = {
             v: np.zeros((1, N), dtype=FC.DTYPE)
             for v in algo.states.output_point_vars(algo)
         }
-        pdata[FC.POINTS] = self._traces_p[None, :N, tindx]
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
+        hpdata[FC.POINTS] = self._traces_p[None, :N, tindx]
+        hpdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
+        hpdims.update({v: (FC.STATE, FC.POINT) for v in hpdata.keys()})
+        hpdata = Data(hpdata, hpdims, loop_dims=[FC.STATE, FC.POINT])
+        res = algo.states.calculate(algo, mdata, fdata, hpdata)
         self._traces_v[:N, tindx, :2] = wd2uv(res[FV.WD][0], res[FV.WS][0])
-        del pdata, pdims, res
+        del hpdata, hpdims, res
 
         # project:
         dists = cdist(points[0], self._traces_p[:N, tindx])
@@ -196,9 +196,64 @@ class SeqDynamicWakes(WakeFrame):
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
         wcoos[0, :, 0] = np.einsum('pd,pd->p', delp, nx) + self._traces_l[tri, tindx]
         wcoos[0, :, 1] = np.einsum('pd,pd->p', delp, ny)
-        
+
+        # turbines that cause wake:
+        pdata.add(FC.STATE_SOURCE_TURBINE, states_source_turbine, (FC.STATE,))
+
+        # states that cause wake for each target point:
+        pdata.add(FC.STATES_SEL, tri[None, :], (FC.STATE, FC.POINT))
+
         return wcoos
 
+    def get_wake_modelling_data(
+        self,
+        algo,
+        variable,
+        states_source_turbine,
+        fdata,
+        pdata,
+        states0=None,
+    ):
+        """
+        Return data that is required for computing the
+        wake from source turbines to evaluation points.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm, optional
+            The algorithm, needed for data from previous iteration
+        variable: str
+            The variable, serves as data key
+        states_source_turbine: numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
+        states0: numpy.ndarray, optional
+            The states of wake creation
+
+        """      
+        if states0 is None:
+
+            # from previous iteration:
+            if not np.all(
+                states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]
+            ):
+                raise ValueError(
+                    f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}"
+                )
+            
+            s = pdata[FC.STATES_SEL]
+            data = algo.farm_results[variable].to_numpy()
+
+            return data[s, states_source_turbine]
+
+        else:
+            return super().get_wake_modelling_data(algo, variable, states_source_turbine,
+                                                   fdata, pdata, states0)
+    
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
         Gets the points along the centreline for given

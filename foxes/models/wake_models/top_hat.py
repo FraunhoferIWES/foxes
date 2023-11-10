@@ -167,12 +167,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
-
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][st_sel][:, None]
+        ct = self.get_data(FV.CT, FC.STATE_POINT, lookup="w", fdata=fdata, pdata=pdata,
+                           states_source_turbine=states_source_turbine, algo=algo)
         ct[ct > self.ct_max] = self.ct_max
 
         wake_r = self.calc_wake_radius(

@@ -137,7 +137,7 @@ class TurbOParkWake(GaussianWakeModel):
         ct = self.get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -157,7 +157,7 @@ class TurbOParkWake(GaussianWakeModel):
             D = self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -170,7 +170,7 @@ class TurbOParkWake(GaussianWakeModel):
             ati = self.get_data(
                 FV.AMB_TI,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -397,7 +397,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ct = self.get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -417,7 +417,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             D = self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,

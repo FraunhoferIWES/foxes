@@ -82,7 +82,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(100, 200),
+        states_sel=range(200, 300),
     )
 
     """
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
-        chunks={FC.STATE: None, FC.POINT: args.chunksize_points}
+        chunks={FC.STATE: None, FC.POINT: args.chunksize_points},
     )
 
     # in case of animation, add a plugin that creates the images:
@@ -124,21 +124,20 @@ if __name__ == "__main__":
             orientation="xy",
             var=FV.WS,
             resolution=10,
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.04),
-            quiver_n=101,
+            levels=None,
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.035),
+            quiver_n=111,
             xmax=5000,
             ymax=5000,
             fig=fig,
             ax=ax,
             vmin=0,
-            vmax=15,
+            vmax=20,
             ret_im=True,
             title=None,
             animated=True,
         )
         algo.plugins.append(anigen)
-
-    #points = np.random.uniform(0, 1000, (N,5,3))
 
     with DaskRunner(
         scheduler=args.scheduler,
@@ -153,30 +152,27 @@ if __name__ == "__main__":
         print("\nFarm results:\n")
         print(algo.farm_results)
 
-        #print("\nPoint results:\n")
-        #print(algo.point_results)
 
+        if args.animation:
+            print("\nCalculating animation")
 
-    if args.animation:
-        print("\nCalculating animation")
+            anim = foxes.output.Animator(fig)
+            anim.add_generator(anigen.gen_images())
+            ani = anim.animate(interval=600)
 
-        anim = foxes.output.Animator(fig)
-        anim.add_generator(anigen.gen_images())
-        ani = anim.animate(interval=700)
+            lo = foxes.output.FarmLayoutOutput(farm)
+            lo.get_figure(
+                fig=fig,
+                ax=ax,
+                title="",
+                annotate=1,
+                anno_delx=-120,
+                anno_dely=-60,
+                alpha=0,
+                s=10,
+            )
 
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=ax,
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-            s=10,
-        )
-
-        fpath = "ani.gif"
-        print("Writing file", fpath)
-        ani.save(filename=fpath, writer="pillow")
+            fpath = "ani.gif"
+            print("Writing file", fpath)
+            ani.save(filename=fpath, writer="pillow")
             

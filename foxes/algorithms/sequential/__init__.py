@@ -1,4 +1,4 @@
 from .sequential import Sequential
-from .models import SequentialIter, SequentialPlugin
+from .models import SequentialPlugin
 
 from . import models

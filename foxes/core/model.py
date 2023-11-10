@@ -210,7 +210,8 @@ class Model(metaclass=ABCMeta):
             's' for self,
             'm' for mdata,
             'f' for fdata,
-            'p' for pdata
+            'p' for pdata,
+            'w' for wake modelling data
         mdata: foxes.core.Data, optional
             The model data
         fdata: foxes.core.Data, optional
@@ -340,7 +341,6 @@ class Model(metaclass=ABCMeta):
                                 out[sel] = prev_fdata[variable].to_numpy()[
                                     sp[sel], st[sel]
                                 ]
-                                del st
 
             # lookup pdata:
             elif (
@@ -351,6 +351,21 @@ class Model(metaclass=ABCMeta):
                 and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
+            
+            # lookup wake modelling data:
+            elif (
+                s == "w"
+                and target == FC.STATE_POINT
+                and fdata is not None
+                and pdata is not None
+                and variable in fdata
+                and len(fdata.dims[variable]) > 1
+                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
+                and states_source_turbine is not None
+                and algo is not None
+            ):
+                out = algo.wake_frame.get_wake_modelling_data(
+                    algo, variable, states_source_turbine, fdata, pdata)
 
             if out is not None:
                 break
