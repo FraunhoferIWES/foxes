@@ -212,7 +212,7 @@ class PartialDistSlicedWake(PartialWakesModel):
                     algo,
                     mdata,
                     fdata,
-                    hpdata,
+                    pdata,
                     states_source_turbine,
                     wsps,
                     v,

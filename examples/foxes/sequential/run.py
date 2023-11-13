@@ -36,7 +36,7 @@ if __name__ == "__main__":
         default=["Jensen_linear_k007"],
         nargs="+",
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
+    parser.add_argument("-f", "--frame", help="The wake frame", default="seq_dyn_wakes_1min")
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
@@ -85,12 +85,6 @@ if __name__ == "__main__":
         states_sel=range(200, 300),
     )
 
-    """
-    farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_from_file(
-        farm, args.layout, turbine_models=args.tmodels + [ttype.name]
-    )
-    """
     farm = foxes.WindFarm()
     N = 3
     foxes.input.farm_layout.add_grid(
@@ -104,7 +98,7 @@ if __name__ == "__main__":
     if args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
-        plt.close(ax.get_figure())
+        plt.close(ax.get_figure(figsize=(8,8)))
 
     algo = foxes.algorithms.Sequential(
         mbook,
@@ -125,14 +119,16 @@ if __name__ == "__main__":
             var=FV.WS,
             resolution=10,
             levels=None,
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.035),
-            quiver_n=111,
-            xmax=5000,
-            ymax=5000,
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.01),
+            quiver_n=307,
+            xmin=-6000,
+            ymin=-6000,
+            xmax=6000,
+            ymax=6000,
             fig=fig,
             ax=ax,
             vmin=0,
-            vmax=20,
+            vmax=10,
             ret_im=True,
             title=None,
             animated=True,

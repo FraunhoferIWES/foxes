@@ -405,7 +405,7 @@ def get_grid_xz(
     """
 
     # prepare:
-    n_states, n_turbines = farm_results[FC.TURBINE].shape
+    n_states, n_turbines = farm_results[FV.H].shape
     n_x = np.append(wd2uv(x_direction), [0.0], axis=0)
     n_z = np.array([0.0, 0.0, 1.0])
     n_y = np.cross(n_z, n_x)
