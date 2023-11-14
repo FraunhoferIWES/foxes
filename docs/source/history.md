@@ -358,6 +358,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
 - Output:
   - New sub package: `output.flow_plots_2d` is now a package instead of a module
+- Examples:
+  - New example: `sequential`, demonstrating the usage of the sequential algorithm
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
 
