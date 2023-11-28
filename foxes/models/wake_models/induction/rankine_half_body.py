@@ -5,6 +5,7 @@ from foxes.utils import uv2wd, wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class RHB(WakeModel):
     """
     The Rankine half body induction wake model
@@ -13,7 +14,7 @@ class RHB(WakeModel):
     Techincal Paper, Frazer-Nash Consultancy, 2019
 
     """
-    
+
     def __init__(self, superposition, ct_max=0.9999):
         super().__init__()
         self.superposition = superposition
@@ -44,13 +45,13 @@ class RHB(WakeModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.superp = algo.mbook.wake_superpositions[self.superposition] 
+        self.superp = algo.mbook.wake_superpositions[self.superposition]
 
         idata = super().initialize(algo, verbosity)
         algo.update_idata([self.superp], idata=idata, verbosity=verbosity)
 
         return idata
-       
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -120,7 +121,7 @@ class RHB(WakeModel):
             shape (n_states, n_points, ...)
 
         """
-    
+
         # get x, y and z
         x = wake_coos[:, :, 0]
         y = wake_coos[:, :, 1]
@@ -129,7 +130,7 @@ class RHB(WakeModel):
         # get state and point data
         n_states = mdata.n_states
         n_points = x.shape[1]
-        
+
         st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
@@ -170,10 +171,10 @@ class RHB(WakeModel):
         )
 
         # find a (page 6)
-        a = 0.5 * (1-np.sqrt(1-ct))
+        a = 0.5 * (1 - np.sqrt(1 - ct))
 
         # find rotational area
-        rotational_area = np.pi *(D/2)**2
+        rotational_area = np.pi * (D / 2) ** 2
 
         # find m (page 7)
         m = 2 * ws * a * rotational_area
@@ -181,30 +182,29 @@ class RHB(WakeModel):
         # get r and theta
         r = np.sqrt(y**2 + z**2)
         r_sph = np.sqrt(r**2 + x**2)
-        theta = np.arctan2(r,x) 
+        theta = np.arctan2(r, x)
 
         # define rankine half body shape (page 3)
-        RHB_shape = np.cos(theta) -(2/m) * np.pi * ws * (r_sph*np.sin(theta))**2
-      
+        RHB_shape = np.cos(theta) - (2 / m) * np.pi * ws * (r_sph * np.sin(theta)) ** 2
+
         # stagnation point condition
-        xs  = -np.sqrt(m / (4 * np.pi * ws)) 
+        xs = -np.sqrt(m / (4 * np.pi * ws))
 
         # select targets
-        sp_sel = (ct > 0) & ( ( RHB_shape < -1 ) | ( x < xs ) )
-    
-        if np.any(sp_sel):
+        sp_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
 
+        if np.any(sp_sel):
             # apply selection
-            xyz = wake_coos[sp_sel] 
+            xyz = wake_coos[sp_sel]
             m = m[sp_sel]
             a = a[sp_sel]
 
             # calc velocity components
-            vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
-            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,0]
-            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,1]
+            vel_factor = m / (4 * np.pi * np.linalg.norm(xyz, axis=-1) ** 3)
+            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:, 0]
+            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:, 1]
 
-        return wake_deltas 
+        return wake_deltas
 
     def finalize_wake_deltas(
         self,
@@ -245,16 +245,16 @@ class RHB(WakeModel):
         # calc ambient wind vector
         wind_vec = wd2uv(amb_results[FV.WD], amb_results[FV.WS])
 
-        # add ambient result to wake deltas   
-        total_uv = wind_vec + np.stack((wake_deltas['U'], wake_deltas['V']), axis=2)
-        
+        # add ambient result to wake deltas
+        total_uv = wind_vec + np.stack((wake_deltas["U"], wake_deltas["V"]), axis=2)
+
         # deduce WS and WD deltas:
         # this does the job of calc_final_wake_delta, done here as not in parent class of RHB
-        new_wd = uv2wd(total_uv) 
+        new_wd = uv2wd(total_uv)
         new_ws = np.linalg.norm(total_uv, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
         wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
-        
+
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

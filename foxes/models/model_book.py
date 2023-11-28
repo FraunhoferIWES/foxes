@@ -305,9 +305,7 @@ class ModelBook:
             self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
                 A=0.04, superposition=s
             )
-            self.wake_models[f"RHB_{s}"] = fm.wake_models.induction.RHB(
-                superposition=s
-            )
+            self.wake_models[f"RHB_{s}"] = fm.wake_models.induction.RHB(superposition=s)
 
             As = [0.02, 0.04]
             dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]

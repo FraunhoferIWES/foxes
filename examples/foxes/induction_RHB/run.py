@@ -25,7 +25,7 @@ if __name__ == "__main__":
         "-dx", "--deltax", help="The turbine distance in x", type=float, default=800.0
     )
     parser.add_argument(
-        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.
+        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
     )
     parser.add_argument(
         "-t",
@@ -53,7 +53,6 @@ if __name__ == "__main__":
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
     args = parser.parse_args()
-
 
     # create model book
     mbook = foxes.ModelBook()
@@ -150,18 +149,22 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-
-
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xy(args.var, resolution=2, xspace=200.0, yspace=200.0)
     fig = next(g)
     plt.show()
 
-  # vertical flow plot
+    # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=2, xspace=200.0, xmin=-100, zmax=200.0, levels=10,
-                             x_direction=np.mod(args.wd, 360.0))
+    g = o.gen_states_fig_xz(
+        args.var,
+        resolution=2,
+        xspace=200.0,
+        xmin=-100,
+        zmax=200.0,
+        levels=10,
+        x_direction=np.mod(args.wd, 360.0),
+    )
     fig = next(g)
     plt.show()
-
