@@ -195,6 +195,7 @@ class PointWakesCalculation(PointDataModel):
         for w in wmodels:
             w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
         import numpy as np
+
         for v in self.pvars:
             if v in wdeltas:
                 pdata[v] = amb_res[v] + wdeltas[v]

@@ -13,6 +13,7 @@ import foxes.variables as FV
 
 from windIO.utils.yml_utils import load_yaml
 
+
 def read_resource(res, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource
@@ -125,6 +126,7 @@ def read_site(site, **kwargs):
 
     return states
 
+
 def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     """
     Reads a WindIO wind farm
@@ -183,12 +185,7 @@ def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     H = float(tdict["hub_height"])
 
     mbook.turbine_types["windio_turbine"] = CpCtFromTwo(
-        cp_data,
-        ct_data,
-        col_ws_cp_file="ws",
-        col_cp="cp",
-        D=D,
-        H=H
+        cp_data, ct_data, col_ws_cp_file="ws", col_cp="cp", D=D, H=H
     )
 
     models = ["windio_turbine"] + turbine_models

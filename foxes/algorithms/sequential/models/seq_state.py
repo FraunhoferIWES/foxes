@@ -1,15 +1,16 @@
 from foxes.core.states import States
 
+
 class SeqState(States):
     """
     A single state during sequential iteration, just serving
     as a structural placeholder
-    
+
     Parameters
     ----------
     states: foxes.core.States
         The original states set
-    
+
     :group: algorithms.sequential.models
 
     """
@@ -22,7 +23,7 @@ class SeqState(States):
         ----------
         states: foxes.core.States
             The original states set
-        
+
         """
         super().__init__()
         self.states = states
@@ -44,7 +45,7 @@ class SeqState(States):
 
         """
         return [self.states]
-    
+
     def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
@@ -90,7 +91,7 @@ class SeqState(States):
     def counter(self):
         """
         The current index counter
-        
+
         Returns
         -------
         i: int
@@ -98,7 +99,7 @@ class SeqState(States):
 
         """
         return self._counter
-    
+
     def weights(self, algo):
         """
         The statistical weights of all states.
@@ -115,7 +116,7 @@ class SeqState(States):
 
         """
         return self._weight[None, :] if self._size == 1 else self.states.weights(algo)
-    
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.

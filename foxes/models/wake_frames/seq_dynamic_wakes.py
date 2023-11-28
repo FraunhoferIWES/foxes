@@ -58,7 +58,9 @@ class SeqDynamicWakes(WakeFrame):
         """
         super().initialize(algo, verbosity)
         if not isinstance(algo, Sequential):
-            raise TypeError(f"Incompatible algorithm type {type(algo).__name__}, expecting {Sequential.__name__}")
+            raise TypeError(
+                f"Incompatible algorithm type {type(algo).__name__}, expecting {Sequential.__name__}"
+            )
 
         # determine time step:
         times = np.asarray(algo.states.index())
@@ -71,16 +73,20 @@ class SeqDynamicWakes(WakeFrame):
                 raise KeyError(
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
-            self._dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+            self._dt = (
+                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+            )
         else:
             n = max(len(times) - 1, 1)
-            self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
+            self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
+                FC.ITYPE
+            )
 
         # init wake traces data:
         self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_l = np.zeros((algo.n_states, algo.n_turbines), dtype=FC.DTYPE)
-    
+
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.
@@ -169,7 +175,7 @@ class SeqDynamicWakes(WakeFrame):
             dxyz = self._traces_v[:counter, tindx] * self._dt[:counter, None]
             self._traces_p[:counter, tindx] += dxyz
             self._traces_l[:counter, tindx] += np.linalg.norm(dxyz, axis=-1)
-                        
+
         # compute wind vectors at wake traces:
         # TODO: dz from U_z is missing here
         hpdata = {
@@ -191,11 +197,11 @@ class SeqDynamicWakes(WakeFrame):
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][stsel][0, None, 2]
         delp = points[0, :, :2] - self._traces_p[tri, tindx, :2]
-        nx = self._traces_v[tri, tindx, :2] 
+        nx = self._traces_v[tri, tindx, :2]
         nx /= np.linalg.norm(nx, axis=1)[:, None]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-        wcoos[0, :, 0] = np.einsum('pd,pd->p', delp, nx) + self._traces_l[tri, tindx]
-        wcoos[0, :, 1] = np.einsum('pd,pd->p', delp, ny)
+        wcoos[0, :, 0] = np.einsum("pd,pd->p", delp, nx) + self._traces_l[tri, tindx]
+        wcoos[0, :, 1] = np.einsum("pd,pd->p", delp, ny)
 
         # turbines that cause wake:
         pdata.add(FC.STATE_SOURCE_TURBINE, states_source_turbine, (FC.STATE,))
@@ -234,26 +240,24 @@ class SeqDynamicWakes(WakeFrame):
         states0: numpy.ndarray, optional
             The states of wake creation
 
-        """      
+        """
         if states0 is None:
-
             # from previous iteration:
-            if not np.all(
-                states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]
-            ):
+            if not np.all(states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]):
                 raise ValueError(
                     f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}"
                 )
-            
+
             s = pdata[FC.STATES_SEL]
             data = algo.farm_results[variable].to_numpy()
 
             return data[s, states_source_turbine]
 
         else:
-            return super().get_wake_modelling_data(algo, variable, states_source_turbine,
-                                                   fdata, pdata, states0)
-    
+            return super().get_wake_modelling_data(
+                algo, variable, states_source_turbine, fdata, pdata, states0
+            )
+
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
         Gets the points along the centreline for given

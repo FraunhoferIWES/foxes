@@ -172,8 +172,8 @@ class ModelBook:
                 base_frame=fm.wake_frames.Streamlines(step=s)
             )
         dtlist = [
-            ("1s", 1/60),
-            ("10s", 1/6),
+            ("1s", 1 / 60),
+            ("10s", 1 / 6),
             ("30s", 0.5),
             ("1min", 1),
             ("10min", 10),
@@ -187,7 +187,9 @@ class ModelBook:
         )
         self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
         for s, t in dtlist:
-            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(dt_min=t)
+            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(
+                dt_min=t
+            )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",

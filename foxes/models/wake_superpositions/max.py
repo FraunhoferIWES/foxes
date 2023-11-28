@@ -193,8 +193,15 @@ class MaxSuperposition(WakeSuperposition):
             else:
                 var = scaling[15:]
 
-            scale = self.get_data(var, FC.STATE_POINT, lookup="w", fdata=fdata, pdata=pdata, 
-                                  algo=algo, states_source_turbine=states_source_turbine)[sel_sp]
+            scale = self.get_data(
+                var,
+                FC.STATE_POINT,
+                lookup="w",
+                fdata=fdata,
+                pdata=pdata,
+                algo=algo,
+                states_source_turbine=states_source_turbine,
+            )[sel_sp]
 
             wake_delta[sel_sp] = np.maximum(odelta, scale * wake_model_result)
 

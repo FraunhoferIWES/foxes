@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 
 from .flow_plots import FlowPlots2D
 
+
 class SeqFlowAnimationPlugin(SequentialPlugin):
     """
-    Plugin for creating data for a 2D flow animation 
+    Plugin for creating data for a 2D flow animation
     during sequential iterations
 
     Attributes
@@ -21,12 +22,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
     """
 
-    def __init__(
-            self, 
-            orientation,
-            runner=None,
-            **pars
-        ):
+    def __init__(self, orientation, runner=None, **pars):
         """
         Constructor.
 
@@ -44,17 +40,17 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         self.orientation = orientation
         self.runner = runner
         self.pars = pars
-        #self.pars["animated"] = True
+        # self.pars["animated"] = True
 
     def initialize(self, algo):
         """
         Initialize data based on the intial iterator
-        
+
         Parameters
         ----------
         algo: foxes.algorithms.sequential.Sequential
             The current sequetial algorithm
-        
+
         """
         super().initialize(algo)
         self._data = []
@@ -62,7 +58,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     def update(self, algo, fres, pres=None):
         """
         Updates data based on current iteration
-        
+
         Parameters
         ----------
         algo: foxes.algorithms.sequential.Sequential
@@ -71,7 +67,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             The latest farm results
         pres: xarray.Dataset, optional
             The latest point results
-        
+
         """
         super().update(algo, fres, pres)
 
@@ -84,8 +80,10 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         elif self.orientation == "yz":
             self._data.append(next(o.gen_states_fig_yz(**self.pars)))
         else:
-            raise KeyError(f"Unkown orientation '{self.orientation}', choises: xy, xz, yz")
-    
+            raise KeyError(
+                f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
+            )
+
     def gen_images(self):
         for d in self._data:
             yield d

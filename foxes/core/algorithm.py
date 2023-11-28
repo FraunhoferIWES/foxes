@@ -301,7 +301,7 @@ class Algorithm(Model):
     def get_models_idata(self):
         """
         Returns idata object of models
-        
+
         Returns
         -------
         idata: dict, optional
@@ -309,7 +309,7 @@ class Algorithm(Model):
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`.
             Take algorithm's idata object by default.
-        
+
         """
         if not self.initialized:
             raise ValueError(

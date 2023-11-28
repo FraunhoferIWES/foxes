@@ -6,6 +6,7 @@ from foxes.utils import wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 def get_fig(
     var,
     fig,
@@ -54,7 +55,7 @@ def get_fig(
     normalize_var: float, optional
         Divide the variable by this value
     levels: int
-        The number of levels for the contourf plot, 
+        The number of levels for the contourf plot,
         or None for non-contour image
     x_pos: numpy.ndarray
         The grid x positions, shape: (n_x, 3)
@@ -201,17 +202,18 @@ def get_fig(
 
     return out
 
+
 def calc_point_results(
-        algo, 
-        g_pts,
-        farm_results=None, 
-        seq_iter=None, 
-        runner=None,
-        verbosity=0, 
-        **kwargs,
-    ):
+    algo,
+    g_pts,
+    farm_results=None,
+    seq_iter=None,
+    runner=None,
+    verbosity=0,
+    **kwargs,
+):
     """
-    
+
     Helper function that calculates results at grid points.
 
     Parameters
@@ -230,7 +232,7 @@ def calc_point_results(
         The verbosity level, 0 = silent
     kwargs: dict, optional
         Additional parameters for algo.calc_points
-    
+
     """
     averb = None if verbosity == algo.verbosity else algo.verbosity
     if averb is not None:
@@ -240,13 +242,12 @@ def calc_point_results(
         point_results = algo.calc_points(fres, points=g_pts, **kwargs)
     else:
         kwargs["points"] = g_pts
-        point_results = runner.run(
-            algo.calc_points, args=(fres,), kwargs=kwargs
-        )
+        point_results = runner.run(algo.calc_points, args=(fres,), kwargs=kwargs)
     if averb is not None:
         algo.verbosity = averb
 
     return point_results
+
 
 def get_grid_xy(
     farm_results,
@@ -343,11 +344,14 @@ def get_grid_xy(
         print("Res XY   =", x_res, y_res)
         print("Dim XY   =", N_x, N_y)
         print("Grid pts =", n_pts)
-    
+
     return (
-        x_pos, y_pos, z_pos, 
+        x_pos,
+        y_pos,
+        z_pos,
         g_pts.reshape(n_states, n_pts, 3),
     )
+
 
 def get_grid_xz(
     farm_results,
@@ -398,7 +402,7 @@ def get_grid_xz(
     y_pos: float
         The y position of the grid
     z_pos: numpy.ndarray
-        The z grid positions, shape: (n_z, 3) 
+        The z grid positions, shape: (n_z, 3)
     g_pts: numpy.ndarray
         The grid points, shape: (n_states, n_pts, 3)
 
@@ -461,11 +465,14 @@ def get_grid_xz(
         print("Res XZ   =", x_res, z_res)
         print("Dim XZ   =", N_x, N_z)
         print("Grid pts =", n_pts)
-    
+
     return (
-        x_pos, y_pos, z_pos, 
+        x_pos,
+        y_pos,
+        z_pos,
         g_pts.reshape(n_states, n_pts, 3),
     )
+
 
 def get_grid_yz(
     farm_results,
@@ -516,7 +523,7 @@ def get_grid_yz(
     y_pos: numpy.ndarray
         The y grid positions, shape: (n_y, 3)
     z_pos: numpy.ndarray
-        The z grid positions, shape: (n_z, 3) 
+        The z grid positions, shape: (n_z, 3)
     g_pts: numpy.ndarray
         The grid points, shape: (n_states, n_pts, 3)
 
@@ -579,8 +586,10 @@ def get_grid_yz(
         print("Res YZ   =", y_res, z_res)
         print("Dim YZ   =", N_y, N_z)
         print("Grid pts =", n_pts)
-    
+
     return (
-        x_pos, y_pos, z_pos, 
+        x_pos,
+        y_pos,
+        z_pos,
         g_pts.reshape(n_states, n_pts, 3),
     )

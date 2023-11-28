@@ -351,7 +351,7 @@ class Model(metaclass=ABCMeta):
                 and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
-            
+
             # lookup wake modelling data:
             elif (
                 s == "w"
@@ -365,7 +365,8 @@ class Model(metaclass=ABCMeta):
                 and algo is not None
             ):
                 out = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, states_source_turbine, fdata, pdata)
+                    algo, variable, states_source_turbine, fdata, pdata
+                )
 
             if out is not None:
                 break

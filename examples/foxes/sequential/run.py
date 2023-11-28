@@ -36,7 +36,9 @@ if __name__ == "__main__":
         default=["Jensen_linear_k007"],
         nargs="+",
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="seq_dyn_wakes_1min")
+    parser.add_argument(
+        "-f", "--frame", help="The wake frame", default="seq_dyn_wakes_1min"
+    )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     if args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
-        plt.close(ax.get_figure(figsize=(8,8)))
+        plt.close(ax.get_figure(figsize=(8, 8)))
 
     algo = foxes.algorithms.Sequential(
         mbook,
@@ -140,14 +142,12 @@ if __name__ == "__main__":
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
-
         # run all states sequentially:
         for r in algo:
             print(algo.index)
-        
+
         print("\nFarm results:\n")
         print(algo.farm_results)
-
 
         if args.animation:
             print("\nCalculating animation")
@@ -171,4 +171,3 @@ if __name__ == "__main__":
             fpath = "ani.gif"
             print("Writing file", fpath)
             ani.save(filename=fpath, writer="pillow")
-            

@@ -5,12 +5,13 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 from .common import (
-    get_grid_xy, 
-    get_grid_xz, 
-    get_grid_yz, 
-    calc_point_results, 
+    get_grid_xy,
+    get_grid_xz,
+    get_grid_yz,
+    calc_point_results,
     get_fig,
 )
+
 
 class FlowPlots2D(Output):
     """
@@ -157,13 +158,18 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_xy(self.fres, resolution, 
-                                                 xmin, ymin, xmax, ymax, 
-                                                 z, xspace, yspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_xy(
+            self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
+        )
 
         # calculate point results:
-        data = calc_point_results(algo=self.algo, farm_results=self.fres, g_pts=g_pts, 
-                                  verbosity=verbosity, **kwargs)[var].to_numpy()
+        data = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -326,13 +332,28 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_xz(self.fres, resolution, x_direction,
-                                                 xmin, zmin, xmax, zmax, y,
-                                                 xspace, zspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_xz(
+            self.fres,
+            resolution,
+            x_direction,
+            xmin,
+            zmin,
+            xmax,
+            zmax,
+            y,
+            xspace,
+            zspace,
+            verbosity,
+        )
 
         # calculate point results:
-        data = calc_point_results(algo=self.algo, farm_results=self.fres, g_pts=g_pts, 
-                                  verbosity=verbosity, **kwargs)[var].to_numpy()
+        data = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -496,13 +517,28 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_yz(self.fres, resolution, x_direction,
-                                                 ymin, zmin, ymax, zmax, x,
-                                                 yspace, zspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_yz(
+            self.fres,
+            resolution,
+            x_direction,
+            ymin,
+            zmin,
+            ymax,
+            zmax,
+            x,
+            yspace,
+            zspace,
+            verbosity,
+        )
 
         # calculate point results:
-        data = calc_point_results(algo=self.algo, farm_results=self.fres, g_pts=g_pts, 
-                                  verbosity=verbosity, **kwargs)[var].to_numpy()
+        data = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -664,15 +700,20 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_xy(self.fres, resolution, 
-                                                 xmin, ymin, xmax, ymax, 
-                                                 z, xspace, yspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_xy(
+            self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
+        )
 
         # calculate point results:
-        point_results = calc_point_results(algo=self.algo, farm_results=self.fres,
-                                            g_pts=g_pts, verbosity=verbosity, **kwargs)
+        point_results = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )
         data = point_results[var].to_numpy()
-        
+
         # define wind vector arrows:
         quiv = (
             None
@@ -700,7 +741,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"
@@ -854,15 +894,30 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_xz(self.fres, resolution, x_direction,
-                                                 xmin, zmin, xmax, zmax, y,
-                                                 xspace, zspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_xz(
+            self.fres,
+            resolution,
+            x_direction,
+            xmin,
+            zmin,
+            xmax,
+            zmax,
+            y,
+            xspace,
+            zspace,
+            verbosity,
+        )
 
         # calculate point results:
-        point_results = calc_point_results(algo=self.algo, farm_results=self.fres, 
-                                           g_pts=g_pts, verbosity=verbosity, **kwargs)
+        point_results = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )
         data = point_results[var].to_numpy()
-        
+
         # define wind vector arrows:
         quiv = (
             None
@@ -891,7 +946,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", x direction = {x_direction}°"
@@ -1046,13 +1100,28 @@ class FlowPlots2D(Output):
         """
 
         # create grid:
-        x_pos, y_pos, z_pos, g_pts = get_grid_yz(self.fres, resolution, x_direction,
-                                                 ymin, zmin, ymax, zmax, x,
-                                                 yspace, zspace, verbosity)
+        x_pos, y_pos, z_pos, g_pts = get_grid_yz(
+            self.fres,
+            resolution,
+            x_direction,
+            ymin,
+            zmin,
+            ymax,
+            zmax,
+            x,
+            yspace,
+            zspace,
+            verbosity,
+        )
 
         # calculate point results:
-        point_results = calc_point_results(algo=self.algo, farm_results=self.fres, 
-                                           g_pts=g_pts, verbosity=verbosity, **kwargs)
+        point_results = calc_point_results(
+            algo=self.algo,
+            farm_results=self.fres,
+            g_pts=g_pts,
+            verbosity=verbosity,
+            **kwargs,
+        )
         data = point_results[var].to_numpy()
         quiv = (
             None
@@ -1081,7 +1150,6 @@ class FlowPlots2D(Output):
 
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
-
             ttl = f"State {s}" if title is None else title
             ttl += f", x direction = {x_direction}°"
             ttl += f", x =  {int(np.round(x_pos))} m"
