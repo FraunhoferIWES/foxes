@@ -361,6 +361,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New induction model: `RHB`, the classic Rankine-half-body model.
 - Examples:
   - New example: `sequential`, demonstrating the usage of the sequential algorithm
+  - New example: `induction_RHB`, showing the Rankine-half-body model for blockage
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
 

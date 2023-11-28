@@ -141,7 +141,7 @@ def get_fig(
             vmax=vmax,
             vmin=vmin,
             cmap=cmap,
-            #animated=animated,
+            # animated=animated,
         )
 
     qv = None

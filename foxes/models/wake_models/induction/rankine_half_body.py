@@ -35,7 +35,7 @@ class RHB(WakeModel):
 
         """
         return [self.superp]
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
