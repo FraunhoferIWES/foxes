@@ -13,6 +13,10 @@ class RHB(WakeModel):
     Ref: B Gribben and G Hawkes - A potential flow model for wind turbine induction and wind farm blockage
     Techincal Paper, Frazer-Nash Consultancy, 2019
 
+    https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
+
+    :group: models.wake_models.induction
+
     """
 
     def __init__(self, superposition, ct_max=0.9999):
@@ -20,6 +24,18 @@ class RHB(WakeModel):
         self.superposition = superposition
         self.ct_max = ct_max
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.superp]
+    
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -32,25 +48,21 @@ class RHB(WakeModel):
 
         Parameters
         ----------
-        algo : foxes.core.Algorithm
+        algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity : int
+        verbosity: int
             The verbosity level, 0 = silent
 
         Returns
         -------
-        idata : dict
+        idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self.superp = algo.mbook.wake_superpositions[self.superposition]
-
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata([self.superp], idata=idata, verbosity=verbosity)
-
-        return idata
+        super().initialize(algo, verbosity)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -126,12 +138,6 @@ class RHB(WakeModel):
         x = wake_coos[:, :, 0]
         y = wake_coos[:, :, 1]
         z = wake_coos[:, :, 2]
-
-        # get state and point data
-        n_states = mdata.n_states
-        n_points = x.shape[1]
-
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # get ct:
         ct = self.get_data(
@@ -254,18 +260,3 @@ class RHB(WakeModel):
         new_ws = np.linalg.norm(total_uv, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
         wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo : foxes.core.Algorithm
-            The calculation algorithm
-        verbosity : int
-            The verbosity level, 0 = silent
-
-        """
-        algo.finalize_model(self.superp, verbosity)
-        super().finalize(algo, verbosity)

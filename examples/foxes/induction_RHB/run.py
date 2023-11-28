@@ -22,10 +22,10 @@ if __name__ == "__main__":
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
-        "-dx", "--deltax", help="The turbine distance in x", type=float, default=800.0
+        "-dx", "--deltax", help="The turbine distance in x", type=float, default=0.0
     )
     parser.add_argument(
-        "-dy", "--deltay", help="Turbine layout y step", type=float, default=0.0
+        "-dy", "--deltay", help="Turbine layout y step", type=float, default=200.0
     )
     parser.add_argument(
         "-t",
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["RHB_linear"],
+        default=["RHB_linear", "Bastankhah_linear_k002"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -151,20 +151,6 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=2, xspace=200.0, yspace=200.0)
-    fig = next(g)
-    plt.show()
-
-    # vertical flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(
-        args.var,
-        resolution=2,
-        xspace=200.0,
-        xmin=-100,
-        zmax=200.0,
-        levels=10,
-        x_direction=np.mod(args.wd, 360.0),
-    )
+    g = o.gen_states_fig_xy(args.var, figsize=(4,8), resolution=2, xmin=-300,xmax=500, yspace=200.0)
     fig = next(g)
     plt.show()

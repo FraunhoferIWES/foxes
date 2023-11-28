@@ -340,8 +340,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.4.5
 
-- Algorithms:
-  - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
 - Models:
   - New rotor model: `LevelRotor`, calculates the REWS from different height levels
   - New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
@@ -358,6 +356,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
 - Output:
   - New sub package: `output.flow_plots_2d` is now a package instead of a module
+- Models:
+  - This version introduces induction models for modelling blockage effects.
+  - New induction model: `RHB`, the classic Rankine-half-body model.
 - Examples:
   - New example: `sequential`, demonstrating the usage of the sequential algorithm
   
