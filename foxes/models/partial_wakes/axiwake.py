@@ -57,12 +57,6 @@ class PartialAxiwake(PartialWakesModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -70,20 +64,10 @@ class PartialAxiwake(PartialWakesModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
-        idata = super().initialize(algo, verbosity)
-
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
-
-        algo.update_idata(self.rotor_model, idata=idata, verbosity=verbosity)
+        super().initialize(algo, verbosity)
 
         for w in self.wake_models:
             if not isinstance(w, AxisymmetricWakeModel):
@@ -91,21 +75,17 @@ class PartialAxiwake(PartialWakesModel):
                     f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not an AxisymmetricWakeModel"
                 )
 
-        return idata
-
-    def keep(self, algo):
+    def sub_models(self):
         """
-        Add model and all sub models to
-        the keep_models list
+        List of all sub-models
 
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
 
         """
-        super().keep(algo)
-        self.rotor_model.keep(algo)
+        return super().sub_models() + [self.rotor_model]
 
     def new_wake_deltas(self, algo, mdata, fdata):
         """
@@ -343,19 +323,3 @@ class PartialAxiwake(PartialWakesModel):
         self.rotor_model.eval_rpoint_results(
             algo, mdata, fdata, wres, weights, states_turbine=states_turbine
         )
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        if self.rotor_model.initialized:
-            self.rotor_model.finalize(algo, verbosity)
-        super().finalize(algo, verbosity)

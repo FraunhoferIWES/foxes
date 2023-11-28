@@ -187,20 +187,15 @@ class QuadraticSuperposition(WakeSuperposition):
             else:
                 var = scaling[15:]
 
-            try:
-                vdata = fdata[var]
-
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': Scaling variable '{var}' for wake variable '{variable}' not found in fdata {sorted(list(fdata.keys()))}"
-                )
-
-            n_states = mdata.n_states
-            n_points = wake_delta.shape[1]
-            stsel = (np.arange(n_states), states_source_turbine)
-            scale = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            scale[:] = vdata[stsel][:, None]
-            scale = scale[sel_sp]
+            scale = self.get_data(
+                var,
+                FC.STATE_POINT,
+                lookup="w",
+                fdata=fdata,
+                pdata=pdata,
+                algo=algo,
+                states_source_turbine=states_source_turbine,
+            )[sel_sp]
 
             wake_delta[sel_sp] += (scale * wake_model_result) ** 2
 

@@ -324,7 +324,43 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Output:
   - Improved: `RosePlotOutput` and `StatesRosePlotOutput` now optionally return the binned data
+- Models:
+  - New vertical profile: `DataProfile`, data based profile from file or pandas DataFrame
+  - Improved ti superposition: Now supporting n-th power superposition
+  - Improved wake model `TurbOParkIX`: New option for consideration of all wakes in ti integral
 - Bug fixes:
   - Fixed bug with `windio` input that resulted in wrong wind rose weights
+  - Fixed bug with `FlowPlots2D` with value bounds in contour plots
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.3](https://github.com/FraunhoferIWES/foxes/commits/v0.4.3)
+
+## v0.4.4
+
+- Testing automated publishing to PyPi via workflow
+
+## v0.4.5
+
+- Algorithms:
+  - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
+- Models:
+  - New rotor model: `LevelRotor`, calculates the REWS from different height levels
+  - New turbine type: `WsTI2PCtFromTwo`, reads turbulence-dependent ct- and power curves
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.4.5](https://github.com/FraunhoferIWES/foxes/commits/v0.4.5)
+
+## v0.5
+
+- Dependencies:
+  - Dropping support for Python 3.7, due to `netcdf4` dependency
+- Core:
+  - Simplified model initialization/finalization. Removing the `keep_models` idea, instead all models are now kept in the algorithm's idata memory until finalization. Adding a new model now mostly requires that the `sub_models` and the `load_data` functions are overloaded, if applicable. The `initialize` and `finalize` only need to be addressed explicitly in non-standard cases.
+- Algorithms:
+  - New algorithm: `Sequential`, step wise evaluation of states for simulation environments that do not support chunking
+- Output:
+  - New sub package: `output.flow_plots_2d` is now a package instead of a module
+- Examples:
+  - New example: `sequential`, demonstrating the usage of the sequential algorithm
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
+
+

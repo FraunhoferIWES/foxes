@@ -78,7 +78,7 @@ class ConvCritList(ConvCrit):
     ----------
     crits: list of ConvCrit
         The criteria
-    
+
     :group: algorithms.iterative.models
 
     """
@@ -167,7 +167,7 @@ class ConvVarDelta(ConvCrit):
         values: float values
     wd_vars: list of str
         The wind direction type variables (unit deg)
-    
+
     :group: algorithms.iterative.models
 
     """

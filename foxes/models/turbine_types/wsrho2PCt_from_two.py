@@ -132,15 +132,13 @@ class WsRho2PCtFromTwo(TurbineType):
         """
         return [FV.P, FV.CT]
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -187,7 +185,7 @@ class WsRho2PCtFromTwo(TurbineType):
         self._rho_ct = np.sort(data.columns.to_numpy())
         self._ct = data[self._rho_ct].to_numpy(FC.DTYPE)
 
-        return super().initialize(algo, verbosity)
+        return super().load_data(algo, verbosity)
 
     def _bounds_info(self, target, qts):
         """Helper function for printing bounds info"""
@@ -326,7 +324,7 @@ class WsRho2PCtFromTwo(TurbineType):
             The verbosity level
 
         """
+        super().finalize(algo, verbosity)
         del self._ws_P, self._rho_P, self._ws_ct, self._rho_ct
         self._P = None
         self._ct = None
-        super().finalize(algo, verbosity)

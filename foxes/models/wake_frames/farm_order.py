@@ -36,35 +36,17 @@ class FarmOrder(WakeFrame):
         super().__init__()
         self.base_frame = base_frame
 
-    def initialize(self, algo, verbosity=0):
+    def sub_models(self):
         """
-        Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        List of all sub-models
 
         Returns
         -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        smdls: list of foxes.core.Model
+            Names of all sub models
 
         """
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.base_frame, idata=idata, verbosity=verbosity)
-
-        return idata
+        return [self.base_frame]
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -150,19 +132,3 @@ class FarmOrder(WakeFrame):
         return self.base_frame.get_centreline_points(
             algo, mdata, fdata, states_source_turbine, x
         )
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        if self.base_frame.initialized:
-            self.base_frame.finalize(algo, verbosity)
-        super().finalize(algo, verbosity)

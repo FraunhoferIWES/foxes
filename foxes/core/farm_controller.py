@@ -52,20 +52,20 @@ class FarmController(FarmDataModel):
 
         self.pars = pars
 
-    def keep(self, algo):
+    def sub_models(self):
         """
-        Add model and all sub models to
-        the keep_models list
+        List of all sub-models
 
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
 
         """
-        super().keep(algo)
-        self.pre_rotor_models.keep(algo)
-        self.post_rotor_models.keep(algo)
+        return [
+            self.pre_rotor_models,
+            self.post_rotor_models,
+        ]
 
     def set_pars(self, model_name, init_pars, calc_pars, final_pars):
         """
@@ -253,11 +253,24 @@ class FarmController(FarmDataModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        self.collect_models(algo)
+        super().initialize(algo, verbosity)
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -274,20 +287,12 @@ class FarmController(FarmDataModel):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        idata = super().initialize(algo, verbosity)
-
-        self.collect_models(algo)
-
-        # done by algo.update_idata
-        # algo.update_idata([self.pre_rotor_models, self.post_rotor_models],
-        #    idata=idata, verbosity=verbosity)
-
+        idata = super().load_data(algo, verbosity)
         idata["coords"][FC.TMODELS] = self.turbine_model_names
         idata["data_vars"][FC.TMODEL_SELS] = (
             (FC.STATE, FC.TURBINE, FC.TMODELS),
             self.turbine_model_sels,
         )
-
         return idata
 
     def output_farm_vars(self, algo):
@@ -359,11 +364,6 @@ class FarmController(FarmDataModel):
             The verbosity level, 0 means silent
 
         """
-        for s in [self.pre_rotor_models, self.post_rotor_models]:
-            if s is not None and s.initialized:
-                algo.finalize_model(s, verbosity)
-
+        super().finalize(algo, verbosity)
         self.turbine_model_names = None
         self.turbine_model_sels = None
-
-        super().finalize(algo, verbosity)

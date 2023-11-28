@@ -11,8 +11,10 @@ from foxes.models.turbine_types import CpCtFromTwo
 import foxes.constants as FC
 import foxes.variables as FV
 
+from windIO.utils.yml_utils import load_yaml
 
-def read_resource(res_yaml, fixed_vars={}, **kwargs):
+
+def read_resource(res, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource
 
@@ -32,10 +34,6 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
         The uniform states
 
     """
-    res_yaml = Path(res_yaml)
-
-    with open(res_yaml, "r") as file:
-        res = yaml.load(file, Loader=yaml.loader.BaseLoader)
     wres = res["wind_resource"]
 
     wd = np.array(wres["wind_direction"], dtype=FC.DTYPE)
@@ -92,7 +90,7 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
             _to_data(v, d["data"], d["dims"])
     if sec_prob is not None and "probability" in names:
         data[:, :, names.index("probability")] *= sec_prob
-    
+
     n_vars = len(names)
     data = data.reshape(n, n_vars)
 
@@ -102,11 +100,11 @@ def read_resource(res_yaml, fixed_vars={}, **kwargs):
 
     ovars = {v: v for v in data.columns if v != FV.WEIGHT}
     ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
-    
+
     return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
 
 
-def read_site(site_yaml, **kwargs):
+def read_site(site, **kwargs):
     """
     Reads a WindIO site
 
@@ -123,20 +121,13 @@ def read_site(site_yaml, **kwargs):
         The states object
 
     """
-    site_yaml = Path(site_yaml)
-
-    with open(site_yaml, "r") as file:
-        site = yaml.load(file, Loader=yaml.loader.BaseLoader)
-
     res_yaml = site["energy_resource"]
-    if res_yaml[0] == ".":
-        res_yaml = (site_yaml.parent / res_yaml).resolve()
     states = read_resource(res_yaml, **kwargs)
 
     return states
 
 
-def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
+def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     """
     Reads a WindIO wind farm
 
@@ -162,10 +153,6 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     """
     mbook = ModelBook() if mbook is None else mbook
-    farm_yaml = Path(farm_yaml)
-
-    with open(farm_yaml, "r") as file:
-        fdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
 
     if isinstance(layout, str):
         layout = fdict["layouts"][layout]
@@ -181,19 +168,8 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
     ldata["x"] = x
     ldata["y"] = y
 
-    if "turbines" in fdict:
-        turbines_yaml = fdict["turbines"]
-        if turbines_yaml[0] == ".":
-            turbines_yaml = (farm_yaml.parent / turbines_yaml).resolve()
-
-        with open(turbines_yaml, "r") as file:
-            tdict = yaml.load(file, Loader=yaml.loader.BaseLoader)
-
-        pdict = tdict["performance"]
-
-    else:
-        tdict = fdict
-        pdict = fdict
+    tdict = fdict["turbines"]
+    pdict = tdict["performance"]
 
     ct_ws = np.array(pdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
     ct_data = pd.DataFrame(index=range(len(ct_ws)))
@@ -214,6 +190,7 @@ def read_farm(farm_yaml, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     models = ["windio_turbine"] + turbine_models
     farm = WindFarm(name=fdict["name"])
+
     add_from_df(farm, ldata, col_x="x", col_y="y", turbine_models=models, **kwargs)
 
     return mbook, farm
@@ -286,19 +263,12 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
     :group: input.windio
 
     """
-    case_yaml = Path(case_yaml)
-
-    with open(case_yaml, "r") as file:
-        case = yaml.load(file, Loader=yaml.loader.BaseLoader)
+    case = load_yaml(case_yaml)
 
     site_yaml = case["site"]
-    if site_yaml[0] == ".":
-        site_yaml = (case_yaml.parent / site_yaml).resolve()
     states = read_site(site_yaml, **site_pars)
 
     farm_yaml = case["wind_farm"]
-    if farm_yaml[0] == ".":
-        farm_yaml = (case_yaml.parent / farm_yaml).resolve()
     mbook, farm = read_farm(farm_yaml, **farm_pars)
 
     attr_dict = case["attributes"]

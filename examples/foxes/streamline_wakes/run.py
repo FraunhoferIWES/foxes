@@ -119,7 +119,6 @@ if __name__ == "__main__":
         wake_frame=args.wake_frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
-        keep_models=[states.name, args.wake_frame, ttype.name],
     )
 
     with DaskRunner(
@@ -145,8 +144,10 @@ if __name__ == "__main__":
             figsize=(8, 8),
             quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
             quiver_n=15,
-            xspace=1000,
-            yspace=1000,
+            xmin=0,
+            xmax=2500,
+            ymin=0,
+            ymax=2500,
         ):
             plt.show()
             plt.close(fig)

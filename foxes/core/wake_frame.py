@@ -76,6 +76,45 @@ class WakeFrame(Model):
         """
         pass
 
+    def get_wake_modelling_data(
+        self,
+        algo,
+        variable,
+        states_source_turbine,
+        fdata,
+        pdata,
+        states0=None,
+    ):
+        """
+        Return data that is required for computing the
+        wake from source turbines to evaluation points.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm, optional
+            The algorithm, needed for data from previous iteration
+        variable: str
+            The variable, serves as data key
+        states_source_turbine: numpy.ndarray
+            For each state, one turbine index for the
+            wake causing turbine. Shape: (n_states,)
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
+        states0: numpy.ndarray, optional
+            The states of wake creation
+
+        """
+        n_states = fdata.n_states
+        n_points = pdata.n_points
+        s = np.arange(n_states) if states0 is None else states0
+
+        out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        out[:] = fdata[variable][s, states_source_turbine][:, None]
+
+        return out
+
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
         Gets the points along the centreline for given
@@ -115,6 +154,7 @@ class WakeFrame(Model):
         x,
         dx,
         wake_models=None,
+        self_wake=True,
         **ipars,
     ):
         """
@@ -140,6 +180,8 @@ class WakeFrame(Model):
             The step size of the integral
         wake_models: list of foxes.core.WakeModels
             The wake models to consider, default: from algo
+        self_wake: bool
+            Flag for considering only wake from states_source_turbine
         ipars: dict, optional
             Additional interpolation parameters
 
@@ -156,7 +198,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = np.max(x)
+        xmax = np.nanmax(x)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1
@@ -172,7 +214,7 @@ class WakeFrame(Model):
         pdata = Data.from_points(
             pts,
             data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
-            dims={v: (FC.STATE, FC.POINT) for v in vrs}
+            dims={v: (FC.STATE, FC.POINT) for v in vrs},
         )
         res = algo.states.calculate(algo, mdata, fdata, pdata)
         pdata.update(res)
@@ -191,9 +233,12 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.get_model("PointWakesCalculation")(vrs, wake_models=wake_models)
+            wcalc = algo.get_model("PointWakesCalculation")(
+                vrs, wake_models=wake_models
+            )
             wcalc.initialize(algo, verbosity=0)
-            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=states_source_turbine)
+            wsrc = states_source_turbine if self_wake else None
+            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)
             pdata.update(res)
             del wcalc, res
 

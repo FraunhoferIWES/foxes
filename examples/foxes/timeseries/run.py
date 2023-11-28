@@ -34,7 +34,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
     )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-w",
         "--wakes",
@@ -46,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
+    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-n",
         "--n_workers",
@@ -113,6 +113,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=cks,
+        verbosity=1,
     )
 
     with DaskRunner(

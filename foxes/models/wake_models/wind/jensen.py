@@ -124,11 +124,10 @@ class JensenWake(TopHatWakeModel):
             self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
-                upcast=True,
                 states_source_turbine=states_source_turbine,
             )
             / 2
@@ -137,7 +136,7 @@ class JensenWake(TopHatWakeModel):
         k = self.get_data(
             self.k_var,
             FC.STATE_POINT,
-            lookup="sf",
+            lookup="sw",
             algo=algo,
             fdata=fdata,
             pdata=pdata,

@@ -29,15 +29,15 @@ class SingleStateStates(States):
 
     """
 
-    def __init__(self, ws, wd, ti=None, rho=None, profiles={}, **profdata):
+    def __init__(self, ws=None, wd=None, ti=None, rho=None, profiles={}, **profdata):
         """
         Constructor.
 
         Parameters
         ----------
-        ws: float
+        ws: float, optional
             The wind speed
-        wd: float
+        wd: float, optional
             The wind direction
         ti: float, optional
             The TI value
@@ -58,15 +58,32 @@ class SingleStateStates(States):
         self.profdicts = profiles
         self.profdata = profdata
 
+        if (
+            ws is None
+            and wd is None
+            and ti is None
+            and rho is None
+            and not len(profiles)
+        ):
+            raise KeyError(
+                f"Expecting at least one parameter: ws, wd, ti, rho, profiles"
+            )
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return list(self._profiles.values())
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -74,13 +91,6 @@ class SingleStateStates(States):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
         self._profiles = {}
@@ -96,11 +106,7 @@ class SingleStateStates(States):
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
-
-        idata = super().initialize(algo, verbosity)
-        self._update_idata(algo, idata)
-
-        return idata
+        super().initialize(algo, verbosity)
 
     def size(self):
         """
@@ -129,16 +135,18 @@ class SingleStateStates(States):
             The output variable names
 
         """
-        out = []
+        out = set()
         if self.ws is not None:
-            out.append(FV.WS)
+            out.add(FV.WS)
         if self.wd is not None:
-            out.append(FV.WD)
+            out.add(FV.WD)
         if self.ti is not None:
-            out.append(FV.TI)
+            out.add(FV.TI)
         if self.rho is not None:
-            out.append(FV.RHO)
-        return out
+            out.add(FV.RHO)
+        out.update(list(self._profiles.keys()))
+
+        return list(out)
 
     def weights(self, algo):
         """
@@ -200,7 +208,6 @@ class SingleStateStates(States):
                 (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
             )
 
-        z = pdata[FC.POINTS][:, :, 2]
         if len(self._profiles):
             z = pdata[FC.POINTS][:, :, 2]
             for k, v in self.profdata.items():

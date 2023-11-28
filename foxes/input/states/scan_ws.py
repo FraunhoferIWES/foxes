@@ -46,15 +46,13 @@ class ScanWS(States):
         self.ti = ti
         self.rho = rho
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -73,8 +71,7 @@ class ScanWS(States):
         """
         self.WS = self.var(FV.WS)
 
-        idata = super().initialize(algo, verbosity)
-        self._update_idata(algo, idata)
+        idata = super().load_data(algo, verbosity)
         idata["data_vars"][self.WS] = ((FC.STATE,), self._wsl)
 
         return idata

@@ -10,7 +10,7 @@ class TISuperposition(WakeSuperposition):
     Attributes
     ----------
     ti_superp: str
-        The method choice: linear, quadratic, max
+        The method choice: linear, quadratic, power_N, max
     superp_to_amb: str
         The method for combining ambient with wake deltas:
         linear or quadratic
@@ -26,7 +26,7 @@ class TISuperposition(WakeSuperposition):
         Parameters
         ----------
         ti_superp: str
-            The method choice: linear, quadratic, max
+            The method choice: linear, quadratic, power_N, max
         superp_to_amb: str
             The method for combining ambient with wake deltas:
             linear or quadratic
@@ -91,6 +91,11 @@ class TISuperposition(WakeSuperposition):
         elif self.ti_superp == "quadratic":
             wake_delta[sel_sp] += wake_model_result**2
 
+        # power_N delta:
+        elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
+            N = int(self.ti_superp[6:])
+            wake_delta[sel_sp] += wake_model_result**N
+
         # max ti delta:
         elif self.ti_superp == "max":
             wake_delta[sel_sp] = np.maximum(wake_model_result, wake_delta[sel_sp])
@@ -98,7 +103,7 @@ class TISuperposition(WakeSuperposition):
         # unknown ti delta:
         else:
             raise ValueError(
-                f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, max"
+                f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, power_N, max"
             )
 
         return wake_delta
@@ -147,9 +152,12 @@ class TISuperposition(WakeSuperposition):
                 return wake_delta
             elif self.ti_superp == "quadratic":
                 return np.sqrt(wake_delta)
+            elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
+                N = int(self.ti_superp[6:])
+                return wake_delta ** (1 / N)
             else:
                 raise ValueError(
-                    f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, max"
+                    f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, power_N, max"
                 )
 
         # quadratic superposition to ambient:
@@ -158,9 +166,12 @@ class TISuperposition(WakeSuperposition):
                 return np.sqrt(wake_delta**2 + amb_results**2) - amb_results
             elif self.ti_superp == "quadratic":
                 return np.sqrt(wake_delta + amb_results**2) - amb_results
+            elif len(self.ti_superp) > 6 and self.ti_superp[:6] == "power_":
+                N = int(self.ti_superp[6:])
+                return np.sqrt(wake_delta ** (2 / N) + amb_results**2) - amb_results
             else:
                 raise ValueError(
-                    f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, max"
+                    f"Unknown ti_superp = '{self.ti_superp}', valid choices: linear, quadratic, power_N, max"
                 )
 
         # unknown ti delta:

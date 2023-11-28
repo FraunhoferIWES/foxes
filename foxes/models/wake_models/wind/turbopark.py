@@ -137,7 +137,7 @@ class TurbOParkWake(GaussianWakeModel):
         ct = self.get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -157,7 +157,7 @@ class TurbOParkWake(GaussianWakeModel):
             D = self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -170,7 +170,7 @@ class TurbOParkWake(GaussianWakeModel):
             ati = self.get_data(
                 FV.AMB_TI,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -252,6 +252,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
         to this number
     ti_var:  str
         The TI variable
+    self_wake: bool
+        Flag for considering only own wake in ti integral
     ipars: dict
         Additional parameters for centreline integration
 
@@ -267,6 +269,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         sbeta_factor=0.25,
         ct_max=0.9999,
         ti_var=FV.TI,
+        self_wake=True,
         **ipars,
     ):
         """
@@ -289,6 +292,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             to this number
         ti_var:  str
             The TI variable
+        self_wake: bool
+            Flag for considering only own wake in ti integral
         ipars: dict, optional
             Additional parameters for centreline integration
 
@@ -302,12 +307,13 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.ti_var = ti_var
         self.ipars = ipars
         self._tiwakes = None
+        self.self_wake = self_wake
 
     def __repr__(self):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
-    
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -342,8 +348,10 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 w.init_wake_deltas(algo, mdata, fdata, pdata, wdel)
                 if self.ti_var in wdel:
                     self._tiwakes.append(w)
-        if len(self._tiwakes) == 0:
-            raise KeyError(f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}")
+        if self.ti_var not in FV.amb2var and len(self._tiwakes) == 0:
+            raise KeyError(
+                f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}"
+            )
 
     def calc_amplitude_sigma_spsel(
         self,
@@ -389,7 +397,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ct = self.get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -409,7 +417,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             D = self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -434,6 +442,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 x,
                 dx=self.dx,
                 wake_models=self._tiwakes,
+                self_wake=self.self_wake,
                 **self.ipars,
             )[:, :, 0]
 
@@ -477,5 +486,5 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The verbosity level, 0 = silent
 
         """
-        self._tiwakes = None
         super().finalize(algo, verbosity)
+        self._tiwakes = None

@@ -77,6 +77,9 @@ class ModelBook:
             self.rotor_models[f"grid{n**2}"] = fm.rotor_models.GridRotor(
                 calc_vars=rvars, n=n, reduce=True
             )
+            self.rotor_models[f"level{n}"] = fm.rotor_models.LevelRotor(
+                calc_vars=rvars, n=n, reduce=True
+            )
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
@@ -168,17 +171,25 @@ class ModelBook:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
                 base_frame=fm.wake_frames.Streamlines(step=s)
             )
+        dtlist = [
+            ("1s", 1 / 60),
+            ("10s", 1 / 6),
+            ("30s", 0.5),
+            ("1min", 1),
+            ("10min", 10),
+            ("30min", 30),
+        ]
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
-        self.wake_frames["timelines_1s"] = fm.wake_frames.Timelines(dt_min=1 / 60)
-        self.wake_frames["timelines_10s"] = fm.wake_frames.Timelines(dt_min=1 / 6)
-        self.wake_frames["timelines_30s"] = fm.wake_frames.Timelines(dt_min=0.5)
-        self.wake_frames["timelines_1min"] = fm.wake_frames.Timelines(dt_min=1)
-        self.wake_frames["timelines_10min"] = fm.wake_frames.Timelines(dt_min=10)
-        self.wake_frames["timelines_30min"] = fm.wake_frames.Timelines(dt_min=30)
-        self.wake_frames["timelines_60min"] = fm.wake_frames.Timelines(dt_min=60)
+        for s, t in dtlist:
+            self.wake_frames[f"timelines_{s}"] = fm.wake_frames.Timelines(dt_min=t)
         self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
             max_wake_length=1000.0
         )
+        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
+        for s, t in dtlist:
+            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(
+                dt_min=t
+            )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
@@ -213,6 +224,12 @@ class ModelBook:
             ),
             ti_quadratic=fm.wake_superpositions.TISuperposition(
                 ti_superp="quadratic", superp_to_amb="quadratic"
+            ),
+            ti_cubic=fm.wake_superpositions.TISuperposition(
+                ti_superp="power_3", superp_to_amb="quadratic"
+            ),
+            ti_quartic=fm.wake_superpositions.TISuperposition(
+                ti_superp="power_4", superp_to_amb="quadratic"
             ),
             ti_max=fm.wake_superpositions.TISuperposition(
                 ti_superp="max", superp_to_amb="quadratic"
@@ -258,6 +275,20 @@ class ModelBook:
                 f"Bastankhah_{s}_k004"
             ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=s)
 
+            self.wake_models[f"Bastankhah0_{s}"] = fm.wake_models.wind.BastankhahWake(
+                superposition=s, sbeta_factor=0.2
+            )
+            self.wake_models[
+                f"Bastankhah0_{s}_k002"
+            ] = fm.wake_models.wind.BastankhahWake(
+                k=0.02, superposition=s, sbeta_factor=0.2
+            )
+            self.wake_models[
+                f"Bastankhah0_{s}_k004"
+            ] = fm.wake_models.wind.BastankhahWake(
+                k=0.04, superposition=s, sbeta_factor=0.2
+            )
+
             self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
                 superposition=s
             )
@@ -288,7 +319,7 @@ class ModelBook:
                         f"TurbOParkIX_{s}_A{a}_dx{d}"
                     ] = fm.wake_models.wind.TurbOParkWakeIX(A=A, superposition=s, dx=dx)
 
-        slist = ["ti_linear", "ti_quadratic", "ti_max"]
+        slist = ["ti_linear", "ti_quadratic", "ti_cubic", "ti_quartic", "ti_max"]
         for s in slist:
             self.wake_models[
                 f"CrespoHernandez_{s[3:]}"
