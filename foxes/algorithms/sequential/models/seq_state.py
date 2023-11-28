@@ -2,7 +2,7 @@ from foxes.core.states import States
 
 class SeqState(States):
     """
-    Dummy states for iteration, just serving
+    A single state during sequential iteration, just serving
     as a structural placeholder
     
     Parameters

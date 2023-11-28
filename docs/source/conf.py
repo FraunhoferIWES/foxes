@@ -312,6 +312,8 @@ python_apigen_modules = {
     "foxes.algorithms.downwind.models": "_algorithms/downwind/models/",
     "foxes.algorithms.iterative": "_algorithms/iterative/",
     "foxes.algorithms.iterative.models": "_algorithms/iterative/models/",
+    "foxes.algorithms.sequential": "_algorithms/sequential/",
+    "foxes.algorithms.sequential.models": "_algorithms/sequential/models/",
     "foxes.core": "_core/",
     "foxes.data": "_data/",
     "foxes.input.farm_layout": "_input/farm_layout/",
