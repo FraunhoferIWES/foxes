@@ -174,7 +174,6 @@ class RHB(WakeModel):
             fdata=fdata,
             pdata=pdata,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # find a (page 6)
@@ -207,9 +206,17 @@ class RHB(WakeModel):
             a = a[sp_sel]
 
             # calc velocity components
-            vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
-            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,0]
-            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,1]
+            vel_factor =  m / (4 * np.pi * np.linalg.norm(xyz, axis=-1) **3 )
+            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz)[:, 0]
+            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz)[:, 1]
+            wake_deltas["W"][sp_sel] += (vel_factor[:, None] * xyz)[:, 2] ## added z component (w)
+
+            # ASK JONAS
+            ### we can only return 2 components for the given coord system (ie for xy ignore z, for xz ignore y)
+            ### so for the xz case, replacing wake_deltas["V"] with the values from wake_deltas["W"]
+            if (np.all(wake_coos[:, :, 1]==0)): # xz data
+                wake_deltas["V"] =  wake_deltas["W"] # assuming shallow copy is ok here
+
 
         return wake_deltas
 

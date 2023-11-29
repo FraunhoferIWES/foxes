@@ -182,7 +182,6 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-<<<<<<< HEAD
     # horizontal flow plot with wind direction
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xy(args.var, resolution=2, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
@@ -201,7 +200,6 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-=======
     # front line plot:
     n_points = 8000
     points = np.zeros((1, n_points, 3))
@@ -217,4 +215,3 @@ if __name__ == "__main__":
     ax.set_xlabel("Wind speed [m/s]")
     plt.show()
     plt.close(fig)
->>>>>>> refs/remotes/origin/dev_blockage
