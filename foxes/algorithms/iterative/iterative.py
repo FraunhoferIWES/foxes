@@ -24,17 +24,17 @@ class Iterative(Downwind):
     def get_model(cls, name):
         """
         Get the algorithm specific model
-        
+
         Parameters
         ----------
         name: str
             The model name
-        
+
         Returns
         -------
         model: foxes.core.model
             The model
-        
+
         """
         try:
             return getattr(mdls, name)
@@ -62,7 +62,9 @@ class Iterative(Downwind):
         super().__init__(*args, verbosity=verbosity, **kwargs)
 
         self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
-        self.conv_crit = self.get_model("DefaultConv")() if conv_crit is None else conv_crit
+        self.conv_crit = (
+            self.get_model("DefaultConv")() if conv_crit is None else conv_crit
+        )
         self._it = None
         self._mlist = None
 
@@ -89,58 +91,29 @@ class Iterative(Downwind):
         """
 
         if self._it == 0:
-            mlist, calc_pars = super()._collect_farm_models(
-                calc_parameters, ambient=False
+            self._mlist0, self._calc_pars0 = super()._collect_farm_models(
+                calc_parameters,
+                ambient=ambient,
             )
+            return self._mlist0, self._calc_pars0
 
-            # calc_pars[mlist.models.index(self.rotor_model)].update(
-            #    {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-            # )
+        elif ambient:
+            return self._mlist0, self._calc_pars0
 
-            mdls = [
-                self.states,
-                self.rotor_model,
-                self.farm_controller,
-                self.wake_frame,
-                self.partial_wakes_model,
-            ] + self.wake_models
+        else:
+            # prepare:
+            calc_pars = []
+            mlist = FarmDataModelList(models=[])
 
-            self.keep_models.update([self.name, f"{self.name}_calc", "calc_wakes"])
-            for m in mdls:
-                m.keep(self)
+            # add model that calculates wake effects:
+            mlist.models.append(self.get_model("FarmWakesCalculation")())
+            mlist.models[-1].name = "calc_wakes"
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+            # initialize models:
+            mlist.initialize(self, self.verbosity)
 
             return mlist, calc_pars
-
-        # prepare:
-        calc_pars = []
-        mlist = FarmDataModelList(models=[])
-        mlist.name = f"{self.name}_calc"
-
-        # add model that calculates wake effects:
-        mlist.models.append(self.get_model("FarmWakesCalculation")())
-        mlist.models[-1].name = "calc_wakes"
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # initialize models:
-        self.update_idata(mlist)
-
-        # update variables:
-        self.farm_vars = [
-            FV.X,
-            FV.Y,
-            FV.H,
-            FV.D,
-            FV.WEIGHT,
-            FV.ORDER,
-            FV.WD,
-            FV.YAW,
-        ] + mlist.output_farm_vars(self)
-        self.farm_vars += [FV.var2amb[v] for v in self.farm_vars if v in FV.var2amb]
-        self.farm_vars = sorted(list(set(self.farm_vars)))
-
-        self._mlist = mlist
-
-        return mlist, calc_pars
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
@@ -190,9 +163,10 @@ class Iterative(Downwind):
         # finalize models:
         if finalize:
             self.print("\n")
-            self.finalize_model(self._mlist)
             self.finalize()
-        self.cleanup()
-        self._mlist = None
+            for m in self._mlist0.models:
+                if m not in self.all_models():
+                    m.finalize(self, self.verbosity)
+            del self._mlist0, self._calc_pars0
 
         return fres

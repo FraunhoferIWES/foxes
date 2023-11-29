@@ -77,12 +77,6 @@ class SectorManagement(TurbineModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -90,14 +84,9 @@ class SectorManagement(TurbineModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
+
         if isinstance(self.source, pd.DataFrame):
             data = self.source
         else:
@@ -154,8 +143,6 @@ class SectorManagement(TurbineModel):
         for vi, v in enumerate(self._rvars):
             if v in self._perds:
                 self._rdata[:, vi] = np.mod(self._rdata[:, vi], self._perds[v])
-
-        return super().initialize(algo, verbosity)
 
     def output_farm_vars(self, algo):
         """

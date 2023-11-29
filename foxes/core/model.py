@@ -30,91 +30,15 @@ class Model(metaclass=ABCMeta):
             self._ids[t] = count(0)
         self._id = next(self._ids[t])
 
-        self._store = {}
-
         ext = "" if self._id == 0 else f"{self._id}"
         self.name = f"{type(self).__name__}{ext}"
 
+        self._store = {}
         self.__initialized = False
 
     def __repr__(self):
         t = type(self).__name__
         return f"{self.name} ({t})"
-
-    def data_to_store(self, name, algo, data):
-        """
-        Adds data from mdata to the local store, intended
-        for iterative runs.
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-
-        """
-        i0 = data.states_i0(counter=True, algo=algo)
-        if i0 not in self._store:
-            self._store[i0] = Data(
-                data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
-            )
-
-        self._store[i0][name] = data[name]
-        self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
-
-    def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
-        """
-        Get data from mdata or local store
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-        ret_dims: bool
-            Return dimensions
-        safe: bool
-            Return None instead of error if
-            not found
-
-        Returns
-        -------
-        data: numpy.ndarray
-            The data
-        dims: tuple of dims, optional
-            The data dimensions
-
-        """
-        if name in data:
-            return (data[name], data.dims[name]) if ret_dims else data[name]
-
-        i0 = data.states_i0(counter=True, algo=algo)
-        if not safe or (i0 in self._store and name in self._store[i0]):
-            if ret_dims:
-                return self._store[i0][name], self._store[i0].dims[name]
-            else:
-                return self._store[i0][name]
-        else:
-            return (None, None) if ret_dims else None
-
-    def keep(self, algo):
-        """
-        Add model and all sub models to
-        the keep_models list
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm
-
-        """
-        algo.keep_models.add(self.name)
 
     @property
     def model_id(self):
@@ -159,15 +83,25 @@ class Model(metaclass=ABCMeta):
         """
         return self.__initialized
 
-    def initialize(self, algo, verbosity=0):
+    def sub_models(self):
         """
-        Initializes the model.
+        List of all sub-models
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return []
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -184,12 +118,38 @@ class Model(metaclass=ABCMeta):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        if self.initialized:
-            raise ValueError(
-                f"Model '{self.name}': initialize called for already initialized object"
-            )
-        self.__initialized = True
         return {"coords": {}, "data_vars": {}}
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if not self.initialized:
+            pr = False
+            for m in self.sub_models():
+                if not m.initialized:
+                    if verbosity > 1 and not pr:
+                        print(f">> {self.name}: Starting sub-model initialization >> ")
+                        pr = True
+                    m.initialize(algo, verbosity)
+            if pr:
+                print(f"<< {self.name}: Finished sub-model initialization << ")
+
+            if verbosity > 0:
+                print(f"Initializing model '{self.name}'")
+            algo.store_model_data(self, self.load_data(algo, verbosity), force)
+
+            self.__initialized = True
 
     def finalize(self, algo, verbosity=0):
         """
@@ -203,12 +163,22 @@ class Model(metaclass=ABCMeta):
             The verbosity level, 0 = silent
 
         """
-        if not self.initialized:
-            raise ValueError(
-                f"Model '{self.name}': Finalization called for uninitialized object"
-            )
-        self._store = {}
-        self.__initialized = False
+        if self.initialized:
+            pr = False
+            for m in self.sub_models():
+                if verbosity > 1 and not pr:
+                    print(f">> {self.name}: Starting sub-model finalization >> ")
+                    pr = True
+                m.finalize(algo, verbosity)
+            if pr:
+                print(f"<< {self.name}: Finished sub-model finalization << ")
+
+            if verbosity > 0:
+                print(f"Finalizing model '{self.name}'")
+            algo.del_model_data(self)
+
+            self._store = {}
+            self.__initialized = False
 
     def get_data(
         self,
@@ -221,6 +191,7 @@ class Model(metaclass=ABCMeta):
         states_source_turbine=None,
         upcast=False,
         accept_none=False,
+        accept_nan=True,
         algo=None,
     ):
         """
@@ -239,7 +210,8 @@ class Model(metaclass=ABCMeta):
             's' for self,
             'm' for mdata,
             'f' for fdata,
-            'p' for pdata
+            'p' for pdata,
+            'w' for wake modelling data
         mdata: foxes.core.Data, optional
             The model data
         fdata: foxes.core.Data, optional
@@ -254,7 +226,9 @@ class Model(metaclass=ABCMeta):
         data_prio: bool
             First search the data source, then the object
         accept_none: bool
-            Do not throw an error if data entry is None or np.nan
+            Do not throw an error if data entry is None
+        accept_nan: bool
+            Do not throw an error if data entry is np.nan
         algo: foxes.core.Algorithm, optional
             The algorithm, needed for data from previous iteration
 
@@ -367,7 +341,6 @@ class Model(metaclass=ABCMeta):
                                 out[sel] = prev_fdata[variable].to_numpy()[
                                     sp[sel], st[sel]
                                 ]
-                                del st
 
             # lookup pdata:
             elif (
@@ -379,21 +352,106 @@ class Model(metaclass=ABCMeta):
             ):
                 out = pdata[variable]
 
+            # lookup wake modelling data:
+            elif (
+                s == "w"
+                and target == FC.STATE_POINT
+                and fdata is not None
+                and pdata is not None
+                and variable in fdata
+                and len(fdata.dims[variable]) > 1
+                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
+                and states_source_turbine is not None
+                and algo is not None
+            ):
+                out = algo.wake_frame.get_wake_modelling_data(
+                    algo, variable, states_source_turbine, fdata, pdata
+                )
+
             if out is not None:
                 break
 
         # check for None:
-        if not accept_none:
+        if not accept_none and out is None:
+            raise ValueError(
+                f"Model '{self.name}': Variable '{variable}' is requested but not found."
+            )
+
+        # check for nan:
+        elif not accept_nan:
             try:
-                if out is None or np.all(np.isnan(np.atleast_1d(out))):
+                if np.all(np.isnan(np.atleast_1d(out))):
                     raise ValueError(
-                        f"Model '{self.name}': Variable '{variable}' requested but not provided."
+                        f"Model '{self.name}': Requested variable '{variable}' contains NaN values."
                     )
             except TypeError:
                 pass
 
         return out
 
+    def data_to_store(self, name, algo, data):
+        """
+        Adds data from mdata to the local store, intended
+        for iterative runs.
+
+        Parameters
+        ----------
+        name: str
+            The data name
+        algo: foxes.core.Algorithm
+            The algorithm
+        data: foxes.utils.Data
+            The mdata, fdata or pdata object
+
+        """
+        i0 = data.states_i0(counter=True, algo=algo)
+        if i0 not in self._store:
+            self._store[i0] = Data(
+                data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
+            )
+
+        self._store[i0][name] = data[name]
+        self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
+
+    def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
+        """
+        Get data from mdata or local store
+
+        Parameters
+        ----------
+        name: str
+            The data name
+        algo: foxes.core.Algorithm
+            The algorithm
+        data: foxes.utils.Data
+            The mdata, fdata or pdata object
+        ret_dims: bool
+            Return dimensions
+        safe: bool
+            Return None instead of error if
+            not found
+
+        Returns
+        -------
+        data: numpy.ndarray
+            The data
+        dims: tuple of dims, optional
+            The data dimensions
+
+        """
+        if name in data:
+            return (data[name], data.dims[name]) if ret_dims else data[name]
+
+        i0 = data.states_i0(counter=True, algo=algo)
+        if not safe or (i0 in self._store and name in self._store[i0]):
+            if ret_dims:
+                return self._store[i0][name], self._store[i0].dims[name]
+            else:
+                return self._store[i0][name]
+        else:
+            return (None, None) if ret_dims else None
+
+    '''
     @classmethod
     def reduce_states(cls, sel_states, objs):
         """
@@ -423,3 +481,4 @@ class Model(metaclass=ABCMeta):
             out.append(Data(data, o.dims, loop_dims=o.loop_dims, name=o.name))
 
         return out
+        '''

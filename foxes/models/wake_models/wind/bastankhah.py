@@ -138,7 +138,7 @@ class BastankhahWake(GaussianWakeModel):
         ct = self.get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -158,7 +158,7 @@ class BastankhahWake(GaussianWakeModel):
             D = self.get_data(
                 FV.D,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -171,7 +171,7 @@ class BastankhahWake(GaussianWakeModel):
             k = self.get_data(
                 self.k_var,
                 FC.STATE_POINT,
-                lookup="sf",
+                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,

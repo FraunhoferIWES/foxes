@@ -78,12 +78,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
-    parser.add_argument(
-        "-ts",
-        "--timestep",
-        help="The timestep of the input timeseries or data in minutes",
-        default=60 * 24 * 365,  # default is one year
-    )
     args = parser.parse_args()
 
     cks = (
@@ -101,7 +95,7 @@ if __name__ == "__main__":
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
-        #states_sel=range(20,30)
+        # states_sel=range(20,30)
     )
 
     farm = foxes.WindFarm()
@@ -182,8 +176,9 @@ if __name__ == "__main__":
         if args.animation:
             print("\nCalculating animation")
 
-            fig, axs = plt.subplots(2, 1, figsize=(5.2,7), 
-                                    gridspec_kw={'height_ratios': [3, 1]})
+            fig, axs = plt.subplots(
+                2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
+            )
 
             anim = foxes.output.Animator(fig)
             of = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
@@ -217,8 +212,15 @@ if __name__ == "__main__":
             ani = anim.animate()
 
             lo = foxes.output.FarmLayoutOutput(farm)
-            lo.get_figure(fig=fig, ax=axs[0], title="", annotate=1,  
-                          anno_delx=-120, anno_dely=-60, alpha=0)
+            lo.get_figure(
+                fig=fig,
+                ax=axs[0],
+                title="",
+                annotate=1,
+                anno_delx=-120,
+                anno_dely=-60,
+                alpha=0,
+            )
 
             fpath = "ani.gif"
             print("Writing file", fpath)

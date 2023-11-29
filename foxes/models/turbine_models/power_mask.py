@@ -67,12 +67,6 @@ class PowerMask(TurbineModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -80,14 +74,9 @@ class PowerMask(TurbineModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
+
         self._P_rated = []
         for t in algo.farm_controller.turbine_types:
             Pnom = FC.DTYPE(t.P_nominal)
@@ -97,8 +86,6 @@ class PowerMask(TurbineModel):
                 )
             self._P_rated.append(Pnom)
         self._P_rated = np.array(self._P_rated, dtype=FC.DTYPE)
-
-        return super().initialize(algo, verbosity)
 
     @classmethod
     def update_P_ct(cls, data, max_P, rated_P, factor_P, var_ws=FV.REWS3, P_lim=100):

@@ -188,7 +188,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         D = self.get_data(
             FV.D,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -200,7 +200,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         k = self.get_data(
             self.k_var,
             FC.STATE_POINT,
-            lookup="sf",
+            lookup="sw",
             algo=algo,
             fdata=fdata,
             pdata=pdata,

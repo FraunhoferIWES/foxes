@@ -58,12 +58,6 @@ class Streamlines(WakeFrame):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -71,18 +65,11 @@ class Streamlines(WakeFrame):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
         self.DATA = self.var("DATA")
         self.CNTR = self.var("CNTR")
         self.PRES = self.var("PRES")
-        return super().initialize(algo, verbosity)
 
     def _init_data(self, mdata, fdata):
         # prepare:

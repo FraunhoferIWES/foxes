@@ -11,7 +11,12 @@ from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("file_pattern", help="The search pattern for input *.nc files")
+    parser.add_argument(
+        "-f",
+        "--file_pattern",
+        help="The search pattern for input *.nc files",
+        default="data/data_*.nc",
+    )
     parser.add_argument(
         "-t",
         "--turbine_file",

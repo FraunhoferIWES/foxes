@@ -128,7 +128,7 @@ class PorteAgelModel(Model):
         D = super().get_data(
             FV.D,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -140,7 +140,7 @@ class PorteAgelModel(Model):
         ct = super().get_data(
             FV.CT,
             FC.STATE_POINT,
-            lookup="f",
+            lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
@@ -156,7 +156,7 @@ class PorteAgelModel(Model):
             ws = super().get_data(
                 FV.REWS,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -168,7 +168,7 @@ class PorteAgelModel(Model):
             ti = super().get_data(
                 FV.TI,
                 FC.STATE_POINT,
-                lookup="f",
+                lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -180,7 +180,7 @@ class PorteAgelModel(Model):
             alpha = super().get_data(
                 FV.PA_ALPHA,
                 FC.STATE_POINT,
-                lookup="fs",
+                lookup="ws",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -192,7 +192,7 @@ class PorteAgelModel(Model):
             beta = super().get_data(
                 FV.PA_BETA,
                 FC.STATE_POINT,
-                lookup="fs",
+                lookup="ws",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -506,7 +506,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             gamma = self.get_data(
                 FV.YAWM,
                 FC.STATE_POINT,
-                lookup="fs",
+                lookup="ws",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
@@ -519,7 +519,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             k = self.get_data(
                 self.k_var,
                 FC.STATE_POINT,
-                lookup="sf",
+                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,

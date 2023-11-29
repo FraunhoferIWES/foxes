@@ -97,6 +97,7 @@ class StatesTable(States):
         self._weights = None
         self._N = None
         self._tvars = None
+        self._profiles = None
 
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
@@ -125,11 +126,53 @@ class StatesTable(States):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        self._profiles = {}
+        self._tvars = set(self.ovars)
+        for v, d in self.profdicts.items():
+            if isinstance(d, str):
+                self._profiles[v] = VerticalProfile.new(d)
+            elif isinstance(d, VerticalProfile):
+                self._profiles[v] = d
+            elif isinstance(d, dict):
+                t = d.pop("type")
+                self._profiles[v] = VerticalProfile.new(t, **d)
+            else:
+                raise TypeError(
+                    f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
+                )
+            self._tvars.update(self._profiles[v].input_vars())
+        self._tvars -= set(self.fixed_vars.keys())
+        self._tvars = list(self._tvars)
+        super().initialize(algo, verbosity)
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of str
+            Names of all sub models
+
+        """
+
+        return list(self._profiles.values())
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -169,24 +212,6 @@ class StatesTable(States):
             data = PandasFileHelper().read_file(self.data_source, **rpars)
             isorg = False
 
-        self._profiles = {}
-        self._tvars = set(self.ovars)
-        for v, d in self.profdicts.items():
-            if isinstance(d, str):
-                self._profiles[v] = VerticalProfile.new(d)
-            elif isinstance(d, VerticalProfile):
-                self._profiles[v] = d
-            elif isinstance(d, dict):
-                t = d.pop("type")
-                self._profiles[v] = VerticalProfile.new(t, **d)
-            else:
-                raise TypeError(
-                    f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
-                )
-            self._tvars.update(self._profiles[v].input_vars())
-        self._tvars -= set(self.fixed_vars.keys())
-        self._tvars = list(self._tvars)
-
         if self.states_sel is not None:
             data = data.iloc[self.states_sel]
         elif self.states_loc is not None:
@@ -219,14 +244,9 @@ class StatesTable(States):
                 )
         data = data[tcols]
 
-        idata = super().initialize(algo, verbosity)
-        self._update_idata(algo, idata)
+        idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self._tvars
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
-
-        algo.update_idata(
-            list(self._profiles.values()), idata=idata, verbosity=verbosity
-        )
 
         return idata
 

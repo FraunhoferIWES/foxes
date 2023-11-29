@@ -41,12 +41,6 @@ class RotorCentreCalc(TurbineModel):
         """
         Initializes the model.
 
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -54,21 +48,22 @@ class RotorCentreCalc(TurbineModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
         pvars = list(self.calc_vars.values())
         self._wcalc = algo.PointWakesCalculation(point_vars=pvars)
+        super().initialize(algo, verbosity)
 
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self._wcalc, idata=idata, verbosity=verbosity)
+    def sub_models(self):
+        """
+        List of all sub-models
 
-        return idata
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self._wcalc]
 
     def output_farm_vars(self, algo):
         """
@@ -143,18 +138,3 @@ class RotorCentreCalc(TurbineModel):
             out[v][st_sel] = res[self.calc_vars[v]][st_sel]
 
         return out
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        algo.finalize_model(self._wcalc, verbosity)
-        super().finalize(algo, verbosity)

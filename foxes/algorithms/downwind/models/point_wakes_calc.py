@@ -22,7 +22,9 @@ class PointWakesCalculation(PointDataModel):
 
     """
 
-    def __init__(self, point_vars=None, emodels=None, emodels_cpars=None, wake_models=None):
+    def __init__(
+        self, point_vars=None, emodels=None, emodels_cpars=None, wake_models=None
+    ):
         """
         Constructor.
 
@@ -44,15 +46,21 @@ class PointWakesCalculation(PointDataModel):
         self.emodels_cpars = emodels_cpars
         self.wake_models = wake_models
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.emodels] if self.emodels is not None else []
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -61,23 +69,11 @@ class PointWakesCalculation(PointDataModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
+        super().initialize(algo, verbosity)
         self.pvars = (
             algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
         )
-
-        idata = super().initialize(algo, verbosity)
-        if self.emodels is not None:
-            algo.update_idata(self.emodels, idata=idata, verbosity=verbosity)
-
-        return idata
 
     def output_point_vars(self, algo):
         """
@@ -95,20 +91,20 @@ class PointWakesCalculation(PointDataModel):
 
         """
         return self.pvars
-    
+
     def contribute_to_wake_deltas(
-            self, 
-            algo,
-            mdata, 
-            fdata, 
-            pdata, 
-            states_source_turbine,
-            wmodels,
-            wdeltas,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        states_source_turbine,
+        wmodels,
+        wdeltas,
+    ):
         """
         Contribute to wake deltas from source turbines
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -129,15 +125,17 @@ class PointWakesCalculation(PointDataModel):
             Key: Variable name str, for which the
             wake delta applies, values: numpy.ndarray with
             shape (n_states, n_points, ...)
-            
+
         """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, pdata, states_source_turbine)
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, pdata, states_source_turbine
+        )
 
         for w in wmodels:
             w.contribute_to_wake_deltas(
                 algo, mdata, fdata, pdata, states_source_turbine, wcoos, wdeltas
             )
-    
+
     def calculate(self, algo, mdata, fdata, pdata, states_source_turbine=None):
         """ "
         The main model calculation.
@@ -167,6 +165,7 @@ class PointWakesCalculation(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+
         torder = fdata[FV.ORDER].astype(FC.ITYPE)
         n_order = torder.shape[1]
         wake_models = algo.wake_models if self.wake_models is None else self.wake_models
@@ -184,14 +183,18 @@ class PointWakesCalculation(PointDataModel):
         if states_source_turbine is None:
             for oi in range(n_order):
                 o = torder[:, oi]
-                self.contribute_to_wake_deltas(algo, mdata, fdata, pdata, o, wmodels, wdeltas)
+                self.contribute_to_wake_deltas(
+                    algo, mdata, fdata, pdata, o, wmodels, wdeltas
+                )
         else:
-            self.contribute_to_wake_deltas(algo, mdata, fdata, pdata, states_source_turbine, 
-                                           wmodels, wdeltas)
+            self.contribute_to_wake_deltas(
+                algo, mdata, fdata, pdata, states_source_turbine, wmodels, wdeltas
+            )
 
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas if v in FV.var2amb}
         for w in wmodels:
             w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
+        import numpy as np
 
         for v in self.pvars:
             if v in wdeltas:

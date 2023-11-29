@@ -60,23 +60,31 @@ class States(PointDataModel):
         """
         pass
 
-    def _update_idata(self, algo, idata):
+    def load_data(self, algo, verbosity=0):
         """
-        Add basic states data to idata.
+        Load and/or create all model data that is subject to chunking.
 
-        This function should be called within initialize,
-        after loading the data.
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
         idata: dict
             The dict has exactly two entries: `data_vars`,
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+        idata = super().load_data(algo, verbosity)
+
         sinds = self.index()
         if sinds is not None:
             idata["coords"][FC.STATE] = sinds
@@ -167,6 +175,18 @@ class ExtendedStates(States):
         """
         self.pmodels.append(model)
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.pmodels]
+
     def size(self):
         """
         The total number of states.
@@ -207,36 +227,6 @@ class ExtendedStates(States):
 
         """
         return self.states.weights(algo)
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        idata = super().initialize(algo, verbosity)
-        algo.update_idata(self.pmodels, idata=idata, verbosity=verbosity)
-
-        return idata
 
     def output_point_vars(self, algo):
         """
@@ -281,21 +271,6 @@ class ExtendedStates(States):
 
         """
         return self.pmodels.calculate(algo, mdata, fdata, pdata)
-
-    def finalize(self, algo, verbosity=0):
-        """
-        Finalizes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level
-
-        """
-        self.pmodels.finalize(algo, verbosity)
-        super().finalize(algo, verbosity)
 
     def __add__(self, m):
         models = self.pmodels.models[1:]

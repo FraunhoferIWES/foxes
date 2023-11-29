@@ -18,7 +18,7 @@ class FarmWakesCalculation(FarmDataModel):
         Constructor.
         """
         super().__init__()
-        
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -38,15 +38,21 @@ class FarmWakesCalculation(FarmDataModel):
         ovars += algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.pwakes]
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -55,16 +61,9 @@ class FarmWakesCalculation(FarmDataModel):
         verbosity: int
             The verbosity level, 0 = silent
 
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
         """
         self.pwakes = algo.partial_wakes_model
-        return super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata):
         """ "
