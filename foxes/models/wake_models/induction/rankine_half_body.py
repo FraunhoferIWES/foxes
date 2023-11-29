@@ -203,6 +203,7 @@ class RHB(WakeModel):
             vel_factor =  m / (4*np.pi*np.linalg.norm(xyz, axis=-1)**3)
             wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,0]
             wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,1]
+            wake_deltas["W"][sp_sel] += (vel_factor[:, None] * xyz[:, :2])[:,2] ## added z component (w)
 
         return wake_deltas 
 
