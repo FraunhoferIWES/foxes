@@ -174,6 +174,7 @@ class RHB(WakeModel):
             fdata=fdata,
             pdata=pdata,
             upcast=True,
+            states_source_turbine=states_source_turbine,
         )
 
         # find a (page 6)
