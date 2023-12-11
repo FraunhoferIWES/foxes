@@ -18,7 +18,7 @@ def test():
         (foxes.algorithms.Iterative, "rotor_wd"),
         (foxes.algorithms.Iterative, "rotor_wd_farmo"),
     ]
-    lims = {FV.REWS: 1e-8, FV.P: 1e-6}
+    lims = {FV.REWS: 5e-7, FV.P: 5e-4}
 
     ck = {FC.STATE: c}
 

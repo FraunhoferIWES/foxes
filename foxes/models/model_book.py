@@ -305,7 +305,6 @@ class ModelBook:
             self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
                 A=0.04, superposition=s
             )
-            self.wake_models[f"RHB_{s}"] = fm.wake_models.induction.RHB(superposition=s)
 
             As = [0.02, 0.04]
             dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
@@ -316,7 +315,7 @@ class ModelBook:
                     self.wake_models[
                         f"TurbOParkIX_{s}_A{a}_dx{d}"
                     ] = fm.wake_models.wind.TurbOParkWakeIX(A=A, superposition=s, dx=dx)
-
+        
         slist = ["ti_linear", "ti_quadratic", "ti_cubic", "ti_quartic", "ti_max"]
         for s in slist:
             self.wake_models[
@@ -336,6 +335,8 @@ class ModelBook:
             self.wake_models[f"IECTI2019_{s[3:]}"] = fm.wake_models.ti.IECTIWake(
                 superposition=s, iec_type="2019"
             )
+        
+        self.wake_models[f"RHB"] = fm.wake_models.induction.RHB()
 
         self.sources = Dict(
             name="sources",

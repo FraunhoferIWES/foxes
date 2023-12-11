@@ -80,4 +80,5 @@ has been supported through multiple publicly funded research projects. We acknow
 the funding by the Federal Ministry of Economic Affairs and Climate Action (BMWK) through the p
 rojects *Smart Wind Farms* (grant no. 0325851B), *GW-Wakes* (0325397B) and *X-Wakes* (03EE3008A) 
 as well as the funding by the Federal Ministry of Education and Research (BMBF) in the framework 
-of the project *H2Digital* (03SF0635).
+of the project *H2Digital* (03SF0635). We furthermore acknowledge funding by the Horizon Europe 
+project FLOW (Atmospheric Flow, Loads and pOwer for Wind energy - grant id 101084205).

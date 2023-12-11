@@ -87,7 +87,61 @@ class LinearSuperposition(WakeSuperposition):
             raise ValueError(
                 f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'"
             )
+    
+    def _get_scale(self, algo, mdata, fdata, pdata, variable,
+                   sel_sp, states_source_turbine):
+        """ Helper function that determines the scale """
 
+        if isinstance(self.scalings, dict):
+            try:
+                scaling = self.scalings[variable]
+            except KeyError:
+                raise KeyError(
+                    f"Model '{self.name}': No scaling found for wake variable '{variable}'"
+                )
+        else:
+            scaling = self.scalings
+
+        if scaling is None:
+            return 1
+
+        elif isinstance(scaling, numbers.Number):
+            return scaling
+        
+        elif variable == FV.WD:
+            return 1
+
+        elif (
+            isinstance(scaling, str)
+            and len(scaling) >= 14
+            and (
+                scaling == f"source_turbine"
+                or scaling == "source_turbine_amb"
+                or (len(scaling) > 15 and scaling[14] == "_")
+            )
+        ):
+            if scaling == f"source_turbine":
+                var = variable
+            elif scaling == "source_turbine_amb":
+                var = FV.var2amb[variable]
+            else:
+                var = scaling[15:]
+
+            return self.get_data(
+                var,
+                FC.STATE_POINT,
+                lookup="w",
+                fdata=fdata,
+                pdata=pdata,
+                algo=algo,
+                states_source_turbine=states_source_turbine,
+            )[sel_sp]
+
+        else:
+            raise ValueError(
+                f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'"
+            )
+        
     def calc_wakes_plus_wake(
         self,
         algo,
@@ -132,58 +186,13 @@ class LinearSuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
-        if isinstance(self.scalings, dict):
-            try:
-                scaling = self.scalings[variable]
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': No scaling found for wake variable '{variable}'"
-                )
-        else:
-            scaling = self.scalings
-
-        if scaling is None:
-            wake_delta[sel_sp] += wake_model_result
-            return wake_delta
-
-        elif isinstance(scaling, numbers.Number):
-            wake_delta[sel_sp] += scaling * wake_model_result
-            return wake_delta
-
-        elif (
-            isinstance(scaling, str)
-            and len(scaling) >= 14
-            and (
-                scaling == f"source_turbine"
-                or scaling == "source_turbine_amb"
-                or (len(scaling) > 15 and scaling[14] == "_")
-            )
-        ):
-            if scaling == f"source_turbine":
-                var = variable
-            elif scaling == "source_turbine_amb":
-                var = FV.var2amb[variable]
-            else:
-                var = scaling[15:]
-
-            scale = self.get_data(
-                var,
-                FC.STATE_POINT,
-                lookup="w",
-                fdata=fdata,
-                pdata=pdata,
-                algo=algo,
-                states_source_turbine=states_source_turbine,
-            )[sel_sp]
+        if np.any(sel_sp):
+            scale = self._get_scale(algo, mdata, fdata, pdata, variable,
+                    sel_sp, states_source_turbine)
 
             wake_delta[sel_sp] += scale * wake_model_result
 
-            return wake_delta
-
-        else:
-            raise ValueError(
-                f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'"
-            )
+        return wake_delta
 
     def calc_final_wake_delta(
         self,

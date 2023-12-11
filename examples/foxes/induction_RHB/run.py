@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["RHB_linear", "Bastankhah_linear_k002"],
+        default=["RHB", "Bastankhah_linear_lim_k002"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    xmin = -300
+    xmin = -1000
     xmax = (args.nx-1)*args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         resolution=40,
         xmin=xmin,
         xmax=xmax,
-        yspace=500.0,
+        yspace=1000.0,
     )
     fig = next(g)
     plt.show()
@@ -175,21 +175,6 @@ if __name__ == "__main__":
     ax.plot(points[0, :, 0], point_results[FV.WS][0, :])
     ax.set_xlabel("x [m]")
     ax.set_ylabel("Wind speed [m/s]")
-    plt.show()
-    plt.close(fig)
-
-    # horizontal flow plot with wind direction
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=2, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
-        quiver_n=4,xspace=120.0, yspace=120.0)
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
-
-    # vertical flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=2, xspace=100.0, zspace=120.0)
-    fig = next(g)
     plt.show()
     plt.close(fig)
 

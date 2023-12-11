@@ -10,6 +10,9 @@ class RHB(WakeModel):
     """
     The Rankine half body induction wake model
 
+    The individual wake effects are superposed linearly,
+    without invoking a wake superposition model.
+
     Ref: B Gribben and G Hawkes - A potential flow model for wind turbine induction and wind farm blockage
     Techincal Paper, Frazer-Nash Consultancy, 2019
 
@@ -19,50 +22,9 @@ class RHB(WakeModel):
 
     """
 
-    def __init__(self, superposition, ct_max=0.9999):
+    def __init__(self, ct_max=0.9999):
         super().__init__()
-        self.superposition = superposition
         self.ct_max = ct_max
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return [self.superp]
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        self.superp = algo.mbook.wake_superpositions[self.superposition]
-        super().initialize(algo, verbosity)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -206,8 +168,8 @@ class RHB(WakeModel):
 
             # calc velocity components
             vel_factor =  m / (4 * np.pi * np.linalg.norm(xyz, axis=-1) **3 )
-            wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz)[:, 0]
-            wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz)[:, 1]
+            wake_deltas["U"][sp_sel] += vel_factor * xyz[:, 0]
+            wake_deltas["V"][sp_sel] += vel_factor * xyz[:, 1]
 
         return wake_deltas
 
@@ -248,14 +210,18 @@ class RHB(WakeModel):
         """
 
         # calc ambient wind vector
-        wind_vec = wd2uv(amb_results[FV.WD], amb_results[FV.WS])
+        ws0 = amb_results[FV.WS]
+        wind_vec = wd2uv(amb_results[FV.WD], ws0)
 
         # add ambient result to wake deltas
-        total_uv = wind_vec + np.stack((wake_deltas["U"], wake_deltas["V"]), axis=2)
+        delta_uv = np.stack((wake_deltas["U"], wake_deltas["V"]), axis=2)
+        sel = np.linalg.norm(delta_uv, axis=-1) < ws0
+        wind_vec[sel] += delta_uv[sel]
+        del delta_uv, sel, ws0
 
         # deduce WS and WD deltas:
         # this does the job of calc_final_wake_delta, done here as not in parent class of RHB
-        new_wd = uv2wd(total_uv)
-        new_ws = np.linalg.norm(total_uv, axis=-1)
+        new_wd = uv2wd(wind_vec)
+        new_ws = np.linalg.norm(wind_vec, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
         wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
