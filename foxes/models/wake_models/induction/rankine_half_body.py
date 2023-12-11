@@ -141,11 +141,8 @@ class RHB(WakeModel):
         # find a (page 6)
         a = 0.5 * (1 - np.sqrt(1 - ct))
 
-        # find rotational area
-        rotational_area = np.pi * (D / 2) ** 2
-
         # find m (page 7)
-        m = 2 * ws * a * rotational_area
+        m = 2 * ws * a * np.pi * (D / 2) ** 2
 
         # get r and theta
         r = np.sqrt(y**2 + z**2)
@@ -220,7 +217,6 @@ class RHB(WakeModel):
         del delta_uv, sel, ws0
 
         # deduce WS and WD deltas:
-        # this does the job of calc_final_wake_delta, done here as not in parent class of RHB
         new_wd = uv2wd(wind_vec)
         new_ws = np.linalg.norm(wind_vec, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
