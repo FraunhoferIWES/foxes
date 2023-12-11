@@ -190,7 +190,7 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-    # vertical flow plot with wind direction
+    # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_xz(args.var, resolution=2, xspace=100.0, zspace=120.0)
     fig = next(g)
