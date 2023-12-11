@@ -275,5 +275,6 @@ class DefaultConv(ConvVarDelta):
             {
                 FV.REWS: 1e-5,
                 FV.TI: 1e-6,
+                FV.CT: 1e-6,
             }
         )

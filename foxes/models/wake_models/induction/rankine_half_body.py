@@ -191,7 +191,7 @@ class RHB(WakeModel):
         theta = np.arctan2(r, x)
 
         # define rankine half body shape (page 3)
-        RHB_shape = np.cos(theta) - (2 / m) * np.pi * ws * (r_sph * np.sin(theta)) ** 2
+        RHB_shape = np.cos(theta) - (2 / (m + 1e-15)) * np.pi * ws * (r_sph * np.sin(theta)) ** 2
 
         # stagnation point condition
         xs = -np.sqrt(m / (4 * np.pi * ws))
@@ -203,7 +203,6 @@ class RHB(WakeModel):
             # apply selection
             xyz = wake_coos[sp_sel]
             m = m[sp_sel]
-            a = a[sp_sel]
 
             # calc velocity components
             vel_factor = m / (4 * np.pi * np.linalg.norm(xyz, axis=-1) ** 3)

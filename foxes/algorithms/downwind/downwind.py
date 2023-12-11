@@ -1,5 +1,5 @@
 from foxes.core import Algorithm, FarmDataModelList
-from foxes.core import PointDataModel, PointDataModelList
+from foxes.core import PointDataModel, PointDataModelList, FarmController
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -129,35 +129,60 @@ class Downwind(Algorithm):
         """
         Helper function for printing model names
         """
+        if self.verbosity > 0:
+            deco = "-" * 50
+            print(f"\n{deco}")
+            print(f"  Running {self.name}: {func_name}")
+            print(deco)
+            print(f"  n_states : {self.n_states}")
+            print(f"  n_turbines: {self.n_turbines}")
+            if n_points is not None:
+                print(f"  n_points : {n_points}")
+            print(deco)
+            print(f"  states   : {self.states}")
+            print(f"  rotor    : {self.rotor_model}")
+            print(f"  controller: {self.farm_controller}")
+            print(f"  partialwks: {self.partial_wakes_model}")
+            print(f"  wake frame: {self.wake_frame}")
+            print(deco)
+            print(f"  wakes:")
+            for i, w in enumerate(self.wake_models):
+                print(f"    {i}) {w}")
+            print(deco)
+            print(f"  turbine models:")
+            for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
+                print(f"    {i}) {m} [pre-rotor]")
+            for i, m in enumerate(self.farm_controller.post_rotor_models.models):
+                print(
+                    f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}"
+                )
+            print(deco)
+            print()
 
-        deco = "-" * 50
-        self.print(f"\n{deco}")
-        self.print(f"  Running {self.name}: {func_name}")
-        self.print(deco)
-        self.print(f"  n_states : {self.n_states}")
-        self.print(f"  n_turbines: {self.n_turbines}")
-        if n_points is not None:
-            self.print(f"  n_points : {n_points}")
-        self.print(deco)
-        self.print(f"  states   : {self.states}")
-        self.print(f"  rotor    : {self.rotor_model}")
-        self.print(f"  controller: {self.farm_controller}")
-        self.print(f"  partialwks: {self.partial_wakes_model}")
-        self.print(f"  wake frame: {self.wake_frame}")
-        self.print(deco)
-        self.print(f"  wakes:")
-        for i, w in enumerate(self.wake_models):
-            self.print(f"    {i}) {w}")
-        self.print(deco)
-        self.print(f"  turbine models:")
-        for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
-            self.print(f"    {i}) {m} [pre-rotor]")
-        for i, m in enumerate(self.farm_controller.post_rotor_models.models):
-            self.print(
-                f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}"
-            )
-        self.print(deco)
-        self.print()
+    def _print_model_oder(self, mlist, calc_pars):
+        """
+        Helper function for printing model names
+        """
+        if self.verbosity > 0:
+            deco = "-" * 50
+            print(f"\n{deco}")
+            print(f"  Model oder")
+            print(f"{deco}")
+
+            for i, m in enumerate(mlist.models):
+                print(f"{i:02d}) {m.name}")
+                if isinstance(m, FarmController):
+                    if calc_pars[i]["pre_rotor"]:
+                        for j, mm in enumerate(m.pre_rotor_models.models):
+                            print(f"  {i:02d}.{j}) Pre-rotor: {mm.name}")
+                    else:
+                        for j, mm in enumerate(m.post_rotor_models.models):
+                            print(f"  {i:02d}.{j}) Post-rotor: {mm.name}")             
+                        
+
+                
+            print(deco)
+            print()
 
     def init_states(self):
         """
@@ -259,13 +284,11 @@ class Downwind(Algorithm):
             mlist.models.append(self.get_model("FarmWakesCalculation")())
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-        # initialize models:
-        mlist.initialize(self, self.verbosity)
-
-        # update variables:
-        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
-
         return mlist, calc_pars
+
+    def _calc_farm_vars(self, mlist):
+        """Helper function that gathers the farm variables"""
+        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
@@ -323,6 +346,12 @@ class Downwind(Algorithm):
 
         # collect models:
         mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
+
+        # initialize models:
+        if not mlist.initialized:
+            mlist.initialize(self, self.verbosity)
+            self._calc_farm_vars(mlist)
+        self._print_model_oder(mlist, calc_pars)
 
         # get input model data:
         models_data = self.get_models_data()
@@ -408,9 +437,6 @@ class Downwind(Algorithm):
             )
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-        # initialize models:
-        mlist.initialize(self, self.verbosity)
-
         return mlist, calc_pars
 
     def calc_points(
@@ -483,6 +509,10 @@ class Downwind(Algorithm):
         mlist, calc_pars = self._collect_point_models(
             vars, vars_to_amb, calc_parameters, point_models, ambient
         )
+
+        # initialize models:
+        if not mlist.initialized:
+            mlist.initialize(self, self.verbosity)
 
         # get input model data:
         models_data = self.get_models_data()

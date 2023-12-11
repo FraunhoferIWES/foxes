@@ -90,7 +90,7 @@ class Model(metaclass=ABCMeta):
         Returns
         -------
         smdls: list of foxes.core.Model
-            Names of all sub models
+            All sub models
 
         """
         return []

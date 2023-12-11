@@ -160,6 +160,20 @@ class FarmDataModelList(FarmDataModel):
 
         """
         self.models.append(model)
+    
+    def insert(self, index, model):
+        """
+        Insert a model into the list
+
+        Parameters
+        ----------
+        index: int
+            The index in the model list
+        model: foxes.core.FarmDataModel
+            The model to insert
+
+        """
+        self.models.insert(index, model)
 
     def sub_models(self):
         """

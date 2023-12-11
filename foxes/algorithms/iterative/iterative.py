@@ -1,6 +1,7 @@
 from foxes.algorithms.downwind.downwind import Downwind
 
 from foxes.core import FarmDataModelList
+from foxes.utils import Dict
 import foxes.variables as FV
 from . import models as mdls
 
@@ -15,6 +16,8 @@ class Iterative(Downwind):
         The maximal number of iterations
     conv_crit: foxes.algorithms.iterative.ConvCrit
         The convergence criteria
+    prev_farm_results: xarray.Dataset
+        Results from the previous iteration
 
     :group: algorithms.iterative
 
@@ -57,16 +60,53 @@ class Iterative(Downwind):
             Keyword arguments for Downwind
 
         """
-
-        verbosity = int(kwargs.pop("verbosity", 1)) - 1
-        super().__init__(*args, verbosity=verbosity, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit is None else conv_crit
         )
+        self.prev_farm_results = None
         self._it = None
         self._mlist = None
+        self._reamb = False
+        self._urelax = Dict(
+            first={}, 
+            pre_rotor={}, 
+            post_rotor={}, 
+            pre_wake={FV.CT: 0.5}, 
+            last={}
+        )
+    
+    def set_urelax(self, entry_point, **urel):
+        """
+        Sets under-relaxation parameters.
+        
+        Parameters
+        ----------
+        entry_point: str
+            The entry point: first, pre_rotor, post_rotor, 
+            pre_wake, last
+        urel: dict
+            The variables and their under-relaxation values
+
+        """
+        if self.initialized:
+            raise ValueError(f"Attempt to set_urelax after initialization")
+        self._urelax[entry_point].update(urel)
+    
+    @property
+    def urelax(self):
+        """
+        Returns the under-relaxation parameters
+        
+        Returns
+        -------
+        urlx: foxes.utils.Dict
+            The under-relaxation parameters
+        
+        """
+        return self._urelax
 
     @property
     def iterations(self):
@@ -91,13 +131,41 @@ class Iterative(Downwind):
         """
 
         if self._it == 0:
+
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
                 calc_parameters,
                 ambient=ambient,
             )
+
+            n = 0
+            if len(self._urelax["first"]):
+                self._mlist0.insert(0, mdls.URelax(**self._urelax["first"]))
+                self._calc_pars0.insert(0, {})
+                self._reamb = True
+                n += 1
+
+            if len(self._urelax["pre_rotor"]):
+                self._mlist0.insert(2+n, mdls.URelax(**self._urelax["pre_rotor"]))
+                self._calc_pars0.insert(2+n, {})
+                self._reamb = True
+                n += 1
+
+            if len(self._urelax["post_rotor"]):
+                self._mlist0.insert(4+n, mdls.URelax(**self._urelax["post_rotor"]))
+                self._calc_pars0.insert(4+n, {})
+                self._reamb = True
+                n += 1
+
+            if len(self._urelax["pre_wake"]):
+                self._mlist0.models[7+n].urelax = mdls.URelax(**self._urelax["pre_wake"])
+
+            if len(self._urelax["last"]):
+                self._mlist0.append(mdls.URelax(**self._urelax["last"]))
+                self._calc_pars0.append({})
+
             return self._mlist0, self._calc_pars0
 
-        elif ambient:
+        elif ambient or self._reamb:
             return self._mlist0, self._calc_pars0
 
         else:
@@ -105,15 +173,26 @@ class Iterative(Downwind):
             calc_pars = []
             mlist = FarmDataModelList(models=[])
 
+            # add under-relaxation during wake calculation:
+            urelax = None
+            if len(self._urelax["pre_wake"]):
+                urelax = mdls.URelax(**self._urelax["pre_wake"])
+                
             # add model that calculates wake effects:
-            mlist.models.append(self.get_model("FarmWakesCalculation")())
-            mlist.models[-1].name = "calc_wakes"
+            mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=urelax))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-            # initialize models:
-            mlist.initialize(self, self.verbosity)
+            # add under-relaxation:
+            if len(self._urelax["last"]):
+                mlist.append(mdls.URelax(**self._urelax["last"]))
+                calc_pars.append({})
 
             return mlist, calc_pars
+
+    def _calc_farm_vars(self, mlist):
+        """Helper function that gathers the farm variables"""
+        if self._it == 0:
+            super()._calc_farm_vars(mlist)
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
@@ -159,6 +238,9 @@ class Iterative(Downwind):
             if conv:
                 self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
                 break
+
+            if self._it == 0:
+                self.verbosity -= 1
 
         # finalize models:
         if finalize:

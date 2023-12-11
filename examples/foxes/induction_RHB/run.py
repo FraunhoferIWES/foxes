@@ -8,24 +8,21 @@ import foxes.variables as FV
 if __name__ == "__main__":
     # define arguments and options:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=10
-    )
-    parser.add_argument(
-        "-l",
-        "--layout",
-        help="The wind farm layout file (path or static)",
-        default=None,
-    )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
-        "-dx", "--deltax", help="The turbine distance in x", type=float, default=0.0
+        "-dx", help="The turbine spacing in x", type=float, default=800.0
     )
     parser.add_argument(
-        "-dy", "--deltay", help="Turbine layout y step", type=float, default=200.0
+        "-dy", help="The turbine spacing in y", type=float, default=400.0
+    )
+    parser.add_argument(
+        "-nx", help="The number of turbines in x direction", type=int, default=20
+    )
+    parser.add_argument(
+        "-ny", help="The number of turbines in y direction", type=int, default=10
     )
     parser.add_argument(
         "-t",
@@ -70,18 +67,14 @@ if __name__ == "__main__":
     # create wind farm
     print("\nCreating wind farm")
     farm = foxes.WindFarm()
-    if args.layout is None:
-        foxes.input.farm_layout.add_row(
-            farm=farm,
-            xy_base=np.array([0.0, 0.0]),
-            xy_step=np.array([args.deltax, args.deltay]),
-            n_turbines=args.n_t,
-            turbine_models=args.tmodels + [ttype.name],
-        )
-    else:
-        foxes.input.farm_layout.add_from_file(
-            farm, args.layout, turbine_models=args.tmodels + [ttype.name]
-        )
+    foxes.input.farm_layout.add_grid(
+        farm=farm,
+        xy_base=[0.0, 0.0],
+        step_vectors=[[args.dx, 0.0], [0., args.dy]],
+        steps=[args.nx, args.ny],
+        turbine_models=["DTU10MW"],
+        verbosity=0
+    )
 
     # create algorithm
     Algo = (
@@ -96,6 +89,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
+        verbosity=1
     )
 
     # calculate farm results
@@ -156,13 +150,15 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
+    xmin = -300
+    xmax = (args.nx-1)*args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
-        figsize=(4, 8),
-        resolution=2,
-        xmin=-300,
-        xmax=args.n_t * args.deltax + 500,
-        yspace=200.0,
+        figsize=(12, 3.5),
+        resolution=40,
+        xmin=xmin,
+        xmax=xmax,
+        yspace=500.0,
     )
     fig = next(g)
     plt.show()
@@ -170,9 +166,9 @@ if __name__ == "__main__":
 
     # center line plot:
     H = mbook.turbine_types[ttype.name].H
-    n_points = 8000
+    n_points = 10000
     points = np.zeros((1, n_points, 3))
-    points[:, :, 0] = np.linspace(-500.0, 2000.0, n_points)[None, :]
+    points[:, :, 0] = np.linspace(xmin, xmax, n_points)[None, :]
     points[:, :, 2] = H
     point_results = algo.calc_points(farm_results, points)
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -183,10 +179,9 @@ if __name__ == "__main__":
     plt.close(fig)
 
     # front line plot:
-    n_points = 8000
     points = np.zeros((1, n_points, 3))
     points[:, :, 0] = -200
-    points[:, :, 1] = np.linspace(-500.0, args.n_t * args.deltay + 500, n_points)[
+    points[:, :, 1] = np.linspace(-500.0, args.ny*args.dy + 500, n_points)[
         None, :
     ]
     points[:, :, 2] = H

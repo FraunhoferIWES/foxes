@@ -82,7 +82,7 @@ class PartialAxiwake(PartialWakesModel):
         Returns
         -------
         smdls: list of foxes.core.Model
-            Names of all sub models
+            All sub models
 
         """
         return super().sub_models() + [self.rotor_model]
