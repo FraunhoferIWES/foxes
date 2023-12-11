@@ -178,6 +178,21 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
+    # horizontal flow plot with wind direction
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xy(args.var, resolution=2, quiver_pars=dict(angles="xy", scale_units="xy", scale=0.35),
+        quiver_n=4,xspace=120.0, yspace=120.0)
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
+    # vertical flow plot
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xz(args.var, resolution=2, xspace=100.0, zspace=120.0)
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
     # front line plot:
     points = np.zeros((1, n_points, 3))
     points[:, :, 0] = -200
