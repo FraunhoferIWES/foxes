@@ -91,7 +91,6 @@ class RHB(WakeModel):
         n_points = pdata.n_points
         wake_deltas["U"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas["V"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        wake_deltas["W"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
@@ -210,14 +209,6 @@ class RHB(WakeModel):
             vel_factor =  m / (4 * np.pi * np.linalg.norm(xyz, axis=-1) **3 )
             wake_deltas["U"][sp_sel] += (vel_factor[:, None] * xyz)[:, 0]
             wake_deltas["V"][sp_sel] += (vel_factor[:, None] * xyz)[:, 1]
-            wake_deltas["W"][sp_sel] += (vel_factor[:, None] * xyz)[:, 2] ## added z component (w)
-
-            # ASK JONAS
-            ### we can only return 2 components for the given coord system (ie for xy ignore z, for xz ignore y)
-            ### so for the xz case, replacing wake_deltas["V"] with the values from wake_deltas["W"]
-            if (np.all(wake_coos[:, :, 1]==0)): # xz data
-                wake_deltas["V"] =  wake_deltas["W"] # assuming shallow copy is ok here
-
 
         return wake_deltas
 
