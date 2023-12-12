@@ -19,7 +19,7 @@ if __name__ == "__main__":
         "-dy", help="The turbine spacing in y", type=float, default=400.0
     )
     parser.add_argument(
-        "-nx", help="The number of turbines in x direction", type=int, default=20
+        "-nx", help="The number of turbines in x direction", type=int, default=6
     )
     parser.add_argument(
         "-ny", help="The number of turbines in y direction", type=int, default=10
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["RHB", "Bastankhah_linear_lim_k002"],
+        default=["RHB", "Jensen_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -150,15 +150,16 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    xmin = -1000
+    xmin = -2000
     xmax = (args.nx-1)*args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
         figsize=(12, 3.5),
-        resolution=40,
+        resolution=20,
         xmin=xmin,
         xmax=xmax,
         yspace=1000.0,
+        levels=40,
     )
     fig = next(g)
     plt.show()
