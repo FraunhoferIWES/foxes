@@ -715,12 +715,14 @@ class FlowPlots2D(Output):
         data = point_results[var].to_numpy()
 
         # define wind vector arrows:
+        qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        qpars.update(quiver_pars)
         quiv = (
             None
             if quiver_n is None
             else (
                 quiver_n,
-                quiver_pars,
+                qpars,
                 point_results[FV.WD].to_numpy(),
                 point_results[FV.WS].to_numpy(),
             )
@@ -919,12 +921,14 @@ class FlowPlots2D(Output):
         data = point_results[var].to_numpy()
 
         # define wind vector arrows:
+        qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        qpars.update(quiver_pars)
         quiv = (
             None
             if quiver_n is None
             else (
                 quiver_n,
-                quiver_pars,
+                qpars,
                 point_results[FV.WD].to_numpy(),
                 point_results[FV.WS].to_numpy(),
             )
@@ -1123,12 +1127,14 @@ class FlowPlots2D(Output):
             **kwargs,
         )
         data = point_results[var].to_numpy()
+        qpars = dict(angles="xy", scale_units="xy", scale=0.05)
+        qpars.update(quiver_pars)
         quiv = (
             None
             if quiver_n is None
             else (
                 quiver_n,
-                quiver_pars,
+                qpars,
                 point_results[FV.WD].to_numpy(),
                 point_results[FV.WS].to_numpy(),
             )
