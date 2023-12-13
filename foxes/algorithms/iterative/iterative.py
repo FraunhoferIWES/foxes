@@ -71,21 +71,17 @@ class Iterative(Downwind):
         self._mlist = None
         self._reamb = False
         self._urelax = Dict(
-            first={}, 
-            pre_rotor={}, 
-            post_rotor={}, 
-            pre_wake={FV.CT: 0.5}, 
-            last={}
+            first={}, pre_rotor={}, post_rotor={}, pre_wake={FV.CT: 0.5}, last={}
         )
-    
+
     def set_urelax(self, entry_point, **urel):
         """
         Sets under-relaxation parameters.
-        
+
         Parameters
         ----------
         entry_point: str
-            The entry point: first, pre_rotor, post_rotor, 
+            The entry point: first, pre_rotor, post_rotor,
             pre_wake, last
         urel: dict
             The variables and their under-relaxation values
@@ -94,17 +90,17 @@ class Iterative(Downwind):
         if self.initialized:
             raise ValueError(f"Attempt to set_urelax after initialization")
         self._urelax[entry_point].update(urel)
-    
+
     @property
     def urelax(self):
         """
         Returns the under-relaxation parameters
-        
+
         Returns
         -------
         urlx: foxes.utils.Dict
             The under-relaxation parameters
-        
+
         """
         return self._urelax
 
@@ -131,7 +127,6 @@ class Iterative(Downwind):
         """
 
         if self._it == 0:
-
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
                 calc_parameters,
                 ambient=ambient,
@@ -145,19 +140,21 @@ class Iterative(Downwind):
                 n += 1
 
             if len(self._urelax["pre_rotor"]):
-                self._mlist0.insert(2+n, mdls.URelax(**self._urelax["pre_rotor"]))
-                self._calc_pars0.insert(2+n, {})
+                self._mlist0.insert(2 + n, mdls.URelax(**self._urelax["pre_rotor"]))
+                self._calc_pars0.insert(2 + n, {})
                 self._reamb = True
                 n += 1
 
             if len(self._urelax["post_rotor"]):
-                self._mlist0.insert(4+n, mdls.URelax(**self._urelax["post_rotor"]))
-                self._calc_pars0.insert(4+n, {})
+                self._mlist0.insert(4 + n, mdls.URelax(**self._urelax["post_rotor"]))
+                self._calc_pars0.insert(4 + n, {})
                 self._reamb = True
                 n += 1
 
             if len(self._urelax["pre_wake"]):
-                self._mlist0.models[7+n].urelax = mdls.URelax(**self._urelax["pre_wake"])
+                self._mlist0.models[7 + n].urelax = mdls.URelax(
+                    **self._urelax["pre_wake"]
+                )
 
             if len(self._urelax["last"]):
                 self._mlist0.append(mdls.URelax(**self._urelax["last"]))
@@ -177,7 +174,7 @@ class Iterative(Downwind):
             urelax = None
             if len(self._urelax["pre_wake"]):
                 urelax = mdls.URelax(**self._urelax["pre_wake"])
-                
+
             # add model that calculates wake effects:
             mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=urelax))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))

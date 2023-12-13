@@ -141,7 +141,7 @@ class Sequential(Downwind):
                 self._mlist.initialize(self, self.verbosity)
                 self._calc_farm_vars(self._mlist)
             self._print_model_oder(self._mlist, self._calc_pars)
-            
+
             self._mdata = self.get_models_idata()
             if self.verbosity > 0:
                 s = "\n".join(

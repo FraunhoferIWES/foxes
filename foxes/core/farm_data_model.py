@@ -160,7 +160,7 @@ class FarmDataModelList(FarmDataModel):
 
         """
         self.models.append(model)
-    
+
     def insert(self, index, model):
         """
         Insert a model into the list

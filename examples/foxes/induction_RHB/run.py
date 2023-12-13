@@ -70,10 +70,10 @@ if __name__ == "__main__":
     foxes.input.farm_layout.add_grid(
         farm=farm,
         xy_base=[0.0, 0.0],
-        step_vectors=[[args.dx, 0.0], [0., args.dy]],
+        step_vectors=[[args.dx, 0.0], [0.0, args.dy]],
         steps=[args.nx, args.ny],
         turbine_models=["DTU10MW"],
-        verbosity=0
+        verbosity=0,
     )
 
     # create algorithm
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
-        verbosity=1
+        verbosity=1,
     )
 
     # calculate farm results
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     xmin = -2000
-    xmax = (args.nx-1)*args.dx + 2000
+    xmax = (args.nx - 1) * args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
         figsize=(12, 3.5),
@@ -182,9 +182,7 @@ if __name__ == "__main__":
     # front line plot:
     points = np.zeros((1, n_points, 3))
     points[:, :, 0] = -200
-    points[:, :, 1] = np.linspace(-500.0, args.ny*args.dy + 500, n_points)[
-        None, :
-    ]
+    points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[None, :]
     points[:, :, 2] = H
     point_results = algo.calc_points(farm_results, points)
     fig, ax = plt.subplots(figsize=(10, 5))

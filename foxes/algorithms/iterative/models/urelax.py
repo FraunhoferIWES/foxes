@@ -1,5 +1,6 @@
 from foxes.core import FarmDataModel
 
+
 class URelax(FarmDataModel):
     """
     Apply under-relaxation to selected variables
@@ -46,7 +47,7 @@ class URelax(FarmDataModel):
 
         """
         return list(self.urel.keys())
-    
+
     def calculate(self, algo, mdata, fdata):
         """ "
         The main model calculation.

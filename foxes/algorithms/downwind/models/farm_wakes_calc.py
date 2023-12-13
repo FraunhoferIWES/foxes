@@ -33,7 +33,9 @@ class FarmWakesCalculation(FarmDataModel):
             The output variable names
 
         """
-        ovars = algo.rotor_model.output_farm_vars(algo) + algo.farm_controller.output_farm_vars(algo)
+        ovars = algo.rotor_model.output_farm_vars(
+            algo
+        ) + algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
 
     def sub_models(self):

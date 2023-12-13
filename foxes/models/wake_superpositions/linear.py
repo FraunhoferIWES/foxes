@@ -87,10 +87,11 @@ class LinearSuperposition(WakeSuperposition):
             raise ValueError(
                 f"{self.name}: Unable to determine scaling variable for scaling = '{self.scalings}'"
             )
-    
-    def _get_scale(self, algo, mdata, fdata, pdata, variable,
-                   sel_sp, states_source_turbine):
-        """ Helper function that determines the scale """
+
+    def _get_scale(
+        self, algo, mdata, fdata, pdata, variable, sel_sp, states_source_turbine
+    ):
+        """Helper function that determines the scale"""
 
         if isinstance(self.scalings, dict):
             try:
@@ -107,7 +108,7 @@ class LinearSuperposition(WakeSuperposition):
 
         elif isinstance(scaling, numbers.Number):
             return scaling
-        
+
         elif variable == FV.WD:
             return 1
 
@@ -141,7 +142,7 @@ class LinearSuperposition(WakeSuperposition):
             raise ValueError(
                 f"Model '{self.name}': Invalid scaling choice '{scaling}' for wake variable '{variable}', valid choices: None, <scalar>, 'source_turbine', 'source_turbine_amb', 'source_turbine_<var>'"
             )
-        
+
     def calc_wakes_plus_wake(
         self,
         algo,
@@ -187,8 +188,9 @@ class LinearSuperposition(WakeSuperposition):
 
         """
         if np.any(sel_sp):
-            scale = self._get_scale(algo, mdata, fdata, pdata, variable,
-                    sel_sp, states_source_turbine)
+            scale = self._get_scale(
+                algo, mdata, fdata, pdata, variable, sel_sp, states_source_turbine
+            )
 
             wake_delta[sel_sp] += scale * wake_model_result
 
