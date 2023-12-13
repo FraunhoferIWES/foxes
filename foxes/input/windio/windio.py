@@ -1,7 +1,5 @@
-import yaml
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 from foxes.core import WindFarm, Algorithm
 from foxes.models import ModelBook
@@ -11,8 +9,11 @@ from foxes.models.turbine_types import CpCtFromTwo
 import foxes.constants as FC
 import foxes.variables as FV
 
-from windIO.utils.yml_utils import load_yaml
-
+try:
+    from windIO.utils.yml_utils import load_yaml
+except ModuleNotFoundError:
+    def load_yaml(*args, **kwargs):
+        raise ModuleNotFoundError("Please install windio, e.g. by 'pip install windio'")
 
 def read_resource(res, fixed_vars={}, **kwargs):
     """
