@@ -83,7 +83,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(200, 300),
+        states_sel=range(230, 280),
     )
 
     farm = foxes.WindFarm()

@@ -127,6 +127,7 @@ class Sequential(Downwind):
         if not self.iterating:
             if not self.initialized:
                 self.initialize()
+            self._print_deco("calc_farm")
 
             self._inds = self.states0.index()
             self._weights = self.states0.weights(self)
@@ -139,6 +140,7 @@ class Sequential(Downwind):
             if not self._mlist.initialized:
                 self._mlist.initialize(self, self.verbosity)
                 self._calc_farm_vars(self._mlist)
+            self._print_model_oder(self._mlist, self._calc_pars)
             
             self._mdata = self.get_models_idata()
             if self.verbosity > 0:
@@ -495,7 +497,7 @@ class Sequential(Downwind):
 
         plist, calc_pars = self._collect_point_models(ambient=self.ambient)
         if not plist.initialized:
-            self.plist.initialize(self, self.verbosity)
+            plist.initialize(self, self.verbosity)
         pvars = plist.output_point_vars(self)
 
         mdata = self.get_models_idata()
