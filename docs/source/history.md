@@ -363,7 +363,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Examples:
   - New example: `sequential`, demonstrating the usage of the sequential algorithm
   - New example: `induction_RHB`, showing the Rankine-half-body model for blockage
-  
+- Notebooks:
+  - New notebook: `blockage.ipynb`, demonstrating how to apply the RHB induction model to a wind farm
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5](https://github.com/FraunhoferIWES/foxes/commits/v0.5)
 
 
