@@ -6,14 +6,9 @@ from foxes.models import ModelBook
 from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
 from foxes.models.turbine_types import CpCtFromTwo
+from foxes.utils import import_module
 import foxes.constants as FC
 import foxes.variables as FV
-
-try:
-    from windIO.utils.yml_utils import load_yaml
-except ModuleNotFoundError:
-    def load_yaml(*args, **kwargs):
-        raise ModuleNotFoundError("Please install windio, e.g. by 'pip install windio'")
 
 def read_resource(res, fixed_vars={}, **kwargs):
     """
@@ -264,7 +259,8 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
     :group: input.windio
 
     """
-    case = load_yaml(case_yaml)
+    yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
+    case = yml_utils.load_yaml(case_yaml)
 
     site_yaml = case["site"]
     states = read_site(site_yaml, **site_pars)
