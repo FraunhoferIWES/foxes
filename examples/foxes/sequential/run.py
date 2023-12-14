@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Jensen_linear_k007"],
+        default=["Bastankhah_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument(
@@ -78,7 +78,6 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    N = 100
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
@@ -112,35 +111,36 @@ if __name__ == "__main__":
         chunks={FC.STATE: None, FC.POINT: args.chunksize_points},
     )
 
-    # in case of animation, add a plugin that creates the images:
-    if args.animation:
-        fig, ax = plt.subplots()
-        anigen = foxes.output.SeqFlowAnimationPlugin(
-            orientation="xy",
-            var=FV.WS,
-            resolution=10,
-            levels=None,
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.01),
-            quiver_n=307,
-            xmin=-6000,
-            ymin=-6000,
-            xmax=6000,
-            ymax=6000,
-            fig=fig,
-            ax=ax,
-            vmin=0,
-            vmax=10,
-            ret_im=True,
-            title=None,
-            animated=True,
-        )
-        algo.plugins.append(anigen)
-
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
         threads_per_worker=args.threads_per_worker,
     ) as runner:
+        # in case of animation, add a plugin that creates the images:
+        if args.animation:
+            fig, ax = plt.subplots()
+            anigen = foxes.output.SeqFlowAnimationPlugin(
+                runner=runner,
+                orientation="xy",
+                var=FV.WS,
+                resolution=10,
+                levels=None,
+                quiver_pars=dict(scale=0.01),
+                quiver_n=307,
+                xmin=-5000,
+                ymin=-5000,
+                xmax=7000,
+                ymax=7000,
+                fig=fig,
+                ax=ax,
+                vmin=0,
+                vmax=10,
+                ret_im=True,
+                title=None,
+                animated=True,
+            )
+            algo.plugins.append(anigen)
+
         # run all states sequentially:
         for r in algo:
             print(algo.index)

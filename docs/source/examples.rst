@@ -18,4 +18,5 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/yawed_wake
         notebooks/layout_opt
         notebooks/timelines
+        notebooks/sequential
         notebooks/blockage

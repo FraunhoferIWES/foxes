@@ -370,6 +370,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.1
 
-
+- Notebooks:
+  - New notebook: `sequential.ipynb`, creating an animation showing state-by-state wake propagation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.1](https://github.com/FraunhoferIWES/foxes/commits/v0.5.1)
