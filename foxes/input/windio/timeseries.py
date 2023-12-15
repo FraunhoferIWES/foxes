@@ -25,7 +25,11 @@ def read_timeseries(res, fixed_vars={}, **kwargs):
         The timeseries states
     
     """
-    times = [d["time"] for d in res]
+    times = np.array([d["time"] for d in res])
+    try:
+        times = times.astype(np.float64)
+    except ValueError:
+        times = times.astype("datetime64[ns]")
     n_times = len(times)
 
     vars = [v for v in res[0] if v != "time"]

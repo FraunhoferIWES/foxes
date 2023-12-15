@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from foxes.core import WindFarm, Algorithm
+from foxes.core import WindFarm, Algorithm, WakeModel
 from foxes.models import ModelBook
 from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
-from foxes.models.turbine_types import CpCtFromTwo
+from foxes.models.turbine_types import PCtFromTwo, CpCtFromTwo
 from foxes.utils import import_module
 import foxes.constants as FC
 import foxes.variables as FV
@@ -175,22 +175,36 @@ def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     tdict = fdict["turbines"]
     pdict = tdict["performance"]
 
+    D = float(tdict["rotor_diameter"])
+    H = float(tdict["hub_height"])
+
     ct_ws = np.array(pdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
     ct_data = pd.DataFrame(index=range(len(ct_ws)))
     ct_data["ws"] = ct_ws
     ct_data["ct"] = np.array(pdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
 
-    cp_ws = np.array(pdict["Cp_curve"]["Cp_wind_speeds"], dtype=FC.DTYPE)
-    cp_data = pd.DataFrame(index=range(len(cp_ws)))
-    cp_data["ws"] = cp_ws
-    cp_data["cp"] = np.array(pdict["Cp_curve"]["Cp_values"], dtype=FC.DTYPE)
+    if "Cp_curve" in pdict:
+        cp_ws = np.array(pdict["Cp_curve"]["Cp_wind_speeds"], dtype=FC.DTYPE)
+        cp_data = pd.DataFrame(index=range(len(cp_ws)))
+        cp_data["ws"] = cp_ws
+        cp_data["cp"] = np.array(pdict["Cp_curve"]["Cp_values"], dtype=FC.DTYPE)
 
-    D = float(tdict["rotor_diameter"])
-    H = float(tdict["hub_height"])
+        mbook.turbine_types["windio_turbine"] = CpCtFromTwo(
+            cp_data, ct_data, col_ws_cp_file="ws", col_cp="cp", D=D, H=H
+        )
 
-    mbook.turbine_types["windio_turbine"] = CpCtFromTwo(
-        cp_data, ct_data, col_ws_cp_file="ws", col_cp="cp", D=D, H=H
-    )
+    elif "power_curve" in pdict:
+        P_ws = np.array(pdict["power_curve"]["power_wind_speeds"], dtype=FC.DTYPE)
+        P_data = pd.DataFrame(index=range(len(P_ws)))
+        P_data["ws"] = P_ws
+        P_data["P"] = np.array(pdict["power_curve"]["power_values"], dtype=FC.DTYPE)
+
+        mbook.turbine_types["windio_turbine"] = PCtFromTwo(
+            P_data, ct_data, col_ws_P_file="ws", col_P="P", D=D, H=H
+        )
+
+    else:
+        raise KeyError(f"Missing 'Cp_curve' or 'power_curve' in performance dict, got: {list(pdict.keys())}")
 
     models = ["windio_turbine"] + turbine_models
     farm = WindFarm(name=fdict["name"])
@@ -230,11 +244,21 @@ def read_anlyses(
         The algorithm
 
     """
-    wmodel = analyses["wake_model"]["name"]
-    wmodels = [keymap.get(wmodel, wmodel)]
+    fname = analyses["flow_model"]["name"]
+    if fname != "foxes":
+        raise KeyError(f"Expecting flow model name 'foxes', found '{fname}'")
+    
+    wmodels = analyses["wake_models"]
+    wake_models = []
+    for wdict in wmodels:
+        wname = wdict.pop("model")
+        wclass = wdict.pop("class", None)
+        if wclass is not None:
+            mbook.wake_models[wname] = WakeModel.new(wclass, **wdict)
+        wake_models.append(wname)
 
     return Algorithm.new(
-        algo_type, mbook, farm, states, wake_models=wmodels, **algo_pars
+        algo_type, mbook, farm, states, wake_models=wake_models, **algo_pars
     )
 
 
@@ -272,7 +296,6 @@ def read_case(case_data, site_pars={}, farm_pars={}, ana_pars={}):
 
     site_data = case["site"]
     states = read_site(site_data, **site_pars)
-    quit()
 
     farm_data = case["wind_farm"]
     mbook, farm = read_farm(farm_data, **farm_pars)
