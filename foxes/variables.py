@@ -246,6 +246,11 @@ Z0 = "z0"
 :group: foxes.variables
 """
 
+USTAR = "ustar"
+""" The friction velocity in m/s
+:group: foxes.variables
+"""
+
 MOL = "MOL"
 """ The Monin-Ubukhof length in m
 :group: foxes.variables

@@ -10,14 +10,16 @@ from foxes.utils import import_module
 import foxes.constants as FC
 import foxes.variables as FV
 
+from .timeseries import read_timeseries
+
 def read_resource(res, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource
 
     Parameters
     ----------
-    res_yaml: str
-        Path to the yaml file
+    res: dict
+        Data from the yaml file
     fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
@@ -31,73 +33,79 @@ def read_resource(res, fixed_vars={}, **kwargs):
 
     """
     wres = res["wind_resource"]
+    if len(wres) != 1:
+        raise KeyError(f"Expecting exactly one entry in wind_resource, found: {list(wres.keys())}")
 
-    wd = np.array(wres["wind_direction"], dtype=FC.DTYPE)
-    ws = np.array(wres["wind_speed"], dtype=FC.DTYPE)
-    n_wd = len(wd)
-    n_ws = len(ws)
-    n = n_wd * n_ws
+    if "timeseries" in wres:
+        return read_timeseries(wres["timeseries"], fixed_vars, **kwargs)
+    
+    else:
+        wd = np.array(wres["wind_direction"], dtype=FC.DTYPE)
+        ws = np.array(wres["wind_speed"], dtype=FC.DTYPE)
+        n_wd = len(wd)
+        n_ws = len(ws)
+        n = n_wd * n_ws
 
-    data = np.zeros((n_wd, n_ws, 2), dtype=FC.DTYPE)
-    data[:, :, 0] = wd[:, None]
-    data[:, :, 1] = ws[None, :]
-    names = ["wind_direction", "wind_speed"]
-    sec_prob = None
+        data = np.zeros((n_wd, n_ws, 2), dtype=FC.DTYPE)
+        data[:, :, 0] = wd[:, None]
+        data[:, :, 1] = ws[None, :]
+        names = ["wind_direction", "wind_speed"]
+        sec_prob = None
 
-    def _to_data(v, d, dims):
-        nonlocal data, names, sec_prob
-        hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
-        if len(dims) == 0:
-            hdata[:, :, 0] = FC.DTYPE(d)
-        elif len(dims) == 1:
-            if dims[0] == "wind_direction":
-                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[:, None]
-            elif dims[0] == "wind_speed":
-                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[None, :]
+        def _to_data(v, d, dims):
+            nonlocal data, names, sec_prob
+            hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
+            if len(dims) == 0:
+                hdata[:, :, 0] = FC.DTYPE(d)
+            elif len(dims) == 1:
+                if dims[0] == "wind_direction":
+                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[:, None]
+                elif dims[0] == "wind_speed":
+                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[None, :]
+                else:
+                    raise ValueError(f"Unknown dimension '{dims[0]}' for data '{v}'")
+            elif len(dims) == 2:
+                if dims[0] == "wind_direction" and dims[1] == "wind_speed":
+                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)
+                elif dims[1] == "wind_direction" and dims[0] == "wind_speed":
+                    hdata[:, :, 0] = np.swapaxes(np.array(d, dtype=FC.DTYPE), 0, 1)
+                else:
+                    raise ValueError(f"Cannot handle dims = {dims} for data '{v}'")
             else:
-                raise ValueError(f"Unknown dimension '{dims[0]}' for data '{v}'")
-        elif len(dims) == 2:
-            if dims[0] == "wind_direction" and dims[1] == "wind_speed":
-                hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)
-            elif dims[1] == "wind_direction" and dims[0] == "wind_speed":
-                hdata[:, :, 0] = np.swapaxes(np.array(d, dtype=FC.DTYPE), 0, 1)
+                raise ValueError(
+                    f"Can not accept more than two dimensions, got {dims} for data '{v}'"
+                )
+            if v == "sector_probability":
+                sec_prob = hdata[:, :, 0].copy()
             else:
-                raise ValueError(f"Cannot handle dims = {dims} for data '{v}'")
-        else:
-            raise ValueError(
-                f"Can not accept more than two dimensions, got {dims} for data '{v}'"
-            )
-        if v == "sector_probability":
-            sec_prob = hdata[:, :, 0].copy()
-        else:
-            data = np.append(data, hdata, axis=2)
-            names.append(v)
+                data = np.append(data, hdata, axis=2)
+                names.append(v)
 
-    vmap = {
-        "wind_direction": FV.WD,
-        "wind_speed": FV.WS,
-        "turbulence_intensity": FV.TI,
-        "air_density": FV.RHO,
-        "probability": FV.WEIGHT,
-    }
+        vmap = {
+            "wind_direction": FV.WD,
+            "wind_speed": FV.WS,
+            "turbulence_intensity": FV.TI,
+            "air_density": FV.RHO,
+            "probability": FV.WEIGHT,
+        }
 
-    for v, d in wres.items():
-        if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
-            _to_data(v, d["data"], d["dims"])
-    if sec_prob is not None and "probability" in names:
-        data[:, :, names.index("probability")] *= sec_prob
+        for v, d in wres.items():
+            if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
+                _to_data(v, d["data"], d["dims"])
+        if sec_prob is not None and "probability" in names:
+            data[:, :, names.index("probability")] *= sec_prob
 
-    n_vars = len(names)
-    data = data.reshape(n, n_vars)
+        n_vars = len(names)
+        data = data.reshape(n, n_vars)
 
-    data = pd.DataFrame(index=range(n), data=data, columns=names)
-    data.index.name = "state"
-    data.rename(columns=vmap, inplace=True)
+        data = pd.DataFrame(index=range(n), data=data, columns=names)
+        data.index.name = "state"
+        data.rename(columns=vmap, inplace=True)
 
-    ovars = {v: v for v in data.columns if v != FV.WEIGHT}
-    ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
+        ovars = {v: v for v in data.columns if v != FV.WEIGHT}
+        ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
 
-    return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
+        return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
 
 
 def read_site(site, **kwargs):
@@ -106,8 +114,8 @@ def read_site(site, **kwargs):
 
     Parameters
     ----------
-    site_yaml: str
-        Path to the yaml file
+    site_data: dict
+        Data from the yaml file
     kwargs: dict, optional
         Additional arguments for read_resource
 
@@ -117,8 +125,8 @@ def read_site(site, **kwargs):
         The states object
 
     """
-    res_yaml = site["energy_resource"]
-    states = read_resource(res_yaml, **kwargs)
+    res = site["energy_resource"]
+    states = read_resource(res, **kwargs)
 
     return states
 
@@ -129,8 +137,8 @@ def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
 
     Parameters
     ----------
-    farm_yaml: str
-        Path to the yaml file
+    farm_data: dict
+        Data from the yaml file
     mbook: foxes.ModelBook, optional
         The model book to start from
     layout: str or int
@@ -230,14 +238,14 @@ def read_anlyses(
     )
 
 
-def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
+def read_case(case_data, site_pars={}, farm_pars={}, ana_pars={}):
     """
     Reads a WindIO case
 
     Parameters
     ----------
-    case_yaml: str
-        Path to the yaml file
+    case_data: dict
+        Data from the yaml file
     site_pars: dict
         Additional arguments for read_site
     farm_pars: dict
@@ -260,13 +268,14 @@ def read_case(case_yaml, site_pars={}, farm_pars={}, ana_pars={}):
 
     """
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
-    case = yml_utils.load_yaml(case_yaml)
+    case = yml_utils.load_yaml(case_data)
 
-    site_yaml = case["site"]
-    states = read_site(site_yaml, **site_pars)
+    site_data = case["site"]
+    states = read_site(site_data, **site_pars)
+    quit()
 
-    farm_yaml = case["wind_farm"]
-    mbook, farm = read_farm(farm_yaml, **farm_pars)
+    farm_data = case["wind_farm"]
+    mbook, farm = read_farm(farm_data, **farm_pars)
 
     attr_dict = case["attributes"]
     algo = read_anlyses(attr_dict["analyses"], mbook, farm, states, **ana_pars)
@@ -278,7 +287,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("case_yaml", help="The case yaml file")
+    parser.add_argument("case_data", help="The case yaml file")
     args = parser.parse_args()
 
-    read_case(args.case_yaml)
+    read_case(args.case_data)

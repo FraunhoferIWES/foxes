@@ -379,5 +379,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.2
 
+- Vertical profiles:
+  - Now optional support for `ustar` input data instead of reference data
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
