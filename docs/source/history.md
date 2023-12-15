@@ -370,6 +370,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.1
 
+- Dependencies:
+  - The `windio` package is now an optional dependency, to be installed by hand if needed. This is due to windio being not available at conda-forge
 - Notebooks:
   - New notebook: `sequential.ipynb`, creating an animation showing state-by-state wake propagation
 
