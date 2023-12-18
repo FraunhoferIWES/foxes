@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+from foxes.utils import all_subclasses
+
 from .model import Model
 
 
@@ -115,3 +117,37 @@ class WakeModel(Model):
 
         """
         pass
+
+    @classmethod
+    def new(cls, wmodel_type, *args, **kwargs):
+        """
+        Run-time wake model factory.
+
+        Parameters
+        ----------
+        wmodel_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+
+        if wmodel_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = wmodel_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == wmodel_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Wake model type '{}' is not defined, available types are \n {}".format(
+                wmodel_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)
+        

@@ -8,9 +8,31 @@ class ABLLogStableWsProfile(VerticalProfile):
     """
     The stable ABL wind speed log profile.
 
+    Attributes
+    ----------
+    ustar_input: bool
+        Flag for using ustar as an input
+
     :group: models.vertical_profiles
 
     """
+
+    def __init__(self, *args, ustar_input=False, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional arguments for VerticalProfile
+        ustar_input: bool
+            Flag for using ustar as an input
+        kwargs: dict, optional
+            Additional arguments for VerticalProfile
+
+        """
+        super().__init__(*args, **kwargs)
+        self.ustar_input = ustar_input
 
     def input_vars(self):
         """
@@ -23,7 +45,10 @@ class ABLLogStableWsProfile(VerticalProfile):
             The variable names
 
         """
-        return [FV.WS, FV.H, FV.Z0, FV.MOL]
+        if self.ustar_input:
+            return [FV.USTAR, FV.Z0, FV.MOL]
+        else:
+            return [FV.WS, FV.H, FV.Z0, FV.MOL]
 
     def calculate(self, data, heights):
         """
@@ -43,12 +68,15 @@ class ABLLogStableWsProfile(VerticalProfile):
             shape as heights
 
         """
-        ws = data[FV.WS]
-        h0 = data[FV.H]
         z0 = data[FV.Z0]
         mol = data[FV.MOL]
 
-        ustar = stable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
+        if self.ustar_input:
+            ustar = data[FV.USTAR]
+        else:
+            ws = data[FV.WS]
+            h0 = data[FV.H]
+            ustar = stable.ustar(ws, h0, z0, mol, kappa=FC.KAPPA)
         psi = stable.psi(heights, mol)
 
         return stable.calc_ws(heights, z0, ustar, psi, kappa=FC.KAPPA)

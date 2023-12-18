@@ -8,9 +8,31 @@ class ABLLogNeutralWsProfile(VerticalProfile):
     """
     The neutral ABL wind speed log profile.
 
+    Attributes
+    ----------
+    ustar_input: bool
+        Flag for using ustar as an input
+
     :group: models.vertical_profiles
 
     """
+
+    def __init__(self, *args, ustar_input=False, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional arguments for VerticalProfile
+        ustar_input: bool
+            Flag for using ustar as an input
+        kwargs: dict, optional
+            Additional arguments for VerticalProfile
+
+        """
+        super().__init__(*args, **kwargs)
+        self.ustar_input = ustar_input
 
     def input_vars(self):
         """
@@ -23,7 +45,10 @@ class ABLLogNeutralWsProfile(VerticalProfile):
             The variable names
 
         """
-        return [FV.WS, FV.H, FV.Z0]
+        if self.ustar_input:
+            return [FV.USTAR, FV.Z0]
+        else:
+            return [FV.WS, FV.H, FV.Z0]
 
     def calculate(self, data, heights):
         """
@@ -44,9 +69,11 @@ class ABLLogNeutralWsProfile(VerticalProfile):
 
         """
         z0 = data[FV.Z0]
-        h0 = data[FV.H]
-        ws = data[FV.WS]
-
-        ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
+        if self.ustar_input:
+            ustar = data[FV.USTAR]
+        else:
+            h0 = data[FV.H]
+            ws = data[FV.WS]
+            ustar = neutral.ustar(ws, h0, z0, kappa=FC.KAPPA)
 
         return neutral.calc_ws(heights, z0, ustar, kappa=FC.KAPPA)
