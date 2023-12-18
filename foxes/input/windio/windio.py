@@ -1,18 +1,17 @@
 import numpy as np
 import pandas as pd
 
-from foxes.core import WindFarm, Algorithm, WakeModel
+from foxes.core import WindFarm, Algorithm
 from foxes.models import ModelBook
-from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
 from foxes.models.turbine_types import PCtFromTwo, CpCtFromTwo
 from foxes.utils import import_module
 import foxes.constants as FC
 import foxes.variables as FV
 
-from .timeseries import read_timeseries
+from .read_states import read_Timeseries, read_StatesTable
 
-def read_resource(res, fixed_vars={}, **kwargs):
+def read_resource(res, fixed_vars={}, **states_pars):
     """
     Reads a WindIO energy resource
 
@@ -23,13 +22,13 @@ def read_resource(res, fixed_vars={}, **kwargs):
     fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
-    kwargs: dict, optional
-        Additional arguments for StatesTable
+    states_pars: dict, optional
+        Additional arguments for the states class
 
     Returns
     -------
-    states: foxes.states.StatesTable
-        The uniform states
+    states: foxes.states.States
+        The states object
 
     """
     wres = res["wind_resource"]
@@ -37,78 +36,11 @@ def read_resource(res, fixed_vars={}, **kwargs):
         raise KeyError(f"Expecting exactly one entry in wind_resource, found: {list(wres.keys())}")
 
     if "timeseries" in wres:
-        return read_timeseries(wres["timeseries"], fixed_vars, **kwargs)
-    
+        return read_Timeseries(wres["timeseries"], fixed_vars, **states_pars)
     else:
-        wd = np.array(wres["wind_direction"], dtype=FC.DTYPE)
-        ws = np.array(wres["wind_speed"], dtype=FC.DTYPE)
-        n_wd = len(wd)
-        n_ws = len(ws)
-        n = n_wd * n_ws
+        return read_StatesTable(wres, fixed_vars, **states_pars)
 
-        data = np.zeros((n_wd, n_ws, 2), dtype=FC.DTYPE)
-        data[:, :, 0] = wd[:, None]
-        data[:, :, 1] = ws[None, :]
-        names = ["wind_direction", "wind_speed"]
-        sec_prob = None
-
-        def _to_data(v, d, dims):
-            nonlocal data, names, sec_prob
-            hdata = np.zeros((n_wd, n_ws, 1), dtype=FC.DTYPE)
-            if len(dims) == 0:
-                hdata[:, :, 0] = FC.DTYPE(d)
-            elif len(dims) == 1:
-                if dims[0] == "wind_direction":
-                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[:, None]
-                elif dims[0] == "wind_speed":
-                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)[None, :]
-                else:
-                    raise ValueError(f"Unknown dimension '{dims[0]}' for data '{v}'")
-            elif len(dims) == 2:
-                if dims[0] == "wind_direction" and dims[1] == "wind_speed":
-                    hdata[:, :, 0] = np.array(d, dtype=FC.DTYPE)
-                elif dims[1] == "wind_direction" and dims[0] == "wind_speed":
-                    hdata[:, :, 0] = np.swapaxes(np.array(d, dtype=FC.DTYPE), 0, 1)
-                else:
-                    raise ValueError(f"Cannot handle dims = {dims} for data '{v}'")
-            else:
-                raise ValueError(
-                    f"Can not accept more than two dimensions, got {dims} for data '{v}'"
-                )
-            if v == "sector_probability":
-                sec_prob = hdata[:, :, 0].copy()
-            else:
-                data = np.append(data, hdata, axis=2)
-                names.append(v)
-
-        vmap = {
-            "wind_direction": FV.WD,
-            "wind_speed": FV.WS,
-            "turbulence_intensity": FV.TI,
-            "air_density": FV.RHO,
-            "probability": FV.WEIGHT,
-        }
-
-        for v, d in wres.items():
-            if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
-                _to_data(v, d["data"], d["dims"])
-        if sec_prob is not None and "probability" in names:
-            data[:, :, names.index("probability")] *= sec_prob
-
-        n_vars = len(names)
-        data = data.reshape(n, n_vars)
-
-        data = pd.DataFrame(index=range(n), data=data, columns=names)
-        data.index.name = "state"
-        data.rename(columns=vmap, inplace=True)
-
-        ovars = {v: v for v in data.columns if v != FV.WEIGHT}
-        ovars.update({k: v for k, v in fixed_vars.items() if k not in data.columns})
-
-        return StatesTable(data, output_vars=ovars, fixed_vars=fixed_vars, **kwargs)
-
-
-def read_site(site, **kwargs):
+def read_site(site, **site_pars):
     """
     Reads a WindIO site
 
@@ -116,7 +48,7 @@ def read_site(site, **kwargs):
     ----------
     site_data: dict
         Data from the yaml file
-    kwargs: dict, optional
+    site_pars: dict, optional
         Additional arguments for read_resource
 
     Returns
@@ -126,12 +58,11 @@ def read_site(site, **kwargs):
 
     """
     res = site["energy_resource"]
-    states = read_resource(res, **kwargs)
+    states = read_resource(res, **site_pars)
 
     return states
 
-
-def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
+def read_farm(fdict, mbook, tmdict, layout=-1, **kwargs):
     """
     Reads a WindIO wind farm
 
@@ -139,25 +70,21 @@ def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     ----------
     farm_data: dict
         Data from the yaml file
-    mbook: foxes.ModelBook, optional
-        The model book to start from
+    mbook: foxes.ModelBook
+        The model book
+    tmdict: dict
+        The turbine model dict
     layout: str or int
         The layout choice
-    turbine_models: list of str
-        Additional turbine models
     kwargs: dict, optional
         Additional parameters for add_from_df()
 
     Returns
     -------
-    mbook: foxes.ModelBook
-        The model book
     farm: foxes.WindFarm
         The wind farm
 
     """
-    mbook = ModelBook() if mbook is None else mbook
-
     if isinstance(layout, str):
         layout = fdict["layouts"][layout]
     else:
@@ -206,17 +133,31 @@ def read_farm(fdict, mbook=None, layout=-1, turbine_models=[], **kwargs):
     else:
         raise KeyError(f"Missing 'Cp_curve' or 'power_curve' in performance dict, got: {list(pdict.keys())}")
 
-    models = ["windio_turbine"] + turbine_models
-    farm = WindFarm(name=fdict["name"])
+    models = []
+    tmnames = [m['model'] for m in tmdict]
+    if len(tmdict) and not "turbine_type" in tmnames:
+        raise ValueError(f"Missing 'turbine_type' among list of turbine models: {tmnames}")
+    elif not len(tmdict):
+        models.append("windio_turbine")
+    for mdict in tmdict:
+        mname = mdict.pop("model")
+        if mname != "turbine_type":
+            mclass = mdict.pop("class", None)
+            if mclass is None and len(mdict):
+                raise KeyError(f"Missing parameter 'class' for turbine model '{mname}', expected due to parameters {sorted(list(mdict.keys()))}")
+            mbook.get("turbine_models", mname, mclass, **mdict)
+        elif len(mdict):
+            raise ValueError(f"Turbine model 'turbine_type' does not support parameters: {sorted(list(mdict.keys()))}")
+        else:
+            mname = "windio_turbine"
+        models.append(mname)
 
+    farm = WindFarm(name=fdict["name"])
     add_from_df(farm, ldata, col_x="x", col_y="y", turbine_models=models, **kwargs)
 
-    return mbook, farm
+    return farm
 
-
-def read_anlyses(
-    analyses, mbook, farm, states, keymap={}, algo_type="Downwind", **algo_pars
-):
+def read_anlyses(analyses, mbook, farm, states):
     """
     Reads a WindIO wind farm
 
@@ -230,13 +171,6 @@ def read_anlyses(
         The wind farm
     states: foxes.states.States
         The states object
-    keymap: dict
-        Translation from windio to foxes keywords
-    algo_type: str
-        The default algorithm class name
-    algo_pars: dict, optional
-        Additional parameters for the algorithm
-        constructor
 
     Returns
     -------
@@ -248,21 +182,46 @@ def read_anlyses(
     if fname != "foxes":
         raise KeyError(f"Expecting flow model name 'foxes', found '{fname}'")
     
-    wmodels = analyses["wake_models"]
-    wake_models = []
-    for wdict in wmodels:
-        wname = wdict.pop("model")
-        wclass = wdict.pop("class", None)
-        if wclass is not None:
-            mbook.wake_models[wname] = WakeModel.new(wclass, **wdict)
-        wake_models.append(wname)
+    def _get_models(mtype, wiokey=None, defaults=[]):
+        wiok = mtype if wiokey is None else wiokey
+        mdicts = analyses.get(wiok, [])
+        if not isinstance(mdicts, list):
+            mdicts = [mdicts]
+        if not len(mdicts):
+            return defaults
+        models = []
+        for mdict in mdicts:
+            mname = mdict.pop("model")
+            mclass = mdict.pop("class", None)
+            if mclass is None and len(mdict):
+                raise KeyError(f"Missing parameter 'class' for entry '{mname}' of model type '{mtype}', expected due to parameters {sorted(list(mdict.keys()))}")
+            mbook.get(mtype, mname, mclass, **mdict)
+            models.append(mname)
+        return models
+
+    rotor_model = _get_models("rotor_models", "rotor_model", ["center"])[0]
+    wake_models = _get_models("wake_models")
+    wake_frame = _get_models("wake_frames", "wake_frame", ["rotor_wd"])[0]
+    pwakes = _get_models("partial_wakes", defaults=["auto"])[0]
+    farm_controller = _get_models("farm_controllers", "farm_controller", ["basic_ctrl"])[0]
+
+    adict = analyses["algorithm"]
+    aclass = adict.pop("class")
 
     return Algorithm.new(
-        algo_type, mbook, farm, states, wake_models=wake_models, **algo_pars
+        aclass, 
+        mbook=mbook, 
+        farm=farm, 
+        states=states, 
+        rotor_model=rotor_model,
+        wake_models=wake_models, 
+        wake_frame=wake_frame,
+        partial_wakes_model=pwakes,
+        farm_controller=farm_controller,
+        **adict,
     )
 
-
-def read_case(case_data, site_pars={}, farm_pars={}, ana_pars={}):
+def read_case(case_data, mbook=None):
     """
     Reads a WindIO case
 
@@ -270,6 +229,8 @@ def read_case(case_data, site_pars={}, farm_pars={}, ana_pars={}):
     ----------
     case_data: dict
         Data from the yaml file
+    mbook: foxes.models.ModelBook, optional
+        The model book to start from
     site_pars: dict
         Additional arguments for read_site
     farm_pars: dict
@@ -293,15 +254,19 @@ def read_case(case_data, site_pars={}, farm_pars={}, ana_pars={}):
     """
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
     case = yml_utils.load_yaml(case_data)
+    mbook = ModelBook() if mbook is None else mbook
+    adict = case["attributes"]["analyses"]
 
     site_data = case["site"]
+    site_pars = adict.pop("site_parameters", {})
     states = read_site(site_data, **site_pars)
 
     farm_data = case["wind_farm"]
-    mbook, farm = read_farm(farm_data, **farm_pars)
+    farm_pars = adict.pop("farm_parameters", {})
+    tmdict = adict.pop("turbine_models", {})
+    farm = read_farm(farm_data, mbook, tmdict, **farm_pars)
 
-    attr_dict = case["attributes"]
-    algo = read_anlyses(attr_dict["analyses"], mbook, farm, states, **ana_pars)
+    algo = read_anlyses(adict, mbook, farm, states)
 
     return mbook, farm, states, algo
 
