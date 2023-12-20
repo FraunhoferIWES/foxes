@@ -9,7 +9,7 @@ class PointWakesCalculation(PointDataModel):
 
     Attributes
     ----------
-    point_vars: list of str
+    pvars: list of str
         The variables of interest
     emodels: foxes.core.PointDataModelList
         The extra evaluation models
@@ -23,15 +23,13 @@ class PointWakesCalculation(PointDataModel):
     """
 
     def __init__(
-        self, point_vars=None, emodels=None, emodels_cpars=None, wake_models=None
+        self, emodels=None, emodels_cpars=None, wake_models=None
     ):
         """
         Constructor.
 
         Parameters
         ----------
-        point_vars: list of str, optional
-            The variables of interest
         emodels: foxes.core.PointDataModelList, optional
             The extra evaluation models
         emodels_cpars: list of dict, optional
@@ -41,7 +39,7 @@ class PointWakesCalculation(PointDataModel):
 
         """
         super().__init__()
-        self._pvars = point_vars
+        self.pvars = None
         self.emodels = emodels
         self.emodels_cpars = emodels_cpars
         self.wake_models = wake_models
@@ -71,9 +69,7 @@ class PointWakesCalculation(PointDataModel):
 
         """
         super().initialize(algo, verbosity)
-        self.pvars = (
-            algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
-        )
+        self.pvars = algo.states.output_point_vars(algo)
 
     def output_point_vars(self, algo):
         """
