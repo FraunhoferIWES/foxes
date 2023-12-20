@@ -4,9 +4,9 @@ from abc import abstractmethod
 import foxes.variables as FV
 import foxes.constants as FC
 from .farm_data_model import FarmDataModel
-from .data import Data
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, all_subclasses
 
+from .data import Data
 
 class RotorModel(FarmDataModel):
     """
@@ -412,3 +412,37 @@ class RotorModel(FarmDataModel):
         )
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
+
+    @classmethod
+    def new(cls, rmodel_type, *args, **kwargs):
+        """
+        Run-time rotor model factory.
+
+        Parameters
+        ----------
+        rmodel_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+
+        if rmodel_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = rmodel_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == rmodel_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Rotor model type '{}' is not defined, available types are \n {}".format(
+                rmodel_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)
+        
