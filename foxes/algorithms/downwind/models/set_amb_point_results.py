@@ -17,21 +17,13 @@ class SetAmbPointResults(PointDataModel):
 
     """
 
-    def __init__(self, point_vars=None, vars_to_amb=None):
+    def __init__(self):
         """
         Constructor.
-
-        Parameters
-        ----------
-        point_vars: list of str, optional
-            The point variables to be treated
-        vars_to_amb: list of str, optional
-            The variables to be copied to output
-
         """
         super().__init__()
-        self._pvars = point_vars
-        self._vars = vars_to_amb
+        self.pvars = None
+        self.vars = None
 
     def initialize(self, algo, verbosity=0):
         """
@@ -45,14 +37,8 @@ class SetAmbPointResults(PointDataModel):
             The verbosity level, 0 = silent
 
         """
-        self.pvars = (
-            algo.states.output_point_vars(algo) if self._pvars is None else self._pvars
-        )
-        self.vars = (
-            [v for v in self.pvars if v in FV.var2amb]
-            if self._vars is None
-            else self._vars
-        )
+        self.pvars = algo.states.output_point_vars(algo) 
+        self.vars = [v for v in self.pvars if v in FV.var2amb]
         super().initialize(algo, verbosity)
 
     def output_point_vars(self, algo):
@@ -70,9 +56,6 @@ class SetAmbPointResults(PointDataModel):
             The output variable names
 
         """
-        for v in algo.states.output_point_vars(algo):
-            if v not in self.vars and v in FV.var2amb:
-                self.vars.append(v)
         return [FV.var2amb[v] for v in self.vars]
 
     def calculate(self, algo, mdata, fdata, pdata):

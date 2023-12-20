@@ -378,8 +378,6 @@ class Downwind(Algorithm):
 
     def _collect_point_models(
         self,
-        vars=None,
-        vars_to_amb=None,
         calc_parameters={},
         point_models=None,
         ambient=False,
@@ -420,16 +418,14 @@ class Downwind(Algorithm):
 
         # 2) transfer ambient results:
         mlist.models.append(
-            self.get_model("SetAmbPointResults")(
-                point_vars=vars, vars_to_amb=vars_to_amb
-            )
+            self.get_model("SetAmbPointResults")()
         )
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:
         if not ambient:
             mlist.models.append(
-                self.get_model("PointWakesCalculation")(vars, emodels, emodels_cpars)
+                self.get_model("PointWakesCalculation")(emodels, emodels_cpars)
             )
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -439,8 +435,6 @@ class Downwind(Algorithm):
         self,
         farm_results,
         points,
-        vars=None,
-        vars_to_amb=None,
         point_models=None,
         calc_parameters={},
         persist_mdata=True,
@@ -459,12 +453,6 @@ class Downwind(Algorithm):
             dimensions (state, turbine)
         points: numpy.ndarray
             The points of interest, shape: (n_states, n_points, 3)
-        vars: list of str, optional
-            The variables that should be kept in the output,
-            or `None` for all
-        vars_to_amb: list of str, optional
-            Variables for which ambient variables should
-            be stored. None means all.
         point_models: str or foxes.core.PointDataModel
             Additional point models to be executed
         calc_parameters: dict
@@ -503,7 +491,7 @@ class Downwind(Algorithm):
 
         # collect models and initialize:
         mlist, calc_pars = self._collect_point_models(
-            vars, vars_to_amb, calc_parameters, point_models, ambient
+            calc_parameters, point_models, ambient
         )
 
         # initialize models:
@@ -537,24 +525,19 @@ class Downwind(Algorithm):
 
         # check vars:
         ovars = mlist.output_point_vars(self)
-        if vars is None:
-            vars = ovars
-        for v in vars:
-            if v not in ovars:
-                raise KeyError(f"Variable '{v}' not in output point vars: {ovars}")
-        self.print(f"\nOutput point variables:", ", ".join(vars))
+        self.print(f"\nOutput point variables:", ", ".join(ovars))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # calculate:
         self.print(
-            f"Calculating {len(vars)} variables at {points.shape[1]} points in {self.n_states} states"
+            f"Calculating {len(ovars)} variables at {points.shape[1]} points in {self.n_states} states"
         )
         point_results = mlist.run_calculation(
             self,
             models_data,
             farm_results,
             point_data,
-            out_vars=vars,
+            out_vars=ovars,
             parameters=calc_pars,
         )
 
