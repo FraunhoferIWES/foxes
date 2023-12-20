@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from foxes.input.states import Timeseries, StatesTable
+from foxes.input.states import Timeseries, StatesTable, MultiHeightTimeseries
 from foxes.models.vertical_profiles import ABLLogNeutralWsProfile
 import foxes.variables as FV
 import foxes.constants as FC
 
-def read_Timeseries(res, fixed_vars={}, **states_pars):
+def read_Timeseries(res, fixed_vars={}, ignore_vars=[], **states_pars):
     """
     Reads timeseries data.
     
@@ -17,6 +17,8 @@ def read_Timeseries(res, fixed_vars={}, **states_pars):
     fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
+    ignore_vars: list of str
+        windio variables to be ignored
     states_pars: dict, optional
         Additional arguments for Timeseries
 
@@ -28,50 +30,86 @@ def read_Timeseries(res, fixed_vars={}, **states_pars):
     """
     times = np.array([d["time"] for d in res])
     try:
-        times = times.astype(np.float64)
+        times = times.astype(FC.DTYPE)
     except ValueError:
         times = times.astype("datetime64[ns]")
     n_times = len(times)
 
-    vars = [v for v in res[0] if v != "time"]
-    n_vars = len(vars)
-    data = np.zeros((n_times, n_vars), dtype=np.float64)
-    for vi, v in enumerate(vars):
-        for ti in range(n_times):
-            data[ti, vi] = res[ti][v]
-    
     kmap = {
         "direction": FV.WD,
         "speed": FV.WS,
-        "z0": FV.Z0,
         "TI": FV.TI,
+        "z0": FV.Z0,
         "ustar": FV.USTAR,
     }
 
+    heights = np.array(res[0]["z"], dtype=FC.DTYPE) if "z" in res[0] else None
+    if heights is not None:
+        ignore_vars += ["z0", "ustar"]
+
+    ign = ["time", "z"] + ignore_vars
+    vars = [v for v in res[0] if v not in ign]
+    n_vars = len(vars)
     fvars = [kmap[v] for v in vars if v in kmap]
     ovars = fvars + [v for v in fixed_vars.keys() if v not in fvars]
 
-    sdata = pd.DataFrame(index=times, data=data, columns=fvars)
-    sdata.index.name = "Time"
+    # spatially uniform case:
+    if heights is None:
+        data = np.zeros((n_times, n_vars), dtype=FC.DTYPE)
+        for ti in range(n_times):
+            for vi, v in enumerate(vars):
+                data[ti, vi] = res[ti][v]
 
-    if FV.TI in fvars:
-        sdata[FV.TI] /= 100
+        sdata = pd.DataFrame(index=times, data=data, columns=fvars)
+        sdata.index.name = "Time"
+        if FV.TI in fvars:
+            sdata[FV.TI] /= 100
+        #print(sdata)
+        #print(sdata.describe())
 
-    pdict = {}
-    if FV.Z0 in ovars and FV.USTAR in ovars:
-        pdict = {FV.WS: ABLLogNeutralWsProfile(ustar_input=True)}
+        pdict = {}
+        if FV.Z0 in ovars:
+            if FV.USTAR in ovars:
+                pdict = {FV.WS: ABLLogNeutralWsProfile(ustar_input=True)}
+            else:
+                pdict = {FV.WS: ABLLogNeutralWsProfile(ustar_input=False)}
 
-    states = Timeseries(
-        data_source=sdata,
-        output_vars=ovars,
-        fixed_vars={v: d for v, d in fixed_vars.items() if v not in fvars},
-        profiles=pdict,
-        **states_pars,
-    )
+        states = Timeseries(
+            data_source=sdata,
+            output_vars=ovars,
+            fixed_vars={v: d for v, d in fixed_vars.items() if v not in fvars},
+            profiles=pdict,
+            **states_pars,
+        )
+    
+    # multi-height case:
+    else:
+        n_heights = len(heights)
+        data = np.zeros((n_times, n_vars, n_heights), dtype=FC.DTYPE)
+        for ti in range(n_times):
+            if ti > 0 and np.any(res[ti]["z"] != heights):
+                raise ValueError(f"Height mismatch between time 0 and time {times[ti]}")
+            for vi, v in enumerate(vars):
+                data[ti, vi] = res[ti][v]
+
+        hmap = {h: f"h{hi:04d}" for hi, h in enumerate(heights)}
+        cfun = lambda v, h: f"{v}-{hmap[h]}"
+        ddict = {cfun(v, h): data[:, vi, hi] for vi, v in enumerate(fvars) for hi, h in enumerate(heights)}
+        sdata = pd.DataFrame(index=times, data=ddict)
+        sdata.index.name = "Time"
+
+        states = MultiHeightTimeseries(
+            data_source=sdata,
+            output_vars=ovars,
+            fixed_vars={v: d for v, d in fixed_vars.items() if v not in fvars},
+            heights=heights,
+            height2col=hmap,
+            **states_pars,
+        )
     
     return states
 
-def read_StatesTable(res, fixed_vars={}, **states_pars):
+def read_StatesTable(res, fixed_vars={}, ignore_vars=[], **states_pars):
     """
     Reads a WindIO energy resource
 
@@ -82,6 +120,8 @@ def read_StatesTable(res, fixed_vars={}, **states_pars):
     fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
+    ignore_vars: list of str
+        windio variables to be ignored
     states_pars: dict, optional
         Additional arguments for the states class
 
@@ -142,7 +182,7 @@ def read_StatesTable(res, fixed_vars={}, **states_pars):
     }
 
     for v, d in res.items():
-        if (v == "sector_probability" or v in vmap) and isinstance(d, dict):
+        if v not in ignore_vars and (v == "sector_probability" or v in vmap) and isinstance(d, dict):
             _to_data(v, d["data"], d["dims"])
     if sec_prob is not None and "probability" in names:
         data[:, :, names.index("probability")] *= sec_prob

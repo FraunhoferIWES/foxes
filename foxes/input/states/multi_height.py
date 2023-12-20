@@ -30,12 +30,14 @@ class MultiHeightStates(States):
         The output variables
     heights: list of float
         The heights at which to search data
-    var2col: dict, optional
+    var2col: dict
         Mapping from variable names to data column names
-    fixed_vars: dict, optional
+    height2col: dict
+        Mapping from height to data column names
+    fixed_vars: dict
         Fixed uniform variable values, instead of
         reading from data
-    pd_read_pars: dict, optional
+    pd_read_pars: dict
         pandas file reading parameters
     states_sel: slice or range or list of int
         States subset selection
@@ -56,6 +58,7 @@ class MultiHeightStates(States):
         output_vars,
         heights,
         var2col={},
+        height2col={},
         fixed_vars={},
         pd_read_pars={},
         states_sel=None,
@@ -75,6 +78,8 @@ class MultiHeightStates(States):
             The heights at which to search data
         var2col: dict, optional
             Mapping from variable names to data column names
+        height2col: dict, optional
+            Mapping from height to data column names
         fixed_vars: dict, optional
             Fixed uniform variable values, instead of
             reading from data
@@ -95,6 +100,7 @@ class MultiHeightStates(States):
         self.heights = np.array(heights, dtype=FC.DTYPE)
         self.rpars = pd_read_pars
         self.var2col = var2col
+        self.height2col = height2col
         self.fixed_vars = fixed_vars
         self.ipars = ipars
         self.states_sel = states_sel
@@ -140,7 +146,10 @@ class MultiHeightStates(States):
         else:
             cls = []
             for h in self.heights:
-                hh = int(h) if int(h) == h else h
+                if h in self.height2col:
+                    hh = self.height2col[h]
+                else:
+                    hh = int(h) if int(h) == h else h
                 c = f"{c0}-{hh}"
                 oc = self.var2col.get(c, c)
                 if oc in cols:
@@ -191,6 +200,7 @@ class MultiHeightStates(States):
             data = PandasFileHelper().read_file(self.data_source, **rpars)
             isorg = False
         else:
+            data = self.data_source
             isorg = True
 
         if self.states_sel is not None:

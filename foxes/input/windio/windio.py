@@ -11,7 +11,7 @@ import foxes.variables as FV
 
 from .read_states import read_Timeseries, read_StatesTable
 
-def read_resource(res, fixed_vars={}, **states_pars):
+def read_resource(res, **site_pars):
     """
     Reads a WindIO energy resource
 
@@ -22,8 +22,8 @@ def read_resource(res, fixed_vars={}, **states_pars):
     fixed_vars: dict
         Additional fixes variables that do
         not occur in the yaml
-    states_pars: dict, optional
-        Additional arguments for the states class
+    site_pars: dict, optional
+        Additional arguments for read_resource
 
     Returns
     -------
@@ -36,9 +36,9 @@ def read_resource(res, fixed_vars={}, **states_pars):
         raise KeyError(f"Expecting exactly one entry in wind_resource, found: {list(wres.keys())}")
 
     if "timeseries" in wres:
-        return read_Timeseries(wres["timeseries"], fixed_vars, **states_pars)
+        return read_Timeseries(wres["timeseries"], **site_pars)
     else:
-        return read_StatesTable(wres, fixed_vars, **states_pars)
+        return read_StatesTable(wres, **site_pars)
 
 def read_site(site, **site_pars):
     """
