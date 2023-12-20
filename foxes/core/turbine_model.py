@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+from foxes.utils import all_subclasses
+
 from .farm_data_model import FarmDataModel
 
 
@@ -42,3 +44,37 @@ class TurbineModel(FarmDataModel):
 
         """
         pass
+
+    @classmethod
+    def new(cls, tmodel_type, *args, **kwargs):
+        """
+        Run-time turbine model factory.
+
+        Parameters
+        ----------
+        tmodel_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+
+        if tmodel_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = tmodel_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == tmodel_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Turbine model type '{}' is not defined, available types are \n {}".format(
+                tmodel_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)
+        

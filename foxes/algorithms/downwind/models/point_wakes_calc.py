@@ -194,7 +194,6 @@ class PointWakesCalculation(PointDataModel):
         amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas if v in FV.var2amb}
         for w in wmodels:
             w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
-        import numpy as np
 
         for v in self.pvars:
             if v in wdeltas:

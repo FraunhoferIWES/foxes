@@ -77,6 +77,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        ret_data=False,
         animated=False,
         **kwargs,
     ):
@@ -139,14 +140,16 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool
             Flag for image return
+        ret_data: bool
+            Flag for returing image data
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
-        Yields
-        ------
+        Returns
+        -------
         fig: matplotlib.Figure
             The figure object
         si: int, optional
@@ -154,6 +157,9 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
+        im_data: tuple, optional
+            The image data numpy.ndarrays, 
+            (x_pos, y_pos, z_pos, g_pts, data)
 
         """
 
@@ -191,7 +197,7 @@ class FlowPlots2D(Output):
             title = f"States mean, z =  {int(np.round(z_pos))} m"
 
         # create plot:
-        return get_fig(
+        out = get_fig(
             var=var,
             fig=fig,
             figsize=figsize,
@@ -215,6 +221,12 @@ class FlowPlots2D(Output):
             ret_im=ret_im,
             animated=animated,
         )
+
+        if ret_data:
+            out = list(out) if isinstance(out, tuple) else [out]
+            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
+        else:
+            return out
 
     def get_mean_fig_xz(
         self,
@@ -247,6 +259,7 @@ class FlowPlots2D(Output):
         verbosity=0,
         ret_state=False,
         ret_im=False,
+        ret_data=False,
         animated=False,
         **kwargs,
     ):
@@ -313,14 +326,16 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool
             Flag for image return
+        ret_data: bool
+            Flag for returing image data
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
-        Yields
-        ------
+        Returns
+        -------
         fig: matplotlib.Figure
             The figure object
         si: int, optional
@@ -328,6 +343,9 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
+        im_data: tuple, optional
+            The image data numpy.ndarrays, 
+            (x_pos, y_pos, z_pos, g_pts, data)
 
         """
 
@@ -376,7 +394,7 @@ class FlowPlots2D(Output):
             title = f"States mean, x direction {x_direction}°, y =  {int(np.round(y_pos))} m"
 
         # create plot:
-        return get_fig(
+        out = get_fig(
             var=var,
             fig=fig,
             figsize=figsize,
@@ -401,6 +419,12 @@ class FlowPlots2D(Output):
             animated=animated,
         )
 
+        if ret_data:
+            out = list(out) if isinstance(out, tuple) else [out]
+            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
+        else:
+            return out
+        
     def get_mean_fig_yz(
         self,
         var,
@@ -432,6 +456,7 @@ class FlowPlots2D(Output):
         verbosity=1,
         ret_state=False,
         ret_im=False,
+        ret_data=False,
         animated=False,
         **kwargs,
     ):
@@ -498,14 +523,16 @@ class FlowPlots2D(Output):
             Flag for state index return
         ret_im: bool
             Flag for image return
+        ret_data: bool
+            Flag for returing image data
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
 
-        Yields
-        ------
+        Returns
+        -------
         fig: matplotlib.Figure
             The figure object
         si: int, optional
@@ -513,6 +540,9 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
+        im_data: tuple, optional
+            The image data numpy.ndarrays, 
+            (x_pos, y_pos, z_pos, g_pts, data)
 
         """
 
@@ -561,7 +591,7 @@ class FlowPlots2D(Output):
             title = f"States mean, x direction {x_direction}°, x =  {int(np.round(x_pos))} m"
 
         # create plot:
-        return get_fig(
+        out = get_fig(
             var=var,
             fig=fig,
             figsize=figsize,
@@ -587,6 +617,12 @@ class FlowPlots2D(Output):
             animated=animated,
         )
 
+        if ret_data:
+            out = list(out) if isinstance(out, tuple) else [out]
+            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
+        else:
+            return out
+        
     def gen_states_fig_xy(
         self,
         var,

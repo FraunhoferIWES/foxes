@@ -213,7 +213,6 @@ def calc_point_results(
     **kwargs,
 ):
     """
-
     Helper function that calculates results at grid points.
 
     Parameters
