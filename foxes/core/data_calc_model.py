@@ -174,6 +174,8 @@ class DataCalcModel(Model):
         loop_dims,
         out_core_vars,
         initial_results=None,
+        sel=None,
+        isel=None,
         **calc_pars,
     ):
         """
@@ -196,10 +198,14 @@ class DataCalcModel(Model):
         out_core_vars: list of str
             The core dimensions of the output data, use
             `FC.VARS` for variables dimension (required)
-        calc_pars: dict, optional
-            Additional arguments for the `calculate` function
         initial_results: xarray.Dataset, optional
             Initial results
+        sel: dict, optional
+            Selection of loop_dim variable subset values
+        isel: dict, optional
+            Selection of loop_dim variable subset index values
+        calc_pars: dict, optional
+            Additional arguments for the `calculate` function
 
         Returns
         -------
@@ -255,6 +261,24 @@ class DataCalcModel(Model):
                     evars.append(c)
 
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
+        
+        # subset selection:
+        if sel is not None:
+            nldata = []
+            for ds in ldata:
+                s = {k: v for k, v in sel.items() if k in ds.coords}
+                if len(s):
+                    nldata.append(ds.sel(s))
+            ldata = nldata
+            del nldata
+        if isel is not None:
+            nldata = []
+            for ds in ldata:
+                s = {k: v for k, v in isel.items() if k in ds.coords}
+                if len(s):
+                    nldata.append(ds.isel(s))
+            ldata = nldata
+            del nldata
 
         # setup dask options:
         dargs = dict(output_sizes={FC.VARS: len(out_vars)})

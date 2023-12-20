@@ -379,6 +379,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.2
 
+- Algorithms:
+  - Improved `Downwind`: Now optional arguments that allow calculation of subsets in calc_farm and calc_points, e.g. a selection of states
+- Output:
+  - Improved `FlowPlots2D`: Now can create figures for subsets only, and furthermore can optinally output the image data
 - Vertical profiles:
   - Now optional support for `ustar` input data instead of reference data
 

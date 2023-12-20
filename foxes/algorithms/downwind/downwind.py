@@ -307,6 +307,7 @@ class Downwind(Algorithm):
         finalize=True,
         ambient=False,
         chunked_results=False,
+        **kwargs,
     ):
         """
         Calculate farm data.
@@ -325,6 +326,8 @@ class Downwind(Algorithm):
             Flag for ambient instead of waked calculation
         chunked_results: bool
             Flag for chunked results
+        kwargs: dict, optional
+            Additional parameters for run_calculation
 
         Returns
         -------
@@ -358,7 +361,12 @@ class Downwind(Algorithm):
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
-        farm_results = self._run_farm_calc(mlist, models_data, parameters=calc_pars)
+        farm_results = self._run_farm_calc(
+            mlist, 
+            models_data, 
+            parameters=calc_pars, 
+            **kwargs,
+        )
         del models_data
 
         # finalize models:
@@ -442,6 +450,7 @@ class Downwind(Algorithm):
         finalize=True,
         ambient=False,
         chunked_results=False,
+        **kwargs,
     ):
         """
         Calculate data at a given set of points.
@@ -470,6 +479,8 @@ class Downwind(Algorithm):
             Flag for ambient instead of waked calculation
         chunked_results: bool
             Flag for chunked results
+        kwargs: dict, optional
+            Additional parameters for run_calculation
 
         Returns
         -------
@@ -539,6 +550,7 @@ class Downwind(Algorithm):
             point_data,
             out_vars=ovars,
             parameters=calc_pars,
+            **kwargs,
         )
 
         del models_data, farm_results, point_data
