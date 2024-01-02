@@ -1048,7 +1048,6 @@ class FlowPlots2D(Output):
                 point_results[FV.WS].to_numpy(),
             )
         )
-        del point_results
 
         # find data min max:
         vmin = vmin if vmin is not None else np.nanmin(data)
@@ -1279,7 +1278,6 @@ class FlowPlots2D(Output):
                 point_results[FV.WS].to_numpy(),
             )
         )
-        del point_results
 
         # find data min max:
         vmin = vmin if vmin is not None else np.nanmin(data)
