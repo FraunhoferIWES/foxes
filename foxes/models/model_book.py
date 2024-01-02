@@ -2,6 +2,18 @@ import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict
 
+from foxes.core import (
+    PointDataModel,
+    FarmDataModel,
+    FarmController,
+    RotorModel,
+    TurbineType,
+    TurbineModel,
+    PartialWakesModel,
+    WakeFrame,
+    WakeSuperposition,
+    WakeModel
+)
 
 class ModelBook:
     """
@@ -21,9 +33,6 @@ class ModelBook:
     turbine_models: foxes.utils.Dict
         The turbine models. Keys: model name str,
         values: foxes.core.TurbineModel
-    turbine_orders: foxes.utils.Dict
-        The turbine orders. Keys: model name str,
-        values: foxes.core.TurbineOrder
     farm_models: foxes.utils.Dict
         The farm models. Keys: model name str,
         values: foxes.core.FarmModel
@@ -44,6 +53,8 @@ class ModelBook:
         values: foxes.core.WakeModel
     sources: foxes.utils.Dict
         All sources dict
+    base_classes: foxes.utils.Dict
+        The base classes for all model types
 
     :group: foxes
 
@@ -344,6 +355,19 @@ class ModelBook:
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
         )
+        self.base_classes = Dict(
+            name="base_classes",
+            point_models=PointDataModel,
+            rotor_models=RotorModel,
+            turbine_types=TurbineType,
+            turbine_models=TurbineModel,
+            farm_models=FarmDataModel,
+            farm_controllers=FarmController,
+            partial_wakes=PartialWakesModel,
+            wake_frames=WakeFrame,
+            wake_superpositions=WakeSuperposition,
+            wake_models=WakeModel,
+        )
 
         for s in self.sources.values():
             for k, m in s.items():
@@ -376,6 +400,38 @@ class ModelBook:
                 else:
                     print("(none)")
                 print()
+    
+    def get(self, model_type, name, class_name=None, *args, **kwargs):
+        """
+        Gets a model object.
+         
+        If not found, dynamically creates it (given the class name)
+
+        Parameters
+        ----------
+        model_type: str
+            The model type
+        name: str
+            The model name
+        class_name: str, optinal
+            Name of the model class
+        args: tuple, optional
+            Arguments for the model class
+        kwargs: dict, optional
+            Arguments for the model class
+        
+        Returns
+        -------
+        model: mclass
+            The model object
+
+        """
+        if name not in self.sources[model_type]:
+            if class_name is None:
+                raise KeyError(f"Model '{name}' of type '{model_type}' not found in model book. Available: {sorted(list(self.sources[model_type].keys()))}")
+            bclass = self.base_classes[model_type]
+            self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
+        return self.sources[model_type][name]
 
     def finalize(self, algo, verbosity=0):
         """
