@@ -10,6 +10,7 @@ from .common import (
     get_grid_yz,
     calc_point_results,
     get_fig,
+    data2xr,
 )
 
 
@@ -78,6 +79,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -141,7 +144,11 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        out_data_vars: list of str, optional
+            The variables in the returned or written data
+        write_data_nc: str, optional
+            Path to which the image data is written, nc format
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -157,9 +164,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -169,13 +175,14 @@ class FlowPlots2D(Output):
         )
 
         # calculate point results:
-        data = calc_point_results(
+        point_results = calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
             verbosity=verbosity,
             **kwargs,
-        )[var].to_numpy()
+        )
+        data = point_results[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -222,11 +229,16 @@ class FlowPlots2D(Output):
             animated=animated,
         )
 
-        if ret_data:
-            out = list(out) if isinstance(out, tuple) else [out]
-            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
-        else:
-            return out
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, 
+                              point_results.isel(**{FC.STATE: [0]}),
+                              out_data_vars, to_file=write_data_nc, 
+                              verbosity=verbosity)
+            if ret_data:
+                out = list(out) if isinstance(out, tuple) else [out]
+                return tuple(out + [data_nc])
+        
+        return out
 
     def get_mean_fig_xz(
         self,
@@ -260,6 +272,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -327,7 +341,11 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        out_data_vars: list of str, optional
+            The variables in the returned or written data
+        write_data_nc: str, optional
+            Path to which the image data is written, nc format
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -343,9 +361,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -365,13 +382,14 @@ class FlowPlots2D(Output):
         )
 
         # calculate point results:
-        data = calc_point_results(
+        point_results = calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
             verbosity=verbosity,
             **kwargs,
-        )[var].to_numpy()
+        )
+        data = point_results[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -419,11 +437,16 @@ class FlowPlots2D(Output):
             animated=animated,
         )
 
-        if ret_data:
-            out = list(out) if isinstance(out, tuple) else [out]
-            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
-        else:
-            return out
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, 
+                              point_results.isel(**{FC.STATE: [0]}),
+                              out_data_vars, to_file=write_data_nc, 
+                              verbosity=verbosity)
+            if ret_data:
+                out = list(out) if isinstance(out, tuple) else [out]
+                return tuple(out + [data_nc])
+        
+        return out
         
     def get_mean_fig_yz(
         self,
@@ -457,6 +480,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -524,7 +549,11 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        out_data_vars: list of str, optional
+            The variables in the returned or written data
+        write_data_nc: str, optional
+            Path to which the image data is written, nc format
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -540,9 +569,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -562,13 +590,14 @@ class FlowPlots2D(Output):
         )
 
         # calculate point results:
-        data = calc_point_results(
+        point_results = calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
             verbosity=verbosity,
             **kwargs,
-        )[var].to_numpy()
+        )
+        data = point_results[var].to_numpy()
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
@@ -617,11 +646,16 @@ class FlowPlots2D(Output):
             animated=animated,
         )
 
-        if ret_data:
-            out = list(out) if isinstance(out, tuple) else [out]
-            return tuple(out + [(x_pos, y_pos, z_pos, g_pts, data)])
-        else:
-            return out
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, 
+                              point_results.isel(**{FC.STATE: [0]}),
+                              out_data_vars, to_file=write_data_nc, 
+                              verbosity=verbosity)
+            if ret_data:
+                out = list(out) if isinstance(out, tuple) else [out]
+                return tuple(out + [data_nc])
+        
+        return out
         
     def gen_states_fig_xy(
         self,
@@ -656,6 +690,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -725,7 +761,11 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        out_data_vars: list of str, optional
+            The variables in the returned or written data
+        write_data_nc: str, optional
+            Path to which the image data is written, nc format
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -741,9 +781,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -790,6 +829,10 @@ class FlowPlots2D(Output):
             x_pos /= normalize_xy
             y_pos /= normalize_xy
 
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
+                                to_file=write_data_nc, verbosity=verbosity)
+            
         # loop over states:
         for si, s in enumerate(point_results[FC.STATE].to_numpy()):
             if not animated and title is None:
@@ -826,10 +869,10 @@ class FlowPlots2D(Output):
 
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [(x_pos, y_pos, z_pos, g_pts[si], data[si])])
+                yield tuple(out + [data_nc])
             else:
                 yield out
-        
+    
     def gen_states_fig_xz(
         self,
         var,
@@ -865,6 +908,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -938,7 +983,11 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        out_data_vars: list of str, optional
+            The variables in the returned or written data
+        write_data_nc: str, optional
+            Path to which the image data is written, nc format
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -954,9 +1003,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -1015,6 +1063,10 @@ class FlowPlots2D(Output):
         if normalize_z is not None:
             z_pos /= normalize_z
 
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
+                                to_file=write_data_nc, verbosity=verbosity)
+            
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             if not animated and title is None:
@@ -1052,7 +1104,7 @@ class FlowPlots2D(Output):
 
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [(x_pos, y_pos, z_pos, g_pts[si], data[si])])
+                yield tuple(out + [data_nc])
             else:
                 yield out
 
@@ -1091,6 +1143,8 @@ class FlowPlots2D(Output):
         ret_state=False,
         ret_im=False,
         ret_data=False,
+        out_data_vars=None,
+        write_data_nc=None,
         animated=False,
         **kwargs,
     ):
@@ -1164,7 +1218,9 @@ class FlowPlots2D(Output):
         ret_im: bool
             Flag for image return
         ret_data: bool
-            Flag for returing image data
+            Flag for returning image data
+        write_data: bool
+            Flag for writing the image data to nc file
         animated: bool
             Switch for usage for an animation
         kwargs: dict, optional
@@ -1180,9 +1236,8 @@ class FlowPlots2D(Output):
         im: tuple, optional
             The image objects, matplotlib.collections.QuadMesh
             or matplotlib.QuadContourSet
-        im_data: tuple, optional
-            The image data numpy.ndarrays, 
-            (x_pos, y_pos, z_pos, g_pts, data)
+        data_nc: xarray.Dataset, optional
+            The image data
 
         """
 
@@ -1239,6 +1294,10 @@ class FlowPlots2D(Output):
         if normalize_z is not None:
             z_pos /= normalize_z
 
+        if ret_data or write_data_nc is not None:
+            data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
+                                to_file=write_data_nc, verbosity=verbosity)
+            
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
@@ -1274,6 +1333,6 @@ class FlowPlots2D(Output):
 
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [(x_pos, y_pos, z_pos, g_pts[si], data[si])])
+                yield tuple(out + [data_nc])
             else:
                 yield out
