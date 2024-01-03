@@ -231,8 +231,9 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, 
-                              point_results.isel(**{FC.STATE: [0]}),
-                              out_data_vars, to_file=write_data_nc, 
+                              point_results, out_data_vars, 
+                              state_mean=weights, 
+                              to_file=write_data_nc, 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -439,8 +440,9 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, 
-                              point_results.isel(**{FC.STATE: [0]}),
-                              out_data_vars, to_file=write_data_nc, 
+                              point_results, out_data_vars, 
+                              state_mean=weights, 
+                              to_file=write_data_nc, 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -648,8 +650,9 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, 
-                              point_results.isel(**{FC.STATE: [0]}),
-                              out_data_vars, to_file=write_data_nc, 
+                              point_results, out_data_vars, 
+                              state_mean=weights, 
+                              to_file=write_data_nc, 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -771,6 +774,11 @@ class FlowPlots2D(Output):
         kwargs: dict, optional
             Parameters forwarded to the algorithm's calc_points
             function.
+        
+        Returns
+        -------
+        data_nc: xarray.Dataset, optional
+            The images data, if ret_data
 
         Yields
         ------
@@ -832,6 +840,9 @@ class FlowPlots2D(Output):
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
                                 to_file=write_data_nc, verbosity=verbosity)
+            if ret_data:
+                return data_nc
+            del data_nc
             
         # loop over states:
         for si, s in enumerate(point_results[FC.STATE].to_numpy()):
@@ -867,11 +878,7 @@ class FlowPlots2D(Output):
                 animated=animated,
             )
 
-            if ret_data:
-                out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [data_nc])
-            else:
-                yield out
+            yield out
     
     def gen_states_fig_xz(
         self,
@@ -994,6 +1001,11 @@ class FlowPlots2D(Output):
             Parameters forwarded to the algorithm's calc_points
             function.
 
+        Returns
+        -------
+        data_nc: xarray.Dataset, optional
+            The images data, if ret_data
+
         Yields
         ------
         fig: matplotlib.Figure
@@ -1065,7 +1077,10 @@ class FlowPlots2D(Output):
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
                                 to_file=write_data_nc, verbosity=verbosity)
-            
+            if ret_data:
+                return data_nc
+            del data_nc
+
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             if not animated and title is None:
@@ -1101,11 +1116,7 @@ class FlowPlots2D(Output):
                 animated=animated,
             )
 
-            if ret_data:
-                out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [data_nc])
-            else:
-                yield out
+            yield out
 
     def gen_states_fig_yz(
         self,
@@ -1226,6 +1237,11 @@ class FlowPlots2D(Output):
             Parameters forwarded to the algorithm's calc_points
             function.
 
+        Returns
+        -------
+        data_nc: xarray.Dataset, optional
+            The images data, if ret_data
+
         Yields
         ------
         fig: matplotlib.Figure
@@ -1295,7 +1311,10 @@ class FlowPlots2D(Output):
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
                                 to_file=write_data_nc, verbosity=verbosity)
-            
+            if ret_data:
+                return data_nc
+            del data_nc
+
         # loop over states:
         for si, s in enumerate(self.fres[FC.STATE].to_numpy()):
             ttl = f"State {s}" if title is None else title
@@ -1329,8 +1348,4 @@ class FlowPlots2D(Output):
                 animated=animated,
             )
 
-            if ret_data:
-                out = list(out) if isinstance(out, tuple) else [out]
-                yield tuple(out + [data_nc])
-            else:
-                yield out
+            yield out

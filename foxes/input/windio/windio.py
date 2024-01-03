@@ -7,9 +7,9 @@ from foxes.input.farm_layout import add_from_df
 from foxes.models.turbine_types import PCtFromTwo, CpCtFromTwo
 from foxes.utils import import_module
 import foxes.constants as FC
-import foxes.variables as FV
 
 from .read_states import read_Timeseries, read_StatesTable
+from .output import WIOOutput
 
 def read_resource(res, **site_pars):
     """
@@ -248,6 +248,8 @@ def read_case(case_data, mbook=None):
         The states object
     algo: foxes.core.Algorithm
         The algorithm
+    outputs: list of foxes.input.windio.WIOOutput
+        The output creating classes
 
     :group: input.windio
 
@@ -256,6 +258,7 @@ def read_case(case_data, mbook=None):
     case = yml_utils.load_yaml(case_data)
     mbook = ModelBook() if mbook is None else mbook
     adict = case["attributes"]["analyses"]
+    olist = adict.pop("outputs", [])
 
     site_data = case["site"]
     site_pars = adict.pop("site_parameters", {})
@@ -268,7 +271,20 @@ def read_case(case_data, mbook=None):
 
     algo = read_anlyses(adict, mbook, farm, states)
 
-    return mbook, farm, states, algo
+    outputs = []
+    for oi, o in enumerate(olist):
+        ocls = o.pop("class")
+        ofun = o.pop("function")
+        oca = o.pop("class_pars", {})
+        if oca.pop("algo", False):
+            oca["algo"] = algo
+        if oca.pop("farm", False):
+            oca["farm"] = farm
+        o["name"] = o.pop("name", f"output_{oi:02d}")
+        o["needs_farm_results"] = oca.pop("farm_results", True)
+        outputs.append(WIOOutput(oclass=ocls, ofunction=ofun, ocargs=oca, **o))
+
+    return mbook, farm, states, algo, outputs
 
 
 if __name__ == "__main__":

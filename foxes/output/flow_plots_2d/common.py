@@ -607,6 +607,7 @@ def data2xr(
         z_pos, 
         point_results, 
         vars=None,
+        state_mean=False,
         round="auto", 
         to_file=None,
         complevel=5,
@@ -627,6 +628,9 @@ def data2xr(
         Results of calc_points
     vars: list of str, optional
         Variable selection, or None for all
+    state_mean: numpy.ndarray or bool
+        Computes mean over states, optionally with
+        given weights
     round: dict, optional
         Round variables to given digits, or 'auto'
         for default
@@ -654,7 +658,12 @@ def data2xr(
         vars = list(point_results.data_vars.keys())
     data = {}
     for v in vars:
-        data[v] = point_results[v].to_numpy()
+        if isinstance(state_mean, np.ndarray):
+            data[v] = np.einsum('sp,s->p', point_results[v].to_numpy(), state_mean)
+        elif state_mean:
+            data[v] = np.mean(point_results[v].to_numpy(), axis=0)
+        else:
+            data[v] = point_results[v].to_numpy()
         if v in round:
             data[v] = np.round(data[v], round[v])
 
@@ -662,12 +671,16 @@ def data2xr(
     allcn = ["x", "y", "z"]
     ci = [i for i, x in enumerate(allc) if isinstance(x, np.ndarray)]
     cj = [i for i in range(3) if i not in ci][0]
-    cl = list(reversed([len(allc[i]) for i in ci]))
+    cl = [len(allc[i]) for i in ci]
     cn = list(reversed([allcn[i] for i in ci]))
 
     coords = {}
     attrs = {allcn[cj]: allc[cj].to_numpy()}
-    if FC.STATE in point_results.coords:
+    if (
+        FC.STATE in point_results.coords and 
+        isinstance(state_mean, bool) 
+        and not state_mean
+    ):
         if point_results.dims[FC.STATE] > 1:
             coords[FC.STATE] = point_results[FC.STATE].to_numpy()
         else:
