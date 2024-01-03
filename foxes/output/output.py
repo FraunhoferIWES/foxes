@@ -1,5 +1,6 @@
-from foxes.utils import PandasFileHelper, all_subclasses
+from pathlib import Path
 
+from foxes.utils import PandasFileHelper, all_subclasses
 
 class Output:
     """
@@ -8,12 +9,53 @@ class Output:
     The job of this class is to provide handy
     helper functions.
 
+    Attributes
+    ----------
+    out_dir: pathlib.Path
+        The output file directory
+    out_fname_fun: Function, optional
+        Modifies file names by f(fname)
+
     :group: output
 
     """
 
-    @classmethod
-    def write(cls, file_path, data, format_col2var={}, format_dict={}, **kwargs):
+    def __init__(self, out_dir=None, out_fname_fun=None):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        out_dir: str, optional
+            The output file directory
+        out_fname_fun: Function, optional
+            Modifies file names by f(fname)
+
+        """
+        self.out_dir = Path(out_dir) if out_dir is not None else None
+        self.out_fname_fun = out_fname_fun
+    
+    def get_fpath(self, fname):
+        """
+        Gets the total file path
+        
+        Parameters
+        ----------
+        fname: str
+            The file name
+        
+        Returns
+        -------
+        fpath: pathlib.Path
+            The total file path
+        
+        """
+        fnm = Path(fname)
+        if self.out_fname_fun is not None:
+            fnm = self.out_fname_fun(fnm)
+        return self.out_dir/fnm if self.out_dir is not None else fnm
+
+    def write(self, file_name, data, format_col2var={}, format_dict={}, **kwargs):
         """
         Writes data to file via pandas.
 
@@ -21,16 +63,16 @@ class Output:
 
         Parameters
         ----------
-        file_path: string
-            The path to the output file
+        file_name: str
+            The output file name
         data: pandas.DataFrame
             The data
         format_col2var: dict
-            Mapping from column names to flappy variables,
+            Mapping from column names to foxes variables,
             for formatting
         format_dict: dict
             Dictionary with format entries for columns, e.g.
-            {FV.P: '{:.4f}'}. Note that the keys are flappy variables
+            {FV.P: '{:.4f}'}. Note that the keys are foxes variables
 
         """
         fdict = {}
@@ -41,8 +83,9 @@ class Output:
             elif v in PandasFileHelper.DEFAULT_FORMAT_DICT:
                 fdict[c] = PandasFileHelper.DEFAULT_FORMAT_DICT[v]
 
-        PandasFileHelper.write_file(data, file_path, fdict, **kwargs)
-
+        fpath = self.get_fpath(file_name)
+        PandasFileHelper.write_file(data, fpath, fdict, **kwargs)
+    
     @classmethod
     def print_models(cls):
         """

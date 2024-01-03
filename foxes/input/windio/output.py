@@ -52,7 +52,7 @@ class WIOOutput:
         self.name = name
         self.ofargs = ofargs
     
-    def create(self, *args, farm_results=None, **kwargs):
+    def create(self, *args, farm_results=None, out_dir=None, auto_fnames=False, **kwargs):
         """
         Creates the output
         
@@ -63,6 +63,10 @@ class WIOOutput:
         farm_results: xarray.Dataset, optional
             The farm results, only used if flag needs_farm_results
             is set
+        out_dir: str, optional
+            Sets the output file directory
+        auto_fnames: bool or Function
+            Flag for automatic file names
         kwargs: dict, optional
             Additional parameters for the output function
         
@@ -78,6 +82,14 @@ class WIOOutput:
             o = Output.new(self.oclass, farm_results=farm_results, **self.ocargs)
         else:
             o = Output.new(self.oclass, **self.ocargs)
+
+        if out_dir is not None:
+            o.out_dir = out_dir
+        if isinstance(auto_fnames, bool):
+            if auto_fnames:
+                o.out_fname_fun = lambda fname: fname.parent/f"{self.name}_{fname.name}"
+        else:
+            o.out_fname_fun = auto_fnames
 
         f = getattr(o, self.ofunction)
         return f(*args, **kwargs, **self.ofargs)

@@ -233,7 +233,7 @@ class FlowPlots2D(Output):
             data_nc = data2xr(x_pos, y_pos, z_pos, 
                               point_results, out_data_vars, 
                               state_mean=weights, 
-                              to_file=write_data_nc, 
+                              to_file=self.get_fpath(write_data_nc), 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -442,7 +442,7 @@ class FlowPlots2D(Output):
             data_nc = data2xr(x_pos, y_pos, z_pos, 
                               point_results, out_data_vars, 
                               state_mean=weights, 
-                              to_file=write_data_nc, 
+                              to_file=self.get_fpath(write_data_nc), 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -652,7 +652,7 @@ class FlowPlots2D(Output):
             data_nc = data2xr(x_pos, y_pos, z_pos, 
                               point_results, out_data_vars, 
                               state_mean=weights, 
-                              to_file=write_data_nc, 
+                              to_file=self.get_fpath(write_data_nc), 
                               verbosity=verbosity)
             if ret_data:
                 out = list(out) if isinstance(out, tuple) else [out]
@@ -839,7 +839,7 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
-                                to_file=write_data_nc, verbosity=verbosity)
+                                to_file=self.get_fpath(write_data_nc), verbosity=verbosity)
             if ret_data:
                 return data_nc
             del data_nc
@@ -1076,7 +1076,7 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
-                                to_file=write_data_nc, verbosity=verbosity)
+                                to_file=self.get_fpath(write_data_nc), verbosity=verbosity)
             if ret_data:
                 return data_nc
             del data_nc
@@ -1310,7 +1310,7 @@ class FlowPlots2D(Output):
 
         if ret_data or write_data_nc is not None:
             data_nc = data2xr(x_pos, y_pos, z_pos, point_results, out_data_vars,
-                                to_file=write_data_nc, verbosity=verbosity)
+                                to_file=self.get_fpath(write_data_nc), verbosity=verbosity)
             if ret_data:
                 return data_nc
             del data_nc

@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 import xarray
 from copy import deepcopy
 
@@ -41,7 +42,7 @@ class PandasFileHelper:
         "csv.gz": {},
         "csv.bz2": {},
         "csv.zip": {},
-        "h5": {"key": "flappy", "mode": "w"},
+        "h5": {"key": "foxes", "mode": "w"},
         "nc": {},
     }
 
@@ -93,27 +94,25 @@ class PandasFileHelper:
             The data
 
         """
-        fname = str(file_path)
-        L = len(fname)
+        fpath = Path(file_path)
+        fname = fpath.name
+        sfx = ".".join(fname.split(".")[1:])
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            l = len(fmt)
-            if fname[L - l :] == fmt:
-                if fmt[:3] == "csv":
-                    f = pd.read_csv
+            sfx = ".".join()
+            if sfx[:3] == "csv":
+                f = pd.read_csv
+            elif sfx == "h5":
+                f = pd.read_hdf
+            elif sfx == "nc":
+                f = lambda fname, **pars: xarray.open_dataset(
+                    fname, **pars
+                ).to_dataframe()
 
-                elif fmt == "h5":
-                    f = pd.read_hdf
-
-                elif fmt == "nc":
-                    f = lambda fname, **pars: xarray.open_dataset(
-                        fname, **pars
-                    ).to_dataframe()
-
-                if f is not None:
-                    pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
-                    pars.update(kwargs)
-                    return f(file_path, **pars)
+            if f is not None:
+                pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
+                pars.update(kwargs)
+                return f(file_path, **pars)
 
         raise KeyError(
             f"Unknown file format '{fname}'. Supported formats: {cls.DATA_FILE_FORMATS}"
@@ -150,27 +149,25 @@ class PandasFileHelper:
             else:
                 out[c] = data[c]
 
-        L = len(file_path)
+        fpath = Path(file_path)
+        fname = fpath.name
+        sfx = ".".join(fname.split(".")[1:])
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            l = len(fmt)
-            if file_path[L - l :] == fmt:
-                if fmt[:3] == "csv":
-                    f = out.to_csv
+            if sfx[:3] == "csv":
+                f = out.to_csv
+            elif sfx == "h5":
+                f = out.to_hdf
+            elif sfx == "nc":
+                f = out.to_netcdf
 
-                elif fmt == "h5":
-                    f = out.to_hdf
+            if f is not None:
+                pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
+                pars.update(kwargs)
 
-                elif fmt == "nc":
-                    f = out.to_netcdf
+                f(file_path, **pars)
 
-                if f is not None:
-                    pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
-                    pars.update(kwargs)
-
-                    f(file_path, **pars)
-
-                    return
+                return
 
         raise KeyError(
             f"Unknown file format '{file_path}'. Supported formats: {cls.DATA_FILE_FORMATS}"

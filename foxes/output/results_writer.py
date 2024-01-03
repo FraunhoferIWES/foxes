@@ -1,3 +1,5 @@
+import pandas as pd
+
 from .output import Output
 import foxes.constants as FC
 
@@ -15,7 +17,7 @@ class ResultsWriter(Output):
 
     """
 
-    def __init__(self, farm_results=None, data=None):
+    def __init__(self, farm_results=None, data=None, **kwargs):
         """
         Constructor.
 
@@ -25,8 +27,12 @@ class ResultsWriter(Output):
             The farm results, if data is None
         data: pandas.DataFrame, optional
             The data, if farm_results is None
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
+
         if farm_results is not None and data is None:
             self.data = farm_results.to_dataframe().reset_index()
             self.data[FC.TNAME] = farm_results[FC.TNAME].to_numpy()[
@@ -45,6 +51,7 @@ class ResultsWriter(Output):
         file_path,
         variables=None,
         turbine_names=False,
+        state_turbine_table=False,
         verbosity=1,
         **kwargs,
     ):
@@ -62,6 +69,9 @@ class ResultsWriter(Output):
             written.
         turbine_names: bool
             Use turbine names instead of turbine indices
+        state_turbine_table: bool
+            Flag for writing a single variable into turbine columns
+            for state rows
         verbosity: int
             The verbosity level, 0 = silent
         kwargs: dict, optional
@@ -87,6 +97,23 @@ class ResultsWriter(Output):
             data = self.data[list(variables)]
 
         if turbine_names:
+            tix = FC.TNAME
             data = data.reset_index().set_index([FC.STATE, FC.TNAME])
+        else:
+            tix = FC.TURBINE
+        
+        fc2v = kwargs.pop("format_col2var", {})
+        if state_turbine_table:
+            if len(variables) != 1:
+                raise ValueError(f"state_turbine_table can only be written for a single variable, got {variables}")
+            v = variables[0]
+            for ti, (t, g) in enumerate(data.reset_index().set_index(FC.STATE).groupby(tix)):
+                if ti == 0:
+                    odata = pd.DataFrame(index=g.index.to_numpy())
+                    odata.index.name = g.index.name
+                cname = f"{v}_turbine_{t}" if tix == FC.TURBINE else f"{v}_{t}"
+                odata[cname] = g[v].to_numpy().copy()
+                fc2v[cname] = v
+            data = odata
 
-        super().write(file_path, data, **kwargs)
+        super().write(file_path, data, format_col2var=fc2v, **kwargs)
