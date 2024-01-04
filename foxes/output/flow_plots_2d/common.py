@@ -3,7 +3,8 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from xarray import Dataset
 
-from foxes.utils import wd2uv
+from foxes.utils import wd2uv, write_nc
+from foxes.output.round import round_defaults
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -594,13 +595,6 @@ def get_grid_yz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
-round_defaults = {v: 4 for v in FV.__dict__.keys() if isinstance(v, str)}
-round_defaults[FV.WD] = 3
-round_defaults[FV.TI] = 6
-round_defaults[FV.RHO] = 6
-round_defaults[FC.XYH] = 3
-round_defaults.update({FV.var2amb[v]: round_defaults[v] for v in FV.var2amb.keys()})
-
 def data2xr(
         x_pos, 
         y_pos, 
@@ -647,6 +641,8 @@ def data2xr(
         The xarray data object
 
     """
+
+    #TODO: use xarray helper
     if round == "auto":
         round = round_defaults
     if round is not None:

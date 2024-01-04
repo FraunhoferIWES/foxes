@@ -275,13 +275,16 @@ def read_case(case_data, mbook=None):
     for oi, o in enumerate(olist):
         ocls = o.pop("class")
         ofun = o.pop("function")
+
         oca = o.pop("class_pars", {})
         if oca.pop("algo", False):
             oca["algo"] = algo
         if oca.pop("farm", False):
             oca["farm"] = farm
+
         o["name"] = o.pop("name", f"output_{oi:02d}")
         o["needs_farm_results"] = oca.pop("farm_results", True)
+
         outputs.append(WIOOutput(oclass=ocls, ofunction=ofun, ocargs=oca, **o))
 
     return mbook, farm, states, algo, outputs

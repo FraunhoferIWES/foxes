@@ -382,6 +382,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Algorithms:
   - Improved `Downwind`: Now optional arguments that allow calculation of subsets in calc_farm and calc_points, e.g. a selection of states
 - Output:
+  - New output: `PointCalculator`, a wrapper for the calc_points function of the algorithm
   - Improved `FlowPlots2D`: Now can create figures for subsets only, and furthermore can optinally output the image data or write it to file in netCFD format
 - Vertical profiles:
   - Now optional support for `ustar` input data instead of reference data

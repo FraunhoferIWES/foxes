@@ -99,7 +99,6 @@ class PandasFileHelper:
         sfx = ".".join(fname.split(".")[1:])
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            sfx = ".".join()
             if sfx[:3] == "csv":
                 f = pd.read_csv
             elif sfx == "h5":
