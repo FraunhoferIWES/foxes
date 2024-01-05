@@ -221,7 +221,7 @@ def read_anlyses(analyses, mbook, farm, states):
         **adict,
     )
 
-def read_case(case_data, mbook=None):
+def read_case(case_data, mbook=None, runner=None):
     """
     Reads a WindIO case
 
@@ -231,12 +231,8 @@ def read_case(case_data, mbook=None):
         Data from the yaml file
     mbook: foxes.models.ModelBook, optional
         The model book to start from
-    site_pars: dict
-        Additional arguments for read_site
-    farm_pars: dict
-        Additional arguments for read_farm
-    ana_pars: dict
-        Additional arguments for read_analyses
+    runner: foxes.utils.runners.Runner, optional
+        The runner
 
     Returns
     -------
@@ -282,6 +278,8 @@ def read_case(case_data, mbook=None):
             oca["algo"] = algo
         if oca.pop("farm", False):
             oca["farm"] = farm
+        if oca.pop("runner", False):
+            oca["runner"] = runner
 
         o["name"] = o.pop("name", f"output_{oi:02d}")
         o["needs_farm_results"] = oca.pop("farm_results", True)
