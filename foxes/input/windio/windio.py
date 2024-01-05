@@ -5,7 +5,7 @@ from foxes.core import WindFarm, Algorithm
 from foxes.models import ModelBook
 from foxes.input.farm_layout import add_from_df
 from foxes.models.turbine_types import PCtFromTwo, CpCtFromTwo
-from foxes.utils import import_module
+from foxes.utils import import_module, eval_str
 import foxes.constants as FC
 
 from .read_states import read_Timeseries, read_StatesTable
@@ -255,7 +255,7 @@ def read_case(case_data, mbook=None):
 
     """
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
-    case = yml_utils.load_yaml(case_data)
+    case = eval_str(yml_utils.load_yaml(case_data))
     mbook = ModelBook() if mbook is None else mbook
     adict = case["attributes"]["analyses"]
     olist = adict.pop("outputs", [])
@@ -273,6 +273,7 @@ def read_case(case_data, mbook=None):
 
     outputs = []
     for oi, o in enumerate(olist):
+
         ocls = o.pop("class")
         ofun = o.pop("function")
 
