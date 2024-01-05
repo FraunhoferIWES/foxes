@@ -43,6 +43,7 @@ class PointCalculator(Output):
             *args, 
             write_csv=None,
             write_vars=None,
+            round="auto",
             **kwargs
         ):
         """

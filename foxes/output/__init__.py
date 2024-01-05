@@ -11,5 +11,7 @@ from .state_turbine_map import StateTurbineMap
 from .turbine_type_curves import TurbineTypeCurves
 from .animation import Animator
 from .calc_points import PointCalculator
+from .slice_data import SliceData
 
 from .flow_plots_2d import FlowPlots2D, SeqFlowAnimationPlugin
+from . import grids

@@ -1,5 +1,4 @@
 from foxes.algorithms.sequential import SequentialPlugin
-import matplotlib.pyplot as plt
 
 from .flow_plots import FlowPlots2D
 

@@ -1,209 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+import pandas as pd
 from xarray import Dataset
 
 from foxes.utils import wd2uv, write_nc
-from foxes.output.round import round_defaults
 import foxes.variables as FV
 import foxes.constants as FC
-
-
-def get_fig(
-    var,
-    fig,
-    figsize,
-    ax,
-    data,
-    si,
-    s,
-    normalize_var,
-    levels,
-    x_pos,
-    y_pos,
-    vmin,
-    vmax,
-    cmap,
-    xlabel,
-    ylabel,
-    title,
-    add_bar,
-    vlabel,
-    ret_state,
-    ret_im,
-    quiv=None,
-    invert_axis=None,
-    animated=False,
-):
-    """
-    Helper function that creates the flow image plot.
-
-    Parameters
-    ----------
-    var: str
-        The variable name
-    fig: plt.Figure, optional
-        The figure object
-    figsize: tuple
-        The figsize for plt.Figure
-    ax: plt.Axes, optional
-        The figure axes
-    data: numpy.ndarray
-        The grid data to plot, shape: (n_states, n_x, x_y)
-    si: int, optional
-        The state counter
-    s: object
-        The state index
-    normalize_var: float, optional
-        Divide the variable by this value
-    levels: int
-        The number of levels for the contourf plot,
-        or None for non-contour image
-    x_pos: numpy.ndarray
-        The grid x positions, shape: (n_x, 3)
-    y_pos: numpy.ndarray
-        The grid y positions, shape: (n_y, 3)
-    vmin: float
-        Minimum variable value
-    vmax: float
-        Maximum variable value
-    xlabel: str
-        The x axis label
-    ylabel: str
-        The y axis label
-    title: str, optional
-        The title
-    add_bar: bool
-        Add a color bar
-    vlabel: str, optional
-        The variable label
-    ret_state: bool
-        Flag for state index return
-    ret_im: bool
-        Flag for image return
-    quiv: tuple, optional
-        The quiver data: (n, pars, wd, ws)
-    invert_axis: str, optional
-        Which axis to invert, either x or y
-    animated: bool
-        Switch for usage for an animation
-
-    Yields
-    ------
-    fig: matplotlib.Figure
-        The figure object
-    si: int, optional
-        The state index
-    im: tuple, optional
-        The image objects, matplotlib.collections.QuadMesh
-        or matplotlib.QuadContourSet
-
-    """
-    # create plot:
-    if fig is None:
-        hfig = plt.figure(figsize=figsize)
-    else:
-        hfig = fig
-    if ax is None:
-        hax = hfig.add_subplot(111)
-    else:
-        hax = ax
-
-    # get results:
-    N_x = len(x_pos)
-    N_y = len(y_pos)
-    zz = data[si].reshape(N_x, N_y).T
-    if normalize_var is not None:
-        zz /= normalize_var
-
-    # raw data image:
-    if levels is None:
-        im = hax.pcolormesh(
-            x_pos,
-            y_pos,
-            zz,
-            vmin=vmin,
-            vmax=vmax,
-            shading="auto",
-            cmap=cmap,
-            animated=animated,
-        )
-
-    # contour plot:
-    else:
-        if vmax is not None and vmin is not None and not isinstance(levels, list):
-            lvls = np.linspace(vmin, vmax, levels + 1)
-        else:
-            lvls = levels
-        im = hax.contourf(
-            x_pos,
-            y_pos,
-            zz,
-            levels=lvls,
-            vmax=vmax,
-            vmin=vmin,
-            cmap=cmap,
-            # animated=animated,
-        )
-
-    qv = None
-    if quiv is not None and quiv[0] is not None:
-        n, pars, wd, ws = quiv
-        uv = wd2uv(wd[si], ws[si])
-        u = uv[:, 0].reshape([N_x, N_y]).T[::n, ::n]
-        v = uv[:, 1].reshape([N_x, N_y]).T[::n, ::n]
-        qv = hax.quiver(x_pos[::n], y_pos[::n], u, v, animated=animated, **pars)
-        del n, pars, u, v, uv
-
-    hax.autoscale_view()
-    hax.set_xlabel(xlabel)
-    hax.set_ylabel(ylabel)
-    hax.set_aspect("equal", adjustable="box")
-
-    ttl = None
-    if animated and title is None:
-        if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
-            t = np.datetime_as_string(s, unit="m").replace("T", " ")
-        else:
-            t = s
-        ttl = hax.text(
-            0.5,
-            1.05,
-            f"State {t}",
-            backgroundcolor="w",
-            transform=hax.transAxes,
-            ha="center",
-            animated=True,
-            clip_on=False,
-        )
-    else:
-        hax.set_title(title if title is not None else f"State {s}")
-
-    if invert_axis == "x":
-        hax.invert_xaxis()
-    elif invert_axis == "y":
-        hax.invert_yaxis()
-
-    if add_bar:
-        divider = make_axes_locatable(hax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        vlab = vlabel if vlabel is not None else var
-        hfig.colorbar(im, cax=cax, orientation="vertical", label=vlab)
-        out = hfig
-    else:
-        out = fig
-
-    if ret_state or ret_im:
-        out = [out]
-    if ret_state:
-        out.append(si)
-    if ret_im:
-        out.append([i for i in [im, qv, ttl] if i is not None])
-    if ret_state or ret_im:
-        out = tuple(out)
-
-    return out
-
 
 def calc_point_results(
     algo,
@@ -249,7 +50,6 @@ def calc_point_results(
 
     return point_results
 
-
 def get_grid_xy(
     farm_results,
     resolution,
@@ -292,9 +92,9 @@ def get_grid_xy(
     Returns
     -------
     x_pos: numpy.ndarray
-        The x grid positions, shape: (n_x, 3)
+        The x grid positions, shape: (n_x,)
     y_pos: numpy.ndarray
-        The y grid positions, shape: (n_y, 3)
+        The y grid positions, shape: (n_y,)
     z_pos: float
         The z position of the grid
     g_pts: numpy.ndarray
@@ -353,7 +153,6 @@ def get_grid_xy(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
-
 def get_grid_xz(
     farm_results,
     resolution,
@@ -399,11 +198,11 @@ def get_grid_xz(
     Returns
     -------
     x_pos: numpy.ndarray
-        The x grid positions, shape: (n_x, 3)
+        The x grid positions, shape: (n_x,)
     y_pos: float
         The y position of the grid
     z_pos: numpy.ndarray
-        The z grid positions, shape: (n_z, 3)
+        The z grid positions, shape: (n_z,)
     g_pts: numpy.ndarray
         The grid points, shape: (n_states, n_pts, 3)
 
@@ -474,7 +273,6 @@ def get_grid_xz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
-
 def get_grid_yz(
     farm_results,
     resolution,
@@ -522,9 +320,9 @@ def get_grid_yz(
     x_pos: float
         The x position of the grid
     y_pos: numpy.ndarray
-        The y grid positions, shape: (n_y, 3)
+        The y grid positions, shape: (n_y,)
     z_pos: numpy.ndarray
-        The z grid positions, shape: (n_z, 3)
+        The z grid positions, shape: (n_z,)
     g_pts: numpy.ndarray
         The grid points, shape: (n_states, n_pts, 3)
 
@@ -595,6 +393,224 @@ def get_grid_yz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
+def np2np_p(data, a_pos, b_pos):
+    """
+    Create numpy data from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_gpts,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    
+    Returns
+    -------
+    out: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_a, n_b, n_vars)
+
+    """
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    n_v = len(data)
+    out = np.zeros((n_a, n_b, n_v), dtype=FC.DTYPE)
+    for vi, (v, d) in enumerate(data.items()):
+        out[:, :, vi] = d.reshape(n_a, n_b)
+    return out
+
+def np2np_sp(data, states, a_pos, b_pos):
+    """
+    Create numpy data from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_states, n_gpts)
+    states: numpy.ndarray
+        The states index, shape: (n_states,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    
+    Returns
+    -------
+    out: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_states, n_a, n_b, n_vars)
+
+    """
+    n_s = len(states)
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    n_v = len(data)
+    out = np.zeros((n_s, n_a, n_b, n_v), dtype=FC.DTYPE)
+    for vi, (v, d) in enumerate(data.items()):
+        out[:, :, :, vi] = d.reshape(n_s, n_a, n_b)
+    return out
+
+def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
+    """
+    Create pandas DataFrame from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_gpts,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    ori: str
+        The orientation, 'xy' or 'xz' or 'yz'
+    label_map: dict
+        The mapping from original to new field names
+
+    Returns
+    -------
+    out: pandas.DataFrame
+        The multi-indexed DataFrame object
+
+    """
+    a, b = [label_map.get(o, o) for o in ori]
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    minds = pd.MultiIndex.from_product([range(n_a), range(n_b)],
+                                       names=[a, b])
+    return pd.DataFrame(index=minds, data=data)
+
+def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
+    """
+    Create pandas DataFrame from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_states, n_gpts,)
+    states: numpy.ndarray
+        The states index, shape: (n_states,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    ori: str
+        The orientation, 'xy' or 'xz' or 'yz'
+    label_map: dict
+        The mapping from original to new field names
+
+    Returns
+    -------
+    out: pandas.DataFrame
+        The multi-indexed DataFrame object
+
+    """
+    a, b = [label_map.get(o, o) for o in ori]
+    s = label_map.get(FC.STATE, FC.STATE)
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    minds = pd.MultiIndex.from_product([states, range(n_a), range(n_b)],
+                                       names=[s, a, b])
+    return pd.DataFrame(index=minds, data=data)
+
+def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
+    """
+    Create xarray Dataset from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_gpts,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    ori: str
+        The orientation, 'xy' or 'xz' or 'yz'
+    label_map: dict
+        The mapping from original to new field names
+
+    Returns
+    -------
+    out: xarray.Dataset
+        The Dataset object
+    
+    """
+    a, b = [label_map.get(o, o) for o in ori]
+    c = list(set("xyz") - set(ori))[0]
+    c = label_map.get(c, c)
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    return Dataset(
+        coords={a: a_pos, b: b_pos},
+        data_vars={
+            v: ((a, b), d.reshape(n_a, n_b))
+            for v, d in data.items()
+        },
+        attrs={c: float(c_pos)}
+    )
+
+def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
+    """
+    Create xarray Dataset from numpy data
+    
+    Parameters
+    ----------
+    data: dict
+        The data on the grid. Key: variable name,
+        value: numpy.ndarray with shape (n_states, n_gpts,)
+    states: numpy.ndarray
+        The states index, shape: (n_states,)
+    a_pos: numpy.ndarray
+        The first axis coordinates, e.g. x_pos,
+        shape: (n_a,)
+    b_pos: numpy.ndarray
+        The second axis coordinates, e.g. y_pos,
+        shape: (n_b,)
+    ori: str
+        The orientation, 'xy' or 'xz' or 'yz'
+    label_map: dict
+        The mapping from original to new field names
+
+    Returns
+    -------
+    out: xarray.Dataset
+        The Dataset object
+    
+    """
+    a, b = [label_map.get(o, o) for o in ori]
+    c = list(set("xyz") - set(ori))[0]
+    c = label_map.get(c, c)
+    s = label_map.get(FC.STATE, FC.STATE)
+    n_s = len(states)
+    n_a = len(a_pos)
+    n_b = len(b_pos)
+    return Dataset(
+        coords={s: states, a: a_pos, b: b_pos},
+        data_vars={
+            v: ((s, a, b), d.reshape(n_s, n_a, n_b))
+            for v, d in data.items()
+        },
+        attrs={c: float(c_pos)}
+    )
+
 def data2xr(
         x_pos, 
         y_pos, 
@@ -602,10 +618,8 @@ def data2xr(
         point_results, 
         vars=None,
         state_mean=False,
-        round="auto", 
         to_file=None,
-        complevel=5,
-        verbosity=1,
+        **kwargs,
     ):
     """
     Converts the image data to xarray data
@@ -630,10 +644,8 @@ def data2xr(
         for default
     to_file: str, optional
         Write to nc file
-    complevel: int
-        The compression level
-    verbosity: int
-        The verbostiy level, 0 = silent
+    kwargs: dict, optional
+        Additional parameters for write_nc
 
     Returns
     -------
@@ -641,15 +653,6 @@ def data2xr(
         The xarray data object
 
     """
-
-    #TODO: use xarray helper
-    if round == "auto":
-        round = round_defaults
-    if round is not None:
-        x_pos = np.round(x_pos, round[FC.XYH])
-        y_pos = np.round(y_pos, round[FC.XYH])
-        z_pos = np.round(z_pos, round[FC.XYH])
-
     if vars is None:
         vars = list(point_results.data_vars.keys())
     data = {}
@@ -660,8 +663,6 @@ def data2xr(
             data[v] = np.mean(point_results[v].to_numpy(), axis=0)
         else:
             data[v] = point_results[v].to_numpy()
-        if v in round:
-            data[v] = np.round(data[v], round[v])
 
     allc = [x_pos, y_pos, z_pos]
     allcn = ["x", "y", "z"]
@@ -699,9 +700,6 @@ def data2xr(
     )
 
     if to_file is not None:
-        if verbosity > 0:
-            print("Writing file", to_file)
-        enc = {k: {"zlib": True, "complevel": complevel} for k in ds.data_vars}
-        ds.to_netcdf(to_file, encoding=enc)
+        write_nc(ds, to_file, **kwargs)
     
     return ds
