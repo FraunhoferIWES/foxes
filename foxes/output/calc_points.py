@@ -107,7 +107,7 @@ class PointCalculator(Output):
         if to_file is not None:
             if states_mean:
                 if p_has_s:
-                    points = np.einsum('s,sp->p', weights, points)
+                    points = np.einsum('s,spd->pd', weights, points)
                 dvars = {
                     "x": ((FC.POINT,), points[..., 0]),
                     "y": ((FC.POINT,), points[..., 1]),
