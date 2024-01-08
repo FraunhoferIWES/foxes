@@ -1,7 +1,6 @@
 import numpy as np
 
 from foxes.output import SliceData
-import foxes.constants as FC
 import foxes.variables as FV
 
 from .get_fig import get_fig
@@ -28,6 +27,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -63,6 +64,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -97,6 +102,8 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, gdata = self.get_mean_data_xy(variables=variables, 
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
                         data_format="numpy", ret_grid=True, **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
 
@@ -161,6 +168,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -198,6 +207,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -232,6 +245,8 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, gdata = self.get_mean_data_xz(variables=variables, 
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
                         x_direction=x_direction, data_format="numpy", 
                         ret_grid=True, **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
@@ -297,6 +312,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -334,6 +351,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -368,6 +389,8 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, gdata = self.get_mean_data_yz(variables=variables, 
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
                         x_direction=x_direction, data_format="numpy", 
                         ret_grid=True, **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
@@ -433,6 +456,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -467,6 +492,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at each `n`th point
         quiver_pars: dict, optional
@@ -497,7 +526,10 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, states, gdata = self.get_states_data_xy(variables=variables, 
-                data_format="numpy", ret_states=True, ret_grid=True, **kwargs)
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
+                        data_format="numpy", ret_states=True, ret_grid=True, 
+                        **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -561,6 +593,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -597,6 +631,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
@@ -627,7 +665,10 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, states, gdata = self.get_states_data_xz(variables=variables, 
-                data_format="numpy", ret_states=True, ret_grid=True, **kwargs)
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
+                        data_format="numpy", ret_states=True, ret_grid=True, 
+                        **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -692,6 +733,8 @@ class FlowPlots2D(SliceData):
         ax=None,
         add_bar=True,
         cmap=None,
+        vmin=None,
+        vmax=None,
         quiver_n=None,
         quiver_pars={},
         ret_state=False,
@@ -728,6 +771,10 @@ class FlowPlots2D(SliceData):
             Add a color bar
         cmap: str, optional
             The colormap
+        vmin: float, optional
+            The minimal variable value
+        vmax: float, optional
+            The maximal variable value
         quiver_n: int, optional
             Place a vector at ech `n`th point
         quiver_pars: dict, optional
@@ -758,7 +805,10 @@ class FlowPlots2D(SliceData):
         wsi = variables.index(FV.WS)
 
         data, states, gdata = self.get_states_data_yz(variables=variables, 
-                data_format="numpy", ret_states=True, ret_grid=True, **kwargs)
+                        vmin={var: vmin} if vmin is not None else {},
+                        vmax={var: vmax} if vmax is not None else {},
+                        data_format="numpy", ret_states=True, ret_grid=True, 
+                        **kwargs)
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
