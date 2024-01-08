@@ -181,8 +181,6 @@ class TurbOParkWake(GaussianWakeModel):
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            # sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
             alpha = self.c1 * ati
@@ -208,20 +206,14 @@ class TurbOParkWake(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                # sblim,
                 alpha,
                 beta,
                 epsilon,
             )
 
-            # calculate amplitude, same as in Bastankha model (eqn 7)
-            if self.sbeta_factor < 0.25:
-                radicant = 1.0 - ct / (8 * (sigma / D) ** 2)
-                reals = radicant >= 0
-                ampld = -np.ones_like(radicant)
-                ampld[reals] = np.sqrt(radicant[reals]) - 1.0
-            else:
-                ampld = np.sqrt(1.0 - ct / (8 * (sigma / D) ** 2)) - 1.0
+            # calculate amplitude, same as in Bastankhah model (eqn 7)
+            term = 1.0 - ct / (8 * (sigma / D) ** 2)
+            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
 
         # case no targets:
         else:
@@ -428,8 +420,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            # sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            # sbeta[sbeta > sblim] = sblim
             epsilon = self.sbeta_factor * sbeta
 
             # get TI by integration along centre line:
@@ -452,18 +442,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
             del (
                 x,
                 sbeta,
-                # sblim,
                 epsilon,
             )
 
-            # calculate amplitude, same as in Bastankha model (eqn 7)
-            if self.sbeta_factor < 0.25:
-                radicant = 1.0 - ct / (8 * (sigma / D) ** 2)
-                reals = radicant >= 0
-                ampld = -np.ones_like(radicant)
-                ampld[reals] = np.sqrt(radicant[reals]) - 1.0
-            else:
-                ampld = np.sqrt(1.0 - ct / (8 * (sigma / D) ** 2)) - 1.0
+            # calculate amplitude, same as in Bastankhah model (eqn 7)
+            term = 1.0 - ct / (8 * (sigma / D) ** 2)
+            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
 
         # case no targets:
         else:
