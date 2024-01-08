@@ -236,7 +236,7 @@ class WakeFrame(Model):
         # calc wakes:
         if not ambient:
             wcalc = algo.get_model("PointWakesCalculation")(
-                vrs, wake_models=wake_models
+                wake_models=wake_models
             )
             wcalc.initialize(algo, verbosity=0)
             wsrc = states_source_turbine if self_wake else None

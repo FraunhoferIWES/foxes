@@ -49,8 +49,7 @@ class RotorCentreCalc(TurbineModel):
             The verbosity level, 0 = silent
 
         """
-        pvars = list(self.calc_vars.values())
-        self._wcalc = algo.PointWakesCalculation(point_vars=pvars)
+        self._wcalc = algo.get_model("PointWakesCalculation")()
         super().initialize(algo, verbosity)
 
     def sub_models(self):
