@@ -1,8 +1,10 @@
 import pandas as pd
+from xarray import Dataset
+
+import foxes.constants as FC
+from foxes.utils import write_nc
 
 from .output import Output
-import foxes.constants as FC
-
 
 class ResultsWriter(Output):
     """
@@ -45,6 +47,24 @@ class ResultsWriter(Output):
             raise KeyError(
                 f"ResultsWriter: Either give 'farm_results' or 'data' arguments"
             )
+    
+    def _get_data_vars(self, variables):
+        """ Helper function for variable gathering """
+        data = self.data
+        if variables is None:
+            pass
+        elif isinstance(variables, dict):
+            inds = {
+                s: variables.pop(s) for s in self.data.index.names if s in variables
+            }
+            if len(variables):
+                data = data[list(variables.keys())].rename(variables, axis=1)
+            if len(inds):
+                for s, ns in inds.items():
+                    data = data.rename_axis(index={s: ns})
+        else:
+            data = self.data[list(variables)]
+        return data, list(data.data_vars.keys())
 
     def write_csv(
         self,
@@ -81,34 +101,16 @@ class ResultsWriter(Output):
         if verbosity:
             print(f"ResultsWriter: Writing file '{file_path}'")
 
-        if variables is None:
-            data = self.data
-        elif isinstance(variables, dict):
-            inds = {
-                s: variables.pop(s) for s in self.data.index.names if s in variables
-            }
-            data = self.data
-            if len(variables):
-                data = data[list(variables.keys())].rename(variables, axis=1)
-            if len(inds):
-                for s, ns in inds.items():
-                    data = data.rename_axis(index={s: ns})
-        else:
-            data = self.data[list(variables)]
-
-        if turbine_names:
-            tix = FC.TNAME
-        else:
-            tix = FC.TURBINE
+        data, variables = self._get_data_vars(variables)
         data.reset_index(inplace=True)
-        v = variables[0]
-        cnames = {t: f"{v}_T{t:04d}" if tix == FC.TURBINE else f"{v}_{t}" for t in data[tix]}
-        data.set_index(tix, inplace=True)
         
         fc2v = kwargs.pop("format_col2var", {})
         if state_turbine_table:
             if len(variables) != 1:
                 raise ValueError(f"state_turbine_table can only be written for a single variable, got {variables}")
+            v = variables[0]
+            tix = FC.TNAME if turbine_names else FC.TURBINE
+            cnames = {t: f"{v}_T{t:04d}" if tix == FC.TURBINE else f"{v}_{t}" for t in data[tix]}
             for ti, (t, g) in enumerate(data.reset_index().set_index(FC.STATE).groupby(tix)):
                 if ti == 0:
                     odata = pd.DataFrame(index=g.index.to_numpy(), columns=list(cnames.values()))
@@ -117,5 +119,52 @@ class ResultsWriter(Output):
                 odata[cname] = g[v].to_numpy().copy()
                 fc2v[cname] = v
             data = odata
+        
+        data.set_index(tix, inplace=True)
 
         super().write(file_path, data, format_col2var=fc2v, **kwargs)
+
+    def write_nc(
+        self,
+        file_path,
+        variables=None,
+        turbine_names=False,
+        verbosity=1,
+        **kwargs,
+    ):
+        """
+        Writes a netCDF file
+
+        Parameters
+        ----------
+        file_path: str
+            Path the the csv file
+        variables: dict or list of str, optional
+            The variables to be written. If a dict, then
+            the keys are the foxes variables and the values
+            the column names. If None, then all data will be
+            written.
+        turbine_names: bool
+            Use turbine names instead of turbine indices
+        verbosity: int
+            The verbosity level, 0 = silent
+        kwargs: dict, optional
+            Additional parameters for write_nc()
+
+        """
+        data, variables = self._get_data_vars(variables)
+
+        crds = {FC.STATE: data.get_level_values(0).to_numpy()}
+        if turbine_names:
+            idx = pd.IndexSlice
+            crds[FC.TURBINE] = self.data.loc[idx[0, :], FC.TNAME].to_numpy()
+        
+        ds = Dataset(
+            coords=crds,
+            data_vars={
+                v: ((FC.STATE, FC.TURBINE), data[v].to_numpy())
+                for v in variables
+            }
+        )
+
+        write_nc(ds, file_path, verbosity=verbosity, **kwargs)
