@@ -98,20 +98,22 @@ class ResultsWriter(Output):
 
         if turbine_names:
             tix = FC.TNAME
-            data = data.reset_index().set_index([FC.STATE, FC.TNAME])
         else:
             tix = FC.TURBINE
+        data.reset_index(inplace=True)
+        v = variables[0]
+        cnames = {t: f"{v}_T{t:04d}" if tix == FC.TURBINE else f"{v}_{t}" for t in data[tix]}
+        data.set_index(tix, inplace=True)
         
         fc2v = kwargs.pop("format_col2var", {})
         if state_turbine_table:
             if len(variables) != 1:
                 raise ValueError(f"state_turbine_table can only be written for a single variable, got {variables}")
-            v = variables[0]
             for ti, (t, g) in enumerate(data.reset_index().set_index(FC.STATE).groupby(tix)):
                 if ti == 0:
-                    odata = pd.DataFrame(index=g.index.to_numpy())
+                    odata = pd.DataFrame(index=g.index.to_numpy(), columns=list(cnames.values()))
                     odata.index.name = g.index.name
-                cname = f"{v}_turbine_{t}" if tix == FC.TURBINE else f"{v}_{t}"
+                cname = cnames[t]
                 odata[cname] = g[v].to_numpy().copy()
                 fc2v[cname] = v
             data = odata

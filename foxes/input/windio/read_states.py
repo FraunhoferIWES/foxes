@@ -6,7 +6,7 @@ from foxes.models.vertical_profiles import ABLLogNeutralWsProfile
 import foxes.variables as FV
 import foxes.constants as FC
 
-def read_Timeseries(res, fixed_vars={}, ignore_vars=[], **states_pars):
+def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_pars):
     """
     Reads timeseries data.
     
@@ -19,6 +19,8 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], **states_pars):
         not occur in the yaml
     ignore_vars: list of str
         windio variables to be ignored
+    var_map: dict
+        Map from data column names to foxes names
     states_pars: dict, optional
         Additional arguments for Timeseries
 
@@ -42,6 +44,7 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], **states_pars):
         "z0": FV.Z0,
         "ustar": FV.USTAR,
     }
+    kmap.update(var_map)
 
     heights = np.array(res[0]["z"], dtype=FC.DTYPE) if "z" in res[0] else None
     if heights is not None:

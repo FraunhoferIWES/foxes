@@ -49,6 +49,8 @@ class PandasFileHelper:
     DEFAULT_FORMAT_DICT = {
         FV.WD: "{:.3f}",
         FV.AMB_WD: "{:.3f}",
+        FV.YAW: "{:.3f}",
+        FV.AMB_YAW: "{:.3f}",
         FV.WS: "{:.4f}",
         FV.AMB_WS: "{:.4f}",
         FV.REWS: "{:.4f}",
@@ -139,7 +141,7 @@ class PandasFileHelper:
         fdict = deepcopy(cls.DEFAULT_FORMAT_DICT)
         fdict.update(format_dict)
 
-        out = pd.DataFrame(index=data.index)
+        out = pd.DataFrame(index=data.index, columns=data.columns)
         for c in data.columns:
             if c in fdict.keys():
                 out[c] = data[c].map(
