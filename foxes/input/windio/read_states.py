@@ -6,7 +6,8 @@ from foxes.models.vertical_profiles import ABLLogNeutralWsProfile
 import foxes.variables as FV
 import foxes.constants as FC
 
-def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_pars):
+def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, 
+                    rescale={}, fillna=False, **states_pars):
     """
     Reads timeseries data.
     
@@ -21,6 +22,10 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_par
         windio variables to be ignored
     var_map: dict
         Map from data column names to foxes names
+    rescale: dict
+        Rescale foxes variables by these factors
+    fillna: bool
+        Fill NaN values by neighbours
     states_pars: dict, optional
         Additional arguments for Timeseries
 
@@ -45,6 +50,7 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_par
         "ustar": FV.USTAR,
     }
     kmap.update(var_map)
+    kmapi = {f: w for w, f in kmap.items()}
 
     heights = np.array(res[0]["z"], dtype=FC.DTYPE) if "z" in res[0] else None
     if heights is not None:
@@ -52,21 +58,21 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_par
 
     ign = ["time", "z"] + ignore_vars
     vars = [v for v in res[0] if v not in ign]
-    n_vars = len(vars)
     fvars = [kmap[v] for v in vars if v in kmap]
     ovars = fvars + [v for v in fixed_vars.keys() if v not in fvars]
+    n_vars = len(fvars)
 
     # spatially uniform case:
     if heights is None:
         data = np.zeros((n_times, n_vars), dtype=FC.DTYPE)
         for ti in range(n_times):
-            for vi, v in enumerate(vars):
-                data[ti, vi] = res[ti][v]
+            for vi, v in enumerate(fvars):
+                w = kmapi[v]
+                f = rescale.get(v, 1.)
+                data[ti, vi] = f*np.array(res[ti][w])
 
         sdata = pd.DataFrame(index=times, data=data, columns=fvars)
         sdata.index.name = "Time"
-        if FV.TI in fvars:
-            sdata[FV.TI] /= 100
         #print(sdata)
         #print(sdata.describe())
 
@@ -77,6 +83,9 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_par
             else:
                 pdict = {FV.WS: ABLLogNeutralWsProfile(ustar_input=False)}
 
+        if fillna:
+            sdata = sdata.ffill().bfill()
+            
         states = Timeseries(
             data_source=sdata,
             output_vars=ovars,
@@ -92,14 +101,18 @@ def read_Timeseries(res, fixed_vars={}, ignore_vars=[], var_map={}, **states_par
         for ti in range(n_times):
             if ti > 0 and np.any(res[ti]["z"] != heights):
                 raise ValueError(f"Height mismatch between time 0 and time {times[ti]}")
-            for vi, v in enumerate(vars):
-                data[ti, vi] = res[ti][v]
+            for vi, v in enumerate(fvars):
+                w = kmapi[v]
+                f = rescale.get(v, 1.)
+                data[ti, vi] = f*np.array(res[ti][w])                      
 
         hmap = {h: f"h{hi:04d}" for hi, h in enumerate(heights)}
         cfun = lambda v, h: f"{v}-{hmap[h]}"
         ddict = {cfun(v, h): data[:, vi, hi] for vi, v in enumerate(fvars) for hi, h in enumerate(heights)}
         sdata = pd.DataFrame(index=times, data=ddict)
-        sdata.index.name = "Time"
+
+        if fillna:
+            sdata = sdata.ffill().bfill()
 
         states = MultiHeightTimeseries(
             data_source=sdata,

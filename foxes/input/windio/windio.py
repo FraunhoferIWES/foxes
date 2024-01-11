@@ -177,11 +177,7 @@ def read_anlyses(analyses, mbook, farm, states):
     algo: foxes.core.Algorithm
         The algorithm
 
-    """
-    fname = analyses["flow_model"]["name"]
-    if fname != "foxes":
-        raise KeyError(f"Expecting flow model name 'foxes', found '{fname}'")
-    
+    """   
     def _get_models(mtype, wiokey=None, defaults=[]):
         wiok = mtype if wiokey is None else wiokey
         mdicts = analyses.get(wiok, [])
@@ -256,16 +252,21 @@ def read_case(case_data, mbook=None, runner=None):
     adict = case["attributes"]["analyses"]
     olist = adict.pop("outputs", [])
 
+    fdict = adict.pop("flow_model")
+    fname = fdict["name"]
+    if fname != "foxes":
+        raise KeyError(f"Expecting flow model name 'foxes', found '{fname}'")
+
     site_data = case["site"]
     site_pars = adict.pop("site_parameters", {})
     states = read_site(site_data, **site_pars)
 
     farm_data = case["wind_farm"]
-    farm_pars = adict.pop("farm_parameters", {})
-    tmdict = adict.pop("turbine_models", {})
+    farm_pars = fdict.pop("farm_parameters", {})
+    tmdict = fdict.pop("turbine_models", {})
     farm = read_farm(farm_data, mbook, tmdict, **farm_pars)
 
-    algo = read_anlyses(adict, mbook, farm, states)
+    algo = read_anlyses(fdict, mbook, farm, states)
 
     outputs = []
     for oi, o in enumerate(olist):
