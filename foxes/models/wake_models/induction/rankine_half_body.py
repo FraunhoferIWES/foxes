@@ -6,7 +6,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class RHB(WakeModel):
+class RankineHalfBody(WakeModel):
     """
     The Rankine half body induction wake model
 
@@ -161,12 +161,17 @@ class RHB(WakeModel):
         sp_sel = (ct > 0) & ((RHB_shape <= -1) | (x < xs))
         if np.any(sp_sel):
             # apply selection
-            xyz = wake_coos[sp_sel]
+            xyz = wake_coos[sp_sel]                
 
             # calc velocity components
             vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
             wake_deltas["U"][sp_sel] += vel_factor * xyz[:, 0]
             wake_deltas["V"][sp_sel] += vel_factor * xyz[:, 1]
+
+        # treat points within induction zone
+        sp_sel = (ct > 0) & ((RHB_shape > -1) & (x >= xs) & (x < 0))
+        if np.any(sp_sel):  
+            wake_deltas["U"][sp_sel] -= 2*ws[sp_sel]*a[sp_sel]
 
         return wake_deltas
 

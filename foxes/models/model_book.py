@@ -340,7 +340,7 @@ class ModelBook:
                 superposition=s, iec_type="2019"
             )
 
-        self.wake_models[f"RHB"] = fm.wake_models.induction.RHB()
+        self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
 
         self.sources = Dict(
             name="sources",
