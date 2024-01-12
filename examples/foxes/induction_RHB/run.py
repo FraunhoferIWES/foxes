@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["RHB", "Jensen_linear_lim_k004"],
+        default=["RHB", "Bastankhah_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")

@@ -387,5 +387,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `FlowPlots2D`: Completely refactored, data based on `SliceData`. New option for creating figures for subsets of states only.
 - Vertical profiles:
   - Now optional support for `ustar` input data instead of reference data
+- Wake models:
+  - Renaming: `RHB` class now called `RankineHalfBody`
+  - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)

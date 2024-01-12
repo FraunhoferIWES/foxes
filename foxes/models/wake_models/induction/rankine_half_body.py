@@ -6,7 +6,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class RHB(WakeModel):
+class RankineHalfBody(WakeModel):
     """
     The Rankine half body induction wake model
 
@@ -18,13 +18,34 @@ class RHB(WakeModel):
 
     https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
 
+    Attributes
+    ----------
+    ct_max: float
+        The maximal value for ct, values beyond will be limited
+        to this number
+    lim_induction: bool
+        Limit near-rotor wake effect to Betz induction
+
     :group: models.wake_models.induction
 
     """
 
-    def __init__(self, ct_max=0.9999):
+    def __init__(self, ct_max=0.9999, lim_induction=True):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        ct_max: float
+            The maximal value for ct, values beyond will be limited
+            to this number
+        lim_induction: bool
+            Limit near-rotor wake effect to Betz induction
+
+        """
         super().__init__()
         self.ct_max = ct_max
+        self.lim_induction = lim_induction
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -161,12 +182,19 @@ class RHB(WakeModel):
         sp_sel = (ct > 0) & ((RHB_shape <= -1) | (x < xs))
         if np.any(sp_sel):
             # apply selection
-            xyz = wake_coos[sp_sel]
+            xyz = wake_coos[sp_sel]                
 
             # calc velocity components
             vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
             wake_deltas["U"][sp_sel] += vel_factor * xyz[:, 0]
             wake_deltas["V"][sp_sel] += vel_factor * xyz[:, 1]
+
+        # treat points within induction zone
+        if self.lim_induction:
+            sp_sel = (ct > 0) & (RHB_shape > -1) & (x >= xs) & (x <= 0)
+            if np.any(sp_sel):  
+                wake_deltas["U"][sp_sel] -= ws[sp_sel]*a[sp_sel]
+            wake_deltas["U"] = np.maximum(-ws*a, wake_deltas["U"])
 
         return wake_deltas
 
@@ -212,9 +240,10 @@ class RHB(WakeModel):
 
         # add ambient result to wake deltas
         delta_uv = np.stack((wake_deltas["U"], wake_deltas["V"]), axis=2)
-        sel = np.linalg.norm(delta_uv, axis=-1) < ws0
-        wind_vec[sel] += delta_uv[sel]
-        del delta_uv, sel, ws0
+        #sel = np.linalg.norm(delta_uv, axis=-1) < ws0
+        #wind_vec[sel] += delta_uv[sel]
+        wind_vec += delta_uv
+        del delta_uv, ws0
 
         # deduce WS and WD deltas:
         new_wd = uv2wd(wind_vec)

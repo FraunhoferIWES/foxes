@@ -559,9 +559,9 @@ def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
     n_a = len(a_pos)
     n_b = len(b_pos)
     return Dataset(
-        coords={a: a_pos, b: b_pos},
+        coords={b: b_pos, a: a_pos},
         data_vars={
-            v: ((a, b), d.reshape(n_a, n_b))
+            v: ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1))
             for v, d in data.items()
         },
         attrs={c: float(c_pos)}
@@ -603,9 +603,9 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
     n_a = len(a_pos)
     n_b = len(b_pos)
     return Dataset(
-        coords={s: states, a: a_pos, b: b_pos},
+        coords={s: states, b: b_pos, a: a_pos},
         data_vars={
-            v: ((s, a, b), d.reshape(n_s, n_a, n_b))
+            v: ((s, b, a), np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2))
             for v, d in data.items()
         },
         attrs={c: float(c_pos)}
