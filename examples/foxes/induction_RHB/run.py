@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["RHB", "Jensen_linear_lim_k004"],
+        default=["RHB", "Bastankhah_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -148,7 +148,6 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-    
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
     xmin = -2000
@@ -165,7 +164,7 @@ if __name__ == "__main__":
     fig = next(g)
     plt.show()
     plt.close(fig)
-    
+
     # center line plot:
     H = mbook.turbine_types[ttype.name].H
     n_points = 10000
@@ -179,7 +178,7 @@ if __name__ == "__main__":
     ax.set_ylabel("Wind speed [m/s]")
     plt.show()
     plt.close(fig)
-    
+
     # front line plot:
     points = np.zeros((1, n_points, 3))
     points[:, :, 0] = -200
