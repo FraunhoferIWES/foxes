@@ -207,11 +207,23 @@ class ModelBook:
             linear_amb=fm.wake_superpositions.LinearSuperposition(
                 scalings=f"source_turbine_{FV.AMB_REWS}"
             ),
-            quadratic=fm.wake_superpositions.QuadraticSuperposition(
-                scalings=f"source_turbine_{FV.REWS}"
+            quadratic=fm.wake_superpositions.PowSuperposition(
+                pow=2, scalings=f"source_turbine_{FV.REWS}"
             ),
-            quadratic_amb=fm.wake_superpositions.QuadraticSuperposition(
-                scalings=f"source_turbine_{FV.AMB_REWS}"
+            quadratic_amb=fm.wake_superpositions.PowSuperposition(
+                pow=2, scalings=f"source_turbine_{FV.AMB_REWS}"
+            ),
+            cubic=fm.wake_superpositions.PowSuperposition(
+                pow=3, scalings=f"source_turbine_{FV.REWS}"
+            ),
+            cubic_amb=fm.wake_superpositions.PowSuperposition(
+                pow=3, scalings=f"source_turbine_{FV.AMB_REWS}"
+            ),
+            quartic=fm.wake_superpositions.PowSuperposition(
+                pow=4, scalings=f"source_turbine_{FV.REWS}"
+            ),
+            quartic_amb=fm.wake_superpositions.PowSuperposition(
+                pow=4, scalings=f"source_turbine_{FV.AMB_REWS}"
             ),
             max=fm.wake_superpositions.MaxSuperposition(
                 scalings=f"source_turbine_{FV.REWS}"
@@ -247,6 +259,10 @@ class ModelBook:
             "linear_amb",
             "quadratic",
             "quadratic_amb",
+            "cubic",
+            "cubic_amb",
+            "quartic",
+            "quartic_amb",
             "max",
             "max_amb",
             "product",

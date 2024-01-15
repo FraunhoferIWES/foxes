@@ -390,5 +390,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Wake models:
   - Renaming: `RHB` class now called `RankineHalfBody`
   - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc
+  - Generalization: `QuadraticSuperposition` is now a special case of `PowSuperposition`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)

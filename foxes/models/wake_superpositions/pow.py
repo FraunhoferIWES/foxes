@@ -6,13 +6,15 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class QuadraticSuperposition(WakeSuperposition):
+class PowSuperposition(WakeSuperposition):
     """
-    Quadratic supersposition of wake model results,
+    To-a-power supersposition of wake model results,
     optionally rescaled.
 
     Attributes
     ----------
+    pow: float
+        The power to which to take the wake results
     scalings: dict or number or str
         The scaling rules
     svars: list of str
@@ -22,12 +24,14 @@ class QuadraticSuperposition(WakeSuperposition):
 
     """
 
-    def __init__(self, scalings, svars=None):
+    def __init__(self, pow, scalings, svars=None):
         """
         Constructor.
 
         Parameters
         ----------
+        pow: float
+            The power to which to take the wake results
         scalings: dict or number or str
             Scaling rules. If `dict`, key: variable name str,
             value: number or str. If `str`:
@@ -39,6 +43,7 @@ class QuadraticSuperposition(WakeSuperposition):
 
         """
         super().__init__()
+        self.pow = pow
         self.scalings = scalings
         self.svars = svars
 
@@ -164,11 +169,11 @@ class QuadraticSuperposition(WakeSuperposition):
             scaling = self.scalings
 
         if scaling is None:
-            wake_delta[sel_sp] += wake_model_result**2
+            wake_delta[sel_sp] += np.abs(wake_model_result)**self.pow
             return wake_delta
 
         elif isinstance(scaling, numbers.Number):
-            wake_delta[sel_sp] += (scaling * wake_model_result) ** 2
+            wake_delta[sel_sp] += np.abs(scaling * wake_model_result)**self.pow
             return wake_delta
 
         elif (
@@ -197,7 +202,7 @@ class QuadraticSuperposition(WakeSuperposition):
                 states_source_turbine=states_source_turbine,
             )[sel_sp]
 
-            wake_delta[sel_sp] += (scale * wake_model_result) ** 2
+            wake_delta[sel_sp] += np.abs(scale * wake_model_result)**self.pow
 
             return wake_delta
 
@@ -245,7 +250,7 @@ class QuadraticSuperposition(WakeSuperposition):
 
         """
         try:
-            return mdata[self.SIGNS][variable] * np.sqrt(wake_delta)
+            return mdata[self.SIGNS][variable] * wake_delta**(1/self.pow)
         except KeyError as e:
             if np.max(np.abs(wake_delta)) < 1e-10:
                 return wake_delta
