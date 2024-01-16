@@ -154,11 +154,11 @@ if __name__ == "__main__":
     xmax = (args.nx - 1) * args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
-        figsize=(12, 3.5),
+        figsize=(8, 6),
         resolution=20,
         xmin=xmin,
         xmax=xmax,
-        yspace=1000.0,
+        yspace=2000.0,
         levels=40,
     )
     fig = next(g)

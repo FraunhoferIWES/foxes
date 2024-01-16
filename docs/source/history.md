@@ -389,7 +389,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Now optional support for `ustar` input data instead of reference data
 - Wake models:
   - Renaming: `RHB` class now called `RankineHalfBody`
-  - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc
+  - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
   - Generalization: `QuadraticSuperposition` is now a special case of `PowSuperposition`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
