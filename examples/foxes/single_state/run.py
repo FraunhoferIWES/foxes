@@ -69,7 +69,7 @@ if __name__ == "__main__":
         kTI=0.4, k_var="K2", ti_var=FV.AMB_TI
     )
     mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.BastankhahWake(
-        superposition="quadratic", k_var="K1"
+        superposition="ws_quadratic", k_var="K1"
     )
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
         superposition="ti_max", k_var="K2", use_ambti=False

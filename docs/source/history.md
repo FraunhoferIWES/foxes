@@ -392,6 +392,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
   - Generalization: `QuadraticSuperposition` is now a special case of `PowSuperposition`
 - Wake superpositions:
-  - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`
+  - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`, etc. Also in the model book the models are now called `ws_linear` or `ti_quadratic`, etc.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
