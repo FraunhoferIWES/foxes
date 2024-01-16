@@ -387,6 +387,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved `FlowPlots2D`: Completely refactored, data based on `SliceData`. New option for creating figures for subsets of states only.
 - Vertical profiles:
   - Now optional support for `ustar` input data instead of reference data
+- Turbine types:
+  - Fix for `Cp`-based models with interpolation within sparse input data
 - Wake models:
   - Renaming: `RHB` class now called `RankineHalfBody`
   - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
