@@ -72,7 +72,7 @@ if __name__ == "__main__":
         superposition="quadratic", k_var="K1"
     )
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
-        superposition="max", k_var="K2", use_ambti=False
+        superposition="ti_max", k_var="K2", use_ambti=False
     )
 
     # create states

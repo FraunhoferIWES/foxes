@@ -211,25 +211,13 @@ class ModelBook:
             quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
             max=fm.wake_superpositions.WSMax(scale_amb=False),
             max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
-            product=fm.wake_superpositions.ProductSuperposition(),
-            product_lim=fm.wake_superpositions.ProductSuperposition(
-                lim_low={FV.WS: 1e-4},
-            ),
-            ti_linear=fm.wake_superpositions.TISuperposition(
-                ti_superp="linear", superp_to_amb="quadratic"
-            ),
-            ti_quadratic=fm.wake_superpositions.TISuperposition(
-                ti_superp="quadratic", superp_to_amb="quadratic"
-            ),
-            ti_cubic=fm.wake_superpositions.TISuperposition(
-                ti_superp="power_3", superp_to_amb="quadratic"
-            ),
-            ti_quartic=fm.wake_superpositions.TISuperposition(
-                ti_superp="power_4", superp_to_amb="quadratic"
-            ),
-            ti_max=fm.wake_superpositions.TISuperposition(
-                ti_superp="max", superp_to_amb="quadratic"
-            ),
+            product=fm.wake_superpositions.WSProduct(),
+            product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
+            ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
+            ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
+            ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
+            ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
+            ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
         self.wake_models = Dict(name="wake_models")

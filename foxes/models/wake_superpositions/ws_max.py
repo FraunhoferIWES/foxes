@@ -105,6 +105,9 @@ class WSMax(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
+        if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
+            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
+        
         if np.any(sel_sp):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,

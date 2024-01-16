@@ -391,5 +391,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Renaming: `RHB` class now called `RankineHalfBody`
   - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
   - Generalization: `QuadraticSuperposition` is now a special case of `PowSuperposition`
+- Wake superpositions:
+  - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)

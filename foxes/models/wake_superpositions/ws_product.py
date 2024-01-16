@@ -2,11 +2,11 @@ import numpy as np
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
+import foxes.constants as FC
 
-
-class ProductSuperposition(WakeSuperposition):
+class WSProduct(WakeSuperposition):
     """
-    Product wind wake superposition.
+    Product supersposition of wind deficit results
 
     This is based on the idea that the dimensionless
     wind deficit should be rescaled with the wake
@@ -18,12 +18,10 @@ class ProductSuperposition(WakeSuperposition):
 
     Attributes
     ----------
-    lim_low: dict
-        Lower limits of the final wake deltas. Key: variable str,
-        value: float
-    lim_high: dict
-        Higher limits of the final wake deltas. Key: variable str,
-        value: float
+    lim_low: float
+        Lower limit of the final waked wind speed
+    lim_high: float
+        Upper limit of the final waked wind speed
 
     :group: models.wake_superpositions
 
@@ -35,17 +33,34 @@ class ProductSuperposition(WakeSuperposition):
 
         Parameters
         ----------
-        lim_low: dict, optional
-            Lower limits of the final wake deltas. Key: variable str,
-            value: float
-        lim_high: dict, optional
-            Higher limits of the final wake deltas. Key: variable str,
-            value: float
+        lim_low: float
+            Lower limit of the final waked wind speed
+        lim_high: float
+            Upper limit of the final waked wind speed
 
         """
         super().__init__()
+
         self.lim_low = lim_low
         self.lim_high = lim_high
+
+    def input_farm_vars(self, algo):
+        """
+        The variables which are needed for running
+        the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        input_vars: list of str
+            The input variable names
+
+        """
+        return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
     def calc_wakes_plus_wake(
         self,
@@ -91,10 +106,16 @@ class ProductSuperposition(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
+        if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
+            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
+        
+        if np.any(sel_sp):
 
-        if np.max(np.abs(wake_delta)) < 1e-14:
-            wake_delta[:] = 1
-        wake_delta[sel_sp] *= 1 + wake_model_result
+            if np.max(np.abs(wake_delta)) < 1e-14:
+                wake_delta[:] = 1
+
+            wake_delta[sel_sp] *= 1 + wake_model_result
+
         return wake_delta
 
     def calc_final_wake_delta(
@@ -136,8 +157,8 @@ class ProductSuperposition(WakeSuperposition):
 
         """
         w = amb_results * (wake_delta - 1)
-        if self.lim_low is not None and variable in self.lim_low:
-            w = np.maximum(w, self.lim_low[variable] - amb_results)
-        if self.lim_high is not None and variable in self.lim_high:
-            w = np.minimum(w, self.lim_high[variable] - amb_results)
+        if self.lim_low is not None:
+            w = np.maximum(w, self.lim_low - amb_results)
+        if self.lim_high is not None:
+            w = np.minimum(w, self.lim_high - amb_results)
         return w

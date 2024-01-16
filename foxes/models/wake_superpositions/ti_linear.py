@@ -2,64 +2,34 @@ import numpy as np
 
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
-import foxes.constants as FC
 
-class WSQuadratic(WakeSuperposition):
+class TILinear(WakeSuperposition):
     """
-    Quadratic supersposition of wind deficit results
+    Linear wake superposition for TI.
 
     Attributes
     ----------
-    scale_amb: bool
-        Flag for scaling wind deficit with ambient wind speed
-        instead of waked wind speed
-    lim_low: float
-        Lower limit of the final waked wind speed
-    lim_high: float
-        Upper limit of the final waked wind speed
+    superp_to_amb: str
+        The method for combining ambient with wake deltas:
+        linear or quadratic
 
     :group: models.wake_superpositions
 
     """
 
-    def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
+    def __init__(self, superp_to_amb="quadratic"):
         """
         Constructor.
 
         Parameters
         ----------
-        scale_amb: bool
-            Flag for scaling wind deficit with ambient wind speed
-            instead of waked wind speed
-        lim_low: float
-            Lower limit of the final waked wind speed
-        lim_high: float
-            Upper limit of the final waked wind speed
+        superp_to_amb: str
+            The method for combining ambient with wake deltas:
+            linear or quadratic
 
         """
         super().__init__()
-
-        self.scale_amb = scale_amb
-        self.lim_low = lim_low
-        self.lim_high = lim_high
-
-    def input_farm_vars(self, algo):
-        """
-        The variables which are needed for running
-        the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        input_vars: list of str
-            The input variable names
-
-        """
-        return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
+        self.superp_to_amb = superp_to_amb
 
     def calc_wakes_plus_wake(
         self,
@@ -105,23 +75,10 @@ class WSQuadratic(WakeSuperposition):
             The updated wake deltas, shape: (n_states, n_points)
 
         """
-        if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
+        if variable != FV.TI:
+            raise ValueError(f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}")
         
-        if np.any(sel_sp):
-            scale = self.get_data(
-                FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_POINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                pdata=pdata,
-                upcast=True,
-                states_source_turbine=states_source_turbine,
-            )[sel_sp]
-
-            wake_delta[sel_sp] += (scale * wake_model_result)**2
-
+        wake_delta[sel_sp] += wake_model_result
         return wake_delta
 
     def calc_final_wake_delta(
@@ -162,9 +119,16 @@ class WSQuadratic(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        w = -np.sqrt(wake_delta)
-        if self.lim_low is not None:
-            w = np.maximum(w, self.lim_low - amb_results)
-        if self.lim_high is not None:
-            w = np.minimum(w, self.lim_high - amb_results)
-        return w
+        # linear superposition to ambient:
+        if self.superp_to_amb == "linear":
+            return wake_delta
+
+        # quadratic superposition to ambient:
+        elif self.superp_to_amb == "quadratic":
+            return np.sqrt(wake_delta**2 + amb_results**2) - amb_results
+
+        # unknown ti delta:
+        else:
+            raise ValueError(
+                f"Unknown superp_to_amb = '{self.superp_to_amb}', valid choices: linear, quadratic"
+            )
