@@ -197,40 +197,20 @@ class ModelBook:
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
-            linear=fm.wake_superpositions.LinearSuperposition(
-                scalings=f"source_turbine_{FV.REWS}"
-            ),
-            linear_lim=fm.wake_superpositions.LinearSuperposition(
-                scalings=f"source_turbine_{FV.REWS}",
-                lim_low={FV.WS: 1e-4},
-            ),
-            linear_amb=fm.wake_superpositions.LinearSuperposition(
-                scalings=f"source_turbine_{FV.AMB_REWS}"
-            ),
-            quadratic=fm.wake_superpositions.PowSuperposition(
-                pow=2, scalings=f"source_turbine_{FV.REWS}"
-            ),
-            quadratic_amb=fm.wake_superpositions.PowSuperposition(
-                pow=2, scalings=f"source_turbine_{FV.AMB_REWS}"
-            ),
-            cubic=fm.wake_superpositions.PowSuperposition(
-                pow=3, scalings=f"source_turbine_{FV.REWS}"
-            ),
-            cubic_amb=fm.wake_superpositions.PowSuperposition(
-                pow=3, scalings=f"source_turbine_{FV.AMB_REWS}"
-            ),
-            quartic=fm.wake_superpositions.PowSuperposition(
-                pow=4, scalings=f"source_turbine_{FV.REWS}"
-            ),
-            quartic_amb=fm.wake_superpositions.PowSuperposition(
-                pow=4, scalings=f"source_turbine_{FV.AMB_REWS}"
-            ),
-            max=fm.wake_superpositions.MaxSuperposition(
-                scalings=f"source_turbine_{FV.REWS}"
-            ),
-            max_amb=fm.wake_superpositions.MaxSuperposition(
-                scalings=f"source_turbine_{FV.AMB_REWS}"
-            ),
+            linear=fm.wake_superpositions.WSLinear(scale_amb=False),
+            linear_lim=fm.wake_superpositions.WSLinear(scale_amb=False, lim_low=1e-4),
+            linear_amb=fm.wake_superpositions.WSLinear(scale_amb=True),
+            linear_amb_lim=fm.wake_superpositions.WSLinear(scale_amb=True, lim_low=1e-4),
+            quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
+            quadratic_lim=fm.wake_superpositions.WSQuadratic(scale_amb=False, lim_low=1e-4),
+            quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
+            quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(scale_amb=True, lim_low=1e-4),
+            cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
+            cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
+            quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
+            quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
+            max=fm.wake_superpositions.WSMax(scale_amb=False),
+            max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
             product=fm.wake_superpositions.ProductSuperposition(),
             product_lim=fm.wake_superpositions.ProductSuperposition(
                 lim_low={FV.WS: 1e-4},
@@ -257,8 +237,11 @@ class ModelBook:
             "linear",
             "linear_lim",
             "linear_amb",
+            "linear_amb_lim",
             "quadratic",
+            "quadratic_lim",
             "quadratic_amb",
+            "quadratic_amb_lim",
             "cubic",
             "cubic_amb",
             "quartic",
