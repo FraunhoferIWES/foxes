@@ -66,14 +66,24 @@ class CpCtFromTwo(PCtFromTwo):
         A = np.pi * (D / 2) ** 2
         ws = data_cp[col_ws_cp_file].to_numpy()
         cp = data_cp[col_cp].to_numpy()
-        data_cp["P"] = 0.5 * rho * A * cp * ws**3 / FC.P_UNITS[FC.kW]
+        P_unit = pars.pop("P_unit", FC.kW)
+
+        ws_delta = 0.0001
+        ws_min = np.min(ws)
+        ws_max = np.max(ws)
+        N = int((ws_max - ws_min)/ws_delta)
+
+        data_P = pd.DataFrame(index=range(N), dtype=FC.DTYPE)
+        data_P["ws"] = np.linspace(ws_min, ws_max, N, endpoint=True)
+        data_P["cp"] = np.interp(data_P["ws"], ws, cp, left=0, right=0)
+        data_P["P"] = 0.5 * rho * A * data_P["cp"] * data_P["ws"]**3 / FC.P_UNITS[P_unit]
 
         super().__init__(
-            data_cp,
+            data_P,
             data_ct,
-            col_ws_P_file=col_ws_cp_file,
+            col_ws_P_file="ws",
             col_P="P",
             rho=rho,
-            P_unit=FC.kW,
+            P_unit=P_unit,
             **pars,
         )
