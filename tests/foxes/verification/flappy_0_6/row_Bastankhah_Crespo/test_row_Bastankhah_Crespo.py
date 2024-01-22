@@ -32,7 +32,7 @@ def test():
 
     mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
         wname2pwake={
-            "Bastankhah_quadratic": ("PartialAxiwake", dict(n=6)),
+            "Bastankhah025_quadratic": ("PartialAxiwake", dict(n=6)),
             "CrespoHernandez_max": ("PartialTopHat", {}),
         }
     )
@@ -56,7 +56,7 @@ def test():
         farm,
         states=states,
         rotor_model=rotor,
-        wake_models=["Bastankhah_quadratic", "CrespoHernandez_max"],
+        wake_models=["Bastankhah025_quadratic", "CrespoHernandez_max"],
         wake_frame="rotor_wd",
         partial_wakes_model="mapped",
         chunks=ck,

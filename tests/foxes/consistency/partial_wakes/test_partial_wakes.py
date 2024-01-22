@@ -58,7 +58,7 @@ def test():
             farm,
             states=states,
             rotor_model=rotor,
-            wake_models=["Bastankhah_linear_k002"],
+            wake_models=["Bastankhah025_linear_k002"],
             wake_frame="rotor_wd",
             partial_wakes_model=pwake,
             chunks=ck,

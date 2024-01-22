@@ -2,10 +2,12 @@ from abc import abstractmethod
 import numpy as np
 from scipy.interpolate import interpn
 
-from .data import Data
-from .model import Model
+from foxes.utils import all_subclasses
 import foxes.constants as FC
 import foxes.variables as FV
+
+from .data import Data
+from .model import Model
 
 
 class WakeFrame(Model):
@@ -234,7 +236,7 @@ class WakeFrame(Model):
         # calc wakes:
         if not ambient:
             wcalc = algo.get_model("PointWakesCalculation")(
-                vrs, wake_models=wake_models
+                wake_models=wake_models
             )
             wcalc.initialize(algo, verbosity=0)
             wsrc = states_source_turbine if self_wake else None
@@ -263,3 +265,37 @@ class WakeFrame(Model):
         )
 
         return results.reshape(n_states, n_points, n_vars)
+
+    @classmethod
+    def new(cls, wframe_type, *args, **kwargs):
+        """
+        Run-time wake frame factory.
+
+        Parameters
+        ----------
+        wframe_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+
+        if wframe_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = wframe_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == wframe_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Wake frame type '{}' is not defined, available types are \n {}".format(
+                wframe_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)
+        

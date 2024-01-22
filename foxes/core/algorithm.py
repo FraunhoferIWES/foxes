@@ -374,7 +374,7 @@ class Algorithm(Model):
             or points.shape[2] != 3
         ):
             raise ValueError(
-                f"points have wrong dimensions, expecting ({self.n_states}, n_points, 3), got {points.shape}"
+                f"points have wrong dimensions, expecting ({self.n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
         idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FC.XYH), points)
 

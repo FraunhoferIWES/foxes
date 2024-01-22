@@ -4,7 +4,7 @@ import pandas as pd
 from .PCt_file import PCtFile
 from foxes.data import parse_Pct_file_name
 from foxes.utils import PandasFileHelper
-
+import foxes.constants as FC
 
 class CpCtFile(PCtFile):
     """
@@ -55,6 +55,16 @@ class CpCtFile(PCtFile):
         A = np.pi * (D / 2) ** 2
         ws = data[col_ws].to_numpy()
         cp = data[col_cp].to_numpy()
-        data["P"] = 0.5 * rho * A * cp * ws**3
+        P_unit = pars.pop("P_unit", FC.kW)
 
-        super().__init__(data, col_ws=col_ws, col_P="P", rho=rho, **pars)
+        ws_delta = 0.0001
+        ws_min = np.min(ws)
+        ws_max = np.max(ws)
+        N = int((ws_max - ws_min)/ws_delta)
+
+        data_P = pd.DataFrame(index=range(N), dtype=FC.DTYPE)
+        data_P["ws"] = np.linspace(ws_min, ws_max, N, endpoint=True)
+        data_P["cp"] = np.interp(data_P["ws"], ws, cp, left=0, right=0)
+        data_P["P"] = 0.5 * rho * A * data_P["cp"] * data_P["ws"]**3 / FC.P_UNITS[P_unit]
+
+        super().__init__(data_P, col_ws="ws", col_P="P", rho=rho, P_unit=P_unit, **pars)

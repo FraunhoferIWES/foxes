@@ -1,8 +1,8 @@
 from abc import abstractmethod
 
-from .model import Model
 from foxes.utils import all_subclasses
 
+from .model import Model
 
 class PartialWakesModel(Model):
     """

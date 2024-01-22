@@ -90,7 +90,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_linear_k002"],
+        default=["Bastankhah2014_linear_k002"],
         nargs="+",
     )
     parser.add_argument(

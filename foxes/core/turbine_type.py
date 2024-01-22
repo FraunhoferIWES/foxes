@@ -1,6 +1,7 @@
-from .turbine_model import TurbineModel
 import foxes.constants as FC
+from foxes.utils import all_subclasses
 
+from .turbine_model import TurbineModel
 
 class TurbineType(TurbineModel):
     """
@@ -57,3 +58,36 @@ class TurbineType(TurbineModel):
             raise KeyError(
                 f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}"
             )
+
+    @classmethod
+    def new(cls, ttype_type, *args, **kwargs):
+        """
+        Run-time turbine type factory.
+
+        Parameters
+        ----------
+        ttype_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+
+        if ttype_type is None:
+            return None
+
+        allc = all_subclasses(cls)
+        found = ttype_type in [scls.__name__ for scls in allc]
+
+        if found:
+            for scls in allc:
+                if scls.__name__ == ttype_type:
+                    return scls(*args, **kwargs)
+
+        else:
+            estr = "Turbine type class '{}' is not defined, available types are \n {}".format(
+                ttype_type, sorted([i.__name__ for i in allc])
+            )
+            raise KeyError(estr)

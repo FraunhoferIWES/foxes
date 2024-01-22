@@ -5,14 +5,16 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class BastankhahWake(GaussianWakeModel):
+class Bastankhah2014(GaussianWakeModel):
     """
-    The Bastankhah wake model
+    The Bastankhah 2014 wake model
 
-    (https://doi.org/10.1016/j.renene.2014.01.002)
-    Modifications: In the calculation of the initial wake radius
-    a constant of 0.25 instead of 0.2 is used as it fits better
-    to the validation data
+    Notes
+    -----
+    Reference: 
+    "A new analytical model for wind-turbine wakes"
+    Majid Bastankhah, Fernando Porté-Agel
+    https://doi.org/10.1016/j.renene.2014.01.002
 
     Attributes
     ----------
@@ -32,7 +34,7 @@ class BastankhahWake(GaussianWakeModel):
     """
 
     def __init__(
-        self, superposition, k=None, sbeta_factor=0.25, ct_max=0.9999, k_var=FV.K
+        self, superposition, k=None, sbeta_factor=0.2, ct_max=0.9999, k_var=FV.K
     ):
         """
         Constructor.
@@ -188,13 +190,8 @@ class BastankhahWake(GaussianWakeModel):
             del x, k, sbeta, sblim
 
             # calculate amplitude:
-            if self.sbeta_factor < 0.25:
-                radicant = 1.0 - ct / (8 * (sigma / D) ** 2)
-                reals = radicant >= 0
-                ampld = -np.ones_like(radicant)
-                ampld[reals] = np.sqrt(radicant[reals]) - 1.0
-            else:
-                ampld = np.sqrt(1.0 - ct / (8 * (sigma / D) ** 2)) - 1.0
+            term = 1.0 - ct / (8 * (sigma / D) ** 2)
+            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
 
         # case no targets:
         else:

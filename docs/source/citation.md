@@ -1,5 +1,7 @@
 # Citation
 
+## Journal paper
+
 Please cite the JOSS paper [FOXES: Farm Optimization and eXtended yield
 Evaluation Software](https://doi.org/10.21105/joss.05464). 
 
@@ -19,3 +21,8 @@ Bibtex:
     journal = {Journal of Open Source Software} 
 }
 ```
+
+
+## Version specific DOI
+
+All version specific DOIs can be found at [zenodo.org](https://zenodo.org/records/10390503).

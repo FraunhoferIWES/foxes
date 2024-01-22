@@ -379,7 +379,23 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.2
 
+- Algorithms:
+  - Improved `Downwind`: Now optional arguments that allow calculation of subsets in calc_farm and calc_points, e.g. a selection of states
+- Output:
+  - New output: `PointCalculator`, a wrapper for the calc_points function of the algorithm
+  - New output: `SliceData`, creating arrays, DataFrames or Datasets from 2D slices
+  - Improved `FlowPlots2D`: Completely refactored, data based on `SliceData`. New option for creating figures for subsets of states only.
 - Vertical profiles:
   - Now optional support for `ustar` input data instead of reference data
+- Turbine types:
+  - Fix for `Cp`-based models with interpolation within sparse input data
+- Wake models:
+  - Renaming: `BastankhahWake` class now called `Bastankhah2014`. Models in the model book are also renamed from `Bastankhah` to `Bastankhah2014`
+  - Renaming: `PorteAgelWake` class now called `Bastankhah2016`. Models in the model book are also renamed from `PorteAgel` to `Bastankhah2016`
+  - Renaming: `RHB` class now called `RankineHalfBody`
+  - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
+  - New default values: `Bastankhah2014` now has default value `sbeta_factor=0.2` (previously 0.25). Models with the previous value are available in the model book as `Bastankhah025` etc.
+- Wake superpositions:
+  - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`, etc. Also in the model book the models are now called `ws_linear` or `ti_quadratic`, etc.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
