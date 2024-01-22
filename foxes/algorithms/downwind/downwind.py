@@ -8,28 +8,28 @@ from . import models as mdls
 
 class Downwind(Algorithm):
     """
-     The downwind algorithm.
+    The downwind algorithm.
 
-     The turbines are evaluated once, in the order
-     that is calculated by the provided `TurbineOrder`
-     object.
+    The turbines are evaluated once, in the order
+    that is calculated by the provided `TurbineOrder`
+    object.
 
-     Attributes
-     ----------
-     states: foxes.core.States
-         The ambient states
-     wake_models: list of foxes.core.WakeModel
-         The wake models, applied to all turbines
-     rotor_model: foxes.core.RotorModel
-         The rotor model, for all turbines
-     wake_frame: foxes.core.WakeFrame
-         The wake frame
-     partial_wakes_model: foxes.core.PartialWakesModel
-         The partial wakes model
-     farm_controller: foxes.core.FarmController
-         The farm controller
-     n_states: int
-         The number of states
+    Attributes
+    ----------
+    states: foxes.core.States
+        The ambient states
+    wake_models: list of foxes.core.WakeModel
+        The wake models, applied to all turbines
+    rotor_model: foxes.core.RotorModel
+        The rotor model, for all turbines
+    wake_frame: foxes.core.WakeFrame
+        The wake frame
+    partial_wakes_model: foxes.core.PartialWakesModel
+        The partial wakes model
+    farm_controller: foxes.core.FarmController
+        The farm controller
+    n_states: int
+        The number of states
 
     :group: algorithms.downwind
 
