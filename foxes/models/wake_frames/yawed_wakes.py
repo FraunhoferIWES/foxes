@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import WakeFrame
-from foxes.models.wake_models.wind.porte_agel import PorteAgelModel
+from foxes.models.wake_models.wind.bastankhah16 import Bastankhah2016Model
 import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_wd import RotorWD
@@ -9,13 +9,19 @@ from .rotor_wd import RotorWD
 
 class YawedWakes(WakeFrame):
     """
-    Bend the wakes for yawed turbines.
+    Bend the wakes for yawed turbines, based on the
+    Bastankhah 2016 wake model
 
-    Based on Bastankhah & Porte-Agel, 2016, https://doi.org/10.1017/jfm.2016.595
+    Notes
+    -----
+    Reference: 
+    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
+    Majid Bastankhah, Fernando Porté-Agel
+    https://doi.org/10.1017/jfm.2016.595
 
     Attributes
     ----------
-    model: PorteAgelModel
+    model: Bastankhah2016Model
         The model for computing common data
     K: float
         The wake growth parameter k. If not given here
@@ -65,7 +71,7 @@ class YawedWakes(WakeFrame):
         super().__init__()
 
         self.base_frame = base_frame
-        self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.model = Bastankhah2016Model(ct_max, alpha, beta)
         self.k_var = k_var
 
         setattr(self, k_var, k)
@@ -143,20 +149,20 @@ class YawedWakes(WakeFrame):
         )
 
         # select targets:
-        sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
+        sp_sel = self.model.get_data(Bastankhah2016Model.SP_SEL, mdata)
         if np.any(sp_sel):
             # prepare:
             n_sp_sel = np.sum(sp_sel)
             ydef = np.zeros((n_sp_sel,), dtype=FC.DTYPE)
 
             # collect data:
-            near = self.model.get_data(PorteAgelModel.NEAR, mdata)
+            near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
             far = ~near
 
             # near wake:
             if np.any(near):
                 # collect data:
-                delta = self.model.get_data(PorteAgelModel.DELTA_NEAR, mdata)
+                delta = self.model.get_data(Bastankhah2016Model.DELTA_NEAR, mdata)
 
                 # set deflection:
                 ydef[near] = delta
@@ -164,7 +170,7 @@ class YawedWakes(WakeFrame):
             # far wake:
             if np.any(far):
                 # collect data:
-                delta = self.model.get_data(PorteAgelModel.DELTA_FAR, mdata)
+                delta = self.model.get_data(Bastankhah2016Model.DELTA_FAR, mdata)
 
                 # set deflection:
                 ydef[far] = delta

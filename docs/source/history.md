@@ -390,10 +390,17 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Turbine types:
   - Fix for `Cp`-based models with interpolation within sparse input data
 - Wake models:
+  - Renaming: `BastankhahWake` class now called `Bastankhah2014`. Models in the model book are also renamed from `Bastankhah` to `Bastankhah2014`
+  - Renaming: `PorteAgelWake` class now called `Bastankhah2016`. Models in the model book are also renamed from `PorteAgel` to `Bastankhah2016`
   - Renaming: `RHB` class now called `RankineHalfBody`
   - Fix: `RankineHalfBody` no longer shows a jump at the rotor disc, but a small region of constant deficit instead
-  - Generalization: `QuadraticSuperposition` is now a special case of `PowSuperposition`
+  - New default values: `Bastankhah2014` now has default value `sbeta_factor=0.2` (previously 0.25). Models with the previous value are available in the model book as `Bastankhah025` etc.
 - Wake superpositions:
   - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`, etc. Also in the model book the models are now called `ws_linear` or `ti_quadratic`, etc.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
+
+## v0.5.3
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)

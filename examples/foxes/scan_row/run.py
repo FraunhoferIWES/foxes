@@ -27,7 +27,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_linear"],
+        default=["Bastankhah2014_linear"],
         nargs="+",
     )
     parser.add_argument(

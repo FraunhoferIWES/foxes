@@ -68,7 +68,7 @@ if __name__ == "__main__":
     mbook.turbine_models["kTI_K2"] = foxes.models.turbine_models.kTI(
         kTI=0.4, k_var="K2", ti_var=FV.AMB_TI
     )
-    mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.BastankhahWake(
+    mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.Bastankhah2014(
         superposition="ws_quadratic", k_var="K1"
     )
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(

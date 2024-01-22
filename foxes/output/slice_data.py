@@ -525,12 +525,14 @@ class SliceData(Output):
         ):
         """ Helper function for states data calculation """
         # calculate point results:
+        if states_sel is not None:
+            kwargs["sel"] = {FC.STATE: states_sel}
+        if states_isel is not None:
+            kwargs["isel"] = {FC.STATE: states_isel}
         point_results = grids.calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
-            sel={FC.STATE: states_sel} if states_sel is not None else None,
-            isel={FC.STATE: states_isel} if states_isel is not None else None,
             verbosity=verbosity,
             **kwargs,
         )

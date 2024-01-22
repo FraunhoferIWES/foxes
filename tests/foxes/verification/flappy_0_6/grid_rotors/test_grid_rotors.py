@@ -16,10 +16,10 @@ def test():
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
     cases = [
-        (["Bastankhah_linear"], "centre", "rotor_points"),
-        (["Bastankhah_linear"], "grid4", "grid4"),
-        (["Bastankhah_linear"], "grid16", "grid16"),
-        (["Bastankhah_linear"], "grid64", "grid64"),
+        (["Bastankhah025_linear"], "centre", "rotor_points"),
+        (["Bastankhah025_linear"], "grid4", "grid4"),
+        (["Bastankhah025_linear"], "grid16", "grid16"),
+        (["Bastankhah025_linear"], "grid64", "grid64"),
     ]
 
     ck = {FC.STATE: c}
