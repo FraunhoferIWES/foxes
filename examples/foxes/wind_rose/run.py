@@ -35,7 +35,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["CrespoHernandez_quadratic", "Bastankhah_linear"],
+        default=["CrespoHernandez_quadratic", "Bastankhah2014_linear"],
         nargs="+",
     )
     parser.add_argument(

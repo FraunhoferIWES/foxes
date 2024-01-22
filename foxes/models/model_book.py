@@ -256,37 +256,41 @@ class ModelBook:
                 k=0.075, superposition=f"ws_{s}"
             )
 
-            self.wake_models[f"Bastankhah_{s}"] = fm.wake_models.wind.BastankhahWake(
-                superposition=f"ws_{s}"
-            )
-            self.wake_models[
-                f"Bastankhah_{s}_k002"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.02, superposition=f"ws_{s}")
-            self.wake_models[
-                f"Bastankhah_{s}_k004"
-            ] = fm.wake_models.wind.BastankhahWake(k=0.04, superposition=f"ws_{s}")
-
-            self.wake_models[f"Bastankhah0_{s}"] = fm.wake_models.wind.BastankhahWake(
+            self.wake_models[f"Bastankhah2014_{s}"] = fm.wake_models.wind.Bastankhah2014(
                 superposition=f"ws_{s}", sbeta_factor=0.2
             )
             self.wake_models[
-                f"Bastankhah0_{s}_k002"
-            ] = fm.wake_models.wind.BastankhahWake(
-                k=0.02, superposition=f"ws_{s}", sbeta_factor=0.2
+                f"Bastankhah2014_{s}_k002"
+            ] = fm.wake_models.wind.Bastankhah2014(
+                k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}"
             )
             self.wake_models[
-                f"Bastankhah0_{s}_k004"
-            ] = fm.wake_models.wind.BastankhahWake(
-                k=0.04, superposition=f"ws_{s}", sbeta_factor=0.2
+                f"Bastankhah2014_{s}_k004"
+            ] = fm.wake_models.wind.Bastankhah2014(
+                k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}"
             )
 
-            self.wake_models[f"PorteAgel_{s}"] = fm.wake_models.wind.PorteAgelWake(
+            self.wake_models[f"Bastankhah025_{s}"] = fm.wake_models.wind.Bastankhah2014(
+                superposition=f"ws_{s}", sbeta_factor=0.25
+            )
+            self.wake_models[
+                f"Bastankhah025_{s}_k002"
+            ] = fm.wake_models.wind.Bastankhah2014(
+                k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25
+            )
+            self.wake_models[
+                f"Bastankhah025_{s}_k004"
+            ] = fm.wake_models.wind.Bastankhah2014(
+                k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25
+            )
+
+            self.wake_models[f"Bastankhah2016_{s}"] = fm.wake_models.wind.Bastankhah2016(
                 superposition=f"ws_{s}"
             )
-            self.wake_models[f"PorteAgel_{s}_k002"] = fm.wake_models.wind.PorteAgelWake(
+            self.wake_models[f"Bastankhah2016_{s}_k002"] = fm.wake_models.wind.Bastankhah2016(
                 superposition=f"ws_{s}", k=0.02
             )
-            self.wake_models[f"PorteAgel_{s}_k004"] = fm.wake_models.wind.PorteAgelWake(
+            self.wake_models[f"Bastankhah2016_{s}_k004"] = fm.wake_models.wind.Bastankhah2016(
                 superposition=f"ws_{s}", k=0.04
             )
 

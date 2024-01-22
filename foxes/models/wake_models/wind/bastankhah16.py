@@ -6,12 +6,16 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class PorteAgelModel(Model):
+class Bastankhah2016Model(Model):
     """
     Common calculations for the wake model and the wake
     frame, such that code repetitions can be avoided.
 
-    Based on Bastankhah & Porte-Agel, 2016,
+    Notes
+    -----
+    Reference: 
+    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
+    Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
 
     Attributes
@@ -28,7 +32,7 @@ class PorteAgelModel(Model):
 
     """
 
-    MDATA_KEY = "PorteAgelModel"
+    MDATA_KEY = "Bastankhah2016Model"
     PARS = "pars"
     CHECK = "check"
     SP_SEL = "sp_sel"
@@ -355,16 +359,20 @@ class PorteAgelModel(Model):
         del mdata[self.MDATA_KEY]
 
 
-class PorteAgelWake(DistSlicedWakeModel):
+class Bastankhah2016(DistSlicedWakeModel):
     """
-    The Bastankhah PorteAgel wake model
+    The Bastankhah 2016 wake model
 
-    Based on Bastankhah & Porte-Agel, 2016,
+    Notes
+    -----
+    Reference: 
+    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
+    Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
 
     Attributes
     ----------
-    model: PorteAgelModel
+    model: Bastankhah2016Model
         The model for computing common data
     K: float
         The wake growth parameter k. If not given here
@@ -413,7 +421,7 @@ class PorteAgelWake(DistSlicedWakeModel):
         """
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.model = PorteAgelModel(ct_max, alpha, beta)
+        self.model = Bastankhah2016Model(ct_max, alpha, beta)
         self.k_var = k_var
 
         setattr(self, k_var, k)
@@ -533,7 +541,7 @@ class PorteAgelWake(DistSlicedWakeModel):
             )
 
         # select targets:
-        sp_sel = self.model.get_data(PorteAgelModel.SP_SEL, mdata)
+        sp_sel = self.model.get_data(Bastankhah2016Model.SP_SEL, mdata)
         n_sp_sel = np.sum(sp_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
         if np.any(sp_sel):
@@ -541,15 +549,15 @@ class PorteAgelWake(DistSlicedWakeModel):
             yz = yz[sp_sel]
 
             # collect data:
-            near = self.model.get_data(PorteAgelModel.NEAR, mdata)
+            near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
             far = ~near
 
             # near wake:
             if np.any(near):
                 # collect data:
-                ampl = self.model.get_data(PorteAgelModel.AMPL_NEAR, mdata)
-                r_pc = self.model.get_data(PorteAgelModel.R_PC, mdata)
-                s = self.model.get_data(PorteAgelModel.R_PC_S, mdata)
+                ampl = self.model.get_data(Bastankhah2016Model.AMPL_NEAR, mdata)
+                r_pc = self.model.get_data(Bastankhah2016Model.R_PC, mdata)
+                s = self.model.get_data(Bastankhah2016Model.R_PC_S, mdata)
 
                 # radial dependency:
                 r = np.linalg.norm(yz[near], axis=-1)
@@ -569,11 +577,11 @@ class PorteAgelWake(DistSlicedWakeModel):
                 yz = yz[far]
 
                 # collect data:
-                ampl = self.model.get_data(PorteAgelModel.AMPL_FAR, mdata)[:, None]
-                sigma_y = self.model.get_data(PorteAgelModel.SIGMA_Y_FAR, mdata)[
+                ampl = self.model.get_data(Bastankhah2016Model.AMPL_FAR, mdata)[:, None]
+                sigma_y = self.model.get_data(Bastankhah2016Model.SIGMA_Y_FAR, mdata)[
                     :, None
                 ]
-                sigma_z = self.model.get_data(PorteAgelModel.SIGMA_Z_FAR, mdata)[
+                sigma_z = self.model.get_data(Bastankhah2016Model.SIGMA_Z_FAR, mdata)[
                     :, None
                 ]
 

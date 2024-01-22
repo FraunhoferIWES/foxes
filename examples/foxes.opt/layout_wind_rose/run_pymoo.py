@@ -31,7 +31,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah_quadratic_k002"],
+        default=["Bastankhah025_quadratic_k002"],
         nargs="+",
     )
     parser.add_argument(

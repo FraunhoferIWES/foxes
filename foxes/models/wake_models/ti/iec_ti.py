@@ -9,13 +9,15 @@ class IECTIWake(TopHatWakeModel):
     """
     The TI wake model from IEC-64100-1-2005-8 (2005):
 
-    source: http://orbit.dtu.dk/files/3750291/2009_31.pdf
+    Notes
+    -----
+    Reference: 
+    http://orbit.dtu.dk/files/3750291/2009_31.pdf
     v2: VolLuk: corrected implementation following: IEC-64100-1-2005-8
     (Appearently an error in the document by DTU)
 
     and the Frandsen wake TI model, from IEC-64100 (2019):
-
-    Source: http://orbit.dtu.dk/files/3750291/2009_31.pdf
+    http://orbit.dtu.dk/files/3750291/2009_31.pdf
 
     Attributes
     ----------
