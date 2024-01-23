@@ -37,7 +37,7 @@ class SetAmbPointResults(PointDataModel):
             The verbosity level, 0 = silent
 
         """
-        self.pvars = algo.states.output_point_vars(algo) 
+        self.pvars = algo.states.output_point_vars(algo)
         self.vars = [v for v in self.pvars if v in FV.var2amb]
         super().initialize(algo, verbosity)
 

@@ -4,6 +4,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WSLinear(WakeSuperposition):
     """
     Linear supersposition of wind deficit results
@@ -106,8 +107,10 @@ class WSLinear(WakeSuperposition):
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
+
         if np.any(sel_sp):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,

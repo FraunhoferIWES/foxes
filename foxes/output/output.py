@@ -2,6 +2,7 @@ from pathlib import Path
 
 from foxes.utils import PandasFileHelper, all_subclasses
 
+
 class Output:
     """
     Base class for foxes output.
@@ -23,7 +24,7 @@ class Output:
     def __init__(self, out_dir=None, out_fname_fun=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         out_dir: str, optional
@@ -34,26 +35,26 @@ class Output:
         """
         self.out_dir = Path(out_dir) if out_dir is not None else None
         self.out_fname_fun = out_fname_fun
-    
+
     def get_fpath(self, fname):
         """
         Gets the total file path
-        
+
         Parameters
         ----------
         fname: str
             The file name
-        
+
         Returns
         -------
         fpath: pathlib.Path
             The total file path
-        
+
         """
         fnm = Path(fname)
         if self.out_fname_fun is not None:
             fnm = self.out_fname_fun(fnm)
-        return self.out_dir/fnm if self.out_dir is not None else fnm
+        return self.out_dir / fnm if self.out_dir is not None else fnm
 
     def write(self, file_name, data, format_col2var={}, format_dict={}, **kwargs):
         """
@@ -85,7 +86,7 @@ class Output:
 
         fpath = self.get_fpath(file_name)
         PandasFileHelper.write_file(data, fpath, fdict, **kwargs)
-    
+
     @classmethod
     def print_models(cls):
         """

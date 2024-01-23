@@ -12,8 +12,9 @@ from foxes.core import (
     PartialWakesModel,
     WakeFrame,
     WakeSuperposition,
-    WakeModel
+    WakeModel,
 )
+
 
 class ModelBook:
     """
@@ -198,13 +199,21 @@ class ModelBook:
         self.wake_superpositions = Dict(
             name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
-            ws_linear_lim=fm.wake_superpositions.WSLinear(scale_amb=False, lim_low=1e-4),
+            ws_linear_lim=fm.wake_superpositions.WSLinear(
+                scale_amb=False, lim_low=1e-4
+            ),
             ws_linear_amb=fm.wake_superpositions.WSLinear(scale_amb=True),
-            ws_linear_amb_lim=fm.wake_superpositions.WSLinear(scale_amb=True, lim_low=1e-4),
+            ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
+                scale_amb=True, lim_low=1e-4
+            ),
             ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
-            ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(scale_amb=False, lim_low=1e-4),
+            ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
+                scale_amb=False, lim_low=1e-4
+            ),
             ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
-            ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(scale_amb=True, lim_low=1e-4),
+            ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
+                scale_amb=True, lim_low=1e-4
+            ),
             ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
             ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
             ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
@@ -256,7 +265,9 @@ class ModelBook:
                 k=0.075, superposition=f"ws_{s}"
             )
 
-            self.wake_models[f"Bastankhah2014_{s}"] = fm.wake_models.wind.Bastankhah2014(
+            self.wake_models[
+                f"Bastankhah2014_{s}"
+            ] = fm.wake_models.wind.Bastankhah2014(
                 superposition=f"ws_{s}", sbeta_factor=0.2
             )
             self.wake_models[
@@ -284,15 +295,15 @@ class ModelBook:
                 k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25
             )
 
-            self.wake_models[f"Bastankhah2016_{s}"] = fm.wake_models.wind.Bastankhah2016(
-                superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k002"] = fm.wake_models.wind.Bastankhah2016(
-                superposition=f"ws_{s}", k=0.02
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k004"] = fm.wake_models.wind.Bastankhah2016(
-                superposition=f"ws_{s}", k=0.04
-            )
+            self.wake_models[
+                f"Bastankhah2016_{s}"
+            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
+            self.wake_models[
+                f"Bastankhah2016_{s}_k002"
+            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
+            self.wake_models[
+                f"Bastankhah2016_{s}_k004"
+            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
 
             self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
                 A=0.02, superposition=f"ws_{s}"
@@ -309,7 +320,9 @@ class ModelBook:
                     d = str(dx).replace(".", "") if dx < 1 else int(dx)
                     self.wake_models[
                         f"TurbOParkIX_{s}_A{a}_dx{d}"
-                    ] = fm.wake_models.wind.TurbOParkWakeIX(A=A, superposition=f"ws_{s}", dx=dx)
+                    ] = fm.wake_models.wind.TurbOParkWakeIX(
+                        A=A, superposition=f"ws_{s}", dx=dx
+                    )
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
@@ -318,7 +331,9 @@ class ModelBook:
             ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
             self.wake_models[
                 f"CrespoHernandez_ambti_{s}"
-            ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}", use_ambti=True)
+            ] = fm.wake_models.ti.CrespoHernandezTIWake(
+                superposition=f"ti_{s}", use_ambti=True
+            )
             self.wake_models[
                 f"CrespoHernandez_{s}_k002"
             ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
@@ -391,11 +406,11 @@ class ModelBook:
                 else:
                     print("(none)")
                 print()
-    
+
     def get(self, model_type, name, class_name=None, *args, **kwargs):
         """
         Gets a model object.
-         
+
         If not found, dynamically creates it (given the class name)
 
         Parameters
@@ -410,7 +425,7 @@ class ModelBook:
             Arguments for the model class
         kwargs: dict, optional
             Arguments for the model class
-        
+
         Returns
         -------
         model: mclass
@@ -419,7 +434,9 @@ class ModelBook:
         """
         if name not in self.sources[model_type]:
             if class_name is None:
-                raise KeyError(f"Model '{name}' of type '{model_type}' not found in model book. Available: {sorted(list(self.sources[model_type].keys()))}")
+                raise KeyError(
+                    f"Model '{name}' of type '{model_type}' not found in model book. Available: {sorted(list(self.sources[model_type].keys()))}"
+                )
             bclass = self.base_classes[model_type]
             self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
         return self.sources[model_type][name]

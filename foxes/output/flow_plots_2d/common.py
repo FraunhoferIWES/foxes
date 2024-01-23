@@ -594,6 +594,7 @@ def get_grid_yz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
+
 round_defaults = {v: 4 for v in FV.__dict__.keys() if isinstance(v, str)}
 round_defaults[FV.WD] = 3
 round_defaults[FV.TI] = 6
@@ -601,20 +602,21 @@ round_defaults[FV.RHO] = 6
 round_defaults[FC.XYH] = 3
 round_defaults.update({FV.var2amb[v]: round_defaults[v] for v in FV.var2amb.keys()})
 
+
 def data2xr(
-        x_pos, 
-        y_pos, 
-        z_pos, 
-        point_results, 
-        vars=None,
-        round="auto", 
-        to_file=None,
-        complevel=5,
-        verbosity=1,
-    ):
+    x_pos,
+    y_pos,
+    z_pos,
+    point_results,
+    vars=None,
+    round="auto",
+    to_file=None,
+    complevel=5,
+    verbosity=1,
+):
     """
     Converts the image data to xarray data
-    
+
     Parameter
     ---------
     x_pos: numpy.ndarray or float
@@ -672,9 +674,7 @@ def data2xr(
             coords[FC.STATE] = point_results[FC.STATE].to_numpy()
         else:
             attrs[FC.STATE] = str(point_results[FC.STATE][0].to_numpy())
-    coords.update({
-        allcn[i]: allc[i] for i in reversed(ci)
-    })
+    coords.update({allcn[i]: allc[i] for i in reversed(ci)})
 
     dvars = {}
     for v, d in data.items():
@@ -683,16 +683,12 @@ def data2xr(
         else:
             dvars[v] = ([FC.STATE] + cn, np.swapaxes(d.reshape(d.shape[0], *cl), 1, 2))
 
-    ds = Dataset(
-        coords=coords,
-        data_vars=dvars,
-        attrs=attrs
-    )
+    ds = Dataset(coords=coords, data_vars=dvars, attrs=attrs)
 
     if to_file is not None:
         if verbosity > 0:
             print("Writing file", to_file)
         enc = {k: {"zlib": True, "complevel": complevel} for k in ds.data_vars}
         ds.to_netcdf(to_file, encoding=enc)
-    
+
     return ds

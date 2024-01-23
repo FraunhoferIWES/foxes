@@ -25,7 +25,7 @@ class ABLLogWsProfile(VerticalProfile):
     def __init__(self, *args, ustar_input=False, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -79,7 +79,7 @@ class ABLLogWsProfile(VerticalProfile):
 
         mol = np.zeros_like(heights)
         mol[:] = data[FV.MOL]
-        
+
         if self.ustar_input:
             ustar = data[FV.USTAR]
         else:

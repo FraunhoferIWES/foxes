@@ -11,7 +11,7 @@ class IECTIWake(TopHatWakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     http://orbit.dtu.dk/files/3750291/2009_31.pdf
     v2: VolLuk: corrected implementation following: IEC-64100-1-2005-8
     (Appearently an error in the document by DTU)

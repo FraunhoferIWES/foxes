@@ -13,7 +13,7 @@ class Bastankhah2016Model(Model):
 
     Notes
     -----
-    Reference: 
+    Reference:
     "Experimental and theoretical study of wind turbine wakes in yawed conditions"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595
@@ -365,7 +365,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     "Experimental and theoretical study of wind turbine wakes in yawed conditions"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1017/jfm.2016.595

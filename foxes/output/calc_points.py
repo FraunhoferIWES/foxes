@@ -7,17 +7,18 @@ from foxes.utils import write_nc
 
 from .output import Output
 
+
 class PointCalculator(Output):
     """
     Computes results at given points
-    
+
     Attributes
     ----------
     algo: foxes.Algorithm
         The algorithm for point calculation
     farm_results: xarray.Dataset
         The farm results
-    
+
     :group: output
 
     """
@@ -25,7 +26,7 @@ class PointCalculator(Output):
     def __init__(self, algo, farm_results, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         algo: foxes.Algorithm
@@ -41,23 +42,23 @@ class PointCalculator(Output):
         self.farm_results = farm_results
 
     def calculate(
-            self, 
-            points, 
-            *args, 
-            states_mean=False,
-            weight_turbine=0,
-            to_file=None,
-            write_vars=None,
-            write_pars={},
-            **kwargs
-        ):
+        self,
+        points,
+        *args,
+        states_mean=False,
+        weight_turbine=0,
+        to_file=None,
+        write_vars=None,
+        write_pars={},
+        **kwargs,
+    ):
         """
         Calculate point results
-        
+
         Parameters
         ----------
         points: numpy.ndarray
-            The points, shape: (n_points, 3) 
+            The points, shape: (n_points, 3)
             or (n_states, n_points, 3)
         args: tuple, optional
             Additional arguments for algo.calc_points
@@ -90,15 +91,17 @@ class PointCalculator(Output):
             pts[:] = points[None, :]
             p_has_s = False
         else:
-            raise ValueError(f"Expecting point shape (n_states, n_points, 3) or (n_points, 3), got {points.shape}")
-        
+            raise ValueError(
+                f"Expecting point shape (n_states, n_points, 3) or (n_points, 3), got {points.shape}"
+            )
+
         pres = self.algo.calc_points(self.farm_results, pts, *args, **kwargs)
 
         if states_mean:
             weights = self.farm_results[FV.WEIGHT].to_numpy()[:, weight_turbine]
             pres = Dataset(
                 data_vars={
-                    v: np.einsum('s,sp->p', weights, pres[v].to_numpy()) 
+                    v: np.einsum("s,sp->p", weights, pres[v].to_numpy())
                     for v in pres.data_vars.keys()
                 }
             )
@@ -107,37 +110,35 @@ class PointCalculator(Output):
         if to_file is not None:
             if states_mean:
                 if p_has_s:
-                    points = np.einsum('s,spd->pd', weights, points)
+                    points = np.einsum("s,spd->pd", weights, points)
                 dvars = {
                     "x": ((FC.POINT,), points[..., 0]),
                     "y": ((FC.POINT,), points[..., 1]),
-                    "z": ((FC.POINT,), points[..., 2])
-                }   
-                dvars.update({v: ((FC.POINT,), pres[v].to_numpy()) 
-                            for v in vrs})
+                    "z": ((FC.POINT,), points[..., 2]),
+                }
+                dvars.update({v: ((FC.POINT,), pres[v].to_numpy()) for v in vrs})
                 ds = Dataset(data_vars=dvars)
             else:
                 if p_has_s:
                     dvars = {
                         "x": ((FC.STATE, FC.POINT), points[..., 0]),
                         "y": ((FC.STATE, FC.POINT), points[..., 1]),
-                        "z": ((FC.STATE, FC.POINT), points[..., 2])
+                        "z": ((FC.STATE, FC.POINT), points[..., 2]),
                     }
                 else:
                     dvars = {
                         "x": ((FC.POINT,), points[..., 0]),
                         "y": ((FC.POINT,), points[..., 1]),
-                        "z": ((FC.POINT,), points[..., 2])
-                    }   
-                dvars.update({v: ((FC.STATE, FC.POINT), pres[v].to_numpy()) 
-                            for v in vrs})
+                        "z": ((FC.POINT,), points[..., 2]),
+                    }
+                dvars.update(
+                    {v: ((FC.STATE, FC.POINT), pres[v].to_numpy()) for v in vrs}
+                )
                 ds = Dataset(
-                    coords={FC.STATE: pres[FC.STATE].to_numpy()},
-                    data_vars=dvars
+                    coords={FC.STATE: pres[FC.STATE].to_numpy()}, data_vars=dvars
                 )
 
             fpath = self.get_fpath(to_file)
             write_nc(ds, fpath, **write_pars)
 
         return pres
-    

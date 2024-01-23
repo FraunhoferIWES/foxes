@@ -235,9 +235,7 @@ class WakeFrame(Model):
 
         # calc wakes:
         if not ambient:
-            wcalc = algo.get_model("PointWakesCalculation")(
-                wake_models=wake_models
-            )
+            wcalc = algo.get_model("PointWakesCalculation")(wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
             wsrc = states_source_turbine if self_wake else None
             res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)
@@ -294,8 +292,9 @@ class WakeFrame(Model):
                     return scls(*args, **kwargs)
 
         else:
-            estr = "Wake frame type '{}' is not defined, available types are \n {}".format(
-                wframe_type, sorted([i.__name__ for i in allc])
+            estr = (
+                "Wake frame type '{}' is not defined, available types are \n {}".format(
+                    wframe_type, sorted([i.__name__ for i in allc])
+                )
             )
             raise KeyError(estr)
-        

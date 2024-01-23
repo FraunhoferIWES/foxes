@@ -7,6 +7,7 @@ import foxes.variables as FV
 
 from . import grids
 
+
 class SliceData(Output):
     """
     Create data for horizontal or vertical 2D slices
@@ -45,10 +46,20 @@ class SliceData(Output):
         self.fres = farm_results
         self.runner = runner
 
-    def _data_mod(self, a_pos, b_pos, c_pos, data, 
-                   normalize_a, normalize_b, normalize_c,
-                   normalize_v, vmin, vmax):
-        """ Helper function for data modification """
+    def _data_mod(
+        self,
+        a_pos,
+        b_pos,
+        c_pos,
+        data,
+        normalize_a,
+        normalize_b,
+        normalize_c,
+        normalize_v,
+        vmin,
+        vmax,
+    ):
+        """Helper function for data modification"""
         if normalize_a is not None:
             a_pos /= normalize_a
         if normalize_b is not None:
@@ -62,14 +73,13 @@ class SliceData(Output):
             if v in vmin:
                 data[v] = np.maximum(data[v], vmin[v])
             if v in vmax:
-                data[v] = np.minimum(data[v], vmax[v])   
-        
+                data[v] = np.minimum(data[v], vmax[v])
+
         return a_pos, b_pos, c_pos, data
 
     def _write(self, format, data, fname, verbosity, **write_pars):
-        """ Helper function for file writing """
+        """Helper function for file writing"""
         if fname is not None:
-
             if format == "numpy":
                 fpath = self.get_fpath(fname)
                 if verbosity > 0:
@@ -87,34 +97,36 @@ class SliceData(Output):
                 write_nc(data, self.get_fpath(fname), verbosity=verbosity, **write_pars)
 
             else:
-                raise ValueError(f"Unknown data format '{format}', choices: numpy, pandas, xarray")        
+                raise ValueError(
+                    f"Unknown data format '{format}', choices: numpy, pandas, xarray"
+                )
 
     def _calc_mean_data(
-            self,
-            ori,
-            data_format,
-            variables,
-            a_pos,
-            b_pos,
-            c_pos,
-            g_pts,
-            normalize_a, 
-            normalize_b, 
-            normalize_c, 
-            normalize_v, 
-            label_map,
-            vmin, 
-            vmax,
-            states_sel,
-            states_isel,
-            weight_turbine,
-            to_file,
-            write_pars,
-            ret_states,
-            verbosity,
-            **kwargs,
-        ):
-        """ Helper function for mean data calculation """
+        self,
+        ori,
+        data_format,
+        variables,
+        a_pos,
+        b_pos,
+        c_pos,
+        g_pts,
+        normalize_a,
+        normalize_b,
+        normalize_c,
+        normalize_v,
+        label_map,
+        vmin,
+        vmax,
+        states_sel,
+        states_isel,
+        weight_turbine,
+        to_file,
+        write_pars,
+        ret_states,
+        verbosity,
+        **kwargs,
+    ):
+        """Helper function for mean data calculation"""
         # calculate point results:
         point_results = grids.calc_point_results(
             algo=self.algo,
@@ -134,29 +146,43 @@ class SliceData(Output):
 
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
-        data = {v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
-                for v in variables}
+        data = {
+            v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
+            for v in variables
+        }
         del point_results
 
         # apply data modification:
-        a_pos, b_pos, c_pos, data  = self._data_mod(a_pos, b_pos, c_pos, data, 
-            normalize_a, normalize_b, normalize_c, normalize_v, vmin, vmax)
+        a_pos, b_pos, c_pos, data = self._data_mod(
+            a_pos,
+            b_pos,
+            c_pos,
+            data,
+            normalize_a,
+            normalize_b,
+            normalize_c,
+            normalize_v,
+            vmin,
+            vmax,
+        )
 
         # translate to selected format:
         if data_format == "numpy":
             data = grids.np2np_p(data, a_pos, b_pos)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         elif data_format == "pandas":
             data = grids.np2pd_p(data, a_pos, b_pos, ori, label_map)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         elif data_format == "xarray":
             data = grids.np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         else:
-            raise ValueError(f"Unknown data format '{data_format}', choices: numpy, pandas, xarray")        
+            raise ValueError(
+                f"Unknown data format '{data_format}', choices: numpy, pandas, xarray"
+            )
 
         return (data, states) if ret_states else data
-    
+
     def get_mean_data_xy(
         self,
         resolution,
@@ -259,11 +285,28 @@ class SliceData(Output):
             self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
         )
 
-        data = self._calc_mean_data("xy", data_format, variables, *gdata,
-            normalize_x, normalize_y, normalize_z, normalize_v, label_map,
-            vmin, vmax, states_sel, states_isel, weight_turbine, to_file, 
-            write_pars, ret_states, verbosity, **kwargs)
-        
+        data = self._calc_mean_data(
+            "xy",
+            data_format,
+            variables,
+            *gdata,
+            normalize_x,
+            normalize_y,
+            normalize_z,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            weight_turbine,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])
@@ -276,7 +319,7 @@ class SliceData(Output):
         data_format="xarray",
         x_direction=270,
         xmin=None,
-        zmin=0.,
+        zmin=0.0,
         xmax=None,
         zmax=None,
         y=None,
@@ -370,15 +413,43 @@ class SliceData(Output):
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
-        gdata = grids.get_grid_xz(self.fres, resolution,
-            x_direction, xmin, zmin, xmax, zmax, y, xspace, zspace, verbosity)
+        gdata = grids.get_grid_xz(
+            self.fres,
+            resolution,
+            x_direction,
+            xmin,
+            zmin,
+            xmax,
+            zmax,
+            y,
+            xspace,
+            zspace,
+            verbosity,
+        )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
-        data = self._calc_mean_data("xz", data_format, variables, *gdatb,
-            normalize_x, normalize_z, normalize_y, normalize_v, label_map,
-            vmin, vmax, states_sel, states_isel, weight_turbine, to_file, 
-            write_pars, ret_states, verbosity, **kwargs)
-        
+        data = self._calc_mean_data(
+            "xz",
+            data_format,
+            variables,
+            *gdatb,
+            normalize_x,
+            normalize_z,
+            normalize_y,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            weight_turbine,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])
@@ -391,7 +462,7 @@ class SliceData(Output):
         data_format="xarray",
         x_direction=270,
         ymin=None,
-        zmin=0.,
+        zmin=0.0,
         ymax=None,
         zmax=None,
         x=None,
@@ -485,45 +556,73 @@ class SliceData(Output):
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
-        gdata = grids.get_grid_yz(self.fres, resolution,
-            x_direction, ymin, zmin, ymax, zmax, x, yspace, zspace, verbosity)
+        gdata = grids.get_grid_yz(
+            self.fres,
+            resolution,
+            x_direction,
+            ymin,
+            zmin,
+            ymax,
+            zmax,
+            x,
+            yspace,
+            zspace,
+            verbosity,
+        )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
-        
-        data = self._calc_mean_data("yz", data_format, variables, *gdatb,
-            normalize_y, normalize_z, normalize_x, normalize_v, label_map,
-            vmin, vmax, states_sel, states_isel, weight_turbine, to_file, 
-            write_pars, ret_states, verbosity, **kwargs)
-        
+
+        data = self._calc_mean_data(
+            "yz",
+            data_format,
+            variables,
+            *gdatb,
+            normalize_y,
+            normalize_z,
+            normalize_x,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            weight_turbine,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])
         return data
 
     def _calc_states_data(
-            self,
-            ori,
-            data_format,
-            variables,
-            a_pos,
-            b_pos,
-            c_pos,
-            g_pts,
-            normalize_a, 
-            normalize_b, 
-            normalize_c, 
-            normalize_v, 
-            label_map,
-            vmin, 
-            vmax,
-            states_sel,
-            states_isel,
-            to_file,
-            write_pars,
-            ret_states,
-            verbosity,
-            **kwargs,
-        ):
-        """ Helper function for states data calculation """
+        self,
+        ori,
+        data_format,
+        variables,
+        a_pos,
+        b_pos,
+        c_pos,
+        g_pts,
+        normalize_a,
+        normalize_b,
+        normalize_c,
+        normalize_v,
+        label_map,
+        vmin,
+        vmax,
+        states_sel,
+        states_isel,
+        to_file,
+        write_pars,
+        ret_states,
+        verbosity,
+        **kwargs,
+    ):
+        """Helper function for states data calculation"""
         # calculate point results:
         if states_sel is not None:
             kwargs["sel"] = {FC.STATE: states_sel}
@@ -548,21 +647,33 @@ class SliceData(Output):
         del point_results
 
         # apply data modification:
-        a_pos, b_pos, c_pos, data  = self._data_mod(a_pos, b_pos, c_pos, data, 
-            normalize_a, normalize_b, normalize_c, normalize_v, vmin, vmax)
+        a_pos, b_pos, c_pos, data = self._data_mod(
+            a_pos,
+            b_pos,
+            c_pos,
+            data,
+            normalize_a,
+            normalize_b,
+            normalize_c,
+            normalize_v,
+            vmin,
+            vmax,
+        )
 
         # translate to selected format:
         if data_format == "numpy":
             data = grids.np2np_sp(data, states, a_pos, b_pos)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         elif data_format == "pandas":
             data = grids.np2pd_sp(data, states, a_pos, b_pos, ori, label_map)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         elif data_format == "xarray":
             data = grids.np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map)
-            self._write(data_format, data, to_file, verbosity, **write_pars) 
+            self._write(data_format, data, to_file, verbosity, **write_pars)
         else:
-            raise ValueError(f"Unknown data format '{data_format}', choices: numpy, pandas, xarray")        
+            raise ValueError(
+                f"Unknown data format '{data_format}', choices: numpy, pandas, xarray"
+            )
 
         return (data, states) if ret_states else data
 
@@ -665,11 +776,27 @@ class SliceData(Output):
             self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
         )
 
-        data = self._calc_states_data("xy", data_format, variables, *gdata,
-                normalize_x, normalize_y, normalize_z, normalize_v, label_map,
-                vmin, vmax, states_sel, states_isel, to_file, write_pars, 
-                ret_states, verbosity, **kwargs)
-        
+        data = self._calc_states_data(
+            "xy",
+            data_format,
+            variables,
+            *gdata,
+            normalize_x,
+            normalize_y,
+            normalize_z,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])
@@ -682,7 +809,7 @@ class SliceData(Output):
         data_format="xarray",
         x_direction=270,
         xmin=None,
-        zmin=0.,
+        zmin=0.0,
         xmax=None,
         zmax=None,
         y=None,
@@ -773,15 +900,42 @@ class SliceData(Output):
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
-        gdata = grids.get_grid_xz(self.fres, resolution,
-            x_direction, xmin, zmin, xmax, zmax, y, xspace, zspace, verbosity)
+        gdata = grids.get_grid_xz(
+            self.fres,
+            resolution,
+            x_direction,
+            xmin,
+            zmin,
+            xmax,
+            zmax,
+            y,
+            xspace,
+            zspace,
+            verbosity,
+        )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
-        data = self._calc_states_data("xz", data_format, variables, *gdatb,
-                normalize_x, normalize_z, normalize_y, normalize_v, label_map,
-                vmin, vmax, states_sel, states_isel, to_file, write_pars, 
-                ret_states, verbosity, **kwargs)
-        
+        data = self._calc_states_data(
+            "xz",
+            data_format,
+            variables,
+            *gdatb,
+            normalize_x,
+            normalize_z,
+            normalize_y,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])
@@ -794,7 +948,7 @@ class SliceData(Output):
         data_format="xarray",
         x_direction=270,
         ymin=None,
-        zmin=0.,
+        zmin=0.0,
         ymax=None,
         zmax=None,
         x=None,
@@ -885,15 +1039,42 @@ class SliceData(Output):
             The grid data (x_pos, y_pos, z_pos, g_pts)
 
         """
-        gdata = grids.get_grid_yz(self.fres, resolution,
-            x_direction, ymin, zmin, ymax, zmax, x, yspace, zspace, verbosity)
+        gdata = grids.get_grid_yz(
+            self.fres,
+            resolution,
+            x_direction,
+            ymin,
+            zmin,
+            ymax,
+            zmax,
+            x,
+            yspace,
+            zspace,
+            verbosity,
+        )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
-        
-        data = self._calc_states_data("yz", data_format, variables, *gdatb,
-                normalize_y, normalize_z, normalize_x, normalize_v, label_map,
-                vmin, vmax, states_sel, states_isel, to_file, write_pars, 
-                ret_states, verbosity, **kwargs)
-        
+
+        data = self._calc_states_data(
+            "yz",
+            data_format,
+            variables,
+            *gdatb,
+            normalize_y,
+            normalize_z,
+            normalize_x,
+            normalize_v,
+            label_map,
+            vmin,
+            vmax,
+            states_sel,
+            states_isel,
+            to_file,
+            write_pars,
+            ret_states,
+            verbosity,
+            **kwargs,
+        )
+
         if ret_grid:
             out = list(data) if ret_states else [data]
             return tuple(out + [gdata])

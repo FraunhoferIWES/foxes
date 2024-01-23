@@ -533,7 +533,7 @@ class Sequential(Downwind):
 
         pres = plist.calculate(self, mdata, fdata, pdata, parameters=calc_pars)
         pres = Dataset(
-            coords={FC.STATE: [self.states.index], FC.POINT: np.arange(n_points)},
+            coords={FC.STATE: self.states.index(), FC.POINT: np.arange(n_points)},
             data_vars={v: ((FC.STATE, FC.POINT), d) for v, d in pres.items()},
         )
 

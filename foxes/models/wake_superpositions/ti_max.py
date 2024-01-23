@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 
+
 class TIMax(WakeSuperposition):
     """
     Max wake superposition for TI.
@@ -76,8 +77,10 @@ class TIMax(WakeSuperposition):
 
         """
         if variable != FV.TI:
-            raise ValueError(f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}"
+            )
+
         wake_delta[sel_sp] = np.maximum(wake_model_result, wake_delta[sel_sp])
         return wake_delta
 

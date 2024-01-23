@@ -399,3 +399,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Restructured: Now simplified classes for WS or TI superposition only (less general but simpler), e.g. `WSLinear` or `TIQuadratic`, etc. Also in the model book the models are now called `ws_linear` or `ti_quadratic`, etc.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2)
+
+## v0.5.2.1
+
+- Bug fixes:
+  - Bugs fixed that messed up the colorbar and the title in animations
+- Notebooks:
+  - Improved animations in `timelines.ipynb` and `sequential.ipynb`
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1)

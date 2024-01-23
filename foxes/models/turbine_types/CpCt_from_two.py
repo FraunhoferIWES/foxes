@@ -71,12 +71,14 @@ class CpCtFromTwo(PCtFromTwo):
         ws_delta = 0.0001
         ws_min = np.min(ws)
         ws_max = np.max(ws)
-        N = int((ws_max - ws_min)/ws_delta)
+        N = int((ws_max - ws_min) / ws_delta)
 
         data_P = pd.DataFrame(index=range(N), dtype=FC.DTYPE)
         data_P["ws"] = np.linspace(ws_min, ws_max, N, endpoint=True)
         data_P["cp"] = np.interp(data_P["ws"], ws, cp, left=0, right=0)
-        data_P["P"] = 0.5 * rho * A * data_P["cp"] * data_P["ws"]**3 / FC.P_UNITS[P_unit]
+        data_P["P"] = (
+            0.5 * rho * A * data_P["cp"] * data_P["ws"] ** 3 / FC.P_UNITS[P_unit]
+        )
 
         super().__init__(
             data_P,

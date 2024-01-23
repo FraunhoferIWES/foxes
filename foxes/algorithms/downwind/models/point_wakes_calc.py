@@ -22,9 +22,7 @@ class PointWakesCalculation(PointDataModel):
 
     """
 
-    def __init__(
-        self, emodels=None, emodels_cpars=None, wake_models=None
-    ):
+    def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
         """
         Constructor.
 

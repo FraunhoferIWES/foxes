@@ -4,6 +4,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WSProduct(WakeSuperposition):
     """
     Product supersposition of wind deficit results
@@ -107,10 +108,11 @@ class WSProduct(WakeSuperposition):
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
-        
-        if np.any(sel_sp):
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
 
+        if np.any(sel_sp):
             if np.max(np.abs(wake_delta)) < 1e-14:
                 wake_delta[:] = 1
 

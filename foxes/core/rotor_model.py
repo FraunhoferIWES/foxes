@@ -8,6 +8,7 @@ from foxes.utils import wd2uv, uv2wd, all_subclasses
 
 from .data import Data
 
+
 class RotorModel(FarmDataModel):
     """
     Abstract base class of rotor models.
@@ -445,4 +446,3 @@ class RotorModel(FarmDataModel):
                 rmodel_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)
-        

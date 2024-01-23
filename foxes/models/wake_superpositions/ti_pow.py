@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 
+
 class TIPow(WakeSuperposition):
     """
     Power wake superposition for TI.
@@ -81,8 +82,10 @@ class TIPow(WakeSuperposition):
 
         """
         if variable != FV.TI:
-            raise ValueError(f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}"
+            )
+
         wake_delta[sel_sp] += wake_model_result**self.pow
         return wake_delta
 
@@ -126,11 +129,13 @@ class TIPow(WakeSuperposition):
         """
         # linear superposition to ambient:
         if self.superp_to_amb == "linear":
-            return wake_delta ** (1/self.pow)
+            return wake_delta ** (1 / self.pow)
 
         # quadratic superposition to ambient:
         elif self.superp_to_amb == "quadratic":
-            return np.sqrt(wake_delta **(2/self.pow) + amb_results**2) - amb_results
+            return (
+                np.sqrt(wake_delta ** (2 / self.pow) + amb_results**2) - amb_results
+            )
 
         # unknown ti delta:
         else:

@@ -4,6 +4,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WSQuadratic(WakeSuperposition):
     """
     Quadratic supersposition of wind deficit results
@@ -106,8 +107,10 @@ class WSQuadratic(WakeSuperposition):
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
+
         if np.any(sel_sp):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
@@ -120,7 +123,7 @@ class WSQuadratic(WakeSuperposition):
                 states_source_turbine=states_source_turbine,
             )[sel_sp]
 
-            wake_delta[sel_sp] += (scale * wake_model_result)**2
+            wake_delta[sel_sp] += (scale * wake_model_result) ** 2
 
         return wake_delta
 

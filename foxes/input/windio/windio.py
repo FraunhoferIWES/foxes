@@ -10,6 +10,7 @@ from foxes.utils import import_module
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 def read_resource(res, fixed_vars={}, **kwargs):
     """
     Reads a WindIO energy resource

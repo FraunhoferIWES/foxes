@@ -3,6 +3,7 @@ from foxes.utils import all_subclasses
 
 from .turbine_model import TurbineModel
 
+
 class TurbineType(TurbineModel):
     """
     Abstract base class for turbine type models.
