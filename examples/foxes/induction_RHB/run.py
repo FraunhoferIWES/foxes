@@ -154,7 +154,7 @@ if __name__ == "__main__":
     xmax = (args.nx - 1) * args.dx + 2000
     g = o.gen_states_fig_xy(
         args.var,
-        figsize=(12, 3.5),
+        figsize=(7, 5),
         resolution=20,
         xmin=xmin,
         xmax=xmax,

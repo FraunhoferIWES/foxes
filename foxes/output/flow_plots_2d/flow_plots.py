@@ -143,6 +143,8 @@ class FlowPlots2D(SliceData):
             add_bar=add_bar,
             vlabel=vlabel,
             quiv=quiv,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             animated=animated,
@@ -286,6 +288,8 @@ class FlowPlots2D(SliceData):
             title=title,
             add_bar=add_bar,
             vlabel=vlabel,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             quiv=quiv,
@@ -430,6 +434,8 @@ class FlowPlots2D(SliceData):
             title=title,
             add_bar=add_bar,
             vlabel=vlabel,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             quiv=quiv,
@@ -548,9 +554,13 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
             else:
                 ttl = title
 
@@ -571,6 +581,8 @@ class FlowPlots2D(SliceData):
                 title=ttl,
                 add_bar=add_bar,
                 vlabel=vlabel,
+                vmin=vmin,
+                vmax=vmax,
                 quiv=quiv,
                 ret_state=ret_state,
                 ret_im=ret_im,
@@ -687,10 +699,14 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", x direction = {x_direction}°"
                 ttl += f", y =  {int(np.round(y_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
             else:
                 ttl = title
 
@@ -712,6 +728,8 @@ class FlowPlots2D(SliceData):
                 add_bar=add_bar,
                 vlabel=vlabel,
                 quiv=quiv,
+                vmin=vmin,
+                vmax=vmax,
                 ret_state=ret_state,
                 ret_im=ret_im,
                 animated=animated,
@@ -827,9 +845,16 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", x direction = {x_direction}°"
-            ttl += f", x =  {int(np.round(x_pos))} m"
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
+            if not animated and title is None:
+                ttl = f"State {s}" if title is None else title
+                ttl += f", x direction = {x_direction}°"
+                ttl += f", x =  {int(np.round(x_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
+            else:
+                ttl = title
 
             out = get_fig(
                 var=var,
@@ -848,6 +873,8 @@ class FlowPlots2D(SliceData):
                 title=ttl,
                 add_bar=add_bar,
                 vlabel=vlabel,
+                vmin=vmin,
+                vmax=vmax,
                 quiv=quiv,
                 ret_state=ret_state,
                 ret_im=ret_im,

@@ -39,7 +39,11 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         self.orientation = orientation
         self.runner = runner
         self.pars = pars
-        # self.pars["animated"] = True
+        
+        if "title" in self.pars and callable(self.pars["title"]):
+            self._tfun = self.pars.pop("title")
+        else:
+            self._tfun = None
 
     def initialize(self, algo):
         """
@@ -72,6 +76,11 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         o = FlowPlots2D(algo, fres, self.runner)
 
+        if self._tfun is not None:
+            self.pars["title"] = self._tfun(algo.states.counter, 
+                                            algo.states.index()[0])
+
+
         if self.orientation == "xy":
             self._data.append(next(o.gen_states_fig_xy(**self.pars)))
         elif self.orientation == "xz":
@@ -82,6 +91,12 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             raise KeyError(
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
+        
+        if (
+            self.pars.get("vmin", None) is not None and
+            self.pars.get("vmax", None) is not None
+        ):
+            self.pars["add_bar"] = False
 
     def gen_images(self):
         for d in self._data:
