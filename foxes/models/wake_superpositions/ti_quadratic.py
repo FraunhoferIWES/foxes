@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 
+
 class TIQuadratic(WakeSuperposition):
     """
     Quadratic wake superposition for TI.
@@ -76,8 +77,10 @@ class TIQuadratic(WakeSuperposition):
 
         """
         if variable != FV.TI:
-            raise ValueError(f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wake variable {FV.TI}, got {variable}"
+            )
+
         wake_delta[sel_sp] += wake_model_result**2
         return wake_delta
 

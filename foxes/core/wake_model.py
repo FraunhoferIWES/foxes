@@ -146,8 +146,9 @@ class WakeModel(Model):
                     return scls(*args, **kwargs)
 
         else:
-            estr = "Wake model type '{}' is not defined, available types are \n {}".format(
-                wmodel_type, sorted([i.__name__ for i in allc])
+            estr = (
+                "Wake model type '{}' is not defined, available types are \n {}".format(
+                    wmodel_type, sorted([i.__name__ for i in allc])
+                )
             )
             raise KeyError(estr)
-        

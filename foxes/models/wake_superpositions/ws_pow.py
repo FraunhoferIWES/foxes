@@ -4,6 +4,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WSPow(WakeSuperposition):
     """
     Power supersposition of wind deficit results
@@ -111,8 +112,10 @@ class WSPow(WakeSuperposition):
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
+
         if np.any(sel_sp):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
@@ -125,7 +128,7 @@ class WSPow(WakeSuperposition):
                 states_source_turbine=states_source_turbine,
             )[sel_sp]
 
-            wake_delta[sel_sp] += np.abs(scale * wake_model_result)**self.pow
+            wake_delta[sel_sp] += np.abs(scale * wake_model_result) ** self.pow
 
         return wake_delta
 
@@ -167,7 +170,7 @@ class WSPow(WakeSuperposition):
             results by simple plus operation. Shape: (n_states, n_points)
 
         """
-        w = -wake_delta**(1/self.pow)
+        w = -(wake_delta ** (1 / self.pow))
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)
         if self.lim_high is not None:

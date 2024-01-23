@@ -1,9 +1,10 @@
 import importlib
 
+
 def import_module(name, package=None, hint=None):
     """
     Imports a module dynamically.
-    
+
     Parameters
     ----------
     name: str
@@ -13,14 +14,14 @@ def import_module(name, package=None, hint=None):
         if not given
     hint: str, optional
         Installation advice, in case the import fails
-    
+
     Returns
     -------
     mdl: module
         The imnported package
-    
+
     :group: utils
-    
+
     """
     try:
         return importlib.import_module(name, package)

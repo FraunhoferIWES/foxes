@@ -4,6 +4,7 @@ from foxes.core import WakeSuperposition
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WSMax(WakeSuperposition):
     """
     Max supersposition of wind deficit results
@@ -106,8 +107,10 @@ class WSMax(WakeSuperposition):
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
-            raise ValueError(f"Superposition '{self.name}': Expecting wind speed variable, got {variable}")
-        
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
+
         if np.any(sel_sp):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
@@ -122,7 +125,7 @@ class WSMax(WakeSuperposition):
 
             wake_model_result = np.abs(scale * wake_model_result)
             odelta = wake_delta[sel_sp]
-            
+
             wake_delta[sel_sp] = np.maximum(odelta, wake_model_result)
 
         return wake_delta

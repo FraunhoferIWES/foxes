@@ -31,7 +31,7 @@ class RankineHalfBody(WakeModel):
     def __init__(self, ct_max=0.9999):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ct_max: float
@@ -177,7 +177,7 @@ class RankineHalfBody(WakeModel):
         sp_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
         if np.any(sp_sel):
             # apply selection
-            xyz = wake_coos[sp_sel]                
+            xyz = wake_coos[sp_sel]
 
             # calc velocity components
             vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
@@ -189,7 +189,7 @@ class RankineHalfBody(WakeModel):
         if np.any(sp_sel):
             # apply selection
             xyz = np.zeros_like(wake_coos[sp_sel])
-            xyz[:, 0] = xs[sp_sel]                
+            xyz[:, 0] = xs[sp_sel]
 
             # calc velocity components
             vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)

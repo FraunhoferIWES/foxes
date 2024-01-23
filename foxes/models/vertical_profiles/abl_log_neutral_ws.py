@@ -20,7 +20,7 @@ class ABLLogNeutralWsProfile(VerticalProfile):
     def __init__(self, *args, ustar_input=False, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional

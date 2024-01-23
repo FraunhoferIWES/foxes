@@ -11,7 +11,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     "Turbulence characteristics in wind-turbine wakes"
     A. Crespo, J. Hernandez
     https://doi.org/10.1016/0167-6105(95)00033-X

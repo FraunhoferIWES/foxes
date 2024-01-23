@@ -96,15 +96,19 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_xy(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -153,7 +157,7 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
 
     def get_mean_fig_xz(
@@ -241,16 +245,20 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_xz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        x_direction=x_direction, data_format="numpy", 
-                        ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_xz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            x_direction=x_direction,
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -299,7 +307,7 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
 
     def get_mean_fig_yz(
@@ -387,16 +395,20 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_yz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        x_direction=x_direction, data_format="numpy", 
-                        ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_yz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            x_direction=x_direction,
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -446,9 +458,9 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
-        
+
     def gen_states_fig_xy(
         self,
         var,
@@ -526,16 +538,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xy(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -590,7 +606,7 @@ class FlowPlots2D(SliceData):
             )
 
             yield out
-    
+
     def gen_states_fig_xz(
         self,
         var,
@@ -671,16 +687,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_xz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -817,16 +837,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_yz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_yz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
