@@ -6,6 +6,7 @@ from foxes.utils import write_nc
 
 from .output import Output
 
+
 class ResultsWriter(Output):
     """
     Writes results farm data to file.
@@ -47,9 +48,9 @@ class ResultsWriter(Output):
             raise KeyError(
                 f"ResultsWriter: Either give 'farm_results' or 'data' arguments"
             )
-    
+
     def _get_data_vars(self, variables):
-        """ Helper function for variable gathering """
+        """Helper function for variable gathering"""
         data = self.data
         if variables is None:
             pass
@@ -64,7 +65,7 @@ class ResultsWriter(Output):
                     data = data.rename_axis(index={s: ns})
         else:
             data = self.data[list(variables)]
-        
+
         return data, data.columns.tolist()
 
     def write_csv(
@@ -109,12 +110,21 @@ class ResultsWriter(Output):
 
         if state_turbine_table:
             if len(variables) != 1:
-                raise ValueError(f"state_turbine_table can only be written for a single variable, got {variables}")
+                raise ValueError(
+                    f"state_turbine_table can only be written for a single variable, got {variables}"
+                )
             v = variables[0]
-            cnames = {t: f"{v}_T{t:04d}" if tix == FC.TURBINE else f"{v}_{t}" for t in data[tix]}
-            for ti, (t, g) in enumerate(data.reset_index().set_index(FC.STATE).groupby(tix)):
+            cnames = {
+                t: f"{v}_T{t:04d}" if tix == FC.TURBINE else f"{v}_{t}"
+                for t in data[tix]
+            }
+            for ti, (t, g) in enumerate(
+                data.reset_index().set_index(FC.STATE).groupby(tix)
+            ):
                 if ti == 0:
-                    odata = pd.DataFrame(index=g.index.to_numpy(), columns=list(cnames.values()))
+                    odata = pd.DataFrame(
+                        index=g.index.to_numpy(), columns=list(cnames.values())
+                    )
                     odata.index.name = g.index.name
                 cname = cnames[t]
                 odata[cname] = g[v].to_numpy().copy()
@@ -163,13 +173,16 @@ class ResultsWriter(Output):
         if turbine_names:
             idx = pd.IndexSlice
             crds[FC.TURBINE] = self.data.loc[idx[0, :], FC.TNAME].to_numpy()
-        
+
         ds = Dataset(
             coords=crds,
             data_vars={
-                v: ((FC.STATE, FC.TURBINE), data[v].to_numpy().reshape(n_states, n_turbines))
+                v: (
+                    (FC.STATE, FC.TURBINE),
+                    data[v].to_numpy().reshape(n_states, n_turbines),
+                )
                 for v in variables
-            }
+            },
         )
 
         fpath = self.get_fpath(file_path)

@@ -96,15 +96,19 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_xy(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -143,6 +147,8 @@ class FlowPlots2D(SliceData):
             add_bar=add_bar,
             vlabel=vlabel,
             quiv=quiv,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             animated=animated,
@@ -151,7 +157,7 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
 
     def get_mean_fig_xz(
@@ -239,16 +245,20 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_xz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        x_direction=x_direction, data_format="numpy", 
-                        ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_xz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            x_direction=x_direction,
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -286,6 +296,8 @@ class FlowPlots2D(SliceData):
             title=title,
             add_bar=add_bar,
             vlabel=vlabel,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             quiv=quiv,
@@ -295,7 +307,7 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
 
     def get_mean_fig_yz(
@@ -383,16 +395,20 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, gdata = self.get_mean_data_yz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        x_direction=x_direction, data_format="numpy", 
-                        ret_grid=True, **kwargs)
+        data, gdata = self.get_mean_data_yz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            x_direction=x_direction,
+            data_format="numpy",
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         if title is None:
@@ -430,6 +446,8 @@ class FlowPlots2D(SliceData):
             title=title,
             add_bar=add_bar,
             vlabel=vlabel,
+            vmin=vmin,
+            vmax=vmax,
             ret_state=ret_state,
             ret_im=ret_im,
             quiv=quiv,
@@ -440,9 +458,9 @@ class FlowPlots2D(SliceData):
         if ret_data:
             out = list(out) if isinstance(out, tuple) else [out]
             return tuple(out + [data[:, :, 0]])
-        
+
         return out
-        
+
     def gen_states_fig_xy(
         self,
         var,
@@ -520,16 +538,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xy(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_xy(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -548,9 +570,13 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
             else:
                 ttl = title
 
@@ -571,6 +597,8 @@ class FlowPlots2D(SliceData):
                 title=ttl,
                 add_bar=add_bar,
                 vlabel=vlabel,
+                vmin=vmin,
+                vmax=vmax,
                 quiv=quiv,
                 ret_state=ret_state,
                 ret_im=ret_im,
@@ -578,7 +606,7 @@ class FlowPlots2D(SliceData):
             )
 
             yield out
-    
+
     def gen_states_fig_xz(
         self,
         var,
@@ -659,16 +687,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_xz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -687,10 +719,14 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", x direction = {x_direction}°"
                 ttl += f", y =  {int(np.round(y_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
             else:
                 ttl = title
 
@@ -712,6 +748,8 @@ class FlowPlots2D(SliceData):
                 add_bar=add_bar,
                 vlabel=vlabel,
                 quiv=quiv,
+                vmin=vmin,
+                vmax=vmax,
                 ret_state=ret_state,
                 ret_im=ret_im,
                 animated=animated,
@@ -799,16 +837,20 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
-        variables = list(set([var]+[FV.WD, FV.WS]))
+        variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_yz(variables=variables, 
-                        vmin={var: vmin} if vmin is not None else {},
-                        vmax={var: vmax} if vmax is not None else {},
-                        data_format="numpy", ret_states=True, ret_grid=True, 
-                        **kwargs)
+        data, states, gdata = self.get_states_data_yz(
+            variables=variables,
+            vmin={var: vmin} if vmin is not None else {},
+            vmax={var: vmax} if vmax is not None else {},
+            data_format="numpy",
+            ret_states=True,
+            ret_grid=True,
+            **kwargs,
+        )
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -827,9 +869,16 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
-            ttl = f"State {s}" if title is None else title
-            ttl += f", x direction = {x_direction}°"
-            ttl += f", x =  {int(np.round(x_pos))} m"
+            if animated and si > 0 and vmin is not None and vmax is not None:
+                add_bar = False
+            if not animated and title is None:
+                ttl = f"State {s}" if title is None else title
+                ttl += f", x direction = {x_direction}°"
+                ttl += f", x =  {int(np.round(x_pos))} m"
+            elif callable(title):
+                ttl = title(si, s)
+            else:
+                ttl = title
 
             out = get_fig(
                 var=var,
@@ -848,6 +897,8 @@ class FlowPlots2D(SliceData):
                 title=ttl,
                 add_bar=add_bar,
                 vlabel=vlabel,
+                vmin=vmin,
+                vmax=vmax,
                 quiv=quiv,
                 ret_state=ret_state,
                 ret_im=ret_im,

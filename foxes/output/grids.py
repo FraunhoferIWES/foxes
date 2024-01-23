@@ -6,6 +6,7 @@ from foxes.utils import wd2uv, write_nc
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 def calc_point_results(
     algo,
     g_pts,
@@ -49,6 +50,7 @@ def calc_point_results(
         algo.verbosity = averb
 
     return point_results
+
 
 def get_grid_xy(
     farm_results,
@@ -152,6 +154,7 @@ def get_grid_xy(
         z_pos,
         g_pts.reshape(n_states, n_pts, 3),
     )
+
 
 def get_grid_xz(
     farm_results,
@@ -273,6 +276,7 @@ def get_grid_xz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
+
 def get_grid_yz(
     farm_results,
     resolution,
@@ -393,10 +397,11 @@ def get_grid_yz(
         g_pts.reshape(n_states, n_pts, 3),
     )
 
+
 def np2np_p(data, a_pos, b_pos):
     """
     Create numpy data from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -408,7 +413,7 @@ def np2np_p(data, a_pos, b_pos):
     b_pos: numpy.ndarray
         The second axis coordinates, e.g. y_pos,
         shape: (n_b,)
-    
+
     Returns
     -------
     out: dict
@@ -424,10 +429,11 @@ def np2np_p(data, a_pos, b_pos):
         out[:, :, vi] = d.reshape(n_a, n_b)
     return out
 
+
 def np2np_sp(data, states, a_pos, b_pos):
     """
     Create numpy data from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -441,7 +447,7 @@ def np2np_sp(data, states, a_pos, b_pos):
     b_pos: numpy.ndarray
         The second axis coordinates, e.g. y_pos,
         shape: (n_b,)
-    
+
     Returns
     -------
     out: dict
@@ -458,10 +464,11 @@ def np2np_sp(data, states, a_pos, b_pos):
         out[:, :, :, vi] = d.reshape(n_s, n_a, n_b)
     return out
 
+
 def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
     """
     Create pandas DataFrame from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -487,14 +494,14 @@ def np2pd_p(data, a_pos, b_pos, ori, label_map={}):
     a, b = [label_map.get(o, o) for o in ori]
     n_a = len(a_pos)
     n_b = len(b_pos)
-    minds = pd.MultiIndex.from_product([range(n_a), range(n_b)],
-                                       names=[a, b])
+    minds = pd.MultiIndex.from_product([range(n_a), range(n_b)], names=[a, b])
     return pd.DataFrame(index=minds, data=data)
+
 
 def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
     """
     Create pandas DataFrame from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -523,14 +530,16 @@ def np2pd_sp(data, states, a_pos, b_pos, ori, label_map={}):
     s = label_map.get(FC.STATE, FC.STATE)
     n_a = len(a_pos)
     n_b = len(b_pos)
-    minds = pd.MultiIndex.from_product([states, range(n_a), range(n_b)],
-                                       names=[s, a, b])
+    minds = pd.MultiIndex.from_product(
+        [states, range(n_a), range(n_b)], names=[s, a, b]
+    )
     return pd.DataFrame(index=minds, data=data)
+
 
 def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
     """
     Create xarray Dataset from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -551,7 +560,7 @@ def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
     -------
     out: xarray.Dataset
         The Dataset object
-    
+
     """
     a, b = [label_map.get(o, o) for o in ori]
     c = list(set("xyz") - set(ori))[0]
@@ -561,16 +570,16 @@ def np2xr_p(data, a_pos, b_pos, c_pos, ori, label_map={}):
     return Dataset(
         coords={b: b_pos, a: a_pos},
         data_vars={
-            v: ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1))
-            for v, d in data.items()
+            v: ((b, a), np.swapaxes(d.reshape(n_a, n_b), 0, 1)) for v, d in data.items()
         },
-        attrs={c: float(c_pos)}
+        attrs={c: float(c_pos)},
     )
+
 
 def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
     """
     Create xarray Dataset from numpy data
-    
+
     Parameters
     ----------
     data: dict
@@ -593,7 +602,7 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
     -------
     out: xarray.Dataset
         The Dataset object
-    
+
     """
     a, b = [label_map.get(o, o) for o in ori]
     c = list(set("xyz") - set(ori))[0]
@@ -608,22 +617,23 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
             v: ((s, b, a), np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2))
             for v, d in data.items()
         },
-        attrs={c: float(c_pos)}
+        attrs={c: float(c_pos)},
     )
 
+
 def data2xr(
-        x_pos, 
-        y_pos, 
-        z_pos, 
-        point_results, 
-        vars=None,
-        state_mean=False,
-        to_file=None,
-        **kwargs,
-    ):
+    x_pos,
+    y_pos,
+    z_pos,
+    point_results,
+    vars=None,
+    state_mean=False,
+    to_file=None,
+    **kwargs,
+):
     """
     Converts the image data to xarray data
-    
+
     Parameter
     ---------
     x_pos: numpy.ndarray or float
@@ -658,7 +668,7 @@ def data2xr(
     data = {}
     for v in vars:
         if isinstance(state_mean, np.ndarray):
-            data[v] = np.einsum('sp,s->p', point_results[v].to_numpy(), state_mean)
+            data[v] = np.einsum("sp,s->p", point_results[v].to_numpy(), state_mean)
         elif state_mean:
             data[v] = np.mean(point_results[v].to_numpy(), axis=0)
         else:
@@ -674,17 +684,15 @@ def data2xr(
     coords = {}
     attrs = {allcn[cj]: allc[cj].to_numpy()}
     if (
-        FC.STATE in point_results.coords and 
-        isinstance(state_mean, bool) 
+        FC.STATE in point_results.coords
+        and isinstance(state_mean, bool)
         and not state_mean
     ):
         if point_results.dims[FC.STATE] > 1:
             coords[FC.STATE] = point_results[FC.STATE].to_numpy()
         else:
             attrs[FC.STATE] = str(point_results[FC.STATE][0].to_numpy())
-    coords.update({
-        allcn[i]: allc[i] for i in reversed(ci)
-    })
+    coords.update({allcn[i]: allc[i] for i in reversed(ci)})
 
     dvars = {}
     for v, d in data.items():
@@ -693,13 +701,9 @@ def data2xr(
         else:
             dvars[v] = ([FC.STATE] + cn, np.swapaxes(d.reshape(d.shape[0], *cl), 1, 2))
 
-    ds = Dataset(
-        coords=coords,
-        data_vars=dvars,
-        attrs=attrs
-    )
+    ds = Dataset(coords=coords, data_vars=dvars, attrs=attrs)
 
     if to_file is not None:
         write_nc(ds, to_file, **kwargs)
-    
+
     return ds

@@ -1,14 +1,13 @@
-
 def write_nc(ds, fpath, round="auto", complevel=5, verbosity=1, **kwargs):
     """
     Writes a dataset to netCFD file
-    
+
     Parameters
     ----------
     fpath: str
         Path to the output file, should be nc
     round: dict or str, optional
-        The rounding definitions, or auto for 
+        The rounding definitions, or auto for
         default settings
     complevel: int
         The compression level

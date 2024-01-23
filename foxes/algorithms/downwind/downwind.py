@@ -362,9 +362,9 @@ class Downwind(Algorithm):
 
         # run main calculation:
         farm_results = self._run_farm_calc(
-            mlist, 
-            models_data, 
-            parameters=calc_pars, 
+            mlist,
+            models_data,
+            parameters=calc_pars,
             **kwargs,
         )
         del models_data
@@ -425,9 +425,7 @@ class Downwind(Algorithm):
         calc_pars.append({"parameters": emodels_cpars})
 
         # 2) transfer ambient results:
-        mlist.models.append(
-            self.get_model("SetAmbPointResults")()
-        )
+        mlist.models.append(self.get_model("SetAmbPointResults")())
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 3) calc wake effects:

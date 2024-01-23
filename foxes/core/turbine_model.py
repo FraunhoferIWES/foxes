@@ -77,4 +77,3 @@ class TurbineModel(FarmDataModel):
                 tmodel_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)
-        

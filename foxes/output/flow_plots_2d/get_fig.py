@@ -4,6 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from foxes.utils import wd2uv
 
+
 def get_fig(
     var,
     fig,
@@ -23,6 +24,8 @@ def get_fig(
     vlabel,
     ret_state,
     ret_im,
+    vmin=None,
+    vmax=None,
     quiv=None,
     invert_axis=None,
     animated=False,
@@ -67,6 +70,10 @@ def get_fig(
         Flag for state index return
     ret_im: bool
         Flag for image return
+    vmin: float, optional
+        The minimal variable value
+    vmax: float, optional
+        The maximal variable value
     quiv: tuple, optional
         The quiver data: (n, pars, wd, ws)
     invert_axis: str, optional
@@ -108,6 +115,8 @@ def get_fig(
             zz,
             shading="auto",
             cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
             animated=animated,
         )
 
@@ -119,6 +128,8 @@ def get_fig(
             zz,
             levels=levels,
             cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
             # animated=animated,
         )
 
@@ -137,15 +148,18 @@ def get_fig(
     hax.set_aspect("equal", adjustable="box")
 
     ttl = None
-    if animated and title is None:
-        if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
-            t = np.datetime_as_string(s, unit="m").replace("T", " ")
+    if animated:
+        if title is None:
+            if hasattr(s, "dtype") and np.issubdtype(s.dtype, np.datetime64):
+                t = np.datetime_as_string(s, unit="m").replace("T", " ")
+            else:
+                t = f"State {s}"
         else:
-            t = s
+            t = title
         ttl = hax.text(
             0.5,
             1.05,
-            f"State {t}",
+            t,
             backgroundcolor="w",
             transform=hax.transAxes,
             ha="center",
@@ -179,5 +193,3 @@ def get_fig(
         out = tuple(out)
 
     return out
-
-

@@ -11,7 +11,7 @@ class TurbOParkWake(GaussianWakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     "Turbulence Optimized Park model with Gaussian wake profile"
     J G Pedersen, E Svensson, L Poulsen and N G Nygaard
     https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf

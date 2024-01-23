@@ -11,7 +11,7 @@ class Bastankhah2014(GaussianWakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     "A new analytical model for wind-turbine wakes"
     Majid Bastankhah, Fernando Porté-Agel
     https://doi.org/10.1016/j.renene.2014.01.002

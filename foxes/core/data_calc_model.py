@@ -261,7 +261,7 @@ class DataCalcModel(Model):
                     evars.append(c)
 
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
-        
+
         # subset selection:
         if sel is not None:
             nldata = []
