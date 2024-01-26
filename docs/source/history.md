@@ -411,5 +411,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.3
 
+- Wake models:
+  - Removing `sbeta` limitation from `Bastankhah2014` and `CrespoHernandez`
+  - New option `regularize` for `Bastankhah2014`, `TurbOParkWake` and `TurbOParkIXWake`, smoothing the sqrt at the end of the near wake region
+- Tests:
+  - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)
