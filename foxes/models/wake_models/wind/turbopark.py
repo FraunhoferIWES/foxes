@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.models.wake_models.gaussian import GaussianWakeModel
+from foxes.utils import sqrt_reg
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -29,13 +30,22 @@ class TurbOParkWake(GaussianWakeModel):
         Factor from Frandsen turbulence model
     c2: float
         Factor from Frandsen turbulence model
+    regularize: float or bool
+        Smoothen the near wake sqrt function
 
     :group: models.wake_models.wind
 
     """
 
     def __init__(
-        self, superposition, A, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
+        self, 
+        superposition, 
+        A, 
+        sbeta_factor=0.25, 
+        ct_max=0.9999, 
+        c1=1.5, 
+        c2=0.8,
+        regularize=False,
     ):
         """
         Constructor.
@@ -57,6 +67,8 @@ class TurbOParkWake(GaussianWakeModel):
             Factor from Frandsen turbulence model
         c2: float
             Factor from Frandsen turbulence model
+        regularize: float or bool
+            Smoothen the near wake sqrt function
 
         """
         super().__init__(superpositions={FV.WS: superposition})
@@ -66,6 +78,7 @@ class TurbOParkWake(GaussianWakeModel):
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
+        self.regularize = regularize
 
     def __repr__(self):
         s = super().__repr__()
@@ -218,7 +231,12 @@ class TurbOParkWake(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             term = 1.0 - ct / (8 * (sigma / D) ** 2)
-            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
+
+            if isinstance(self.regularize, bool) and not self.regularize:
+                ampld = np.sqrt(np.where(term>0, term, 0)) - 1
+            else:
+                x0 = 0.03 if isinstance(self.regularize, bool) else self.regularize
+                ampld = sqrt_reg(term, x0) - 1
 
         # case no targets:
         else:
@@ -251,6 +269,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
         The TI variable
     self_wake: bool
         Flag for considering only own wake in ti integral
+    regularize: float or bool
+        Smoothen the near wake sqrt function
     ipars: dict
         Additional parameters for centreline integration
 
@@ -267,6 +287,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ct_max=0.9999,
         ti_var=FV.TI,
         self_wake=True,
+        regularize=False,
         **ipars,
     ):
         """
@@ -291,6 +312,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The TI variable
         self_wake: bool
             Flag for considering only own wake in ti integral
+        regularize: float or bool
+            Smoothen the near wake sqrt function
         ipars: dict, optional
             Additional parameters for centreline integration
 
@@ -305,6 +328,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.ipars = ipars
         self._tiwakes = None
         self.self_wake = self_wake
+        self.regularize = regularize
 
     def __repr__(self):
         s = super().__repr__()
@@ -452,7 +476,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             term = 1.0 - ct / (8 * (sigma / D) ** 2)
-            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
+
+            if isinstance(self.regularize, bool) and not self.regularize:
+                ampld = np.sqrt(np.where(term>0, term, 0)) - 1
+            else:
+                x0 = 0.03 if isinstance(self.regularize, bool) else self.regularize
+                ampld = sqrt_reg(term, x0) - 1
 
         # case no targets:
         else:

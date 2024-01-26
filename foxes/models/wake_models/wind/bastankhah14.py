@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.models.wake_models.gaussian import GaussianWakeModel
+from foxes.utils import sqrt_reg
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -28,13 +29,21 @@ class Bastankhah2014(GaussianWakeModel):
         to this number
     k_var: str
         The variable name for k
+    regularize: float or bool
+        Smoothen the near wake sqrt function
 
     :group: models.wake_models.wind
 
     """
 
     def __init__(
-        self, superposition, k=None, sbeta_factor=0.2, ct_max=0.9999, k_var=FV.K
+        self, 
+        superposition, 
+        k=None, 
+        sbeta_factor=0.2, 
+        ct_max=0.9999, 
+        k_var=FV.K,
+        regularize=False,
     ):
         """
         Constructor.
@@ -55,6 +64,8 @@ class Bastankhah2014(GaussianWakeModel):
             to this number
         k_var: str
             The variable name for k
+        regularize: float or bool
+            Smoothen the near wake sqrt function
 
         """
         super().__init__(superpositions={FV.WS: superposition})
@@ -62,6 +73,7 @@ class Bastankhah2014(GaussianWakeModel):
         self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
         self.k_var = k_var
+        self.regularize = regularize
 
         setattr(self, k_var, k)
 
@@ -184,14 +196,17 @@ class Bastankhah2014(GaussianWakeModel):
 
             # calculate sigma:
             sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sblim = 1 / (np.sqrt(8) * self.sbeta_factor)
-            sbeta[sbeta > sblim] = sblim
             sigma = k * x + self.sbeta_factor * sbeta * D
-            del x, k, sbeta, sblim
+            del sbeta
 
             # calculate amplitude:
             term = 1.0 - ct / (8 * (sigma / D) ** 2)
-            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
+
+            if isinstance(self.regularize, bool) and not self.regularize:
+                ampld = np.sqrt(np.where(term>0, term, 0)) - 1
+            else:
+                x0 = 0.03 if isinstance(self.regularize, bool) else self.regularize
+                ampld = sqrt_reg(term, x0) - 1
 
         # case no targets:
         else:
