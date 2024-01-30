@@ -47,6 +47,7 @@ if __name__ == "__main__":
         default=["B_K1", "CH_K2"],
         nargs="+",
     )
+    parser.add_argument("-g", "--ground", help="switch on ground mirror", action="store_true")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
@@ -70,6 +71,10 @@ if __name__ == "__main__":
     )
     mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.Bastankhah2014(
         superposition="ws_quadratic", sbeta_factor=0.25, k_var="K1"
+    )
+    if args.ground:
+        mbook.wake_models["B_K1"] = foxes.models.wake_models.GroundMirror(
+        mbook.wake_models["B_K1"]
     )
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
         superposition="ti_max", k_var="K2", use_ambti=False
