@@ -173,13 +173,13 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10)
+    g = o.gen_states_fig_xy(args.var, resolution=10, figsize=(10,3))
     fig = next(g)
     plt.show()
     plt.close(fig)
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
+    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0), figsize=(10,3))
     fig = next(g)
     plt.show()

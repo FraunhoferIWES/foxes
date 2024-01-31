@@ -417,5 +417,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
 - Tests:
   - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
+- Wake frames:
+  - Improved `Streamlines`, now complete streamline calculation at first call
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)
