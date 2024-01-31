@@ -165,16 +165,16 @@ class ModelBook:
         )
         stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
         for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(
+            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines2D(
                 step=s
             )
         for s in stps:
             self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines(step=s)
+                base_frame=fm.wake_frames.Streamlines2D(step=s)
             )
         for s in stps:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
-                base_frame=fm.wake_frames.Streamlines(step=s)
+                base_frame=fm.wake_frames.Streamlines2D(step=s)
             )
         dtlist = [
             ("1s", 1 / 60),

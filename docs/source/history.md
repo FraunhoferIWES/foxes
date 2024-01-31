@@ -415,9 +415,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Removing `sbeta` limitation from `Bastankhah2014` and `CrespoHernandez`
   - New option `regularize` for `Bastankhah2014`, `TurbOParkWake` and `TurbOParkIXWake`, smoothing the sqrt at the end of the near wake region
   - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
+- Wake frames:
+  - Renaming `Streamlines` to `Streamlines2D`, no changes in model book names
+- Bug fixes:
+  - Fix for bug in `Streamlines2D` when used in combination with `WakeMirror`
 - Tests:
   - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
-- Wake frames:
-  - Improved `Streamlines`, now complete streamline calculation at first call
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)

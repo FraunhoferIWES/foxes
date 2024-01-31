@@ -8,7 +8,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class Streamlines(WakeFrame):
+class Streamlines2D(WakeFrame):
     """
     Streamline following wakes
 
@@ -139,7 +139,7 @@ class Streamlines(WakeFrame):
         
         # find nearest streamline points:
         data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
-        dists = np.linalg.norm(points[:, :, None] - data[:, None, :, :3], axis=-1)
+        dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
         selp = np.argmin(dists, axis=2)
         data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[:, :, 0]
         slen = self.step * selp
@@ -147,13 +147,12 @@ class Streamlines(WakeFrame):
 
         # calculate coordinates:
         coos = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
-        delta = points - data[:, :, :3]
-        nx = np.append(wd2uv(data[:, :, 3]), np.zeros((n_states, n_points, 1)), axis=2)
-        nz = np.array([0.0, 0.0, 1.0], dtype=FC.DTYPE)[None, None, :]
-        ny = np.cross(nz, nx, axis=-1)
+        nx = wd2uv(data[:, :, 3])
+        ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
+        delta = points[:, :, :2] - data[:, :, :2]
         coos[:, :, 0] = slen + np.einsum("spd,spd->sp", delta, nx)
         coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
-        coos[:, :, 2] = delta[:, :, 2]
+        coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
 
         return coos
 
