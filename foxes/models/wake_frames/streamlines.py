@@ -56,8 +56,8 @@ class Streamlines(WakeFrame):
         Helper function that computes all streamline data
         """
         # prepare:
-        n_states = algo.n_states
-        n_turbines = algo.n_turbines
+        n_states = mdata.n_states
+        n_turbines = mdata.n_turbines
         N = int(self.max_length/self.step)
 
         # calc data: x, y, z, wd
@@ -131,7 +131,7 @@ class Streamlines(WakeFrame):
         Helper function, calculates streamline coordinates
         for given points and given turbine
         """
-
+        
         # prepare:
         n_states = mdata.n_states
         n_points = points.shape[1]
