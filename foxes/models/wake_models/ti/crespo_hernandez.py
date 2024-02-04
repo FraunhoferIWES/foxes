@@ -56,13 +56,13 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         use_ambti=False,
         sbeta_factor=0.25,
         near_wake_D=None,
-        ct_max=0.9999,
         a_near=0.362,
         a_far=0.73,
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
         k_var=FV.K,
+        **kwargs,
     ):
         """
         Constructor.
@@ -84,9 +84,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         near_wake_D: float, optional
             The near wake distance in units of D,
             calculated from TI and ct if not given here
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         a_near: float
             Model parameter
         a_far: float
@@ -99,9 +96,11 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             Model parameter
         k_var: str
             The variable name for k
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
+        super().__init__(superpositions={FV.TI: superposition}, **kwargs)
 
         self.a_near = a_near
         self.a_far = a_far
@@ -214,8 +213,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         )
 
         # calculate:
-        sbeta = np.sqrt(0.5 * (1 + np.sqrt(1 - ct)) / np.sqrt(1 - ct))
-        radius = 2 * (k * x + self.sbeta_factor * sbeta * D)
+        a = self.induction.ct2a(ct)
+        beta = (1 - a) / (1 - 2 * a)
+        radius = 2 * (k * x + self.sbeta_factor * np.sqrt(beta) * D)
 
         return radius
 
@@ -282,6 +282,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         ti[:] = fdata[TI][st_sel][:, None]
         ti = ti[sp_sel]
 
+        # calculate induction factor:
+        twoa = 2*self.induction.ct2a(ct)
+
         # prepare output:
         wake_deltas = np.zeros(n_targts, dtype=FC.DTYPE)
 
@@ -291,7 +294,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
                 2**self.e1
                 * self.a_near
                 / (self.a_far * ti**self.e2)
-                * (1 - np.sqrt(1 - ct)) ** (1 - self.e1)
+                * twoa ** (1 - self.e1)
             ) ** (1 / self.e3)
         else:
             near_wake_D = self.near_wake_D
@@ -299,7 +302,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         # calc near wake:
         sel = x < near_wake_D * D
         if np.any(sel):
-            wake_deltas[sel] = self.a_near * (1.0 - np.sqrt(1.0 - ct[sel]))
+            wake_deltas[sel] = self.a_near * twoa[sel]
 
         # calc far wake:
         if np.any(~sel):
@@ -313,7 +316,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             #
             wake_deltas[~sel] = (
                 self.a_far
-                * ((1.0 - np.sqrt(1.0 - ct[~sel])) / 2) ** self.e1
+                * (twoa[~sel] / 2) ** self.e1
                 * ti[~sel] ** self.e2
                 * (x[~sel] / D[~sel]) ** self.e3
             )

@@ -21,7 +21,7 @@ class JensenWake(TopHatWakeModel):
 
     """
 
-    def __init__(self, superposition, k=None, ct_max=0.9999, k_var=FV.K):
+    def __init__(self, superposition, k=None, k_var=FV.K, **kwargs):
         """
         Constructor.
 
@@ -34,14 +34,13 @@ class JensenWake(TopHatWakeModel):
         k: float, optional
             The wake growth parameter k. If not given here
             it will be searched in the farm data.
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         k_var: str
             The variable name for k
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__(superpositions={FV.WS: superposition}, ct_max=ct_max)
+        super().__init__(superpositions={FV.WS: superposition}, **kwargs)
 
         self.k_var = k_var
         setattr(self, k_var, k)
@@ -200,4 +199,6 @@ class JensenWake(TopHatWakeModel):
         R[:] = fdata[FV.D][st_sel][:, None] / 2
         R = R[sp_sel]
 
-        return {FV.WS: -((R / wake_r) ** 2) * (1.0 - np.sqrt(1.0 - ct))}
+        twoa = 2 * self.induction.ct2a(ct)
+
+        return {FV.WS: -((R / wake_r) ** 2) * twoa}
