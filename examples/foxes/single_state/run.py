@@ -72,13 +72,14 @@ if __name__ == "__main__":
     mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.Bastankhah2014(
         superposition="ws_quadratic", sbeta_factor=0.25, k_var="K1"
     )
-    if args.ground:
-        mbook.wake_models["B_K1"] = foxes.models.wake_models.GroundMirror(
-        mbook.wake_models["B_K1"]
-    )
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
         superposition="ti_max", k_var="K2", use_ambti=False
     )
+    if args.ground:
+        for w in args.wakes:
+            mbook.wake_models[w] = foxes.models.wake_models.GroundMirror(
+                mbook.wake_models[w]
+            )
 
     # create states
     states = foxes.input.states.SingleStateStates(
