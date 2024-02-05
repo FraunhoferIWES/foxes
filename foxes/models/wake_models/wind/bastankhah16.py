@@ -20,13 +20,12 @@ class Bastankhah2016Model(Model):
 
     Attributes
     ----------
-    ct_max: float
-        The maximal value for ct, values beyond will be limited
-        to this number, by default 0.9999
     alpha: float
         model parameter used to determine onset of far wake region
     beta: float
         model parameter used to determine onset of far wake region
+    induction: foxes.core.InductionModel or str
+        The induction model
 
     :group: models.wake_models.wind
 
@@ -49,25 +48,54 @@ class Bastankhah2016Model(Model):
     SIGMA_Z_FAR = "sigma_z_far"
     DELTA_FAR = "delta_far"
 
-    def __init__(self, ct_max=0.9999, alpha=0.58, beta=0.07):
+    def __init__(self, alpha=0.58, beta=0.07, induction="Madsen"):
         """
         Constructor.
 
         Parameters
         ----------
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number, by default 0.9999
         alpha: float
             model parameter used to determine onset of far wake region
         beta: float
             model parameter used to determine onset of far wake region
+        induction: foxes.core.InductionModel or str
+            The induction model
 
         """
         super().__init__()
-        self.ct_max = ct_max
+        self.induction = induction
         setattr(self, FV.PA_ALPHA, alpha)
         setattr(self, FV.PA_BETA, beta)
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.induction_models[self.induction]
+        super().initialize(algo, verbosity, force)
 
     @property
     def pars(self):
@@ -82,7 +110,7 @@ class Bastankhah2016Model(Model):
         """
         alpha = getattr(self, FV.PA_ALPHA)
         beta = getattr(self, FV.PA_BETA)
-        return dict(alpha=alpha, beta=beta, ct_max=self.ct_max)
+        return dict(alpha=alpha, beta=beta, induction=self.induction.name)
 
     def calc_data(
         self,
@@ -151,7 +179,6 @@ class Bastankhah2016Model(Model):
             upcast=True,
             states_source_turbine=states_source_turbine,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
@@ -217,14 +244,14 @@ class Bastankhah2016Model(Model):
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
-            theta = 0.3 * gamma / cosg * (1 - np.sqrt(1 - ct * cosg))
+            twoac = 2 * self.induction.ct2a(ct*cosg)
+            theta = 0.3 * gamma / cosg * twoac
 
             # calculate x0, Eq. (7.3):
-            sqomct = np.sqrt(1 - ct)
+            twoa = 2 * self.induction.ct2a(ct)
             x0 = (
-                D
-                * (cosg * (1 + sqomct))
-                / (np.sqrt(2) * (4 * alpha * ti + 2 * beta * (1 - sqomct)))
+                D * cosg * (2 - twoa)
+                / (np.sqrt(2) * (4 * alpha * ti + beta * twoa))
             )
             out[self.X0] = x0
 
@@ -239,15 +266,16 @@ class Bastankhah2016Model(Model):
             out[self.NEAR] = near
             if np.any(near):
                 # apply filter:
-                wsn = ws[near]
                 ctn = ct[near]
                 cosgn = cosg[near]
+                twoan = twoa[near]
+                twoacn = twoac[near]
 
                 # initial velocity deficits, Eq. (6.4):
-                uR = 0.5 * ctn * cosgn / (1 - np.sqrt(1 - ctn * cosgn))
+                uR = 0.5 * ctn * cosgn / twoacn
 
                 # constant potential core value, Eq. (6.7):
-                u0 = np.sqrt(1 - ctn)
+                u0 = 1 - twoan
 
                 # compute potential core shape, for later, Eq. (6.13):
                 d = x[near] / x0[near]
@@ -261,7 +289,7 @@ class Bastankhah2016Model(Model):
                 out[self.AMPL_NEAR] = u0 - 1
 
                 # cleanup:
-                del wsn, ctn, cosgn, uR, u0, d, r_pc_0, r_pc
+                del ctn, cosgn, uR, u0, d, r_pc_0, r_pc, twoan, twoacn
 
             # calc far wake data:
             far = ~near
@@ -276,7 +304,7 @@ class Bastankhah2016Model(Model):
                 theta = theta[far]
                 x0 = x0[far]
                 k = k[far]
-                sqomct = sqomct[far]
+                twoa = twoa[far]
 
                 # calculate delta, Eq. (7.4):
                 sqct = np.sqrt(ct)
@@ -286,7 +314,7 @@ class Bastankhah2016Model(Model):
                     * theta
                     / 14.7
                     * np.sqrt(cosg / (ct * k**2))
-                    * (2.9 + 1.3 * sqomct - ct)
+                    * (2.9 + 1.3 * (1 - twoa) - ct)
                     * np.log(
                         ((1.6 + sqct) * (1.6 * sqsd - sqct))
                         / ((1.6 - sqct) * (1.6 * sqsd + sqct))
@@ -294,7 +322,8 @@ class Bastankhah2016Model(Model):
                 )
 
                 # calculate amplitude, Eq. (7.1):
-                ampl = np.sqrt(1 - ct * cosg * D**2 / (8 * sigma_y * sigma_z)) - 1
+                ct_eff = ct * cosg * D**2 / (8 * sigma_y * sigma_z)
+                ampl = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
 
                 # memorize far wake data:
                 out[self.AMPL_FAR] = ampl
@@ -374,6 +403,8 @@ class Bastankhah2016(DistSlicedWakeModel):
     ----------
     model: Bastankhah2016Model
         The model for computing common data
+    model_pars: dict
+        Model parameters
     K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
@@ -391,10 +422,8 @@ class Bastankhah2016(DistSlicedWakeModel):
         self,
         superposition,
         k=None,
-        ct_max=0.9999,
-        alpha=0.58,
-        beta=0.07,
         k_var=FV.K,
+        **kwargs,
     ):
         """
         Constructor.
@@ -417,11 +446,15 @@ class Bastankhah2016(DistSlicedWakeModel):
             model parameter used to determine onset of far wake region
         k_var: str
             The variable name for k
+        kwargs: dict, optional
+            Additional parameters for the Bastankhah2016Model,
+            if not found in wake model
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.model = Bastankhah2016Model(ct_max, alpha, beta)
+        self.model = None
+        self.model_pars = kwargs
         self.k_var = k_var
 
         setattr(self, k_var, k)
@@ -432,6 +465,36 @@ class Bastankhah2016(DistSlicedWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        return [self.model]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if not self.initialized:
+            self.model = Bastankhah2016Model(**self.model_pars)
+        super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -503,10 +566,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
 
         # prepare:
-        n_states = mdata.n_states
-        n_points = x.shape[1]
         n_y_per_z = yz.shape[2]
-        st_sel = (np.arange(n_states), states_source_turbine)
 
         # calculate model data:
         if not self.model.has_data(mdata, states_source_turbine, x):

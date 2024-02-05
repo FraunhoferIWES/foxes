@@ -416,6 +416,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Wake models:
   - Reformulating `beta` in terms of induction in `Bastankhah2014` and `CrespoHernandez`
   - New default: `Bastankhah2014` now with default induction model `Madsen`
+  - New default: `Bastankhah2016` now with default induction model `Madsen`
   - New default: `TurbOPark` and `TurbOParkIX` now with default induction model `Madsen`
   - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
 - Wake frames:
