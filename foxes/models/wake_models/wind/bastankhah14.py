@@ -24,26 +24,22 @@ class Bastankhah2014(GaussianWakeModel):
         it will be searched in the farm data.
     sbeta_factor: float
         Factor multiplying sbeta
-    ct_max: float
-        The maximal value for ct, values beyond will be limited
-        to this number
     k_var: str
         The variable name for k
-    regularize: float or bool
-        Smoothen the near wake sqrt function
+    induction: foxes.core.InductionModel or str
+        The induction model
 
     :group: models.wake_models.wind
 
     """
 
     def __init__(
-        self, 
-        superposition, 
-        k=None, 
-        sbeta_factor=0.2, 
-        ct_max=0.9999, 
+        self,
+        superposition,
+        k=None,
+        sbeta_factor=0.2,
         k_var=FV.K,
-        regularize=False,
+        induction="Madsen",
     ):
         """
         Constructor.
@@ -59,21 +55,17 @@ class Bastankhah2014(GaussianWakeModel):
             it will be searched in the farm data.
         sbeta_factor: float
             Factor multiplying sbeta
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         k_var: str
             The variable name for k
-        regularize: float or bool
-            Smoothen the near wake sqrt function
+        induction: foxes.core.InductionModel or str
+            The induction model
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
-        self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
         self.k_var = k_var
-        self.regularize = regularize
+        self.induction = induction
 
         setattr(self, k_var, k)
 
@@ -82,6 +74,36 @@ class Bastankhah2014(GaussianWakeModel):
         s = super().__repr__()
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.induction_models[self.induction]
+        super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -147,7 +169,6 @@ class Bastankhah2014(GaussianWakeModel):
             is non-zero, shape: (n_states, n_points)
 
         """
-
         # get ct:
         ct = self.get_data(
             FV.CT,
@@ -159,7 +180,6 @@ class Bastankhah2014(GaussianWakeModel):
             upcast=True,
             states_source_turbine=states_source_turbine,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
@@ -195,18 +215,15 @@ class Bastankhah2014(GaussianWakeModel):
             k = k[sp_sel]
 
             # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            sigma = k * x + self.sbeta_factor * sbeta * D
-            del sbeta
+            # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
+            sigma = k * x + self.sbeta_factor * np.sqrt(beta) * D
+            del beta, a
 
             # calculate amplitude:
-            term = 1.0 - ct / (8 * (sigma / D) ** 2)
-
-            if isinstance(self.regularize, bool) and not self.regularize:
-                ampld = np.sqrt(np.where(term>0, term, 0)) - 1
-            else:
-                x0 = 0.03 if isinstance(self.regularize, bool) else self.regularize
-                ampld = sqrt_reg(term, x0) - 1
+            ct_eff = ct / (8 * (sigma / D) ** 2)
+            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:

@@ -1,12 +1,12 @@
 import numpy as np
-from abc import ABCMeta
+from abc import ABC
 from itertools import count
 
 import foxes.constants as FC
 from .data import Data
 
 
-class Model(metaclass=ABCMeta):
+class Model(ABC):
     """
     Base class for all models.
 

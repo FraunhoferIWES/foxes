@@ -35,9 +35,9 @@ class IECTIWake(TopHatWakeModel):
         self,
         superposition,
         opening_angle=21.6,
-        ct_max=0.9999,
         iec_type="2019",
         k_var=FV.K,
+        **kwargs,
     ):
         """
         Constructor.
@@ -51,14 +51,13 @@ class IECTIWake(TopHatWakeModel):
         opening_angle: float
             The wake opening angle. The wake growth parameter k is calculated
             based on the wake opening angle.
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         k_var: str
             The variable name for k
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
-        super().__init__(superpositions={FV.TI: superposition}, ct_max=ct_max)
+        super().__init__(superpositions={FV.TI: superposition}, **kwargs)
 
         k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 

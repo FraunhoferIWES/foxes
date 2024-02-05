@@ -53,15 +53,9 @@ class DistSlicedWakeModel(WakeModel):
         """
         return list(self.superp.values())
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
-
-        This includes loading all required data from files. The model
-        should return all array type data as part of the idata return
-        dictionary (and not store it under self, for memory reasons). This
-        data will then be chunked and provided as part of the mdata object
-        during calculations.
 
         Parameters
         ----------
@@ -69,19 +63,14 @@ class DistSlicedWakeModel(WakeModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
+        force: bool
+            Overwrite existing data
 
         """
         self.superp = {
             v: algo.mbook.wake_superpositions[s] for v, s in self.superpositions.items()
         }
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force)
 
     @abstractmethod
     def calc_wakes_spsel_x_yz(

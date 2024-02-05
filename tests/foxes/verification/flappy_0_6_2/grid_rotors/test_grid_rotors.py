@@ -16,10 +16,10 @@ def test():
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
     cases = [
-        (["Bastankhah025_linear"], "centre", "rotor_points"),
-        (["Bastankhah025_linear"], "grid4", "grid4"),
-        (["Bastankhah025_linear"], "grid16", "grid16"),
-        (["Bastankhah025_linear"], "grid64", "grid64"),
+        (["Basta"], "centre", "rotor_points"),
+        (["Basta"], "grid4", "grid4"),
+        (["Basta"], "grid16", "grid16"),
+        (["Basta"], "grid64", "grid64"),
     ]
 
     ck = {FC.STATE: c}
@@ -32,6 +32,10 @@ def test():
             data_source=tfile, var_ws_ct=FV.REWS, var_ws_P=FV.REWS
         )
         mbook.turbine_types[ttype.name] = ttype
+
+        mbook.wake_models["Basta"] = foxes.models.wake_models.wind.Bastankhah2014(
+            sbeta_factor=0.25, superposition="ws_linear", induction="Betz"
+        )
 
         states = foxes.input.states.StatesTable(
             data_source=sfile,

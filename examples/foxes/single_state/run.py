@@ -47,6 +47,7 @@ if __name__ == "__main__":
         default=["B_K1", "CH_K2"],
         nargs="+",
     )
+    parser.add_argument("-g", "--ground", help="switch on ground mirror", action="store_true")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
@@ -74,6 +75,11 @@ if __name__ == "__main__":
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
         superposition="ti_max", k_var="K2", use_ambti=False
     )
+    if args.ground:
+        for w in args.wakes:
+            mbook.wake_models[w] = foxes.models.wake_models.GroundMirror(
+                mbook.wake_models[w]
+            )
 
     # create states
     states = foxes.input.states.SingleStateStates(
@@ -168,13 +174,13 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10)
+    g = o.gen_states_fig_xy(args.var, resolution=10, figsize=(10,3))
     fig = next(g)
     plt.show()
     plt.close(fig)
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
+    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0), figsize=(10,3))
     fig = next(g)
     plt.show()
