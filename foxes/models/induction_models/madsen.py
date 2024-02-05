@@ -5,6 +5,13 @@ class MadsenInduction(InductionModel):
     Computes the induction factor through polynomial
     fit, extending validity for high ct values
 
+    Notes
+    -----
+    Reference:
+    Helge Aagaard Madsen, Torben Juul Larsen, Georg Raimund Pirrung, Ang Li, and Frederik Zahle
+    "Implementation of the blade element momentum model on a polar grid and its aeroelastic load impact"
+    https://doi.org/10.5194/wes-5-1-2020
+
     Attributes
     ----------
     k1: float
