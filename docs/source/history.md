@@ -418,6 +418,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New default: `Bastankhah2014` now with default induction model `Madsen`
   - New default: `Bastankhah2016` now with default induction model `Madsen`
   - New default: `TurbOPark` and `TurbOParkIX` now with default induction model `Madsen`
+  - New induction wake models: `SelfSimilar` and `SelfSimilar2020`, for blockage modelling
   - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
 - Wake frames:
   - Renaming `Streamlines` to `Streamlines2D`, no changes in model book names
