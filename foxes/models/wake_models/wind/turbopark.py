@@ -104,7 +104,7 @@ class TurbOParkWake(GaussianWakeModel):
 
         """
         if isinstance(self.induction, str):
-            self.induction = algo.mbook.induction_models[self.induction]
+            self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
@@ -372,7 +372,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         """
         if isinstance(self.induction, str):
-            self.induction = algo.mbook.induction_models[self.induction]
+            self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):

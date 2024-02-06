@@ -1,8 +1,8 @@
 import numpy as np
 
-from foxes.core import InductionModel
+from foxes.core import AxialInductionModel
 
-class BetzInduction(InductionModel):
+class BetzAxialInduction(AxialInductionModel):
     """
     The classic axial induction from 1D
     momentum theory
@@ -12,7 +12,7 @@ class BetzInduction(InductionModel):
     ct_max: float
         The maximal ct value
 
-    :group: models.induction
+    :group: models.axial_induction
 
     """
     def __init__(self, ct_max=1):

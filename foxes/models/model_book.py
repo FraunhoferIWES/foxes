@@ -13,7 +13,7 @@ from foxes.core import (
     WakeFrame,
     WakeSuperposition,
     WakeModel,
-    InductionModel,
+    AxialInductionModel,
 )
 
 
@@ -233,9 +233,9 @@ class ModelBook:
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
-        self.induction_models = Dict(name="induction_models")
-        self.induction_models["Betz"] = fm.induction_models.BetzInduction()
-        self.induction_models["Madsen"] = fm.induction_models.MadsenInduction()
+        self.axial_induction = Dict(name="induction_models")
+        self.axial_induction["Betz"] = fm.axial_induction_models.BetzAxialInduction()
+        self.axial_induction["Madsen"] = fm.axial_induction_models.MadsenAxialInduction()
 
         self.wake_models = Dict(name="wake_models")
         slist = [
@@ -419,7 +419,7 @@ class ModelBook:
             wake_frames=self.wake_frames,
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
-            induction_models=self.induction_models,
+            axial_induction=self.axial_induction,
         )
         self.base_classes = Dict(
             name="base_classes",
@@ -433,7 +433,7 @@ class ModelBook:
             wake_frames=WakeFrame,
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
-            induction_models=InductionModel,
+            axial_induction=AxialInductionModel,
         )
 
         for s in self.sources.values():
