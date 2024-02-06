@@ -2,9 +2,9 @@ from abc import abstractmethod
 
 from .model import Model
 
-class InductionModel(Model):
+class AxialInductionModel(Model):
     """
-    Abstract base class for induction models
+    Abstract base class for axial induction models
 
     :group: core
 

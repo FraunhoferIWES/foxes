@@ -63,7 +63,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
         """
         if isinstance(self.induction, str):
-            self.induction = algo.mbook.induction_models[self.induction]
+            self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
     @abstractmethod

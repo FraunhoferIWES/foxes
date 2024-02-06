@@ -1,6 +1,6 @@
-from foxes.core import InductionModel
+from foxes.core import AxialInductionModel
 
-class MadsenInduction(InductionModel):
+class MadsenAxialInduction(AxialInductionModel):
     """
     Computes the induction factor through polynomial
     fit, extending validity for high ct values
@@ -21,7 +21,7 @@ class MadsenInduction(InductionModel):
     k3: float
         Model coefficient
 
-    :group: models.induction
+    :group: models.axial_induction
 
     """
     def __init__(self, k1=0.2460, k2=0.0586, k3=0.0883):
