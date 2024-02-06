@@ -405,6 +405,8 @@ class ModelBook:
         self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
         self.wake_models[f"SelfSimilar2020"] = fm.wake_models.induction.SelfSimilar2020()
 
+        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
+
         self.sources = Dict(
             name="sources",
             point_models=self.point_models,
