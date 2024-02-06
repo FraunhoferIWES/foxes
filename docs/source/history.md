@@ -412,13 +412,13 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 ## v0.5.3
 
 - Core:
-  - This version introduces `InductionModel` classes, computing the induction factor `a(ct)`
+  - This version introduces `InductionModel` classes, computing the axial induction factor `a(ct)`
 - Wake models:
   - Reformulating `beta` in terms of induction in `Bastankhah2014` and `CrespoHernandez`
   - New default: `Bastankhah2014` now with default induction model `Madsen`
   - New default: `Bastankhah2016` now with default induction model `Madsen`
   - New default: `TurbOPark` and `TurbOParkIX` now with default induction model `Madsen`
-  - New induction wake models: `SelfSimilar` and `SelfSimilar2020`, for blockage modelling
+  - New induction wake models: `Rathmann`, `SelfSimilar` and `SelfSimilar2020`, for blockage modelling
   - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
 - Wake frames:
   - Renaming `Streamlines` to `Streamlines2D`, no changes in model book names
