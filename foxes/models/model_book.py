@@ -61,7 +61,7 @@ class ModelBook:
     base_classes: foxes.utils.Dict
         The base classes for all model types
 
-    :group: foxes
+    :group: models
 
     """
 

@@ -11,7 +11,7 @@ class WindFarm:
     boundary: foxes.utils.geom2d.AreaGeometry, optional
         The wind farm boundary
 
-    :group: foxes
+    :group: core
 
     """
 

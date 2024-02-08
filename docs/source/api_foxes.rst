@@ -6,4 +6,6 @@ selected classes and functions.
 All objects listed here can be reached directly
 via the *foxes* package, e.g. *foxes.WindFarm*.
 
-    .. python-apigen-group:: foxes
+    .. python-apigen-group:: foxes.core.WindFarm
+    .. python-apigen-group:: foxes.core.Turbine
+    .. python-apigen-group:: foxes.models.ModelBook
