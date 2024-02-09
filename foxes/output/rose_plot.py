@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-import plotly.express as px
 
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, StochasticWindroseAxes
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
@@ -215,8 +214,7 @@ class RosePlotOutput(Output):
         cmap="Turbo",
         title=None,
         legend=None,
-        layout_dict={},
-        title_dict={},
+        type="bar",
         start0=False,
         ret_data=False,
     ):
@@ -241,12 +239,12 @@ class RosePlotOutput(Output):
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
+        cmap: str
+            The color map
+        title. str, optional
+            The title
         legend: str, optional
             The data legend string
-        layout_dict: dict, optional
-            Optional parameters for the px figure layout
-        title_dict: dict, optional
-            Optional parameters for the px title layout
         start0: bool
             Flag for starting the first sector at
             zero degrees instead of minus half width
@@ -255,7 +253,7 @@ class RosePlotOutput(Output):
 
         Returns
         -------
-        fig: px.Figure
+        fig: matplotlib.pyplot.Figure
             The rose plot figure
         data: pd.DataFrame, optional
             The wind rose data
@@ -279,19 +277,11 @@ class RosePlotOutput(Output):
             start0=start0,
         )
 
-        cols = px.colors.sequential.__dict__.keys()
-        cols = [c for c in cols if isinstance(px.colors.sequential.__dict__[c], list)]
-        cmap = px.colors.sequential.__dict__[cols[cols.index(cmap)]]
+        ax = StochasticWindroseAxes.from_ax()
+        fig = ax.get_figure()
 
-        intv = f"interval_{var}"
-        fig = px.bar_polar(
-            wrdata,
-            r="frequency",
-            theta=wd_var,
-            color=intv,
-            color_discrete_sequence=cmap,
-            labels={intv: lg},
-        )
+        plfun = getattr(ax, type)
+        plfun(direction=wrdata[wd_var], var=wrdata[var], weights=)
 
         tdict = dict(xanchor="center", yanchor="top", x=0.5, y=0.97)
         tdict.update(title_dict)
