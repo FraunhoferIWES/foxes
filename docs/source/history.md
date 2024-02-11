@@ -429,6 +429,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved: `RosePlotOutput` no longer depends on `plotly`, but on the new utility `TabWindroseAxes`
 - Utils:
   - New: `TabWindroseAxes`, a derivative of `windrose.WindroseAxes` for input data that is based on bins with weights (and not timeseries)
+- Notebooks:
+  - New: `blockage_comparison.ipynb`, comparing four turbine induction models
 - Bug fixes:
   - Fix for bug in `Streamlines2D` when used in combination with `WakeMirror`
 - Tests:
