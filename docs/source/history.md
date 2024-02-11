@@ -409,7 +409,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1)
 
-## v0.5.3
+## v0.6
 
 - Dependencies:
   - Replacing dependency on `plotly` by dependency on `windrose`, since the latter is lighter
@@ -436,4 +436,4 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Tests:
   - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6](https://github.com/FraunhoferIWES/foxes/commits/v0.6)
