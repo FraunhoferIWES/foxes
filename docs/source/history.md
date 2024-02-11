@@ -411,6 +411,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.5.3
 
+- Dependencies:
+  - Replacing dependency on `plotly` by dependency on `windrose`, since the latter is lighter
 - Core:
   - This version introduces `AxialInductionModel` classes, computing the axial induction factor `a(ct)`
 - Wake models:
@@ -423,6 +425,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Axial induction models:
   - New induction model: `BetzAxialInduction`, the classic `a = 0.5(1 - sqrt(1-ct))` relation. In the model book this is called `Betz`.
   - New induction model: `MadsenAxialInduction`, a third-order polynomial approximation of `a(ct)`. In the model book this is called `Madsen`.
+- Output:
+  - Improved: `RosePlotOutput` no longer depends on `plotly`, but on the new utility `TabWindroseAxes`
+- Utils:
+  - New: `TabWindroseAxes`, a derivative of `windrose.WindroseAxes` for input data that is based on bins with weights (and not timeseries)
 - Bug fixes:
   - Fix for bug in `Streamlines2D` when used in combination with `WakeMirror`
 - Tests:

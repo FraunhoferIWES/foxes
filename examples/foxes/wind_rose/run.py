@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
     fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
-    foxes.utils.show_plotly_fig(fig)
+    plt.show()
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
