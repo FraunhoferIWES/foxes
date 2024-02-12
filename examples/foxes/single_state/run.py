@@ -75,11 +75,6 @@ if __name__ == "__main__":
     mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
         superposition="ti_max", k_var="K2", use_ambti=False
     )
-    if args.ground:
-        for w in args.wakes:
-            mbook.wake_models[w] = foxes.models.wake_models.GroundMirror(
-                mbook.wake_models[w]
-            )
 
     # create states
     states = foxes.input.states.SingleStateStates(
@@ -102,6 +97,12 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
+    # optionally add wake ground mirror:
+    if args.ground:
+        mirrors = {w: [0] for w in args.wakes}
+    else:
+        mirrors = {}
+
     # create algorithm
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
@@ -113,6 +114,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
+        wake_mirrors=mirrors,
         verbosity=1,
     )
 
