@@ -244,15 +244,12 @@ class Bastankhah2016Model(Model):
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
-            twoac = 2 * self.induction.ct2a(ct*cosg)
+            twoac = 2 * self.induction.ct2a(ct * cosg)
             theta = 0.3 * gamma / cosg * twoac
 
             # calculate x0, Eq. (7.3):
             twoa = 2 * self.induction.ct2a(ct)
-            x0 = (
-                D * cosg * (2 - twoa)
-                / (np.sqrt(2) * (4 * alpha * ti + beta * twoa))
-            )
+            x0 = D * cosg * (2 - twoa) / (np.sqrt(2) * (4 * alpha * ti + beta * twoa))
             out[self.X0] = x0
 
             # calcuate sigma, Eq. (7.2):
@@ -323,7 +320,7 @@ class Bastankhah2016Model(Model):
 
                 # calculate amplitude, Eq. (7.1):
                 ct_eff = ct * cosg * D**2 / (8 * sigma_y * sigma_z)
-                ampl = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+                ampl = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
                 # memorize far wake data:
                 out[self.AMPL_FAR] = ampl

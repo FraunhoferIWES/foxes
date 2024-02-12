@@ -15,8 +15,8 @@ class Rathmann(WakeModel):
     Notes
     -----
     Reference:
-    Forsting, Alexander R. Meyer, et al. 
-    "On the accuracy of predicting wind-farm blockage." 
+    Forsting, Alexander R. Meyer, et al.
+    "On the accuracy of predicting wind-farm blockage."
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
 
@@ -185,34 +185,42 @@ class Rathmann(WakeModel):
             states_source_turbine=states_source_turbine,
         )
 
-        x_R = x/(D/2)
-        r_R = np.sqrt(y**2 + z**2)/(D/2)
-        
+        x_R = x / (D / 2)
+        r_R = np.sqrt(y**2 + z**2) / (D / 2)
+
         def mu(x_R):
-            """ axial shape function at r=0 from vortex cylinder model (eqn 11) """
-            return 1 + x_R/(np.sqrt(1+x_R**2))
-        
+            """axial shape function at r=0 from vortex cylinder model (eqn 11)"""
+            return 1 + x_R / (np.sqrt(1 + x_R**2))
+
         def G(x_R, r_R):
-            """ radial shape function eqn 20 """
-            sin_2_alpha = (2*x_R) / np.sqrt((x_R**2 +(r_R-1)**2)*(x_R**2+(r_R+1)**2)) # eqn 19
-            sin_alpha = np.sqrt(0.5*(1-np.sqrt(1-sin_2_alpha**2))) # derived from cos(2a)**2 + sin(2a)**2 = 1
-            sin_beta = 1/np.sqrt(x_R**2 + r_R**2 +1) # eqn 19
-            return sin_alpha * sin_beta * (1+x_R**2)
+            """radial shape function eqn 20"""
+            sin_2_alpha = (2 * x_R) / np.sqrt(
+                (x_R**2 + (r_R - 1) ** 2) * (x_R**2 + (r_R + 1) ** 2)
+            )  # eqn 19
+            sin_alpha = np.sqrt(
+                0.5 * (1 - np.sqrt(1 - sin_2_alpha**2))
+            )  # derived from cos(2a)**2 + sin(2a)**2 = 1
+            sin_beta = 1 / np.sqrt(x_R**2 + r_R**2 + 1)  # eqn 19
+            return sin_alpha * sin_beta * (1 + x_R**2)
 
         # ws delta in front of rotor
-        sp_sel = (ct > 0) &  (x < 0) 
+        sp_sel = (ct > 0) & (x < 0)
         if np.any(sp_sel):
             a = self.induction.ct2a(ct[sp_sel])
-            blockage = ws[sp_sel] * a* mu(x_R[sp_sel]) * G(x_R[sp_sel], r_R[sp_sel]) # eqn 10
+            blockage = (
+                ws[sp_sel] * a * mu(x_R[sp_sel]) * G(x_R[sp_sel], r_R[sp_sel])
+            )  # eqn 10
             wake_deltas[FV.WS][sp_sel] += -blockage
 
         # ws delta behind rotor
         if not self.pre_rotor_only:
             # mirror -blockage in rotor plane
-            sp_sel = (ct > 0) & (x > 0) & (r_R > 1 )
+            sp_sel = (ct > 0) & (x > 0) & (r_R > 1)
             if np.any(sp_sel):
                 a = self.induction.ct2a(ct[sp_sel])
-                blockage = ws[sp_sel] * a * mu(-x_R[sp_sel]) * G(-x_R[sp_sel], r_R[sp_sel]) # eqn 10
+                blockage = (
+                    ws[sp_sel] * a * mu(-x_R[sp_sel]) * G(-x_R[sp_sel], r_R[sp_sel])
+                )  # eqn 10
                 wake_deltas[FV.WS][sp_sel] += blockage
 
         return wake_deltas

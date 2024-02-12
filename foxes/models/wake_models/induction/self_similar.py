@@ -4,9 +4,10 @@ from foxes.core import WakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class SelfSimilar(WakeModel):
     """
-    The self-similar induction wake model 
+    The self-similar induction wake model
     from Troldborg and Meyer Forsting
 
     The individual wake effects are superposed linearly,
@@ -15,14 +16,14 @@ class SelfSimilar(WakeModel):
     Notes
     -----
     References:
-    [1] Troldborg, Niels, and Alexander Raul Meyer Forsting. 
-    "A simple model of the wind turbine induction zone derived 
-    from numerical simulations." 
+    [1] Troldborg, Niels, and Alexander Raul Meyer Forsting.
+    "A simple model of the wind turbine induction zone derived
+    from numerical simulations."
     Wind Energy 20.12 (2017): 2011-2020.
-    https://onlinelibrary.wiley.com/doi/full/10.1002/we.2137 
+    https://onlinelibrary.wiley.com/doi/full/10.1002/we.2137
 
-    [2] Forsting, Alexander R. Meyer, et al. 
-    "On the accuracy of predicting wind-farm blockage." 
+    [2] Forsting, Alexander R. Meyer, et al.
+    "On the accuracy of predicting wind-farm blockage."
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
 
@@ -40,7 +41,7 @@ class SelfSimilar(WakeModel):
     def __init__(self, pre_rotor_only=False, induction="Madsen"):
         """
         Constructor.
-        
+
         Parameters
         ----------
         pre_rotor_only: bool
@@ -111,25 +112,25 @@ class SelfSimilar(WakeModel):
         wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
 
     def _mu(self, x_R):
-        """ Helper function: define mu (eqn 11 from [1])"""
-        return (1 + (x_R/np.sqrt(1 + x_R**2)))
-    
+        """Helper function: define mu (eqn 11 from [1])"""
+        return 1 + (x_R / np.sqrt(1 + x_R**2))
+
     def _a0(self, ct, x_R, gamma=1.1):
-        """ Helper function: define a0 with gamma factor, eqn 8 from [2]"""
+        """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
         return self.induction.ct2a(gamma * ct)
 
     def _a(self, ct, x_R):
-        """ Helper function: define axial shape function (eqn 11 from [1]) """
+        """Helper function: define axial shape function (eqn 11 from [1])"""
         return self._a0(ct, x_R) * self._mu(x_R)
 
     def _r_half(self, x_R):
-        """ Helper function: using eqn 13 from [2] """
+        """Helper function: using eqn 13 from [2]"""
         return np.sqrt(0.587 * (1.32 + x_R**2))
 
-    def _rad_fn(self, x_R, r_R, beta=np.sqrt(2), alpha=8/9):
-        """ Helper function: define radial shape function (eqn 12 from [1]) """
-        return  ((1 / np.cosh(beta * (r_R)/self._r_half(x_R)))**alpha) #* (x_R < 0)
-    
+    def _rad_fn(self, x_R, r_R, beta=np.sqrt(2), alpha=8 / 9):
+        """Helper function: define radial shape function (eqn 12 from [1])"""
+        return (1 / np.cosh(beta * (r_R) / self._r_half(x_R))) ** alpha  # * (x_R < 0)
+
     def contribute_to_wake_deltas(
         self,
         algo,
@@ -210,17 +211,19 @@ class SelfSimilar(WakeModel):
         x = wake_coos[:, :, 0]
         y = wake_coos[:, :, 1]
         z = wake_coos[:, :, 2]
-        R = D/2
-        x_R = x/R
+        R = D / 2
+        x_R = x / R
         r = np.sqrt(y**2 + z**2)
-        r_R = r/R
+        r_R = r / R
 
         # select values
-        sp_sel = (ct > 0) & (x < 0) # upstream
+        sp_sel = (ct > 0) & (x < 0)  # upstream
         if np.any(sp_sel):
             # velocity eqn 10 from [1]
             xr = x_R[sp_sel]
-            blockage = ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
+            blockage = (
+                ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
+            )
             wake_deltas[FV.WS][sp_sel] -= blockage
 
         # set area behind to mirrored value EXCEPT for area behind turbine
@@ -229,11 +232,11 @@ class SelfSimilar(WakeModel):
             if np.any(sp_sel):
                 # velocity eqn 10 from [1]
                 xr = x_R[sp_sel]
-                blockage = ws[sp_sel] * self._a(ct[sp_sel], -xr) * self._rad_fn(-xr, r_R[sp_sel])
+                blockage = (
+                    ws[sp_sel]
+                    * self._a(ct[sp_sel], -xr)
+                    * self._rad_fn(-xr, r_R[sp_sel])
+                )
                 wake_deltas[FV.WS][sp_sel] += blockage
 
         return wake_deltas
-
-
-
-

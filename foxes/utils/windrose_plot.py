@@ -1,15 +1,16 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from windrose import WindroseAxes
 
 FIGSIZE_DEFAULT = (8, 8)
 DPI_DEFAULT = 80
 
+
 class TabWindroseAxes(WindroseAxes):
     """
     A derivate of the wind rose axes that runs
-    on stochastic data (bins with weights) instead 
+    on stochastic data (bins with weights) instead
     of time series data
 
     :group: utils
@@ -43,7 +44,7 @@ class TabWindroseAxes(WindroseAxes):
             return ax
         else:
             return ax
-        
+
     def _init_plot(self, direction, var, **kwargs):
 
         # self.clear()
@@ -64,7 +65,6 @@ class TabWindroseAxes(WindroseAxes):
         nbins = len(bins)
         bins.append(np.inf)
 
-
         # Sets the colors table based on the colormap or the "colors" argument
         colors = kwargs.pop("colors", None)
         cmap = kwargs.pop("cmap", None)
@@ -81,18 +81,18 @@ class TabWindroseAxes(WindroseAxes):
 
         if "bin_min_dir" in kwargs:
             angles = 90 - np.sort(np.unique(direction))
-            angles[angles>180] -= 360
-            angles *= np.pi/180
+            angles[angles > 180] -= 360
+            angles *= np.pi / 180
 
             dir_min = kwargs.pop("bin_min_dir")
-            dir_edges = np.mod(dir_min, 360.).tolist()
+            dir_edges = np.mod(dir_min, 360.0).tolist()
 
             dir_bins = dir_min.copy().tolist()
             if dir_bins[0] < 0:
                 dir_bins.append(360 + dir_bins[0])
                 dir_bins[0] = 0
                 dir_bins.append(360 + dir_bins[1])
-            
+
             nsector = len(angles)
 
         else:
@@ -108,13 +108,17 @@ class TabWindroseAxes(WindroseAxes):
             dir_edges[0] = dir_edges.pop(-1)
             dir_bins[0] = 0.0
 
-        table = np.histogram2d(x=var, y=direction, 
-                bins=[bins, dir_bins], 
-                density=False, weights=weights)[0]
+        table = np.histogram2d(
+            x=var, y=direction, bins=[bins, dir_bins], density=False, weights=weights
+        )[0]
         table[:, 0] = table[:, 0] + table[:, -1]
         table = table[:, :-1]
 
-        self._info["dir"], self._info["bins"], self._info["table"] = dir_edges, bins, table
+        self._info["dir"], self._info["bins"], self._info["table"] = (
+            dir_edges,
+            bins,
+            table,
+        )
 
         return bins, nbins, nsector, colors, angles, kwargs
 
@@ -139,8 +143,10 @@ if __name__ == "__main__":
     weights = data["weight"].to_numpy()
 
     ax = TabWindroseAxes.from_ax()
-    #ax.contourf(wd, ws, weights=weights, bins=[0,3,8,13], cmap=plt.cm.Blues)
-    #ax.contour(wd, ws, weights=weights, bins=[0,3,8,13], colors='black')
-    ax.bar(wd, ws, weights=weights, bins=[0,3,5,8,10,13,16,20], cmap=plt.cm.Blues)
+    # ax.contourf(wd, ws, weights=weights, bins=[0,3,8,13], cmap=plt.cm.Blues)
+    # ax.contour(wd, ws, weights=weights, bins=[0,3,8,13], colors='black')
+    ax.bar(
+        wd, ws, weights=weights, bins=[0, 3, 5, 8, 10, 13, 16, 20], cmap=plt.cm.Blues
+    )
     ax.set_legend()
     plt.show()

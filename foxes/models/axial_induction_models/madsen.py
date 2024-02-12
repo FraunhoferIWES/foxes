@@ -1,5 +1,6 @@
 from foxes.core import AxialInductionModel
 
+
 class MadsenAxialInduction(AxialInductionModel):
     """
     Computes the induction factor through polynomial
@@ -24,10 +25,11 @@ class MadsenAxialInduction(AxialInductionModel):
     :group: models.axial_induction
 
     """
+
     def __init__(self, k1=0.2460, k2=0.0586, k3=0.0883):
         """
         Constructor.
-        
+
         Parameters
         ----------
         k1: float
@@ -51,11 +53,11 @@ class MadsenAxialInduction(AxialInductionModel):
         ----------
         ct: numpy.ndarray or float
             The ct values
-        
+
         Returns
         -------
         ct: numpy.ndarray or float
             The induction values
 
         """
-        return self.k1*ct + self.k2*ct**2 + self.k3*ct**3
+        return self.k1 * ct + self.k2 * ct**2 + self.k3 * ct**3

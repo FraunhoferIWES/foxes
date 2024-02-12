@@ -591,15 +591,15 @@ class FlowPlots2D(SliceData):
                     turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
-                    'color': rotor_color,
-                    'D': self.fres[FV.D][si],
-                    'H': self.fres[FV.H][si],
-                    'X': self.fres[FV.X][si],
-                    'Y': self.fres[FV.Y][si],
-                    'AMB_WD': self.fres[FV.AMB_WD][si],
-                    'turb_angle': turb_angle,
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
                 }
-            else: 
+            else:
                 show_rotor_dict = None
 
             out = get_fig(
@@ -764,15 +764,15 @@ class FlowPlots2D(SliceData):
                     turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
-                    'color': rotor_color,
-                    'D': self.fres[FV.D][si],
-                    'H': self.fres[FV.H][si],
-                    'X': self.fres[FV.X][si],
-                    'Y': self.fres[FV.Y][si],
-                    'AMB_WD': self.fres[FV.AMB_WD][si],
-                    'turb_angle': turb_angle
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
                 }
-            else: 
+            else:
                 show_rotor_dict = None
 
             out = get_fig(
@@ -937,13 +937,13 @@ class FlowPlots2D(SliceData):
                     turb_angle = self.fres[FV.AMB_WD][si]
 
                 show_rotor_dict = {
-                    'color': rotor_color,
-                    'D': self.fres[FV.D][si],
-                    'H': self.fres[FV.H][si],
-                    'X': self.fres[FV.X][si],
-                    'Y': self.fres[FV.Y][si],
-                    'AMB_WD': self.fres[FV.AMB_WD][si],
-                    'turb_angle': turb_angle,
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
                 }
             else:
                 show_rotor_dict = None

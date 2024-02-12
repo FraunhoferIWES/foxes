@@ -618,9 +618,7 @@ class MeMiMaDist(Objective):
         mi = np.min(dists)
         ma = np.max(dists)
         return np.atleast_1d(
-            self.c1 * mean**2
-            - self.c2 * (mean - mi) ** 2
-            - self.c3 * (mean - ma) ** 2
+            self.c1 * mean**2 - self.c2 * (mean - mi) ** 2 - self.c3 * (mean - ma) ** 2
         )
 
     def calc_population(self, vars_int, vars_float, problem_results, cmpnts=None):

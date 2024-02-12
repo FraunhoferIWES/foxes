@@ -55,7 +55,7 @@ class IECTIWake(TopHatWakeModel):
             The variable name for k
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(superpositions={FV.TI: superposition}, **kwargs)
 

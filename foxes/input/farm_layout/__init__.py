@@ -1,6 +1,7 @@
 """
 Functions for adding turbines to the wind farm.
 """
+
 from .row import add_row
 from .grid import add_grid
 from .from_json import add_from_json

@@ -131,10 +131,12 @@ class Downwind(Algorithm):
                 hts = wake_mirrors[w]
                 if isinstance(m, fm.wake_models.WakeMirror):
                     if list(m.heights) != list(hts):
-                        raise ValueError(f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}")
+                        raise ValueError(
+                            f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}"
+                        )
                 else:
                     self.wake_models.append(fm.wake_models.WakeMirror(m, heights=hts))
-                    
+
             else:
                 self.wake_models.append(m)
 

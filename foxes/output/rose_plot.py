@@ -293,13 +293,13 @@ class RosePlotOutput(Output):
 
         plfun = getattr(ax, design)
         plfun(
-            direction=wrdata[wd_var].to_numpy(), 
+            direction=wrdata[wd_var].to_numpy(),
             var=wrdata[var].to_numpy(),
-            weights=wrdata["frequency"].to_numpy(), 
-            bin_min_dir=np.sort(wrdata[f"bin_min_{wd_var}"].unique()), 
-            bin_min_var=np.sort(wrdata[f"bin_min_{var}"].unique()), 
-            bin_max_var=np.sort(wrdata[f"bin_max_{var}"].unique()), 
-            **kwargs
+            weights=wrdata["frequency"].to_numpy(),
+            bin_min_dir=np.sort(wrdata[f"bin_min_{wd_var}"].unique()),
+            bin_min_var=np.sort(wrdata[f"bin_min_{var}"].unique()),
+            bin_max_var=np.sort(wrdata[f"bin_max_{var}"].unique()),
+            **kwargs,
         )
         ax.set_legend(title=lg)
         ax.set_title(ttl)

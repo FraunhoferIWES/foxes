@@ -35,11 +35,11 @@ class TurbOParkWake(GaussianWakeModel):
     """
 
     def __init__(
-        self, 
-        superposition, 
-        A, 
-        sbeta_factor=0.25, 
-        c1=1.5, 
+        self,
+        superposition,
+        A,
+        sbeta_factor=0.25,
+        c1=1.5,
         c2=0.8,
         induction="Madsen",
     ):
@@ -254,7 +254,7 @@ class TurbOParkWake(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:
@@ -518,7 +518,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:

@@ -272,9 +272,7 @@ class RotorModel(FarmDataModel):
                     if uvp.shape[2] > 1:
                         rews2 = np.sqrt(
                             np.maximum(
-                                np.einsum(
-                                    "stp,p->st", np.sign(wsp) * wsp**2, weights
-                                ),
+                                np.einsum("stp,p->st", np.sign(wsp) * wsp**2, weights),
                                 0.0,
                             )
                         )
@@ -294,9 +292,7 @@ class RotorModel(FarmDataModel):
                             np.einsum("stp,p->st", wsp**3, weights), 0.0
                         ) ** (1.0 / 3.0)
                     else:
-                        rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (
-                            1.0 / 3.0
-                        )
+                        rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (1.0 / 3.0)
                     self._set_res(fdata, v, rews3, stsel)
                     del rews3
                     vdone.append(v)

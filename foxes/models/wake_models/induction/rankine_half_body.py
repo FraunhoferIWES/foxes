@@ -15,7 +15,7 @@ class RankineHalfBody(WakeModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     B Gribben and G Hawkes
     "A potential flow model for wind turbine induction and wind farm blockage"
     Techincal Paper, Frazer-Nash Consultancy, 2019

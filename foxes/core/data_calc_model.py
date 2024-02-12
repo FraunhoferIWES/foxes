@@ -104,9 +104,11 @@ class DataCalcModel(Model):
         # add zero output data arrays:
         odims = {v: out_dims for v in out_vars}
         odata = {
-            v: np.full(oshape, np.nan, dtype=FC.DTYPE)
-            if v not in init_vars
-            else prev[init_vars.index(v)].copy()
+            v: (
+                np.full(oshape, np.nan, dtype=FC.DTYPE)
+                if v not in init_vars
+                else prev[init_vars.index(v)].copy()
+            )
             for v in out_vars
             if v not in data[-1]
         }
