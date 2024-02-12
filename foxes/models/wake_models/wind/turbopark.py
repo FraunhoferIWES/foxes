@@ -27,7 +27,7 @@ class TurbOParkWake(GaussianWakeModel):
         Factor from Frandsen turbulence model
     c2: float
         Factor from Frandsen turbulence model
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.wind
@@ -60,7 +60,7 @@ class TurbOParkWake(GaussianWakeModel):
             Factor from Frandsen turbulence model
         c2: float
             Factor from Frandsen turbulence model
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
@@ -284,7 +284,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         The TI variable
     self_wake: bool
         Flag for considering only own wake in ti integral
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
     ipars: dict
         Additional parameters for centreline integration
@@ -323,7 +323,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The TI variable
         self_wake: bool
             Flag for considering only own wake in ti integral
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
         ipars: dict, optional
             Additional parameters for centreline integration

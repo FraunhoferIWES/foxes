@@ -13,14 +13,17 @@ class RankineHalfBody(WakeModel):
     The individual wake effects are superposed linearly,
     without invoking a wake superposition model.
 
-    Ref: B Gribben and G Hawkes - A potential flow model for wind turbine induction and wind farm blockage
+    Notes
+    -----
+    Reference: 
+    B Gribben and G Hawkes
+    "A potential flow model for wind turbine induction and wind farm blockage"
     Techincal Paper, Frazer-Nash Consultancy, 2019
-
     https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
 
     Attributes
     ----------
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.induction
@@ -33,7 +36,7 @@ class RankineHalfBody(WakeModel):
 
         Parameters
         ----------
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """

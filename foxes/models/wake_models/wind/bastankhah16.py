@@ -24,7 +24,7 @@ class Bastankhah2016Model(Model):
         model parameter used to determine onset of far wake region
     beta: float
         model parameter used to determine onset of far wake region
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.wind
@@ -58,7 +58,7 @@ class Bastankhah2016Model(Model):
             model parameter used to determine onset of far wake region
         beta: float
             model parameter used to determine onset of far wake region
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """

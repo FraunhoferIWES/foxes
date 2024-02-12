@@ -55,7 +55,7 @@ class ModelBook:
         values: foxes.core.WakeModel
     induction_models: foxes.utils.Dict
         The induction models. Keys: model name str,
-        values: foxes.core.InductionModel
+        values: foxes.core.AxialInductionModel
     sources: foxes.utils.Dict
         All sources dict
     base_classes: foxes.utils.Dict

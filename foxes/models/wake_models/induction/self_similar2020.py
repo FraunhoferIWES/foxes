@@ -7,9 +7,12 @@ class SelfSimilar2020(SelfSimilar):
     The self-similar 2020 induction wake model 
     from Troldborg and Meyer Forsting
 
+    The individual wake effects are superposed linearly,
+    without invoking a wake superposition model.
+    
     Notes
     -----
-    Referenecs:
+    References:
     [1] Troldborg, Niels, and Alexander Raul Meyer Forsting. 
     "A simple model of the wind turbine induction zone derived from numerical simulations." 
     Wind Energy 20.12 (2017): 2011-2020.
@@ -19,9 +22,6 @@ class SelfSimilar2020(SelfSimilar):
     "On the accuracy of predicting wind-farm blockage." 
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
-
-    The individual wake effects are superposed linearly,
-    without invoking a wake superposition model.
 
     :group: models.wake_models.induction
 

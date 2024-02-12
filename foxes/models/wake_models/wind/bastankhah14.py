@@ -25,7 +25,7 @@ class Bastankhah2014(GaussianWakeModel):
         Factor multiplying sbeta
     k_var: str
         The variable name for k
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.wind
@@ -56,7 +56,7 @@ class Bastankhah2014(GaussianWakeModel):
             Factor multiplying sbeta
         k_var: str
             The variable name for k
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """

@@ -24,7 +24,7 @@ class Rathmann(WakeModel):
     ----------
     pre_rotor_only: bool
         Calculate only the pre-rotor region
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.induction
@@ -39,7 +39,7 @@ class Rathmann(WakeModel):
         ----------
         pre_rotor_only: bool
             Calculate only the pre-rotor region
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """

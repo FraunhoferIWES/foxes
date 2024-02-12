@@ -6,14 +6,18 @@ import foxes.constants as FC
 
 class SelfSimilar(WakeModel):
     """
-    The self-similar induction wake model f
-    rom Troldborg and Meyer Forsting 
+    The self-similar induction wake model 
+    from Troldborg and Meyer Forsting
+
+    The individual wake effects are superposed linearly,
+    without invoking a wake superposition model.
 
     Notes
     -----
     References:
     [1] Troldborg, Niels, and Alexander Raul Meyer Forsting. 
-    "A simple model of the wind turbine induction zone derived from numerical simulations." 
+    "A simple model of the wind turbine induction zone derived 
+    from numerical simulations." 
     Wind Energy 20.12 (2017): 2011-2020.
     https://onlinelibrary.wiley.com/doi/full/10.1002/we.2137 
 
@@ -22,14 +26,11 @@ class SelfSimilar(WakeModel):
     Renewable Energy (2023).
     https://www.sciencedirect.com/science/article/pii/S0960148123007620
 
-    The individual wake effects are superposed linearly,
-    without invoking a wake superposition model.
-
     Attributes
     ----------
     pre_rotor_only: bool
         Calculate only the pre-rotor region
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.induction
@@ -44,7 +45,7 @@ class SelfSimilar(WakeModel):
         ----------
         pre_rotor_only: bool
             Calculate only the pre-rotor region
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
