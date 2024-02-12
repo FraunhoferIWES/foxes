@@ -1,7 +1,10 @@
 import numpy as np
 
 from foxes.core import WakeFrame
-from foxes.models.wake_models.wind.bastankhah16 import Bastankhah2016Model
+from foxes.models.wake_models.wind.bastankhah16 import (
+    Bastankhah2016Model,
+    Bastankhah2016,
+)
 import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_wd import RotorWD
@@ -23,6 +26,8 @@ class YawedWakes(WakeFrame):
     ----------
     model: Bastankhah2016Model
         The model for computing common data
+    model_pars: dict
+        Model parameters
     K: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
@@ -41,11 +46,9 @@ class YawedWakes(WakeFrame):
     def __init__(
         self,
         k=None,
-        ct_max=0.9999,
-        alpha=0.58,
-        beta=0.07,
         base_frame=RotorWD(),
         k_var=FV.K,
+        **kwargs,
     ):
         """
         Constructor.
@@ -55,23 +58,20 @@ class YawedWakes(WakeFrame):
         k: float, optional
             The wake growth parameter k. If not given here
             it will be searched in the farm data, by default None
-        ct_max: float, optional
-            The maximal value for ct, values beyond will be limited
-            to this number, by default 0.9999
-        alpha: float, optional
-            model parameter used to determine onset of far wake region
-        beta: float, optional
-            model parameter used to determine onset of far wake region
         base_frame: foxes.core.WakeFrame
             The wake frame from which to start
         k_var: str
             The variable name for k
+        kwargs: dict, optional
+            Additional parameters for the Bastankhah2016Model,
+            if not found in wake model
 
         """
         super().__init__()
 
         self.base_frame = base_frame
-        self.model = Bastankhah2016Model(ct_max, alpha, beta)
+        self.model = None
+        self.model_pars = kwargs
         self.k_var = k_var
 
         setattr(self, k_var, k)
@@ -87,7 +87,39 @@ class YawedWakes(WakeFrame):
             Names of all sub models
 
         """
-        return [self.base_frame]
+        return [self.base_frame, self.model]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if not self.initialized:
+            for w in algo.wake_models:
+                if isinstance(w, Bastankhah2016):
+                    if not w.initialized:
+                        w.initialize(algo, verbosity, force)
+                    self.model = w.model
+                    if w.k_var == self.k_var:
+                        setattr(self, self.k_var, getattr(w, self.k_var))
+            if self.model is None:
+                self.model = Bastankhah2016Model(**self.model_pars)
+            if self.k is None:
+                for w in algo.wake_models:
+                    if hasattr(w, "k_var") and w.k_var == self.k_var:
+                        setattr(self, self.k_var, getattr(w, self.k_var))
+                        break
+
+        super().initialize(algo, verbosity, force)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -122,7 +154,7 @@ class YawedWakes(WakeFrame):
         gamma = self.get_data(
             FV.YAWM,
             FC.STATE_POINT,
-            lookup="fs",
+            lookup="wfs",
             algo=algo,
             fdata=fdata,
             pdata=pdata,

@@ -47,6 +47,9 @@ if __name__ == "__main__":
         default=["B_K1", "CH_K2"],
         nargs="+",
     )
+    parser.add_argument(
+        "-g", "--ground", help="switch on ground mirror", action="store_true"
+    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
@@ -96,6 +99,12 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
+    # optionally add wake ground mirror:
+    if args.ground:
+        mirrors = {w: [0] for w in args.wakes}
+    else:
+        mirrors = {}
+
     # create algorithm
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
@@ -107,6 +116,7 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes_model=args.pwakes,
         chunks=None,
+        wake_mirrors=mirrors,
         verbosity=1,
     )
 
@@ -168,13 +178,19 @@ if __name__ == "__main__":
 
     # horizontal flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10)
+    g = o.gen_states_fig_xy(args.var, resolution=10, rotor_color="red", figsize=(10, 3))
     fig = next(g)
     plt.show()
     plt.close(fig)
 
     # vertical flow plot
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, x_direction=np.mod(args.wd, 360.0))
+    g = o.gen_states_fig_xz(
+        args.var,
+        resolution=10,
+        x_direction=np.mod(args.wd, 360.0),
+        rotor_color="red",
+        figsize=(10, 3),
+    )
     fig = next(g)
     plt.show()

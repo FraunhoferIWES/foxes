@@ -5,8 +5,19 @@ from . import states
 from . import power_ct_curves
 
 FARM = "farm"
+""" Static wind farm data identifier
+:group: data
+"""
+
 STATES = "states"
+""" Static states data identifier
+:group: data
+"""
+
 PCTCURVE = "power_ct_curve"
+""" Static power-ct curve data identifier
+:group: data
+"""
 
 
 class StaticData(DataBook):
@@ -14,7 +25,7 @@ class StaticData(DataBook):
     A DataBook filled with static data from
     this directory.
 
-    :group: foxes
+    :group: data
 
     """
 

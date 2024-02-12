@@ -30,10 +30,17 @@ def test():
     )
     mbook.turbine_types[ttype.name] = ttype
 
+    mbook.wake_models["Basta"] = foxes.models.wake_models.wind.Bastankhah2014(
+        sbeta_factor=0.25, superposition="ws_quadratic", induction="Betz"
+    )
+    mbook.wake_models["Crespo"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
+        superposition="ti_max", induction="Betz"
+    )
+
     mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
         wname2pwake={
-            "Bastankhah025_quadratic": ("PartialAxiwake", dict(n=6)),
-            "CrespoHernandez_max": ("PartialTopHat", {}),
+            "Basta": ("PartialAxiwake", dict(n=6)),
+            "Crespo": ("PartialTopHat", {}),
         }
     )
 
@@ -56,7 +63,7 @@ def test():
         farm,
         states=states,
         rotor_model=rotor,
-        wake_models=["Bastankhah025_quadratic", "CrespoHernandez_max"],
+        wake_models=["Basta", "Crespo"],
         wake_frame="rotor_wd",
         partial_wakes_model="mapped",
         chunks=ck,

@@ -8,7 +8,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class Streamlines(WakeFrame):
+class Streamlines2D(WakeFrame):
     """
     Streamline following wakes
 
@@ -16,8 +16,6 @@ class Streamlines(WakeFrame):
     ----------
     step: float
         The streamline step size in m
-    n_delstor: int
-        The streamline point storage increase
     max_length: float
         The maximal streamline length
     cl_ipars: dict
@@ -28,7 +26,7 @@ class Streamlines(WakeFrame):
 
     """
 
-    def __init__(self, step, n_delstor=100, max_length=1e5, cl_ipars={}):
+    def __init__(self, step, max_length=1e4, cl_ipars={}):
         """
         Constructor.
 
@@ -36,8 +34,6 @@ class Streamlines(WakeFrame):
         ----------
         step: float
             The streamline step size in m
-        n_delstor: int
-            The streamline point storage increase
         max_length: float
             The maximal streamline length
         cl_ipars: dict
@@ -47,194 +43,122 @@ class Streamlines(WakeFrame):
         """
         super().__init__()
         self.step = step
-        self.n_delstor = n_delstor
         self.max_length = max_length
         self.cl_ipars = cl_ipars
+
+        self.DATA = self.var("DATA")
 
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
 
-    def initialize(self, algo, verbosity=0):
+    def _calc_streamlines(self, algo, mdata, fdata):
         """
-        Initializes the model.
+        Helper function that computes all streamline data
+        """
+        # prepare:
+        n_states = mdata.n_states
+        n_turbines = mdata.n_turbines
+        N = int(self.max_length / self.step)
+
+        # calc data: x, y, z, wd
+        data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)
+        for i in range(N):
+
+            # set streamline start point data (rotor centre):
+            if i == 0:
+                data[:, :, i, :3] = fdata[FV.TXYH]
+                data[:, :, i, 3] = fdata[FV.AMB_WD]
+
+            # compute next step:
+            else:
+
+                # calculate next point:
+                xyz = data[:, :, i - 1, :3]
+                n = wd2uv(data[:, :, i - 1, 3])
+                data[:, :, i, :2] = xyz[:, :, :2] + self.step * n
+                data[:, :, i, 2] = xyz[:, :, 2]
+
+                # calculate next tangential vector:
+                svars = algo.states.output_point_vars(algo)
+                pdata = {FC.POINTS: data[:, :, i, :3]}
+                pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
+                pdata.update(
+                    {
+                        v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                        for v in svars
+                    }
+                )
+                pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
+                pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
+                data[:, :, i, 3] = algo.states.calculate(algo, mdata, fdata, pdata)[
+                    FV.WD
+                ]
+
+                sel = np.isnan(data[:, :, i, 3])
+                if np.any(sel):
+                    data[sel, i, 3] = data[sel, i - 1, 3]
+
+        return data
+
+    def get_streamline_data(self, algo, mdata, fdata):
+        """
+        Gets streamline data, generating it on the fly
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+
+        Returns
+        -------
+        data: numpy.ndarray
+            The streamline data, shape:
+            (n_states, n_turbines, n_steps, 4)
+            with data x, y, z, wd
 
         """
-        super().initialize(algo, verbosity)
-        self.DATA = self.var("DATA")
-        self.CNTR = self.var("CNTR")
-        self.PRES = self.var("PRES")
+        if self.DATA not in mdata or not np.all(
+            mdata[self.DATA][:, :, 0, :3] == fdata[FV.TXYH]
+        ):
+            mdata[self.DATA] = self._calc_streamlines(algo, mdata, fdata)
 
-    def _init_data(self, mdata, fdata):
-        # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
+        return mdata[self.DATA]
 
-        # x, y, z, u, v, w, len
-        mdata[self.DATA] = np.full(
-            (n_states, n_turbines, self.n_delstor, 7), np.nan, dtype=FC.DTYPE
-        )
-        mdata[self.CNTR] = 1
-
-        # set streamline start point data (rotor centre):
-        mdata[self.DATA][:, :, 0, :3] = fdata[FV.TXYH]
-        mdata[self.DATA][:, :, 0, 3:5] = wd2uv(fdata[FV.AMB_WD])
-        mdata[self.DATA][:, :, 0, 5:] = 0.0
-
-    def _add_next_point(self, algo, mdata, fdata):
-        """
-        Helper function, adds next point to streamlines.
-        """
-
-        # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
-        n_spts = int(mdata[self.CNTR])
-        data = mdata[self.DATA]
-
-        # ensure storage size:
-        while n_spts >= data.shape[2]:
-            data = np.append(
-                data,
-                np.full(
-                    (n_states, n_turbines, self.n_delstor, 7),
-                    np.nan,
-                    dtype=FC.DTYPE,
-                ),
-                axis=2,
-            )
-            mdata[self.DATA] = data
-
-        # data aliases:
-        spts = data[..., :3]
-        sn = data[..., 3:6]
-        slen = data[..., 6]
-
-        # calculate next point:
-        p0 = spts[:, :, n_spts - 1]
-        n0 = sn[:, :, n_spts - 1]
-        spts[:, :, n_spts] = p0 + self.step * n0
-        slen[:, :, n_spts] = slen[:, :, n_spts - 1] + self.step
-        newpts = spts[:, :, n_spts]
-        del p0, n0
-
-        # calculate next tangential vector:
-        svars = algo.states.output_point_vars(algo)
-        pdata = {FC.POINTS: newpts}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        pdata.update(
-            {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) for v in svars}
-        )
-        pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-        data[:, :, n_spts, 5] = 0.0
-        data[:, :, n_spts, 3:5] = wd2uv(
-            algo.states.calculate(algo, mdata, fdata, pdata)[FV.WD]
-        )
-        mdata[self.CNTR] += 1
-
-        return newpts, data, mdata[self.CNTR]
-
-    def _calc_coos(self, algo, mdata, fdata, points, tcase=False):
+    def _calc_coos(self, algo, mdata, fdata, points, states_source_turbine):
         """
         Helper function, calculates streamline coordinates
-        for given points.
+        for given points and given turbine
         """
 
         # prepare:
         n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
         n_points = points.shape[1]
-        n_spts = int(mdata[self.CNTR])
-        data = mdata[self.DATA]
-        spts = data[..., :3]
-        sn = data[..., 3:6]
+        st_sel = (np.arange(n_states), states_source_turbine)
 
-        # find minimal distances to existing streamline points:
-        # (loop over target points, since otherwise this blows memory)
-        done = np.zeros((n_states, n_turbines, n_points), dtype=bool)
-        inds = np.full((n_states, n_turbines, n_points), -1, dtype=FC.ITYPE)
-        dists = np.full((n_states, n_turbines, n_points), np.nan, dtype=FC.DTYPE)
-        for pi in range(n_points):
-            hdists = np.linalg.norm(
-                points[:, None, pi, None] - spts[:, :, :n_spts], axis=-1
-            )
-            if tcase:
-                hdists[:, pi] = np.inf
-            inds[:, :, pi] = np.argmin(hdists, axis=2)
-            dists[:, :, pi] = np.take_along_axis(hdists, inds[:, :, pi, None], axis=2)[
-                ..., 0
-            ]
-            done[:, :, pi] = inds[:, :, pi] < n_spts - 1
-            del hdists
-
-        # calc streamline points, as many as needed:
-        maxl = np.nanmax(data[:, :, n_spts - 1, 6])
-        while maxl + self.step <= self.max_length and not np.all(done):
-            # print("CALC STREAMLINES, TODO", np.sum(~done))
-
-            # add next streamline point:
-            newpts, data, n_spts = self._add_next_point(algo, mdata, fdata)
-
-            # evaluate distance:
-            d = np.linalg.norm(points[:, None] - newpts[:, :, None], axis=-1)
-            if tcase:
-                for ti in range(n_turbines):
-                    d[:, ti, ti] = 1e20
-            sel = d < dists
-            if np.any(sel):
-                dists[sel] = d[sel]
-                inds[sel] = n_spts - 1
-
-            # rotation:
-            done = inds < n_spts - 1
-            maxl = np.nanmax(data[:, :, n_spts - 1, 6])
-            del newpts
-
-        # shrink to size:
-        mdata[self.DATA] = data[:, :, :n_spts]
-        del data, spts, sn, dists, done
-
-        # select streamline points:
-        # n_states, n_turbines, n_points, 7
-        data = np.take_along_axis(
-            mdata[self.DATA][:, :, :, None], inds[:, :, None, :, None], axis=2
-        )[:, :, 0]
-        spts = data[..., :3]
-        sn = data[..., 3:6]
-        slen = data[..., 6]
+        # find nearest streamline points:
+        data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
+        dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
+        selp = np.argmin(dists, axis=2)
+        data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[
+            :, :, 0
+        ]
+        slen = self.step * selp
+        del dists, selp
 
         # calculate coordinates:
-        coos = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
-        delta = points[:, None] - spts
-        nx = sn
-        nz = np.array([0.0, 0.0, 1.0], dtype=FC.DTYPE)[None, None, None, :]
-        ny = np.cross(nz, nx, axis=-1)
-        coos[..., 0] = slen + np.einsum("stpd,stpd->stp", delta, nx)
-        coos[..., 1] = np.einsum("stpd,stpd->stp", delta, ny)
-        coos[..., 2] = delta[..., 2]
+        coos = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
+        nx = wd2uv(data[:, :, 3])
+        ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
+        delta = points[:, :, :2] - data[:, :, :2]
+        coos[:, :, 0] = slen + np.einsum("spd,spd->sp", delta, nx)
+        coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
+        coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
 
         return coos
-
-    def _ensure_min_length(self, algo, mdata, fdata, length):
-        """
-        Helper function, ensures minimal length of streamlines
-        """
-        data = mdata[self.DATA]
-        slen = data[:, :, mdata[self.CNTR] - 1, 6]
-        minl = np.nanmin(slen)
-        maxl = np.nanmax(slen)
-        while maxl + self.step <= self.max_length and minl < length:
-            __, data, n_spts = self._add_next_point(algo, mdata, fdata)
-            slen = data[:, :, n_spts - 1, 6]
-            minl = np.nanmin(slen)
-            maxl = np.nanmax(slen)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -258,18 +182,18 @@ class Streamlines(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-
         # prepare:
-        n_states = mdata.n_states
-        n_turbines = mdata.n_turbines
-
-        # initialize storage:
-        if self.DATA not in mdata:
-            self._init_data(mdata, fdata)
+        n_states = fdata.n_states
+        n_turbines = algo.n_turbines
+        pdata = Data.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
-        coosx = self._calc_coos(algo, mdata, fdata, fdata[FV.TXYH], tcase=True)[..., 0]
+        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
+        for ti in range(n_turbines):
+            coosx[:, ti, :] = self.get_wake_coos(
+                algo, mdata, fdata, pdata, np.full(n_states, ti)
+            )[..., 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -304,24 +228,9 @@ class Streamlines(WakeFrame):
             points, shape: (n_states, n_points, 3)
 
         """
-
-        # prepare:
-        n_states = mdata.n_states
-        stsel = (np.arange(n_states), states_source_turbine)
-        points = pdata[FC.POINTS]
-        pid = id(points)
-
-        # initialize storage:
-        if self.DATA not in mdata:
-            self._init_data(mdata, fdata)
-
-        # calc streamlines, once for given points:
-        if self.PRES not in mdata or pid not in mdata[self.PRES]:
-            mdata[self.PRES] = {
-                pid: self._calc_coos(algo, mdata, fdata, points, tcase=False)
-            }
-
-        return mdata[self.PRES][pid][stsel]
+        return self._calc_coos(
+            algo, mdata, fdata, pdata[FC.POINTS], states_source_turbine
+        )
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
@@ -354,7 +263,8 @@ class Streamlines(WakeFrame):
 
         # get streamline points:
         n_states, n_points = x.shape
-        data = mdata[self.DATA][range(n_states), states_source_turbine]
+        st_sel = (np.arange(n_states), states_source_turbine)
+        data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
         spts = data[:, :, :3]
         n_spts = spts.shape[1]
         xs = self.step * np.arange(n_spts)
@@ -362,7 +272,7 @@ class Streamlines(WakeFrame):
         # interpolate to x of interest:
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         qts[:, :, 0] = np.arange(n_states)[:, None]
-        qts[:, :, 1] = x
+        qts[:, :, 1] = np.minimum(x, xs[-1])
         qts = qts.reshape(n_states * n_points, 2)
         ipars = dict(bounds_error=False, fill_value=0.0)
         ipars.update(self.cl_ipars)

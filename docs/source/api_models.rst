@@ -16,6 +16,7 @@ This package contains all concrete model classes.
         :ref:`foxes.models.turbine_models`       Turbine models, calculating data at turbines.
         :ref:`foxes.models.turbine_types`        Turbine types, providing power and thrust.
         :ref:`foxes.models.vertical_profiles`    Vertical profiles, for atmospheric input.
+        :ref:`foxes.models.axial_induction`      Axial induction models, computing axial induction factors.
         :ref:`foxes.models.wake_frames`          Wake frames, defining the wake propagation.
         :ref:`foxes.models.wake_models`          Wake models, computing variable changes due to wakes.
         :ref:`foxes.models.wake_superpositions`  Wake superposition models, evaluating multiple wakes deltas.
@@ -78,6 +79,12 @@ The vertical profile models. They compute height dependent data
 in one dimension, e.g., wind speed profiles.
 
     .. python-apigen-group:: models.vertical_profiles
+
+foxes.models.axial_induction
+----------------------------
+The axial induction models, basically providing a function `ct2a`.
+
+    .. python-apigen-group:: models.axial_induction
 
 foxes.models.wake_frames
 ------------------------

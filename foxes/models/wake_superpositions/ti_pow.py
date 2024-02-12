@@ -133,9 +133,7 @@ class TIPow(WakeSuperposition):
 
         # quadratic superposition to ambient:
         elif self.superp_to_amb == "quadratic":
-            return (
-                np.sqrt(wake_delta ** (2 / self.pow) + amb_results**2) - amb_results
-            )
+            return np.sqrt(wake_delta ** (2 / self.pow) + amb_results**2) - amb_results
 
         # unknown ti delta:
         else:

@@ -1,6 +1,7 @@
 """
 Abstract classes and core functionality.
 """
+
 from .data import Data
 from .model import Model
 from .data_calc_model import DataCalcModel
@@ -20,3 +21,4 @@ from .wake_frame import WakeFrame
 from .wake_model import WakeModel
 from .wake_superposition import WakeSuperposition
 from .vertical_profile import VerticalProfile
+from .axial_induction_model import AxialInductionModel

@@ -13,6 +13,7 @@ from foxes.core import (
     WakeFrame,
     WakeSuperposition,
     WakeModel,
+    AxialInductionModel,
 )
 
 
@@ -52,12 +53,15 @@ class ModelBook:
     wake_models: foxes.utils.Dict
         The wake models. Keys: model name str,
         values: foxes.core.WakeModel
+    induction_models: foxes.utils.Dict
+        The induction models. Keys: model name str,
+        values: foxes.core.AxialInductionModel
     sources: foxes.utils.Dict
         All sources dict
     base_classes: foxes.utils.Dict
         The base classes for all model types
 
-    :group: foxes
+    :group: models
 
     """
 
@@ -151,9 +155,9 @@ class ModelBook:
         for n in nlst:
             self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
-            self.partial_wakes[
-                f"distsliced{n**2}"
-            ] = fm.partial_wakes.PartialDistSlicedWake(n)
+            self.partial_wakes[f"distsliced{n**2}"] = (
+                fm.partial_wakes.PartialDistSlicedWake(n)
+            )
         for n in nlist:
             self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n)
 
@@ -165,16 +169,16 @@ class ModelBook:
         )
         stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
         for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines(
+            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines2D(
                 step=s
             )
         for s in stps:
             self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines(step=s)
+                base_frame=fm.wake_frames.Streamlines2D(step=s)
             )
         for s in stps:
             self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
-                base_frame=fm.wake_frames.Streamlines(step=s)
+                base_frame=fm.wake_frames.Streamlines2D(step=s)
             )
         dtlist = [
             ("1s", 1 / 60),
@@ -229,6 +233,12 @@ class ModelBook:
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
+        self.axial_induction = Dict(name="induction_models")
+        self.axial_induction["Betz"] = fm.axial_induction_models.BetzAxialInduction()
+        self.axial_induction["Madsen"] = (
+            fm.axial_induction_models.MadsenAxialInduction()
+        )
+
         self.wake_models = Dict(name="wake_models")
         slist = [
             "linear",
@@ -265,45 +275,93 @@ class ModelBook:
                 k=0.075, superposition=f"ws_{s}"
             )
 
-            self.wake_models[
-                f"Bastankhah2014_{s}"
-            ] = fm.wake_models.wind.Bastankhah2014(
-                superposition=f"ws_{s}", sbeta_factor=0.2
+            self.wake_models[f"Bastankhah2014_{s}"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    superposition=f"ws_{s}", sbeta_factor=0.2
+                )
             )
-            self.wake_models[
-                f"Bastankhah2014_{s}_k002"
-            ] = fm.wake_models.wind.Bastankhah2014(
-                k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}"
+            self.wake_models[f"Bastankhah2014_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}"
+                )
             )
-            self.wake_models[
-                f"Bastankhah2014_{s}_k004"
-            ] = fm.wake_models.wind.Bastankhah2014(
-                k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}"
+            self.wake_models[f"Bastankhah2014_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}"
+                )
+            )
+
+            self.wake_models[f"Bastankhah2014B_{s}"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    superposition=f"ws_{s}", sbeta_factor=0.2, induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah2014B_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}", induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah2014B_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}", induction="Betz"
+                )
             )
 
             self.wake_models[f"Bastankhah025_{s}"] = fm.wake_models.wind.Bastankhah2014(
                 superposition=f"ws_{s}", sbeta_factor=0.25
             )
-            self.wake_models[
-                f"Bastankhah025_{s}_k002"
-            ] = fm.wake_models.wind.Bastankhah2014(
-                k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25
+            self.wake_models[f"Bastankhah025_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25
+                )
             )
-            self.wake_models[
-                f"Bastankhah025_{s}_k004"
-            ] = fm.wake_models.wind.Bastankhah2014(
-                k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25
+            self.wake_models[f"Bastankhah025_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25
+                )
             )
 
-            self.wake_models[
-                f"Bastankhah2016_{s}"
-            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
-            self.wake_models[
-                f"Bastankhah2016_{s}_k002"
-            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
-            self.wake_models[
-                f"Bastankhah2016_{s}_k004"
-            ] = fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
+            self.wake_models[f"Bastankhah025B_{s}"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah025B_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah025B_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2014(
+                    k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
+                )
+            )
+
+            self.wake_models[f"Bastankhah2016_{s}"] = (
+                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
+            )
+            self.wake_models[f"Bastankhah2016_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
+            )
+            self.wake_models[f"Bastankhah2016_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
+            )
+
+            self.wake_models[f"Bastankhah2016B_{s}"] = (
+                fm.wake_models.wind.Bastankhah2016(
+                    superposition=f"ws_{s}", induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah2016B_{s}_k002"] = (
+                fm.wake_models.wind.Bastankhah2016(
+                    superposition=f"ws_{s}", k=0.02, induction="Betz"
+                )
+            )
+            self.wake_models[f"Bastankhah2016B_{s}_k004"] = (
+                fm.wake_models.wind.Bastankhah2016(
+                    superposition=f"ws_{s}", k=0.04, induction="Betz"
+                )
+            )
 
             self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
                 A=0.02, superposition=f"ws_{s}"
@@ -312,31 +370,42 @@ class ModelBook:
                 A=0.04, superposition=f"ws_{s}"
             )
 
+            self.wake_models[f"TurbOParkB_{s}_A002"] = (
+                fm.wake_models.wind.TurbOParkWake(
+                    A=0.02, superposition=f"ws_{s}", induction="Betz"
+                )
+            )
+            self.wake_models[f"TurbOParkB_{s}_A004"] = (
+                fm.wake_models.wind.TurbOParkWake(
+                    A=0.04, superposition=f"ws_{s}", induction="Betz"
+                )
+            )
+
             As = [0.02, 0.04]
             dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
             for A in As:
                 for dx in dxs:
                     a = str(A).replace(".", "")
                     d = str(dx).replace(".", "") if dx < 1 else int(dx)
-                    self.wake_models[
-                        f"TurbOParkIX_{s}_A{a}_dx{d}"
-                    ] = fm.wake_models.wind.TurbOParkWakeIX(
-                        A=A, superposition=f"ws_{s}", dx=dx
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
+                        fm.wake_models.wind.TurbOParkWakeIX(
+                            A=A, superposition=f"ws_{s}", dx=dx
+                        )
                     )
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
-            self.wake_models[
-                f"CrespoHernandez_{s}"
-            ] = fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
-            self.wake_models[
-                f"CrespoHernandez_ambti_{s}"
-            ] = fm.wake_models.ti.CrespoHernandezTIWake(
-                superposition=f"ti_{s}", use_ambti=True
+            self.wake_models[f"CrespoHernandez_{s}"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
             )
-            self.wake_models[
-                f"CrespoHernandez_{s}_k002"
-            ] = fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
+            self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(
+                    superposition=f"ti_{s}", use_ambti=True
+                )
+            )
+            self.wake_models[f"CrespoHernandez_{s}_k002"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
+            )
 
             self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
                 superposition=f"ti_{s}", iec_type="2005"
@@ -347,6 +416,12 @@ class ModelBook:
             )
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
+        self.wake_models[f"SelfSimilar2020"] = (
+            fm.wake_models.induction.SelfSimilar2020()
+        )
+
+        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
 
         self.sources = Dict(
             name="sources",
@@ -360,6 +435,7 @@ class ModelBook:
             wake_frames=self.wake_frames,
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
+            axial_induction=self.axial_induction,
         )
         self.base_classes = Dict(
             name="base_classes",
@@ -373,6 +449,7 @@ class ModelBook:
             wake_frames=WakeFrame,
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
+            axial_induction=AxialInductionModel,
         )
 
         for s in self.sources.values():

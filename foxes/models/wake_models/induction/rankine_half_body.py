@@ -13,34 +13,65 @@ class RankineHalfBody(WakeModel):
     The individual wake effects are superposed linearly,
     without invoking a wake superposition model.
 
-    Ref: B Gribben and G Hawkes - A potential flow model for wind turbine induction and wind farm blockage
+    Notes
+    -----
+    Reference:
+    B Gribben and G Hawkes
+    "A potential flow model for wind turbine induction and wind farm blockage"
     Techincal Paper, Frazer-Nash Consultancy, 2019
-
     https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
 
     Attributes
     ----------
-    ct_max: float
-        The maximal value for ct, values beyond will be limited
-        to this number
+    induction: foxes.core.AxialInductionModel or str
+        The induction model
 
     :group: models.wake_models.induction
 
     """
 
-    def __init__(self, ct_max=0.9999):
+    def __init__(self, induction="Madsen"):
         """
         Constructor.
 
         Parameters
         ----------
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
 
         """
         super().__init__()
-        self.ct_max = ct_max
+        self.induction = induction
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+        super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -128,7 +159,6 @@ class RankineHalfBody(WakeModel):
             upcast=True,
             states_source_turbine=states_source_turbine,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         # get ws:
         ws = self.get_data(
@@ -154,11 +184,8 @@ class RankineHalfBody(WakeModel):
             states_source_turbine=states_source_turbine,
         )
 
-        # calc induction factor (page 6)
-        a = 0.5 * (1 - np.sqrt(1 - ct))
-
         # calc m (page 7, skipping pi everywhere)
-        m = 2 * ws * a * (D / 2) ** 2
+        m = 2 * ws * self.induction.ct2a(ct) * (D / 2) ** 2
 
         # get r and theta
         r = np.sqrt(y**2 + z**2)

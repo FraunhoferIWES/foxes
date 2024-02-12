@@ -10,11 +10,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for top-hat wake models.
 
+    Parameters
+    ----------
+    induction: foxes.core.AxialInductionModel or str
+        The induction model
+
     :group: models.wake_models
 
     """
 
-    def __init__(self, superpositions, ct_max=0.9999):
+    def __init__(self, superpositions, induction="Betz"):
         """
         Constructor.
 
@@ -24,13 +29,42 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The superpositions. Key: variable name str,
             value: The wake superposition model name,
             will be looked up in model book
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
 
         """
         super().__init__(superpositions)
-        self.ct_max = ct_max
+        self.induction = induction
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+        super().initialize(algo, verbosity, force)
 
     @abstractmethod
     def calc_wake_radius(
@@ -176,7 +210,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             states_source_turbine=states_source_turbine,
             algo=algo,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         wake_r = self.calc_wake_radius(
             algo, mdata, fdata, pdata, states_source_turbine, x, ct

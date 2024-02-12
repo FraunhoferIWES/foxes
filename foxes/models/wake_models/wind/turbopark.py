@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.models.wake_models.gaussian import GaussianWakeModel
+from foxes.utils import sqrt_reg
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -22,20 +23,25 @@ class TurbOParkWake(GaussianWakeModel):
         The wake growth parameter A.
     sbeta_factor: float
         Factor multiplying sbeta
-    ct_max: float
-        The maximal value for ct, values beyond will be limited
-        to this number
     c1: float
         Factor from Frandsen turbulence model
     c2: float
         Factor from Frandsen turbulence model
+    induction: foxes.core.AxialInductionModel or str
+        The induction model
 
     :group: models.wake_models.wind
 
     """
 
     def __init__(
-        self, superposition, A, sbeta_factor=0.25, ct_max=0.9999, c1=1.5, c2=0.8
+        self,
+        superposition,
+        A,
+        sbeta_factor=0.25,
+        c1=1.5,
+        c2=0.8,
+        induction="Madsen",
     ):
         """
         Constructor.
@@ -50,27 +56,56 @@ class TurbOParkWake(GaussianWakeModel):
             The wake growth parameter A.
         sbeta_factor: float
             Factor multiplying sbeta
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         c1: float
             Factor from Frandsen turbulence model
         c2: float
             Factor from Frandsen turbulence model
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.A = A
-        self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
+        self.induction = induction
 
     def __repr__(self):
         s = super().__repr__()
         s += f"(A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+        super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -149,7 +184,6 @@ class TurbOParkWake(GaussianWakeModel):
             upcast=True,
             states_source_turbine=states_source_turbine,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
@@ -185,8 +219,11 @@ class TurbOParkWake(GaussianWakeModel):
             ati = ati[sp_sel]
 
             # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            epsilon = self.sbeta_factor * sbeta
+            # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
+            epsilon = self.sbeta_factor * np.sqrt(beta)
+            del a, beta
 
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct)
@@ -210,15 +247,14 @@ class TurbOParkWake(GaussianWakeModel):
 
             del (
                 x,
-                sbeta,
                 alpha,
                 beta,
                 epsilon,
             )
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
-            term = 1.0 - ct / (8 * (sigma / D) ** 2)
-            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
+            ct_eff = ct / (8 * (sigma / D) ** 2)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:
@@ -244,13 +280,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
         The wake growth parameter A.
     sbeta_factor: float
         Factor multiplying sbeta
-    ct_max: float
-        The maximal value for ct, values beyond will be limited
-        to this number
     ti_var:  str
         The TI variable
     self_wake: bool
         Flag for considering only own wake in ti integral
+    induction: foxes.core.AxialInductionModel or str
+        The induction model
     ipars: dict
         Additional parameters for centreline integration
 
@@ -264,9 +299,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
         dx,
         A,
         sbeta_factor=0.25,
-        ct_max=0.9999,
         ti_var=FV.TI,
         self_wake=True,
+        induction="Madsen",
         **ipars,
     ):
         """
@@ -284,13 +319,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The wake growth parameter A.
         sbeta_factor: float
             Factor multiplying sbeta
-        ct_max: float
-            The maximal value for ct, values beyond will be limited
-            to this number
         ti_var:  str
             The TI variable
         self_wake: bool
             Flag for considering only own wake in ti integral
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
         ipars: dict, optional
             Additional parameters for centreline integration
 
@@ -299,17 +333,47 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         self.dx = dx
         self.A = A
-        self.ct_max = ct_max
         self.sbeta_factor = sbeta_factor
         self.ti_var = ti_var
         self.ipars = ipars
         self._tiwakes = None
         self.self_wake = self_wake
+        self.induction = induction
 
     def __repr__(self):
         s = super().__repr__()
         s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
         return s
+
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+        super().initialize(algo, verbosity, force)
 
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -401,7 +465,6 @@ class TurbOParkWakeIX(GaussianWakeModel):
             upcast=True,
             states_source_turbine=states_source_turbine,
         )
-        ct[ct > self.ct_max] = self.ct_max
 
         # select targets:
         sp_sel = (x > 1e-5) & (ct > 0.0)
@@ -424,8 +487,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
             D = D[sp_sel]
 
             # calculate sigma:
-            sbeta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
-            epsilon = self.sbeta_factor * sbeta
+            # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
+            epsilon = self.sbeta_factor * np.sqrt(beta)
+            del a, beta
 
             # get TI by integration along centre line:
             ti_ix = algo.wake_frame.calc_centreline_integral(
@@ -451,8 +517,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             )
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
-            term = 1.0 - ct / (8 * (sigma / D) ** 2)
-            ampld = np.sqrt(np.where(term > 0, term, 0)) - 1
+            ct_eff = ct / (8 * (sigma / D) ** 2)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:

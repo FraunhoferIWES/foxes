@@ -255,9 +255,11 @@ class FarmLayoutOutput(Output):
         ti = (
             title
             if title is not None
-            else self.farm.name
-            if D is None or not normalize_D
-            else f"{self.farm.name} (D = {D} m)"
+            else (
+                self.farm.name
+                if D is None or not normalize_D
+                else f"{self.farm.name} (D = {D} m)"
+            )
         )
         ax.set_title(ti)
 

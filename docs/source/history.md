@@ -408,3 +408,33 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Improved animations in `timelines.ipynb` and `sequential.ipynb`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1)
+
+## v0.6
+
+- Dependencies:
+  - Replacing dependency on `plotly` by dependency on `windrose`, since the latter is lighter
+- Core:
+  - This version introduces `AxialInductionModel` classes, computing the axial induction factor `a(ct)`
+- Wake models:
+  - Reformulating `beta` in terms of induction in `Bastankhah2014` and `CrespoHernandez`
+  - New default: `Bastankhah2014`, `Bastankhah2016`, `TurbOPark` and `TurbOParkIX` now with default axial induction model `Madsen`
+  - New induction wake models: `Rathmann`, `SelfSimilar` and `SelfSimilar2020`, for blockage modelling
+  - Introducing `WakeMirror` wrapper around wake models, modelling wake reflection from ground or horizontal plane via virtual mirrored turbines
+- Wake frames:
+  - Renaming `Streamlines` to `Streamlines2D`, no changes in model book names
+- Axial induction models:
+  - New induction model: `BetzAxialInduction`, the classic `a = 0.5(1 - sqrt(1-ct))` relation. In the model book this is called `Betz`.
+  - New induction model: `MadsenAxialInduction`, a third-order polynomial approximation of `a(ct)`. In the model book this is called `Madsen`.
+- Output:
+  - Improved: `FlowPlots2D` now includes an option for indicating the rotor disk by a colored line
+  - Improved: `RosePlotOutput` no longer depends on `plotly`, but on the new utility `TabWindroseAxes`
+- Utils:
+  - New: `TabWindroseAxes`, a derivative of `windrose.WindroseAxes` for input data that is based on bins with weights (and not timeseries)
+- Notebooks:
+  - New: `blockage_comparison.ipynb`, comparing four turbine induction models
+- Bug fixes:
+  - Fix for bug in `Streamlines2D` when used in combination with `WakeMirror`
+- Tests:
+  - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6](https://github.com/FraunhoferIWES/foxes/commits/v0.6)

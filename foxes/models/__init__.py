@@ -1,6 +1,7 @@
 """
 Model collection.
 """
+
 from . import turbine_types
 from . import rotor_models
 from . import turbine_models
@@ -12,5 +13,6 @@ from . import wake_superpositions
 from . import farm_controllers
 from . import vertical_profiles
 from . import point_models
+from . import axial_induction_models
 
 from .model_book import ModelBook

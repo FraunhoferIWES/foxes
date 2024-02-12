@@ -30,6 +30,10 @@ def test():
     )
     mbook.turbine_types[ttype.name] = ttype
 
+    mbook.wake_models["Basta"] = foxes.models.wake_models.wind.Bastankhah2014(
+        sbeta_factor=0.25, superposition="ws_linear", induction="Betz"
+    )
+
     states = foxes.input.states.ScanWS(
         ws_list=np.linspace(6.0, 16.0, n_s), wd=wd, ti=ti, rho=1.225
     )
@@ -49,7 +53,7 @@ def test():
         farm,
         states=states,
         rotor_model=rotor,
-        wake_models=["Bastankhah025_linear"],
+        wake_models=["Basta"],
         wake_frame="rotor_wd",
         partial_wakes_model="rotor_points",
         chunks=ck,
