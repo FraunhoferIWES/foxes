@@ -90,19 +90,29 @@ if __name__ == "__main__":
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
 
-    # horizontal flow plot
+    # xy horizontal flow plot
     print("\nHorizontal flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10, xmin=-100, xmax=3000)
+    g = o.gen_states_fig_xy(args.var, resolution=10, xmin=-100, xmax=3000, rotor_color="red")
     fig = next(g)
     plt.show()
     plt.close(fig)
 
-    # vertical flow plot
+    # xz flow plot
+    print("\nVertical flow figure output:")
+    o = foxes.output.FlowPlots2D(algo, farm_results)
+    g = o.gen_states_fig_xz(
+        args.var, resolution=10, y=0, zmax=300, rotor_color='red'
+    )
+    fig = next(g)
+    plt.show()
+    plt.close(fig)
+
+    # yz flow plot
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_yz(
-        args.var, resolution=10, x=750, ymin=-200, ymax=200, zmax=300
+        var=args.var, resolution=10, x=1700, ymin=-200, ymax=200, zmax=300, rotor_color='red'
     )
     fig = next(g)
     plt.show()

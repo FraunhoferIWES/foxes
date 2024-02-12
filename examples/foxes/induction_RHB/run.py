@@ -160,6 +160,7 @@ if __name__ == "__main__":
         xmax=xmax,
         yspace=1000.0,
         levels=40,
+        rotor_color="black"
     )
     fig = next(g)
     plt.show()
