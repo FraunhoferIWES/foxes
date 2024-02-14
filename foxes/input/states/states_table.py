@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from xarray import Dataset
 from pathlib import Path
 
 from foxes.core import States, VerticalProfile
-from foxes.utils import PandasFileHelper
+from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
@@ -379,3 +380,62 @@ class Timeseries(StatesTable):
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
+
+class TabStates(StatesTable):
+    """
+    States created from a single tab file
+
+    :group: input.states
+
+    """
+    def __init__(
+        self,
+        data_source,
+        *args,
+        normalize=True,
+        **kwargs
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or xarray.Dataset
+            The tab file data file name, or its data
+        args: tuple, optional
+            Additional parameters for StatesTable
+        normalize: bool
+            Normalize the tab file data
+        kwargs: dict, optional
+            Additional parameters for StatesTable
+
+        """
+        if isinstance(data_source, Dataset):
+            tab_data = data_source
+        else:
+            tab_data = read_tab_file(data_source, normalize)
+        
+        ws0 = tab_data["ws"].to_numpy() + tab_data["delta_ws"]/2
+        wd0 = tab_data["wd"].to_numpy()
+        n_ws = len(ws0)
+        n_wd = len(wd0)
+        n_states = n_ws * n_wd
+
+        ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+        wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+        ws[:] = ws0[:, None]
+        wd[:] = wd0[None, :]
+
+        weights = tab_data["frequency"].to_numpy()
+
+        data = pd.DataFrame(
+            index=np.arange(n_states), 
+            data={
+                FV.WS: ws.reshape(n_states),
+                FV.WD: wd.reshape(n_states),
+                FV.WEIGHT: weights.reshape(n_states)/1000 
+                  --> TODO: HOW FREQENT IS EACH SECTOR? <--
+            }
+        )
+

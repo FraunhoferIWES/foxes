@@ -14,7 +14,7 @@ from .load import import_module
 from .exec_python import exec_python
 from .regularize import sqrt_reg
 from .windrose_plot import TabWindroseAxes
-from .windfarmer_utils import read_tab_file
+from .tab_files import read_tab_file
 
 from . import two_circles
 from . import abl
