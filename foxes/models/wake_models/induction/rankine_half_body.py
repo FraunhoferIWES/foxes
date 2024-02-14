@@ -268,10 +268,11 @@ class RankineHalfBody(WakeModel):
         # wake deltas are in wake frame, rotate back to global frame:
         ny = np.stack((-nx[:, :, 1], nx[:, :, 0]), axis=2)
         delta_uv = wake_deltas["U"][:, :, None] * nx + wake_deltas["V"][:, :, None] * ny
+        del ws0, nx, ny
 
         # add ambient result to wake deltas:
         wind_vec += delta_uv
-        del delta_uv, ws0, nx, ny
+        del delta_uv
 
         # deduce WS and WD deltas:
         new_wd = uv2wd(wind_vec)
