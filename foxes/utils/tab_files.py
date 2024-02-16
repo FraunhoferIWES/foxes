@@ -28,8 +28,10 @@ def read_tab_file(fname, normalize=True):
         header.append(f.readline().replace("\t", " ").strip())
         header.append(f.readline().replace("\t", " ").strip())
         header.append(f.readline().replace("\t", " ").strip())
-        s = "0 " + f.read().replace("\t", " ").strip()
+        sfreqs = f.readline().replace("\t", " ").strip()
+        s = f.read().replace("\t", " ").strip()
     data = np.genfromtxt(StringIO(s))
+    sfreqs = np.fromstring(sfreqs, sep=' ')
 
     descr = header[0]
     lat, lon, height = np.fromstring(header[1], sep=' ')
@@ -42,21 +44,22 @@ def read_tab_file(fname, normalize=True):
             "wd": np.arange(0, 360., delta_wd)
         },
         data_vars={
-            "frequency": (("ws", "wd"), data[:, 1:])
+            "wd_freq": (("wd",), sfreqs),
+            "ws_freq": (("ws", "wd"), data[:, 1:])
         },
         attrs={
             "description": descr,
             "latitude": lat,
             "longitude": lon,
             "height": height, 
-            "delta_ws": a,
-            "delta_wd": delta_wd,
+            "factor_ws": a,
             "shift_wd": b,
         }
     )
 
     if normalize:
-        out["frequency"] *= 1000/np.sum(data[:, 1:], axis=0)[None, :]
+        out["ws_freq"] *= 1000/np.sum(data[:, 1:], axis=0)[None, :]
+        out["wd_freq"] *= 100/np.sum(sfreqs)
 
     return out
 

@@ -33,5 +33,5 @@ class StaticData(DataBook):
         super().__init__()
 
         self.add_data_package(FARM, farms, ".csv")
-        self.add_data_package(STATES, states, [".csv", ".csv.gz", ".nc"])
+        self.add_data_package(STATES, states, [".csv", ".csv.gz", ".nc", ".tab"])
         self.add_data_package(PCTCURVE, power_ct_curves, ".csv")

@@ -4,4 +4,5 @@ include foxes/data/power_ct_curves/*.csv
 include foxes/data/states/*.csv
 include foxes/data/states/*.csv.gz
 include foxes/data/states/*.nc
+include foxes/data/states/*.tab
 include foxes/data/farms/*.csv

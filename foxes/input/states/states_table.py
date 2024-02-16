@@ -411,31 +411,86 @@ class TabStates(StatesTable):
             Additional parameters for StatesTable
 
         """
+        self._normalize = normalize
         if isinstance(data_source, Dataset):
-            tab_data = data_source
+            self._tab_source = None
+            self._tab_data = data_source
+        elif isinstance(data_source, (str, Path)):
+            self._tab_source = data_source
+            self._tab_data = None
         else:
-            tab_data = read_tab_file(data_source, normalize)
+            raise TypeError(f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}")
         
-        ws0 = tab_data["ws"].to_numpy() + tab_data["delta_ws"]/2
-        wd0 = tab_data["wd"].to_numpy()
-        n_ws = len(ws0)
-        n_wd = len(wd0)
-        n_states = n_ws * n_wd
+        super().__init__(data_source=None, *args, **kwargs)
 
-        ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
-        wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
-        ws[:] = ws0[:, None]
-        wd[:] = wd0[None, :]
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
 
-        weights = tab_data["frequency"].to_numpy()
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
-        data = pd.DataFrame(
-            index=np.arange(n_states), 
-            data={
-                FV.WS: ws.reshape(n_states),
-                FV.WD: wd.reshape(n_states),
-                FV.WEIGHT: weights.reshape(n_states)/1000 
-                  --> TODO: HOW FREQENT IS EACH SECTOR? <--
-            }
-        )
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
 
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        if self.data_source is None:
+            if self._tab_data is None:
+                if not Path(self._tab_source).is_file():
+                    if verbosity:
+                        print(
+                            f"States '{self.name}': Reading static data '{self._tab_source}' from context '{STATES}'"
+                        )
+                    self._tab_source = algo.dbook.get_file_path(
+                        STATES, self._tab_source, check_raw=False
+                    )
+                    if verbosity:
+                        print(f"Path: {self._tab_source}")
+                elif verbosity:
+                    print(f"States '{self.name}': Reading file {self._tab_source}")
+                self._tab_data = read_tab_file(self._tab_source, self._normalize)
+
+            a = self._tab_data.attrs['factor_ws']
+            b = self._tab_data.attrs['shift_wd']
+            if b != 0.:
+                raise ValueError(f"{self.name}: shift_wd = {b} is not supported, expecting zero")
+
+            wd0 = self._tab_data["wd"].to_numpy()
+            ws0 = a * np.append(np.array([0], dtype=FC.DTYPE), self._tab_data['ws'].to_numpy())
+            ws0 = 0.5*(ws0[:-1] + ws0[1:])
+
+            n_ws = self._tab_data.dims["ws"]
+            n_wd = self._tab_data.dims["wd"]
+            ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+            wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+            ws[:] = ws0[:, None]
+            wd[:] = wd0[None, :]
+
+            wd_freq = self._tab_data["wd_freq"].to_numpy()/100
+            weights = self._tab_data["ws_freq"].to_numpy()*wd_freq[None, :]/1000
+
+            sel = weights > 0
+
+            self.data_source = pd.DataFrame(
+                index=np.arange(np.sum(sel)), 
+                data={
+                    FV.WS: ws[sel],
+                    FV.WD: wd[sel],
+                    FV.WEIGHT: weights[sel],
+                }
+            )
+            self.data_source.index.name = FC.STATE
+            
+        return super().load_data(algo, verbosity)
