@@ -451,3 +451,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Bug fixed for `RankineHalfBody` turbine induction model that produced wrong results for wind directions unequal 270 degrees
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.1](https://github.com/FraunhoferIWES/foxes/commits/v0.6.1)
+
+## v0.6.2
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)
