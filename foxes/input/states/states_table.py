@@ -389,13 +389,8 @@ class TabStates(StatesTable):
     :group: input.states
 
     """
-    def __init__(
-        self,
-        data_source,
-        *args,
-        normalize=True,
-        **kwargs
-    ):
+
+    def __init__(self, data_source, *args, normalize=True, **kwargs):
         """
         Constructor.
 
@@ -419,8 +414,10 @@ class TabStates(StatesTable):
             self._tab_source = data_source
             self._tab_data = None
         else:
-            raise TypeError(f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}")
-        
+            raise TypeError(
+                f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}"
+            )
+
         super().__init__(data_source=None, *args, **kwargs)
 
     def load_data(self, algo, verbosity=0):
@@ -462,14 +459,18 @@ class TabStates(StatesTable):
                     print(f"States '{self.name}': Reading file {self._tab_source}")
                 self._tab_data = read_tab_file(self._tab_source, self._normalize)
 
-            a = self._tab_data.attrs['factor_ws']
-            b = self._tab_data.attrs['shift_wd']
-            if b != 0.:
-                raise ValueError(f"{self.name}: shift_wd = {b} is not supported, expecting zero")
+            a = self._tab_data.attrs["factor_ws"]
+            b = self._tab_data.attrs["shift_wd"]
+            if b != 0.0:
+                raise ValueError(
+                    f"{self.name}: shift_wd = {b} is not supported, expecting zero"
+                )
 
             wd0 = self._tab_data["wd"].to_numpy()
-            ws0 = a * np.append(np.array([0], dtype=FC.DTYPE), self._tab_data['ws'].to_numpy())
-            ws0 = 0.5*(ws0[:-1] + ws0[1:])
+            ws0 = a * np.append(
+                np.array([0], dtype=FC.DTYPE), self._tab_data["ws"].to_numpy()
+            )
+            ws0 = 0.5 * (ws0[:-1] + ws0[1:])
 
             n_ws = self._tab_data.dims["ws"]
             n_wd = self._tab_data.dims["wd"]
@@ -478,19 +479,19 @@ class TabStates(StatesTable):
             ws[:] = ws0[:, None]
             wd[:] = wd0[None, :]
 
-            wd_freq = self._tab_data["wd_freq"].to_numpy()/100
-            weights = self._tab_data["ws_freq"].to_numpy()*wd_freq[None, :]/1000
+            wd_freq = self._tab_data["wd_freq"].to_numpy() / 100
+            weights = self._tab_data["ws_freq"].to_numpy() * wd_freq[None, :] / 1000
 
             sel = weights > 0
 
             self.data_source = pd.DataFrame(
-                index=np.arange(np.sum(sel)), 
+                index=np.arange(np.sum(sel)),
                 data={
                     FV.WS: ws[sel],
                     FV.WD: wd[sel],
                     FV.WEIGHT: weights[sel],
-                }
+                },
             )
             self.data_source.index.name = FC.STATE
-            
+
         return super().load_data(algo, verbosity)
