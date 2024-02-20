@@ -454,5 +454,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.6.2
 
+- Models:
+  - New partial wakes model: `PartialCentre`, evaluating wake deltas at the rotor centre point only
+
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)
