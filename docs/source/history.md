@@ -438,3 +438,16 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6](https://github.com/FraunhoferIWES/foxes/commits/v0.6)
+
+## v0.6.1
+
+- Input:
+  - New ambient states: `TabStates`, single tab-file input
+- Data
+  - New static data: `winds100.tab`, an example tab file
+- Examples:
+  - New example: `tab_file`, demonstrating the usage of the `TabStates`
+- Bug fixes:
+  - Bug fixed for `RankineHalfBody` turbine induction model that produced wrong results for wind directions unequal 270 degrees
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.1](https://github.com/FraunhoferIWES/foxes/commits/v0.6.1)

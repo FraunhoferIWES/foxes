@@ -32,7 +32,7 @@ exceptiongroup==1.2.0
 executing==2.0.1
 fastjsonschema==2.19.1
 flake8==7.0.0
-fonttools==4.48.1
+fonttools==4.49.0
 fsspec==2024.2.0
 future==0.18.3
 grapheme==0.6.0
@@ -58,7 +58,7 @@ locket==1.0.0
 lxml==5.1.0
 m2r2==0.3.3.post2
 MarkupSafe==2.1.5
-matplotlib==3.7.4
+matplotlib==3.7.5
 matplotlib-inline==0.1.6
 mccabe==0.7.0
 mistune==0.8.4
@@ -94,14 +94,14 @@ pyflakes==3.2.0
 Pygments==2.17.2
 pymoo==0.6.1.1
 pyparsing==3.1.1
-pytest==8.0.0
+pytest==8.0.1
 python-dateutil==2.8.2
 pytz==2024.1
 PyYAML==6.0.1
 pyzmq==25.1.2
 referencing==0.33.0
 requests==2.31.0
-rpds-py==0.17.1
+rpds-py==0.18.0
 scipy==1.10.1
 six==1.16.0
 snowballstemmer==2.2.0
@@ -124,7 +124,7 @@ tornado==6.4
 traitlets==5.14.1
 typing_extensions==4.9.0
 tzdata==2024.1
-urllib3==2.2.0
+urllib3==2.2.1
 wcwidth==0.2.13
 webencodings==0.5.1
 widgetsnbextension==4.0.10

@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from xarray import Dataset
 from pathlib import Path
 
 from foxes.core import States, VerticalProfile
-from foxes.utils import PandasFileHelper
+from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
@@ -379,3 +380,118 @@ class Timeseries(StatesTable):
     """
 
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
+
+class TabStates(StatesTable):
+    """
+    States created from a single tab file
+
+    :group: input.states
+
+    """
+
+    def __init__(self, data_source, *args, normalize=True, **kwargs):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or xarray.Dataset
+            The tab file data file name, or its data
+        args: tuple, optional
+            Additional parameters for StatesTable
+        normalize: bool
+            Normalize the tab file data
+        kwargs: dict, optional
+            Additional parameters for StatesTable
+
+        """
+        self._normalize = normalize
+        if isinstance(data_source, Dataset):
+            self._tab_source = None
+            self._tab_data = data_source
+        elif isinstance(data_source, (str, Path)):
+            self._tab_source = data_source
+            self._tab_data = None
+        else:
+            raise TypeError(
+                f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}"
+            )
+
+        super().__init__(data_source=None, *args, **kwargs)
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        if self.data_source is None:
+            if self._tab_data is None:
+                if not Path(self._tab_source).is_file():
+                    if verbosity:
+                        print(
+                            f"States '{self.name}': Reading static data '{self._tab_source}' from context '{STATES}'"
+                        )
+                    self._tab_source = algo.dbook.get_file_path(
+                        STATES, self._tab_source, check_raw=False
+                    )
+                    if verbosity:
+                        print(f"Path: {self._tab_source}")
+                elif verbosity:
+                    print(f"States '{self.name}': Reading file {self._tab_source}")
+                self._tab_data = read_tab_file(self._tab_source, self._normalize)
+
+            a = self._tab_data.attrs["factor_ws"]
+            b = self._tab_data.attrs["shift_wd"]
+            if b != 0.0:
+                raise ValueError(
+                    f"{self.name}: shift_wd = {b} is not supported, expecting zero"
+                )
+
+            wd0 = self._tab_data["wd"].to_numpy()
+            ws0 = a * np.append(
+                np.array([0], dtype=FC.DTYPE), self._tab_data["ws"].to_numpy()
+            )
+            ws0 = 0.5 * (ws0[:-1] + ws0[1:])
+
+            n_ws = self._tab_data.dims["ws"]
+            n_wd = self._tab_data.dims["wd"]
+            ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+            wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+            ws[:] = ws0[:, None]
+            wd[:] = wd0[None, :]
+
+            wd_freq = self._tab_data["wd_freq"].to_numpy() / 100
+            weights = self._tab_data["ws_freq"].to_numpy() * wd_freq[None, :] / 1000
+
+            sel = weights > 0
+
+            self.data_source = pd.DataFrame(
+                index=np.arange(np.sum(sel)),
+                data={
+                    FV.WS: ws[sel],
+                    FV.WD: wd[sel],
+                    FV.WEIGHT: weights[sel],
+                },
+            )
+            self.data_source.index.name = FC.STATE
+
+        return super().load_data(algo, verbosity)
