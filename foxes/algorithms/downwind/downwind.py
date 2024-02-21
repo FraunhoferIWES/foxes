@@ -18,8 +18,9 @@ class Downwind(Algorithm):
     ----------
     states: foxes.core.States
         The ambient states
-    wake_models: list of foxes.core.WakeModel
-        The wake models, applied to all turbines
+    wake_models: dict
+        The wake models. Key: wake model name,
+        value: foxes.core.WakeModel
     rotor_model: foxes.core.RotorModel
         The rotor model, for all turbines
     wake_frame: foxes.core.WakeFrame
@@ -101,7 +102,7 @@ class Downwind(Algorithm):
         self.wake_frame = self.mbook.wake_frames[wake_frame]
         self.wake_frame.name = wake_frame
 
-        self.wake_models = []
+        self.wake_models = {}
         for w in wake_models:
             m = self.mbook.wake_models[w]
             m.name = w
@@ -115,10 +116,10 @@ class Downwind(Algorithm):
                             f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}"
                         )
                 else:
-                    self.wake_models.append(fm.wake_models.WakeMirror(m, heights=hts))
+                    self.wake_models[w] = fm.wake_models.WakeMirror(m, heights=hts)
 
             else:
-                self.wake_models.append(m)
+                self.wake_models[w] = m
 
         self.partial_wakes = {}
         for wi, w in enumerate(wake_models):
@@ -170,7 +171,7 @@ class Downwind(Algorithm):
             print(f"  wake frame: {self.wake_frame}")
             print(deco)
             print(f"  wakes:")
-            for i, w in enumerate(self.wake_models):
+            for i, w in enumerate(self.wake_models.keys()):
                 print(f"    {i}) {w}")
             print(deco)
             print(f"  partial wakes:")
@@ -236,7 +237,9 @@ class Downwind(Algorithm):
             self.rotor_model,
             self.farm_controller,
             self.wake_frame,
-        ] + self.wake_models + list(self.partial_wakes.values())
+        ]
+        mdls += list(self.wake_models.values())
+        mdls += list(self.partial_wakes.values())
 
         return mdls
 
