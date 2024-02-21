@@ -64,7 +64,7 @@ class FarmWakesCalculation(FarmDataModel):
                                    wmodel, states_turbine=o)
 
             trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
-            np.put_along_axis(trbs, o[:, None], True, axis=1)
+            trbs[np.arange(n_states), o] = True
 
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, st_sel=trbs
@@ -79,11 +79,10 @@ class FarmWakesCalculation(FarmDataModel):
             wtargets = np.ones((n_states, n_turbines), dtype=bool)
             for oi in range(n_turbines):
                 o = torder[:, oi]
-                np.put_along_axis(wtargets, o[:, None], False, axis=1)
+                wtargets[np.arange(n_states), o] = False
 
                 for wname, wmodel in wmodels.items():
                     pwake = algo.partial_wakes[wname]
-
 
                     if oi > 0:
                         #print("EVAL",oi, wname)
@@ -111,7 +110,7 @@ class FarmWakesCalculation(FarmDataModel):
                                 algo, mdata, fdata, wmodel)
 
                         pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
-                                pdata[wname], o, wdeltas[wname], wmodel,  wtargets)
+                                pdata[wname], o, wdeltas[wname], wmodel, wtargets)
                 
 
 
