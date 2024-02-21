@@ -97,7 +97,6 @@ class PartialCentre(RotorPoints):
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
-        print("HERE PWAKE CENTRE", {v: d.shape for v, d in wdel.items()})
         wmodel.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
 
         for v in wres.keys():

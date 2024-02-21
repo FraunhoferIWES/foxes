@@ -76,17 +76,17 @@ class FarmWakesCalculation(FarmDataModel):
         if len(wmodels):
             wdeltas = {}
             pdata = {}
+            wtargets = np.ones((n_states, n_turbines), dtype=bool)
             for oi in range(n_turbines):
                 o = torder[:, oi]
-                wtargets = np.zeros((n_states, n_turbines), dtype=bool)
-                wtargets[:, oi+1:] = True
+                np.put_along_axis(wtargets, o[:, None], False, axis=1)
 
                 for wname, wmodel in wmodels.items():
                     pwake = algo.partial_wakes[wname]
 
 
                     if oi > 0:
-                        print("EVAL",oi, wname)
+                        #print("EVAL",oi, wname)
                         _evaluate(algo, mdata, fdata, pdata[wname], 
                                 wdeltas[wname], o, wmodel, pwake)
                         """
@@ -104,7 +104,7 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi < n_turbines - 1:
 
-                        print("WAKES",oi, wname, np.sum(wtargets[0]))
+                        #print("WAKES",oi, wname, np.sum(wtargets[0]))
 
                         if wname not in wdeltas:
                             wdeltas[wname], pdata[wname] = pwake.new_wake_deltas(
