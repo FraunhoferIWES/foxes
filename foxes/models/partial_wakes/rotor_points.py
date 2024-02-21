@@ -13,20 +13,6 @@ class RotorPoints(PartialWakesModel):
 
     """
 
-    def __init__(self, wake_models=None, wake_frame=None):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        wake_models: list of foxes.core.WakeModel, optional
-            The wake models, default are the ones from the algorithm
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, default is the one from the algorithm
-
-        """
-        super().__init__(wake_models, wake_frame)
-
     def get_wake_points(self, algo, mdata, fdata):
         """
         Get the wake calculation points.
@@ -43,14 +29,13 @@ class RotorPoints(PartialWakesModel):
         Returns
         -------
         rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_points, 3)
+            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
         rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
-        return rpoints.reshape(n_states, n_turbines * n_rpoints, 3)
+        return rpoints
 
-    def new_wake_deltas(self, algo, mdata, fdata):
+    def new_wake_deltas(self, algo, mdata, fdata, wmodel):
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -63,6 +48,8 @@ class RotorPoints(PartialWakesModel):
             The model data
         fdata: foxes.core.Data
             The farm data
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------
@@ -73,11 +60,15 @@ class RotorPoints(PartialWakesModel):
 
         """
         points = self.get_wake_points(algo, mdata, fdata)
+        n_states, n_turbines, n_rpoints, __ = points.shape
+        points = points.reshape(n_states, n_turbines*n_rpoints, 3)
         pdata = Data.from_points(points=points)
 
+        self.N_RPTS = self.var("N_RPTS")
+        mdata[self.N_RPTS] = n_rpoints
+
         wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
+        wmodel.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
 
         return wake_deltas, pdata
 
@@ -89,6 +80,8 @@ class RotorPoints(PartialWakesModel):
         pdata,
         states_source_turbine,
         wake_deltas,
+        wmodel,  
+        wtargets,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -110,16 +103,40 @@ class RotorPoints(PartialWakesModel):
         wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
+        wmodel: foxes.core.WakeModel
+            The wake model
+        wtargets: numpy.ndarray
+            Boolean flags for active turbines,
+            shape: (n_states, n_turbines)
 
         """
-        wcoos = self.wake_frame.get_wake_coos(
-            algo, mdata, fdata, pdata, states_source_turbine
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        n_rpoints = mdata[self.N_RPTS]
+
+        points = pdata[FC.POINTS].reshape(n_states, n_turbines, n_rpoints, 3)[wtargets]
+        n_targets = int(points.shape[0]/n_states)
+        points = points.reshape(n_states, n_targets*n_rpoints, 3)
+        hpdata = Data.from_points(points=points)
+
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, hpdata, states_source_turbine
         )
 
-        for w in self.wake_models:
-            w.contribute_to_wake_deltas(
-                algo, mdata, fdata, pdata, states_source_turbine, wcoos, wake_deltas
-            )
+        wdel = {}
+        for v, d in wake_deltas.items():
+            wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[wtargets]
+            wdel[v] = wdel[v].reshape(n_states, n_targets*n_rpoints)
+
+        wmodel.contribute_to_wake_deltas(
+            algo, mdata, fdata, hpdata, states_source_turbine, 
+            wcoos, wdel
+        )
+        
+        for v, d in wdel.items():
+            wake_deltas[v] = wake_deltas[v].reshape(n_states, n_turbines, n_rpoints)
+            wake_deltas[v][wtargets] = d.reshape(n_states*n_targets, n_rpoints)
+            wake_deltas[v] = wake_deltas[v].reshape(n_states, n_turbines*n_rpoints)
 
     def evaluate_results(
         self,
@@ -128,6 +145,8 @@ class RotorPoints(PartialWakesModel):
         fdata,
         pdata,
         wake_deltas,
+        wmodel,
+        wtargets,
         states_turbine,
         amb_res=None,
     ):
@@ -150,6 +169,11 @@ class RotorPoints(PartialWakesModel):
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
+        wmodel: foxes.core.WakeModel
+            The wake model
+        wtargets: numpy.ndarray
+            Boolean flags for active turbines,
+            shape: (n_states, n_turbines)
         states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.

@@ -23,52 +23,6 @@ class PartialWakesModel(Model):
 
     """
 
-    def __init__(self, wake_models=None, wake_frame=None):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        wake_models: list of foxes.core.WakeModel
-            The wake model selection, None for all
-            from algorithm.
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, None takes from algorithm
-
-        """
-        super().__init__()
-
-        self._wmodels = wake_models
-        self._wframe = wake_frame
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return self.wake_models + [self.wake_frame]
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
-        self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
-        super().initialize(algo, verbosity)
-
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata):
         """

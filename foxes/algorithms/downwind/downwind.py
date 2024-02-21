@@ -122,10 +122,10 @@ class Downwind(Algorithm):
                 self.wake_models[w] = m
 
         self.partial_wakes = {}
-        for wi, w in enumerate(wake_models):
+        for w in wake_models:
             pw = partial_wakes.get(
                 w,
-                mbook.default_partial_wakes(self.wake_models[wi])
+                mbook.default_partial_wakes(self.wake_models[w])
             )
             self.partial_wakes[w] = self.mbook.partial_wakes[pw]
             self.partial_wakes[w].name = pw
@@ -171,12 +171,12 @@ class Downwind(Algorithm):
             print(f"  wake frame: {self.wake_frame}")
             print(deco)
             print(f"  wakes:")
-            for i, w in enumerate(self.wake_models.keys()):
+            for i, w in enumerate(self.wake_models.values()):
                 print(f"    {i}) {w}")
             print(deco)
             print(f"  partial wakes:")
-            for i, w in enumerate(self.wake_models):
-                print(f"    {i}) {w.name}: {self.partial_wakes[w.name]}")
+            for i, (w, p) in enumerate(self.partial_wakes.items()):
+                print(f"    {i}) {w}: {p}")
             print(deco)
             print(f"  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
