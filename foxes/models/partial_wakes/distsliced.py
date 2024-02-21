@@ -28,7 +28,7 @@ class PartialDistSlicedWake(PartialWakesModel):
     """
 
     def __init__(
-        self, n=None, wake_models=None, wake_frame=None, rotor_model=None, **kwargs
+        self, n=9, wake_models=None, wake_frame=None, rotor_model=None, **kwargs
     ):
         """
         Constructor.

@@ -149,8 +149,9 @@ class ModelBook:
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             distsliced=fm.partial_wakes.PartialDistSlicedWake(),
+            distsliced_rotor=fm.partial_wakes.PartialDistSlicedWake(n=None),
+            axiwake=fm.partial_wakes.PartialAxiwake(),
             centre=fm.partial_wakes.PartialCentre(),
-            auto=fm.partial_wakes.Mapped(),
         )
         nlst = list(range(2, 11)) + [20]
         for n in nlst:
@@ -518,6 +519,31 @@ class ModelBook:
             bclass = self.base_classes[model_type]
             self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
         return self.sources[model_type][name]
+    
+    def default_partial_wakes(self, wake_model):
+        """
+        Gets a default partial wakes model name
+        for a given wake model
+        
+        Parameters
+        ----------
+        wake_model: foxes.core.WakeModel
+            The wake model
+            
+        Returns
+        -------
+        pwake: str
+            The partial wake model name
+
+        """
+        if isinstance(wake_model, fm.wake_models.TopHatWakeModel):
+            return "top_hat"
+        elif isinstance(wake_model, fm.wake_models.AxisymmetricWakeModel):
+            return "axiwake"
+        elif isinstance(wake_model, fm.wake_models.DistSlicedWakeModel):
+            return "distsliced"
+        else:
+            raise TypeError(f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'")
 
     def finalize(self, algo, verbosity=0):
         """
