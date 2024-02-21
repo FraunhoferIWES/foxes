@@ -29,7 +29,7 @@ class PartialAxiwake(PartialWakesModel):
 
     """
 
-    def __init__(self, n, wake_models=None, wake_frame=None, rotor_model=None):
+    def __init__(self, n=6, wake_models=None, wake_frame=None, rotor_model=None):
         """
         Constructor.
 

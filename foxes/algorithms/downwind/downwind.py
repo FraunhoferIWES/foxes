@@ -24,8 +24,9 @@ class Downwind(Algorithm):
         The rotor model, for all turbines
     wake_frame: foxes.core.WakeFrame
         The wake frame
-    partial_wakes_model: foxes.core.PartialWakesModel
-        The partial wakes model
+    partial_wakes: dict
+        The partial wakes mapping. Key: wake model name,
+        value: foxes.core.PartialWakesModel
     farm_controller: foxes.core.FarmController
         The farm controller
     n_states: int
@@ -35,24 +36,6 @@ class Downwind(Algorithm):
 
     """
 
-    @classmethod
-    def get_model(cls, name):
-        """
-        Get the algorithm specific model
-
-        Parameters
-        ----------
-        name: str
-            The model name
-
-        Returns
-        -------
-        model: foxes.core.model
-            The model
-
-        """
-        return getattr(mdls, name)
-
     def __init__(
         self,
         mbook,
@@ -61,7 +44,7 @@ class Downwind(Algorithm):
         wake_models,
         rotor_model="centre",
         wake_frame="rotor_wd",
-        partial_wakes_model="auto",
+        partial_wakes={},
         farm_controller="basic_ctrl",
         chunks={FC.STATE: 1000, FC.POINT: 10000},
         wake_mirrors={},
@@ -88,9 +71,9 @@ class Downwind(Algorithm):
         wake_frame: str
             The wake frame. Will be looked up in the
             model book
-        partial_wakes_model: str
-            The partial wakes model. Will be
-            looked up in the model book
+        partial_wakes: dict
+            The partial wakes mapping. Key: wake model name,
+            value: partial wake model name
         farm_controller: str
             The farm controller. Will be
             looked up in the model book
@@ -115,9 +98,6 @@ class Downwind(Algorithm):
         self.rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
 
-        self.partial_wakes_model = self.mbook.partial_wakes[partial_wakes_model]
-        self.partial_wakes_model.name = partial_wakes_model
-
         self.wake_frame = self.mbook.wake_frames[wake_frame]
         self.wake_frame.name = wake_frame
 
@@ -140,9 +120,36 @@ class Downwind(Algorithm):
             else:
                 self.wake_models.append(m)
 
+        self.partial_wakes = {}
+        for wi, w in enumerate(wake_models):
+            pw = partial_wakes.get(
+                w,
+                mbook.default_partial_wakes(self.wake_models[wi])
+            )
+            self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+            self.partial_wakes[w].name = pw
+
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
+    @classmethod
+    def get_model(cls, name):
+        """
+        Get the algorithm specific model
+
+        Parameters
+        ----------
+        name: str
+            The model name
+
+        Returns
+        -------
+        model: foxes.core.model
+            The model
+
+        """
+        return getattr(mdls, name)
+    
     def _print_deco(self, func_name, n_points=None):
         """
         Helper function for printing model names
@@ -160,12 +167,15 @@ class Downwind(Algorithm):
             print(f"  states   : {self.states}")
             print(f"  rotor    : {self.rotor_model}")
             print(f"  controller: {self.farm_controller}")
-            print(f"  partialwks: {self.partial_wakes_model}")
             print(f"  wake frame: {self.wake_frame}")
             print(deco)
             print(f"  wakes:")
             for i, w in enumerate(self.wake_models):
                 print(f"    {i}) {w}")
+            print(deco)
+            print(f"  partial wakes:")
+            for i, w in enumerate(self.wake_models):
+                print(f"    {i}) {w.name}: {self.partial_wakes[w.name]}")
             print(deco)
             print(f"  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
@@ -226,8 +236,7 @@ class Downwind(Algorithm):
             self.rotor_model,
             self.farm_controller,
             self.wake_frame,
-            self.partial_wakes_model,
-        ] + self.wake_models
+        ] + self.wake_models + list(self.partial_wakes.values())
 
         return mdls
 
