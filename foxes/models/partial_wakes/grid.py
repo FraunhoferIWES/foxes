@@ -12,7 +12,7 @@ class PartialGrid(PartialDistSlicedWake):
     """
 
     def __init__(
-        self, n, wake_models=None, wake_frame=None, rotor_model=None, **kwargs
+        self, n, rotor_model=None, **kwargs
     ):
         """
         Constructor.
@@ -21,17 +21,13 @@ class PartialGrid(PartialDistSlicedWake):
         ----------
         n: int, optional
             The `GridRotor`'s `n` parameter
-        wake_models: list of foxes.core.WakeModel, optional
-            The wake models, default are the ones from the algorithm
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, default is the one from the algorithm
         rotor_model: foxes.core.RotorModel, optional
             The rotor model, default is the one from the algorithm
         kwargs: dict, optional
             Additional parameters for the `GridRotor`
 
         """
-        super().__init__(n, wake_models, wake_frame, rotor_model, **kwargs)
+        super().__init__(n, rotor_model, **kwargs)
 
         if not isinstance(self.grotor, GridRotor):
             raise ValueError(

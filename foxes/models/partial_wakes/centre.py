@@ -15,6 +15,7 @@ class PartialCentre(RotorPoints):
 
     """
 
+
     def get_wake_points(self, algo, mdata, fdata):
         """
         Get the wake calculation points.
@@ -31,11 +32,10 @@ class PartialCentre(RotorPoints):
         Returns
         -------
         rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_points, 3)
+            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
-        return fdata[FV.TXYH]
-
+        return fdata[FV.TXYH][:, :, None]
 
     def evaluate_results(
         self,
@@ -44,6 +44,7 @@ class PartialCentre(RotorPoints):
         fdata,
         pdata,
         wake_deltas,
+        wmodel,
         states_turbine,
         amb_res=None,
     ):
@@ -66,6 +67,8 @@ class PartialCentre(RotorPoints):
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
             by `contribute_to_wake_deltas`
+        wmodel: foxes.core.WakeModel
+            The wake model
         states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.
@@ -90,11 +93,12 @@ class PartialCentre(RotorPoints):
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
 
+        
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
-        for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
+        print("HERE PWAKE CENTRE", {v: d.shape for v, d in wdel.items()})
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
 
         for v in wres.keys():
             if v in wake_deltas:

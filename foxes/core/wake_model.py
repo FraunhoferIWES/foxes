@@ -13,6 +13,20 @@ class WakeModel(Model):
 
     """
 
+    @property
+    def effects_downwind(self):
+        """
+        Flag for downwind or upwind effects 
+        on other turbines
+        
+        Returns
+        -------
+        dwnd: bool
+            Flag for downwind effects by this model
+
+        """
+        return True
+
     @abstractmethod
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
@@ -152,3 +166,26 @@ class WakeModel(Model):
                 )
             )
             raise KeyError(estr)
+
+class TurbineInductionModel(Model):
+    """
+    Abstract base class for turbine induction models.
+
+    :group: core
+
+    """
+
+    @property
+    def effects_downwind(self):
+        """
+        Flag for downwind or upwind effects 
+        on other turbines
+        
+        Returns
+        -------
+        dwnd: bool
+            Flag for downwind effects by this model
+
+        """
+        return False
+    

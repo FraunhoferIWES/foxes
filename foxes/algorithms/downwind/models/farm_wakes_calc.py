@@ -12,12 +12,6 @@ class FarmWakesCalculation(FarmDataModel):
 
     """
 
-    def __init__(self):
-        """
-        Constructor.
-        """
-        super().__init__()
-
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -37,33 +31,6 @@ class FarmWakesCalculation(FarmDataModel):
             algo
         ) + algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return [self.pwakes]
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        self.pwakes = algo.partial_wakes_model
-        super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -89,9 +56,67 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         torder = fdata[FV.ORDER]
-        n_order = torder.shape[1]
         n_states = mdata.n_states
+        n_turbines = mdata.n_turbines
 
+        def _evaluate(algo, mdata, fdata, pdata, wdeltas, o, wmodel, pwake):
+            pwake.evaluate_results(algo, mdata, fdata, pdata, wdeltas, 
+                                   wmodel, states_turbine=o)
+
+            trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
+            np.put_along_axis(trbs, o[:, None], True, axis=1)
+
+            res = algo.farm_controller.calculate(
+                algo, mdata, fdata, pre_rotor=False, st_sel=trbs
+            )
+            fdata.update(res)
+
+        # downwind:
+        wmodels = {w: m for w, m in algo.wake_models.items() if m.effects_downwind}
+        if len(wmodels):
+            wdeltas = {}
+            pdata = {}
+            for oi in range(n_turbines):
+                o = torder[:, oi]
+                wtargets = np.zeros((n_states, n_turbines), dtype=bool)
+                wtargets[:, oi+1:] = True
+
+                for wname, wmodel in wmodels.items():
+                    pwake = algo.partial_wakes[wname]
+
+
+                    if oi > 0:
+                        print("EVAL",oi, wname)
+                        _evaluate(algo, mdata, fdata, pdata[wname], 
+                                wdeltas[wname], o, wmodel, pwake)
+                        """
+                        wdel = {}
+                        for oj in range(oi):
+                            for v, d in wdeltas[wname][oj].items():
+                                if v not in wdel:
+                                    wdel[v] = []
+                                wdel[v].append(d[:, 0, None])
+                                wdeltas[wname][oj][v] = d[:, 1:]
+                        wdel = {v: np.concatenate(d, axis=1) for v, d in wdel.items()}
+                        print("-->", {v: d.shape for v, d in wdel.items()})
+                        _evaluate(algo, mdata, fdata, wdel, o, wmodel, pwake)
+                        """
+
+                    if oi < n_turbines - 1:
+
+                        print("WAKES",oi, wname, np.sum(wtargets[0]))
+
+                        if wname not in wdeltas:
+                            wdeltas[wname], pdata[wname] = pwake.new_wake_deltas(
+                                algo, mdata, fdata, wmodel)
+
+                        pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
+                                pdata[wname], o, wdeltas[wname], wmodel,  wtargets)
+                
+
+
+
+        """
         def _evaluate(algo, mdata, fdata, pdata, wdeltas, o):
             self.pwakes.evaluate_results(
                 algo, mdata, fdata, pdata, wdeltas, states_turbine=o
@@ -116,5 +141,7 @@ class FarmWakesCalculation(FarmDataModel):
                 self.pwakes.contribute_to_wake_deltas(
                     algo, mdata, fdata, pdata, o, wdeltas
                 )
+
+        """
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

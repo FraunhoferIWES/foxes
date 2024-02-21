@@ -1,11 +1,11 @@
 import numpy as np
 
-from foxes.core import WakeModel
+from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class SelfSimilar(WakeModel):
+class SelfSimilar(TurbineInductionModel):
     """
     The self-similar induction wake model
     from Troldborg and Meyer Forsting

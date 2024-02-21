@@ -29,7 +29,7 @@ class PartialAxiwake(PartialWakesModel):
 
     """
 
-    def __init__(self, n=6, wake_models=None, wake_frame=None, rotor_model=None):
+    def __init__(self, n=6, rotor_model=None):
         """
         Constructor.
 
@@ -37,15 +37,11 @@ class PartialAxiwake(PartialWakesModel):
         ----------
         n: int
             The number of radial evaluation points
-        wake_models: list of foxes.core.WakeModel, optional
-            The wake models, default are the ones from the algorithm
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, default is the one from the algorithm
         rotor_model: foxes.core.RotorModel, optional
             The rotor model, default is the one from the algorithm
 
         """
-        super().__init__(wake_models, wake_frame)
+        super().__init__()
 
         self.n = n
         self.rotor_model = rotor_model
