@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default="centre"
+        "-p", "--pwakes", help="The partial wakes models", default=["centre"], nargs="+"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
@@ -109,6 +109,7 @@ if __name__ == "__main__":
         plt.show()
         plt.close(fig)
 
+    pwakes = {w: args.pwakes[i] for i, w in enumerate(args.wakes)}
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
         mbook,
@@ -117,7 +118,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes_model=args.pwakes,
+        partial_wakes=pwakes,
         chunks=cks,
         verbosity=1,
     )
