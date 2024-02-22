@@ -11,7 +11,7 @@ def create_random_abl_states(
     """
     Create random abl states.
 
-        Parameters
+    Parameters
     ----------
     n_states: int
         The number of states
@@ -32,7 +32,7 @@ def create_random_abl_states(
     data: pandas.DataFrame
         The created states data
 
-    :group: input.states
+    :group: input.states.create
 
     """
 
@@ -70,6 +70,10 @@ def write_random_abl_states(
     **kwargs
 ):
     """
+    Writes random abl states to file
+
+    Parameters
+    ----------
     file_path: str
         Path to the file
     n_states: int
