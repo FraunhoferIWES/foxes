@@ -59,12 +59,8 @@ class FarmWakesCalculation(FarmDataModel):
         torder = fdata[FV.ORDER]
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-
-        # invert order:
         ssel = np.zeros_like(torder)
         ssel[:] = np.arange(n_states)[:, None]
-        #torderi = np.zeros_like(torder)
-        #torderi[ssel, torder] = np.arange(n_turbines)[None, :]
 
         # generate all wake evaluation points, renumbered to
         # (n_states, n_order, n_rpoints, 3)
@@ -113,7 +109,7 @@ class FarmWakesCalculation(FarmDataModel):
                                   for v, d in wdeltas[wname].items()}
 
                         pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
-                                pdata, o, wdelta, wmodel)
+                                                        pdata, o, wdelta, wmodel)
                         
                 else:
                     raise NotImplementedError
