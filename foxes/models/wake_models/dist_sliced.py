@@ -188,7 +188,6 @@ class DistSlicedWakeModel(WakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
         amb_results,
         wake_deltas,
     ):
@@ -205,8 +204,6 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
@@ -220,5 +217,5 @@ class DistSlicedWakeModel(WakeModel):
         """
         for v, s in self.superp.items():
             wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, pdata, v, amb_results[v], wake_deltas[v]
+                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
             )

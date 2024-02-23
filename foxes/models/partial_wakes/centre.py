@@ -32,7 +32,7 @@ class PartialCentre(RotorPoints):
         Returns
         -------
         rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
+            All rotor points, shape: (n_states, n_turbines, n_rpoints, 3)
 
         """
         return fdata[FV.TXYH][:, :, None]
@@ -42,7 +42,6 @@ class PartialCentre(RotorPoints):
         algo,
         mdata,
         fdata,
-        pdata,
         wake_deltas,
         wmodel,
         states_turbine,
@@ -61,8 +60,6 @@ class PartialCentre(RotorPoints):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        pdata: foxes.core.Data
-            The evaluation point data
         wake_deltas: Any
             The wake deltas object, created by the
             `new_wake_deltas` function and filled
@@ -92,16 +89,12 @@ class PartialCentre(RotorPoints):
         st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
             wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-
         
-        wdel = {}
-        for v, d in wake_deltas.items():
-            wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wake_deltas)
 
         for v in wres.keys():
             if v in wake_deltas:
-                wres[v] += wdel[v]
+                wres[v] += wake_deltas[v]
                 if amb_res_in:
                     amb_res[v][st_sel] = wres[v]
             wres[v] = wres[v][:, None]

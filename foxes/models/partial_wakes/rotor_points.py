@@ -35,7 +35,7 @@ class RotorPoints(PartialWakesModel):
         rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
         return rpoints
 
-    def new_wake_deltas(self, algo, mdata, fdata, wmodel):
+    def new_wake_deltas(self, algo, mdata, fdata, wmodel, wpoints):
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -50,27 +50,18 @@ class RotorPoints(PartialWakesModel):
             The farm data
         wmodel: foxes.core.WakeModel
             The wake model
+        wpoints: numpy.ndarray
+            The wake evaluation points,
+            shape: (n_states, n_turbines, n_rpoints, 3)
 
         Returns
         -------
         wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
+            Keys: Variable name str, values: numpy.ndarray
+            with shape: (n_states, n_points, ...)
 
         """
-        points = self.get_wake_points(algo, mdata, fdata)
-        n_states, n_turbines, n_rpoints, __ = points.shape
-        points = points.reshape(n_states, n_turbines*n_rpoints, 3)
-        pdata = Data.from_points(points=points)
-
-        self.N_RPTS = self.var("N_RPTS")
-        mdata[self.N_RPTS] = n_rpoints
-
-        wake_deltas = {}
-        wmodel.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
-
-        return wake_deltas, pdata
+        return wmodel.new_wake_deltas(algo, mdata, fdata, wpoints)
 
     def contribute_to_wake_deltas(
         self,
@@ -81,7 +72,6 @@ class RotorPoints(PartialWakesModel):
         states_source_turbine,
         wake_deltas,
         wmodel,  
-        wtargets,
     ):
         """
         Modifies wake deltas by contributions from the
@@ -105,38 +95,19 @@ class RotorPoints(PartialWakesModel):
             `new_wake_deltas` function
         wmodel: foxes.core.WakeModel
             The wake model
-        wtargets: numpy.ndarray
-            Boolean flags for active turbines,
-            shape: (n_states, n_turbines)
 
         """
         n_states = fdata.n_states
         n_turbines = fdata.n_turbines
-        n_rpoints = mdata[self.N_RPTS]
-
-        points = pdata[FC.POINTS].reshape(n_states, n_turbines, n_rpoints, 3)[wtargets]
-        n_targets = int(points.shape[0]/n_states)
-        points = points.reshape(n_states, n_targets*n_rpoints, 3)
-        hpdata = Data.from_points(points=points)
 
         wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, hpdata, states_source_turbine
+            algo, mdata, fdata, pdata, states_source_turbine
         )
-
-        wdel = {}
-        for v, d in wake_deltas.items():
-            wdel[v] = d.reshape(n_states, n_turbines, n_rpoints)[wtargets]
-            wdel[v] = wdel[v].reshape(n_states, n_targets*n_rpoints)
 
         wmodel.contribute_to_wake_deltas(
-            algo, mdata, fdata, hpdata, states_source_turbine, 
-            wcoos, wdel
+            algo, mdata, fdata, pdata, states_source_turbine, 
+            wcoos, wake_deltas
         )
-        
-        for v, d in wdel.items():
-            wake_deltas[v] = wake_deltas[v].reshape(n_states, n_turbines, n_rpoints)
-            wake_deltas[v][wtargets] = d.reshape(n_states*n_targets, n_rpoints)
-            wake_deltas[v] = wake_deltas[v].reshape(n_states, n_turbines*n_rpoints)
 
     def evaluate_results(
         self,
