@@ -14,7 +14,7 @@ class WakeModel(Model):
     """
 
     @property
-    def effects_downwind(self):
+    def affects_downwind(self):
         """
         Flag for downwind or upwind effects 
         on other turbines
@@ -176,7 +176,7 @@ class TurbineInductionModel(Model):
     """
 
     @property
-    def effects_downwind(self):
+    def affects_downwind(self):
         """
         Flag for downwind or upwind effects 
         on other turbines

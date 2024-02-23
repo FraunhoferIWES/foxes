@@ -80,7 +80,8 @@ class FarmWakesCalculation(FarmDataModel):
             n_targets, n_rpoints = points.shape[1:3]
             n_points = n_targets * n_rpoints
 
-            pdata = Data.from_points(points=points.reshape(n_states, n_points, 3))
+            pdata = Data.from_points(
+                points=points.reshape(n_states, n_points, 3))
 
             wdelta = {v: d[:, s].reshape(n_states, n_points) 
                         for v, d in wdeltas[wname].items()}
@@ -99,12 +100,12 @@ class FarmWakesCalculation(FarmDataModel):
             )
             fdata.update(res)
 
-        for oi in range(n_turbines):
-            for wname, wmodel in algo.wake_models.items():
-                pwake = algo.partial_wakes[wname]
+        for wname, wmodel in algo.wake_models.items():
+            pwake = algo.partial_wakes[wname]
 
-                # downwind:
-                if wmodel.effects_downwind:
+            # downwind:
+            if wmodel.affects_downwind:
+                for oi in range(n_turbines):
                     o = torder[:, oi]
 
                     if oi > 0:
@@ -116,17 +117,17 @@ class FarmWakesCalculation(FarmDataModel):
                         pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
                                                         pdata, o, wdelta, wmodel)
                 
-                # upwind:
-                else:
-                    oj = n_turbines - oi - 1
-                    o = torder[:, oj]
+            # upwind:
+            else:
+                for oi in range(n_turbines-1, -1, -1):
+                    o = torder[:, oi]
 
-                    if oj < n_turbines - 1:
-                        wdelta = {v: d[:, oj] for v, d in wdeltas[wname].items()}
+                    if oi < n_turbines - 1:
+                        wdelta = {v: d[:, oi] for v, d in wdeltas[wname].items()}
                         _evaluate(algo, mdata, fdata, wdelta, o, wmodel, pwake)
 
-                    if oj > 0:
-                        pdata, wdelta = _get_wdata(wname, pwake, np.s_[:oj])
+                    if oi > 0:
+                        pdata, wdelta = _get_wdata(wname, pwake, np.s_[:oi])
                         pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
                                                         pdata, o, wdelta, wmodel)
 
