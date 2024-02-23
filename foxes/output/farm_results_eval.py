@@ -106,7 +106,7 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
-        n_turbines = self.results.dims[FC.TURBINE]
+        n_turbines = self.results.sizes[FC.TURBINE]
 
         rdata = {}
         for v, op in vars_op.items():
