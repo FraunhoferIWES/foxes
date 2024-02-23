@@ -80,7 +80,8 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    sdata = foxes.input.states.create.random_timseries_data(args.n_times)
+    sdata = foxes.input.states.create.random_timseries_data(
+            args.n_times, seed=args.seed)
     states = foxes.input.states.Timeseries(
         data_source=sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
@@ -89,7 +90,8 @@ if __name__ == "__main__":
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_random(farm, args.n_turbines, 
-        min_dist=500, turbine_models=args.tmodels + [ttype.name]
+        min_dist=500, turbine_models=args.tmodels + [ttype.name],
+        seed=args.seed
     )
 
     if not args.nofig:
