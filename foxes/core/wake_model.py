@@ -27,7 +27,7 @@ class WakeModel(Model):
         """
         return True
 
-    @abstractmethod
+    #@abstractmethod
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.

@@ -132,7 +132,6 @@ class WSLinear(WakeSuperposition):
         algo,
         mdata,
         fdata,
-        pdata,
         variable,
         amb_results,
         wake_delta,
@@ -149,8 +148,6 @@ class WSLinear(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray

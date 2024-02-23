@@ -104,11 +104,9 @@ class Bastankhah2014(GaussianWakeModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, wpoints):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
@@ -118,16 +116,20 @@ class Bastankhah2014(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        wpoints: numpy.ndarray
+            The wake evaluation points,
+            shape: (n_states, n_turbines, n_rpoints, 3)
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        wake_deltas[FV.WS] = np.zeros((mdata.n_states, pdata.n_points), dtype=FC.DTYPE)
+        return {
+            FV.WS: np.zeros_like(wpoints[:, :, :, 0])
+        }
 
     def calc_amplitude_sigma_spsel(
         self,
