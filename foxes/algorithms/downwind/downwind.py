@@ -123,10 +123,10 @@ class Downwind(Algorithm):
 
         self.partial_wakes = {}
         for w in wake_models:
-            pw = partial_wakes.get(
-                w,
-                mbook.default_partial_wakes(self.wake_models[w])
-            )
+            if w in partial_wakes:
+                pw = partial_wakes[w]
+            else:
+                pw = mbook.default_partial_wakes(self.wake_models[w])
             self.partial_wakes[w] = self.mbook.partial_wakes[pw]
             self.partial_wakes[w].name = pw
 
