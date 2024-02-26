@@ -104,7 +104,7 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure())
 
-    pwakes = {w: args.pwakes[i] for i, w in enumerate(args.wakes)}
+    pwakes = {args.wakes[i]: pw for i, pw in enumerate(args.pwakes)}
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
         mbook,

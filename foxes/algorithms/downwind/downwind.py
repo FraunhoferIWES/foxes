@@ -265,13 +265,11 @@ class Downwind(Algorithm):
         """
         # prepare:
         calc_pars = []
-        t2f = fm.farm_models.Turbine2FarmModel
         mlist = FarmDataModelList(models=[])
         mlist.name = f"{self.name}_calc"
 
-        # 0) set XHYD:
-        m = fm.turbine_models.SetXYHD()
-        mlist.models.append(t2f(m))
+        # 0) set initial data:
+        mlist.models.append(self.get_model("InitFarmData")())
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 1) run pre-rotor turbine models via farm controller:
@@ -279,33 +277,24 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = True
 
-        # 2) calculate yaw from wind direction at rotor centre:
-        mlist.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
-        mlist.models[-1].name = "calc_yaw_" + mlist.models[-1].name
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 3) calculate ambient rotor results:
+        # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1].update(
             {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
         )
 
-        # 4) calculate turbine order:
-        mlist.models.append(self.get_model("CalcOrder")())
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 5) run post-rotor turbine models via farm controller:
+        # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = False
 
-        # 6) copy results to ambient, requires self.farm_vars:
+        # 4) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(self.get_model("SetAmbFarmResults")())
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-        # 7) calculate wake effects:
+        # 5) calculate wake effects:
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
