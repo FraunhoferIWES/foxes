@@ -68,7 +68,7 @@ class WSLinear(WakeSuperposition):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         sel_sp,
         variable,
         wake_delta,
@@ -87,9 +87,8 @@ class WSLinear(WakeSuperposition):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         sel_sp: numpy.ndarray of bool
             The selection of points, shape: (n_states, n_points)
         variable: str
@@ -119,8 +118,7 @@ class WSLinear(WakeSuperposition):
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
-                upcast=True,
-                states_source_turbine=states_source_turbine,
+                downwind_index=downwind_index,
             )[sel_sp]
 
             wake_delta[sel_sp] += scale * wake_model_result

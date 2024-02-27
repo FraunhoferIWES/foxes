@@ -44,7 +44,7 @@ class PartialCentre(RotorPoints):
         fdata,
         wake_deltas,
         wmodel,
-        states_turbine,
+        downwind_index,
         amb_res=None,
     ):
         """
@@ -66,10 +66,8 @@ class PartialCentre(RotorPoints):
             by `contribute_to_wake_deltas`
         wmodel: foxes.core.WakeModel
             The wake model
-        states_turbine: numpy.ndarray of int
-            For each state, the index of one turbine
-            for which to evaluate the wake deltas.
-            Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         amb_res: dict, optional
             Ambient states results. Keys: var str, values:
             numpy.ndarray of shape (n_states, n_points)
@@ -86,9 +84,8 @@ class PartialCentre(RotorPoints):
             )
 
         wres = {}
-        st_sel = (np.arange(n_states), states_turbine)
         for v, ares in amb_res.items():
-            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
+            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[:, downwind_index]
         
         wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wake_deltas)
 
@@ -96,9 +93,10 @@ class PartialCentre(RotorPoints):
             if v in wake_deltas:
                 wres[v] += wake_deltas[v]
                 if amb_res_in:
-                    amb_res[v][st_sel] = wres[v]
+                    amb_res[v][:, downwind_index] = wres[v]
             wres[v] = wres[v][:, None]
 
         algo.rotor_model.eval_rpoint_results(
-            algo, mdata, fdata, wres, weights, states_turbine=states_turbine
+            algo, mdata, fdata, wres, weights, 
+            downwind_index=downwind_index
         )

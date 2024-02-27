@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     # create model book
@@ -138,6 +139,7 @@ if __name__ == "__main__":
         farm_df[
             [
                 FV.X,
+                FV.ORDER,
                 FV.WD,
                 FV.AMB_REWS,
                 FV.REWS,
@@ -177,21 +179,23 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-    # horizontal flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10, rotor_color="red", figsize=(10, 3))
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
 
-    # vertical flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(
-        args.var,
-        resolution=10,
-        x_direction=np.mod(args.wd, 360.0),
-        rotor_color="red",
-        figsize=(10, 3),
-    )
-    fig = next(g)
-    plt.show()
+        # horizontal flow plot
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_xy(args.var, resolution=10, rotor_color="red", figsize=(10, 3))
+        fig = next(g)
+        plt.show()
+        plt.close(fig)
+
+        # vertical flow plot
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_xz(
+            args.var,
+            resolution=10,
+            x_direction=np.mod(args.wd, 360.0),
+            rotor_color="red",
+            figsize=(10, 3),
+        )
+        fig = next(g)
+        plt.show()

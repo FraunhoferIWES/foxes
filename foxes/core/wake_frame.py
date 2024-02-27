@@ -82,7 +82,7 @@ class WakeFrame(Model):
         self,
         algo,
         variable,
-        states_source_turbine,
+        downwind_index,
         fdata,
         pdata,
         states0=None,
@@ -97,15 +97,20 @@ class WakeFrame(Model):
             The algorithm, needed for data from previous iteration
         variable: str
             The variable, serves as data key
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int, optional
+            The index in the downwind order
         fdata: foxes.core.Data
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
         states0: numpy.ndarray, optional
             The states of wake creation
+        
+        Returns
+        -------
+        data: numpy.ndarray
+            Data for wake modelling, shape:
+            (n_states, n_points)
 
         """
         n_states = fdata.n_states
@@ -113,7 +118,7 @@ class WakeFrame(Model):
         s = np.arange(n_states) if states0 is None else states0
 
         out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        out[:] = fdata[variable][s, states_source_turbine][:, None]
+        out[:] = fdata[variable][s, downwind_index][:, None]
 
         return out
 

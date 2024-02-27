@@ -1,3 +1,4 @@
+import numpy as np
 from abc import abstractmethod
 
 from .data_calc_model import DataCalcModel
@@ -25,6 +26,29 @@ class PointDataModel(DataCalcModel):
 
         """
         return []
+
+    def ensure_variables(self, algo, mdata, fdata, pdata):
+        """
+        Add variables to pdata, initialized with NaN
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The point data
+
+        """
+        n_states = pdata.n_states
+        n_points = pdata.n_points
+        for v in self.output_point_vars(algo):
+            if v not in pdata:
+                pdata[v] = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+                pdata.dims[v] = (FC.STATE, FC.POINT)
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata, pdata):

@@ -3,6 +3,7 @@ from abc import ABC
 from itertools import count
 
 import foxes.constants as FC
+import foxes.variables as FV
 from .data import Data
 
 
@@ -188,8 +189,8 @@ class Model(ABC):
         mdata=None,
         fdata=None,
         pdata=None,
-        states_source_turbine=None,
-        upcast=False,
+        turbine_index=None,
+        downwind_index=None,
         accept_none=False,
         accept_nan=True,
         algo=None,
@@ -204,7 +205,7 @@ class Model(ABC):
             The variable, serves as data key
         target: str, optional
             The dimensions identifier for the output, e.g
-            FC.STATE_TURBINE, FC.STATE_POINT
+            FC.STATE_DOWNWIND, FC.STATE_TURBINE, FC.STATE_POINT
         lookup: str
             The order of data sources. Combination of:
             's' for self,
@@ -218,11 +219,10 @@ class Model(ABC):
             The farm data
         pdata: foxes.core.Data, optional
             The evaluation point data
-        states_source_turbine: numpy.ndarray, optional
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        upcast: bool, optional
-            Upcast array to dims if data is scalar
+        turbine_index: int, optional
+            The turbine index
+        downwind_index: int, optional
+            The index in the downwind order
         data_prio: bool
             First search the data source, then the object
         accept_none: bool
@@ -253,7 +253,7 @@ class Model(ABC):
             )
 
         n_states = _geta("n_states")
-        if target == FC.STATE_TURBINE:
+        if target in [FC.STATE_DOWNWIND, FC.STATE_TURBINE]:
             n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
         elif target == FC.STATE_POINT:
@@ -261,29 +261,28 @@ class Model(ABC):
             dims = (FC.STATE, FC.POINT)
         else:
             raise KeyError(
-                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}"
+                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_DOWNWIND}, {FC.STATE_TURBINE}, {FC.STATE_POINT}"
             )
 
         out = None
+        out_dims = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
                 a = getattr(self, variable)
-
-                if a is not None and upcast:
-                    if target == FC.STATE_TURBINE:
+                if a is not None:
+                    if target in [FC.STATE_DOWNWIND, FC.STATE_TURBINE]:
                         out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
                         out[:] = a
+                        out_dims = (FC.STATE, FC.TURBINE)
                     elif target == FC.STATE_POINT:
                         out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
                         out[:] = a
+                        out_dims = (FC.STATE, FC.POINT)
                     else:
                         raise KeyError(
-                            f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT"
+                            f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choices: {FC.STATE_DOWNWIND}, {FC.STATE_TURBINE}, {FC.STATE_POINT}"
                         )
-
-                else:
-                    out = a
 
             # lookup mdata:
             elif (
@@ -294,6 +293,7 @@ class Model(ABC):
                 and tuple(mdata.dims[variable][:2]) == dims
             ):
                 out = mdata[variable]
+                out_dims = tuple(mdata.dims[variable][:2])
 
             # lookup fdata:
             elif (
@@ -303,44 +303,8 @@ class Model(ABC):
                 and len(fdata.dims[variable]) > 1
                 and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
             ):
-                # direct fdata:
-                if target == FC.STATE_TURBINE:
-                    out = fdata[variable]
-
-                # translate state-turbine to state-point data:
-                elif target == FC.STATE_POINT and states_source_turbine is not None:
-                    # from fdata, uniform for points:
-                    st_sel = (np.arange(n_states), states_source_turbine)
-                    out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-                    out[:] = fdata[variable][st_sel][:, None]
-
-                    # from previous iteration, if requested:
-                    if pdata is not None and FC.STATES_SEL in pdata:
-                        if not np.all(
-                            states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]
-                        ):
-                            raise ValueError(
-                                f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}"
-                            )
-
-                        i0 = _geta("states_i0")
-                        sp = pdata[FC.STATES_SEL]
-                        sel = sp < i0
-                        if np.any(sel):
-                            if algo is None or not hasattr(algo, "prev_farm_results"):
-                                raise KeyError(
-                                    f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
-                                )
-
-                            prev_fdata = getattr(algo, "prev_farm_results")
-                            if prev_fdata is None:
-                                out[sel] = 0
-                            else:
-                                st = np.zeros_like(sp)
-                                st[:] = states_source_turbine[:, None]
-                                out[sel] = prev_fdata[variable].to_numpy()[
-                                    sp[sel], st[sel]
-                                ]
+                out = fdata[variable]
+                out_dims = (FC.STATE, FC.TURBINE)
 
             # lookup pdata:
             elif (
@@ -351,6 +315,7 @@ class Model(ABC):
                 and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
+                out_dims = tuple(mdata.dims[variable][:2])
 
             # lookup wake modelling data:
             elif (
@@ -361,13 +326,14 @@ class Model(ABC):
                 and variable in fdata
                 and len(fdata.dims[variable]) > 1
                 and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
-                and states_source_turbine is not None
+                and downwind_index is not None
                 and algo is not None
             ):
                 out = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, states_source_turbine, fdata, pdata
+                    algo, variable, downwind_index, fdata, pdata
                 )
-
+                out_dims = (FC.STATE, FC.POINT)
+            
             if out is not None:
                 break
 
@@ -386,6 +352,57 @@ class Model(ABC):
                     )
             except TypeError:
                 pass
+        
+        # reorder, if requested:
+        if target == FC.STATE_TURBINE or turbine_index:
+            out = out[fdata[FV.ORDER_SSEL], fdata[FV.ORDER_INV]]
+
+        # select single downwind index:
+        assert downwind_index is None or turbine_index is None
+        if out_dims == (FC.STATE, FC.TURBINE) and downwind_index is not None:
+            assert target != FC.STATE_TURBINE
+            out = out[:, downwind_index]
+        
+        # select single turbine index:
+        elif out_dims == (FC.STATE, FC.TURBINE) and turbine_index is not None:
+            assert target != FC.STATE_DOWNWIND
+            return out[:, turbine_index]
+        
+        # translate to state-point results:
+        if target == FC.STATE_POINT and out_dims == (FC.STATE, FC.TURBINE):
+            out0 = out
+            out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            if downwind_index or turbine_index:
+                out[:] = out0[:, None]
+            else:
+                raise KeyError(f"Require turbine_index or downwind_index for target {target}")
+            del out0
+
+            # from previous iteration, if requested:
+            if pdata is not None and FC.STATES_SEL in pdata:
+                assert downwind_index # not implemented for turbine_index
+
+                if not pdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
+                    raise ValueError(
+                        f"Model '{self.name}': Mismatch of downwind_index: Expected {pdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
+                    )
+
+                i0 = _geta("states_i0")
+                sp = pdata[FC.STATES_SEL]
+                sel = sp < i0
+                if np.any(sel):
+                    if algo is None or not hasattr(algo, "prev_farm_results"):
+                        raise KeyError(
+                            f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
+                        )
+
+                    prev_fdata = getattr(algo, "prev_farm_results")
+                    if prev_fdata is None:
+                        out[sel] = 0
+                    else:
+                        out[sel] = prev_fdata[variable].to_numpy()[
+                            sp[sel], downwind_index
+                        ]
 
         return out
 

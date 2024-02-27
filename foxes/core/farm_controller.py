@@ -219,26 +219,29 @@ class FarmController(FarmDataModel):
             algo, pre_rotor=False, models=postr_models
         )
         tmsels = tmsels_pre + tmsels_post
+        self._tmall = [np.all(t) for t in tmsels]
         self.turbine_model_names = mnames_pre + mnames_post
         if len(self.turbine_model_names):
             self._tmsels = np.stack(tmsels, axis=2)
         else:
             raise ValueError(f"Controller '{self.name}': No turbine model found.")
 
-    def __get_pars(self, algo, models, ptype, mdata=None, st_sel=None):
+    def __get_pars(self, algo, models, ptype, mdata=None, downwind_index=None):
         """
         Private helper function for gathering model parameters.
         """
-        s = mdata[FC.TMODEL_SELS]
-        if st_sel is not None:
-            s = s & st_sel[:, :, None]
-
-        pars = [
-            {"st_sel": s[:, :, self.turbine_model_names.index(m.name)]} for m in models
-        ]
-        for mi, m in enumerate(models):
+        pars = []
+        for m in models:
+            mi = self.turbine_model_names.index(m.name)
+            if downwind_index is None:
+                s = np.s_[:]
+            elif self._tmall[mi]:
+                s = np.s_[:, downwind_index, None]
+            else:
+                s = mdata[FC.TMODEL_SELS][:, downwind_index, mi, None]
+            pars.append({"st_sel": s})
             if m.name in self.pars:
-                pars[mi].update(self.pars[m.name][ptype])
+                pars[-1].update(self.pars[m.name][ptype])
 
         return pars
 
@@ -313,7 +316,7 @@ class FarmController(FarmDataModel):
             )
         )
 
-    def calculate(self, algo, mdata, fdata, pre_rotor, st_sel=None):
+    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
         """ "
         The main model calculation.
 
@@ -331,9 +334,8 @@ class FarmController(FarmDataModel):
         pre_rotor: bool
             Flag for running pre-rotor or post-rotor
             models
-        st_sel: numpy.ndarray of bool, optional
-            Selection of states and turbines, shape:
-            (n_states, n_turbines). None for all.
+        downwind_index: int, optional
+            The index in the downwind order
 
         Returns
         -------
@@ -343,7 +345,7 @@ class FarmController(FarmDataModel):
 
         """
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
-        pars = self.__get_pars(algo, s.models, "calc", mdata, st_sel)
+        pars = self.__get_pars(algo, s.models, "calc", mdata, downwind_index)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
         return res
 

@@ -334,18 +334,18 @@ class StatesTable(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        z = pdata[FC.POINTS][:, :, 2]
-
         for i, v in enumerate(self._tvars):
             if v in pdata:
                 pdata[v][:] = mdata[self.DATA][:, i, None]
             else:
-                pdata[v] = mdata[self.DATA][:, i, None]
+                pdata[v] = np.zeros((pdata.n_states, pdata.n_points), dtype=FC.DTYPE)
+                pdata[v][:] = mdata[self.DATA][:, i, None]
                 pdata.dims[v] = (FC.STATE, FC.POINT)
 
         for v, f in self.fixed_vars.items():
             pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE)
 
+        z = pdata[FC.POINTS][:, :, 2]
         for v, p in self._profiles.items():
             pres = p.calculate(pdata, z)
             pdata[v] = pres

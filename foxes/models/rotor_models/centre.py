@@ -90,7 +90,7 @@ class CentreRotor(RotorModel):
         fdata,
         rpoint_results,
         weights,
-        states_turbine=None,
+        downwind_index=None,
         copy_to_ambient=False,
     ):
         """
@@ -117,8 +117,8 @@ class CentreRotor(RotorModel):
             Else: (n_states, 1, n_rpoints)
         weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
-        states_turbine: numpy.ndarray of int, optional
-            The turbine indices, one per state. Shape: (n_states,)
+        downwind_index: int, optional
+            The index in the downwind order
         copy_to_ambient: bool, optional
             If `True`, the fdata results are copied to ambient
             variables after calculation
@@ -126,15 +126,15 @@ class CentreRotor(RotorModel):
         """
         if len(weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, rpoint_results, weights, states_turbine
+                algo, mdata, fdata, rpoint_results, weights, downwind_index
             )
 
         n_states = mdata.n_states
         n_turbines = algo.n_turbines
 
         stsel = None
-        if states_turbine is not None:
-            stsel = (np.arange(n_states), states_turbine)
+        if downwind_index is not None:
+            stsel = np.s_[:, downwind_index]
 
         uvp = None
         uv = None

@@ -112,21 +112,6 @@ class DataCalcModel(Model):
             for v in out_vars
             if v not in data[-1]
         }
-        if (
-            n_prev
-            and FV.TXYH not in odata
-            and FV.X in odata
-            and FV.X in odata
-            and FV.Y in odata
-            and FV.H in odata
-        ):
-            txyh = np.zeros((data[0].n_states, data[0].n_turbines, 3), dtype=FC.DTYPE)
-            txyh[..., 0] = odata[FV.X]
-            txyh[..., 1] = odata[FV.Y]
-            txyh[..., 2] = odata[FV.H]
-            odata[FV.TXYH] = txyh
-            odims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
-            del txyh
         if len(data) == 1:
             data.append(Data(odata, odims, loop_dims))
         else:
@@ -141,6 +126,7 @@ class DataCalcModel(Model):
                 d[FC.STATE] = data[0][FC.STATE]
 
         # run model calculation:
+        self.ensure_variables(algo, *data)
         results = self.calculate(algo, *data, **calc_pars)
 
         # replace missing results by first input data with matching shape:
