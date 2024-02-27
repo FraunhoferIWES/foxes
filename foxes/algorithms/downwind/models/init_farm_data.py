@@ -13,6 +13,12 @@ class InitFarmData(FarmDataModel):
 
     """
 
+    def __init__(self):
+        """
+        Constructor.
+        """
+        super().__init__(pre_rotor=True)
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -28,7 +34,8 @@ class InitFarmData(FarmDataModel):
             The output variable names
 
         """
-        return [FV.X, FV.Y, FV.H, FV.D, FV.WD, FV.YAW, FV.ORDER]
+        return [FV.X, FV.Y, FV.H, FV.D, FV.WD, FV.YAW, 
+                FV.ORDER, FV.WEIGHT]
 
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -59,12 +66,13 @@ class InitFarmData(FarmDataModel):
 
         # define FV.TXYH as vector [X, Y, H]:
         fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
+        fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
         fdata[FV.X] = fdata[FV.TXYH][..., 0]
         fdata[FV.Y] = fdata[FV.TXYH][..., 1]
         fdata[FV.H] = fdata[FV.TXYH][..., 2]
 
         # set X, Y, H, D:
-        fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
+        fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
             fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
 
@@ -83,12 +91,17 @@ class InitFarmData(FarmDataModel):
         sres = algo.states.calculate(algo, mdata, fdata, pdata)
         fdata[FV.WD] = sres[FV.WD]
         del pdata, sres
-        
-        # calculate and apply downwind order:
+
+        # calculate and inverse:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)
-        fdata[FV.ORDER] = order
-        ssel = np.zeros_like(fdata[FV.ORDER])
+        ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]
+        fdata[FV.ORDER] = order
+        fdata[FV.ORDER_SSEL] = ssel
+        fdata[FV.ORDER_INV] = np.zeros_like(order)
+        fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
+
+        # apply downwind order to all data:
         fdata[FV.WD] = fdata[FV.WD][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
         fdata[FV.D] = fdata[FV.D][ssel, order]
@@ -96,6 +109,9 @@ class InitFarmData(FarmDataModel):
         fdata[FV.X] = fdata[FV.TXYH][..., 0]
         fdata[FV.Y] = fdata[FV.TXYH][..., 1]
         fdata[FV.H] = fdata[FV.TXYH][..., 2]
-        mdata[FC.TMODEL_SELS] = mdata[FC.TMODEL_SELS][ssel, order]
+        for k in mdata.keys():
+            if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE):
+                    mdata[k] = mdata[k][ssel, order]
+        fdata[FV.WEIGHT] = mdata[FV.WEIGHT]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

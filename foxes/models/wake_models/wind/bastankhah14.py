@@ -137,7 +137,7 @@ class Bastankhah2014(GaussianWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
     ):
         """
@@ -154,9 +154,8 @@ class Bastankhah2014(GaussianWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
@@ -178,8 +177,7 @@ class Bastankhah2014(GaussianWakeModel):
             algo=algo,
             fdata=fdata,
             pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
+            downwind_index=downwind_index,
         )
 
         # select targets:
@@ -197,8 +195,7 @@ class Bastankhah2014(GaussianWakeModel):
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
-                upcast=True,
-                states_source_turbine=states_source_turbine,
+                downwind_index=downwind_index,
             )
             D = D[sp_sel]
 
@@ -210,8 +207,7 @@ class Bastankhah2014(GaussianWakeModel):
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
-                upcast=True,
-                states_source_turbine=states_source_turbine,
+                downwind_index=downwind_index,
             )
             k = k[sp_sel]
 

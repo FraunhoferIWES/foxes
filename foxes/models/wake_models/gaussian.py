@@ -19,7 +19,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
     ):
         """
@@ -36,9 +36,8 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
 
@@ -60,7 +59,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         r,
     ):
@@ -77,9 +76,8 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
         r: numpy.ndarray
@@ -97,7 +95,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
 
         """
         amsi, sp_sel = self.calc_amplitude_sigma_spsel(
-            algo, mdata, fdata, pdata, states_source_turbine, x
+            algo, mdata, fdata, pdata, downwind_index, x
         )
         wdeltas = {}
         rsel = r[sp_sel]

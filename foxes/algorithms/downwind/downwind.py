@@ -37,6 +37,25 @@ class Downwind(Algorithm):
 
     """
 
+    DEFAULT_FARM_OUTPUTS = [
+        FV.X,
+        FV.Y,
+        FV.H,
+        FV.D,
+        FV.AMB_REWS,
+        FV.AMB_TI,
+        FV.AMB_RHO,
+        FV.AMB_P,
+        FV.REWS,
+        FV.WD,
+        FV.YAW,
+        FV.TI,
+        FV.CT,
+        FV.P,
+        FV.ORDER,
+        FV.WEIGHT,
+    ]
+
     def __init__(
         self,
         mbook,
@@ -257,6 +276,7 @@ class Downwind(Algorithm):
 
     def _collect_farm_models(
         self,
+        outputs,
         calc_parameters,
         ambient,
     ):
@@ -299,19 +319,24 @@ class Downwind(Algorithm):
             mlist.models.append(self.get_model("FarmWakesCalculation")())
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
+        # 6) reorder back to state-turbine dimensions:
+        mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
         return mlist, calc_pars
 
     def _calc_farm_vars(self, mlist):
         """Helper function that gathers the farm variables"""
         self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
-    def _run_farm_calc(self, mlist, *data, **kwargs):
+    def _run_farm_calc(self, mlist, *data, outputs=None, **kwargs):
         """Helper function for running the main farm calculation"""
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
+        out_vars = self.farm_vars if outputs is None else outputs
         farm_results = mlist.run_calculation(
-            self, *data, out_vars=self.farm_vars, **kwargs
+            self, *data, out_vars=out_vars, **kwargs
         )
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         if FV.ORDER in farm_results:
@@ -321,6 +346,7 @@ class Downwind(Algorithm):
 
     def calc_farm(
         self,
+        outputs=None,
         calc_parameters={},
         persist=True,
         finalize=True,
@@ -336,6 +362,8 @@ class Downwind(Algorithm):
         calc_parameters: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
+        outputs: list of str, optional
+            The output variables, or None for defaults
         persist: bool
             Switch for forcing dask to load all model data
             into memory
@@ -363,7 +391,8 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # collect models:
-        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
+        out_vars = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
+        mlist, calc_pars = self._collect_farm_models(out_vars, calc_parameters, ambient)
 
         # initialize models:
         if not mlist.initialized:
@@ -375,8 +404,10 @@ class Downwind(Algorithm):
         models_data = self.get_models_data()
         if persist:
             models_data = models_data.persist()
+        out_vars = sorted(list(set(out_vars).intersection(self.farm_vars)))
         self.print("\nInput data:\n\n", models_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+        self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
+        self.print(f"\nOutput variables:", ", ".join(out_vars))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
@@ -384,6 +415,7 @@ class Downwind(Algorithm):
             mlist,
             models_data,
             parameters=calc_pars,
+            outputs=out_vars,
             **kwargs,
         )
         del models_data

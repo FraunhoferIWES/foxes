@@ -81,18 +81,23 @@ STATES_SEL = "states_sel"
 :group: foxes.constants
 """
 
-STATE_SOURCE_TURBINE = "state_source_turbine"
-"""Identifier for the source turbines per state
-:group: foxes.constants
-"""
-
 STATE_TURBINE = "state-turbine"
 """Identifier for state-turbine dimensions
 :group: foxes.constants
 """
 
+STATE_DOWNWIND = "state-downwind"
+"""Identifier for state-downwind order dimensions
+:group: foxes.constants
+"""
+
 STATE_POINT = "state-point"
 """Identifier for state-point dimensions
+:group: foxes.constants
+"""
+
+STATE_SOURCE_ORDERI = "state-source-orderi"
+"""Identifier for order index of wake causing turbines
 :group: foxes.constants
 """
 

@@ -23,7 +23,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         r,
     ):
@@ -40,9 +40,8 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
         r: numpy.ndarray
@@ -67,7 +66,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         yz,
     ):
@@ -84,9 +83,8 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
         yz: numpy.ndarray
@@ -105,5 +103,5 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         """
         r = np.linalg.norm(yz, axis=-1)
         return self.calc_wakes_spsel_x_r(
-            algo, mdata, fdata, pdata, states_source_turbine, x, r
+            algo, mdata, fdata, pdata, downwind_index, x, r
         )

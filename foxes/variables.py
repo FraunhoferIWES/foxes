@@ -34,6 +34,16 @@ ORDER = "order"
 :group: foxes.variables
 """
 
+ORDER_INV = "order_inv"
+""" The inverse of the turbine order
+:group: foxes.variables
+"""
+
+ORDER_SSEL = "order_ssel"
+""" The states selection for applying the order
+:group: foxes.variables
+"""
+
 WS = "WS"
 """ The wind speed in m/s
 :group: foxes.variables

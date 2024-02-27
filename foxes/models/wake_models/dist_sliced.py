@@ -79,7 +79,7 @@ class DistSlicedWakeModel(WakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         yz,
     ):
@@ -96,9 +96,8 @@ class DistSlicedWakeModel(WakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
         yz: numpy.ndarray
@@ -123,7 +122,7 @@ class DistSlicedWakeModel(WakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
@@ -143,9 +142,8 @@ class DistSlicedWakeModel(WakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
@@ -160,7 +158,7 @@ class DistSlicedWakeModel(WakeModel):
         yz = wake_coos[:, :, None, 1:3]
 
         wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
-            algo, mdata, fdata, pdata, states_source_turbine, x, yz
+            algo, mdata, fdata, pdata, downwind_index, x, yz
         )
 
         for v, hdel in wdeltas.items():
@@ -176,7 +174,7 @@ class DistSlicedWakeModel(WakeModel):
                 mdata,
                 fdata,
                 pdata,
-                states_source_turbine,
+                downwind_index,
                 sp_sel,
                 v,
                 wake_deltas[v],

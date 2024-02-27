@@ -100,13 +100,13 @@ class kTI(TurbineModel):
 
         """
         kTI = self.get_data(
-            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata
         )[st_sel]
         kb = self.get_data(
-            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata
         )[st_sel]
         ti = self.get_data(
-            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata
         )[st_sel]
 
         k = fdata.get(
