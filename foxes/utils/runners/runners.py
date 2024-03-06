@@ -196,8 +196,18 @@ class DaskRunner(Runner):
         """
         if self.scheduler is not None:
             dask.config.set(scheduler=self.scheduler)
+
+        if self.scheduler == "dthreads":
+            self.print("Launching local dask cluster..")
+
+            cargs = deepcopy(self.cluster_args)
+            del cargs["processes"]
+            self._client = Client(
+                processes=False, **self.client_args, **cargs)
             
-        if self.scheduler == "distributed":
+            self.print(f"Dashboard: {self._client.dashboard_link}\n")
+
+        elif self.scheduler == "distributed":
             self.print("Launching local dask cluster..")
 
             self._cluster = LocalCluster(**self.cluster_args)
