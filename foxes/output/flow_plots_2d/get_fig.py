@@ -150,6 +150,8 @@ def get_fig(
     hax.set_xlabel(xlabel)
     hax.set_ylabel(ylabel)
     hax.set_aspect("equal", adjustable="box")
+    hax.set_xlim(x_pos.min(), x_pos.max())
+    hax.set_ylim(y_pos.min(), y_pos.max())
 
     ttl = None
     if animated:
