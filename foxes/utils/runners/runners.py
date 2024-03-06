@@ -194,6 +194,9 @@ class DaskRunner(Runner):
         """
         Initialize the runner
         """
+        if self.scheduler is not None:
+            dask.config.set(scheduler=self.scheduler)
+            
         if self.scheduler == "distributed":
             self.print("Launching local dask cluster..")
 
