@@ -465,3 +465,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New example: `random_timeseries`, computes a random farm in a random timeseries. Both sizes are defined by user input
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)
+
+## v0.7
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7](https://github.com/FraunhoferIWES/foxes/commits/v0.7)
