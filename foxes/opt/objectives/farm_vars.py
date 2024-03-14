@@ -208,7 +208,7 @@ class FarmVarObjective(FarmObjective):
         """
         n_pop = problem_results["n_pop"].values
         n_states = problem_results["n_org_states"].values
-        n_turbines = problem_results.dims[FC.TURBINE]
+        n_turbines = problem_results.sizes[FC.TURBINE]
         data = (
             problem_results[self.variable]
             .to_numpy()

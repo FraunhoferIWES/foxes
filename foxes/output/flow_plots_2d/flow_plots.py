@@ -481,6 +481,7 @@ class FlowPlots2D(SliceData):
         ret_state=False,
         ret_im=False,
         animated=False,
+        rotor_color=None,
         **kwargs,
     ):
         """
@@ -524,6 +525,8 @@ class FlowPlots2D(SliceData):
             Flag for image return
         animated: bool
             Switch for usage for an animation
+        rotor_color: str, optional
+            Indicate the rotor orientation by a colored line
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xy
 
@@ -580,6 +583,25 @@ class FlowPlots2D(SliceData):
             else:
                 ttl = title
 
+            # get data for show_turbines
+            if rotor_color is not None:
+                try:
+                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                except KeyError:
+                    turb_angle = self.fres[FV.AMB_WD][si]
+
+                show_rotor_dict = {
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
+                }
+            else:
+                show_rotor_dict = None
+
             out = get_fig(
                 var=var,
                 fig=fig,
@@ -603,6 +625,7 @@ class FlowPlots2D(SliceData):
                 ret_state=ret_state,
                 ret_im=ret_im,
                 animated=animated,
+                show_rotor_dict=show_rotor_dict,
             )
 
             yield out
@@ -628,6 +651,7 @@ class FlowPlots2D(SliceData):
         ret_state=False,
         ret_im=False,
         animated=False,
+        rotor_color=None,
         **kwargs,
     ):
         """
@@ -673,6 +697,8 @@ class FlowPlots2D(SliceData):
             Flag for image return
         animated: bool
             Switch for usage for an animation
+        rotor_color: str, optional
+            Indicate the rotor orientation by a colored line
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xz
 
@@ -730,6 +756,25 @@ class FlowPlots2D(SliceData):
             else:
                 ttl = title
 
+            # get data for show_turbines
+            if rotor_color is not None:
+                try:
+                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                except KeyError:
+                    turb_angle = self.fres[FV.AMB_WD][si]
+
+                show_rotor_dict = {
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
+                }
+            else:
+                show_rotor_dict = None
+
             out = get_fig(
                 var=var,
                 fig=fig,
@@ -753,6 +798,7 @@ class FlowPlots2D(SliceData):
                 ret_state=ret_state,
                 ret_im=ret_im,
                 animated=animated,
+                show_rotor_dict=show_rotor_dict,
             )
 
             yield out
@@ -778,6 +824,7 @@ class FlowPlots2D(SliceData):
         ret_state=False,
         ret_im=False,
         animated=False,
+        rotor_color=None,
         **kwargs,
     ):
         """
@@ -823,6 +870,8 @@ class FlowPlots2D(SliceData):
             Flag for image return
         animated: bool
             Switch for usage for an animation
+        rotor_color: str, optional
+            Indicate the rotor orientation by a colored line
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_yz
 
@@ -880,6 +929,25 @@ class FlowPlots2D(SliceData):
             else:
                 ttl = title
 
+            # get data for show_turbines
+            if rotor_color is not None:
+                try:
+                    turb_angle = self.fres[FV.AMB_WD][si] + self.fres[FV.YAWM][si]
+                except KeyError:
+                    turb_angle = self.fres[FV.AMB_WD][si]
+
+                show_rotor_dict = {
+                    "color": rotor_color,
+                    "D": self.fres[FV.D][si],
+                    "H": self.fres[FV.H][si],
+                    "X": self.fres[FV.X][si],
+                    "Y": self.fres[FV.Y][si],
+                    "AMB_WD": self.fres[FV.AMB_WD][si],
+                    "turb_angle": turb_angle,
+                }
+            else:
+                show_rotor_dict = None
+
             out = get_fig(
                 var=var,
                 fig=fig,
@@ -904,6 +972,7 @@ class FlowPlots2D(SliceData):
                 ret_im=ret_im,
                 invert_axis="x",
                 animated=animated,
+                show_rotor_dict=show_rotor_dict,
             )
 
             yield out

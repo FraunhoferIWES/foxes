@@ -1,7 +1,10 @@
 import numpy as np
 
 from foxes.core import WakeFrame
-from foxes.models.wake_models.wind.bastankhah16 import Bastankhah2016Model, Bastankhah2016
+from foxes.models.wake_models.wind.bastankhah16 import (
+    Bastankhah2016Model,
+    Bastankhah2016,
+)
 import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_wd import RotorWD

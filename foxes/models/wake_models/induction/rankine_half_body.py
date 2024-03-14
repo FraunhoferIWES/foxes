@@ -13,14 +13,17 @@ class RankineHalfBody(WakeModel):
     The individual wake effects are superposed linearly,
     without invoking a wake superposition model.
 
-    Ref: B Gribben and G Hawkes - A potential flow model for wind turbine induction and wind farm blockage
+    Notes
+    -----
+    Reference:
+    B Gribben and G Hawkes
+    "A potential flow model for wind turbine induction and wind farm blockage"
     Techincal Paper, Frazer-Nash Consultancy, 2019
-
     https://www.fnc.co.uk/media/o5eosxas/a-potential-flow-model-for-wind-turbine-induction-and-wind-farm-blockage.pdf
 
     Attributes
     ----------
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.induction
@@ -33,7 +36,7 @@ class RankineHalfBody(WakeModel):
 
         Parameters
         ----------
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
@@ -257,14 +260,19 @@ class RankineHalfBody(WakeModel):
 
         """
 
-        # calc ambient wind vector
+        # calc ambient wind vector:
         ws0 = amb_results[FV.WS]
-        wind_vec = wd2uv(amb_results[FV.WD], ws0)
+        nx = wd2uv(amb_results[FV.WD])
+        wind_vec = nx * ws0[:, :, None]
 
-        # add ambient result to wake deltas
-        delta_uv = np.stack((wake_deltas["U"], wake_deltas["V"]), axis=2)
+        # wake deltas are in wake frame, rotate back to global frame:
+        ny = np.stack((-nx[:, :, 1], nx[:, :, 0]), axis=2)
+        delta_uv = wake_deltas["U"][:, :, None] * nx + wake_deltas["V"][:, :, None] * ny
+        del ws0, nx, ny
+
+        # add ambient result to wake deltas:
         wind_vec += delta_uv
-        del delta_uv, ws0
+        del delta_uv
 
         # deduce WS and WD deltas:
         new_wd = uv2wd(wind_vec)

@@ -29,6 +29,7 @@ def get_fig(
     quiv=None,
     invert_axis=None,
     animated=False,
+    show_rotor_dict=None,
 ):
     """
     Helper function that creates the flow image plot.
@@ -80,6 +81,9 @@ def get_fig(
         Which axis to invert, either x or y
     animated: bool
         Switch for usage for an animation
+    show_rotor_dict: dict, optional
+        Parameters for indicating the rotor plane
+        by a line
 
     Yields
     ------
@@ -146,6 +150,8 @@ def get_fig(
     hax.set_xlabel(xlabel)
     hax.set_ylabel(ylabel)
     hax.set_aspect("equal", adjustable="box")
+    hax.set_xlim(x_pos.min(), x_pos.max())
+    hax.set_ylim(y_pos.min(), y_pos.max())
 
     ttl = None
     if animated:
@@ -173,6 +179,45 @@ def get_fig(
         hax.invert_xaxis()
     elif invert_axis == "y":
         hax.invert_yaxis()
+
+    # add rotor position:
+    if show_rotor_dict is not None:
+        D = show_rotor_dict["D"]
+        coords = np.zeros(shape=(2, len(D)))  # array to hold change to turbine coords
+
+        if (xlabel == "x [m]") & (ylabel == "y [m]"):
+            x = show_rotor_dict["X"]
+            y = show_rotor_dict["Y"]
+            turb_angle = show_rotor_dict["turb_angle"]
+            theta = np.deg2rad(np.mod(turb_angle + 90, 360))
+            coords[0, :] = (D / 2) * np.sin(theta)
+            coords[1, :] = (D / 2) * np.cos(theta)
+
+        if (xlabel == "x [m]") & (ylabel == "z [m]"):
+            # get hub heights for use as y coords in plot
+            x = show_rotor_dict["X"]
+            y = show_rotor_dict["H"]
+            coords[1, :] = D / 2  # don't show yaw in xz plot
+
+        if (xlabel == "y [m]") & (ylabel == "z [m]"):
+            x = show_rotor_dict["Y"]
+            y = show_rotor_dict["H"]
+            coords[1, :] = D / 2
+
+        # plot each rotor
+        c = show_rotor_dict["color"]
+        for t in np.arange(len(D)):
+            turb_x1 = x[t] + coords[0, t]
+            turb_x2 = x[t] - coords[0, t]
+            turb_y1 = y[t] + coords[1, t]
+            turb_y2 = y[t] - coords[1, t]
+            hax.plot(
+                [turb_x1, turb_x2],
+                [turb_y1, turb_y2],
+                color=c,
+                linestyle="-",
+                linewidth=1,
+            )
 
     if add_bar:
         divider = make_axes_locatable(hax)

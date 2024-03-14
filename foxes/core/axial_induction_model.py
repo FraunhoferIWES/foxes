@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from .model import Model
 
+
 class AxialInductionModel(Model):
     """
     Abstract base class for axial induction models
@@ -9,6 +10,7 @@ class AxialInductionModel(Model):
     :group: core
 
     """
+
     @abstractmethod
     def ct2a(self, ct):
         """
@@ -18,7 +20,7 @@ class AxialInductionModel(Model):
         ----------
         ct: numpy.ndarray or float
             The ct values
-        
+
         Returns
         -------
         ct: numpy.ndarray or float

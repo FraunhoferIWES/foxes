@@ -29,7 +29,7 @@ class Turbine:
         The hub height. Overwrites turbine type
         settings if given
 
-    :group: foxes
+    :group: core
 
     """
 

@@ -12,7 +12,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     Parameters
     ----------
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models
@@ -29,7 +29,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The superpositions. Key: variable name str,
             value: The wake superposition model name,
             will be looked up in model book
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """

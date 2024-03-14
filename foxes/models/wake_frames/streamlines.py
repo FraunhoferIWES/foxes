@@ -50,7 +50,7 @@ class Streamlines2D(WakeFrame):
 
     def __repr__(self):
         return super().__repr__() + f"(step={self.step})"
-    
+
     def _calc_streamlines(self, algo, mdata, fdata):
         """
         Helper function that computes all streamline data
@@ -58,7 +58,7 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        N = int(self.max_length/self.step)
+        N = int(self.max_length / self.step)
 
         # calc data: x, y, z, wd
         data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)
@@ -68,39 +68,42 @@ class Streamlines2D(WakeFrame):
             if i == 0:
                 data[:, :, i, :3] = fdata[FV.TXYH]
                 data[:, :, i, 3] = fdata[FV.AMB_WD]
-            
+
             # compute next step:
             else:
 
                 # calculate next point:
-                xyz = data[:, :, i-1, :3]
-                n = wd2uv(data[:, :, i-1, 3])
+                xyz = data[:, :, i - 1, :3]
+                n = wd2uv(data[:, :, i - 1, 3])
                 data[:, :, i, :2] = xyz[:, :, :2] + self.step * n
                 data[:, :, i, 2] = xyz[:, :, 2]
-                
+
                 # calculate next tangential vector:
                 svars = algo.states.output_point_vars(algo)
                 pdata = {FC.POINTS: data[:, :, i, :3]}
                 pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
                 pdata.update(
-                    {v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE) 
-                     for v in svars}
+                    {
+                        v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                        for v in svars
+                    }
                 )
                 pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
                 pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-                data[:, :, i, 3] = algo.states.calculate(
-                                        algo, mdata, fdata, pdata)[FV.WD]
-                
+                data[:, :, i, 3] = algo.states.calculate(algo, mdata, fdata, pdata)[
+                    FV.WD
+                ]
+
                 sel = np.isnan(data[:, :, i, 3])
                 if np.any(sel):
-                    data[sel, i, 3] = data[sel, i-1, 3]
+                    data[sel, i, 3] = data[sel, i - 1, 3]
 
         return data
 
     def get_streamline_data(self, algo, mdata, fdata):
         """
         Gets streamline data, generating it on the fly
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -113,17 +116,16 @@ class Streamlines2D(WakeFrame):
         Returns
         -------
         data: numpy.ndarray
-            The streamline data, shape: 
+            The streamline data, shape:
             (n_states, n_turbines, n_steps, 4)
             with data x, y, z, wd
-        
+
         """
-        if (
-            self.DATA not in mdata or
-            not np.all(mdata[self.DATA][:, :, 0, :3] == fdata[FV.TXYH])
+        if self.DATA not in mdata or not np.all(
+            mdata[self.DATA][:, :, 0, :3] == fdata[FV.TXYH]
         ):
             mdata[self.DATA] = self._calc_streamlines(algo, mdata, fdata)
-        
+
         return mdata[self.DATA]
 
     def _calc_coos(self, algo, mdata, fdata, points, states_source_turbine):
@@ -131,17 +133,19 @@ class Streamlines2D(WakeFrame):
         Helper function, calculates streamline coordinates
         for given points and given turbine
         """
-        
+
         # prepare:
         n_states = mdata.n_states
         n_points = points.shape[1]
         st_sel = (np.arange(n_states), states_source_turbine)
-        
+
         # find nearest streamline points:
         data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
         dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
         selp = np.argmin(dists, axis=2)
-        data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[:, :, 0]
+        data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[
+            :, :, 0
+        ]
         slen = self.step * selp
         del dists, selp
 
@@ -155,7 +159,6 @@ class Streamlines2D(WakeFrame):
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
 
         return coos
-
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -199,7 +202,7 @@ class Streamlines2D(WakeFrame):
             order[si] = np.lexsort(keys=coosx[si])
 
         return order
-    
+
     def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
         """
         Calculate wake coordinates.
@@ -225,8 +228,9 @@ class Streamlines2D(WakeFrame):
             points, shape: (n_states, n_points, 3)
 
         """
-        return self._calc_coos(algo, mdata, fdata, 
-                               pdata[FC.POINTS], states_source_turbine)
+        return self._calc_coos(
+            algo, mdata, fdata, pdata[FC.POINTS], states_source_turbine
+        )
 
     def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
         """
@@ -275,4 +279,3 @@ class Streamlines2D(WakeFrame):
         results = interpn((np.arange(n_states), xs), spts, qts, **ipars)
 
         return results.reshape(n_states, n_points, 3)
-    

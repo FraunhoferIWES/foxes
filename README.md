@@ -191,6 +191,20 @@ farm_results = algo.calc_farm()
 print(farm_results)
 ```
 
+## Testing
+
+For testing, please clone the repository and install the required dependencies:
+```console
+git clone https://github.com/FraunhoferIWES/foxes.git
+cd foxes
+pip install -e .[test]
+```
+
+The tests are then run by
+```console
+pytest tests
+```
+
 ## Contributing
 
 1. Fork _foxes_ on _github_.
@@ -198,7 +212,6 @@ print(farm_results)
 3. Commit your changes (`git commit -am "your awesome message"`)
 4. Push to the branch (`git push origin new_branch`)
 5. Create a pull request [here](https://github.com/FraunhoferIWES/foxes/pulls)
-
 
 ## Acknowledgements
 

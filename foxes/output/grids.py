@@ -688,7 +688,7 @@ def data2xr(
         and isinstance(state_mean, bool)
         and not state_mean
     ):
-        if point_results.dims[FC.STATE] > 1:
+        if point_results.sizes[FC.STATE] > 1:
             coords[FC.STATE] = point_results[FC.STATE].to_numpy()
         else:
             attrs[FC.STATE] = str(point_results[FC.STATE][0].to_numpy())

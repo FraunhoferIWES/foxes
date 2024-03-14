@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-import plotly.express as px
 
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, TabWindroseAxes
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
@@ -212,16 +211,18 @@ class RosePlotOutput(Output):
         wd_var=FV.AMB_WD,
         turbine=None,
         point=None,
-        cmap="Turbo",
         title=None,
         legend=None,
-        layout_dict={},
-        title_dict={},
+        design="bar",
         start0=False,
+        fig=None,
+        figsize=None,
+        rect=None,
         ret_data=False,
+        **kwargs,
     ):
         """
-        Creates px figure object
+        Creates figure object
 
         Parameters
         ----------
@@ -241,33 +242,41 @@ class RosePlotOutput(Output):
             Only relevant in case of point results.
             If None, mean over all points.
             Else, data from a single point
+        title. str, optional
+            The title
         legend: str, optional
             The data legend string
-        layout_dict: dict, optional
-            Optional parameters for the px figure layout
-        title_dict: dict, optional
-            Optional parameters for the px title layout
+        design: str
+            The wind rose design: bar, contour, ...
         start0: bool
             Flag for starting the first sector at
             zero degrees instead of minus half width
+        fig: matplotlib.Figure
+            The figure to which to add an axis
+        figsize: tuple, optional
+            The figsize of the newly created figure
+        rect: list, optional
+            The rectangle of the figure which to fill,
+            e.g. [0.1, 0.1, 0.8, 0.8]
         ret_data: bool
             Flag for returning wind rose data
+        kwargs: dict, optional
+            Additional arguments for TabWindroseAxes
+            plot function
 
         Returns
         -------
-        fig: px.Figure
+        fig: matplotlib.pyplot.Figure
             The rose plot figure
         data: pd.DataFrame, optional
             The wind rose data
 
         """
-
+        lg = legend
         if title is None or legend is None:
             ttl, lg = self.get_data_info(var)
         if title is not None:
             ttl = title
-        if legend is not None:
-            lg = legend
 
         wrdata = self.get_data(
             sectors=sectors,
@@ -279,27 +288,21 @@ class RosePlotOutput(Output):
             start0=start0,
         )
 
-        cols = px.colors.sequential.__dict__.keys()
-        cols = [c for c in cols if isinstance(px.colors.sequential.__dict__[c], list)]
-        cmap = px.colors.sequential.__dict__[cols[cols.index(cmap)]]
+        ax = TabWindroseAxes.from_ax(fig=fig, rect=rect, figsize=figsize)
+        fig = ax.get_figure()
 
-        intv = f"interval_{var}"
-        fig = px.bar_polar(
-            wrdata,
-            r="frequency",
-            theta=wd_var,
-            color=intv,
-            color_discrete_sequence=cmap,
-            labels={intv: lg},
+        plfun = getattr(ax, design)
+        plfun(
+            direction=wrdata[wd_var].to_numpy(),
+            var=wrdata[var].to_numpy(),
+            weights=wrdata["frequency"].to_numpy(),
+            bin_min_dir=np.sort(wrdata[f"bin_min_{wd_var}"].unique()),
+            bin_min_var=np.sort(wrdata[f"bin_min_{var}"].unique()),
+            bin_max_var=np.sort(wrdata[f"bin_max_{var}"].unique()),
+            **kwargs,
         )
-
-        tdict = dict(xanchor="center", yanchor="top", x=0.5, y=0.97)
-        tdict.update(title_dict)
-
-        ldict = dict(width=500, height=400, margin=dict(l=50, r=50, t=50, b=50))
-        ldict.update(layout_dict)
-
-        fig = fig.update_layout(title={"text": ttl, **tdict}, **ldict)
+        ax.set_legend(title=lg)
+        ax.set_title(ttl)
 
         if ret_data:
             return fig, wrdata
@@ -312,16 +315,8 @@ class RosePlotOutput(Output):
         sectors,
         var,
         var_bins,
-        wd_var=FV.AMB_WD,
-        turbine=None,
-        point=None,
-        cmap="Turbo",
-        title=None,
-        legend=None,
-        layout_dict={},
-        title_dict={},
-        start0=False,
         ret_data=False,
+        **kwargs,
     ):
         """
         Write rose plot to file
@@ -336,27 +331,10 @@ class RosePlotOutput(Output):
             The data variable name
         var_bins: list of float
             The variable bin seperation values
-        wd_var: str, optional
-            The wind direction variable name
-        turbine: int, optional
-            Only relevant in case of farm results.
-            If None, mean over all turbines.
-            Else, data from a single turbine
-        point: int, optional
-            Only relevant in case of point results.
-            If None, mean over all points.
-            Else, data from a single point
-        legend: str, optional
-            The data legend string
-        layout_dict: dict, optional
-            Optional parameters for the px figure layout
-        title_dict: dict, optional
-            Optional parameters for the px title layout
-        start0: bool
-            Flag for starting the first sector at
-            zero degrees instead of minus half width
         ret_data: bool
             Flag for returning wind rose data
+        kwargs: dict, optional
+            Additional parameters for get_figure()
 
         Returns
         -------
@@ -369,16 +347,8 @@ class RosePlotOutput(Output):
             sectors=sectors,
             var=var,
             var_bins=var_bins,
-            wd_var=wd_var,
-            turbine=turbine,
-            point=point,
-            cmap=cmap,
-            title=title,
-            legend=legend,
-            layout_dict=layout_dict,
-            title_dict=title_dict,
-            start0=start0,
             ret_data=ret_data,
+            **kwargs,
         )
         if ret_data:
             r[0].write_image(file_name)

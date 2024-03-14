@@ -27,7 +27,7 @@ class TurbOParkWake(GaussianWakeModel):
         Factor from Frandsen turbulence model
     c2: float
         Factor from Frandsen turbulence model
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.wind
@@ -35,11 +35,11 @@ class TurbOParkWake(GaussianWakeModel):
     """
 
     def __init__(
-        self, 
-        superposition, 
-        A, 
-        sbeta_factor=0.25, 
-        c1=1.5, 
+        self,
+        superposition,
+        A,
+        sbeta_factor=0.25,
+        c1=1.5,
         c2=0.8,
         induction="Madsen",
     ):
@@ -60,7 +60,7 @@ class TurbOParkWake(GaussianWakeModel):
             Factor from Frandsen turbulence model
         c2: float
             Factor from Frandsen turbulence model
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
@@ -254,7 +254,7 @@ class TurbOParkWake(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:
@@ -284,7 +284,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         The TI variable
     self_wake: bool
         Flag for considering only own wake in ti integral
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
     ipars: dict
         Additional parameters for centreline integration
@@ -323,7 +323,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The TI variable
         self_wake: bool
             Flag for considering only own wake in ti integral
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
         ipars: dict, optional
             Additional parameters for centreline integration
@@ -518,7 +518,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:

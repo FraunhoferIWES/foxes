@@ -18,7 +18,7 @@ def parse_Pct_file_name(file_name):
     parsed_data: dict
         dict with data parsed from file name
 
-    :group: foxes
+    :group: data
 
     """
     sname = Path(file_name).stem
@@ -85,7 +85,7 @@ def parse_Pct_two_files(file_name_A, file_name_B):
     parsed_data: dict
         dict with data parsed from file name
 
-    :group: foxes
+    :group: data
 
     """
     pars_A = parse_Pct_file_name(file_name_A)

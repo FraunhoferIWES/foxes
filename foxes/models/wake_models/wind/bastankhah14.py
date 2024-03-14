@@ -26,7 +26,7 @@ class Bastankhah2014(GaussianWakeModel):
         Factor multiplying sbeta
     k_var: str
         The variable name for k
-    induction: foxes.core.InductionModel or str
+    induction: foxes.core.AxialInductionModel or str
         The induction model
 
     :group: models.wake_models.wind
@@ -57,7 +57,7 @@ class Bastankhah2014(GaussianWakeModel):
             Factor multiplying sbeta
         k_var: str
             The variable name for k
-        induction: foxes.core.InductionModel or str
+        induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
@@ -223,7 +223,7 @@ class Bastankhah2014(GaussianWakeModel):
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2*self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
 
         # case no targets:
         else:

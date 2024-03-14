@@ -409,8 +409,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1](https://github.com/FraunhoferIWES/foxes/commits/v0.5.2.1)
 
-## v0.5.3
+## v0.6
 
+- Dependencies:
+  - Replacing dependency on `plotly` by dependency on `windrose`, since the latter is lighter
 - Core:
   - This version introduces `AxialInductionModel` classes, computing the axial induction factor `a(ct)`
 - Wake models:
@@ -423,9 +425,43 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Axial induction models:
   - New induction model: `BetzAxialInduction`, the classic `a = 0.5(1 - sqrt(1-ct))` relation. In the model book this is called `Betz`.
   - New induction model: `MadsenAxialInduction`, a third-order polynomial approximation of `a(ct)`. In the model book this is called `Madsen`.
+- Output:
+  - Improved: `FlowPlots2D` now includes an option for indicating the rotor disk by a colored line
+  - Improved: `RosePlotOutput` no longer depends on `plotly`, but on the new utility `TabWindroseAxes`
+- Utils:
+  - New: `TabWindroseAxes`, a derivative of `windrose.WindroseAxes` for input data that is based on bins with weights (and not timeseries)
+- Notebooks:
+  - New: `blockage_comparison.ipynb`, comparing four turbine induction models
 - Bug fixes:
   - Fix for bug in `Streamlines2D` when used in combination with `WakeMirror`
 - Tests:
   - Fresh `flappy` v0.6.2 test data for all Bastankhah and CrespoHernandez wakes, also without the `sbeta` limitation
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.5.3](https://github.com/FraunhoferIWES/foxes/commits/v0.5.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6](https://github.com/FraunhoferIWES/foxes/commits/v0.6)
+
+## v0.6.1
+
+- Input:
+  - New ambient states: `TabStates`, single tab-file input
+- Data
+  - New static data: `winds100.tab`, an example tab file
+- Examples:
+  - New example: `tab_file`, demonstrating the usage of the `TabStates`
+- Bug fixes:
+  - Bug fixed for `RankineHalfBody` turbine induction model that produced wrong results for wind directions unequal 270 degrees
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.1](https://github.com/FraunhoferIWES/foxes/commits/v0.6.1)
+
+## v0.6.2
+
+- Models:
+  - New partial wakes model: `PartialCentre`, evaluating wake deltas at the rotor centre point only
+- Inputs:
+  - New farm layout input: `add_random`, adds turbines at random positions, respecting a minimal distance
+  - New states creation: `random_timseries_data`, creates uniform random timeseries data
+- Utils:
+  - New function `random_xy_square`, generates random xy positions with minimal distance
+- Examples:
+  - New example: `random_timeseries`, computes a random farm in a random timeseries. Both sizes are defined by user input
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)

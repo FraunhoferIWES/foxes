@@ -283,7 +283,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         ti = ti[sp_sel]
 
         # calculate induction factor:
-        twoa = 2*self.induction.ct2a(ct)
+        twoa = 2 * self.induction.ct2a(ct)
 
         # prepare output:
         wake_deltas = np.zeros(n_targts, dtype=FC.DTYPE)

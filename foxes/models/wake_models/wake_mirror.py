@@ -4,6 +4,7 @@ from foxes.core import WakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WakeMirror(WakeModel):
     """
     A wake model wrapper that adds mirror turbines
@@ -20,6 +21,7 @@ class WakeMirror(WakeModel):
     :group: models.wake_models
 
     """
+
     def __init__(self, wmodel, heights):
         """
         Constructor.
@@ -48,7 +50,7 @@ class WakeMirror(WakeModel):
 
         """
         return [self.wmodel]
-    
+
     def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
         """
         Initialize wake delta storage.
@@ -115,20 +117,24 @@ class WakeMirror(WakeModel):
         """
         stsel = (np.arange(algo.n_states), states_source_turbine)
         hh = fdata[FV.H][stsel]
-        self.wmodel.contribute_to_wake_deltas(algo, mdata, fdata,
-                pdata, states_source_turbine, wake_coos, wake_deltas)
-        
-        pdata[FC.POINTS] = pdata[FC.POINTS].copy() # making sure this is no ref
-        
+        self.wmodel.contribute_to_wake_deltas(
+            algo, mdata, fdata, pdata, states_source_turbine, wake_coos, wake_deltas
+        )
+
+        pdata[FC.POINTS] = pdata[FC.POINTS].copy()  # making sure this is no ref
+
         for h in self.heights:
 
-            fdata[FV.H][stsel] = hh + 2*(h - hh)
+            fdata[FV.H][stsel] = hh + 2 * (h - hh)
 
-            nwcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, pdata, states_source_turbine)
-            
-            self.wmodel.contribute_to_wake_deltas(algo, mdata, fdata,
-                    pdata, states_source_turbine, nwcoos, wake_deltas)
-            
+            nwcoos = algo.wake_frame.get_wake_coos(
+                algo, mdata, fdata, pdata, states_source_turbine
+            )
+
+            self.wmodel.contribute_to_wake_deltas(
+                algo, mdata, fdata, pdata, states_source_turbine, nwcoos, wake_deltas
+            )
+
         fdata[FV.H][stsel] = hh
 
     def finalize_wake_deltas(
@@ -166,8 +172,10 @@ class WakeMirror(WakeModel):
             numpy.ndarray with shape (n_states, n_points) afterwards
 
         """
-        self.wmodel.finalize_wake_deltas(algo, mdata, fdata,
-            pdata, amb_results, wake_deltas)
+        self.wmodel.finalize_wake_deltas(
+            algo, mdata, fdata, pdata, amb_results, wake_deltas
+        )
+
 
 class GroundMirror(WakeMirror):
     """
@@ -177,6 +185,7 @@ class GroundMirror(WakeMirror):
     :group: models.wake_models
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
