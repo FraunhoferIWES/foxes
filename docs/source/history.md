@@ -451,3 +451,17 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Bug fixed for `RankineHalfBody` turbine induction model that produced wrong results for wind directions unequal 270 degrees
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.1](https://github.com/FraunhoferIWES/foxes/commits/v0.6.1)
+
+## v0.6.2
+
+- Models:
+  - New partial wakes model: `PartialCentre`, evaluating wake deltas at the rotor centre point only
+- Inputs:
+  - New farm layout input: `add_random`, adds turbines at random positions, respecting a minimal distance
+  - New states creation: `random_timseries_data`, creates uniform random timeseries data
+- Utils:
+  - New function `random_xy_square`, generates random xy positions with minimal distance
+- Examples:
+  - New example: `random_timeseries`, computes a random farm in a random timeseries. Both sizes are defined by user input
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)

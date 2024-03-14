@@ -149,6 +149,7 @@ class ModelBook:
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             distsliced=fm.partial_wakes.PartialDistSlicedWake(),
+            centre=fm.partial_wakes.PartialCentre(),
             auto=fm.partial_wakes.Mapped(),
         )
         nlst = list(range(2, 11)) + [20]
