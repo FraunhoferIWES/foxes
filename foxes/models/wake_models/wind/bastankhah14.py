@@ -215,11 +215,12 @@ class Bastankhah2014(GaussianWakeModel):
             k = k[sp_sel]
 
             # calculate sigma:
-            # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
-            a = self.induction.ct2a(ct)
-            beta = (1 - a) / (1 - 2 * a)
+            soct = np.sqrt(1.0 - np.minimum(ct, 0.999999))
+            beta = np.sqrt(0.5 * (1 + soct) / soct)
+            #a = self.induction.ct2a(ct)
+            #beta = (1 - a) / (1 - 2 * a)
             sigma = k * x + self.sbeta_factor * np.sqrt(beta) * D
-            del beta, a
+            del beta, soct#, a
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
