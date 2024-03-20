@@ -104,11 +104,6 @@ class InitFarmData(FarmDataModel):
         # apply downwind order to all data:
         fdata[FV.WD] = fdata[FV.WD][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
-        fdata[FV.D] = fdata[FV.D][ssel, order]
-        fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
-        fdata[FV.X] = fdata[FV.TXYH][..., 0]
-        fdata[FV.Y] = fdata[FV.TXYH][..., 1]
-        fdata[FV.H] = fdata[FV.TXYH][..., 2]
         for k in mdata.keys():
             if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE):
                     mdata[k] = mdata[k][ssel, order]
