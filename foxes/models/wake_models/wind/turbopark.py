@@ -219,12 +219,11 @@ class TurbOParkWake(GaussianWakeModel):
             ati = ati[sp_sel]
 
             # calculate sigma:
-            soct = np.sqrt(1.0 - np.minimum(ct, 0.999999))
-            beta = np.sqrt(0.5 * (1 + soct) / soct)
-            #a = self.induction.ct2a(ct)
-            #beta = (1 - a) / (1 - 2 * a)
+            # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
             epsilon = self.sbeta_factor * np.sqrt(beta)
-            del beta, soct#, a
+            del a, beta
 
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct)
@@ -488,12 +487,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
             D = D[sp_sel]
 
             # calculate sigma:
-            soct = np.sqrt(1.0 - np.minimum(ct, 0.999999))
-            beta = np.sqrt(0.5 * (1 + soct) / soct)
-            #a = self.induction.ct2a(ct)
-            #beta = (1 - a) / (1 - 2 * a)
+            # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
             epsilon = self.sbeta_factor * np.sqrt(beta)
-            del beta, soct#, a
+            del a, beta
 
             # get TI by integration along centre line:
             ti_ix = algo.wake_frame.calc_centreline_integral(

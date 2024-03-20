@@ -1,7 +1,6 @@
 import numpy as np
 
 from foxes.models.wake_models.gaussian import GaussianWakeModel
-from foxes.utils import sqrt_reg
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -215,12 +214,11 @@ class Bastankhah2014(GaussianWakeModel):
             k = k[sp_sel]
 
             # calculate sigma:
-            soct = np.sqrt(1.0 - np.minimum(ct, 0.999999))
-            beta = np.sqrt(0.5 * (1 + soct) / soct)
-            #a = self.induction.ct2a(ct)
-            #beta = (1 - a) / (1 - 2 * a)
+            # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
             sigma = k * x + self.sbeta_factor * np.sqrt(beta) * D
-            del beta, soct#, a
+            del beta, a
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
