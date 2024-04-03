@@ -96,10 +96,9 @@ class PartialDistSlicedWake(PartialWakesModel):
         """
         return super().sub_models() + [self.rotor_model, self.grotor]
 
-    def new_wake_deltas(self, algo, mdata, fdata):
+    def get_wake_points(self, algo, mdata, fdata):
         """
-        Creates new initial wake deltas, filled
-        with zeros.
+        Get the wake calculation points.
 
         Parameters
         ----------
@@ -112,26 +111,11 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         Returns
         -------
-        wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
+        rpoints: numpy.ndarray
+            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
-
-        n_states = fdata.n_states
-        n_rpoints = self.grotor.n_rotor_points()
-        n_points = fdata.n_turbines * n_rpoints
-        points = self.grotor.get_rotor_points(algo, mdata, fdata).reshape(
-            n_states, n_points, 3
-        )
-        pdata = Data.from_points(points=points)
-
-        wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
-
-        return wake_deltas, pdata
+        return self.grotor.get_rotor_points(algo, mdata, fdata)
 
     def contribute_to_wake_deltas(
         self,
@@ -141,6 +125,7 @@ class PartialDistSlicedWake(PartialWakesModel):
         pdata,
         states_source_turbine,
         wake_deltas,
+        wmodel,  
     ):
         """
         Modifies wake deltas by contributions from the
@@ -162,6 +147,8 @@ class PartialDistSlicedWake(PartialWakesModel):
         wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         """
 
@@ -182,39 +169,38 @@ class PartialDistSlicedWake(PartialWakesModel):
         yz = wcoos.reshape(n_states, n_turbines, n_rpoints, 3)[:, :, :, 1:3]
         del wcoos
 
-        # evaluate wake models:
-        for w in self.wake_models:
-            wdeltas, sp_sel = w.calc_wakes_spsel_x_yz(
-                algo, mdata, fdata, hpdata, states_source_turbine, x, yz
-            )
+        # evaluate wake model:
+        wdeltas, sp_sel = wmodel.calc_wakes_spsel_x_yz(
+            algo, mdata, fdata, hpdata, states_source_turbine, x, yz
+        )
 
-            wsps = np.zeros((n_states, n_turbines, n_rpoints), dtype=bool)
-            wsps[:] = sp_sel[:, :, None]
-            wsps = wsps.reshape(n_states, n_points)
+        wsps = np.zeros((n_states, n_turbines, n_rpoints), dtype=bool)
+        wsps[:] = sp_sel[:, :, None]
+        wsps = wsps.reshape(n_states, n_points)
 
-            for v, wdel in wdeltas.items():
-                d = np.zeros((n_states, n_turbines, n_rpoints), dtype=FC.DTYPE)
-                d[sp_sel] = wdel
-                d = d.reshape(n_states, n_points)[wsps]
+        for v, wdel in wdeltas.items():
+            d = np.zeros((n_states, n_turbines, n_rpoints), dtype=FC.DTYPE)
+            d[sp_sel] = wdel
+            d = d.reshape(n_states, n_points)[wsps]
 
-                try:
-                    superp = w.superp[v]
-                except KeyError:
-                    raise KeyError(
-                        f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
-                    )
-
-                wake_deltas[v] = superp.calc_wakes_plus_wake(
-                    algo,
-                    mdata,
-                    fdata,
-                    pdata,
-                    states_source_turbine,
-                    wsps,
-                    v,
-                    wake_deltas[v],
-                    d,
+            try:
+                superp = wmodel.superp[v]
+            except KeyError:
+                raise KeyError(
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
                 )
+
+            wake_deltas[v] = superp.calc_wakes_plus_wake(
+                algo,
+                mdata,
+                fdata,
+                pdata,
+                states_source_turbine,
+                wsps,
+                v,
+                wake_deltas[v],
+                d,
+            )
 
     def evaluate_results(
         self,
@@ -242,9 +228,8 @@ class PartialDistSlicedWake(PartialWakesModel):
         pdata: foxes.core.Data
             The evaluation point data
         wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
+            The wake deltas object at the selected downwind
+            turbines
         states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.

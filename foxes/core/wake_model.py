@@ -1,6 +1,8 @@
 from abc import abstractmethod
+import numpy as np
 
 from foxes.utils import all_subclasses
+import foxes.variables as FV
 
 from .model import Model
 
@@ -27,12 +29,9 @@ class WakeModel(Model):
         """
         return True
 
-    #@abstractmethod
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, wpoints):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
@@ -42,16 +41,20 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        wpoints: numpy.ndarray
+            The wake evaluation points,
+            shape: (n_states, n_turbines, n_rpoints, 3)
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        pass
+        return {
+            FV.WS: np.zeros_like(wpoints[:, :, :, 0])
+        }
 
     @abstractmethod
     def contribute_to_wake_deltas(

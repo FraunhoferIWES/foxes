@@ -75,10 +75,9 @@ class PartialTopHat(PartialWakesModel):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def new_wake_deltas(self, algo, mdata, fdata):
+    def get_wake_points(self, algo, mdata, fdata):
         """
-        Creates new initial wake deltas, filled
-        with zeros.
+        Get the wake calculation points.
 
         Parameters
         ----------
@@ -91,19 +90,11 @@ class PartialTopHat(PartialWakesModel):
 
         Returns
         -------
-        wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
+        rpoints: numpy.ndarray
+            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
-        pdata = Data.from_points(points=fdata[FV.TXYH])
-
-        wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
-
-        return wake_deltas, pdata
+        return fdata[FV.TXYH][:, :, None, :]
 
     def contribute_to_wake_deltas(
         self,
@@ -240,9 +231,8 @@ class PartialTopHat(PartialWakesModel):
         pdata: foxes.core.Data
             The evaluation point data
         wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
+            The wake deltas object at the selected downwind
+            turbines
         states_turbine: numpy.ndarray of int
             For each state, the index of one turbine
             for which to evaluate the wake deltas.

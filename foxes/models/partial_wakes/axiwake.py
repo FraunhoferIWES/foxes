@@ -83,10 +83,9 @@ class PartialAxiwake(PartialWakesModel):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def new_wake_deltas(self, algo, mdata, fdata):
+    def get_wake_points(self, algo, mdata, fdata):
         """
-        Creates new initial wake deltas, filled
-        with zeros.
+        Get the wake calculation points.
 
         Parameters
         ----------
@@ -99,19 +98,11 @@ class PartialAxiwake(PartialWakesModel):
 
         Returns
         -------
-        wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
+        rpoints: numpy.ndarray
+            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
-        pdata = Data.from_points(points=fdata[FV.TXYH])
-
-        wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
-
-        return wake_deltas, pdata
+        return fdata[FV.TXYH][:, :, None, :]
 
     def contribute_to_wake_deltas(
         self,
@@ -121,6 +112,7 @@ class PartialAxiwake(PartialWakesModel):
         pdata,
         states_source_turbine,
         wake_deltas,
+        wmodel,  
     ):
         """
         Modifies wake deltas by contributions from the
@@ -142,6 +134,8 @@ class PartialAxiwake(PartialWakesModel):
         wake_deltas: Any
             The wake deltas object created by the
             `new_wake_deltas` function
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         """
         # prepare:
@@ -221,42 +215,41 @@ class PartialAxiwake(PartialWakesModel):
             weights[sel] = hA / np.sum(hA, axis=-1)[:, None]
             del hA, hr, Rsel, Dsel, R1, R2
 
-        # evaluate wake models:
-        for w in self.wake_models:
-            wdeltas, sp_sel = w.calc_wakes_spsel_x_r(
-                algo, mdata, fdata, pdata, states_source_turbine, x, r
-            )
+        # evaluate wake model:
+        wdeltas, sp_sel = wmodel.calc_wakes_spsel_x_r(
+            algo, mdata, fdata, pdata, states_source_turbine, x, r
+        )
 
-            for v, wdel in wdeltas.items():
-                d = np.einsum("ps,ps->p", wdel, weights[sp_sel])
+        for v, wdel in wdeltas.items():
+            d = np.einsum("ps,ps->p", wdel, weights[sp_sel])
 
-                try:
-                    superp = w.superp[v]
-                except KeyError:
-                    raise KeyError(
-                        f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
-                    )
-
-                wake_deltas[v] = superp.calc_wakes_plus_wake(
-                    algo,
-                    mdata,
-                    fdata,
-                    pdata,
-                    states_source_turbine,
-                    sp_sel,
-                    v,
-                    wake_deltas[v],
-                    d,
+            try:
+                superp = wmodel.superp[v]
+            except KeyError:
+                raise KeyError(
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
                 )
+
+            wake_deltas[v] = superp.calc_wakes_plus_wake(
+                algo,
+                mdata,
+                fdata,
+                pdata,
+                states_source_turbine,
+                sp_sel,
+                v,
+                wake_deltas[v],
+                d,
+            )
 
     def evaluate_results(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
         wake_deltas,
-        states_turbine,
+        wmodel,
+        downwind_index,
         amb_res=None,
     ):
         """
@@ -272,16 +265,13 @@ class PartialAxiwake(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        pdata: foxes.core.Data
-            The evaluation point data
         wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
-        states_turbine: numpy.ndarray of int
-            For each state, the index of one turbine
-            for which to evaluate the wake deltas.
-            Shape: (n_states,)
+            The wake deltas object at the selected downwind
+            turbines
+        wmodel: foxes.core.WakeModel
+            The wake model
+        downwind_index: int
+            The index in the downwind order
         amb_res: dict, optional
             Ambient states results. Keys: var str, values:
             numpy.ndarray of shape (n_states, n_points)

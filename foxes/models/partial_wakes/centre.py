@@ -1,5 +1,3 @@
-import numpy as np
-
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -14,7 +12,6 @@ class PartialCentre(RotorPoints):
     :group: models.partial_wakes
 
     """
-
 
     def get_wake_points(self, algo, mdata, fdata):
         """
@@ -61,9 +58,8 @@ class PartialCentre(RotorPoints):
             The farm data
             Modified in-place by this function
         wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
+            The wake deltas object at the selected downwind
+            turbines
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
@@ -92,8 +88,6 @@ class PartialCentre(RotorPoints):
         for v in wres.keys():
             if v in wake_deltas:
                 wres[v] += wake_deltas[v]
-                if amb_res_in:
-                    amb_res[v][:, downwind_index] = wres[v]
             wres[v] = wres[v][:, None]
 
         algo.rotor_model.eval_rpoint_results(
