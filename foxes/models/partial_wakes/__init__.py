@@ -8,3 +8,4 @@ from .axiwake import PartialAxiwake
 from .distsliced import PartialDistSlicedWake
 from .grid import PartialGrid
 from .centre import PartialCentre
+from .wake_shaped import WakeShapedPartials

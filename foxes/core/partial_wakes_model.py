@@ -79,7 +79,7 @@ class PartialWakesModel(Model):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         wake_deltas,
         wmodel,  
     ):
@@ -97,21 +97,22 @@ class PartialWakesModel(Model):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray of int
-            For each state, one turbine index corresponding
-            to the wake causing turbine. Shape: (n_states,)
-        wake_deltas: Any
-            The wake deltas object created by the
-            `new_wake_deltas` function
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_points, ...)
         wmodel: foxes.core.WakeModel
             The wake model
 
         """
         wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, pdata, states_source_turbine
+            algo, mdata, fdata, pdata, downwind_index
         )
         wmodel.contribute_to_wake_deltas(
-            algo, mdata, fdata, pdata, states_source_turbine, 
+            algo, mdata, fdata, pdata, downwind_index, 
             wcoos, wake_deltas
         )
 

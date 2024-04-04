@@ -63,7 +63,7 @@ class WakeModel(Model):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
@@ -83,9 +83,9 @@ class WakeModel(Model):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)

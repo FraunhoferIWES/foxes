@@ -3,8 +3,9 @@ import numpy as np
 from foxes.core import PartialWakesModel, Data
 import foxes.constants as FC
 
+from .wake_shaped import WakeShapedPartials
 
-class RotorPoints(PartialWakesModel):
+class RotorPoints(WakeShapedPartials):
     """
     Partial wakes calculation directly by the
     rotor model.
@@ -33,6 +34,23 @@ class RotorPoints(PartialWakesModel):
 
         """
         return algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
+
+    def n_wpoints(self, algo):
+        """
+        The number of evaluation points per rotor
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        n: int
+            The number of evaluation points per rotor
+        
+        """
+        return algo.rotor_model.n_rotor_points()
 
     def evaluate_results(
         self,

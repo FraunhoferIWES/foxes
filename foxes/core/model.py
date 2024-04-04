@@ -380,7 +380,7 @@ class Model(ABC):
 
             # from previous iteration, if requested:
             if pdata is not None and FC.STATES_SEL in pdata:
-                assert downwind_index # not implemented for turbine_index
+                assert downwind_index is not None 
 
                 if not pdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
                     raise ValueError(

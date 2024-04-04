@@ -51,7 +51,14 @@ class WakeFrame(Model):
         pass
 
     @abstractmethod
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata, 
+            downwind_index,
+        ):
         """
         Calculate wake coordinates.
 
@@ -65,9 +72,9 @@ class WakeFrame(Model):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------

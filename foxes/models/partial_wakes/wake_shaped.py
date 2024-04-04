@@ -1,115 +1,106 @@
 import numpy as np
+from abc import abstractmethod
 
 from foxes.core import PartialWakesModel, Data
-from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
-from foxes.models.rotor_models.grid import GridRotor
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .distsliced import DistSlicedWakeModel
 
-class PartialDistSlicedWake(PartialWakesModel):
+class WakeShapedPartials(PartialWakesModel):
     """
-    Partial wakes for distance sliced wake models,
-    making use of their structure.
-
-    The evaluations are optinally done on a grid rotor
-    that can differ from the algorithm's rotor model.
-
-    Attributes
-    ----------
-    rotor_model: foxes.core.RotorModel
-        The rotor model, default is the one from the algorithm
-    grotor: foxes.models.rotor_models.GridRotor
-        The grid rotor model
+    Abstract class that makes use of wake shapes
+    during point evaluation
 
     :group: models.partial_wakes
 
     """
 
-    def __init__(
-        self, n=9, rotor_model=None, **kwargs
+    @abstractmethod
+    def n_wpoints(self, algo):
+        """
+        The number of evaluation points per rotor
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+            
+        Returns
+        -------
+        n: int
+            The number of evaluation points per rotor
+        
+        """
+        pass
+
+    def _contr_generic(self, *args, **kwargs):
+        """ Helper function for generic wake models """
+        super().contribute_to_wake_deltas(*args, **kwargs)
+
+    def _contr_dsliced(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        downwind_index,
+        wake_deltas,
+        wmodel,  
     ):
-        """
-        Constructor.
+        """ Helper function for DistSlicedWakesModel """
 
-        Parameters
-        ----------
-        n: int, optional
-            The `GridRotor`'s `n` parameter
-        rotor_model: foxes.core.RotorModel, optional
-            The rotor model, default is the one from the algorithm
-        kwargs: dict, optional
-            Additional parameters for the `GridRotor`
+        # evaluate grid rotor:
+        n_states = fdata.n_states
+        n_points = pdata.n_points
+        n_wpoints = self.n_wpoints(algo)
+        n_turbines = int(n_points/n_wpoints)
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, pdata, downwind_index
+        ).reshape(n_states, n_turbines, n_wpoints, 3)
+        x = wcoos[:, :, 0, 0]
+        yz = wcoos[:, :, :, 1:3]
+        del wcoos
 
-        """
-        super().__init__()
+        # reconstruct centre points:
+        points = pdata[FC.POINTS].reshape(n_states, n_turbines, n_wpoints, 3)
+        points = np.mean(points, axis=2)
+        hpdata = Data.from_points(points=points)
+        del points
 
-        self.rotor_model = rotor_model
-        self.grotor = None if n is None else GridRotor(n=n, calc_vars=[], **kwargs)
+        # evaluate wake model:
+        wdeltas, sp_sel = wmodel.calc_wakes_spsel_x_yz(
+            algo, mdata, fdata, hpdata, downwind_index, x, yz
+        )
 
-    def __repr__(self):
-        if self.grotor is not None:
-            return super().__repr__() + f"(n={self.grotor.n})"
-        elif self.rotor_model is not None and isinstance(self.rotor_model, GridRotor):
-            return super().__repr__() + f"(n={self.rotor_model.n})"
-        else:
-            return super().__repr__()
+        wsps = np.zeros((n_states, n_turbines, n_wpoints), dtype=bool)
+        wsps[:] = sp_sel[:, :, None]
+        wsps = wsps.reshape(n_states, n_points)
 
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
+        for v, wdel in wdeltas.items():
+            d = np.zeros((n_states, n_turbines, n_wpoints), dtype=FC.DTYPE)
+            d[sp_sel] = wdel
+            d = d.reshape(n_states, n_points)[wsps]
 
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+            try:
+                superp = wmodel.superp[v]
+            except KeyError:
+                raise KeyError(
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {sorted(list(wmodel.superp.keys()))}"
+                )
 
-        """
-        if self.rotor_model is None:
-            self.rotor_model = algo.rotor_model
-        if self.grotor is None:
-            self.grotor = self.rotor_model
-
-        super().initialize(algo, verbosity)
-
-        self.YZ = self.var("YZ")
-        self.W = self.var(FV.WEIGHT)
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return super().sub_models() + [self.rotor_model, self.grotor]
-
-    def get_wake_points(self, algo, mdata, fdata):
-        """
-        Get the wake calculation points.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-
-        Returns
-        -------
-        rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
-
-        """
-        return self.grotor.get_rotor_points(algo, mdata, fdata)
+            wake_deltas[v] = superp.calc_wakes_plus_wake(
+                algo,
+                mdata,
+                fdata,
+                pdata,
+                downwind_index,
+                wsps,
+                v,
+                wake_deltas[v],
+                d,
+            )
 
     def contribute_to_wake_deltas(
         self,
@@ -147,61 +138,12 @@ class PartialDistSlicedWake(PartialWakesModel):
 
         """
 
-        if not isinstance(wmodel, DistSlicedWakeModel):
-            raise TypeError(
-                f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not an DistSlicedWakeModel"
-            )      
-
-        # evaluate grid rotor:
-        n_states = fdata.n_states
-        n_points = pdata.n_points
-        n_rpoints = self.grotor.n_rotor_points()
-        n_turbines = int(n_points/n_rpoints)
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, pdata, downwind_index
-        ).reshape(n_states, n_turbines, n_rpoints, 3)
-        x = wcoos[:, :, 0, 0]
-        yz = wcoos[:, :, :, 1:3]
-        del wcoos
-
-        # reconstruct centre points:
-        points = pdata[FC.POINTS].reshape(n_states, n_turbines, n_rpoints, 3)
-        points = np.mean(points, axis=2)
-        hpdata = Data.from_points(points=points)
-        del points
-
-        # evaluate wake model:
-        wdeltas, sp_sel = wmodel.calc_wakes_spsel_x_yz(
-            algo, mdata, fdata, hpdata, downwind_index, x, yz
-        )
-
-        wsps = np.zeros((n_states, n_turbines, n_rpoints), dtype=bool)
-        wsps[:] = sp_sel[:, :, None]
-        wsps = wsps.reshape(n_states, n_points)
-
-        for v, wdel in wdeltas.items():
-            d = np.zeros((n_states, n_turbines, n_rpoints), dtype=FC.DTYPE)
-            d[sp_sel] = wdel
-            d = d.reshape(n_states, n_points)[wsps]
-
-            try:
-                superp = wmodel.superp[v]
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
-                )
-
-            wake_deltas[v] = superp.calc_wakes_plus_wake(
-                algo,
-                mdata,
-                fdata,
-                pdata,
-                downwind_index,
-                wsps,
-                v,
-                wake_deltas[v],
-                d,
-            )
+        if isinstance(wmodel, DistSlicedWakeModel):
+            self._contr_dsliced(algo, mdata, fdata, pdata, downwind_index,
+                                wake_deltas, wmodel)
+        else:
+            self._contr_generic(algo, mdata, fdata, pdata, downwind_index,
+                                wake_deltas, wmodel)
 
     def evaluate_results(
         self,
