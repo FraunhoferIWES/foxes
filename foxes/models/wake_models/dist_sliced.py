@@ -73,7 +73,7 @@ class DistSlicedWakeModel(WakeModel):
         super().initialize(algo, verbosity, force)
 
     @abstractmethod
-    def calc_wakes_spsel_x_yz(
+    def calc_wakes_x_yz(
         self,
         algo,
         mdata,
@@ -99,24 +99,87 @@ class DistSlicedWakeModel(WakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
             The yz values for each x value, shape:
-            (n_states, n_points, n_yz_per_x, 2)
+            (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel: numpy.ndarray of bool
+            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
+        st_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            is non-zero, shape: (n_states, n_targets)
 
         """
         pass
 
-    def contribute_to_wake_deltas(
+    def contribute_at_rotors(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        downwind_index,
+        wake_coos,
+        wake_deltas,
+    ):
+        """
+        Modifies wake deltas at rotor points by 
+        contributions from the specified wake source turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_rotors, n_rpoints, 3)
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_rotors, n_rpoints, ...)
+
+        """
+        x = wake_coos[:, :, 0, 0]
+        yz = wake_coos[..., 1:3]
+
+        wdeltas, st_sel = self.calc_wakes_x_yz(
+            algo, mdata, fdata, pdata, downwind_index, x, yz
+        )
+
+        for v, hdel in wdeltas.items():
+            try:
+                superp = self.superp[v]
+            except KeyError:
+                raise KeyError(
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
+                )
+
+            wake_deltas[v] = superp.calc_wakes_plus_wake(
+                algo,
+                mdata,
+                fdata,
+                pdata,
+                downwind_index,
+                sp_sel,
+                v,
+                wake_deltas[v],
+                hdel[:, 0],
+            )
+
+    def contribute_at_points(
         self,
         algo,
         mdata,
@@ -143,19 +206,29 @@ class DistSlicedWakeModel(WakeModel):
         pdata: foxes.core.Data
             The evaluation point data
         downwind_index: int
-            The index in the downwind order
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_points, 3)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_points, ...) or
+            (n_states, n_rotors, n_rpoints, ...)
 
         """
-        x = wake_coos[:, :, 0]
-        yz = wake_coos[:, :, None, 1:3]
+        # calculation at points:
+        if n_rpoints is None:
+            x = wake_coos[:, :, 0]
+            yz = wake_coos[:, :, None, 1:3]
+        
+        # farm calc case: n_rpoints per rotor
+        else:
+            n_states, n_rotors, n_rpoints = wake_deltas.shape[:3]
+            wcoos = wake_coos.reshape(n_states, n_rotors, n_rpoints, 3)
+            x = wcoos[:, :, 0, 0]
+            yz = wcoos[..., 1:3]
 
         wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
             algo, mdata, fdata, pdata, downwind_index, x, yz

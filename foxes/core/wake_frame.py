@@ -112,7 +112,7 @@ class WakeFrame(Model):
             The evaluation point data
         states0: numpy.ndarray, optional
             The states of wake creation
-        
+
         Returns
         -------
         data: numpy.ndarray

@@ -96,6 +96,32 @@ class Data(Dict):
         """
         return self.sizes[FC.POINT] if FC.POINT in self.sizes else None
 
+    @property
+    def n_rotors(self):
+        """
+        The number of rotors
+
+        Returns
+        -------
+        int:
+            The number of rotors
+
+        """
+        return self.sizes[FC.ROTOR] if FC.ROTOR in self.sizes else None
+
+    @property
+    def n_rpoints(self):
+        """
+        The number of points per rotor
+
+        Returns
+        -------
+        int:
+            The number of points per rotor
+
+        """
+        return self.sizes[FC.RPOINT] if FC.RPOINT in self.sizes else None
+    
     def states_i0(self, counter=False, algo=None):
         """
         Get the state counter for first state in chunk
@@ -221,3 +247,45 @@ class Data(Dict):
         data[FC.POINTS] = points
         dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
         return Data(data, dims, [FC.STATE, FC.POINT], name)
+
+    @classmethod
+    def from_rpoints(
+        cls,
+        rpoints,
+        data={},
+        dims={},
+        name="pdata",
+    ):
+        """
+        Create from points at rotors
+
+        Parameters
+        ----------
+        rpoints: np.ndarray
+            The points at rotors, shape: 
+            (n_states, n_rotors, n_rpoints, 3)
+        data: dict
+            The initial data to be stored
+        dims: dict
+            The dimensions tuples, same or subset
+            of data keys
+        name: str
+            The data container name
+
+        Returns
+        -------
+        pdata: Data
+            The data object
+
+        """
+        if len(rpoints.shape) != 4 or rpoints.shape[3] != 3:
+            raise ValueError(
+                f"Expecting rpoints shape (n_states, n_rotors, n_rpoints, 3), got {rpoints.shape}"
+            )
+        n_states, n_rotors, n_rpoints = rpoints.shape[:3]
+        data[FC.RPOINTS] = rpoints
+        dims[FC.RPOINTS] = (FC.STATE, FC.ROTOR, FC.RPOINT, FC.XYH)
+        data[FC.POINTS] = rpoints.reshape(n_states, n_rotors*n_rpoints, 3)
+        dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
+        return Data(data, dims, [FC.STATE], name)
+    

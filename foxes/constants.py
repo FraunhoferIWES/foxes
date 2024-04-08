@@ -50,6 +50,11 @@ RWEIGHTS = "rotor_weights"
 :group: foxes.constants
 """
 
+ROTOR = "rotor"
+""" Rotor identifier
+:group: foxes.constants
+"""
+
 AMB_RPOINT_RESULTS = "amb_rpoint_res"
 """ Identified for ambient rotor point results
 :group: foxes.constants
@@ -86,13 +91,13 @@ STATE_TURBINE = "state-turbine"
 :group: foxes.constants
 """
 
-STATE_DOWNWIND = "state-downwind"
-"""Identifier for state-downwind order dimensions
+STATE_POINT = "state-point"
+"""Identifier for state-point dimensions
 :group: foxes.constants
 """
 
-STATE_POINT = "state-point"
-"""Identifier for state-point dimensions
+STATE_ROTOR = "state-rotor"
+"""Identifier for state-rotor-rpoints dimensions
 :group: foxes.constants
 """
 

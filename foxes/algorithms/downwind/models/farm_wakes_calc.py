@@ -73,22 +73,13 @@ class FarmWakesCalculation(FarmDataModel):
                 algo, mdata, fdata, wmodel, wpoints[pwake.name])
 
         def _get_wdata(wname, pwake, s):
-            points = wpoints[pwake.name][:, s]
-            n_targets, n_rpoints = points.shape[1:3]
-            n_points = n_targets * n_rpoints
-
-            pdata = Data.from_points(
-                points=points.reshape(n_states, n_points, 3))
-
-            wdelta = {v: d[:, s].reshape(n_states, n_points) 
-                        for v, d in wdeltas[wname].items()}
-                        
+            pdata = Data.from_rpoints(rpoints=wpoints[pwake.name][:, s])
+            wdelta = {v: d[:, s] for v, d in wdeltas[wname].items()}
             return pdata, wdelta
 
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
             pwake.evaluate_results(
                 algo, mdata, fdata, wdeltas, wmodel, oi)
-
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
             fdata.update(res)
@@ -105,8 +96,8 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi < n_turbines - 1:
                         pdata, wdelta = _get_wdata(wname, pwake, np.s_[oi+1:])
-                        pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
-                                                        pdata, oi, wdelta, wmodel)
+                        pwake.contribute_at_rotors(algo, mdata, fdata, 
+                                                   pdata, oi, wdelta, wmodel)
                 
             # upwind:
             else:
@@ -117,7 +108,7 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi > 0:
                         pdata, wdelta = _get_wdata(wname, pwake, np.s_[:oi])
-                        pwake.contribute_to_wake_deltas(algo, mdata, fdata, 
-                                                        pdata, oi, wdelta, wmodel)
+                        pwake.contribute_at_rotors(algo, mdata, fdata, 
+                                                   pdata, oi, wdelta, wmodel)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

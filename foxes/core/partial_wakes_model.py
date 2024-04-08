@@ -73,7 +73,7 @@ class PartialWakesModel(Model):
         """
         return wmodel.new_wake_deltas(algo, mdata, fdata, wpoints)
 
-    def contribute_to_wake_deltas(
+    def contribute_at_rotors(
         self,
         algo,
         mdata,
@@ -84,8 +84,51 @@ class PartialWakesModel(Model):
         wmodel,  
     ):
         """
-        Modifies wake deltas by contributions from the
-        specified wake source turbines.
+        Modifies wake deltas at rotor points by 
+        contributions from the specified wake source turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_rotors, n_rpoints, ...)
+        wmodel: foxes.core.WakeModel
+            The wake model
+
+        """
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, pdata, downwind_index
+        ).reshape(pdata.n_states, pdata.n_rotors, pdata.n_rpoints, 3)
+        wmodel.contribute_at_rotors(
+            algo, mdata, fdata, pdata, downwind_index, 
+            wcoos, wake_deltas
+        )
+
+    def contribute_at_points(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        downwind_index,
+        wake_deltas,
+        wmodel,  
+    ):
+        """
+        Modifies wake deltas at given points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -111,7 +154,7 @@ class PartialWakesModel(Model):
         wcoos = algo.wake_frame.get_wake_coos(
             algo, mdata, fdata, pdata, downwind_index
         )
-        wmodel.contribute_to_wake_deltas(
+        wmodel.contribute_at_points(
             algo, mdata, fdata, pdata, downwind_index, 
             wcoos, wake_deltas
         )

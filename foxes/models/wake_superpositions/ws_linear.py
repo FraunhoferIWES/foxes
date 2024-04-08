@@ -62,14 +62,14 @@ class WSLinear(WakeSuperposition):
         """
         return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
-    def calc_wakes_plus_wake(
+    def add_at_rotors(
         self,
         algo,
         mdata,
         fdata,
         pdata,
         downwind_index,
-        sel_sp,
+        sr_sel,
         variable,
         wake_delta,
         wake_model_result,
@@ -86,23 +86,26 @@ class WSLinear(WakeSuperposition):
         fdata: foxes.core.Data
             The farm data
         pdata: foxes.core.Data
-            The evaluation point data
+            The evaluation point data at rotor points
         downwind_index: int
-            The index in the downwind order
-        sel_sp: numpy.ndarray of bool
-            The selection of points, shape: (n_states, n_points)
+            The index of the wake causing turbine
+            in the downwnd order
+        sr_sel: numpy.ndarray of bool
+            The selection of rotors, shape: (n_states, n_rotors)
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray
-            The original wake deltas, shape: (n_states, n_points)
+            The original wake deltas, shape: 
+            (n_states, n_rotors, n_rpoints, ...)
         wake_model_result: numpy.ndarray
-            The new wake deltas of the selected points,
-            shape: (n_sel_sp,)
+            The new wake deltas of the selected rotors,
+            shape: (n_sr_sel, n_rpoints, ...)
 
         Returns
         -------
         wdelta: numpy.ndarray
-            The updated wake deltas, shape: (n_states, n_points)
+            The updated wake deltas, shape: 
+            (n_states, n_rotors, n_rpoints, ...)
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
@@ -110,7 +113,7 @@ class WSLinear(WakeSuperposition):
                 f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
             )
 
-        if np.any(sel_sp):
+        if np.any(sr_sel):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
                 FC.STATE_POINT,
