@@ -168,7 +168,6 @@ class PartialWakesModel(Model):
         wake_deltas,
         wmodel,
         downwind_index,
-        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -191,9 +190,6 @@ class PartialWakesModel(Model):
             The wake model
         downwind_index: int
             The index in the downwind order
-        amb_res: dict, optional
-            Ambient states results. Keys: var str, values:
-            numpy.ndarray of shape (n_states, n_points)
 
         """
         pass

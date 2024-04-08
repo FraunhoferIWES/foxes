@@ -42,7 +42,6 @@ class RotorPoints(PartialWakesModel):
         wake_deltas,
         wmodel,
         downwind_index,
-        amb_res=None,
     ):
         """
         Updates the farm data according to the wake
@@ -57,36 +56,28 @@ class RotorPoints(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
             Modified in-place by this function
-        wake_deltas: Any
+        wake_deltas: dict
             The wake deltas object at the selected downwind
-            turbines
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_rpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
-        amb_res: dict, optional
-            Ambient states results. Keys: var str, values:
-            numpy.ndarray of shape (n_states, n_points)
 
         """
         weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
-        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
-
-        amb_res_in = amb_res is not None
-        if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(
-                FC.AMB_RPOINT_RESULTS, algo, mdata
-            )
-
-        wres = {}
-        for v, ares in amb_res.items():
-            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[:, downwind_index]
+        amb_res = algo.rotor_model.from_data_or_store(
+            FC.AMB_RPOINT_RESULTS, algo, mdata
+        )
+        wres = {v: a[:, downwind_index] for v, a in amb_res.items()}
+        del amb_res
 
         wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wake_deltas)
 
         for v in wres.keys():
             if v in wake_deltas:
+                print("HERE RPOINTS",v,wres[v].shape,wake_deltas[v].shape)
                 wres[v] += wake_deltas[v]
                 if amb_res_in:
                     amb_res[v][:, downwind_index] = wres[v]

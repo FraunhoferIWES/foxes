@@ -71,6 +71,7 @@ class FarmWakesCalculation(FarmDataModel):
                     algo, mdata, fdata)
             wdeltas[wname] = pwake.new_wake_deltas(
                 algo, mdata, fdata, wmodel, wpoints[pwake.name])
+            print("ALGO INIT",wname,wdeltas[wname]["WS"].shape)
 
         def _get_wdata(wname, pwake, s):
             pdata = Data.from_rpoints(rpoints=wpoints[pwake.name][:, s])
@@ -78,6 +79,7 @@ class FarmWakesCalculation(FarmDataModel):
             return pdata, wdelta
 
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
+            print("ALGO EVAL",oi,wdeltas["WS"].shape)
             pwake.evaluate_results(
                 algo, mdata, fdata, wdeltas, wmodel, oi)
             res = algo.farm_controller.calculate(
