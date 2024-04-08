@@ -128,6 +128,7 @@ class WakeFrame(Model):
         downwind_index,
         fdata,
         pdata,
+        target,
         states0=None,
     ):
         """
@@ -146,6 +147,9 @@ class WakeFrame(Model):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
+        target: str, optional
+            The dimensions identifier for the output, 
+            FC.STATE_POINT, FC.STATE_ROTOR
         states0: numpy.ndarray, optional
             The states of wake creation
 
@@ -157,10 +161,15 @@ class WakeFrame(Model):
 
         """
         n_states = fdata.n_states
-        n_points = pdata.n_points
         s = np.arange(n_states) if states0 is None else states0
 
-        out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        if target == FC.STATE_POINT:
+            out = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+        elif target == FC.STATE_ROTOR:
+            out = np.zeros((n_states, pdata.n_rotors), dtype=FC.DTYPE)
+        else:
+            raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_POINT}' or '{FC.STATE_ROTOR}'")
+            
         out[:] = fdata[variable][s, downwind_index][:, None]
 
         return out

@@ -148,8 +148,6 @@ class ModelBook:
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
-            distsliced=fm.partial_wakes.PartialDistSlicedWake(),
-            distsliced_rotor=fm.partial_wakes.PartialDistSlicedWake(n=None),
             axiwake=fm.partial_wakes.PartialAxiwake(),
             centre=fm.partial_wakes.PartialCentre(),
         )
@@ -157,11 +155,7 @@ class ModelBook:
         for n in nlst:
             self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
-            self.partial_wakes[f"distsliced{n**2}"] = (
-                fm.partial_wakes.PartialDistSlicedWake(n)
-            )
-        for n in nlist:
-            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n)
+            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n=n)
 
         self.wake_frames = Dict(
             name="wake_frames",

@@ -257,7 +257,7 @@ class Model(ABC):
             n_rotors = _geta("n_rotors")
             n_rpoints = _geta("n_rpoints")
             n_points = n_rotors * n_rpoints
-            dims = (FC.STATE, FC.ROTOR, FC.RPOINT)
+            dims = (FC.STATE, FC.ROTOR)
         else:
             raise KeyError(
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}, {FC.STATE_ROTOR}"
@@ -275,9 +275,9 @@ class Model(ABC):
                         out[:] = a
                         out_dims = (FC.STATE, FC.POINT)
                     elif target == FC.STATE_ROTOR:
-                        out = np.full((n_states, n_rotors, n_rpoints), np.nan, dtype=FC.DTYPE)
+                        out = np.full((n_states, n_rotors), np.nan, dtype=FC.DTYPE)
                         out[:] = a
-                        out_dims = (FC.STATE, FC.ROTOR, FC.RPOINT)
+                        out_dims = (FC.STATE, FC.ROTOR)
                     else:
                         raise KeyError(
                             f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}, {FC.STATE_ROTOR}"
@@ -311,10 +311,10 @@ class Model(ABC):
                 and pdata is not None
                 and variable in pdata
                 and len(pdata.dims[variable]) > 1
-                and tuple(pdata.dims[variable][:len(dims)]) == dims
+                and tuple(pdata.dims[variable][:2]) == dims
             ):
                 out = pdata[variable]
-                out_dims = tuple(mdata.dims[variable][:len(dims)])
+                out_dims = tuple(mdata.dims[variable][:2])
 
             # lookup wake modelling data:
             elif (
@@ -324,21 +324,18 @@ class Model(ABC):
                 and pdata is not None
                 and variable in fdata
                 and len(fdata.dims[variable]) > 1
-                and (
-                    tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
-                    or tuple(fdata.dims[variable][:3]) == (FC.STATE, FC.ROTOR, FC.RPOINT)
-                )
+                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
                 and downwind_index is not None
                 and algo is not None
             ):
                 out = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, downwind_index, fdata, pdata
+                    algo, variable, downwind_index, fdata, pdata,
+                    target=target
                 )
                 if target == FC.STATE_POINT:
                     out_dims = (FC.STATE, FC.POINT)
                 else:
-                    out = out.reshape(n_states, n_rotors, n_rpoints)
-                    out_dims = (FC.STATE, FC.ROTOR, FC.RPOINT)
+                    out_dims = (FC.STATE, FC.ROTOR)
             
             if out is not None:
                 break

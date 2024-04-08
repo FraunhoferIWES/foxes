@@ -145,7 +145,7 @@ class Bastankhah2014(GaussianWakeModel):
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="w",
             algo=algo,
             fdata=fdata,
@@ -154,7 +154,7 @@ class Bastankhah2014(GaussianWakeModel):
         )
 
         # select targets:
-        sp_sel = (x > 1e-5) & (ct > 0.0)
+        sp_sel = (x > 0) & (ct > 0.0)
         if np.any(sp_sel):
             # apply selection:
             x = x[sp_sel]
@@ -163,7 +163,7 @@ class Bastankhah2014(GaussianWakeModel):
             # get D:
             D = self.get_data(
                 FV.D,
-                FC.STATE_POINT,
+                FC.STATE_ROTOR,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
@@ -175,7 +175,7 @@ class Bastankhah2014(GaussianWakeModel):
             # get k:
             k = self.get_data(
                 self.k_var,
-                FC.STATE_POINT,
+                FC.STATE_ROTOR,
                 lookup="sw",
                 algo=algo,
                 fdata=fdata,

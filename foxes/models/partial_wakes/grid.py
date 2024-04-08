@@ -1,8 +1,8 @@
-from foxes.models.partial_wakes.dist_sliced import PartialDistSlicedWake
+from .segregated import PartialSegregated
 from foxes.models.rotor_models.grid import GridRotor
 
 
-class PartialGrid(PartialDistSlicedWake):
+class PartialGrid(PartialSegregated):
     """
     Partial wakes on a grid rotor that may
     differ from the one in the algorithm.
@@ -11,25 +11,18 @@ class PartialGrid(PartialDistSlicedWake):
 
     """
 
-    def __init__(
-        self, n, rotor_model=None, **kwargs
-    ):
+    def __init__(self, *args, **kwargs):
         """
         Constructor.
 
         Parameters
         ----------
-        n: int, optional
-            The `GridRotor`'s `n` parameter
-        rotor_model: foxes.core.RotorModel, optional
-            The rotor model, default is the one from the algorithm
+        args: tuple, optional
+            Parameters for GridRotor
         kwargs: dict, optional
-            Additional parameters for the `GridRotor`
+            Parameters for GridRotor
 
         """
-        super().__init__(n, rotor_model, **kwargs)
-
-        if not isinstance(self.grotor, GridRotor):
-            raise ValueError(
-                f"Wrong grotor type, expecting {GridRotor.__name__}, got {type(self.grotor).__name__}"
-            )
+        super().__init__(
+            GridRotor(*args, calc_vars=[], **kwargs)
+        )

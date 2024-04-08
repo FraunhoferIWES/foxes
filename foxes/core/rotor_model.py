@@ -152,17 +152,17 @@ class RotorModel(FarmDataModel):
 
         return points
 
-    def _set_res(self, fdata, v, res, stsel):
+    def _set_res(self, fdata, v, res, downwind_index):
         """
         Helper function for results setting
         """
-        if stsel is None:
+        if downwind_index is None:
             fdata[v] = res.copy()
         elif res.shape[1] == 1:
-            fdata[v][stsel] = res[:, 0]
+            fdata[v][:, downwind_index] = res[:, 0]
         else:
             raise ValueError(
-                f"Rotor model '{self.name}': states_turbine is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
+                f"Rotor model '{self.name}': downwind_index is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
             )
 
     def eval_rpoint_results(
@@ -201,17 +201,11 @@ class RotorModel(FarmDataModel):
             The rotor point weights, shape: (n_rpoints,)
         downwind_index: int, optional
             The index in the downwind order
-        copy_to_ambient: bool, optional
+        copy_to_ambient: bool
             If `True`, the fdata results are copied to ambient
             variables after calculation
 
         """
-
-        if downwind_index is not None:
-            stsel = np.s_[:, downwind_index]
-        else:
-            stsel = None
-
         uvp = None
         uv = None
         if (
@@ -233,12 +227,12 @@ class RotorModel(FarmDataModel):
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
-                self._set_res(fdata, v, wd, stsel)
+                self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
 
             elif v == FV.WS:
                 ws = np.linalg.norm(uv, axis=-1)
-                self._set_res(fdata, v, ws, stsel)
+                self._set_res(fdata, v, ws, downwind_index)
                 del ws
                 vdone.append(v)
         del uv, wd
@@ -248,17 +242,17 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            if stsel is None:
+            if downwind_index is None:
                 yaw = fdata[FV.YAW].copy()
             else:
-                yaw = fdata[FV.YAW][stsel][:, None]
+                yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
                 if v == FV.REWS:
                     rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
-                    self._set_res(fdata, v, rews, stsel)
+                    self._set_res(fdata, v, rews, downwind_index)
                     del rews
                     vdone.append(v)
 
@@ -276,7 +270,7 @@ class RotorModel(FarmDataModel):
                         )
                     else:
                         rews2 = np.sqrt(np.einsum("stp,p->st", wsp**2, weights))
-                    self._set_res(fdata, v, rews2, stsel)
+                    self._set_res(fdata, v, rews2, downwind_index)
                     del rews2
                     vdone.append(v)
 
@@ -291,7 +285,7 @@ class RotorModel(FarmDataModel):
                         ) ** (1.0 / 3.0)
                     else:
                         rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (1.0 / 3.0)
-                    self._set_res(fdata, v, rews3, stsel)
+                    self._set_res(fdata, v, rews3, downwind_index)
                     del rews3
                     vdone.append(v)
 
@@ -301,7 +295,7 @@ class RotorModel(FarmDataModel):
         for v in self.calc_vars:
             if v not in vdone:
                 res = np.einsum("stp,p->st", rpoint_results[v], weights)
-                self._set_res(fdata, v, res, stsel)
+                self._set_res(fdata, v, res, downwind_index)
             if copy_to_ambient and v in FV.var2amb:
                 fdata[FV.var2amb[v]] = fdata[v].copy()
 

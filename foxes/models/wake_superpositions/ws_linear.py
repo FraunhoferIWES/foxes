@@ -123,8 +123,8 @@ class WSLinear(WakeSuperposition):
                 fdata=fdata,
                 pdata=pdata,
                 downwind_index=downwind_index,
-            )[sr_sel]
-
+            )[sr_sel, None]
+            
             wake_delta[sr_sel] += scale * wake_model_result
 
         return wake_delta
