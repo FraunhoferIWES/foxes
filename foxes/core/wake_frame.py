@@ -9,7 +9,6 @@ import foxes.variables as FV
 from .data import Data
 from .model import Model
 
-
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -50,8 +49,7 @@ class WakeFrame(Model):
         """
         pass
 
-    @abstractmethod
-    def get_wake_coos(
+    def wake_coos_at_rotors(
             self, 
             algo, 
             mdata, 
@@ -60,7 +58,45 @@ class WakeFrame(Model):
             downwind_index,
         ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+
+        Returns
+        -------
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_rotors, n_rpoints, 3)
+
+        """
+        coos = self.wake_coos_at_points(algo, mdata, fdata, 
+                                        pdata, downwind_index)
+        return coos.reshape(pdata.n_states, pdata.n_rotors, 
+                            pdata.n_rpoints, 3)
+
+    @abstractmethod
+    def wake_coos_at_points(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            pdata, 
+            downwind_index,
+        ):
+        """
+        Calculate wake coordinates of given points.
 
         Parameters
         ----------
@@ -84,7 +120,7 @@ class WakeFrame(Model):
 
         """
         pass
-
+    
     def get_wake_modelling_data(
         self,
         algo,

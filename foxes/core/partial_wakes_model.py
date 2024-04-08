@@ -108,9 +108,9 @@ class PartialWakesModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(
+        wcoos = algo.wake_frame.wake_coos_at_rotors(
             algo, mdata, fdata, pdata, downwind_index
-        ).reshape(pdata.n_states, pdata.n_rotors, pdata.n_rpoints, 3)
+        )
         wmodel.contribute_at_rotors(
             algo, mdata, fdata, pdata, downwind_index, 
             wcoos, wake_deltas
@@ -151,7 +151,7 @@ class PartialWakesModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(
+        wcoos = algo.wake_frame.wake_coos_at_points(
             algo, mdata, fdata, pdata, downwind_index
         )
         wmodel.contribute_at_points(

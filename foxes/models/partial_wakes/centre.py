@@ -33,21 +33,3 @@ class PartialCentre(RotorPoints):
 
         """
         return fdata[FV.TXYH][:, :, None]
-
-    def n_wpoints(self, algo):
-        """
-        The number of evaluation points per rotor
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        n: int
-            The number of evaluation points per rotor
-        
-        """
-        return 1
-    

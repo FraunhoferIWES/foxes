@@ -166,22 +166,22 @@ class ModelBook:
         self.wake_frames = Dict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
-            rotor_wd_farmo=fm.wake_frames.FarmOrder(),
-            yawed=fm.wake_frames.YawedWakes(),
+            #rotor_wd_farmo=fm.wake_frames.FarmOrder(),
+            #yawed=fm.wake_frames.YawedWakes(),
         )
         stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines2D(
-                step=s
-            )
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines2D(step=s)
-            )
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
-                base_frame=fm.wake_frames.Streamlines2D(step=s)
-            )
+        #for s in stps:
+        #    self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines2D(
+        #        step=s
+        #    )
+        #for s in stps:
+        #    self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
+        #        base_frame=fm.wake_frames.Streamlines2D(step=s)
+        #    )
+        #for s in stps:
+        #    self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
+        #        base_frame=fm.wake_frames.Streamlines2D(step=s)
+        #    )
         dtlist = [
             ("1s", 1 / 60),
             ("10s", 1 / 6),
@@ -190,17 +190,17 @@ class ModelBook:
             ("10min", 10),
             ("30min", 30),
         ]
-        self.wake_frames["timelines"] = fm.wake_frames.Timelines()
-        for s, t in dtlist:
-            self.wake_frames[f"timelines_{s}"] = fm.wake_frames.Timelines(dt_min=t)
-        self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
-            max_wake_length=1000.0
-        )
-        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
-        for s, t in dtlist:
-            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(
-                dt_min=t
-            )
+        #self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+        #for s, t in dtlist:
+        #    self.wake_frames[f"timelines_{s}"] = fm.wake_frames.Timelines(dt_min=t)
+        #self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
+        #    max_wake_length=1000.0
+        #)
+        #self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
+        #for s, t in dtlist:
+        #    self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(
+        #        dt_min=t
+        #    )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
