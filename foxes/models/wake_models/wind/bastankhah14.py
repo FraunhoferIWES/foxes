@@ -104,7 +104,7 @@ class Bastankhah2014(GaussianWakeModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,

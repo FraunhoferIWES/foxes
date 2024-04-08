@@ -107,10 +107,8 @@ class WakeModel(Model):
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at given points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -131,8 +129,7 @@ class WakeModel(Model):
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_points, ...) or
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_points, ...)
 
         """
         pass

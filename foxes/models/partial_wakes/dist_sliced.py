@@ -111,7 +111,7 @@ class PartialDistSlicedWake(PartialWakesModel):
         """
         return self.grotor.get_rotor_points(algo, mdata, fdata)
 
-    def contribute_to_wake_deltas(
+    def contribute_at_rotors(
         self,
         algo,
         mdata,
@@ -122,8 +122,8 @@ class PartialDistSlicedWake(PartialWakesModel):
         wmodel,  
     ):
         """
-        Modifies wake deltas by contributions from the
-        specified wake source turbines.
+        Modifies wake deltas at rotor points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -134,19 +134,18 @@ class PartialDistSlicedWake(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
         pdata: foxes.core.Data
-            The evaluation point data
+            The evaluation point data at rotor points
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_points, ...)
+            (n_states, n_rotors, n_rpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
 
         """
-
         if not isinstance(wmodel, DistSlicedWakeModel):
             raise TypeError(
                 f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not an DistSlicedWakeModel"

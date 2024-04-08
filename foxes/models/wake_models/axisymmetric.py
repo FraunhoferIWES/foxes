@@ -17,7 +17,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
     """
 
     @abstractmethod
-    def calc_wakes_spsel_x_r(
+    def calc_wakes_x_r(
         self,
         algo,
         mdata,
@@ -43,24 +43,24 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_r_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         pass
 
-    def calc_wakes_spsel_x_yz(
+    def calc_wakes_x_yz(
         self,
         algo,
         mdata,
@@ -86,22 +86,22 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
             The yz values for each x value, shape:
-            (n_states, n_points, n_yz_per_x, 2)
+            (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         r = np.linalg.norm(yz, axis=-1)
-        return self.calc_wakes_spsel_x_r(
+        return self.calc_wakes_x_r(
             algo, mdata, fdata, pdata, downwind_index, x, r
         )

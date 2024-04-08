@@ -13,7 +13,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     """
 
     @abstractmethod
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,
@@ -53,7 +53,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         """
         pass
 
-    def calc_wakes_spsel_x_r(
+    def calc_wakes_x_r(
         self,
         algo,
         mdata,
@@ -79,28 +79,28 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_r_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
-        amsi, sp_sel = self.calc_amplitude_sigma_spsel(
+        amsi, st_sel = self.calc_amplitude_sigma(
             algo, mdata, fdata, pdata, downwind_index, x
         )
         wdeltas = {}
-        rsel = r[sp_sel]
+        rsel = r[st_sel]
         for v in amsi.keys():
             ampld, sigma = amsi[v]
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
 
-        return wdeltas, sp_sel
+        return wdeltas, st_sel

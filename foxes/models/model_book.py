@@ -212,27 +212,27 @@ class ModelBook:
             ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
                 scale_amb=True, lim_low=1e-4
             ),
-            ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
-            ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
-                scale_amb=False, lim_low=1e-4
-            ),
-            ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
-            ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
-                scale_amb=True, lim_low=1e-4
-            ),
-            ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
-            ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
-            ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
-            ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
-            ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
-            ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
-            ws_product=fm.wake_superpositions.WSProduct(),
-            ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
-            ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
-            ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
-            ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
-            ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
-            ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
+            #ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
+            #ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
+            #    scale_amb=False, lim_low=1e-4
+            #),
+            #ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
+            #ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
+            #    scale_amb=True, lim_low=1e-4
+            #),
+            #ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
+            #ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
+            #ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
+            #ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
+            #ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
+            #ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
+            #ws_product=fm.wake_superpositions.WSProduct(),
+            #ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
+            #ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
+            #ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
+            #ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
+            #ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
+            #ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
         self.axial_induction = Dict(name="induction_models")
@@ -247,35 +247,35 @@ class ModelBook:
             "linear_lim",
             "linear_amb",
             "linear_amb_lim",
-            "quadratic",
-            "wquadratic_lim",
-            "quadratic_amb",
-            "quadratic_amb_lim",
-            "cubic",
-            "cubic_amb",
-            "quartic",
-            "quartic_amb",
-            "wmax",
-            "max_amb",
-            "product",
-            "product_lim",
+            #"quadratic",
+            #"wquadratic_lim",
+            #"quadratic_amb",
+            #"quadratic_amb_lim",
+            #"cubic",
+            #"cubic_amb",
+            #"quartic",
+            #"quartic_amb",
+            #"wmax",
+            #"max_amb",
+            #"product",
+            #"product_lim",
         ]
         for s in slist:
-            self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
-                superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
-                k=0.02, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
-                k=0.04, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
-                k=0.07, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
-                k=0.075, superposition=f"ws_{s}"
-            )
+            #self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
+            #    superposition=f"ws_{s}"
+            #)
+            #self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
+            #    k=0.02, superposition=f"ws_{s}"
+            #)
+            #self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
+            #    k=0.04, superposition=f"ws_{s}"
+            #)
+            #self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
+            #    k=0.07, superposition=f"ws_{s}"
+            #)
+            #self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
+            #    k=0.075, superposition=f"ws_{s}"
+            #)
 
             self.wake_models[f"Bastankhah2014_{s}"] = (
                 fm.wake_models.wind.Bastankhah2014(
@@ -339,91 +339,92 @@ class ModelBook:
                 )
             )
 
-            self.wake_models[f"Bastankhah2016_{s}"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
-            )
+            #self.wake_models[f"Bastankhah2016_{s}"] = (
+            #    fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
+            #)
+            #self.wake_models[f"Bastankhah2016_{s}_k002"] = (
+            #    fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
+            #)
+            #self.wake_models[f"Bastankhah2016_{s}_k004"] = (
+            #    fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
+            #)
 
-            self.wake_models[f"Bastankhah2016B_{s}"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2016B_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", k=0.02, induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2016B_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", k=0.04, induction="Betz"
-                )
-            )
+            #self.wake_models[f"Bastankhah2016B_{s}"] = (
+            #    fm.wake_models.wind.Bastankhah2016(
+            #        superposition=f"ws_{s}", induction="Betz"
+            #    )
+            #)
+            #self.wake_models[f"Bastankhah2016B_{s}_k002"] = (
+            #    fm.wake_models.wind.Bastankhah2016(
+            #        superposition=f"ws_{s}", k=0.02, induction="Betz"
+            #    )
+            #)
+            #self.wake_models[f"Bastankhah2016B_{s}_k004"] = (
+            #    fm.wake_models.wind.Bastankhah2016(
+            #        superposition=f"ws_{s}", k=0.04, induction="Betz"
+            #    )
+            #)
 
-            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
-                A=0.02, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
-                A=0.04, superposition=f"ws_{s}"
-            )
+            #self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
+            #    A=0.02, superposition=f"ws_{s}"
+            #)
+            #self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
+            #    A=0.04, superposition=f"ws_{s}"
+            #)
 
-            self.wake_models[f"TurbOParkB_{s}_A002"] = (
-                fm.wake_models.wind.TurbOParkWake(
-                    A=0.02, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-            self.wake_models[f"TurbOParkB_{s}_A004"] = (
-                fm.wake_models.wind.TurbOParkWake(
-                    A=0.04, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
+            #self.wake_models[f"TurbOParkB_{s}_A002"] = (
+            #    fm.wake_models.wind.TurbOParkWake(
+            #        A=0.02, superposition=f"ws_{s}", induction="Betz"
+            #    )
+            #)
+            #self.wake_models[f"TurbOParkB_{s}_A004"] = (
+            #    fm.wake_models.wind.TurbOParkWake(
+            #        A=0.04, superposition=f"ws_{s}", induction="Betz"
+            #    )
+            #)
 
-            As = [0.02, 0.04]
-            dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
-            for A in As:
-                for dx in dxs:
-                    a = str(A).replace(".", "")
-                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
-                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
-                        fm.wake_models.wind.TurbOParkWakeIX(
-                            A=A, superposition=f"ws_{s}", dx=dx
-                        )
-                    )
+            #As = [0.02, 0.04]
+            #dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
+            #for A in As:
+            #    for dx in dxs:
+            #        a = str(A).replace(".", "")
+            #        d = str(dx).replace(".", "") if dx < 1 else int(dx)
+            #        self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
+            #            fm.wake_models.wind.TurbOParkWakeIX(
+            #                A=A, superposition=f"ws_{s}", dx=dx
+            #            )
+            #        )
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
-            self.wake_models[f"CrespoHernandez_{s}"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
-            )
-            self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(
-                    superposition=f"ti_{s}", use_ambti=True
-                )
-            )
-            self.wake_models[f"CrespoHernandez_{s}_k002"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
-            )
+            pass
+            #self.wake_models[f"CrespoHernandez_{s}"] = (
+            #    fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
+            #)
+            #self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
+            #    fm.wake_models.ti.CrespoHernandezTIWake(
+            #        superposition=f"ti_{s}", use_ambti=True
+            #    )
+            #)
+            #self.wake_models[f"CrespoHernandez_{s}_k002"] = (
+            #    fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
+            #)
 
-            self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
-                superposition=f"ti_{s}", iec_type="2005"
-            )
+            #self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
+            #    superposition=f"ti_{s}", iec_type="2005"
+            #)
 
-            self.wake_models[f"IECTI2019_{s}"] = fm.wake_models.ti.IECTIWake(
-                superposition=f"ti_{s}", iec_type="2019"
-            )
+            #self.wake_models[f"IECTI2019_{s}"] = fm.wake_models.ti.IECTIWake(
+            #    superposition=f"ti_{s}", iec_type="2019"
+            #)
 
-        self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
-        self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models[f"SelfSimilar2020"] = (
-            fm.wake_models.induction.SelfSimilar2020()
-        )
+        #self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        #self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
+        #self.wake_models[f"SelfSimilar2020"] = (
+        #    fm.wake_models.induction.SelfSimilar2020()
+        #)
 
-        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
+        #self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
 
         self.sources = Dict(
             name="sources",

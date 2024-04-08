@@ -73,7 +73,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         ct,
     ):
@@ -90,14 +90,10 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The x values, shape: (n_states, n_points)
-        r: numpy.ndarray
-            The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
             shape: (n_states, n_points)
@@ -117,7 +113,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         sp_sel,
         x,
         wake_r,
@@ -136,9 +132,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         sp_sel: numpy.ndarray of bool
             The state-point selection, for which the wake
             is non-zero, shape: (n_states, n_points)
@@ -159,13 +154,13 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         pass
 
-    def calc_wakes_spsel_x_r(
+    def calc_wakes_x_r(
         self,
         algo,
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         r,
     ):
@@ -182,23 +177,22 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_r_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         ct = self.get_data(
@@ -207,30 +201,28 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             lookup="w",
             fdata=fdata,
             pdata=pdata,
-            states_source_turbine=states_source_turbine,
+            downwind_index=downwind_index,
             algo=algo,
         )
 
         wake_r = self.calc_wake_radius(
-            algo, mdata, fdata, pdata, states_source_turbine, x, ct
+            algo, mdata, fdata, pdata, downwind_index, x, ct
         )
 
         wdeltas = {}
-        sp_sel = (ct > 0.0) & (x > 1e-5) & np.any(r < wake_r[:, :, None], axis=2)
-        if np.any(sp_sel):
-            x = x[sp_sel]
-            r = r[sp_sel]
-            ct = ct[sp_sel]
-            wake_r = wake_r[sp_sel]
+        st_sel = (ct > 0) & (x > 0) & np.any(r < wake_r[:, :, None], axis=2)
+        if np.any(st_sel):
+            x = x[st_sel]
+            r = r[st_sel]
+            ct = ct[st_sel]
+            wake_r = wake_r[st_sel]
 
             cl_del = self.calc_centreline_wake_deltas(
-                algo, mdata, fdata, pdata, states_source_turbine, sp_sel, x, wake_r, ct
+                algo, mdata, fdata, pdata, downwind_index, st_sel, x, wake_r, ct
             )
 
-            nsel = r >= wake_r[:, None]
+            isin = r < wake_r[:, None]
             for v, wdel in cl_del.items():
-                wdeltas[v] = np.zeros_like(r)
-                wdeltas[v][:] = wdel[:, None]
-                wdeltas[v][nsel] = 0.0
+                wdeltas[v] = np.where(isin, wdel[:, None], 0.)
 
-        return wdeltas, sp_sel
+        return wdeltas, st_sel

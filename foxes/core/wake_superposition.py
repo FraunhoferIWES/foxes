@@ -30,7 +30,8 @@ class WakeSuperposition(Model):
         wake_model_result,
     ):
         """
-        Add a wake delta to previous wake deltas.
+        Add a wake delta to previous wake deltas,
+        at rotor points.
 
         Parameters
         ----------
@@ -65,6 +66,56 @@ class WakeSuperposition(Model):
         """
         pass
 
+    @abstractmethod
+    def add_at_points(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        downwind_index,
+        sp_sel,
+        variable,
+        wake_delta,
+        wake_model_result,
+    ):
+        """
+        Add a wake delta to previous wake deltas,
+        at points of interest.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        sp_sel: numpy.ndarray of bool
+            The selection of points, shape: (n_states, n_points)
+        variable: str
+            The variable name for which the wake deltas applies
+        wake_delta: numpy.ndarray
+            The original wake deltas, shape: 
+            (n_states, n_points, ...)
+        wake_model_result: numpy.ndarray
+            The new wake deltas of the selected rotors,
+            shape: (n_sp_sel, ...)
+
+        Returns
+        -------
+        wdelta: numpy.ndarray
+            The updated wake deltas, shape: 
+            (n_states, n_points, ...)
+
+        """
+        pass
+    
     @abstractmethod
     def calc_final_wake_delta(
         self,

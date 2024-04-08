@@ -75,7 +75,8 @@ class WSLinear(WakeSuperposition):
         wake_model_result,
     ):
         """
-        Add a wake delta to previous wake deltas.
+        Add a wake delta to previous wake deltas,
+        at rotor points.
 
         Parameters
         ----------
@@ -116,18 +117,85 @@ class WSLinear(WakeSuperposition):
         if np.any(sr_sel):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
+                FC.STATE_ROTOR,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                pdata=pdata,
+                downwind_index=downwind_index,
+            )[sr_sel]
+
+            wake_delta[sr_sel] += scale * wake_model_result
+
+        return wake_delta
+
+    def add_at_points(
+        self,
+        algo,
+        mdata,
+        fdata,
+        pdata,
+        downwind_index,
+        sp_sel,
+        variable,
+        wake_delta,
+        wake_model_result,
+    ):
+        """
+        Add a wake delta to previous wake deltas,
+        at points of interest.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        sp_sel: numpy.ndarray of bool
+            The selection of points, shape: (n_states, n_points)
+        variable: str
+            The variable name for which the wake deltas applies
+        wake_delta: numpy.ndarray
+            The original wake deltas, shape: 
+            (n_states, n_points, ...)
+        wake_model_result: numpy.ndarray
+            The new wake deltas of the selected rotors,
+            shape: (n_sp_sel, ...)
+
+        Returns
+        -------
+        wdelta: numpy.ndarray
+            The updated wake deltas, shape: 
+            (n_states, n_points, ...)
+
+        """
+        if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
+            raise ValueError(
+                f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
+            )
+
+        if np.any(sp_sel):
+            scale = self.get_data(
+                FV.AMB_REWS if self.scale_amb else FV.REWS,
                 FC.STATE_POINT,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
                 pdata=pdata,
                 downwind_index=downwind_index,
-            )[sel_sp]
+            )[sp_sel]
 
-            wake_delta[sel_sp] += scale * wake_model_result
+            wake_delta[sp_sel] += scale * wake_model_result
 
         return wake_delta
-
+    
     def calc_final_wake_delta(
         self,
         algo,

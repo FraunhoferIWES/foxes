@@ -1,4 +1,4 @@
-from foxes.models.partial_wakes.distsliced import PartialDistSlicedWake
+from foxes.models.partial_wakes.dist_sliced import PartialDistSlicedWake
 from foxes.models.rotor_models.grid import GridRotor
 
 

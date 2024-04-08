@@ -110,7 +110,7 @@ class DistSlicedWakeModel(WakeModel):
             The wake deltas. Key: variable name str,
             value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
         st_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
+            The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
         """
@@ -155,7 +155,7 @@ class DistSlicedWakeModel(WakeModel):
         x = wake_coos[:, :, 0, 0]
         yz = wake_coos[..., 1:3]
 
-        wdeltas, st_sel = self.calc_wakes_x_yz(
+        wdeltas, sr_sel = self.calc_wakes_x_yz(
             algo, mdata, fdata, pdata, downwind_index, x, yz
         )
 
@@ -167,16 +167,16 @@ class DistSlicedWakeModel(WakeModel):
                     f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
                 )
 
-            wake_deltas[v] = superp.calc_wakes_plus_wake(
+            wake_deltas[v] = superp.add_at_rotors(
                 algo,
                 mdata,
                 fdata,
                 pdata,
                 downwind_index,
-                sp_sel,
+                sr_sel,
                 v,
                 wake_deltas[v],
-                hdel[:, 0],
+                hdel
             )
 
     def contribute_at_points(
@@ -190,10 +190,8 @@ class DistSlicedWakeModel(WakeModel):
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at given points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -214,23 +212,14 @@ class DistSlicedWakeModel(WakeModel):
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_points, ...) or
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_points, ...)
 
         """
         # calculation at points:
-        if n_rpoints is None:
-            x = wake_coos[:, :, 0]
-            yz = wake_coos[:, :, None, 1:3]
-        
-        # farm calc case: n_rpoints per rotor
-        else:
-            n_states, n_rotors, n_rpoints = wake_deltas.shape[:3]
-            wcoos = wake_coos.reshape(n_states, n_rotors, n_rpoints, 3)
-            x = wcoos[:, :, 0, 0]
-            yz = wcoos[..., 1:3]
+        x = wake_coos[:, :, 0]
+        yz = wake_coos[:, :, None, 1:3]
 
-        wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
+        wdeltas, sp_sel = self.calc_wakes_x_yz(
             algo, mdata, fdata, pdata, downwind_index, x, yz
         )
 
@@ -242,7 +231,7 @@ class DistSlicedWakeModel(WakeModel):
                     f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
                 )
 
-            wake_deltas[v] = superp.calc_wakes_plus_wake(
+            wake_deltas[v] = superp.add_at_points(
                 algo,
                 mdata,
                 fdata,
