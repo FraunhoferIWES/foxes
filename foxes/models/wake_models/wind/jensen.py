@@ -83,7 +83,7 @@ class JensenWake(TopHatWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         x,
         ct,
     ):
@@ -100,50 +100,41 @@ class JensenWake(TopHatWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
-        r: numpy.ndarray
-            The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            The x values, shape: (n_states, n_targets)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_states, n_points)
+            shape: (n_states, n_targets)
 
         Returns
         -------
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_states, n_points)
+            The wake radii, shape: (n_states, n_targets)
 
         """
-
-        R = (
-            self.get_data(
-                FV.D,
-                FC.STATE_POINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                pdata=pdata,
-                states_source_turbine=states_source_turbine,
-            )
-            / 2
+        D = self.get_data(
+            FV.D,
+            FC.STATE_ROTOR,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            downwind_index=downwind_index,
         )
 
         k = self.get_data(
             self.k_var,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="sw",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
+            downwind_index=downwind_index,
         )
 
-        return R + k * x
+        return D/2 + k * x
 
     def calc_centreline_wake_deltas(
         self,
@@ -151,8 +142,8 @@ class JensenWake(TopHatWakeModel):
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
-        sp_sel,
+        downwind_index,
+        st_sel,
         x,
         wake_r,
         ct,
@@ -170,35 +161,36 @@ class JensenWake(TopHatWakeModel):
             The farm data
         pdata: foxes.core.Data
             The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+        downwind_index: int
+            The index in the downwind order
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
         x: numpy.ndarray
-            The x values, shape: (n_sp_sel,)
+            The x values, shape: (n_st_sel,)
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_sp_sel,)
+            The wake radii, shape: (n_st_sel,)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_sp_sel,)
+            shape: (n_st_sel,)
 
         Returns
         -------
         cl_del: dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,)
+            varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
-        n_states = mdata.n_states
-        n_points = sp_sel.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
-
-        R = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        R[:] = fdata[FV.D][st_sel][:, None] / 2
-        R = R[sp_sel]
-
+        R = self.get_data(
+            FV.D,
+            FC.STATE_ROTOR,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            pdata=pdata,
+            downwind_index=downwind_index,
+        )[st_sel] / 2
+        
         twoa = 2 * self.induction.ct2a(ct)
 
         return {FV.WS: -((R / wake_r) ** 2) * twoa}

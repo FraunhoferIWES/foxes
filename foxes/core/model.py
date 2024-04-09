@@ -366,7 +366,8 @@ class Model(ABC):
             and out_dims == (FC.STATE, FC.TURBINE)
         ):
             out0 = out
-            out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            n = n_points if target == FC.STATE_POINT else n_rotors
+            out = np.zeros((n_states, n), dtype=FC.DTYPE)
             if downwind_index:
                 out[:] = out0[:, None]
             else:
@@ -396,11 +397,8 @@ class Model(ABC):
                         out[sel] = 0
                     else:
                         out[sel] = prev_fdata[variable].to_numpy()[
-                            sp[sel], downwind_index
+                            sp[sel], downwind_index, None
                         ]
-
-            if target == FC.STATE_ROTOR:
-                out = out.reshape(n_states, n_rotors, n_rpoints)
 
         return out
 

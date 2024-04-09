@@ -130,16 +130,16 @@ class Bastankhah2014(GaussianWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         # get ct:
@@ -154,11 +154,11 @@ class Bastankhah2014(GaussianWakeModel):
         )
 
         # select targets:
-        sp_sel = (x > 0) & (ct > 0.0)
-        if np.any(sp_sel):
+        st_sel = (x > 0) & (ct > 0.0)
+        if np.any(st_sel):
             # apply selection:
-            x = x[sp_sel]
-            ct = ct[sp_sel]
+            x = x[st_sel]
+            ct = ct[st_sel]
 
             # get D:
             D = self.get_data(
@@ -170,7 +170,7 @@ class Bastankhah2014(GaussianWakeModel):
                 pdata=pdata,
                 downwind_index=downwind_index,
             )
-            D = D[sp_sel]
+            D = D[st_sel]
 
             # get k:
             k = self.get_data(
@@ -182,7 +182,7 @@ class Bastankhah2014(GaussianWakeModel):
                 pdata=pdata,
                 downwind_index=downwind_index,
             )
-            k = k[sp_sel]
+            k = k[st_sel]
 
             # calculate sigma:
             # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
@@ -197,9 +197,9 @@ class Bastankhah2014(GaussianWakeModel):
 
         # case no targets:
         else:
-            sp_sel = np.zeros_like(x, dtype=bool)
-            n_sp = np.sum(sp_sel)
+            st_sel = np.zeros_like(x, dtype=bool)
+            n_sp = np.sum(st_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
-        return {FV.WS: (ampld, sigma)}, sp_sel
+        return {FV.WS: (ampld, sigma)}, st_sel

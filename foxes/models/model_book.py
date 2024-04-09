@@ -255,21 +255,21 @@ class ModelBook:
             #"product_lim",
         ]
         for s in slist:
-            #self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
-            #    superposition=f"ws_{s}"
-            #)
-            #self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
-            #    k=0.02, superposition=f"ws_{s}"
-            #)
-            #self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
-            #    k=0.04, superposition=f"ws_{s}"
-            #)
-            #self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
-            #    k=0.07, superposition=f"ws_{s}"
-            #)
-            #self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
-            #    k=0.075, superposition=f"ws_{s}"
-            #)
+            self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
+                superposition=f"ws_{s}"
+            )
+            self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
+                k=0.02, superposition=f"ws_{s}"
+            )
+            self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
+                k=0.04, superposition=f"ws_{s}"
+            )
+            self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
+                k=0.07, superposition=f"ws_{s}"
+            )
+            self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
+                k=0.075, superposition=f"ws_{s}"
+            )
 
             self.wake_models[f"Bastankhah2014_{s}"] = (
                 fm.wake_models.wind.Bastankhah2014(

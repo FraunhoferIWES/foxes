@@ -39,16 +39,16 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         pass

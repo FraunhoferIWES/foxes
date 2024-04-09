@@ -96,18 +96,19 @@ class PartialTopHat(PartialWakesModel):
         """
         return fdata[FV.TXYH][:, :, None, :]
 
-    def contribute_to_wake_deltas(
+    def contribute_at_rotors(
         self,
         algo,
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         wake_deltas,
+        wmodel,  
     ):
         """
-        Modifies wake deltas by contributions from the
-        specified wake source turbines.
+        Modifies wake deltas at rotor points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -118,92 +119,96 @@ class PartialTopHat(PartialWakesModel):
         fdata: foxes.core.Data
             The farm data
         pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray of int
-            For each state, one turbine index corresponding
-            to the wake causing turbine. Shape: (n_states,)
-        wake_deltas: Any
-            The wake deltas object created by the
-            `new_wake_deltas` function
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_rotors, n_rpoints, ...)
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         """
-        n_states = mdata.n_states
-        n_points = fdata.n_turbines
-        stsel = (np.arange(n_states), states_source_turbine)
+        n_states = pdata.n_states
+        n_rotors = pdata.n_rotors
 
-        if (
-            self.WCOOS_ID not in mdata
-            or mdata[self.WCOOS_ID] != states_source_turbine[0]
-        ):
-            wcoos = self.wake_frame.get_wake_coos(
-                algo, mdata, fdata, pdata, states_source_turbine
-            )
-            mdata[self.WCOOS_ID] = states_source_turbine[0]
-            mdata[self.WCOOS_X] = wcoos[:, :, 0]
-            mdata[self.WCOOS_R] = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
-            wcoos[:, :, 1:3] = 0
-        else:
-            wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            wcoos[:, :, 0] = mdata[self.WCOOS_X]
+        wcoos = algo.wake_frame.wake_coos_at_rotors(
+            algo, mdata, fdata, pdata, downwind_index
+        )
+        x = wcoos[:, :, 0, 0]
 
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][stsel][:, None]
-        x = mdata[self.WCOOS_X]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_ROTOR,
+            lookup="w",
+            fdata=fdata,
+            pdata=pdata,
+            downwind_index=downwind_index,
+            algo=algo,
+        )
 
         sel0 = (ct > 0.0) & (x > 0.0)
         if np.any(sel0):
-            R = mdata[self.WCOOS_R]
-            r = np.zeros_like(R)
-            D = fdata[FV.D]
+            R = np.linalg.norm(wcoos[:, :, :, 1:3], axis=-1)
 
-            for w in self.wake_models:
-                wr = w.calc_wake_radius(
-                    algo, mdata, fdata, pdata, states_source_turbine, x, ct
+            D = self.get_data(
+                FV.D,
+                FC.STATE_ROTOR,
+                lookup="w",
+                fdata=fdata,
+                pdata=pdata,
+                downwind_index=downwind_index,
+                algo=algo,
+            )
+
+            wr = wmodel.calc_wake_radius(algo, mdata, fdata,
+                            pdata, downwind_index, x, ct)
+            TODO
+            sel_sp = sel0 & (wr > R - D / 2)
+            if np.any(sel_sp):
+                hx = x[sel_sp]
+                hct = ct[sel_sp]
+                hwr = wr[sel_sp]
+
+                clw = w.calc_centreline_wake_deltas(
+                    algo,
+                    mdata,
+                    fdata,
+                    pdata,
+                    states_source_turbine,
+                    sel_sp,
+                    hx,
+                    hwr,
+                    hct,
                 )
+                del hx, hct
 
-                sel_sp = sel0 & (wr > R - D / 2)
-                if np.any(sel_sp):
-                    hx = x[sel_sp]
-                    hct = ct[sel_sp]
-                    hwr = wr[sel_sp]
+                hR = R[sel_sp]
+                hD = D[sel_sp]
+                weights = calc_area(hD / 2, hwr, hR) / (np.pi * (hD / 2) ** 2)
+                del hD, hwr, hR
 
-                    clw = w.calc_centreline_wake_deltas(
+                for v, d in clw.items():
+                    try:
+                        superp = w.superp[v]
+                    except KeyError:
+                        raise KeyError(
+                            f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
+                        )
+
+                    wake_deltas[v] = superp.calc_wakes_plus_wake(
                         algo,
                         mdata,
                         fdata,
                         pdata,
                         states_source_turbine,
                         sel_sp,
-                        hx,
-                        hwr,
-                        hct,
+                        v,
+                        wake_deltas[v],
+                        weights * d,
                     )
-                    del hx, hct
-
-                    hR = R[sel_sp]
-                    hD = D[sel_sp]
-                    weights = calc_area(hD / 2, hwr, hR) / (np.pi * (hD / 2) ** 2)
-                    del hD, hwr, hR
-
-                    for v, d in clw.items():
-                        try:
-                            superp = w.superp[v]
-                        except KeyError:
-                            raise KeyError(
-                                f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
-                            )
-
-                        wake_deltas[v] = superp.calc_wakes_plus_wake(
-                            algo,
-                            mdata,
-                            fdata,
-                            pdata,
-                            states_source_turbine,
-                            sel_sp,
-                            v,
-                            wake_deltas[v],
-                            weights * d,
-                        )
 
     def evaluate_results(
         self,

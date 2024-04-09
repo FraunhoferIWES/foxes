@@ -93,15 +93,15 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_states, n_points)
+            shape: (n_states, n_targets)
 
         Returns
         -------
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_states, n_points)
+            The wake radii, shape: (n_states, n_targets)
 
         """
         pass
@@ -114,7 +114,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         fdata,
         pdata,
         downwind_index,
-        sp_sel,
+        st_sel,
         x,
         wake_r,
         ct,
@@ -134,22 +134,22 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The evaluation point data
         downwind_index: int
             The index in the downwind order
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
         x: numpy.ndarray
-            The x values, shape: (n_sp_sel,)
+            The x values, shape: (n_st_sel,)
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_sp_sel,)
+            The wake radii, shape: (n_st_sel,)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_sp_sel,)
+            shape: (n_st_sel,)
 
         Returns
         -------
         cl_del: dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,)
+            varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
         pass
@@ -197,7 +197,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="w",
             fdata=fdata,
             pdata=pdata,
@@ -218,7 +218,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             wake_r = wake_r[st_sel]
 
             cl_del = self.calc_centreline_wake_deltas(
-                algo, mdata, fdata, pdata, downwind_index, st_sel, x, wake_r, ct
+                algo, mdata, fdata, pdata, downwind_index, 
+                st_sel, x, wake_r, ct
             )
 
             isin = r < wake_r[:, None]
