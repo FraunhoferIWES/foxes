@@ -5,9 +5,9 @@ from foxes.utils.two_circles import calc_area
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .rotor_points import RotorPoints
+from .centre import PartialCentre
 
-class PartialTopHat(RotorPoints):
+class PartialTopHat(PartialCentre):
     """
     Partial wakes for top-hat models.
 
@@ -69,27 +69,6 @@ class PartialTopHat(RotorPoints):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def get_wake_points(self, algo, mdata, fdata):
-        """
-        Get the wake calculation points.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-
-        Returns
-        -------
-        rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
-
-        """
-        return fdata[FV.TXYH][:, :, None, :]
-
     def contribute_at_rotors(
         self,
         algo,
@@ -145,9 +124,10 @@ class PartialTopHat(RotorPoints):
             pdata=pdata,
             downwind_index=downwind_index,
             algo=algo,
+            upcast=True,
         )
 
-        sel0 = (ct > 0.0) & (x > 0.0)
+        sel0 = (ct > 0) & (x > 0)
         if np.any(sel0):
             R = np.linalg.norm(yz, axis=-1)
             del yz
@@ -160,6 +140,7 @@ class PartialTopHat(RotorPoints):
                 pdata=pdata,
                 downwind_index=downwind_index,
                 algo=algo,
+                upcast=True,
             )
 
             wr = wmodel.calc_wake_radius(algo, mdata, fdata,

@@ -130,6 +130,7 @@ class WakeFrame(Model):
         pdata,
         target,
         states0=None,
+        upcast=False,
     ):
         """
         Return data that is required for computing the
@@ -152,6 +153,9 @@ class WakeFrame(Model):
             FC.STATE_POINT, FC.STATE_ROTOR
         states0: numpy.ndarray, optional
             The states of wake creation
+        upcast: bool
+            Flag for ensuring targets dimension,
+            otherwise dimension 1 is entered
 
         Returns
         -------
@@ -163,14 +167,18 @@ class WakeFrame(Model):
         n_states = fdata.n_states
         s = np.arange(n_states) if states0 is None else states0
 
-        if target == FC.STATE_POINT:
-            out = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
-        elif target == FC.STATE_ROTOR:
-            out = np.zeros((n_states, pdata.n_rotors), dtype=FC.DTYPE)
+        if upcast:
+            if target == FC.STATE_POINT:
+                out = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+            elif target == FC.STATE_ROTOR:
+                out = np.zeros((n_states, pdata.n_rotors), dtype=FC.DTYPE)
+            else:
+                raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_POINT}' or '{FC.STATE_ROTOR}'")
+                
+            out[:] = fdata[variable][s, downwind_index][:, None]
+        
         else:
-            raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_POINT}' or '{FC.STATE_ROTOR}'")
-            
-        out[:] = fdata[variable][s, downwind_index][:, None]
+            out = fdata[variable][s, downwind_index, None]
 
         return out
 

@@ -193,6 +193,7 @@ class Model(ABC):
         accept_none=False,
         accept_nan=True,
         algo=None,
+        upcast=False,
     ):
         """
         Getter for a data entry in the model object
@@ -228,6 +229,9 @@ class Model(ABC):
             Do not throw an error if data entry is np.nan
         algo: foxes.core.Algorithm, optional
             The algorithm, needed for data from previous iteration
+        upcast: bool
+            Flag for ensuring targets dimension,
+            otherwise dimension 1 is entered
 
         """
         
@@ -270,7 +274,10 @@ class Model(ABC):
             if s == "s" and hasattr(self, variable):
                 a = getattr(self, variable)
                 if a is not None:
-                    if target == FC.STATE_POINT:
+                    if not upcast:
+                        out = a
+                        out_dims = None
+                    elif target == FC.STATE_POINT:
                         out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
                         out[:] = a
                         out_dims = (FC.STATE, FC.POINT)
@@ -330,7 +337,7 @@ class Model(ABC):
             ):
                 out = algo.wake_frame.get_wake_modelling_data(
                     algo, variable, downwind_index, fdata, pdata,
-                    target=target
+                    target=target, upcast=upcast
                 )
                 if target == FC.STATE_POINT:
                     out_dims = (FC.STATE, FC.POINT)
@@ -359,25 +366,28 @@ class Model(ABC):
         # select single downwind index:
         if out_dims == (FC.STATE, FC.TURBINE) and downwind_index is not None:
             out = out[:, downwind_index]
-        
+    
         # translate to state-point results:
         if (
             target in [FC.STATE_POINT, FC.STATE_ROTOR] 
             and out_dims == (FC.STATE, FC.TURBINE)
         ):
-            out0 = out
-            n = n_points if target == FC.STATE_POINT else n_rotors
-            out = np.zeros((n_states, n), dtype=FC.DTYPE)
-            if downwind_index:
-                out[:] = out0[:, None]
-            else:
+            if downwind_index is None:
                 raise KeyError(f"Require downwind_index for target {target}")
-            del out0
+
+            # from current iteration only:
+            if pdata is None or FC.STATES_SEL not in pdata:
+                if upcast:
+                    out0 = out
+                    n = n_points if target == FC.STATE_POINT else n_rotors
+                    out = np.zeros((n_states, n), dtype=FC.DTYPE)
+                    out[:] = out0[:, None]
+                    del out0
+                else:
+                    out = out[:, None]
 
             # from previous iteration, if requested:
-            if pdata is not None and FC.STATES_SEL in pdata:
-                assert downwind_index is not None 
-
+            else:
                 if not pdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
                     raise ValueError(
                         f"Model '{self.name}': Mismatch of downwind_index: Expected {pdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
@@ -391,6 +401,11 @@ class Model(ABC):
                         raise KeyError(
                             f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
                         )
+
+                    out0 = out
+                    out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+                    out[:] = out0[:, None]
+                    del out0
 
                     prev_fdata = getattr(algo, "prev_farm_results")
                     if prev_fdata is None:

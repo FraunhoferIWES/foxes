@@ -151,6 +151,7 @@ class Bastankhah2014(GaussianWakeModel):
             fdata=fdata,
             pdata=pdata,
             downwind_index=downwind_index,
+            upcast=True,
         )
 
         # select targets:
@@ -169,6 +170,7 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 pdata=pdata,
                 downwind_index=downwind_index,
+                upcast=True,
             )
             D = D[st_sel]
 
@@ -181,6 +183,7 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 pdata=pdata,
                 downwind_index=downwind_index,
+                upcast=True,
             )
             k = k[st_sel]
 
