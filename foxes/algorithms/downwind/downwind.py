@@ -321,8 +321,9 @@ class Downwind(Algorithm):
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 6) reorder back to state-turbine dimensions:
-        mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+        if outputs != False:
+            mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         return mlist, calc_pars
 

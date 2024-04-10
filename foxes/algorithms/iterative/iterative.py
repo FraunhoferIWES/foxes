@@ -119,6 +119,7 @@ class Iterative(Downwind):
 
     def _collect_farm_models(
         self,
+        outputs,
         calc_parameters,
         ambient,
     ):
@@ -128,7 +129,8 @@ class Iterative(Downwind):
 
         if self._it == 0:
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
-                calc_parameters,
+                outputs=False,
+                calc_parameters=calc_parameters,
                 ambient=ambient,
             )
 
@@ -152,7 +154,7 @@ class Iterative(Downwind):
                 n += 1
 
             if len(self._urelax["pre_wake"]):
-                self._mlist0.models[7 + n].urelax = mdls.URelax(
+                self._mlist0.models[5 + n].urelax = mdls.URelax(
                     **self._urelax["pre_wake"]
                 )
 
@@ -170,19 +172,32 @@ class Iterative(Downwind):
             calc_pars = []
             mlist = FarmDataModelList(models=[])
 
-            # add under-relaxation during wake calculation:
-            urelax = None
-            if len(self._urelax["pre_wake"]):
-                urelax = mdls.URelax(**self._urelax["pre_wake"])
+            # do not rotate back from downwind order:
+            if not self._final_run:
 
-            # add model that calculates wake effects:
-            mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=urelax))
-            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+                # add under-relaxation during wake calculation:
+                urelax = None
+                if len(self._urelax["pre_wake"]):
+                    urelax = mdls.URelax(**self._urelax["pre_wake"])
 
-            # add under-relaxation:
-            if len(self._urelax["last"]):
-                mlist.append(mdls.URelax(**self._urelax["last"]))
-                calc_pars.append({})
+                # add model that calculates wake effects:
+                mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=urelax))
+                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+                # add under-relaxation:
+                if len(self._urelax["last"]):
+                    mlist.append(mdls.URelax(**self._urelax["last"]))
+                    calc_pars.append({})
+            
+            # rotate back from downwind order:
+            else:
+
+                # add model that calculates wake effects:
+                mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
+                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+                mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
+                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
             return mlist, calc_pars
 
@@ -220,6 +235,7 @@ class Iterative(Downwind):
         """
         fres = None
         self._it = -1
+        self._final_run = False
         while self._it < self.max_it:
             self._it += 1
 
@@ -234,6 +250,9 @@ class Iterative(Downwind):
 
             if conv:
                 self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
+                self.print("Starting final run")
+                self._final_run = True
+                fres = super().calc_farm(finalize=False, **kwargs)
                 break
 
             if self._it == 0:

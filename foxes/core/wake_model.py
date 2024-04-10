@@ -139,7 +139,6 @@ class WakeModel(Model):
         algo,
         mdata,
         fdata,
-        pdata,
         amb_results,
         wake_deltas,
     ):
@@ -156,8 +155,6 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
@@ -206,7 +203,7 @@ class WakeModel(Model):
             )
             raise KeyError(estr)
 
-class TurbineInductionModel(Model):
+class TurbineInductionModel(WakeModel):
     """
     Abstract base class for turbine induction models.
 

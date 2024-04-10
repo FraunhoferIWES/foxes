@@ -73,11 +73,9 @@ class RankineHalfBody(TurbineInductionModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, wpoints):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
@@ -87,37 +85,37 @@ class RankineHalfBody(TurbineInductionModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        wpoints: numpy.ndarray
+            The wake evaluation points,
+            shape: (n_states, n_turbines, n_rpoints, 3)
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        n_states = mdata.n_states
-        n_points = pdata.n_points
-        wake_deltas["U"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        wake_deltas["V"] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        wake_deltas[FV.WS] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        wake_deltas[FV.WD] = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-
-    def contribute_to_wake_deltas(
+        return {
+            FV.WS: np.zeros_like(wpoints[:, :, :, 0]),
+            FV.WD: np.zeros_like(wpoints[:, :, :, 0]),
+            "U": np.zeros_like(wpoints[:, :, :, 0]),
+            "V": np.zeros_like(wpoints[:, :, :, 0])
+        }
+    
+    def contribute_at_rotors(
         self,
         algo,
         mdata,
         fdata,
         pdata,
-        states_source_turbine,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at rotor points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -128,61 +126,59 @@ class RankineHalfBody(TurbineInductionModel):
         fdata: foxes.core.Data
             The farm data
         pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+            The evaluation point data at rotor points
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_rotors, n_rpoints, 3)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_rotors, n_rpoints, ...)
 
         """
-
         # get x, y and z
-        x = wake_coos[:, :, 0]
-        y = wake_coos[:, :, 1]
-        z = wake_coos[:, :, 2]
+        x = wake_coos[..., 0]
+        y = wake_coos[..., 1]
+        z = wake_coos[..., 2]
 
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
-        )
+            downwind_index=downwind_index,
+            upcast=False,
+        )[:, :, True]
 
         # get ws:
         ws = self.get_data(
             FV.REWS,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
-        )
+        )[:, :, None]
 
         # get D
         D = self.get_data(
             FV.D,
-            FC.STATE_POINT,
+            FC.STATE_ROTOR,
             lookup="w",
             algo=algo,
             fdata=fdata,
             pdata=pdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
-        )
+        )[:, :, None]
 
         # calc m (page 7, skipping pi everywhere)
         m = 2 * ws * self.induction.ct2a(ct) * (D / 2) ** 2
@@ -224,12 +220,49 @@ class RankineHalfBody(TurbineInductionModel):
 
         return wake_deltas
 
-    def finalize_wake_deltas(
+    def contribute_at_points(
         self,
         algo,
         mdata,
         fdata,
         pdata,
+        downwind_index,
+        wake_coos,
+        wake_deltas,
+    ):
+        """
+        Modifies wake deltas at given points by 
+        contributions from the specified wake source turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        pdata: foxes.core.Data
+            The evaluation point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_points, 3)
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_points, ...)
+
+        """
+        raise NotImplementedError
+
+    def finalize_wake_deltas(
+        self,
+        algo,
+        mdata,
+        fdata,
         amb_results,
         wake_deltas,
     ):
@@ -246,8 +279,6 @@ class RankineHalfBody(TurbineInductionModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
             values: numpy.ndarray with shape (n_states, n_points)
@@ -259,7 +290,6 @@ class RankineHalfBody(TurbineInductionModel):
             numpy.ndarray with shape (n_states, n_points) afterwards
 
         """
-
         # calc ambient wind vector:
         ws0 = amb_results[FV.WS]
         nx = wd2uv(amb_results[FV.WD])

@@ -412,7 +412,7 @@ class ModelBook:
             #    superposition=f"ti_{s}", iec_type="2019"
             #)
 
-        #self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
         #self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
         #self.wake_models[f"SelfSimilar2020"] = (
         #    fm.wake_models.induction.SelfSimilar2020()

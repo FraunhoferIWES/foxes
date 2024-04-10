@@ -73,7 +73,6 @@ class DataCalcModel(Model):
         """
         Wrapper that mitigates between apply_ufunc and `calculate`.
         """
-
         n_prev = len(init_vars)
         if n_prev:
             prev = ldata[:n_prev]
@@ -124,7 +123,15 @@ class DataCalcModel(Model):
         if FC.STATE in data[0]:
             for d in data[1:]:
                 d[FC.STATE] = data[0][FC.STATE]
-
+        
+        # ensure TXYH:
+        if len(data) > 1:
+            if FV.X in data[1] and FV.Y in data[1] and FV.H in data[1]:
+                data[1][FV.TXYH] = np.stack([data[1][FV.X], data[1][FV.Y], data[1][FV.H]], axis=-1)
+                data[1][FV.X] = data[1][FV.TXYH][..., 0]
+                data[1][FV.Y] = data[1][FV.TXYH][..., 1]
+                data[1][FV.H] = data[1][FV.TXYH][..., 2]
+                
         # run model calculation:
         self.ensure_variables(algo, *data)
         results = self.calculate(algo, *data, **calc_pars)

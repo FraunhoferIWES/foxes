@@ -56,7 +56,6 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         # prepare:
-        n_states = mdata.n_states
         n_turbines = mdata.n_turbines
 
         # generate all wake evaluation points
