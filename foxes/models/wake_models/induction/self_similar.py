@@ -38,7 +38,7 @@ class SelfSimilar(WakeModel):
 
     """
 
-    def __init__(self, pre_rotor_only=False, induction="Madsen"):
+    def __init__(self, pre_rotor_only=False, induction="Madsen", gamma=1.1):
         """
         Constructor.
 
@@ -48,11 +48,14 @@ class SelfSimilar(WakeModel):
             Calculate only the pre-rotor region
         induction: foxes.core.AxialInductionModel or str
             The induction model
+        gamma: float, default=1.1
+            The parameter that multiplies Ct in the ct2a calculation
 
         """
         super().__init__()
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
+        self.gamma = gamma
 
     def sub_models(self):
         """
@@ -115,9 +118,9 @@ class SelfSimilar(WakeModel):
         """Helper function: define mu (eqn 11 from [1])"""
         return 1 + (x_R / np.sqrt(1 + x_R**2))
 
-    def _a0(self, ct, x_R, gamma=1.1):
+    def _a0(self, ct, x_R):
         """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
-        return self.induction.ct2a(gamma * ct)
+        return self.induction.ct2a(self.gamma * ct)
 
     def _a(self, ct, x_R):
         """Helper function: define axial shape function (eqn 11 from [1])"""
