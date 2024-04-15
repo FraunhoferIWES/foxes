@@ -22,7 +22,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         r,
@@ -38,8 +38,8 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -65,7 +65,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         yz,
@@ -81,8 +81,8 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -103,5 +103,5 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         """
         r = np.linalg.norm(yz, axis=-1)
         return self.calc_wakes_x_r(
-            algo, mdata, fdata, pdata, downwind_index, x, r
+            algo, mdata, fdata, tdata, downwind_index, x, r
         )

@@ -78,7 +78,7 @@ class DistSlicedWakeModel(WakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         yz,
@@ -94,8 +94,8 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -116,18 +116,18 @@ class DistSlicedWakeModel(WakeModel):
         """
         pass
 
-    def contribute_at_rotors(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         wake_coos,
         wake_deltas,
     ):
         """
-        Modifies wake deltas at rotor points by 
+        Modifies wake deltas at target points by 
         contributions from the specified wake source turbines.
 
         Parameters
@@ -138,25 +138,25 @@ class DistSlicedWakeModel(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_rotors, n_rpoints, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_targets, n_tpoints, ...)
 
         """
         x = wake_coos[:, :, 0, 0]
         yz = wake_coos[..., 1:3]
 
-        wdeltas, sr_sel = self.calc_wakes_x_yz(
-            algo, mdata, fdata, pdata, downwind_index, x, yz
+        wdeltas, st_sel = self.calc_wakes_x_yz(
+            algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
         for v, hdel in wdeltas.items():
@@ -167,80 +167,16 @@ class DistSlicedWakeModel(WakeModel):
                     f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
                 )
 
-            wake_deltas[v] = superp.add_at_rotors(
+            wake_deltas[v] = superp.add_wake(
                 algo,
                 mdata,
                 fdata,
-                pdata,
+                tdata,
                 downwind_index,
-                sr_sel,
+                st_sel,
                 v,
                 wake_deltas[v],
                 hdel
-            )
-
-    def contribute_at_points(
-        self,
-        algo,
-        mdata,
-        fdata,
-        pdata,
-        downwind_index,
-        wake_coos,
-        wake_deltas,
-    ):
-        """
-        Modifies wake deltas at given points by 
-        contributions from the specified wake source turbines.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwnd order
-        wake_coos: numpy.ndarray
-            The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_points, ...)
-
-        """
-        # calculation at points:
-        x = wake_coos[:, :, 0]
-        yz = wake_coos[:, :, None, 1:3]
-
-        wdeltas, sp_sel = self.calc_wakes_x_yz(
-            algo, mdata, fdata, pdata, downwind_index, x, yz
-        )
-
-        for v, hdel in wdeltas.items():
-            try:
-                superp = self.superp[v]
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
-                )
-
-            wake_deltas[v] = superp.add_at_points(
-                algo,
-                mdata,
-                fdata,
-                pdata,
-                downwind_index,
-                sp_sel,
-                v,
-                wake_deltas[v],
-                hdel[:, 0],
             )
 
     def finalize_wake_deltas(

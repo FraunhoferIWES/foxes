@@ -84,7 +84,7 @@ class PartialWakesModel(Model):
         wmodel,  
     ):
         """
-        Modifies wake deltas at rotor points by 
+        Modifies wake deltas at target points by 
         contributions from the specified wake source turbines.
 
         Parameters

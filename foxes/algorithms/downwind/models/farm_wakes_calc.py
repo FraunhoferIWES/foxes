@@ -95,8 +95,8 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi < n_turbines - 1:
                         pdata, wdelta = _get_wdata(wname, pwake, np.s_[oi+1:])
-                        pwake.contribute_at_rotors(algo, mdata, fdata, 
-                                                   pdata, oi, wdelta, wmodel)
+                        pwake.contribute(algo, mdata, fdata, pdata, oi, 
+                                         wdelta, wmodel)
                 
             # upwind:
             else:
@@ -107,7 +107,7 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi > 0:
                         pdata, wdelta = _get_wdata(wname, pwake, np.s_[:oi])
-                        pwake.contribute_at_rotors(algo, mdata, fdata, 
-                                                   pdata, oi, wdelta, wmodel)
+                        pwake.contribute(algo, mdata, fdata, pdata, oi, 
+                                         wdelta, wmodel)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

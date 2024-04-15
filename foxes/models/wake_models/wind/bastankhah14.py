@@ -109,7 +109,7 @@ class Bastankhah2014(GaussianWakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
     ):
@@ -125,8 +125,8 @@ class Bastankhah2014(GaussianWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -145,11 +145,11 @@ class Bastankhah2014(GaussianWakeModel):
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
             upcast=True,
         )
