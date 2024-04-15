@@ -84,43 +84,30 @@ class Data(Dict):
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
 
     @property
-    def n_points(self):
+    def n_targets(self):
         """
-        The number of points
+        The number of targets
 
         Returns
         -------
         int:
-            The number of points
+            The number of targets
 
         """
-        return self.sizes[FC.POINT] if FC.POINT in self.sizes else None
+        return self.sizes[FC.TARGET] if FC.TARGET in self.sizes else None
 
     @property
-    def n_rotors(self):
+    def n_tpoints(self):
         """
-        The number of rotors
+        The number of points per target
 
         Returns
         -------
         int:
-            The number of rotors
+            The number of points per target
 
         """
-        return self.sizes[FC.ROTOR] if FC.ROTOR in self.sizes else None
-
-    @property
-    def n_rpoints(self):
-        """
-        The number of points per rotor
-
-        Returns
-        -------
-        int:
-            The number of points per rotor
-
-        """
-        return self.sizes[FC.RPOINT] if FC.RPOINT in self.sizes else None
+        return self.sizes[FC.TPOINT] if FC.TPOINT in self.sizes else None
     
     def states_i0(self, counter=False, algo=None):
         """
@@ -217,7 +204,7 @@ class Data(Dict):
         points,
         data={},
         dims={},
-        name="pdata",
+        name="tdata",
     ):
         """
         Create from points
@@ -244,26 +231,26 @@ class Data(Dict):
             raise ValueError(
                 f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
             )
-        data[FC.POINTS] = points
-        dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
-        return Data(data, dims, [FC.STATE, FC.POINT], name)
+        data[FC.TARGETS] = points[:, :, None, 3]
+        dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+        return Data(data, dims, [FC.STATE, FC.TARGET], name)
 
     @classmethod
-    def from_rpoints(
+    def from_tpoints(
         cls,
         rpoints,
         data={},
         dims={},
-        name="pdata",
+        name="tdata",
     ):
         """
-        Create from points at rotors
+        Create from points at targets
 
         Parameters
         ----------
         rpoints: np.ndarray
             The points at rotors, shape: 
-            (n_states, n_rotors, n_rpoints, 3)
+            (n_states, n_targets, n_tpoints, 3)
         data: dict
             The initial data to be stored
         dims: dict
@@ -280,12 +267,10 @@ class Data(Dict):
         """
         if len(rpoints.shape) != 4 or rpoints.shape[3] != 3:
             raise ValueError(
-                f"Expecting rpoints shape (n_states, n_rotors, n_rpoints, 3), got {rpoints.shape}"
+                f"Expecting rpoints shape (n_states, n_targets, n_tpoints, 3), got {rpoints.shape}"
             )
-        n_states, n_rotors, n_rpoints = rpoints.shape[:3]
-        data[FC.RPOINTS] = rpoints
-        dims[FC.RPOINTS] = (FC.STATE, FC.ROTOR, FC.RPOINT, FC.XYH)
-        data[FC.POINTS] = rpoints.reshape(n_states, n_rotors*n_rpoints, 3)
-        dims[FC.POINTS] = (FC.STATE, FC.POINT, FC.XYH)
+        n_states, n_targets, n_tpoints = rpoints.shape[:3]
+        data[FC.TPOINTS] = rpoints
+        dims[FC.TPOINTS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         return Data(data, dims, [FC.STATE], name)
     

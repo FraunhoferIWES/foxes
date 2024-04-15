@@ -25,38 +25,33 @@ TNAME = "tname"
 :group: foxes.constants
 """
 
-POINT = "point"
-""" Point identifier
+TARGET = "taget"
+""" Target identifier
 :group: foxes.constants
 """
 
-POINTS = "points"
-""" Points identifier
+TARGETS = "targets"
+""" Targets identifier
 :group: foxes.constants
 """
 
-RPOINT = "rotor_point"
-""" Rotor point identifier
+TPOINT = "target_point"
+""" Target point identifier
 :group: foxes.constants
 """
 
-RPOINTS = "rotor_points"
-""" Rotor points identifier
+TPOINTS = "target_points"
+""" Points per target identifier
 :group: foxes.constants
 """
 
-RWEIGHTS = "rotor_weights"
-""" Rotor point weights identifier
+TWEIGHTS = "tpoint_weights"
+""" Target point weights identifier
 :group: foxes.constants
 """
 
-ROTOR = "rotor"
-""" Rotor identifier
-:group: foxes.constants
-"""
-
-AMB_RPOINT_RESULTS = "amb_rpoint_res"
-""" Identified for ambient rotor point results
+AMB_TARGET_RESULTS = "amb_target_res"
+""" Identified for ambient target results
 :group: foxes.constants
 """
 
@@ -91,13 +86,8 @@ STATE_TURBINE = "state-turbine"
 :group: foxes.constants
 """
 
-STATE_POINT = "state-point"
-"""Identifier for state-point dimensions
-:group: foxes.constants
-"""
-
-STATE_ROTOR = "state-rotor"
-"""Identifier for state-rotor-rpoints dimensions
+STATE_TARGET = "state-target"
+"""Identifier for state-target-tpoints dimensions
 :group: foxes.constants
 """
 

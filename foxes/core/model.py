@@ -188,7 +188,7 @@ class Model(ABC):
         lookup="smfp",
         mdata=None,
         fdata=None,
-        pdata=None,
+        tdata=None,
         downwind_index=None,
         accept_none=False,
         accept_nan=True,
@@ -204,21 +204,21 @@ class Model(ABC):
         variable: str
             The variable, serves as data key
         target: str, optional
-            The dimensions identifier for the output, e.g
-            FC.STATE_TURBINE, FC.STATE_POINT, FC.STATE_ROTOR
+            The dimensions identifier for the output,
+            FC.STATE_TURBINE, FC.STATE_TARGET
         lookup: str
             The order of data sources. Combination of:
             's' for self,
             'm' for mdata,
             'f' for fdata,
-            'p' for pdata,
+            't' for tdata,
             'w' for wake modelling data
         mdata: foxes.core.Data, optional
             The model data
         fdata: foxes.core.Data, optional
             The farm data
-        pdata: foxes.core.Data, optional
-            The evaluation point data
+        tdata: foxes.core.Data, optional
+            The target point data
         downwind_index: int, optional
             The index in the downwind order
         data_prio: bool
@@ -236,7 +236,7 @@ class Model(ABC):
         """
         
         def _geta(a):
-            sources = [s for s in [mdata, fdata, pdata, algo, self] if s is not None]
+            sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
                 if a == "states_i0":
                     out = s.states_i0(counter=True, algo=algo)
@@ -250,22 +250,22 @@ class Model(ABC):
                     except AttributeError:
                         pass
             raise KeyError(
-                f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?"
+                f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, tdata, algo?"
             )
 
         n_states = _geta("n_states")
-        if target == FC.STATE_POINT:
-            n_points = _geta("n_points")
+        if target == FC.STATE_TURBINE:
+            n_turbines = _geta("n_turbine")
             dims = (FC.STATE, FC.POINT)
-        elif target == FC.STATE_ROTOR:
-            n_rotors = _geta("n_rotors")
-            n_rpoints = _geta("n_rpoints")
-            n_points = n_rotors * n_rpoints
-            dims = (FC.STATE, FC.ROTOR)
+        elif target == FC.STATE_TARGET:
+            n_targets = _geta("n_targets")
+            n_tpoints = _geta("n_tpoints")
+            dims = (FC.STATE, FC.TARGET, FC.TPOINT)
         else:
             raise KeyError(
-                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}, {FC.STATE_ROTOR}"
+                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}"
             )
+        n_dims = len(dims)
 
         out = None
         out_dims = None
@@ -277,18 +277,16 @@ class Model(ABC):
                     if not upcast:
                         out = a
                         out_dims = None
-                    elif target == FC.STATE_POINT:
-                        out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+                    elif target == FC.STATE_TURBINE:
+                        out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
                         out[:] = a
-                        out_dims = (FC.STATE, FC.POINT)
-                    elif target == FC.STATE_ROTOR:
-                        out = np.full((n_states, n_rotors), np.nan, dtype=FC.DTYPE)
+                        out_dims = (FC.STATE, FC.TURBINE)
+                    elif target == FC.STATE_TARGET:
+                        out = np.full((n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE)
                         out[:] = a
-                        out_dims = (FC.STATE, FC.ROTOR)
+                        out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
                     else:
-                        raise KeyError(
-                            f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}, {FC.STATE_ROTOR}"
-                        )
+                        raise NotImplementedError
 
             # lookup mdata:
             elif (
@@ -296,10 +294,10 @@ class Model(ABC):
                 and mdata is not None
                 and variable in mdata
                 and len(mdata.dims[variable]) > 1
-                and tuple(mdata.dims[variable][:2]) == dims
+                and tuple(mdata.dims[variable][:n_dims]) == dims
             ):
                 out = mdata[variable]
-                out_dims = tuple(mdata.dims[variable][:2])
+                out_dims = dims
 
             # lookup fdata:
             elif (
@@ -314,21 +312,21 @@ class Model(ABC):
 
             # lookup pdata:
             elif (
-                s == "p"
-                and pdata is not None
-                and variable in pdata
-                and len(pdata.dims[variable]) > 1
-                and tuple(pdata.dims[variable][:2]) == dims
+                s == "t"
+                and tdata is not None
+                and variable in tdata
+                and len(tdata.dims[variable]) > 1
+                and tuple(tdata.dims[variable][:n_dims]) == dims
             ):
-                out = pdata[variable]
-                out_dims = tuple(mdata.dims[variable][:2])
+                out = tdata[variable]
+                out_dims = dims
 
             # lookup wake modelling data:
             elif (
                 s == "w"
-                and target in [FC.STATE_POINT, FC.STATE_ROTOR]
+                and target in [FC.STATE_TURBINE, FC.STATE_TARGET]
                 and fdata is not None
-                and pdata is not None
+                and tdata is not None
                 and variable in fdata
                 and len(fdata.dims[variable]) > 1
                 and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
@@ -336,13 +334,13 @@ class Model(ABC):
                 and algo is not None
             ):
                 out = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, downwind_index, fdata, pdata,
-                    target=target, upcast=upcast
+                    algo, variable, downwind_index, fdata, 
+                    tdata=tdata, target=target, upcast=upcast
                 )
-                if target == FC.STATE_POINT:
-                    out_dims = (FC.STATE, FC.POINT)
+                if target == FC.STATE_TURBINE:
+                    out_dims = (FC.STATE, FC.TURBINE)
                 else:
-                    out_dims = (FC.STATE, FC.ROTOR)
+                    out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
             
             if out is not None:
                 break
@@ -367,45 +365,50 @@ class Model(ABC):
         if out_dims == (FC.STATE, FC.TURBINE) and downwind_index is not None:
             out = out[:, downwind_index]
     
-        # translate to state-point results:
+        # map to state-turbine dimensions:
         if (
-            target in [FC.STATE_POINT, FC.STATE_ROTOR] 
+            out_dims != dims 
             and out_dims == (FC.STATE, FC.TURBINE)
         ):
             if downwind_index is None:
-                raise KeyError(f"Require downwind_index for target {target}")
+                raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")
 
             # from current iteration only:
-            if pdata is None or FC.STATES_SEL not in pdata:
-                if upcast:
-                    out0 = out
-                    n = n_points if target == FC.STATE_POINT else n_rotors
-                    out = np.zeros((n_states, n), dtype=FC.DTYPE)
-                    out[:] = out0[:, None]
-                    del out0
+            if tdata is None or FC.STATES_SEL not in tdata:
+                if target == FC.STATE_TURBINE:
+                    if upcast:
+                        out0 = out
+                        out = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+                        out[:] = out0[:, None]  
+                        del out0
+                    else:
+                        out = out[:, None]
+                elif target == FC.STATE_TARGET:
+                    if upcast:
+                        out0 = out 
+                        out = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+                        out[:] = out0[:, None, None]  
+                        del out0
+                    else:
+                        out = out[:, None, None]
                 else:
-                    out = out[:, None]
+                    raise NotImplementedError
 
             # from previous iteration, if requested:
             else:
-                if not pdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
+                if not tdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
                     raise ValueError(
-                        f"Model '{self.name}': Mismatch of downwind_index: Expected {pdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
+                        f"Model '{self.name}': Mismatch of downwind_index: Expected {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
                     )
-
+                TODO
                 i0 = _geta("states_i0")
-                sp = pdata[FC.STATES_SEL]
+                sp = tdata[FC.STATES_SEL]
                 sel = sp < i0
                 if np.any(sel):
                     if algo is None or not hasattr(algo, "prev_farm_results"):
                         raise KeyError(
                             f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
                         )
-
-                    out0 = out
-                    out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-                    out[:] = out0[:, None]
-                    del out0
 
                     prev_fdata = getattr(algo, "prev_farm_results")
                     if prev_fdata is None:

@@ -127,7 +127,7 @@ class WakeFrame(Model):
         variable,
         downwind_index,
         fdata,
-        pdata,
+        tdata,
         target,
         states0=None,
         upcast=False,
@@ -146,11 +146,11 @@ class WakeFrame(Model):
             The index in the downwind order
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         target: str, optional
             The dimensions identifier for the output, 
-            FC.STATE_POINT, FC.STATE_ROTOR
+            FC.STATE_TURBINE, FC.STATE_TARGET
         states0: numpy.ndarray, optional
             The states of wake creation
         upcast: bool
@@ -160,25 +160,23 @@ class WakeFrame(Model):
         Returns
         -------
         data: numpy.ndarray
-            Data for wake modelling, shape:
-            (n_states, n_points)
+            Data for wake modelling, shape: (n_states,) or
+            (n_states, n_turbines) or (n_states, n_target, n_tpoints)
 
         """
         n_states = fdata.n_states
-        s = np.arange(n_states) if states0 is None else states0
+        s = np.s_[:] if states0 is None else states0
 
-        if upcast:
-            if target == FC.STATE_POINT:
-                out = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
-            elif target == FC.STATE_ROTOR:
-                out = np.zeros((n_states, pdata.n_rotors), dtype=FC.DTYPE)
-            else:
-                raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_POINT}' or '{FC.STATE_ROTOR}'")
-                
-            out[:] = fdata[variable][s, downwind_index][:, None]
-        
+        if not upcast:
+            out = fdata[variable][s, downwind_index]
+        elif target == FC.STATE_TURBINE:
+            out = np.zeros((n_states, fdata.n_turbines), dtype=FC.DTYPE)
+            out[:] = fdata[variable][s, downwind_index, None]
+        elif target == FC.STATE_TARGET:
+            out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
+            out[:] = fdata[variable][s, downwind_index, None, None]
         else:
-            out = fdata[variable][s, downwind_index, None]
+            raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}' or '{FC.STATE_TARGET}'")
 
         return out
 
