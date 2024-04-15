@@ -115,15 +115,30 @@ class Algorithm(Model):
                     raise ValueError(
                         f"Input {mtype} data entry '{v}': Dimension '{FC.STATE}' not at first position, got {t[0]}"
                     )
-                if FC.POINT in t[0] and t[0][1] != FC.POINT:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at second position, got {t[0]}"
-                    )
-            elif FC.POINT in t[0]:
-                if t[0][0] != FC.POINT:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at first position, got {t[0]}"
-                    )
+                if FC.TURBINE in t[0]:
+                    if t[0][1] != FC.TURBINE:
+                        raise ValueError(
+                            f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' not at second position, got {t[0]}"
+                        )
+                if FC.TARGET in t[0]:
+                    if t[0][1] != FC.TARGET:
+                        raise ValueError(
+                            f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
+                        )
+                    if len(t[0]) < 3 or t[1][2] != FC.TPOINT:
+                        raise KeyError(f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}")
+            elif FC.TURBINE in t[0]:
+                raise ValueError(
+                    f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
+                )
+            elif FC.TARGET in t[0]:
+                raise ValueError(
+                    f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' requires combination with dimension '{FC.STATE}'"
+                )
+            elif FC.TPOINT in t[0] and FC.TARGET not in t[0]:
+                raise ValueError(
+                    f"Input {mtype} data entry '{v}': Dimension '{FC.TPOINT}' requires combination with dimension '{FC.TARGET}'"
+                )
             for d, s in zip(t[0], t[1].shape):
                 if d not in sizes:
                     sizes[d] = s
@@ -153,9 +168,9 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Dimension '{FC.TURBINE}' cannot be chunked, got chunks {self.chunks}"
                 )
-            if FC.RPOINT in self.chunks.keys():
+            if FC.TPOINT in self.chunks.keys():
                 raise ValueError(
-                    f"Dimension '{FC.RPOINT}' cannot be chunked, got chunks {self.chunks}"
+                    f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
                 )
             xrdata = xrdata.chunk(
                 chunks={c: v for c, v in self.chunks.items() if c in sizes}

@@ -65,7 +65,7 @@ class Sequential(Downwind):
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.POINT: 10000},
+        chunks={FC.STATE: None, FC.TARGET: 1000},
         plugins=[],
         **kwargs,
     ):

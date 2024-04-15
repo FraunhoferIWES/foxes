@@ -49,12 +49,13 @@ class WakeFrame(Model):
         """
         pass
 
-    def wake_coos_at_rotors(
+    @abstractmethod
+    def get_wake_coos(
             self, 
             algo, 
             mdata, 
             fdata, 
-            pdata, 
+            tdata, 
             downwind_index,
         ):
         """
@@ -68,8 +69,8 @@ class WakeFrame(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
@@ -78,45 +79,7 @@ class WakeFrame(Model):
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_rotors, n_rpoints, 3)
-
-        """
-        coos = self.wake_coos_at_points(algo, mdata, fdata, 
-                                        pdata, downwind_index)
-        return coos.reshape(pdata.n_states, pdata.n_rotors, 
-                            pdata.n_rpoints, 3)
-
-    @abstractmethod
-    def wake_coos_at_points(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            pdata, 
-            downwind_index,
-        ):
-        """
-        Calculate wake coordinates of given points.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwnd order
-
-        Returns
-        -------
-        wake_coos: numpy.ndarray
-            The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
         pass
@@ -276,17 +239,17 @@ class WakeFrame(Model):
         )
 
         # run ambient calculation:
-        pdata = Data.from_points(
+        tdata = Data.from_points(
             pts,
             data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
             dims={v: (FC.STATE, FC.POINT) for v in vrs},
         )
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
+        res = algo.states.calculate(algo, mdata, fdata, tdata)
+        tdata.update(res)
         amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0)
-        res = amb2var.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
+        res = amb2var.calculate(algo, mdata, fdata, tdata)
+        tdata.update(res)
         del res, amb2var
 
         # find out if all vars ambient:
@@ -301,8 +264,8 @@ class WakeFrame(Model):
             wcalc = algo.get_model("PointWakesCalculation")(wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
             wsrc = states_source_turbine if self_wake else None
-            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)
-            pdata.update(res)
+            res = wcalc.calculate(algo, mdata, fdata, tdata, states_source_turbine=wsrc)
+            tdata.update(res)
             del wcalc, res
 
         # collect integration results:

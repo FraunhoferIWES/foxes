@@ -57,21 +57,20 @@ class RotorWD(WakeFrame):
         """
         n = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
         xy = fdata[FV.TXYH][:, :, :2]
-
         order = np.argsort(np.einsum("std,sd->st", xy, n), axis=-1)
 
         return order
 
-    def wake_coos_at_points(
+    def get_wake_coos(
             self, 
             algo, 
             mdata, 
             fdata, 
-            pdata, 
+            tdata, 
             downwind_index,
         ):
         """
-        Calculate wake coordinates of given points.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
@@ -81,8 +80,8 @@ class RotorWD(WakeFrame):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
@@ -91,14 +90,14 @@ class RotorWD(WakeFrame):
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
-
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+            
         """
-        n_states = pdata.n_states
-        points = pdata[FC.POINTS]
+        n_states = tdata.n_states
+        targets = tdata[FC.TARGETS]
         
         xyz = fdata[FV.TXYH][:, downwind_index]
-        delta = points - xyz[:, None, :]
+        delta = targets - xyz[:, None, None, :]
         del xyz
 
         wd = fdata[self.var_wd][:, downwind_index]
@@ -111,7 +110,7 @@ class RotorWD(WakeFrame):
         nax[:, 2, 2] = 1
         del wd
 
-        coos = np.einsum("spd,sad->spa", delta, nax)
+        coos = np.einsum("stpd,sad->stpa", delta, nax)
 
         return coos
     

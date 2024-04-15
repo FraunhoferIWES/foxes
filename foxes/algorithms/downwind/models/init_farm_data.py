@@ -87,10 +87,10 @@ class InitFarmData(FarmDataModel):
             fdata[FV.D][:, ti] = D 
 
         # calc WD and YAW at rotor centres:
-        pdata = Data.from_points(points=fdata[FV.TXYH])
-        sres = algo.states.calculate(algo, mdata, fdata, pdata)
-        fdata[FV.WD] = sres[FV.WD]
-        del pdata, sres
+        tdata = Data.from_points(points=fdata[FV.TXYH])
+        sres = algo.states.calculate(algo, mdata, fdata, tdata)
+        fdata[FV.WD] = sres[FV.WD][:, :, 0]
+        del tdata, sres
 
         # calculate and inverse:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)

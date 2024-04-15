@@ -309,7 +309,7 @@ class StatesTable(States):
         """
         return self._weights
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -324,8 +324,8 @@ class StatesTable(States):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         Returns
         -------
@@ -335,22 +335,21 @@ class StatesTable(States):
 
         """
         for i, v in enumerate(self._tvars):
-            if v in pdata:
-                pdata[v][:] = mdata[self.DATA][:, i, None]
+            if v in tdata:
+                tdata[v][:] = mdata[self.DATA][:, i, None, None]
             else:
-                pdata[v] = np.zeros((pdata.n_states, pdata.n_points), dtype=FC.DTYPE)
-                pdata[v][:] = mdata[self.DATA][:, i, None]
-                pdata.dims[v] = (FC.STATE, FC.POINT)
+                tdata[v] = np.zeros((tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
+                tdata[v][:] = mdata[self.DATA][:, i, None, None]
+                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         for v, f in self.fixed_vars.items():
-            pdata[v] = np.full((pdata.n_states, pdata.n_points), f, dtype=FC.DTYPE)
+            tdata[v] = np.full((tdata.n_states, tdata.n_targets, tdata.n_tpoints), f, dtype=FC.DTYPE)
 
-        z = pdata[FC.POINTS][:, :, 2]
+        z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
-            pres = p.calculate(pdata, z)
-            pdata[v] = pres
+            tdata[v] = p.calculate(tdata, z)
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in self.output_point_vars(algo)}
 
     def finalize(self, algo, verbosity=0):
         """

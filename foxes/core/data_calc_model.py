@@ -119,7 +119,7 @@ class DataCalcModel(Model):
             data[-1] = Data(odata, odims, loop_dims)
         del odims, odata
 
-        # link chunk state indices from mdata to fdata and pdata:
+        # link chunk state indices from mdata to fdata and tdata:
         if FC.STATE in data[0]:
             for d in data[1:]:
                 d[FC.STATE] = data[0][FC.STATE]

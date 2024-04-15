@@ -72,7 +72,7 @@ class FarmWakesCalculation(FarmDataModel):
                 algo, mdata, fdata, wmodel, wpoints[pwake.name])
 
         def _get_wdata(wname, pwake, s):
-            pdata = Data.from_rpoints(rpoints=wpoints[pwake.name][:, s])
+            pdata = Data.from_tpoints(rpoints=wpoints[pwake.name][:, s])
             wdelta = {v: d[:, s] for v, d in wdeltas[wname].items()}
             return pdata, wdelta
 

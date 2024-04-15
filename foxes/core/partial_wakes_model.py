@@ -62,23 +62,23 @@ class PartialWakesModel(Model):
             The wake model
         wpoints: numpy.ndarray
             The wake evaluation points,
-            shape: (n_states, n_turbines, n_rpoints, 3)
+            shape: (n_states, n_turbines, n_tpoints, 3)
 
         Returns
         -------
         wake_deltas: dict
             Key: variable name, value: The zero filled 
-            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
+            wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
 
         """
         return wmodel.new_wake_deltas(algo, mdata, fdata, wpoints)
 
-    def contribute_at_rotors(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         wake_deltas,
         wmodel,  
@@ -95,67 +95,24 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
 
         """
-        wcoos = algo.wake_frame.wake_coos_at_rotors(
-            algo, mdata, fdata, pdata, downwind_index
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, tdata, downwind_index
         )
-        wmodel.contribute_at_rotors(
-            algo, mdata, fdata, pdata, downwind_index, 
-            wcoos, wake_deltas
-        )
-
-    def contribute_at_points(
-        self,
-        algo,
-        mdata,
-        fdata,
-        pdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,  
-    ):
-        """
-        Modifies wake deltas at given points by 
-        contributions from the specified wake source turbines.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwnd order
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_points, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
-
-        """
-        wcoos = algo.wake_frame.wake_coos_at_points(
-            algo, mdata, fdata, pdata, downwind_index
-        )
-        wmodel.contribute_at_points(
-            algo, mdata, fdata, pdata, downwind_index, 
+        wmodel.contribute(
+            algo, mdata, fdata, tdata, downwind_index, 
             wcoos, wake_deltas
         )
 

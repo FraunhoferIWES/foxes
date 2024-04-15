@@ -231,7 +231,7 @@ class Data(Dict):
             raise ValueError(
                 f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
             )
-        data[FC.TARGETS] = points[:, :, None, 3]
+        data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         return Data(data, dims, [FC.STATE, FC.TARGET], name)
 
@@ -270,7 +270,7 @@ class Data(Dict):
                 f"Expecting rpoints shape (n_states, n_targets, n_tpoints, 3), got {rpoints.shape}"
             )
         n_states, n_targets, n_tpoints = rpoints.shape[:3]
-        data[FC.TPOINTS] = rpoints
-        dims[FC.TPOINTS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+        data[FC.TARGETS] = rpoints
+        dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         return Data(data, dims, [FC.STATE], name)
     

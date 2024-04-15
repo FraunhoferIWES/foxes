@@ -269,6 +269,7 @@ class Model(ABC):
 
         out = None
         out_dims = None
+        source_s = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
@@ -345,6 +346,66 @@ class Model(ABC):
             if out is not None:
                 break
 
+        # cast dimensions:
+        if out_dims != dims:
+    
+            if target == FC.STATE_TARGET and out_dims == (FC.STATE, FC.TURBINE):
+                if downwind_index is None:
+                    raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")    
+                            
+                if upcast:
+                    out0 = out
+                    out = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+                    out[:] = out0[:, downwind_index, None, None]  
+                    out_dims = dims
+                    del out0
+                
+                else:
+                    out = out[:, downwind_index, None]
+                    out_dims = (FC.STATE, 1)
+                
+            #elif target == FC.STATE_TURBINE and out_dims == (FC.STATE, FC.TARGET, FC.TPOINT):
+            #    raise NotImplementedError
+        
+            else:
+                raise NotImplementedError(f"No implementation for target {target} and out dims {out_dims}")
+
+        # data from previous iterations:
+        if (
+            fdata is not None
+            and variable in fdata
+            and tdata is not None
+            and FC.STATES_SEL in tdata
+        ):
+            if target != FC.STATE_TARGET:
+                raise ValueError(f"Iteration data found for variable '{variable}', requiring target '{FC.STATE_TARGET}'")
+            if out_dims != dims:
+                raise ValueError(f"Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}")
+            if downwind_index is None:
+                raise KeyError(f"Require downwind_index for obtaining results from previous iteration")
+            if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
+                raise ValueError(f"Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
+            
+                      
+            i0 = _geta("states_i0")
+            st = np.where(tdata[FC.STATES_SEL])
+            sel = st < i0
+            if np.any(sel):
+                if (
+                    algo is None 
+                    or not hasattr(algo, "prev_farm_results") 
+                    or getattr(algo, "prev_farm_results") is None
+                ):
+                    raise KeyError(
+                        f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
+                    )
+
+                prev_fres = getattr(algo, "prev_farm_results")[variable].to_numpy()
+                prev_data = np.zeros_like(out)
+                prev_data[:] = prev_fres[:, downwind_index, None, None]
+                out[sel] = prev_data[sel]
+                del prev_fres, prev_data
+        
         # check for None:
         if not accept_none and out is None:
             raise ValueError(
@@ -360,63 +421,6 @@ class Model(ABC):
                     )
             except TypeError:
                 pass
-
-        # select single downwind index:
-        if out_dims == (FC.STATE, FC.TURBINE) and downwind_index is not None:
-            out = out[:, downwind_index]
-    
-        # map to state-turbine dimensions:
-        if (
-            out_dims != dims 
-            and out_dims == (FC.STATE, FC.TURBINE)
-        ):
-            if downwind_index is None:
-                raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")
-
-            # from current iteration only:
-            if tdata is None or FC.STATES_SEL not in tdata:
-                if target == FC.STATE_TURBINE:
-                    if upcast:
-                        out0 = out
-                        out = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
-                        out[:] = out0[:, None]  
-                        del out0
-                    else:
-                        out = out[:, None]
-                elif target == FC.STATE_TARGET:
-                    if upcast:
-                        out0 = out 
-                        out = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
-                        out[:] = out0[:, None, None]  
-                        del out0
-                    else:
-                        out = out[:, None, None]
-                else:
-                    raise NotImplementedError
-
-            # from previous iteration, if requested:
-            else:
-                if not tdata[FC.STATE_SOURCE_ORDERI] == downwind_index:
-                    raise ValueError(
-                        f"Model '{self.name}': Mismatch of downwind_index: Expected {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
-                    )
-                TODO
-                i0 = _geta("states_i0")
-                sp = tdata[FC.STATES_SEL]
-                sel = sp < i0
-                if np.any(sel):
-                    if algo is None or not hasattr(algo, "prev_farm_results"):
-                        raise KeyError(
-                            f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
-                        )
-
-                    prev_fdata = getattr(algo, "prev_farm_results")
-                    if prev_fdata is None:
-                        out[sel] = 0
-                    else:
-                        out[sel] = prev_fdata[variable].to_numpy()[
-                            sp[sel], downwind_index, None
-                        ]
 
         return out
 

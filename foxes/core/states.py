@@ -245,7 +245,7 @@ class ExtendedStates(States):
         """
         return self.states.output_point_vars(algo)
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -260,8 +260,8 @@ class ExtendedStates(States):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         Returns
         -------
@@ -270,7 +270,7 @@ class ExtendedStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        return self.pmodels.calculate(algo, mdata, fdata, pdata)
+        return self.pmodels.calculate(algo, mdata, fdata, tdata)
 
     def __add__(self, m):
         models = self.pmodels.models[1:]

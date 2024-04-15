@@ -27,9 +27,9 @@ class PointDataModel(DataCalcModel):
         """
         return []
 
-    def ensure_variables(self, algo, mdata, fdata, pdata):
+    def ensure_variables(self, algo, mdata, fdata, tdata):
         """
-        Add variables to pdata, initialized with NaN
+        Add variables to tdata, initialized with NaN
         
         Parameters
         ----------
@@ -39,19 +39,17 @@ class PointDataModel(DataCalcModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         """
-        n_states = pdata.n_states
-        n_points = pdata.n_points
         for v in self.output_point_vars(algo):
-            if v not in pdata:
-                pdata[v] = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
-                pdata.dims[v] = (FC.STATE, FC.POINT)
+            if v not in tdata:
+                tdata[v] = np.full((tdata.n_states, tdata.n_targets, tdata.n_tpoints), np.nan, dtype=FC.DTYPE)
+                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -66,8 +64,8 @@ class PointDataModel(DataCalcModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         Returns
         -------
@@ -194,7 +192,7 @@ class PointDataModelList(PointDataModel):
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata, pdata, parameters=None):
+    def calculate(self, algo, mdata, fdata, tdata, parameters=None):
         """ "
         The main model calculation.
 
@@ -209,8 +207,8 @@ class PointDataModelList(PointDataModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
         parameters: list of dict, optional
             A list of parameter dicts, one for each model
 
@@ -233,7 +231,7 @@ class PointDataModelList(PointDataModel):
             )
 
         for mi, m in enumerate(self.models):
-            res = m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
-            pdata.update(res)
+            res = m.calculate(algo, mdata, fdata, tdata, **parameters[mi])
+            tdata.update(res)
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in self.output_point_vars(algo)}
