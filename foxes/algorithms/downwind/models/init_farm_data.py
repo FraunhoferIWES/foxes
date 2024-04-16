@@ -85,8 +85,7 @@ class InitFarmData(FarmDataModel):
             if D is None:
                 D = algo.farm_controller.turbine_types[ti].D
             fdata[FV.D][:, ti] = D 
-        print("INITDATA A",fdata[FV.X][0])
-        
+
         # calc WD and YAW at rotor centres:
         tdata = Data.from_points(points=fdata[FV.TXYH])
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
