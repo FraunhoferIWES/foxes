@@ -106,6 +106,7 @@ class InitFarmData(FarmDataModel):
         fdata[FV.X] = fdata[FV.TXYH][:, :, 0]
         fdata[FV.Y] = fdata[FV.TXYH][:, :, 1]
         fdata[FV.H] = fdata[FV.TXYH][:, :, 2]
+        fdata[FV.D] = fdata[FV.D][ssel, order]
         fdata[FV.WD] = fdata[FV.WD][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
         for k in mdata.keys():
