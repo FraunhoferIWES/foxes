@@ -72,7 +72,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         ct,
@@ -88,8 +88,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -107,12 +107,12 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         pass
 
     @abstractmethod
-    def calc_centreline_wake_deltas(
+    def calc_centreline(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         st_sel,
         x,
@@ -130,8 +130,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         st_sel: numpy.ndarray of bool
@@ -159,7 +159,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         r,
@@ -175,8 +175,8 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -197,16 +197,16 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         ct = self.get_data(
             FV.CT,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="w",
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
         )
 
         wake_r = self.calc_wake_radius(
-            algo, mdata, fdata, pdata, downwind_index, x, ct
+            algo, mdata, fdata, tdata, downwind_index, x, ct
         )
 
         wdeltas = {}
@@ -218,7 +218,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             wake_r = wake_r[st_sel]
 
             cl_del = self.calc_centreline_wake_deltas(
-                algo, mdata, fdata, pdata, downwind_index, 
+                algo, mdata, fdata, tdata, downwind_index, 
                 st_sel, x, wake_r, ct
             )
 

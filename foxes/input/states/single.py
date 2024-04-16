@@ -165,7 +165,7 @@ class SingleStateStates(States):
         """
         return np.ones((1, algo.n_turbines), dtype=FC.DTYPE)
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -180,40 +180,44 @@ class SingleStateStates(States):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
 
         """
-
         if self.ws is not None:
-            pdata[FV.WS] = np.full(
-                (pdata.n_states, pdata.n_points), self.ws, dtype=FC.DTYPE
+            tdata[FV.WS] = np.full(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                self.ws, dtype=FC.DTYPE
             )
         if self.wd is not None:
-            pdata[FV.WD] = np.full(
-                (pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE
+            tdata[FV.WD] = np.full(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                self.wd, dtype=FC.DTYPE
             )
         if self.ti is not None:
-            pdata[FV.TI] = np.full(
-                (pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE
+            tdata[FV.TI] = np.full(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                self.ti, dtype=FC.DTYPE
             )
         if self.rho is not None:
-            pdata[FV.RHO] = np.full(
-                (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
+            tdata[FV.RHO] = np.full(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                self.rho, dtype=FC.DTYPE
             )
 
         if len(self._profiles):
-            z = pdata[FC.POINTS][:, :, 2]
+            z = tdata[FC.POINTS][:, :, 2]
             for k, v in self.profdata.items():
-                pdata[k] = v
+                tdata[k] = v
             for v, p in self._profiles.items():
-                pres = p.calculate(pdata, z)
-                pdata[v] = pres
+                pres = p.calculate(tdata, z)
+                tdata[v] = pres
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in self.output_point_vars(algo)}

@@ -331,7 +331,8 @@ class StatesTable(States):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
 
         """
         for i, v in enumerate(self._tvars):

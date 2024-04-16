@@ -71,7 +71,8 @@ class PointDataModel(DataCalcModel):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
 
         """
         pass
@@ -216,7 +217,8 @@ class PointDataModelList(PointDataModel):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
 
         """
         if parameters is None:

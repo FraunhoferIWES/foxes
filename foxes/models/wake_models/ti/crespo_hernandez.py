@@ -120,7 +120,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, tdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -134,7 +134,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
+        tdata: foxes.core.Data
             The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
@@ -144,15 +144,15 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.TI] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.TI] = np.zeros((n_states, tdata.n_points), dtype=FC.DTYPE)
 
     def calc_wake_radius(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         ct,
     ):
@@ -167,49 +167,44 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.Data
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
-        r: numpy.ndarray
-            The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            The x values, shape: (n_states, n_targets)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_states, n_points)
+            shape: (n_states, n_targets)
 
         Returns
         -------
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_states, n_points)
+            The wake radii, shape: (n_states, n_targets)
 
         """
-
         # get D:
         D = self.get_data(
             FV.D,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=False,
         )
 
         # get k:
         k = self.get_data(
             self.k_var,
-            FC.STATE_POINT,
-            lookup="sw",
+            FC.STATE_TARGET,
+            lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=False,
         )
 
         # calculate:
@@ -219,14 +214,14 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         return radius
 
-    def calc_centreline_wake_deltas(
+    def calc_centreline(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
-        sp_sel,
+        tdata,
+        downwind_index,
+        st_sel,
         x,
         wake_r,
         ct,
@@ -242,45 +237,56 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+        tdata: foxes.core.Data
+            The target point data
+        downwind_index: int
+            The index in the downwind order
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
         x: numpy.ndarray
-            The x values, shape: (n_sp_sel,)
+            The x values, shape: (n_st_sel,)
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_sp_sel,)
+            The wake radii, shape: (n_st_sel,)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_sp_sel,)
+            shape: (n_st_sel,)
 
         Returns
         -------
         cl_del: dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,)
+            varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
         # prepare:
-        n_states = fdata.n_states
-        n_points = sp_sel.shape[1]
-        n_targts = np.sum(sp_sel)
-        st_sel = (np.arange(n_states), states_source_turbine)
+        n_targts = np.sum(st_sel)
         TI = FV.AMB_TI if self.use_ambti else FV.TI
 
-        # read D from extra data:
-        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        D[:] = fdata[FV.D][st_sel][:, None]
-        D = D[sp_sel]
+        # get D:
+        D = self.get_data(
+            FV.D,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=True,
+        )
+        D = D[st_sel]
 
-        # get ti:
-        ti = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ti[:] = fdata[TI][st_sel][:, None]
-        ti = ti[sp_sel]
+        # get TI:
+        ti = self.get_data(
+            TI,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=True,
+        )[st_sel]
 
         # calculate induction factor:
         twoa = 2 * self.induction.ct2a(ct)

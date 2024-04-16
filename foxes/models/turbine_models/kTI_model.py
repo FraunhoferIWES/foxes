@@ -99,20 +99,23 @@ class kTI(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        kTI = self.get_data(
-            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata
+        kti = self.get_data(
+            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
         kb = self.get_data(
-            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata
+            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
         ti = self.get_data(
-            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata
+            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
 
         k = fdata.get(
             self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
         )
 
-        k[st_sel] = kTI * ti + kb
+        k[st_sel] = kti * ti + kb
 
         return {self.k_var: k}

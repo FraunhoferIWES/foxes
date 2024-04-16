@@ -51,7 +51,7 @@ class JensenWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def init_wake_deltas(self, algo, mdata, fdata, tdata, wake_deltas):
         """
         Initialize wake delta storage.
 
@@ -65,7 +65,7 @@ class JensenWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
+        tdata: foxes.core.Data
             The evaluation point data
         wake_deltas: dict
             The wake deltas storage, add wake deltas
@@ -75,14 +75,14 @@ class JensenWake(TopHatWakeModel):
 
         """
         n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
+        wake_deltas[FV.WS] = np.zeros((n_states, tdata.n_points), dtype=FC.DTYPE)
 
     def calc_wake_radius(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         x,
         ct,
@@ -98,8 +98,8 @@ class JensenWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         x: numpy.ndarray
@@ -116,32 +116,34 @@ class JensenWake(TopHatWakeModel):
         """
         D = self.get_data(
             FV.D,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
+            upcast=False,
         )
 
         k = self.get_data(
             self.k_var,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="sw",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
+            upcast=False,
         )
 
         return D/2 + k * x
 
-    def calc_centreline_wake_deltas(
+    def calc_centreline(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         st_sel,
         x,
@@ -159,8 +161,8 @@ class JensenWake(TopHatWakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index in the downwind order
         st_sel: numpy.ndarray of bool
@@ -183,11 +185,11 @@ class JensenWake(TopHatWakeModel):
         """
         R = self.get_data(
             FV.D,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
             upcast=True,
         )[st_sel] / 2

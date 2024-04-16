@@ -256,7 +256,7 @@ class Model(ABC):
 
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
-            n_turbines = _geta("n_turbine")
+            n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
         elif target == FC.STATE_TARGET:
             n_targets = _geta("n_targets")
