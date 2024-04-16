@@ -67,9 +67,9 @@ class InitFarmData(FarmDataModel):
         # define FV.TXYH as vector [X, Y, H]:
         fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
         fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
-        fdata[FV.X] = fdata[FV.TXYH][..., 0]
-        fdata[FV.Y] = fdata[FV.TXYH][..., 1]
-        fdata[FV.H] = fdata[FV.TXYH][..., 2]
+        for i, v in enumerate([FV.X, FV.Y, FV.H]):
+            fdata[v] = fdata[FV.TXYH][..., i]
+            fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
         # set X, Y, H, D:
         fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
@@ -103,9 +103,8 @@ class InitFarmData(FarmDataModel):
 
         # apply downwind order to all data:
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
-        fdata[FV.X] = fdata[FV.TXYH][:, :, 0]
-        fdata[FV.Y] = fdata[FV.TXYH][:, :, 1]
-        fdata[FV.H] = fdata[FV.TXYH][:, :, 2]
+        for i, v in enumerate([FV.X, FV.Y, FV.H]):
+            fdata[v] = fdata[FV.TXYH][..., i]
         fdata[FV.D] = fdata[FV.D][ssel, order]
         fdata[FV.WD] = fdata[FV.WD][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
