@@ -30,7 +30,8 @@ class RotorPoints(PartialWakesModel):
             All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
 
         """
-        return algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
+        rotor = algo.rotor_model
+        return rotor.from_data_or_store(rotor.RPOINTS, algo, mdata)
 
     def evaluate_results(
         self,
@@ -57,7 +58,7 @@ class RotorPoints(PartialWakesModel):
         wake_deltas: dict
             The wake deltas object at the selected downwind
             turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_rpoints, ...)
+            with shape (n_states, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int

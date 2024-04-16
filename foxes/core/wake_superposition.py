@@ -72,7 +72,7 @@ class WakeSuperposition(Model):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         variable,
         amb_results,
         wake_delta,
@@ -89,20 +89,20 @@ class WakeSuperposition(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray
-            The ambient results, shape: (n_states, n_points)
+            The ambient results, shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
-            The wake deltas, shape: (n_states, n_points)
+            The wake deltas, shape: (n_states, n_targets, n_tpoints)
 
         Returns
         -------
         final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
-            results by simple plus operation. Shape: (n_states, n_points)
+            results by simple plus operation. Shape: (n_states, n_targets, n_tpoints)
 
         """
         pass

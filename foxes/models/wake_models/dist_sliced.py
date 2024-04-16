@@ -202,13 +202,13 @@ class DistSlicedWakeModel(WakeModel):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_points)
+            values: numpy.ndarray with shape (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas, are being modified ob the fly.
             Key: Variable name str, for which the wake delta
             applies, values: numpy.ndarray with shape
-            (n_states, n_points, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_points) afterwards
+            (n_states, n_targets, n_rpoints, ...) before evaluation,
+            numpy.ndarray with shape (n_states, n_targets, n_tpoints) afterwards
 
         """
         for v, s in self.superp.items():
