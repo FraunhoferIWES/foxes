@@ -72,10 +72,10 @@ class WakeSuperposition(Model):
         algo,
         mdata,
         fdata,
-        tdata,
         variable,
         amb_results,
         wake_delta,
+        downwind_index,
     ):
         """
         Calculate the final wake delta after adding all
@@ -89,20 +89,23 @@ class WakeSuperposition(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        tdata: foxes.core.Data
-            The target point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray
-            The ambient results, shape: (n_states, n_targets, n_tpoints)
+            The ambient results at target turbines, 
+            shape: (n_states, n_tpoints)
         wake_delta: numpy.ndarray
-            The wake deltas, shape: (n_states, n_targets, n_tpoints)
+            The wake deltas at target turbines, shape: 
+            (n_states, n_tpoints)
+        downwind_index: int
+            The index in the downwind order, selecting the
+            target turbines
 
         Returns
         -------
         final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
-            results by simple plus operation. Shape: (n_states, n_targets, n_tpoints)
+            results by simple plus operation. Shape: (n_states, n_tpoints)
 
         """
         pass

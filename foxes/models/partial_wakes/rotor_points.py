@@ -70,8 +70,9 @@ class RotorPoints(PartialWakesModel):
         amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
         wres = {v: a[:, downwind_index] for v, a in amb_res.items()}
         del amb_res
-
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wake_deltas)
+        
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, 
+                                    wake_deltas, downwind_index)
 
         for v in wres.keys():
             if v in wake_deltas:

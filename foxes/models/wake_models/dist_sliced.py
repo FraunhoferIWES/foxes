@@ -186,6 +186,7 @@ class DistSlicedWakeModel(WakeModel):
         fdata,
         amb_results,
         wake_deltas,
+        downwind_order,
     ):
         """
         Finalize the wake calculation.
@@ -201,17 +202,20 @@ class DistSlicedWakeModel(WakeModel):
         fdata: foxes.core.Data
             The farm data
         amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_targets, n_tpoints)
+            The ambient results at the selected target
+            turbines, key: variable name str,
+            values: numpy.ndarray with shape (n_states, n_tpoints)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta
-            applies, values: numpy.ndarray with shape
-            (n_states, n_targets, n_rpoints, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_targets, n_tpoints) afterwards
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_tpoints, ...)
+        downwind_index: int
+            The index in the downwind order, selecting the
+            target turbines
 
         """
         for v, s in self.superp.items():
             wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
+                algo, mdata, fdata, v, amb_results[v], 
+                wake_deltas[v], downwind_order
             )
