@@ -372,22 +372,30 @@ class Model(ABC):
                     out_dims = (FC.STATE, 1) if len(dims) == 2 else (FC.STATE, 1, 1)
                 del out0
                 
-            elif upcast and out_dims == (FC.STATE, 1):
+            elif out_dims == (FC.STATE, 1):
                 out0 = out
                 if len(dims) == 3:
                     out0 = out0[:, :, None]
-                out = np.zeros(dims, dtype=FC.DTYPE)
-                out[:] = out0
-                out_dims = dims
+                    out_dims = (FC.STATE, 1, 1)
+                if upcast:
+                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                else:
+                    out = out0
                 del out0
 
-            elif upcast and out_dims == (FC.STATE, 1, 1):
+            elif out_dims == (FC.STATE, 1, 1):
                 out0 = out
                 if len(dims) == 2:
                     out0 = out0[:, :, 0]
-                out = np.zeros(dims, dtype=FC.DTYPE)
-                out[:] = out0
-                out_dims = dims
+                    out_dims = (FC.STATE, 1)
+                if upcast:
+                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                else:
+                    out = out0
                 del out0
 
             else:

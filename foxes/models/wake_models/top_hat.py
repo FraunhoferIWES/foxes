@@ -203,6 +203,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
+            upcast=True
         )
 
         wake_r = self.calc_wake_radius(
@@ -217,7 +218,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             ct = ct[st_sel]
             wake_r = wake_r[st_sel]
 
-            cl_del = self.calc_centreline_wake_deltas(
+            cl_del = self.calc_centreline(
                 algo, mdata, fdata, tdata, downwind_index, 
                 st_sel, x, wake_r, ct
             )
