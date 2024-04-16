@@ -64,10 +64,9 @@ class RotorPoints(PartialWakesModel):
             The index in the downwind order
 
         """
-        weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
-        amb_res = algo.rotor_model.from_data_or_store(
-            FC.AMB_RPOINT_RESULTS, algo, mdata
-        )
+        rotor = algo.rotor_model
+        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
         wres = {v: a[:, downwind_index] for v, a in amb_res.items()}
         del amb_res
 

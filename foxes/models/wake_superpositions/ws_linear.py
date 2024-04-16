@@ -62,14 +62,14 @@ class WSLinear(WakeSuperposition):
         """
         return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
-    def add_at_rotors(
+    def add_wake(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
-        sr_sel,
+        st_sel,
         variable,
         wake_delta,
         wake_model_result,
@@ -86,27 +86,27 @@ class WSLinear(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
-        sr_sel: numpy.ndarray of bool
-            The selection of rotors, shape: (n_states, n_rotors)
+        st_sel: numpy.ndarray of bool
+            The selection of targets, shape: (n_states, n_targets)
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray
             The original wake deltas, shape: 
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_targets, n_tpoints, ...)
         wake_model_result: numpy.ndarray
             The new wake deltas of the selected rotors,
-            shape: (n_sr_sel, n_rpoints, ...)
+            shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
         wdelta: numpy.ndarray
             The updated wake deltas, shape: 
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_targets, n_tpoints, ...)
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
@@ -114,19 +114,19 @@ class WSLinear(WakeSuperposition):
                 f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
             )
 
-        if np.any(sr_sel):
+        if np.any(st_sel):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_ROTOR,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
-            )[sr_sel, None]
+            )[st_sel, None]
             
-            wake_delta[sr_sel] += scale * wake_model_result
+            wake_delta[st_sel] += scale * wake_model_result
 
         return wake_delta
 
@@ -135,7 +135,7 @@ class WSLinear(WakeSuperposition):
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         sp_sel,
         variable,
@@ -154,7 +154,7 @@ class WSLinear(WakeSuperposition):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
+        tdata: foxes.core.Data
             The evaluation point data at rotor points
         downwind_index: int
             The index of the wake causing turbine
@@ -189,7 +189,7 @@ class WSLinear(WakeSuperposition):
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 downwind_index=downwind_index,
             )[sp_sel]
 
