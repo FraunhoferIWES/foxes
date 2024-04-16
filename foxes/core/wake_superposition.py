@@ -17,18 +17,19 @@ class WakeSuperposition(Model):
     """
 
     @abstractmethod
-    def add_at_rotors(
+    def add_wake(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
-        sr_sel,
+        st_sel,
         variable,
         wake_delta,
         wake_model_result,
     ):
+        TODO
         """
         Add a wake delta to previous wake deltas,
         at rotor points.
@@ -41,13 +42,13 @@ class WakeSuperposition(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
-        sr_sel: numpy.ndarray of bool
-            The selection of rotors, shape: (n_states, n_rotors)
+        st_sel: numpy.ndarray of bool
+            The selection of targets, shape: (n_states, n_targets)
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray

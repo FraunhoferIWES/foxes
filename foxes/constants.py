@@ -87,6 +87,11 @@ STATE_TURBINE = "state-turbine"
 """
 
 STATE_TARGET = "state-target"
+"""Identifier for state-target dimensions
+:group: foxes.constants
+"""
+
+STATE_TARGET_TPOINT = "state-target-tpoint"
 """Identifier for state-target-tpoints dimensions
 :group: foxes.constants
 """

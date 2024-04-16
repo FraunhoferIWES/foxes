@@ -205,7 +205,8 @@ class Model(ABC):
             The variable, serves as data key
         target: str, optional
             The dimensions identifier for the output,
-            FC.STATE_TURBINE, FC.STATE_TARGET
+            FC.STATE_TURBINE, FC.STATE_TARGET or
+            FC.STATE_TARGET_TPOINT
         lookup: str
             The order of data sources. Combination of:
             's' for self,
@@ -256,20 +257,21 @@ class Model(ABC):
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
             n_turbines = _geta("n_turbine")
-            dims = (FC.STATE, FC.POINT)
+            dims = (FC.STATE, FC.TURBINE)
         elif target == FC.STATE_TARGET:
+            n_targets = _geta("n_targets")
+            dims = (FC.STATE, FC.TARGET)
+        elif target == FC.STATE_TARGET_TPOINT:
             n_targets = _geta("n_targets")
             n_tpoints = _geta("n_tpoints")
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
         else:
             raise KeyError(
-                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}"
+                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
-        n_dims = len(dims)
 
         out = None
         out_dims = None
-        source_s = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
@@ -283,6 +285,10 @@ class Model(ABC):
                         out[:] = a
                         out_dims = (FC.STATE, FC.TURBINE)
                     elif target == FC.STATE_TARGET:
+                        out = np.full((n_states, n_targets), np.nan, dtype=FC.DTYPE)
+                        out[:] = a
+                        out_dims = (FC.STATE, FC.TARGET)
+                    elif target == FC.STATE_TARGET_TPOINT:
                         out = np.full((n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE)
                         out[:] = a
                         out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
@@ -294,8 +300,7 @@ class Model(ABC):
                 s == "m"
                 and mdata is not None
                 and variable in mdata
-                and len(mdata.dims[variable]) > 1
-                and tuple(mdata.dims[variable][:n_dims]) == dims
+                and tuple(mdata.dims[variable]) == dims
             ):
                 out = mdata[variable]
                 out_dims = dims
@@ -305,8 +310,7 @@ class Model(ABC):
                 s == "f"
                 and fdata is not None
                 and variable in fdata
-                and len(fdata.dims[variable]) > 1
-                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
+                and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
             ):
                 out = fdata[variable]
                 out_dims = (FC.STATE, FC.TURBINE)
@@ -316,67 +320,87 @@ class Model(ABC):
                 s == "t"
                 and tdata is not None
                 and variable in tdata
-                and len(tdata.dims[variable]) > 1
-                and tuple(tdata.dims[variable][:n_dims]) == dims
+                and tuple(tdata.dims[variable]) == (FC.STATE, FC.TARGET, FC.TPOINT)
             ):
                 out = tdata[variable]
-                out_dims = dims
+                out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
 
             # lookup wake modelling data:
             elif (
                 s == "w"
-                and target in [FC.STATE_TURBINE, FC.STATE_TARGET]
                 and fdata is not None
                 and tdata is not None
                 and variable in fdata
-                and len(fdata.dims[variable]) > 1
-                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
+                and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
                 and downwind_index is not None
                 and algo is not None
             ):
-                out = algo.wake_frame.get_wake_modelling_data(
+                out, out_dims = algo.wake_frame.get_wake_modelling_data(
                     algo, variable, downwind_index, fdata, 
                     tdata=tdata, target=target, upcast=upcast
                 )
-                if target == FC.STATE_TURBINE:
-                    out_dims = (FC.STATE, FC.TURBINE)
-                else:
-                    out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
             
             if out is not None:
                 break
 
         # cast dimensions:
         if out_dims != dims:
-    
-            if target == FC.STATE_TARGET and out_dims == (FC.STATE, FC.TURBINE):
-                if downwind_index is None:
-                    raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")    
-                            
+
+            if out_dims is None:
                 if upcast:
                     out0 = out
-                    out = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
-                    out[:] = out0[:, downwind_index, None, None]  
+                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out[:] = out0  
                     out_dims = dims
                     del out0
-                
                 else:
-                    out = out[:, downwind_index, None]
-                    out_dims = (FC.STATE, 1)
-                
-            #elif target == FC.STATE_TURBINE and out_dims == (FC.STATE, FC.TARGET, FC.TPOINT):
-            #    raise NotImplementedError
-        
-            else:
-                raise NotImplementedError(f"No implementation for target {target} and out dims {out_dims}")
+                    out_dims = tuple([1 for _ in dims])
 
-        # data from previous iterations:
+            elif out_dims == (FC.STATE, FC.TURBINE):
+                if downwind_index is None:
+                    raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")    
+            
+                out0 = out[:, downwind_index, None]
+                if len(dims) == 3:
+                    out0 = out0[:, :, None]
+                if upcast:
+                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out[:] = out0  
+                    out_dims = dims
+                else:
+                    out = out0
+                    out_dims = (FC.STATE, 1) if len(dims) == 2 else (FC.STATE, 1, 1)
+                del out0
+                
+            elif upcast and out_dims == (FC.STATE, 1):
+                out0 = out
+                if len(dims) == 3:
+                    out0 = out0[:, :, None]
+                out = np.zeros(dims, dtype=FC.DTYPE)
+                out[:] = out0
+                out_dims = dims
+                del out0
+
+            elif upcast and out_dims == (FC.STATE, 1, 1):
+                out0 = out
+                if len(dims) == 2:
+                    out0 = out0[:, :, 0]
+                out = np.zeros(dims, dtype=FC.DTYPE)
+                out[:] = out0
+                out_dims = dims
+                del out0
+
+            else:
+                raise NotImplementedError(f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}")
+
+        # data from other chunks, only with iterations:
         if (
             fdata is not None
             and variable in fdata
             and tdata is not None
             and FC.STATES_SEL in tdata
         ):
+            raise NotImplementedError("TODO: IMPLEMENT OTHER CHUNK LOOKUP")
             if target != FC.STATE_TARGET:
                 raise ValueError(f"Iteration data found for variable '{variable}', requiring target '{FC.STATE_TARGET}'")
             if out_dims != dims:

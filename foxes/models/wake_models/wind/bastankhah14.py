@@ -164,11 +164,11 @@ class Bastankhah2014(GaussianWakeModel):
             # get D:
             D = self.get_data(
                 FV.D,
-                FC.STATE_ROTOR,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
             )
@@ -177,11 +177,11 @@ class Bastankhah2014(GaussianWakeModel):
             # get k:
             k = self.get_data(
                 self.k_var,
-                FC.STATE_ROTOR,
+                FC.STATE_TARGET,
                 lookup="sw",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
             )
