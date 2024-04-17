@@ -140,9 +140,9 @@ class PartialWakesModel(Model):
             The farm data
             Modified in-place by this function
         wake_deltas: dict
-            The wake deltas object at the selected downwind
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_tpoints, ...)
+            The wake deltas object. Key: variable str, 
+            value: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int

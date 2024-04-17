@@ -125,7 +125,7 @@ class Algorithm(Model):
                         raise ValueError(
                             f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
                         )
-                    if len(t[0]) < 3 or t[1][2] != FC.TPOINT:
+                    if len(t[0]) < 3 or t[0][2] != FC.TPOINT:
                         raise KeyError(f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}")
             elif FC.TURBINE in t[0]:
                 raise ValueError(
@@ -391,7 +391,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
-        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FC.XYH), points)
+        idata["data_vars"][FC.TARGETS] = ((FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH), points[:, :, None, :])
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)

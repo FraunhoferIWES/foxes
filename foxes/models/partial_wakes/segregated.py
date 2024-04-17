@@ -96,30 +96,28 @@ class PartialSegregated(PartialWakesModel):
             The farm data
             Modified in-place by this function
         wake_deltas: dict
-            The wake deltas object at the selected downwind
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_rpoints, ...)
+            The wake deltas object. Key: variable str, 
+            value: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
 
         """
-        weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
-        amb_res = algo.rotor_model.from_data_or_store(
-            FC.AMB_RPOINT_RESULTS, algo, mdata
-        )
-        wres = {v: a[:, downwind_index] for v, a in amb_res.items()}
+        rotor = algo.rotor_model
+        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+        wres = {v: a[:, downwind_index, None] for v, a in amb_res.items()}
         del amb_res
         
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wake_deltas)
+        wdel = {v: d[:, downwind_index, None] for v, d in wake_deltas.items()}
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
         
         gweights = self.rotor.rotor_point_weights()
         for v in wres.keys():
             if v in wake_deltas:
-                wdel = np.einsum('sr,r->s', wake_deltas[v], gweights)
-                wres[v] += wdel[:, None]
-            wres[v] = wres[v][:, None]
+                wres[v] += np.einsum('stp,p->st', wdel[v], gweights)[:, None]
 
         algo.rotor_model.eval_rpoint_results(
             algo, mdata, fdata, wres, weights, 

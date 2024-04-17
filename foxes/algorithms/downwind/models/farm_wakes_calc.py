@@ -91,8 +91,7 @@ class FarmWakesCalculation(FarmDataModel):
             if wmodel.affects_downwind:
                 for oi in range(n_turbines):
                     if oi > 0:
-                        wdelta = {v: d[:, oi] for v, d in wdeltas[wname].items()}
-                        _evaluate(algo, mdata, fdata, wdelta, oi, wmodel, pwake)
+                        _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(wname, np.s_[:, oi+1:])
@@ -103,12 +102,13 @@ class FarmWakesCalculation(FarmDataModel):
             else:
                 for oi in range(n_turbines-1, -1, -1):
                     if oi < n_turbines - 1:
-                        wdelta = {v: d[:, oi] for v, d in wdeltas[wname].items()}
-                        _evaluate(algo, mdata, fdata, wdelta, oi, wmodel, pwake)
+                        _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(wname, np.s_[:, :oi])
                         pwake.contribute(algo, mdata, fdata, 
                                          tdata, oi, wdelta, wmodel)
+            
+            del wdeltas[wname]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

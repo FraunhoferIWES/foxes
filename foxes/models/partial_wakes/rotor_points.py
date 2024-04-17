@@ -56,9 +56,9 @@ class RotorPoints(PartialWakesModel):
             The farm data
             Modified in-place by this function
         wake_deltas: dict
-            The wake deltas object at the selected downwind
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_tpoints, ...)
+            The wake deltas object. Key: variable str, 
+            value: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
@@ -68,16 +68,15 @@ class RotorPoints(PartialWakesModel):
         rotor = algo.rotor_model
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
         amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
-        wres = {v: a[:, downwind_index] for v, a in amb_res.items()}
+        wres = {v: a[:, downwind_index, None] for v, a in amb_res.items()}
         del amb_res
         
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, 
-                                    wake_deltas, downwind_index)
+        wdel = {v: d[:, downwind_index, None] for v, d in wake_deltas.items()}
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
 
         for v in wres.keys():
-            if v in wake_deltas:
-                wres[v] += wake_deltas[v]
-            wres[v] = wres[v][:, None]
+            if v in wdel:
+                wres[v] += wdel[v]
 
         algo.rotor_model.eval_rpoint_results(
             algo, mdata, fdata, wres, weights, 

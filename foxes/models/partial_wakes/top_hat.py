@@ -69,18 +69,18 @@ class PartialTopHat(PartialCentre):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def contribute_at_rotors(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
         downwind_index,
         wake_deltas,
         wmodel,  
     ):
         """
-        Modifies wake deltas at rotor points by 
+        Modifies wake deltas at target points by 
         contributions from the specified wake source turbines.
 
         Parameters
@@ -91,15 +91,15 @@ class PartialTopHat(PartialCentre):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data at rotor points
+        tdata: foxes.core.Data
+            The target point data
         downwind_index: int
             The index of the wake causing turbine
             in the downwnd order
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
-            (n_states, n_rotors, n_rpoints, ...)
+            (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
 
@@ -109,8 +109,8 @@ class PartialTopHat(PartialCentre):
                 f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not a TopHatWakeModel"
             )
         
-        wcoos = algo.wake_frame.wake_coos_at_rotors(
-            algo, mdata, fdata, pdata, downwind_index
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, tdata, downwind_index
         )
         x = wcoos[:, :, 0, 0]
         yz = wcoos[:, :, 0, 1:3]
@@ -118,10 +118,10 @@ class PartialTopHat(PartialCentre):
 
         ct = self.get_data(
             FV.CT,
-            FC.STATE_ROTOR,
+            FC.STATE_TARGET,
             lookup="w",
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
             upcast=True,
@@ -134,17 +134,17 @@ class PartialTopHat(PartialCentre):
 
             D = self.get_data(
                 FV.D,
-                FC.STATE_ROTOR,
+                FC.STATE_TARGET,
                 lookup="w",
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 downwind_index=downwind_index,
                 algo=algo,
                 upcast=True,
             )
 
             wr = wmodel.calc_wake_radius(algo, mdata, fdata,
-                            pdata, downwind_index, x, ct)
+                            tdata, downwind_index, x, ct)
 
             st_sel = sel0 & (wr > R - D / 2)
             if np.any(st_sel):
@@ -154,8 +154,8 @@ class PartialTopHat(PartialCentre):
                 R = R[st_sel]
                 D = D[st_sel]
 
-                clw = wmodel.calc_centreline_wake_deltas(
-                        algo, mdata, fdata, pdata, downwind_index,
+                clw = wmodel.calc_centreline(
+                        algo, mdata, fdata, tdata, downwind_index,
                         st_sel, x, wr, ct)
 
                 weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
@@ -168,6 +168,6 @@ class PartialTopHat(PartialCentre):
                             f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {sorted(list(wmodel.superp.keys()))}"
                         )
 
-                    wake_deltas[v] = superp.add_at_rotors(
-                        algo, mdata, fdata, pdata, downwind_index, st_sel, 
+                    wake_deltas[v] = superp.add_wake(
+                        algo, mdata, fdata, tdata, downwind_index, st_sel, 
                         v, wake_deltas[v], weights[:, None]*d[:, None])
