@@ -197,6 +197,39 @@ class Data(Dict):
         self.dims[name] = dims
         self.__run_entry_checks(name, data, dims)
         self.__auto_update()
+    
+    def get_slice(self, s, dim_map={}, name=None):
+        """
+        Get a slice of data.
+        
+        Parameters
+        ----------
+        s: slice
+            The slice
+        dim_map: dict
+            Mapping from original to new dimensions.
+            If not found, same dimensions are assumed.
+        name: str, optional
+            The name of the data object
+        
+        Returns
+        -------
+        data: Data
+            The new data object, containing slices
+
+        """
+        data = {}
+        dims = {}
+        for v in self.keys():
+            try:
+                d = self.dims[v]
+                data[v] = self[v][s]
+                dims[v] = dim_map.get(d, d)
+            except IndexError:
+                pass
+        if name is None:
+            name = self.name
+        return Data(data, dims, self.loop_dims, name)
 
     @classmethod
     def from_points(
