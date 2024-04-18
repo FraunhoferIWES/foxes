@@ -118,6 +118,7 @@ class DataCalcModel(Model):
             for v in out_vars
             if v not in data[-1]
         }
+
         if len(data) == 1:
             data.append(Data(odata, odims, loop_dims))
         else:

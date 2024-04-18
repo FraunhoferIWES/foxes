@@ -341,8 +341,9 @@ class Downwind(Algorithm):
             self, *data, out_vars=out_vars, **kwargs
         )
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in farm_results:
-            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+            if v in farm_results:
+                farm_results[v] = farm_results[v].astype(FC.ITYPE)
 
         return farm_results
 

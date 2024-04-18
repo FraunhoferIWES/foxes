@@ -198,8 +198,8 @@ class Iterative(Downwind):
             else:
 
                 # add model that calculates wake effects:
-                mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
-                calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+                #mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
+                #calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
                 mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
@@ -239,7 +239,7 @@ class Iterative(Downwind):
 
         """
         outputs = kwargs.pop("outputs", self.DEFAULT_FARM_OUTPUTS)
-        outputs = list(set(outputs + [FV.ORDER_SSEL]))
+        outputs = list(set(outputs + [FV.ORDER_SSEL, FV.ORDER_INV]))
         
         fres = None
         self._it = -1
@@ -251,7 +251,6 @@ class Iterative(Downwind):
 
             self.prev_farm_results = fres
             fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
-            print(fres)
 
             conv = self.conv_crit.check_converged(
                 self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
@@ -261,7 +260,7 @@ class Iterative(Downwind):
                 self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
                 self.print("Starting final run")
                 self._final_run = True
-                fres = super().calc_farm(finalize=False, **kwargs)
+                fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
                 break
 
             if self._it == 0:

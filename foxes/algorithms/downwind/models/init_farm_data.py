@@ -35,7 +35,7 @@ class InitFarmData(FarmDataModel):
 
         """
         return [FV.X, FV.Y, FV.H, FV.D, FV.WD, FV.YAW, 
-                FV.ORDER, FV.WEIGHT, FV.ORDER_SSEL]
+                FV.ORDER, FV.WEIGHT, FV.ORDER_SSEL, FV.ORDER_INV]
 
     def calculate(self, algo, mdata, fdata):
         """ "

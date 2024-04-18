@@ -33,7 +33,7 @@ class RosePlotOutput(Output):
             The calculation results (farm or points)
 
         """
-        dims = list(results.dims.keys())
+        dims = list(results.sizes.keys())
         if dims[1] == FC.TURBINE:
             self._rtype = FC.TURBINE
         elif dims[1] == FC.POINT:
@@ -170,7 +170,7 @@ class RosePlotOutput(Output):
         data[wd_var] = pd.cut(data["wd"], wdb, labels=wds)
         data[lgd] = pd.cut(data[lgd], var_bins, right=False, include_lowest=True)
 
-        grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd])
+        grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd], observed=True)
         data = grp.sum().reset_index()
 
         data[wd_var] = data[wd_var].astype(np.float64)

@@ -108,8 +108,6 @@ class FarmWakesCalculation(FarmDataModel):
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
             pwake.evaluate_results(
                 algo, mdata, fdata, wdeltas, wmodel, oi)
-            for v in wdeltas:
-                wdeltas[v][:, oi] = 0
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
             fdata.update(res)
@@ -123,39 +121,20 @@ class FarmWakesCalculation(FarmDataModel):
             pwake = algo.partial_wakes[wname]
             tdata_all = Data.from_tpoints(rpoints=wpoints[pwake.name])
 
-            # downwind:
-            if wmodel.affects_downwind:
-                for oi in range(n_turbines):
-                    
-                    if oi > 0:
-                        tdata, wdelta = _get_wdata(wname, np.s_[:, :oi])
-                        pwake.contribute(algo, mdata, fdata, 
-                                         tdata, oi, wdelta, wmodel)
+            for oi in range(n_turbines):
+                
+                if oi > 0:
+                    tdata, wdelta = _get_wdata(wname, np.s_[:, :oi])
+                    pwake.contribute(algo, mdata, fdata, 
+                                        tdata, oi, wdelta, wmodel)
 
-                    if oi < n_turbines - 1:
-                        tdata, wdelta = _get_wdata(wname, np.s_[:, oi+1:])
-                        pwake.contribute(algo, mdata, fdata,
-                                         tdata, oi, wdelta, wmodel)
-                    
-                    _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
-                        
-            # upwind:
-            else:
-                for oi in range(n_turbines-1, -1, -1):
-
-                    if oi < n_turbines - 1:
-                        _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
-                        
-                        tdata, wdelta = _get_wdata(wname, np.s_[:, oi+1:])
-                        pwake.contribute(algo, mdata, fdata, 
-                                         tdata, oi, wdelta, wmodel)
-
-                    if oi > 0:
-                        tdata, wdelta = _get_wdata(wname, np.s_[:, :oi])
-                        pwake.contribute(algo, mdata, fdata, 
-                                                   tdata, oi, wdelta, wmodel)
-
-                for oi in range(1, n_turbines):
-                    _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
-
+                if oi < n_turbines - 1:
+                    tdata, wdelta = _get_wdata(wname, np.s_[:, oi+1:])
+                    pwake.contribute(algo, mdata, fdata,
+                                        tdata, oi, wdelta, wmodel)
+                
+                _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
+            
+            del wdeltas[wname]
+            
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
