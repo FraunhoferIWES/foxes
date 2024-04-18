@@ -132,6 +132,10 @@ class DataCalcModel(Model):
             for d in data[1:]:
                 d[FC.STATE] = data[0][FC.STATE]
         
+        # link weights from mdata to fdata:
+        if FV.WEIGHT in data[0]:
+            data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
+        
         # ensure TXYH:
         if len(data) > 1:
             if FV.X in data[1] and FV.Y in data[1] and FV.H in data[1]:

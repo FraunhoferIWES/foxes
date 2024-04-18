@@ -70,10 +70,12 @@ class Iterative(Downwind):
         self._it = None
         self._mlist = None
         self._reamb = False
-        self._urelax = None
-        #Dict(
-        #    first={}, pre_rotor={}, post_rotor={}, pre_wake={FV.CT: 0.5}, last={}
-        #)
+        self._urelax = Dict(
+            first={}, pre_rotor={}, post_rotor={}, 
+            #pre_wake={FV.CT: 0.5}, 
+            pre_wake={}, 
+            last={}
+        )
 
     def set_urelax(self, entry_point, **urel):
         """
@@ -126,11 +128,7 @@ class Iterative(Downwind):
     ):
         """
         Helper function that creates model list
-        """
-        #rpars = calc_parameters.get(self.rotor_model.name, {})
-        #rpars.update({"store_amb_res": True})
-        #calc_parameters[self.rotor_model.name] = rpars
-        
+        """      
         if self._it == 0:
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
                 outputs=False,
@@ -239,7 +237,8 @@ class Iterative(Downwind):
 
         """
         outputs = kwargs.pop("outputs", self.DEFAULT_FARM_OUTPUTS)
-        outputs = list(set(outputs + [FV.ORDER_SSEL, FV.ORDER_INV]))
+        outputs = list(set(outputs + 
+                           [FV.ORDER_SSEL, FV.ORDER_INV, FV.WEIGHT]))
         
         fres = None
         self._it = -1

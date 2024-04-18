@@ -111,6 +111,6 @@ class InitFarmData(FarmDataModel):
         for k in mdata.keys():
             if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE):
                     mdata[k] = mdata[k][ssel, order]
-        fdata[FV.WEIGHT] = mdata[FV.WEIGHT]
+        fdata[FV.WEIGHT] = fdata[FV.WEIGHT][ssel, order]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -91,18 +91,15 @@ class FarmWakesCalculation(FarmDataModel):
         # and all wake deltas, both storing as
         # (n_states, n_order, n_rpoints)
         wpoints = {}
-        wdeltas = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in wpoints:
                 wpoints[pwake.name] = pwake.get_wake_points(
                     algo, mdata, fdata)
-            wdeltas[wname] = pwake.new_wake_deltas(
-                algo, mdata, fdata, wmodel, wpoints[pwake.name])
 
-        def _get_wdata(wname, s):
+        def _get_wdata(tdata_all, wdeltas, s):
             tdata = tdata_all.get_slice(s)
-            wdelta = {v: d[s] for v, d in wdeltas[wname].items()}
+            wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
@@ -120,21 +117,23 @@ class FarmWakesCalculation(FarmDataModel):
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             tdata_all = Data.from_tpoints(rpoints=wpoints[pwake.name])
+            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, 
+                                            wmodel, wpoints[pwake.name])
 
             for oi in range(n_turbines):
                 
                 if oi > 0:
-                    tdata, wdelta = _get_wdata(wname, np.s_[:, :oi])
+                    tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
+                                               np.s_[:, :oi])
                     pwake.contribute(algo, mdata, fdata, 
                                         tdata, oi, wdelta, wmodel)
 
                 if oi < n_turbines - 1:
-                    tdata, wdelta = _get_wdata(wname, np.s_[:, oi+1:])
+                    tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
+                                               np.s_[:, oi+1:])
                     pwake.contribute(algo, mdata, fdata,
                                         tdata, oi, wdelta, wmodel)
                 
-                _evaluate(algo, mdata, fdata, wdeltas[wname], oi, wmodel, pwake)
-            
-            del wdeltas[wname]
+                _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
             
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
