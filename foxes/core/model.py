@@ -1,9 +1,9 @@
 import numpy as np
 from abc import ABC
 from itertools import count
+from copy import deepcopy
 
 import foxes.constants as FC
-import foxes.variables as FV
 from .data import Data
 
 
@@ -477,8 +477,8 @@ class Model(ABC):
                 data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
             )
 
-        self._store[i0][name] = data[name]
-        self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
+        self._store[i0][name] = deepcopy(data[name])
+        self._store[i0].dims[name] = deepcopy(data.dims[name]) if name in data.dims else None
 
     def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
         """
@@ -508,7 +508,7 @@ class Model(ABC):
         """
         if name in data:
             return (data[name], data.dims[name]) if ret_dims else data[name]
-
+        
         i0 = data.states_i0(counter=True, algo=algo)
         if not safe or (i0 in self._store and name in self._store[i0]):
             if ret_dims:
@@ -518,34 +518,3 @@ class Model(ABC):
         else:
             return (None, None) if ret_dims else None
 
-    '''
-    @classmethod
-    def reduce_states(cls, sel_states, objs):
-        """
-        Modifies the given objects by selecting a
-        subset of states.
-
-        Parameters
-        ----------
-        sel_states: list of int
-            The states selection
-        objs: list of foxes.core.Data
-            The objects, e.g. [mdata, fdata, pdata]
-
-        Returns
-        -------
-        mobjs: list of foxes.core.Data
-            The modified objects with reduced
-            states dimension
-
-        """
-        out = []
-        for o in objs:
-            data = {
-                v: d[sel_states] if o.dims[v][0] == FC.STATE else d
-                for v, d in o.items()
-            }
-            out.append(Data(data, o.dims, loop_dims=o.loop_dims, name=o.name))
-
-        return out
-        '''

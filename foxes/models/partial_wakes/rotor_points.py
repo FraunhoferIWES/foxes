@@ -68,7 +68,7 @@ class RotorPoints(PartialWakesModel):
         rotor = algo.rotor_model
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
         amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
-        wres = {v: a[:, downwind_index, None] for v, a in amb_res.items()}
+        wres = {v: a[:, downwind_index, None].copy() for v, a in amb_res.items()}
         del amb_res
         
         wdel = {v: d[:, downwind_index, None] for v, d in wake_deltas.items()}
