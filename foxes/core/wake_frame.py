@@ -149,7 +149,7 @@ class WakeFrame(Model):
             out[:] = fdata[variable][s, downwind_index, None]
             dims = (FC.STATE, FC.TARGET)
         elif target == FC.STATE_TARGET_TPOINT:
-            out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoint), dtype=FC.DTYPE)
+            out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
             out[:] = fdata[variable][s, downwind_index, None]
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
         else:

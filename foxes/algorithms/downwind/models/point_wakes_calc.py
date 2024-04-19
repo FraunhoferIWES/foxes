@@ -167,14 +167,18 @@ class PointWakesCalculation(PointDataModel):
                         algo, mdata, fdata, tdata, downwind_index, wmodel, wdeltas
                     )
                 
-                for v in wdeltas.keys():
-                    if v not in res:
-                        res[v] = tdata[FV.var2amb[v]]
+                for v in self.pvars:
+                    if v not in res and v in tdata:
+                        res[v] = tdata[v].copy()
+                        
                 wmodel.finalize_wake_deltas(algo, mdata, fdata, res, wdeltas)
 
-            for v in self.pvars:
-                if v in wdeltas:
-                    tdata[v] = res[v] + wdeltas[v]
+                for v in res.keys():
+                    if v in wdeltas:
+                        res[v] += wdeltas[v]
+
+        for v in res.keys():
+            tdata[v] = res[v]
 
         if self.emodels is not None:
             self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)

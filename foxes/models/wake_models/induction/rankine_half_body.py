@@ -138,53 +138,49 @@ class RankineHalfBody(TurbineInductionModel):
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
 
-        """
-        # get x, y and z
-        x = wake_coos[..., 0]
-        y = wake_coos[..., 1]
-        z = wake_coos[..., 2]
-
+        """        
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_TARGET,
+            FC.STATE_TARGET_TPOINT,
             lookup="w",
             algo=algo,
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
             upcast=False,
-        )[:, :, True]
+        )
 
         # get ws:
         ws = self.get_data(
             FV.REWS,
-            FC.STATE_TARGET,
+            FC.STATE_TARGET_TPOINT,
             lookup="w",
             algo=algo,
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
-        )[:, :, None]
+            upcast=False,
+        )
 
         # get D
         D = self.get_data(
             FV.D,
-            FC.STATE_TARGET,
+            FC.STATE_TARGET_TPOINT,
             lookup="w",
             algo=algo,
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
             upcast=True,
-        )[:, :, None]
+        )
 
         # calc m (page 7, skipping pi everywhere)
         m = 2 * ws * self.induction.ct2a(ct) * (D / 2) ** 2
 
         # get r and theta
-        r = np.sqrt(y**2 + z**2)
+        x = wake_coos[..., 0]
+        r = np.linalg.norm(wake_coos[..., 1:], axis=-1)
         r_sph = np.sqrt(r**2 + x**2)
         theta = np.arctan2(r, x)
 
@@ -197,26 +193,26 @@ class RankineHalfBody(TurbineInductionModel):
         xs = -np.sqrt(m / (4 * ws))
 
         # set values out of body shape
-        sp_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
-        if np.any(sp_sel):
+        st_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
+        if np.any(st_sel):
             # apply selection
-            xyz = wake_coos[sp_sel]
+            xyz = wake_coos[st_sel]
 
             # calc velocity components
-            vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
-            wake_deltas["U"][sp_sel] += vel_factor * xyz[:, 0]
-            wake_deltas["V"][sp_sel] += vel_factor * xyz[:, 1]
+            vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
+            wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
+            wake_deltas["V"][st_sel] += vel_factor * xyz[:, 1]
 
         # set values inside body shape
-        sp_sel = (ct > 0) & (RHB_shape >= -1) & (x >= xs) & (x < 0)
-        if np.any(sp_sel):
+        st_sel = (ct > 0) & (RHB_shape >= -1) & (x >= xs) & (x < 0)
+        if np.any(st_sel):
             # apply selection
-            xyz = np.zeros_like(wake_coos[sp_sel])
-            xyz[:, 0] = xs[sp_sel]
+            xyz = np.zeros_like(wake_coos[st_sel])
+            xyz[:, 0] = xs[st_sel]
 
             # calc velocity components
-            vel_factor = m[sp_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
-            wake_deltas["U"][sp_sel] += vel_factor * xyz[:, 0]
+            vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
+            wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
 
         return wake_deltas
 
@@ -243,23 +239,22 @@ class RankineHalfBody(TurbineInductionModel):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_points)
+            values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta
-            applies, values: numpy.ndarray with shape
-            (n_states, n_points, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_points) afterwards
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
 
         """
         # calc ambient wind vector:
         ws0 = amb_results[FV.WS]
         nx = wd2uv(amb_results[FV.WD])
-        wind_vec = nx * ws0[:, :, None]
+        wind_vec = nx * ws0[:, :, :, None]
 
         # wake deltas are in wake frame, rotate back to global frame:
-        ny = np.stack((-nx[:, :, 1], nx[:, :, 0]), axis=2)
-        delta_uv = wake_deltas["U"][:, :, None] * nx + wake_deltas["V"][:, :, None] * ny
+        ny = np.stack((-nx[..., 1], nx[..., 0]), axis=-1)
+        delta_uv = wake_deltas["U"][:, :, :, None] * nx + wake_deltas["V"][:, :, :, None] * ny
         del ws0, nx, ny
 
         # add ambient result to wake deltas:
