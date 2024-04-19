@@ -73,7 +73,7 @@ class RankineHalfBody(TurbineInductionModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def new_wake_deltas(self, algo, mdata, fdata, wpoints):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.
 
@@ -85,9 +85,8 @@ class RankineHalfBody(TurbineInductionModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        wpoints: numpy.ndarray
-            The wake evaluation points,
-            shape: (n_states, n_turbines, n_rpoints, 3)
+        tdata: foxes.core.Data
+            The target point data
         
         Returns
         -------
@@ -97,10 +96,10 @@ class RankineHalfBody(TurbineInductionModel):
 
         """
         return {
-            FV.WS: np.zeros_like(wpoints[:, :, :, 0]),
-            FV.WD: np.zeros_like(wpoints[:, :, :, 0]),
-            "U": np.zeros_like(wpoints[:, :, :, 0]),
-            "V": np.zeros_like(wpoints[:, :, :, 0])
+            FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0]),
+            FV.WD: np.zeros_like(tdata[FC.TARGETS][..., 0]),
+            "U": np.zeros_like(tdata[FC.TARGETS][..., 0]),
+            "V": np.zeros_like(tdata[FC.TARGETS][..., 0])
         }
     
     def contribute(
@@ -213,8 +212,6 @@ class RankineHalfBody(TurbineInductionModel):
             # calc velocity components
             vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
             wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
-        print("RHB CONTR U",downwind_index,wake_deltas["U"])
-        return wake_deltas
 
     def finalize_wake_deltas(
         self,
@@ -247,7 +244,6 @@ class RankineHalfBody(TurbineInductionModel):
             with shape (n_states, n_targets, n_tpoints)
 
         """
-        print("RHB FINAL U",wake_deltas["U"])
         # calc ambient wind vector:
         ws0 = amb_results[FV.WS]
         nx = wd2uv(amb_results[FV.WD])

@@ -271,7 +271,7 @@ class Data(Dict):
     @classmethod
     def from_tpoints(
         cls,
-        rpoints,
+        tpoints,
         data={},
         dims={},
         name="tdata",
@@ -281,8 +281,8 @@ class Data(Dict):
 
         Parameters
         ----------
-        rpoints: np.ndarray
-            The points at rotors, shape: 
+        tpoints: np.ndarray
+            The points at targets, shape: 
             (n_states, n_targets, n_tpoints, 3)
         data: dict
             The initial data to be stored
@@ -298,12 +298,11 @@ class Data(Dict):
             The data object
 
         """
-        if len(rpoints.shape) != 4 or rpoints.shape[3] != 3:
+        if len(tpoints.shape) != 4 or tpoints.shape[3] != 3:
             raise ValueError(
-                f"Expecting rpoints shape (n_states, n_targets, n_tpoints, 3), got {rpoints.shape}"
+                f"Expecting tpoints shape (n_states, n_targets, n_tpoints, 3), got {tpoints.shape}"
             )
-        n_states, n_targets, n_tpoints = rpoints.shape[:3]
-        data[FC.TARGETS] = rpoints
+        data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         return Data(data, dims, [FC.STATE], name)
     

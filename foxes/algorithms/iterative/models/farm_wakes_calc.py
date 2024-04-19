@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import FarmDataModel, Data
-
+import foxes.constants as FC
 
 class FarmWakesCalculation(FarmDataModel):
     """
@@ -90,52 +90,48 @@ class FarmWakesCalculation(FarmDataModel):
         # generate all wake evaluation points
         # and all wake deltas, both storing as
         # (n_states, n_order, n_rpoints)
-        wpoints = {}
+        pwake2tdata = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
-            if pwake.name not in wpoints:
-                wpoints[pwake.name] = pwake.get_wake_points(
-                    algo, mdata, fdata)
+            if pwake.name not in pwake2tdata:
+                pwake2tdata[pwake.name] = Data.from_tpoints(
+                    tpoints=pwake.get_wake_points(algo, mdata, fdata)
+                )
 
-        def _get_wdata(tdata_all, wdeltas, s):
-            tdata = tdata_all.get_slice(s)
+        def _get_wdata(tdatap, wdeltas, s):
+            tdata = tdatap.get_slice(s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
-            print("FWAKECALCIT EVAL",wdeltas["WS"])
             pwake.evaluate_results(
                 algo, mdata, fdata, wdeltas, wmodel, oi)
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
-            fdata.update(res)
 
-            if self.urelax is not None:
+            if self.urelax is None:
+                fdata.update(res)
+            else:
                 res = self.urelax.calculate(algo, mdata, fdata, oi)
                 for v, d in res.items():
                     fdata[v][:, oi] = d
 
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
-            tdata_all = Data.from_tpoints(rpoints=wpoints[pwake.name])
-            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, 
-                                            wmodel, wpoints[pwake.name])
+            tdatap = pwake2tdata[pwake.name]
+            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
 
             for oi in range(n_turbines):
                 
                 if oi > 0:
-                    tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
-                                               np.s_[:, :oi])
-                    pwake.contribute(algo, mdata, fdata, 
-                                        tdata, oi, wdelta, wmodel)
-                    print("FWAKECALCIT CONTR",oi,wdeltas["WS"])
+                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
+                    pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
 
                 if oi < n_turbines - 1:
-                    tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
-                                               np.s_[:, oi+1:])
-                    pwake.contribute(algo, mdata, fdata,
-                                        tdata, oi, wdelta, wmodel)
-                    print("FWAKECALCIT CONTR",oi,wdeltas["WS"])
+                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
+                    pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+
+            for oi in range(n_turbines):
                 _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
             
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

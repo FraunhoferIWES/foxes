@@ -3,6 +3,7 @@ import numpy as np
 
 from foxes.utils import all_subclasses
 import foxes.variables as FV
+import foxes.constants as FC
 
 from .model import Model
 
@@ -29,7 +30,7 @@ class WakeModel(Model):
         """
         return True
 
-    def new_wake_deltas(self, algo, mdata, fdata, wpoints):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.
 
@@ -41,9 +42,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        wpoints: numpy.ndarray
-            The wake evaluation points,
-            shape: (n_states, n_turbines, n_rpoints, 3)
+        tdata: foxes.core.Data
+            The target point data
         
         Returns
         -------
@@ -53,7 +53,7 @@ class WakeModel(Model):
 
         """
         return {
-            FV.WS: np.zeros_like(wpoints[:, :, :, 0])
+            FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])
         }
 
     @abstractmethod

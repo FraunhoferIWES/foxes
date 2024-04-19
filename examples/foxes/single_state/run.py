@@ -153,6 +153,7 @@ if __name__ == "__main__":
         ]
     )
     print()
+    quit()
 
     # results by turbine
     turbine_results = o.reduce_states(

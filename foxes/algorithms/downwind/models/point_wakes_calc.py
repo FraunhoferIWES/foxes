@@ -153,7 +153,7 @@ class PointWakesCalculation(PointDataModel):
         
         res = {}
         for wmodel in algo.wake_models.values():
-            wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata[FC.TARGETS])
+            wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
             if len(set(self.pvars).intersection(wdeltas.keys())):
                 
                 if downwind_index is None:

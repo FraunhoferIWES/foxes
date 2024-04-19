@@ -1,6 +1,4 @@
 from foxes.core import PartialWakesModel
-import foxes.constants as FC
-
 
 class RotorPoints(PartialWakesModel):
     """
@@ -65,6 +63,7 @@ class RotorPoints(PartialWakesModel):
             The index in the downwind order
 
         """
+        print("RPONTS EVAL A",wmodel.name,downwind_index,fdata["REWS"])
         rotor = algo.rotor_model
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
         amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
@@ -82,3 +81,5 @@ class RotorPoints(PartialWakesModel):
             algo, mdata, fdata, wres, weights, 
             downwind_index=downwind_index
         )
+        
+        print("RPONTS EVAL B",wmodel.name,downwind_index,fdata["REWS"])

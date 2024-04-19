@@ -76,6 +76,7 @@ class Iterative(Downwind):
             pre_wake={}, 
             last={}
         )
+        self._urelax = None
 
     def set_urelax(self, entry_point, **urel):
         """

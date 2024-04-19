@@ -62,15 +62,15 @@ class FarmWakesCalculation(FarmDataModel):
         # generate all wake evaluation points
         # and all wake deltas, both storing as
         # (n_states, n_order, n_rpoints)
-        wpoints = {}
+        pwake2tdata = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
-            if pwake.name not in wpoints:
-                wpoints[pwake.name] = pwake.get_wake_points(
-                    algo, mdata, fdata)
-
-        def _get_wdata(tdata_all, wdeltas, s):
-            tdata = tdata_all.get_slice(s)
+            if pwake.name not in pwake2tdata:
+                pwake2tdata[pwake.name] = Data.from_tpoints(
+                    tpoints=pwake.get_wake_points(algo, mdata, fdata)
+                )
+        def _get_wdata(tdatap, wdeltas, s):
+            tdata = tdatap.get_slice(s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
@@ -83,9 +83,8 @@ class FarmWakesCalculation(FarmDataModel):
 
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
-            tdata_all = Data.from_tpoints(rpoints=wpoints[pwake.name])
-            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, 
-                                            wmodel, wpoints[pwake.name])
+            tdatap = pwake2tdata[pwake.name]
+            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
             
             # downwind:
             if wmodel.affects_downwind:
@@ -94,10 +93,8 @@ class FarmWakesCalculation(FarmDataModel):
                         _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
 
                     if oi < n_turbines - 1:
-                        tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
-                                                   np.s_[:, oi+1:])
-                        pwake.contribute(algo, mdata, fdata, 
-                                         tdata, oi, wdelta, wmodel)
+                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
+                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
                 
             # upwind:
             else:
@@ -106,9 +103,7 @@ class FarmWakesCalculation(FarmDataModel):
                         _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
 
                     if oi > 0:
-                        tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
-                                                   np.s_[:, :oi])
-                        pwake.contribute(algo, mdata, fdata, 
-                                         tdata, oi, wdelta, wmodel)
+                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
+                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

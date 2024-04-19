@@ -45,7 +45,7 @@ class PartialWakesModel(Model):
         """
         pass
 
-    def new_wake_deltas(self, algo, mdata, fdata, wmodel, wpoints):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata, wmodel):
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -58,6 +58,8 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        tdata: foxes.core.Data
+            The target point data
         wmodel: foxes.core.WakeModel
             The wake model
         wpoints: numpy.ndarray
@@ -71,7 +73,7 @@ class PartialWakesModel(Model):
             wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
 
         """
-        return wmodel.new_wake_deltas(algo, mdata, fdata, wpoints)
+        return wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
 
     def contribute(
         self,
