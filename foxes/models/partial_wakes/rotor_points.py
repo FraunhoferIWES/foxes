@@ -39,6 +39,7 @@ class RotorPoints(PartialWakesModel):
         wake_deltas,
         wmodel,
         downwind_index,
+        amb_rotor_res,
     ):
         """
         Updates the farm data according to the wake
@@ -54,32 +55,37 @@ class RotorPoints(PartialWakesModel):
             The farm data
             Modified in-place by this function
         wake_deltas: dict
-            The wake deltas object. Key: variable str, 
-            value: numpy.ndarray with shape 
-            (n_states, n_targets, n_tpoints, ...)
+            The wake deltas object of the selected
+            turbines in the downwind order, shape:
+            (n_states, 1, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
+        amb_rotor_res: dict
+            The ambient results at rotor points of
+            the selected turbines in the downwind order. 
+            Key: variable name, value: numpy.ndarray 
+            with shape (n_states, 1, n_rpoints)
+        
+        Returns
+        -------
+        rotor_res: dict
+            Waked results at rotor points of
+            the selected downwind turbines. Key: variable
+            name, value: numpy.ndarray with shape
+            (n_states, 1, n_rpoints)
 
         """
-        print("RPONTS EVAL A",wmodel.name,downwind_index,fdata["REWS"])
-        rotor = algo.rotor_model
-        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
-        wres = {v: a[:, downwind_index, None].copy() for v, a in amb_res.items()}
-        del amb_res
-        
-        wdel = {v: d[:, downwind_index, None] for v, d in wake_deltas.items()}
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, 
+                                    amb_rotor_res, wake_deltas)
 
-        for v in wres.keys():
-            if v in wdel:
-                wres[v] += wdel[v]
+        wres = {}
+        for v in amb_rotor_res.keys():
+            if v in wake_deltas:
+                wres[v] = amb_rotor_res[v] + wake_deltas[v]
+            else:
+                wres[v] = amb_rotor_res[v].copy()
 
-        algo.rotor_model.eval_rpoint_results(
-            algo, mdata, fdata, wres, weights, 
-            downwind_index=downwind_index
-        )
+        return wres
         
-        print("RPONTS EVAL B",wmodel.name,downwind_index,fdata["REWS"])

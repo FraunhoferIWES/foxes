@@ -127,6 +127,7 @@ class PartialWakesModel(Model):
         wake_deltas,
         wmodel,
         downwind_index,
+        amb_rotor_res,
     ):
         """
         Updates the farm data according to the wake
@@ -142,13 +143,26 @@ class PartialWakesModel(Model):
             The farm data
             Modified in-place by this function
         wake_deltas: dict
-            The wake deltas object. Key: variable str, 
-            value: numpy.ndarray with shape 
-            (n_states, n_targets, n_tpoints, ...)
+            The wake deltas object of the selected
+            turbines in the downwind order, shape:
+            (n_states, 1, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
+        amb_rotor_res: dict
+            The ambient results at rotor points of
+            the selected turbines in the downwind order. 
+            Key: variable name, value: numpy.ndarray 
+            with shape (n_states, 1, n_rpoints)
+        
+        Returns
+        -------
+        rotor_res: dict
+            Waked results at rotor points of
+            the selected downwind turbines. Key: variable
+            name, value: numpy.ndarray with shape
+            (n_states, 1, n_rpoints)
 
         """
         pass

@@ -60,7 +60,6 @@ class FarmWakesCalculation(FarmDataModel):
         n_turbines = mdata.n_turbines
 
         # generate all wake evaluation points
-        # and all wake deltas, both storing as
         # (n_states, n_order, n_rpoints)
         pwake2tdata = {}
         for wname, wmodel in algo.wake_models.items():
@@ -69,14 +68,31 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2tdata[pwake.name] = Data.from_tpoints(
                     tpoints=pwake.get_wake_points(algo, mdata, fdata)
                 )
+        
+        # collect ambient rotor results and weights:
+        rotor = algo.rotor_model
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+
         def _get_wdata(tdatap, wdeltas, s):
+            """ Helper function for wake data extraction """
             tdata = tdatap.get_slice(s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
-            pwake.evaluate_results(
-                algo, mdata, fdata, wdeltas, wmodel, oi)
+        def _evaluate(amb_res, wdeltas, oi, wmodel, pwake):
+            """ Helper function for data evaluation at turbines """
+            ares = {v: d[:, oi, None] for v, d in amb_res.items()}
+            wdel = {v: d[:, oi, None] for v, d in wdeltas.items()}
+            res = pwake.evaluate_results(algo, mdata, fdata, wdel,
+                                         wmodel, oi, ares)
+
+            for v, d in res.items():
+                amb_res[v][:, oi] = d[:, 0]
+
+            rotor.eval_rpoint_results(algo, mdata, fdata, res, 
+                                      weights, downwind_index=oi)
+
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
             fdata.update(res)
@@ -90,7 +106,7 @@ class FarmWakesCalculation(FarmDataModel):
             if wmodel.affects_downwind:
                 for oi in range(n_turbines):
                     if oi > 0:
-                        _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
+                        _evaluate(amb_res, wdeltas, oi, wmodel, pwake)
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
@@ -100,7 +116,7 @@ class FarmWakesCalculation(FarmDataModel):
             else:
                 for oi in range(n_turbines-1, -1, -1):
                     if oi < n_turbines - 1:
-                        _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
+                        _evaluate(amb_res, wdeltas, oi, wmodel, pwake)
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
