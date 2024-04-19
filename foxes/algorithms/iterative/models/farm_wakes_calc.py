@@ -103,6 +103,7 @@ class FarmWakesCalculation(FarmDataModel):
             return tdata, wdelta
 
         def _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake):
+            print("FWAKECALCIT EVAL",wdeltas["WS"])
             pwake.evaluate_results(
                 algo, mdata, fdata, wdeltas, wmodel, oi)
             res = algo.farm_controller.calculate(
@@ -127,13 +128,14 @@ class FarmWakesCalculation(FarmDataModel):
                                                np.s_[:, :oi])
                     pwake.contribute(algo, mdata, fdata, 
                                         tdata, oi, wdelta, wmodel)
+                    print("FWAKECALCIT CONTR",oi,wdeltas["WS"])
 
                 if oi < n_turbines - 1:
                     tdata, wdelta = _get_wdata(tdata_all, wdeltas, 
                                                np.s_[:, oi+1:])
                     pwake.contribute(algo, mdata, fdata,
                                         tdata, oi, wdelta, wmodel)
-                
+                    print("FWAKECALCIT CONTR",oi,wdeltas["WS"])
                 _evaluate(algo, mdata, fdata, wdeltas, oi, wmodel, pwake)
             
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

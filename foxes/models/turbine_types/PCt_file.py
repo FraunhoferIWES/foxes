@@ -233,11 +233,11 @@ class PCtFile(TurbineType):
         out[FV.P][st_sel] = np.interp(
             rews3, self.data_ws, self.data_P, left=0.0, right=0.0
         )
-        out[FV.CT][st_sel] = 0.8
-        print("PCT SETTING CT = 0.8")
-        #np.interp(
-        #    rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
-        #)
+        #out[FV.CT][st_sel] = 0.8
+        #print("PCT SETTING CT = 0.8")
+        out[FV.CT][st_sel] = np.interp(
+            rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
+        )
 
         return out
 

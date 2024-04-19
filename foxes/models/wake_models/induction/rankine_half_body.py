@@ -213,7 +213,7 @@ class RankineHalfBody(TurbineInductionModel):
             # calc velocity components
             vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
             wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
-
+        print("RHB CONTR U",downwind_index,wake_deltas["U"])
         return wake_deltas
 
     def finalize_wake_deltas(
@@ -247,6 +247,7 @@ class RankineHalfBody(TurbineInductionModel):
             with shape (n_states, n_targets, n_tpoints)
 
         """
+        print("RHB FINAL U",wake_deltas["U"])
         # calc ambient wind vector:
         ws0 = amb_results[FV.WS]
         nx = wd2uv(amb_results[FV.WD])
