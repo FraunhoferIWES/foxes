@@ -202,12 +202,9 @@ class SelfSimilar(TurbineInductionModel):
 
         # get x, r and R etc
         x = wake_coos[..., 0]
-        y = wake_coos[..., 1]
-        z = wake_coos[..., 2]
         R = D / 2
         x_R = x / R
-        r = np.sqrt(y**2 + z**2)
-        r_R = r / R
+        r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
         # select values
         sp_sel = (ct > 0) & (x < 0)  # upstream
@@ -221,7 +218,7 @@ class SelfSimilar(TurbineInductionModel):
 
         # set area behind to mirrored value EXCEPT for area behind turbine
         if not self.pre_rotor_only:
-            sp_sel = (ct > 0) & (x > 0) & (r_R > 1)
+            sp_sel = (ct > 0) & (x >= 0) & (r_R > 1)
             if np.any(sp_sel):
                 # velocity eqn 10 from [1]
                 xr = x_R[sp_sel]
