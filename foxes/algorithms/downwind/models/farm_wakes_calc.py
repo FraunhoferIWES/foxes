@@ -1,6 +1,6 @@
 import numpy as np
+from copy import deepcopy
 
-import foxes.variables as FV
 from foxes.core import FarmDataModel, Data
 
 
@@ -71,7 +71,7 @@ class FarmWakesCalculation(FarmDataModel):
         
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+        amb_res = deepcopy(rotor.from_data_or_store(rotor.AMBRES, algo, mdata).copy())
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
 
         def _get_wdata(tdatap, wdeltas, s):
@@ -87,11 +87,11 @@ class FarmWakesCalculation(FarmDataModel):
             res = pwake.evaluate_results(algo, mdata, fdata, wdel,
                                          wmodel, oi, ares)
 
-            for v, d in res.items():
-                amb_res[v][:, oi] = d[:, 0]
-
             rotor.eval_rpoint_results(algo, mdata, fdata, res, 
                                       weights, downwind_index=oi)
+
+            for v, d in res.items():
+                amb_res[v][:, oi] = d[:, 0]
 
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)

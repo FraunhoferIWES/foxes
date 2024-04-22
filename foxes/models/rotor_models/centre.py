@@ -124,7 +124,6 @@ class CentreRotor(RotorModel):
             variables after calculation
 
         """
-        print("RCENTRE",downwind_index, rpoint_results)
         if len(weights) > 1:
             return super().eval_rpoint_results(
                 algo, mdata, fdata, rpoint_results, weights, downwind_index
