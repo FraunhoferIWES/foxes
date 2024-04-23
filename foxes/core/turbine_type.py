@@ -60,6 +60,19 @@ class TurbineType(TurbineModel):
                 f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}"
             )
 
+    def set_continuous_cutin(self, variable):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+        
+        Parameters
+        ----------
+        variable: str
+            The target variable
+            
+        """
+        raise NotImplementedError(f"Turbine type '{self.name}': Continuous cutin not implemented for target variable '{variable}'")
+
     @classmethod
     def new(cls, ttype_type, *args, **kwargs):
         """

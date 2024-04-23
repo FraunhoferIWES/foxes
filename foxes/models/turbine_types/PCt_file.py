@@ -169,6 +169,46 @@ class PCtFile(TurbineType):
 
         return super().load_data(algo, verbosity)
 
+    def set_continuous_cutin(self, variable, steps=10, iterations=100):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+        
+        Parameters
+        ----------
+        variable: str
+            The target variable
+        steps: int
+            The number of steps to be added
+        iterations: int
+            The number of iterations
+            
+        """
+        if variable == FV.CT:
+            
+            ws = self.data_ws
+            ct = self.data_ct
+            P = self.data_P
+
+            if ws[0] > 1e-5:
+
+                if self.data_ct[0] < 1e-5:
+                    raise ValueError(f"Turbine type '{self.name}': require first ct value above 1e-5, got: ct(ws={ws[0]}) = {ct[0]})")
+            
+                new_ws = np.linspace(0., ws[0], steps+1, dtype=ws.dtype)
+                new_ct = np.zeros_like(new_ws)
+                new_ct[-1] = ct[0]
+
+                for it in range(iterations):
+                    new_ct[1:-1] = 0.5 * (new_ct[:-2] + new_ct[2:])
+                
+                self.data_ws = np.concatenate([new_ws[:-1], ws], axis=0)
+                self.data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
+                self.data_P = np.concatenate([np.zeros_like(new_ws[:-1]), P], axis=0)
+
+        else:
+            super().add_smooth_cutin(variable)
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.
@@ -233,8 +273,6 @@ class PCtFile(TurbineType):
         out[FV.P][st_sel] = np.interp(
             rews3, self.data_ws, self.data_P, left=0.0, right=0.0
         )
-        #out[FV.CT][st_sel] = 0.8
-        #print("PCT SETTING CT = 0.8")
         out[FV.CT][st_sel] = np.interp(
             rews2, self.data_ws, self.data_ct, left=0.0, right=0.0
         )

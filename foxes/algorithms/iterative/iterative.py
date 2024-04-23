@@ -97,6 +97,14 @@ class Iterative(Downwind):
             )
         self._urelax[entry_point].update(urel)
 
+    def initialize(self):
+        """
+        Initializes the algorithm.
+        """
+        super().initialize()
+        for t in self.farm_controller.turbine_types:
+            t.set_continuous_cutin(FV.CT)
+
     @property
     def urelax(self):
         """
