@@ -150,7 +150,7 @@ class WakeFrame(Model):
             dims = (FC.STATE, FC.TARGET)
         elif target == FC.STATE_TARGET_TPOINT:
             out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
-            out[:] = fdata[variable][s, downwind_index, None]
+            out[:] = fdata[variable][s, downwind_index, None, None]
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
         else:
             raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}")

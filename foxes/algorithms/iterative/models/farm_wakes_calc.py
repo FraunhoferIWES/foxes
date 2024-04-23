@@ -84,9 +84,6 @@ class FarmWakesCalculation(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        # prepare:
-        n_turbines = mdata.n_turbines
-
         # generate all wake evaluation points
         # and all wake deltas, both storing as
         # (n_states, n_order, n_rpoints)
@@ -101,7 +98,7 @@ class FarmWakesCalculation(FarmDataModel):
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = deepcopy(rotor.from_data_or_store(rotor.AMBRES, algo, mdata))
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
 
         def _get_wdata(tdatap, wdeltas, s):
             """ Helper function for wake data extraction """
@@ -109,19 +106,8 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(algo, mdata, fdata, oi):
-            """ Helper function for data evaluation at turbines """
-            res = algo.farm_controller.calculate(
-                algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
-
-            if self.urelax is None:
-                fdata.update(res)
-            else:
-                res = self.urelax.calculate(algo, mdata, fdata, oi)
-                for v, d in res.items():
-                    fdata[v][:, oi] = d
-
         wake_res = deepcopy(amb_res)
+        n_turbines = mdata.n_turbines
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             tdatap = pwake2tdata[pwake.name]
@@ -143,11 +129,15 @@ class FarmWakesCalculation(FarmDataModel):
                 for v, d in wres.items():
                     if v in wake_res:
                         wake_res[v][:, oi] += d
+
+            del tdata, wdelta, pwake, tdatap, wdeltas
         
         rotor.eval_rpoint_results(
             algo, mdata, fdata, wake_res, weights
         )
-        for oi in range(n_turbines):
-            _evaluate(algo, mdata, fdata, oi)
+        res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False)
+        if self.urelax is not None:
+            res = self.urelax.calculate(algo, mdata, fdata, res)
+        fdata.update(res)
             
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

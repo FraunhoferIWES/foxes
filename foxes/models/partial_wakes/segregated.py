@@ -120,63 +120,15 @@ class PartialSegregated(PartialWakesModel):
 
         """
         ares = {v: d[:, downwind_index, None] for v, d in amb_res.items()}
+        n_states, __, n_rotor_points = next(iter(ares.values())).shape
 
         gweights = self.rotor.rotor_point_weights()
-        wdel = {v: np.einsum('sp,p->s', d[:, downwind_index], gweights)[:, None, None]
-                for v, d in wake_deltas.items()}
+        wdel = {}
+        for v, d in wake_deltas.items():
+            wdel[v] = np.zeros((n_states, 1, n_rotor_points))
+            wdel[v][:] = np.einsum('sp,p->s', d[:, downwind_index], gweights)[:, None, None]
         
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
         return {v: d[:, 0] for v, d in wdel.items()}
     
-    def evaluate_results(
-        self,
-        algo,
-        mdata,
-        fdata,
-        wake_deltas,
-        wmodel,
-        downwind_index,
-    ):
-        """
-        Updates the farm data according to the wake
-        deltas.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-            Modified in-place by this function
-        wake_deltas: dict
-            The wake deltas object. Key: variable str, 
-            value: numpy.ndarray with shape 
-            (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
-        downwind_index: int
-            The index in the downwind order
-
-        """
-        rotor = algo.rotor_model
-        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
-        wres = {v: a[:, downwind_index, None].copy() for v, a in amb_res.items()}
-        del amb_res
-        
-        wdel = {v: d[:, downwind_index, None] for v, d in wake_deltas.items()}
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, wres, wdel)
-        
-        gweights = self.rotor.rotor_point_weights()
-        for v in wres.keys():
-            if v in wake_deltas:
-                wres[v] += np.einsum('stp,p->st', wdel[v], gweights)[:, None]
-
-        algo.rotor_model.eval_rpoint_results(
-            algo, mdata, fdata, wres, weights, 
-            downwind_index=downwind_index
-        )
-        

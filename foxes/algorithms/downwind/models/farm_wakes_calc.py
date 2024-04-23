@@ -55,10 +55,6 @@ class FarmWakesCalculation(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        
-        # prepare:
-        n_turbines = mdata.n_turbines
-
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
         pwake2tdata = {}
@@ -71,8 +67,8 @@ class FarmWakesCalculation(FarmDataModel):
         
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        amb_res = deepcopy(rotor.from_data_or_store(rotor.AMBRES, algo, mdata).copy())
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
 
         def _get_wdata(tdatap, wdeltas, s):
             """ Helper function for wake data extraction """
@@ -80,23 +76,25 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(amb_res, wdeltas, oi, wmodel, pwake):
+        def _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake):
             """ Helper function for data evaluation at turbines """
-            ares = {v: d[:, oi, None] for v, d in amb_res.items()}
-            wdel = {v: d[:, oi, None] for v, d in wdeltas.items()}
-            res = pwake.evaluate_results(algo, mdata, fdata, wdel,
-                                         wmodel, oi, ares)
+            wres = pwake.finalize_wakes(algo, mdata, fdata, amb_res, 
+                                        wdeltas, wmodel, oi)
+            
+            hres = {v: d[:, oi, None] for v, d in wake_res.items()}
+            for v, d in wres.items():
+                if v in wake_res:
+                    hres[v] += d[:, None]
 
-            rotor.eval_rpoint_results(algo, mdata, fdata, res, 
-                                      weights, downwind_index=oi)
-
-            for v, d in res.items():
-                amb_res[v][:, oi] = d[:, 0]
+            rotor.eval_rpoint_results(algo, mdata, fdata, hres, weights, 
+                                      downwind_index=oi)
 
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
             fdata.update(res)
 
+        wake_res = deepcopy(amb_res)
+        n_turbines = mdata.n_turbines
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             tdatap = pwake2tdata[pwake.name]
@@ -106,7 +104,7 @@ class FarmWakesCalculation(FarmDataModel):
             if wmodel.affects_downwind:
                 for oi in range(n_turbines):
                     if oi > 0:
-                        _evaluate(amb_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
@@ -116,7 +114,7 @@ class FarmWakesCalculation(FarmDataModel):
             else:
                 for oi in range(n_turbines-1, -1, -1):
                     if oi < n_turbines - 1:
-                        _evaluate(amb_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])

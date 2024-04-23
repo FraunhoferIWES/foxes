@@ -44,7 +44,7 @@ class Iterative(Downwind):
         except AttributeError:
             return super().get_model(name)
 
-    def __init__(self, *args, max_it=None, conv_crit=None, **kwargs):
+    def __init__(self, *args, max_it=None, conv_crit="default", **kwargs):
         """
         Constructor.
 
@@ -62,7 +62,7 @@ class Iterative(Downwind):
         """
         super().__init__(*args, **kwargs)
 
-        self.max_it = 1#2 * self.farm.n_turbines if max_it is None else max_it
+        self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit=="default" else conv_crit
         )
@@ -70,12 +70,6 @@ class Iterative(Downwind):
         self._it = None
         self._mlist = None
         self._reamb = False
-        self._urelax = Dict(
-            first={}, pre_rotor={}, post_rotor={}, 
-            #pre_wake={FV.CT: 0.5}, 
-            pre_wake={}, 
-            last={}
-        )
         self._urelax = None
 
     def set_urelax(self, entry_point, **urel):
@@ -93,6 +87,14 @@ class Iterative(Downwind):
         """
         if self.initialized:
             raise ValueError(f"Attempt to set_urelax after initialization")
+        if self._urelax is None:
+            self._urelax = Dict(
+                first={}, 
+                pre_rotor={}, 
+                post_rotor={}, 
+                pre_wake={}, 
+                last={},
+            )
         self._urelax[entry_point].update(urel)
 
     @property
