@@ -62,9 +62,9 @@ class Iterative(Downwind):
         """
         super().__init__(*args, **kwargs)
 
-        self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
+        self.max_it = 1#2 * self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = (
-            self.get_model("DefaultConv")() if conv_crit is None else conv_crit
+            self.get_model("DefaultConv")() if conv_crit=="default" else conv_crit
         )
         self.prev_farm_results = None
         self._it = None
@@ -251,17 +251,19 @@ class Iterative(Downwind):
 
             self.prev_farm_results = fres
             fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
+            
+            if self.conv_crit is not None:
+                conv = self.conv_crit.check_converged(
+                    self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
+                )
 
-            conv = self.conv_crit.check_converged(
-                self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
-            )
-
-            if conv:
-                self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
-                self.print("Starting final run")
-                self._final_run = True
-                fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
-                break
+                if conv:
+                    self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
+                    self.print("Starting final run")
+                    self._final_run = True
+                    fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
+                    break
+            
 
             if self._it == 0:
                 self.verbosity -= 1

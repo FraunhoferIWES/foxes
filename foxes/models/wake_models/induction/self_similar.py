@@ -188,8 +188,8 @@ class SelfSimilar(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        # get D
-        D = self.get_data(
+        # get R
+        R = 0.5 * self.get_data(
             FV.D,
             FC.STATE_TARGET_TPOINT,
             lookup="w",
@@ -200,25 +200,25 @@ class SelfSimilar(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        # get x, r and R etc
-        x = wake_coos[..., 0]
-        R = D / 2
-        x_R = x / R
+        # get x, r and R etc. Rounding for safe x < 0 condition below
+        x_R = np.round(wake_coos[..., 0]/R, 12)
         r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
         # select values
-        sp_sel = (ct > 0) & (x < 0)  # upstream
+        sp_sel = (ct > 0) & (x_R < 0)  # upstream
         if np.any(sp_sel):
             # velocity eqn 10 from [1]
             xr = x_R[sp_sel]
             blockage = (
-                ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
+                ws[sp_sel] 
+                * self._a(ct[sp_sel], xr) 
+                * self._rad_fn(xr, r_R[sp_sel])
             )
             wake_deltas[FV.WS][sp_sel] -= blockage
 
         # set area behind to mirrored value EXCEPT for area behind turbine
         if not self.pre_rotor_only:
-            sp_sel = (ct > 0) & (x >= 0) & (r_R > 1)
+            sp_sel = (ct > 0) & (x_R > 0) & (r_R > 1)
             if np.any(sp_sel):
                 # velocity eqn 10 from [1]
                 xr = x_R[sp_sel]

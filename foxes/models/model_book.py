@@ -147,13 +147,13 @@ class ModelBook:
         self.partial_wakes = Dict(
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
-            top_hat=fm.partial_wakes.PartialTopHat(),
-            axiwake=fm.partial_wakes.PartialAxiwake(),
+            #top_hat=fm.partial_wakes.PartialTopHat(),
+            #axiwake=fm.partial_wakes.PartialAxiwake(),
             centre=fm.partial_wakes.PartialCentre(),
         )
         nlst = list(range(2, 11)) + [20]
-        for n in nlst:
-            self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
+        #for n in nlst:
+        #    self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
             self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n=n)
 
@@ -413,12 +413,11 @@ class ModelBook:
             #)
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
         self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
         self.wake_models[f"SelfSimilar2020"] = (
             fm.wake_models.induction.SelfSimilar2020()
         )
-
-        #self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
 
         self.sources = Dict(
             name="sources",

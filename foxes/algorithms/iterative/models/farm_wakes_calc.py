@@ -100,8 +100,8 @@ class FarmWakesCalculation(FarmDataModel):
 
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        amb_res = deepcopy(rotor.from_data_or_store(rotor.AMBRES, algo, mdata))
         weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = deepcopy(rotor.from_data_or_store(rotor.AMBRES, algo, mdata))
 
         def _get_wdata(tdatap, wdeltas, s):
             """ Helper function for wake data extraction """
@@ -109,19 +109,8 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(amb_res, wdeltas, oi, wmodel, pwake):
+        def _evaluate(algo, mdata, fdata, oi):
             """ Helper function for data evaluation at turbines """
-            ares = {v: d[:, oi, None] for v, d in amb_res.items()}
-            wdel = {v: d[:, oi, None] for v, d in wdeltas.items()}
-            res = pwake.evaluate_results(algo, mdata, fdata, wdel,
-                                         wmodel, oi, ares)
-
-            rotor.eval_rpoint_results(algo, mdata, fdata, res, 
-                                      weights, downwind_index=oi)
-
-            for v, d in res.items():
-                amb_res[v][:, oi] = d[:, 0]
-
             res = algo.farm_controller.calculate(
                 algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
 
@@ -132,6 +121,7 @@ class FarmWakesCalculation(FarmDataModel):
                 for v, d in res.items():
                     fdata[v][:, oi] = d
 
+        wake_res = deepcopy(amb_res)
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             tdatap = pwake2tdata[pwake.name]
@@ -146,8 +136,18 @@ class FarmWakesCalculation(FarmDataModel):
                 if oi < n_turbines - 1:
                     tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
                     pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
-
+            
             for oi in range(n_turbines):
-                _evaluate(amb_res, wdeltas, oi, wmodel, pwake)
+                wres = pwake.finalize_wakes(algo, mdata, fdata, amb_res, 
+                                            wdeltas, wmodel, oi)
+                for v, d in wres.items():
+                    if v in wake_res:
+                        wake_res[v][:, oi] += d
+        
+        rotor.eval_rpoint_results(
+            algo, mdata, fdata, wake_res, weights
+        )
+        for oi in range(n_turbines):
+            _evaluate(algo, mdata, fdata, oi)
             
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
