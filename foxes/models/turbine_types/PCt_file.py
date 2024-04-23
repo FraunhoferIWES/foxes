@@ -169,7 +169,7 @@ class PCtFile(TurbineType):
 
         return super().load_data(algo, verbosity)
 
-    def set_continuous_cutin(self, variable, steps=10, iterations=100):
+    def set_continuous_cutin(self, variable, steps=20, iterations=100):
         """
         Modify the data such that a discontinuity
         at cutin wind speed is avoided
@@ -200,7 +200,7 @@ class PCtFile(TurbineType):
                 new_ct[-1] = ct[0]
 
                 for it in range(iterations):
-                    new_ct[1:-1] = 0.5 * (new_ct[:-2] + new_ct[2:])
+                    new_ct[1:-1] = 0.55 * new_ct[:-2] + 0.45 * new_ct[2:]
                 
                 self.data_ws = np.concatenate([new_ws[:-1], ws], axis=0)
                 self.data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
