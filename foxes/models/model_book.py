@@ -206,14 +206,14 @@ class ModelBook:
             ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
                 scale_amb=True, lim_low=1e-4
             ),
-            #ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
-            #ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
-            #    scale_amb=False, lim_low=1e-4
-            #),
-            #ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
-            #ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
-            #    scale_amb=True, lim_low=1e-4
-            #),
+            ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
+            ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
+                scale_amb=False, lim_low=1e-4
+            ),
+            ws_quadratic_amb=fm.wake_superpositions.WSQuadratic(scale_amb=True),
+            ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
+                scale_amb=True, lim_low=1e-4
+            ),
             #ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
             #ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
             #ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
@@ -241,10 +241,10 @@ class ModelBook:
             "linear_lim",
             "linear_amb",
             "linear_amb_lim",
-            #"quadratic",
-            #"wquadratic_lim",
-            #"quadratic_amb",
-            #"quadratic_amb_lim",
+            "quadratic",
+            "wquadratic_lim",
+            "quadratic_amb",
+            "quadratic_amb_lim",
             #"cubic",
             #"cubic_amb",
             #"quartic",
