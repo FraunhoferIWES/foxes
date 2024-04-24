@@ -214,19 +214,19 @@ class ModelBook:
             ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
                 scale_amb=True, lim_low=1e-4
             ),
-            #ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
-            #ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
-            #ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
-            #ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
-            #ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
-            #ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
-            #ws_product=fm.wake_superpositions.WSProduct(),
-            #ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
-            #ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
-            #ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
-            #ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
-            #ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
-            #ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
+            ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
+            ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
+            ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
+            ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
+            ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
+            ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
+            ws_product=fm.wake_superpositions.WSProduct(),
+            ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
+            ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
+            ti_quadratic=fm.wake_superpositions.TIQuadratic(superp_to_amb="quadratic"),
+            ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
+            ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
+            ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
         self.axial_induction = Dict(name="induction_models")
@@ -245,14 +245,14 @@ class ModelBook:
             "wquadratic_lim",
             "quadratic_amb",
             "quadratic_amb_lim",
-            #"cubic",
-            #"cubic_amb",
-            #"quartic",
-            #"quartic_amb",
-            #"wmax",
-            #"max_amb",
-            #"product",
-            #"product_lim",
+            "cubic",
+            "cubic_amb",
+            "quartic",
+            "quartic_amb",
+            "wmax",
+            "max_amb",
+            "product",
+            "product_lim",
         ]
         for s in slist:
             self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
@@ -391,18 +391,17 @@ class ModelBook:
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
-            pass
-            #self.wake_models[f"CrespoHernandez_{s}"] = (
-            #    fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
-            #)
-            #self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
-            #    fm.wake_models.ti.CrespoHernandezTIWake(
-            #        superposition=f"ti_{s}", use_ambti=True
-            #    )
-            #)
-            #self.wake_models[f"CrespoHernandez_{s}_k002"] = (
-            #    fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
-            #)
+            self.wake_models[f"CrespoHernandez_{s}"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
+            )
+            self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(
+                    superposition=f"ti_{s}", use_ambti=True
+                )
+            )
+            self.wake_models[f"CrespoHernandez_{s}_k002"] = (
+                fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
+            )
 
             #self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
             #    superposition=f"ti_{s}", iec_type="2005"

@@ -120,11 +120,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, tdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
@@ -135,16 +133,18 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         fdata: foxes.core.Data
             The farm data
         tdata: foxes.core.Data
-            The evaluation point data
+            The target point data
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        n_states = mdata.n_states
-        wake_deltas[FV.TI] = np.zeros((n_states, tdata.n_points), dtype=FC.DTYPE)
+        return {
+            FV.TI: np.zeros_like(tdata[FC.TARGETS][..., 0])
+        }
 
     def calc_wake_radius(
         self,
@@ -199,7 +199,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         k = self.get_data(
             self.k_var,
             FC.STATE_TARGET,
-            lookup="w",
+            lookup="sw",
             algo=algo,
             fdata=fdata,
             tdata=tdata,

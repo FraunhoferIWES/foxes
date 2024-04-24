@@ -51,32 +51,6 @@ class JensenWake(TopHatWakeModel):
         s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
         return s
 
-    def init_wake_deltas(self, algo, mdata, fdata, tdata, wake_deltas):
-        """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        tdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, tdata.n_points), dtype=FC.DTYPE)
-
     def calc_wake_radius(
         self,
         algo,
