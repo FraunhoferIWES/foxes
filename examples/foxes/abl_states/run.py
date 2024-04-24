@@ -26,15 +26,15 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="level5")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default=["centre"], nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default=["grid16"], nargs="+"
     )
     parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Jensen_linear_k007"],
+        default=["CrespoHernandez_quadratic_k002", "Bastankhah2016_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument(

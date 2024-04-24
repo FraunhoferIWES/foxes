@@ -50,7 +50,7 @@ def calc(runner, args, rotor, sdata, pwake, cks):
         rotor_model=rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=pwake,
+        partial_wakes=pwake,
         chunks=cks,
         verbosity=0,
     )
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         "-p",
         "--pwakes",
         help="The partial wakes model(s)",
-        default=["distsliced9", "axiwake6", "rotor_points"],
+        default=["grid4", "grid9", "rotor_points"],
         nargs="+",
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)

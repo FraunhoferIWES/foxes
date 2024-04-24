@@ -233,12 +233,13 @@ class FarmController(FarmDataModel):
         pars = []
         for m in models:
             mi = self.turbine_model_names.index(m.name)
-            if downwind_index is None:
-                s = np.s_[:]
-            elif self._tmall[mi]:
-                s = np.s_[:, downwind_index, None]
+            if self._tmall[mi]:
+                s = np.s_[:, :] if downwind_index is None else np.s_[:, downwind_index]
             else:
-                s = mdata[FC.TMODEL_SELS][:, downwind_index, mi, None]
+                if downwind_index is None:
+                    s = mdata[FC.TMODEL_SELS][:, :, mi]
+                else:
+                    s = np.s_[mdata[FC.TMODEL_SELS][:, downwind_index, mi], downwind_index]
             pars.append({"st_sel": s})
             if m.name in self.pars:
                 pars[-1].update(self.pars[m.name][ptype])

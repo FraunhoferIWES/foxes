@@ -118,7 +118,7 @@ class SetFarmVars(TurbineModel):
         return idata
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -132,9 +132,9 @@ class SetFarmVars(TurbineModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -143,23 +143,14 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        allt = np.all(st_sel)
+        bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+        bsel[st_sel] = True
 
         for v in self.vars:
             data = mdata[self.var(v)]
             hsel = ~np.isnan(data)
-            hallt = np.all(hsel)
 
-            if allt and hallt:
-                fdata[v][:] = data
-
-            else:
-                if v not in fdata:
-                    fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-
-                tsel = st_sel & hsel
-                fdata[v][tsel] = data[tsel]
+            tsel = bsel & hsel
+            fdata[v][tsel] = data[tsel]
 
         return {v: fdata[v] for v in self.vars}

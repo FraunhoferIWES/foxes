@@ -30,7 +30,8 @@ class Sequential(Downwind):
         The points of interest, shape: (n_states, n_points, 3)
     plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
         The plugins, updated with every iteration
-
+    outputs: list of str
+        The output variables
     :group: algorithms.sequential
 
     """
@@ -67,6 +68,7 @@ class Sequential(Downwind):
         calc_pars={},
         chunks={FC.STATE: None, FC.TARGET: 1000},
         plugins=[],
+        outputs=None,
         **kwargs,
     ):
         """
@@ -93,6 +95,8 @@ class Sequential(Downwind):
             The xarray.Dataset chunk parameters
         plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
             The plugins, updated with every iteration
+        outputs: list of str, optional
+            The output variables
         kwargs: dict, optional
             Additional arguments for Downwind
 
@@ -105,6 +109,7 @@ class Sequential(Downwind):
         self.states0 = self.states.states
         self.points = points
         self.plugins = plugins
+        self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
 
         self._i = None
 
@@ -135,7 +140,7 @@ class Sequential(Downwind):
             self._counter = 0
 
             self._mlist, self._calc_pars = self._collect_farm_models(
-                self.calc_pars, self.ambient
+                self.outputs, self.calc_pars, self.ambient
             )
             if not self._mlist.initialized:
                 self._mlist.initialize(self, self.verbosity)
@@ -185,10 +190,10 @@ class Sequential(Downwind):
                 self._pdata = Data.from_points(
                     self.points,
                     data={
-                        v: np.zeros((self.n_states, n_points), dtype=FC.DTYPE)
+                        v: np.zeros((self.n_states, n_points, 1), dtype=FC.DTYPE)
                         for v in self._pvars
                     },
-                    dims={v: (FC.STATE, FC.POINT) for v in self._pvars},
+                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
                     name="pdata",
                 )
 

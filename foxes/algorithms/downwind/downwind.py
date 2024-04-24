@@ -93,7 +93,7 @@ class Downwind(Algorithm):
         wake_frame: str
             The wake frame. Will be looked up in the
             model book
-        partial_wakes: dict
+        partial_wakes: dict, list or str
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
         farm_controller: str

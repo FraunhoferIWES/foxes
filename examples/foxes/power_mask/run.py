@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
     parser.add_argument(
         "-f", "--pmax_file", help="The max_P csv file", default="power_mask.csv"
@@ -133,10 +133,12 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
         chunks=cks,
         verbosity=0,
     )
+
+    outputs = [FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.WEIGHT, FV.MAX_P]
 
     with DaskRunner(
         scheduler=args.scheduler,
@@ -145,10 +147,10 @@ if __name__ == "__main__":
     ) as runner:
         # run calculation with power mask:
 
-        farm_results = runner.run(algo.calc_farm)
+        farm_results = runner.run(algo.calc_farm, kwargs={"outputs": outputs})
 
         fr = farm_results.to_dataframe()
-        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.MAX_P, FV.AMB_P, FV.P]])
+        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
 
         o = foxes.output.FarmResultsEval(farm_results)
         P0 = o.calc_mean_farm_power(ambient=True)
@@ -157,16 +159,16 @@ if __name__ == "__main__":
 
         o1 = foxes.output.StateTurbineMap(farm_results)
 
-        # run calculation without power mask:
+        # run calculation without power mask: 
 
         mbook.finalize(algo)
         models.remove("set_Pmax")
         models.remove("PMask")
 
-        farm_results = runner.run(algo.calc_farm)
+        farm_results = runner.run(algo.calc_farm, kwargs={"outputs": outputs})
 
     fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.CT, FV.MAX_P]])
 
     o = foxes.output.FarmResultsEval(farm_results)
     P0 = o.calc_mean_farm_power(ambient=True)

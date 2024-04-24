@@ -421,7 +421,7 @@ class FieldDataNC(States):
         """
         return self._weights
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -436,18 +436,22 @@ class FieldDataNC(States):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.Data
+            The target point data
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
 
         """
         # prepare:
-        points = pdata[FC.POINTS]
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        points = tdata[FC.TARGETS].reshape(n_states, n_targets*n_tpoints, 3)
         n_pts = points.shape[1]
         n_states = fdata.n_states
 
@@ -571,4 +575,4 @@ class FieldDataNC(States):
                         (n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE
                     )
 
-        return out
+        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
     parser.add_argument(
         "-w",
@@ -120,9 +120,11 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
         chunks=cks,
     )
+
+    outputs = [FV.WD, FV.AMB_WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]
 
     with DaskRunner(
         scheduler=args.scheduler,
@@ -130,7 +132,7 @@ if __name__ == "__main__":
         threads_per_worker=args.threads_per_worker,
     ) as runner:
         time0 = time.time()
-        farm_results = runner.run(algo.calc_farm)
+        farm_results = runner.run(algo.calc_farm, kwargs={"outputs": outputs})
         time1 = time.time()
 
     print("\nCalc time =", time1 - time0, "\n")
@@ -140,7 +142,7 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     sel = fr[FV.MAX_P].dropna().index
     fr = fr.loc[sel]
-    print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]])
+    print(fr)
 
     o = foxes.output.RosePlotOutput(farm_results)
     fig = o.get_figure(

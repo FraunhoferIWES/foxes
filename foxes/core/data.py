@@ -238,6 +238,7 @@ class Data(Dict):
         data={},
         dims={},
         name="tdata",
+        **kwargs,
     ):
         """
         Create from points
@@ -253,6 +254,8 @@ class Data(Dict):
             of data keys
         name: str
             The data container name
+        kwargs: dict, optional
+            Additional parameters for the constructor
 
         Returns
         -------
@@ -266,7 +269,7 @@ class Data(Dict):
             )
         data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-        return Data(data, dims, [FC.STATE, FC.TARGET], name)
+        return Data(data, dims, [FC.STATE, FC.TARGET], name, **kwargs)
 
     @classmethod
     def from_tpoints(
@@ -275,6 +278,7 @@ class Data(Dict):
         data={},
         dims={},
         name="tdata",
+        **kwargs,
     ):
         """
         Create from points at targets
@@ -291,6 +295,8 @@ class Data(Dict):
             of data keys
         name: str
             The data container name
+        kwargs: dict, optional
+            Additional parameters for the constructor
 
         Returns
         -------
@@ -304,5 +310,5 @@ class Data(Dict):
             )
         data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-        return Data(data, dims, [FC.STATE], name)
+        return Data(data, dims, [FC.STATE], name, **kwargs)
     
