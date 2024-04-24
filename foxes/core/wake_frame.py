@@ -157,7 +157,7 @@ class WakeFrame(Model):
 
         return out, dims
 
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -170,9 +170,8 @@ class WakeFrame(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -191,7 +190,7 @@ class WakeFrame(Model):
         algo,
         mdata,
         fdata,
-        states_source_turbine,
+        downwind_index,
         variables,
         x,
         dx,
@@ -210,9 +209,8 @@ class WakeFrame(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         variables: list of str
             The variables to be integrated
         x: numpy.ndarray
@@ -249,14 +247,14 @@ class WakeFrame(Model):
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
         pts = self.get_centreline_points(
-            algo, mdata, fdata, states_source_turbine, xpts
+            algo, mdata, fdata, downwind_index, xpts
         )
 
         # run ambient calculation:
         tdata = Data.from_points(
             pts,
-            data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
-            dims={v: (FC.STATE, FC.POINT) for v in vrs},
+            data={v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs},
+            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )
         res = algo.states.calculate(algo, mdata, fdata, tdata)
         tdata.update(res)
@@ -277,8 +275,8 @@ class WakeFrame(Model):
         if not ambient:
             wcalc = algo.get_model("PointWakesCalculation")(wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
-            wsrc = states_source_turbine if self_wake else None
-            res = wcalc.calculate(algo, mdata, fdata, tdata, states_source_turbine=wsrc)
+            wsrc = downwind_index if self_wake else None
+            res = wcalc.calculate(algo, mdata, fdata, tdata, downwind_index=wsrc)
             tdata.update(res)
             del wcalc, res
 
@@ -286,7 +284,7 @@ class WakeFrame(Model):
         iresults = np.zeros((n_states, n_ix, n_vars), dtype=FC.DTYPE)
         for vi, v in enumerate(variables):
             for i in range(n_steps):
-                iresults[:, i + 1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx
+                iresults[:, i + 1, vi] = iresults[:, i, vi] + tdata[v][:, i, 0] * dx
 
         # interpolate to x of interest:
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)

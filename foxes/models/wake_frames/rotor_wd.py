@@ -114,7 +114,7 @@ class RotorWD(WakeFrame):
 
         return coos
     
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -127,9 +127,8 @@ class RotorWD(WakeFrame):
             The model data
         fdata: foxes.core.Data
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -139,11 +138,8 @@ class RotorWD(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        n_states = mdata.n_states
-        stsel = (np.arange(n_states), states_source_turbine)
-
-        wd = fdata[self.var_wd][stsel]
+        wd = fdata[self.var_wd][:, downwind_index]
         n = np.append(wd2uv(wd, axis=-1), np.zeros_like(wd)[:, None], axis=-1)
 
-        xyz = fdata[FV.TXYH][stsel]
+        xyz = fdata[FV.TXYH][:, downwind_index]
         return xyz[:, None, :] + x[:, :, None] * n[:, None, :]

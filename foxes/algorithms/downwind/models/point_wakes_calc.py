@@ -15,12 +15,14 @@ class PointWakesCalculation(PointDataModel):
         The extra evaluation models
     emodels_cpars: list of dict
         The calculation parameters for extra models
+    wake_models: list of foxes.core.WakeModel
+        The wake models to be used
 
     :group: algorithms.downwind.models
 
     """
 
-    def __init__(self, emodels=None, emodels_cpars=None):
+    def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
         """
         Constructor.
 
@@ -30,12 +32,15 @@ class PointWakesCalculation(PointDataModel):
             The extra evaluation models
         emodels_cpars: list of dict, optional
             The calculation parameters for extra models
+        wake_models: list of foxes.core.WakeModel, optional
+            Specific wake models to be used
 
         """
         super().__init__()
         self.pvars = None
         self.emodels = emodels
         self.emodels_cpars = emodels_cpars
+        self.wake_models = wake_models
 
     def sub_models(self):
         """
@@ -152,7 +157,8 @@ class PointWakesCalculation(PointDataModel):
         """
         
         res = {}
-        for wmodel in algo.wake_models.values():
+        wmodels = algo.wake_models.values() if self.wake_models is None else self.wake_models
+        for wmodel in wmodels:
             wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
             if len(set(self.pvars).intersection(wdeltas.keys())):
                 

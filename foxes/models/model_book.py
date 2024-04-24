@@ -359,35 +359,35 @@ class ModelBook:
                 )
             )
 
-            #self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
-            #    A=0.02, superposition=f"ws_{s}"
-            #)
-            #self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
-            #    A=0.04, superposition=f"ws_{s}"
-            #)
+            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.02, superposition=f"ws_{s}"
+            )
+            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
+                A=0.04, superposition=f"ws_{s}"
+            )
 
-            #self.wake_models[f"TurbOParkB_{s}_A002"] = (
-            #    fm.wake_models.wind.TurbOParkWake(
-            #        A=0.02, superposition=f"ws_{s}", induction="Betz"
-            #    )
-            #)
-            #self.wake_models[f"TurbOParkB_{s}_A004"] = (
-            #    fm.wake_models.wind.TurbOParkWake(
-            #        A=0.04, superposition=f"ws_{s}", induction="Betz"
-            #    )
-            #)
+            self.wake_models[f"TurbOParkB_{s}_A002"] = (
+                fm.wake_models.wind.TurbOParkWake(
+                    A=0.02, superposition=f"ws_{s}", induction="Betz"
+                )
+            )
+            self.wake_models[f"TurbOParkB_{s}_A004"] = (
+                fm.wake_models.wind.TurbOParkWake(
+                    A=0.04, superposition=f"ws_{s}", induction="Betz"
+                )
+            )
 
-            #As = [0.02, 0.04]
-            #dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
-            #for A in As:
-            #    for dx in dxs:
-            #        a = str(A).replace(".", "")
-            #        d = str(dx).replace(".", "") if dx < 1 else int(dx)
-            #        self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
-            #            fm.wake_models.wind.TurbOParkWakeIX(
-            #                A=A, superposition=f"ws_{s}", dx=dx
-            #            )
-            #        )
+            As = [0.02, 0.04]
+            dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
+            for A in As:
+                for dx in dxs:
+                    a = str(A).replace(".", "")
+                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
+                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
+                        fm.wake_models.wind.TurbOParkWakeIX(
+                            A=A, superposition=f"ws_{s}", dx=dx
+                        )
+                    )
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
