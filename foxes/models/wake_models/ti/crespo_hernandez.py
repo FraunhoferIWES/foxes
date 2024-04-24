@@ -273,8 +273,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             tdata=tdata,
             downwind_index=downwind_index,
             upcast=True,
-        )
-        D = D[st_sel]
+        )[st_sel]
 
         # get TI:
         ti = self.get_data(

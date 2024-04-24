@@ -403,13 +403,13 @@ class ModelBook:
                 fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
             )
 
-            #self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
-            #    superposition=f"ti_{s}", iec_type="2005"
-            #)
+            self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
+                superposition=f"ti_{s}", iec_type="2005"
+            )
 
-            #self.wake_models[f"IECTI2019_{s}"] = fm.wake_models.ti.IECTIWake(
-            #    superposition=f"ti_{s}", iec_type="2019"
-            #)
+            self.wake_models[f"IECTI2019_{s}"] = fm.wake_models.ti.IECTIWake(
+                superposition=f"ti_{s}", iec_type="2019"
+            )
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
         self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
