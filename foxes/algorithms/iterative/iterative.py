@@ -44,7 +44,14 @@ class Iterative(Downwind):
         except AttributeError:
             return super().get_model(name)
 
-    def __init__(self, *args, max_it=None, conv_crit="default", **kwargs):
+    def __init__(
+            self, 
+            *args, 
+            max_it=None, 
+            conv_crit="default", 
+            mod_cutin={}, 
+            **kwargs
+        ):
         """
         Constructor.
 
@@ -56,6 +63,8 @@ class Iterative(Downwind):
             The maximal number of iterations
         conv_crit: foxes.algorithms.iterative.ConvCrit, optional
             The convergence criteria
+        mod_cutin: dict, optional
+            Parameters for cutin modification
         kwargs: dict, optional
             Keyword arguments for Downwind
 
@@ -71,6 +80,9 @@ class Iterative(Downwind):
         self._mlist = None
         self._reamb = False
         self._urelax = None
+
+        self._mod_cutin = dict(modify_ct=True, modify_P=False)
+        self._mod_cutin.update(mod_cutin)
 
     def set_urelax(self, entry_point, **urel):
         """
@@ -102,8 +114,9 @@ class Iterative(Downwind):
         Initializes the algorithm.
         """
         super().initialize()
-        for t in self.farm_controller.turbine_types:
-            t.set_continuous_cutin(FV.CT)
+        if len(self._mod_cutin):
+            for t in self.farm_controller.turbine_types:
+                t.modify_cutin(**self._mod_cutin)
 
     @property
     def urelax(self):
