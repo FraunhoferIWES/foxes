@@ -1,5 +1,6 @@
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
+from foxes.models.wake_models import TopHatWakeModel
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -142,13 +143,31 @@ class Downwind(Algorithm):
                 self.wake_models[w] = m
 
         self.partial_wakes = {}
-        for w in wake_models:
-            if w in partial_wakes:
-                pw = partial_wakes[w]
-            else:
-                pw = mbook.default_partial_wakes(self.wake_models[w])
-            self.partial_wakes[w] = self.mbook.partial_wakes[pw]
-            self.partial_wakes[w].name = pw
+        if isinstance(partial_wakes, list) and len(partial_wakes) == 1:
+            partial_wakes = partial_wakes[0]
+        if isinstance(partial_wakes, str):
+            for w in wake_models:
+                if isinstance(self.wake_models[w], TopHatWakeModel):
+                    pw = mbook.default_partial_wakes(self.wake_models[w])
+                else:
+                    pw = partial_wakes
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw
+        elif isinstance(partial_wakes, list):
+            for i, w in enumerate(wake_models):
+                if i >= len(partial_wakes):
+                    raise IndexError(f"Not enough partial wakes in list {partial_wakes}, expecting {len(wake_models)}")
+                pw = partial_wakes[i]
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw 
+        else:
+            for w in wake_models:
+                if w in partial_wakes:
+                    pw = partial_wakes[w]
+                else:
+                    pw = mbook.default_partial_wakes(self.wake_models[w])
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw
 
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller

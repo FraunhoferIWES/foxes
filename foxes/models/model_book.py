@@ -147,7 +147,7 @@ class ModelBook:
         self.partial_wakes = Dict(
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
-            #top_hat=fm.partial_wakes.PartialTopHat(),
+            top_hat=fm.partial_wakes.PartialTopHat(),
             #axiwake=fm.partial_wakes.PartialAxiwake(),
             centre=fm.partial_wakes.PartialCentre(),
         )

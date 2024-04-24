@@ -109,7 +109,6 @@ if __name__ == "__main__":
         plt.show()
         plt.close(fig)
 
-    pwakes = {w: args.pwakes[i] for i, w in enumerate(args.wakes)}
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
         mbook,
@@ -118,7 +117,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes=pwakes,
+        partial_wakes=args.pwakes,
         chunks=cks,
         verbosity=1,
     )
