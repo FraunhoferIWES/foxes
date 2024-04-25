@@ -413,8 +413,9 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # collect models:
-        out_vars = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
-        mlist, calc_pars = self._collect_farm_models(out_vars, calc_parameters, ambient)
+        if outputs == "default":
+            outputs = self.DEFAULT_FARM_OUTPUTS
+        mlist, calc_pars = self._collect_farm_models(outputs, calc_parameters, ambient)
 
         # initialize models:
         if not mlist.initialized:
@@ -422,14 +423,19 @@ class Downwind(Algorithm):
             self._calc_farm_vars(mlist)
         self._print_model_oder(mlist, calc_pars)
 
+        # update outputs:
+        if outputs is None:
+            outputs = self.farm_vars
+        else:
+            outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
+        
         # get input model data:
         models_data = self.get_models_data()
         if persist:
             models_data = models_data.persist()
-        out_vars = sorted(list(set(out_vars).intersection(self.farm_vars)))
         self.print("\nInput data:\n\n", models_data, "\n")
         self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
-        self.print(f"\nOutput variables:", ", ".join(out_vars))
+        self.print(f"\nOutput variables:", ", ".join(outputs))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
@@ -437,7 +443,7 @@ class Downwind(Algorithm):
             mlist,
             models_data,
             parameters=calc_pars,
-            outputs=out_vars,
+            outputs=outputs,
             **kwargs,
         )
         del models_data

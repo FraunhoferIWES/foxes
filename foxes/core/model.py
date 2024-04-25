@@ -350,7 +350,7 @@ class Model(ABC):
             if out_dims is None:
                 if upcast:
                     out0 = out
-                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out = np.zeros(shp, dtype=FC.DTYPE)
                     out[:] = out0  
                     out_dims = dims
                     del out0
@@ -434,7 +434,6 @@ class Model(ABC):
                         f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
                     )
 
-                #sts = sts.reshape(n_states*n_targets*n_tpoints)
                 prev_fres = getattr(algo, "prev_farm_results")[variable].to_numpy()
                 prev_data = prev_fres[sts[sel], downwind_index]
                 if target == FC.STATE_TARGET:

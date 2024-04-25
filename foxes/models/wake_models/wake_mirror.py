@@ -51,11 +51,9 @@ class WakeMirror(WakeModel):
         """
         return [self.wmodel]
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
@@ -65,32 +63,31 @@ class WakeMirror(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.Data
+            The target point data
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        self.wmodel.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
+        return self.wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
 
-    def contribute_to_wake_deltas(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at target points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
@@ -100,49 +97,47 @@ class WakeMirror(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.Data
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
 
         """
-        stsel = (np.arange(algo.n_states), states_source_turbine)
-        hh = fdata[FV.H][stsel]
-        self.wmodel.contribute_to_wake_deltas(
-            algo, mdata, fdata, pdata, states_source_turbine, wake_coos, wake_deltas
+        hh = fdata[FV.H][:, downwind_index].copy()
+        self.wmodel.contribute(
+            algo, mdata, fdata, tdata, downwind_index, 
+            wake_coos, wake_deltas
         )
 
-        pdata[FC.POINTS] = pdata[FC.POINTS].copy()  # making sure this is no ref
+        tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
 
         for h in self.heights:
 
-            fdata[FV.H][stsel] = hh + 2 * (h - hh)
+            fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
 
-            nwcoos = algo.wake_frame.get_wake_coos(
-                algo, mdata, fdata, pdata, states_source_turbine
+            nwcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, 
+                        tdata, downwind_index)
+
+            self.wmodel.contribute(
+                algo, mdata, fdata, tdata, downwind_index, 
+                nwcoos, wake_deltas
             )
 
-            self.wmodel.contribute_to_wake_deltas(
-                algo, mdata, fdata, pdata, states_source_turbine, nwcoos, wake_deltas
-            )
-
-        fdata[FV.H][stsel] = hh
+        fdata[FV.H][:, downwind_index] = hh
 
     def finalize_wake_deltas(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
         amb_results,
         wake_deltas,
     ):
@@ -159,23 +154,19 @@ class WakeMirror(WakeModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_points)
+            values: numpy.ndarray with shape 
+            (n_states, n_targets, n_tpoints)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta
-            applies, values: numpy.ndarray with shape
-            (n_states, n_points, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_points) afterwards
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
 
         """
         self.wmodel.finalize_wake_deltas(
-            algo, mdata, fdata, pdata, amb_results, wake_deltas
+            algo, mdata, fdata, amb_results, wake_deltas,
         )
-
 
 class GroundMirror(WakeMirror):
     """

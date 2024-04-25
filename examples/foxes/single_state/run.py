@@ -52,7 +52,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default=[], nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default="grid16", nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
@@ -107,7 +107,6 @@ if __name__ == "__main__":
         mirrors = {}
 
     # create algorithm
-    pwakes = {args.wakes[i]: pw for i, pw in enumerate(args.pwakes)}
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
         mbook,
@@ -116,7 +115,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes=pwakes,
+        partial_wakes=args.pwakes,
         chunks=None,
         wake_mirrors=mirrors,
         verbosity=1,
@@ -153,7 +152,6 @@ if __name__ == "__main__":
         ]
     )
     print()
-    quit()
 
     # results by turbine
     turbine_results = o.reduce_states(
