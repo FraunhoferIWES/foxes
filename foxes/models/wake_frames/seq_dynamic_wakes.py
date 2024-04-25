@@ -109,7 +109,6 @@ class SeqDynamicWakes(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
@@ -121,7 +120,7 @@ class SeqDynamicWakes(WakeFrame):
         for ti in range(n_turbines):
             coosx[:, ti, :] = self.get_wake_coos(
                 algo, mdata, fdata, tdata, ti
-            )[..., 0]
+            )[:, :, 0, 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -201,7 +200,7 @@ class SeqDynamicWakes(WakeFrame):
         del hpdata, hpdims, res
 
         # project:
-        dists = cdist(points[0], self._traces_p[:N, downwind_index, 0])
+        dists = cdist(points[0], self._traces_p[:N, downwind_index])
         tri = np.argmin(dists, axis=1)
         del dists
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
@@ -223,7 +222,7 @@ class SeqDynamicWakes(WakeFrame):
             (FC.STATE, FC.TARGET, FC.TPOINT)
         )
 
-        return wcoos
+        return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
 
     def get_wake_modelling_data(
         self,
@@ -288,11 +287,11 @@ class SeqDynamicWakes(WakeFrame):
 
             if target == FC.STATE_TARGET:
                 if n_tpoints == 1:
-                    return data[:, :, 0], (FC.STATE, FC.TURBINE)
+                    return data[:, :, 0], (FC.STATE, FC.TARGET)
                 else:
                     raise ValueError(f"Cannot reduce variable '{variable}' to target '{target}', shape: {data.shape}")
             elif target == FC.STATE_TARGET_TPOINT:
-                return data, (FC.STATE, FC.TURBINE, FC.TPOINT)
+                return data, (FC.STATE, FC.TARGET, FC.TPOINT)
             else:
                 raise ValueError(f"Cannot handle target '{target}', choices are {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}")
 

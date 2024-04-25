@@ -235,21 +235,20 @@ class Model(ABC):
             otherwise dimension 1 is entered
 
         """
-        
         def _geta(a):
             sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
-                if a == "states_i0":
-                    out = s.states_i0(counter=True, algo=algo)
-                    if out is not None:
-                        return out
-                else:
-                    try:
+                try:
+                    if a == "states_i0": 
+                        out = s.states_i0(counter=True, algo=algo)
+                        if out is not None:
+                            return out
+                    else:
                         out = getattr(s, a)
                         if out is not None:
                             return out
-                    except AttributeError:
-                        pass
+                except AttributeError:
+                    pass
             raise KeyError(
                 f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, tdata, algo?"
             )
@@ -258,13 +257,16 @@ class Model(ABC):
         if target == FC.STATE_TURBINE:
             n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
+            shp = (n_states, n_turbines)
         elif target == FC.STATE_TARGET:
             n_targets = _geta("n_targets")
             dims = (FC.STATE, FC.TARGET)
+            shp = (n_states, n_targets)
         elif target == FC.STATE_TARGET_TPOINT:
             n_targets = _geta("n_targets")
             n_tpoints = _geta("n_tpoints")
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+            shp = (n_states, n_targets, n_tpoints)
         else:
             raise KeyError(
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
@@ -345,7 +347,6 @@ class Model(ABC):
 
         # cast dimensions:
         if out_dims != dims:
-
             if out_dims is None:
                 if upcast:
                     out0 = out
@@ -359,12 +360,11 @@ class Model(ABC):
             elif out_dims == (FC.STATE, FC.TURBINE):
                 if downwind_index is None:
                     raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")    
-            
                 out0 = out[:, downwind_index, None]
                 if len(dims) == 3:
                     out0 = out0[:, :, None]
                 if upcast:
-                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out = np.zeros(shp, dtype=FC.DTYPE)
                     out[:] = out0  
                     out_dims = dims
                 else:
@@ -378,7 +378,7 @@ class Model(ABC):
                     out0 = out0[:, :, None]
                     out_dims = (FC.STATE, 1, 1)
                 if upcast:
-                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out = np.zeros(shp, dtype=FC.DTYPE)
                     out[:] = out0
                     out_dims = dims
                 else:
@@ -391,7 +391,7 @@ class Model(ABC):
                     out0 = out0[:, :, 0]
                     out_dims = (FC.STATE, 1)
                 if upcast:
-                    out = np.zeros(dims, dtype=FC.DTYPE)
+                    out = np.zeros(shp, dtype=FC.DTYPE)
                     out[:] = out0
                     out_dims = dims
                 else:
@@ -403,39 +403,44 @@ class Model(ABC):
 
         # data from other chunks, only with iterations:
         if (
-            fdata is not None
+            target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
+            and fdata is not None
             and variable in fdata
             and tdata is not None
             and FC.STATES_SEL in tdata
         ):
-            raise NotImplementedError("TODO: IMPLEMENT OTHER CHUNK LOOKUP")
-            if target != FC.STATE_TARGET:
-                raise ValueError(f"Iteration data found for variable '{variable}', requiring target '{FC.STATE_TARGET}'")
             if out_dims != dims:
-                raise ValueError(f"Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}")
+                raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}")
             if downwind_index is None:
-                raise KeyError(f"Require downwind_index for obtaining results from previous iteration")
+                raise KeyError(f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration")
             if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
-                raise ValueError(f"Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
-            
-                      
+                raise ValueError(f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
+            if algo is None:
+                raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo")
+            if target == FC.STATE_TARGET:
+                if tdata.n_tpoints != 1:
+                    raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}' with {n_targets} targets and {tdata.n_tpoints} tpoints. Requiring target {FC.STATE_TARGET_TPOINT}, got {FC.STATE_TARGET}")
+                n_tpoints = 1
+
             i0 = _geta("states_i0")
-            st = np.where(tdata[FC.STATES_SEL])
-            sel = st < i0
+            sts = tdata[FC.STATES_SEL]
+            sel = sts < i0
             if np.any(sel):
                 if (
-                    algo is None 
-                    or not hasattr(algo, "prev_farm_results") 
+                    not hasattr(algo, "prev_farm_results") 
                     or getattr(algo, "prev_farm_results") is None
                 ):
                     raise KeyError(
-                        f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
+                        f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
                     )
 
+                #sts = sts.reshape(n_states*n_targets*n_tpoints)
                 prev_fres = getattr(algo, "prev_farm_results")[variable].to_numpy()
-                prev_data = np.zeros_like(out)
-                prev_data[:] = prev_fres[:, downwind_index, None, None]
-                out[sel] = prev_data[sel]
+                prev_data = prev_fres[sts[sel], downwind_index]
+                if target == FC.STATE_TARGET:
+                    out[sel[:, :, 0]] = prev_data
+                else:
+                    out[sel] = prev_data
                 del prev_fres, prev_data
         
         # check for None:
