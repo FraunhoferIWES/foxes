@@ -53,7 +53,7 @@ class Thrust2Ct(TurbineModel):
         return [FV.CT]
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -67,9 +67,9 @@ class Thrust2Ct(TurbineModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------

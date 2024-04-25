@@ -182,15 +182,25 @@ class LookupTable(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        data = {
+            v: self.get_data(
+                self.input_vars[0], FC.STATE_TURBINE, lookup="fs", 
+                fdata=fdata, upcast=True
+            )[st_sel] 
+            for v in self.input_vars
+        }
+        dims = {
+            v: ("_z") if len(data[v].shape) == 1 else ("_z", "_u")
+            for v in self.input_vars
+        }
         indata = {
             v: xr.DataArray(
-                self.get_data(
-                    v, FC.STATE_TURBINE, lookup="fs", fdata=fdata, upcast=True
-                )[st_sel],
-                dims=["_z"],
+                data[v],
+                dims=dims[v],
             )
             for v in self.input_vars
         }
+        del data, dims
 
         odata = self._data.interp(**indata, **self._xargs)
 
