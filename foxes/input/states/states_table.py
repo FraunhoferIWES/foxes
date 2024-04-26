@@ -472,8 +472,8 @@ class TabStates(StatesTable):
             )
             ws0 = 0.5 * (ws0[:-1] + ws0[1:])
 
-            n_ws = self._tab_data.dims["ws"]
-            n_wd = self._tab_data.dims["wd"]
+            n_ws = self._tab_data.sizes["ws"]
+            n_wd = self._tab_data.sizes["wd"]
             ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
             wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
             ws[:] = ws0[:, None]

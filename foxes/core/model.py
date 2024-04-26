@@ -417,13 +417,17 @@ class Model(ABC):
                 raise ValueError(f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
             if algo is None:
                 raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo")
-            if target == FC.STATE_TARGET:
-                if tdata.n_tpoints != 1:
-                    raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}' with {n_targets} targets and {tdata.n_tpoints} tpoints. Requiring target {FC.STATE_TARGET_TPOINT}, got {FC.STATE_TARGET}")
-                n_tpoints = 1
+            #if target == FC.STATE_TARGET:
+            #    if tdata.n_tpoints != 1 and not np.all():
+            #        raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}' with {n_targets} targets and {tdata.n_tpoints} tpoints. Requiring target {FC.STATE_TARGET_TPOINT}, got {FC.STATE_TARGET}")
+            #    n_tpoints = tdata.n_tpoints
 
             i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
+            if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
+                # find the mean index and round it to nearest integer:
+                sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
+                sts = (sts + 0.5).astype(FC.ITYPE)
             sel = sts < i0
             if np.any(sel):
                 if (

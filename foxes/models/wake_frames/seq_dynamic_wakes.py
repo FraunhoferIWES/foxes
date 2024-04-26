@@ -191,8 +191,8 @@ class SeqDynamicWakes(WakeFrame):
             v: (FC.STATE, FC.TARGET, FC.TPOINT) 
             for v in hpdata.keys()
         }
-        hpdata = Data.from_tpoints(
-            tpoints=self._traces_p[None, :N, downwind_index, None],
+        hpdata = Data.from_points(
+            points=self._traces_p[None, :N, downwind_index],
             data=hpdata, dims=hpdims,
         )
         res = algo.states.calculate(algo, mdata, fdata, hpdata)
@@ -287,9 +287,10 @@ class SeqDynamicWakes(WakeFrame):
 
             if target == FC.STATE_TARGET:
                 if n_tpoints == 1:
-                    return data[:, :, 0], (FC.STATE, FC.TARGET)
+                    data = data[:, :, 0]
                 else:
-                    raise ValueError(f"Cannot reduce variable '{variable}' to target '{target}', shape: {data.shape}")
+                    data = np.einsum('stp,p->st', data, tdata[FC.TWEIGHTS])
+                return data, (FC.STATE, FC.TARGET)
             elif target == FC.STATE_TARGET_TPOINT:
                 return data, (FC.STATE, FC.TARGET, FC.TPOINT)
             else:

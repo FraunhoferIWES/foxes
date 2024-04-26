@@ -356,8 +356,6 @@ class RotorModel(FarmDataModel):
 
         if downwind_index is not None:
             rpoints = rpoints[:, downwind_index, None]
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
-        n_points = n_turbines * n_rpoints
 
         if weights is None:
             weights = mdata.get(FC.TWEIGHTS, self.rotor_point_weights())
@@ -366,7 +364,7 @@ class RotorModel(FarmDataModel):
             mdata.dims[self.RWEIGHTS] = (FC.TPOINT,)
             self.data_to_store(self.RWEIGHTS, algo, mdata)
 
-        tdata = Data.from_tpoints(rpoints)
+        tdata = Data.from_tpoints(rpoints, weights)
         svars = algo.states.output_point_vars(algo)
         for v in svars:
             tdata.add(

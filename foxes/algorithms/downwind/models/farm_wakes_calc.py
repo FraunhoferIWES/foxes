@@ -55,24 +55,23 @@ class FarmWakesCalculation(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        # collect ambient rotor results and weights:
+        rotor = algo.rotor_model
+        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
         pwake2tdata = {}
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
-                pwake2tdata[pwake.name] = Data.from_tpoints(
-                    tpoints=pwake.get_wake_points(algo, mdata, fdata)
-                )
-        
-        # collect ambient rotor results and weights:
-        rotor = algo.rotor_model
-        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+                tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
+                pwake2tdata[pwake.name] = Data.from_tpoints(tpoints, tweights)
 
         def _get_wdata(tdatap, wdeltas, s):
             """ Helper function for wake data extraction """
-            tdata = tdatap.get_slice(s)
+            tdata = tdatap.get_slice(s, keep=True)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 

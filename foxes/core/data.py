@@ -109,6 +109,26 @@ class Data(Dict):
         """
         return self.sizes[FC.TPOINT] if FC.TPOINT in self.sizes else None
     
+    def tpoint_mean(self, variable):
+        """
+        Take the mean over target points
+
+        Parameters
+        ----------
+        variable: str
+            The variable name
+        
+        Returns
+        -------
+        data: numpy.ndarray
+            The reduced array, shape: 
+            (n_states, n_targets, ...)
+
+        """
+        return np.einsum(
+            'stp...,p->st...', self[variable], self[FC.TWEIGHTS]
+        )
+    
     def states_i0(self, counter=False, algo=None):
         """
         Get the state counter for first state in chunk
@@ -198,7 +218,7 @@ class Data(Dict):
         self.__run_entry_checks(name, data, dims)
         self.__auto_update()
     
-    def get_slice(self, s, dim_map={}, name=None):
+    def get_slice(self, s, dim_map={}, name=None, keep=True):
         """
         Get a slice of data.
         
@@ -211,6 +231,9 @@ class Data(Dict):
             If not found, same dimensions are assumed.
         name: str, optional
             The name of the data object
+        keep: bool
+            Keep non-matching fields as they are, else
+            throw them out
         
         Returns
         -------
@@ -226,7 +249,8 @@ class Data(Dict):
                 data[v] = self[v][s]
                 dims[v] = dim_map.get(d, d)
             except IndexError:
-                pass
+                data[v] = self[v]
+                dims[v] = self.dims[v]
         if name is None:
             name = self.name
         return Data(data, dims, self.loop_dims, name)
@@ -269,12 +293,15 @@ class Data(Dict):
             )
         data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+        data[FC.TWEIGHTS] = np.array([1], dtype=FC.DTYPE)
+        dims[FC.TWEIGHTS] = (FC.TPOINT,)
         return Data(data, dims, [FC.STATE, FC.TARGET], name, **kwargs)
 
     @classmethod
     def from_tpoints(
         cls,
         tpoints,
+        tweights,
         data={},
         dims={},
         name="tdata",
@@ -288,6 +315,9 @@ class Data(Dict):
         tpoints: np.ndarray
             The points at targets, shape: 
             (n_states, n_targets, n_tpoints, 3)
+        tweights: np.ndarray, optional
+            The target point weights, shape: 
+            (n_tpoints,)
         data: dict
             The initial data to be stored
         dims: dict
@@ -310,5 +340,8 @@ class Data(Dict):
             )
         data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+        if tweights is not None:
+            data[FC.TWEIGHTS] = tweights
+            dims[FC.TWEIGHTS] = (FC.TPOINT,)
         return Data(data, dims, [FC.STATE], name, **kwargs)
     

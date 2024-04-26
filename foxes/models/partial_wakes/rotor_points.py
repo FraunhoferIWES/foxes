@@ -11,7 +11,8 @@ class RotorPoints(PartialWakesModel):
 
     def get_wake_points(self, algo, mdata, fdata):
         """
-        Get the wake calculation points.
+        Get the wake calculation points, and their
+        weights.
 
         Parameters
         ----------
@@ -25,11 +26,17 @@ class RotorPoints(PartialWakesModel):
         Returns
         -------
         rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_targets, n_rpoints, 3)
+            The wake calculation points, shape: 
+            (n_states, n_turbines, n_tpoints, 3)
+        rweights: numpy.ndarray
+            The target point weights, shape: (n_tpoints,)
 
         """
         rotor = algo.rotor_model
-        return rotor.from_data_or_store(rotor.RPOINTS, algo, mdata)
+        return (
+            rotor.from_data_or_store(rotor.RPOINTS, algo, mdata),
+            rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        )
 
     def finalize_wakes(
         self,

@@ -1,8 +1,8 @@
-import foxes.constants as FC
+import numpy as np
+
 import foxes.variables as FV
-
+import foxes.constants as FC
 from .rotor_points import RotorPoints
-
 
 class PartialCentre(RotorPoints):
     """
@@ -15,7 +15,8 @@ class PartialCentre(RotorPoints):
 
     def get_wake_points(self, algo, mdata, fdata):
         """
-        Get the wake calculation points.
+        Get the wake calculation points, and their
+        weights.
 
         Parameters
         ----------
@@ -29,7 +30,10 @@ class PartialCentre(RotorPoints):
         Returns
         -------
         rpoints: numpy.ndarray
-            All rotor points, shape: (n_states, n_turbines, n_rpoints, 3)
+            The wake calculation points, shape: 
+            (n_states, n_turbines, n_tpoints, 3)
+        rweights: numpy.ndarray
+            The target point weights, shape: (n_tpoints,)
 
         """
-        return fdata[FV.TXYH][:, :, None]
+        return fdata[FV.TXYH][:, :, None], np.ones(1, dtype=FC.DTYPE)
