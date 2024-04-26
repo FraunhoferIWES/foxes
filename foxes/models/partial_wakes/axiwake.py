@@ -156,12 +156,12 @@ class PartialAxiwake(PartialCentre):
             R1 = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
             R1[:, 1:] = Dsel / 2
             R2 = np.zeros_like(R1)
-            R2[:, 1:] = Rsel[:, :-1] + Dsel/2
-            R2[:]    *= np.linspace(0., 1, self.n + 1, endpoint=True)[None, :]
-            #R2[:, 1:] = (Rsel[:, :-1] + Dsel / 2) / (self.n - 0.5)
-            #R2[:, 1:] *= (
-            #    0.5 + np.linspace(0.0, self.n - 1, self.n, endpoint=True)[None, :]
-            #)
+            #R2[:, 1:] = Rsel[:, :-1] + Dsel/2
+            #R2[:]    *= np.linspace(0., 1, self.n + 1, endpoint=True)[None, :]
+            R2[:, 1:] = (Rsel[:, :-1] + Dsel / 2) / (self.n - 0.5)
+            R2[:, 1:] *= (
+                0.5 + np.linspace(0.0, self.n - 1, self.n, endpoint=True)[None, :]
+            )
             hr = 0.5 * (R2[:, 1:] + R2[:, :-1])
             hr[:, 0] = 0.0
             r[sel] = hr
