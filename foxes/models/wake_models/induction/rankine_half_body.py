@@ -178,7 +178,7 @@ class RankineHalfBody(TurbineInductionModel):
         m = 2 * ws * self.induction.ct2a(ct) * (D / 2) ** 2
 
         # get r and theta
-        x = wake_coos[..., 0]
+        x = np.round(wake_coos[..., 0], 12)
         r = np.linalg.norm(wake_coos[..., 1:], axis=-1)
         r_sph = np.sqrt(r**2 + x**2)
         theta = np.arctan2(r, x)

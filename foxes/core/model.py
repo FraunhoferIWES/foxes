@@ -417,10 +417,6 @@ class Model(ABC):
                 raise ValueError(f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
             if algo is None:
                 raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo")
-            #if target == FC.STATE_TARGET:
-            #    if tdata.n_tpoints != 1 and not np.all():
-            #        raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}' with {n_targets} targets and {tdata.n_tpoints} tpoints. Requiring target {FC.STATE_TARGET_TPOINT}, got {FC.STATE_TARGET}")
-            #    n_tpoints = tdata.n_tpoints
 
             i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
