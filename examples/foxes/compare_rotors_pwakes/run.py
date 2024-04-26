@@ -97,13 +97,13 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument(
-        "-r", "--rotors", help="The rotor model(s)", default=["grid100"], nargs="+"
+        "-r", "--rotors", help="The rotor model(s)", default=["grid400"], nargs="+"
     )
     parser.add_argument(
         "-p",
         "--pwakes",
         help="The partial wakes model(s)",
-        default=["grid4", "grid9", "rotor_points"],
+        default=["grid16", "axiwake6", "rotor_points"],
         nargs="+",
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)

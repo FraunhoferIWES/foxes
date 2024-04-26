@@ -148,12 +148,11 @@ class ModelBook:
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
-            #axiwake=fm.partial_wakes.PartialAxiwake(),
             centre=fm.partial_wakes.PartialCentre(),
         )
         nlst = list(range(2, 11)) + [20]
-        #for n in nlst:
-        #    self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
+        for n in nlst:
+            self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
             self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n=n)
 
@@ -532,9 +531,9 @@ class ModelBook:
         if isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
         elif isinstance(wake_model, fm.wake_models.AxisymmetricWakeModel):
-            return "axiwake"
+            return "axiwake6"
         elif isinstance(wake_model, fm.wake_models.DistSlicedWakeModel):
-            return "distsliced"
+            return "grid9"
         else:
             raise TypeError(f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'")
 

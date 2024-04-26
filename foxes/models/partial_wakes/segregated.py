@@ -2,8 +2,6 @@ import numpy as np
 
 from foxes.core import PartialWakesModel
 import foxes.variables as FV
-import foxes.constants as FC
-
 
 class PartialSegregated(PartialWakesModel):
     """
