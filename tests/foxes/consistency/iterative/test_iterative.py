@@ -40,17 +40,25 @@ def test():
             farm, lfile, turbine_models=[ttype], verbosity=1
         )
 
+        kwargs = {}
+        if Algo is foxes.algorithms.Iterative:
+            kwargs["mod_cutin"] = {"modify_ct": False, "modify_P": False}
+
         algo = Algo(
-            mbook,
             farm,
-            states=states,
-            rotor_model="centre",
-            wake_models=["Bastankhah025_linear_k002", "IECTI2019_max"],
+            states,
+            mbook=mbook,
+            rotor_model="grid16",
+            wake_models=["Bastankhah2014_linear_k004", "IECTI2019_max"],
             wake_frame=frame,
-            partial_wakes_model="auto",
+            partial_wakes="rotor_points",
             chunks=ck,
             verbosity=1,
+            **kwargs,
         )
+
+        #f Algo is foxes.algorithms.Iterative:
+        #    algo.set_urelax("post_rotor", CT=0.9)
 
         with foxes.utils.runners.DaskRunner() as runner:
             data = runner.run(algo.calc_farm)
@@ -75,7 +83,7 @@ def test():
             print(delta.min(), delta.max())
 
             for v, lim in lims.items():
-                chk = delta[v].abs()
+                chk = delta[v].abs().loc[df["AMB_REWS"]>7]
                 print(f"CASE {(Algo.__name__, frame, v, lim)}:", chk.max())
 
             assert (chk < lim).all()

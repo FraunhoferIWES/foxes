@@ -17,7 +17,7 @@ class BetzAxialInduction(AxialInductionModel):
 
     """
 
-    def __init__(self, ct_max=1):
+    def __init__(self, ct_max=0.99999):
         """
         Constructor.
 

@@ -37,13 +37,6 @@ def test():
         superposition="ti_max", induction="Betz"
     )
 
-    mbook.partial_wakes["mapped"] = foxes.models.partial_wakes.Mapped(
-        wname2pwake={
-            "Basta": ("PartialAxiwake", dict(n=6)),
-            "Crespo": ("PartialTopHat", {}),
-        }
-    )
-
     states = foxes.input.states.ScanWS(
         ws_list=np.linspace(6.0, 16.0, n_s), wd=wd, ti=ti, rho=1.225
     )
@@ -59,13 +52,13 @@ def test():
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=rotor,
         wake_models=["Basta", "Crespo"],
         wake_frame="rotor_wd",
-        partial_wakes_model="mapped",
+        partial_wakes=["axiwake6", "top_hat"],
         chunks=ck,
         verbosity=1,
     )

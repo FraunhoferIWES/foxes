@@ -44,9 +44,9 @@ def calc(runner, args, rotor, sdata, pwake, cks):
     mbook.turbine_models["sety"].add_var(FV.Y, ydata)
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",

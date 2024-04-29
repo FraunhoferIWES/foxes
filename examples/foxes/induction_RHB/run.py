@@ -81,9 +81,9 @@ if __name__ == "__main__":
         foxes.algorithms.Downwind if args.not_iterative else foxes.algorithms.Iterative
     )
     algo = Algo(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,

@@ -127,9 +127,9 @@ if __name__ == "__main__":
         plt.close(ax.get_figure())
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",

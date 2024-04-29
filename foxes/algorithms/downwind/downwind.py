@@ -60,10 +60,10 @@ class Downwind(Algorithm):
 
     def __init__(
         self,
-        mbook,
         farm,
         states,
         wake_models,
+        mbook=None,
         rotor_model="centre",
         wake_frame="rotor_wd",
         partial_wakes={},
@@ -78,8 +78,6 @@ class Downwind(Algorithm):
 
         Parameters
         ----------
-        mbook: foxes.ModelBook
-            The model book
         farm: foxes.WindFarm
             The wind farm
         states: foxes.core.States
@@ -87,6 +85,8 @@ class Downwind(Algorithm):
         wake_models: list of str
             The wake models, applied to all turbines.
             Will be looked up in the model book
+        mbook: foxes.ModelBook, optional
+            The model book
         rotor_model: str
             The rotor model, for all turbines. Will be
             looked up in the model book
@@ -111,6 +111,9 @@ class Downwind(Algorithm):
             The verbosity level, 0 means silent
 
         """
+        if mbook is None:
+            mbook = fm.ModelBook()
+            
         super().__init__(mbook, farm, chunks, verbosity, dbook)
 
         self.states = states

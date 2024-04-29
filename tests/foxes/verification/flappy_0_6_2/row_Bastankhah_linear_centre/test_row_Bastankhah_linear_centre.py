@@ -49,13 +49,13 @@ def test():
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=rotor,
         wake_models=["Basta"],
         wake_frame="rotor_wd",
-        partial_wakes_model="rotor_points",
+        partial_wakes="rotor_points",
         chunks=ck,
         verbosity=1,
     )

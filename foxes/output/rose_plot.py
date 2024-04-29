@@ -386,7 +386,7 @@ class StatesRosePlotOutput(RosePlotOutput):
         )
 
         mbook = mbook if mbook is not None else ModelBook()
-        algo = Downwind(mbook, farm, states, wake_models=[], verbosity=0)
+        algo = Downwind(farm, states, wake_models=[], mbook=mbook, verbosity=0)
 
         results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
 

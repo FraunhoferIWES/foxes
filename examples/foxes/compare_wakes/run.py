@@ -12,9 +12,9 @@ def calc(runner, mbook, farm, states, wakes, points, args):
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=wakes,
         wake_frame="rotor_wd",

@@ -59,10 +59,10 @@ class Sequential(Downwind):
 
     def __init__(
         self,
-        mbook,
         farm,
         states,
         *args,
+        mbook=None,
         points=None,
         ambient=False,
         calc_pars={},
@@ -76,14 +76,14 @@ class Sequential(Downwind):
 
         Parameters
         ----------
-        mbook: foxes.ModelBook
-            The model book
         farm: foxes.WindFarm
             The wind farm
         states: foxes.core.States
             The ambient states
         args: tuple, optional
             Additional arguments for Downwind
+        mbook: foxes.ModelBook, optional
+            The model book
         points: numpy.ndarray, optional
             The points of interest, shape: (n_states, n_points, 3)
         ambient: bool
@@ -102,7 +102,8 @@ class Sequential(Downwind):
 
         """
         super().__init__(
-            mbook, farm, mdls.SeqState(states), *args, chunks=chunks, **kwargs
+            farm, mdls.SeqState(states), *args, mbook=mbook, 
+            chunks=chunks, **kwargs
         )
         self.ambient = ambient
         self.calc_pars = calc_pars

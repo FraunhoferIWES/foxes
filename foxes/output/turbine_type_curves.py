@@ -133,7 +133,8 @@ class TurbineTypeCurves(Output):
             verbosity=0,
         )
 
-        algo = Downwind(self.mbook, farm, states, wake_models=[], verbosity=0)
+        algo = Downwind(farm, states, wake_models=[], 
+                        mbook=self.mbook, verbosity=0)
 
         results = algo.calc_farm()
 
@@ -149,7 +150,8 @@ class TurbineTypeCurves(Output):
                 verbosity=0,
             )
 
-            algo = Downwind(self.mbook, farm, states, wake_models=[], verbosity=0)
+            algo = Downwind(farm, states, wake_models=[], 
+                            mbook=self.mbook, verbosity=0)
 
             results1 = algo.calc_farm()
 

@@ -88,9 +88,9 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",

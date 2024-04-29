@@ -273,7 +273,7 @@ class Iterative(Downwind):
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
 
             self.prev_farm_results = fres
-            fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
+            fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
             
             if self.conv_crit is not None:
                 conv = self.conv_crit.check_converged(

@@ -48,7 +48,7 @@ class URelax(FarmDataModel):
         """
         return list(self.urel.keys())
 
-    def calculate(self, algo, mdata, fdata, results):
+    def calculate(self, algo, mdata, fdata):
         """ "
         The main model calculation.
 
@@ -63,9 +63,6 @@ class URelax(FarmDataModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        results: dict
-            The results. Key: variable name,
-            value: np.ndarray, shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -82,8 +79,8 @@ class URelax(FarmDataModel):
         for v, u in self.urel.items():
             if u > 0 and pres is not None:
                 odata = pres[v].to_numpy()[i0:i1]
-                out[v] = u * odata + (1 - u) * results[v]
+                out[v] = u * odata + (1 - u) * fdata[v]
             else:
-                out[v] = results[v]
+                out[v] = fdata[v]
 
         return out

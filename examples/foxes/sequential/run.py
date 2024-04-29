@@ -101,9 +101,9 @@ if __name__ == "__main__":
         plt.close(ax.get_figure(figsize=(8, 8)))
 
     algo = foxes.algorithms.Sequential(
-        mbook,
         farm,
-        states=states,
+        states,
+        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,

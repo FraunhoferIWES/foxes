@@ -20,10 +20,6 @@ def test():
         ("grid9", "rotor_points", 0.06),
         ("centre", "axiwake5", 0.04),
         ("centre", "axiwake10", 0.038),
-        ("grid9", "distsliced", 0.06),
-        ("centre", "distsliced9", 0.06),
-        ("centre", "distsliced16", 0.04),
-        ("centre", "distsliced36", 0.016),
         ("centre", "grid9", 0.06),
         ("centre", "grid16", 0.04),
         ("centre", "grid36", 0.016),
@@ -54,13 +50,13 @@ def test():
         )
 
         algo = foxes.algorithms.Downwind(
-            mbook,
             farm,
-            states=states,
+            states,
+            mbook=mbook,
             rotor_model=rotor,
             wake_models=["Bastankhah025_linear_k002"],
             wake_frame="rotor_wd",
-            partial_wakes_model=pwake,
+            partial_wakes=pwake,
             chunks=ck,
             verbosity=1,
         )
