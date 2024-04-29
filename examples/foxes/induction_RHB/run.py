@@ -83,11 +83,11 @@ if __name__ == "__main__":
     algo = Algo(
         farm,
         states,
-        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=None,
         verbosity=1,
     )

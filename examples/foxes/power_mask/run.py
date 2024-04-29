@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-f", "--pmax_file", help="The max_P csv file", default="power_mask.csv"
@@ -129,11 +129,11 @@ if __name__ == "__main__":
     algo = foxes.algorithms.Downwind(
         farm,
         states,
-        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
         verbosity=0,
     )

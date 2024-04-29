@@ -63,13 +63,13 @@ class Downwind(Algorithm):
         farm,
         states,
         wake_models,
-        mbook=None,
         rotor_model="centre",
         wake_frame="rotor_wd",
-        partial_wakes={},
+        partial_wakes=None,
         farm_controller="basic_ctrl",
-        chunks={FC.STATE: 1000, FC.TARGET: 1000},
+        chunks={FC.STATE: 1000, FC.TARGET: 4000},
         wake_mirrors={},
+        mbook=None,
         dbook=None,
         verbosity=1,
     ):
@@ -85,15 +85,13 @@ class Downwind(Algorithm):
         wake_models: list of str
             The wake models, applied to all turbines.
             Will be looked up in the model book
-        mbook: foxes.ModelBook, optional
-            The model book
         rotor_model: str
             The rotor model, for all turbines. Will be
             looked up in the model book
         wake_frame: str
             The wake frame. Will be looked up in the
             model book
-        partial_wakes: dict, list or str
+        partial_wakes: dict, list or str, optional
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
         farm_controller: str
@@ -105,6 +103,8 @@ class Downwind(Algorithm):
         wake_mirrors: dict
             Switch on wake mirrors for wake models.
             Key: wake model name, value: list of heights
+        mbook: foxes.ModelBook, optional
+            The model book
         dbook: foxes.DataBook, optional
             The data book, or None for default
         verbosity: int
@@ -146,6 +146,8 @@ class Downwind(Algorithm):
                 self.wake_models[w] = m
 
         self.partial_wakes = {}
+        if partial_wakes is None:
+            partial_wakes = {}
         if isinstance(partial_wakes, list) and len(partial_wakes) == 1:
             partial_wakes = partial_wakes[0]
         if isinstance(partial_wakes, str):

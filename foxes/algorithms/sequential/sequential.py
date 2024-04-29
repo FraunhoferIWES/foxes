@@ -62,11 +62,10 @@ class Sequential(Downwind):
         farm,
         states,
         *args,
-        mbook=None,
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.TARGET: 1000},
+        chunks={FC.STATE: None, FC.TARGET: 4000},
         plugins=[],
         outputs=None,
         **kwargs,
@@ -82,8 +81,6 @@ class Sequential(Downwind):
             The ambient states
         args: tuple, optional
             Additional arguments for Downwind
-        mbook: foxes.ModelBook, optional
-            The model book
         points: numpy.ndarray, optional
             The points of interest, shape: (n_states, n_points, 3)
         ambient: bool
@@ -102,7 +99,7 @@ class Sequential(Downwind):
 
         """
         super().__init__(
-            farm, mdls.SeqState(states), *args, mbook=mbook, 
+            farm, mdls.SeqState(states), *args, 
             chunks=chunks, **kwargs
         )
         self.ambient = ambient

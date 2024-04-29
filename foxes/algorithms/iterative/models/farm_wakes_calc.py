@@ -128,7 +128,7 @@ class FarmWakesCalculation(FarmDataModel):
                     if v in wake_res:
                         wake_res[v][:, oi] += d
 
-            del tdata, wdelta, pwake, tdatap, wdeltas
+            del pwake, tdatap, wdeltas
         
         rotor.eval_rpoint_results(
             algo, mdata, fdata, wake_res, weights

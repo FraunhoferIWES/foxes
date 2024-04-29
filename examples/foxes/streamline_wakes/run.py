@@ -113,11 +113,11 @@ if __name__ == "__main__":
     algo = foxes.algorithms.Downwind(
         farm,
         states,
-        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.wake_frame,
         partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 

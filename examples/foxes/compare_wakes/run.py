@@ -14,12 +14,12 @@ def calc(runner, mbook, farm, states, wakes, points, args):
     algo = foxes.algorithms.Downwind(
         farm,
         states,
-        mbook=mbook,
-        rotor_model=args.rotor,
         wake_models=wakes,
+        rotor_model=args.rotor,
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         chunks=cks,
+        mbook=mbook,
         verbosity=0,
     )
 

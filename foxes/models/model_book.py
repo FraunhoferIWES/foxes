@@ -14,6 +14,7 @@ from foxes.core import (
     WakeSuperposition,
     WakeModel,
     AxialInductionModel,
+    TurbineInductionModel,
 )
 
 
@@ -528,7 +529,9 @@ class ModelBook:
             The partial wake model name
 
         """
-        if isinstance(wake_model, fm.wake_models.TopHatWakeModel):
+        if isinstance(wake_model, TurbineInductionModel):
+            return "grid9"
+        elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
             return "top_hat"
         elif isinstance(wake_model, fm.wake_models.AxisymmetricWakeModel):
             return "axiwake6"

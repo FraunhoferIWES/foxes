@@ -52,7 +52,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default={}, nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
@@ -111,13 +111,13 @@ if __name__ == "__main__":
     algo = Algo(
         farm,
         states,
-        mbook=mbook,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
-        chunks=None,
         wake_mirrors=mirrors,
+        mbook=mbook,
+        chunks=None,
         verbosity=1,
     )
 
