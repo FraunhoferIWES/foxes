@@ -183,7 +183,7 @@ class PartialAxiwake(PartialCentre):
                 superp = wmodel.superp[v]
             except KeyError:
                 raise KeyError(
-                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
+                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {sorted(list(wmodel.superp.keys()))}"
                 )
 
             wake_deltas[v] = superp.add_wake(
