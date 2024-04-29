@@ -31,7 +31,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default={}, nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=300
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     cks = (
         None
         if args.nodask
-        else {FC.STATE: args.chunksize, FC.POINT: args.chunksize_points}
+        else {FC.STATE: args.chunksize, FC.TARGET: args.chunksize_points}
     )
 
     mbook = foxes.models.ModelBook()
@@ -114,13 +114,13 @@ if __name__ == "__main__":
         plt.close(ax.get_figure())
 
     algo = foxes.algorithms.Iterative(
-        mbook,
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
         verbosity=1,
     )
@@ -164,7 +164,7 @@ if __name__ == "__main__":
             ]
         )
         print()
-        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.AMB_CT, FV.CT, FV.EFF]].describe())
+        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
 
         # power results
         P0 = o.calc_mean_farm_power(ambient=True)

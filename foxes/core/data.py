@@ -198,6 +198,10 @@ class Data(Dict):
                     raise ValueError(
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
                     )
+                
+        if FC.TARGETS in self and name not in [FC.TARGETS, FC.TWEIGHTS] + list(self.sizes.keys()):
+            if len(self[name].shape) < 3:
+                raise ValueError(f"Invalid target data '{name}': Shape {self[name].shape}, expecting {self[FC.TARGETS][...,0].shape}")
 
     def add(self, name, data, dims):
         """

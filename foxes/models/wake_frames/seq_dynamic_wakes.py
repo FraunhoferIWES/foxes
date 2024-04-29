@@ -269,7 +269,7 @@ class SeqDynamicWakes(WakeFrame):
             The data dimensions
 
         """
-        if states0 is None:
+        if states0 is None and FC.STATE_SOURCE_ORDERI in tdata:
             # from previous iteration:
             if downwind_index != tdata[FC.STATE_SOURCE_ORDERI]:
                 raise ValueError(

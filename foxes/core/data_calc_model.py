@@ -53,13 +53,6 @@ class DataCalcModel(Model):
 
         """
         pass
-    
-    def _call_calc(self, algo, *data, **calc_pars):
-        """
-        Helper function for the final call of the
-        calculation function
-        """
-        return self.calculate(algo, *data, **calc_pars)
 
     def _wrap_calc(
         self,
@@ -146,7 +139,7 @@ class DataCalcModel(Model):
                 
         # run model calculation:
         self.ensure_variables(algo, *data)
-        results = self._call_calc(algo, *data, **calc_pars)
+        results = self.calculate(algo, *data, **calc_pars)
 
         # replace missing results by first input data with matching shape:
         missing = set(out_vars).difference(results.keys())

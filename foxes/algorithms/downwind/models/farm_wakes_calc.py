@@ -94,6 +94,8 @@ class FarmWakesCalculation(FarmDataModel):
 
         wake_res = deepcopy(amb_res)
         n_turbines = mdata.n_turbines
+        run_up = None
+        run_down = None
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             tdatap = pwake2tdata[pwake.name]
@@ -101,6 +103,7 @@ class FarmWakesCalculation(FarmDataModel):
             
             # downwind:
             if wmodel.affects_downwind:
+                run_up = wname
                 for oi in range(n_turbines):
                     if oi > 0:
                         _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
@@ -111,6 +114,7 @@ class FarmWakesCalculation(FarmDataModel):
                 
             # upwind:
             else:
+                run_down = wname
                 for oi in range(n_turbines-1, -1, -1):
                     if oi < n_turbines - 1:
                         _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
@@ -118,5 +122,8 @@ class FarmWakesCalculation(FarmDataModel):
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
                         pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+            
+            if run_up is not None and run_down is not None:
+                raise KeyError(f"Wake model '{run_up}' is an upwind model, wake model '{run_down}' is a downwind model: Require iterative algorithm")
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

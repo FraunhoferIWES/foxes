@@ -147,7 +147,7 @@ class SliceData(Output):
         # take mean over states:
         weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
         data = {
-            v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
+            v: np.einsum("s,sp->p", weights, point_results[v].to_numpy()[:, :, 0])
             for v in variables
         }
         del point_results

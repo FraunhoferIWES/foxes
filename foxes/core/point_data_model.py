@@ -47,7 +47,7 @@ class PointDataModel(DataCalcModel):
             if v not in tdata:
                 tdata[v] = np.full((tdata.n_states, tdata.n_targets, tdata.n_tpoints), np.nan, dtype=FC.DTYPE)
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-
+    
     @abstractmethod
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
@@ -106,7 +106,7 @@ class PointDataModel(DataCalcModel):
             *data,
             out_vars=out_vars,
             loop_dims=[FC.STATE, FC.TARGET],
-            out_core_vars=[FC.VARS],
+            out_core_vars=[FC.TPOINT, FC.VARS],
             **calc_pars,
         )
 
@@ -192,14 +192,6 @@ class PointDataModelList(PointDataModel):
         for m in self.models:
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
-
-    def _call_calc(self, algo, *data, **calc_pars):
-        """
-        Helper function for the final call of the
-        calculation function
-        """
-        results = self.calculate(algo, *data, **calc_pars)
-        return {v: d[:, :, 0] for v, d in results.items()}
     
     def calculate(self, algo, mdata, fdata, tdata, parameters=None):
         """ "

@@ -426,21 +426,18 @@ class Model(ABC):
                 sts = (sts + 0.5).astype(FC.ITYPE)
             sel = sts < i0
             if np.any(sel):
-                if (
-                    not hasattr(algo, "prev_farm_results") 
-                    or getattr(algo, "prev_farm_results") is None
-                ):
+                if not hasattr(algo, "prev_farm_results"):
                     raise KeyError(
                         f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
                     )
-
-                prev_fres = getattr(algo, "prev_farm_results")[variable].to_numpy()
-                prev_data = prev_fres[sts[sel], downwind_index]
-                if target == FC.STATE_TARGET:
-                    out[sel[:, :, 0]] = prev_data
-                else:
-                    out[sel] = prev_data
-                del prev_fres, prev_data
+                prev_fres = getattr(algo, "prev_farm_results")
+                if prev_fres is not None:
+                    prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
+                    if target == FC.STATE_TARGET:
+                        out[sel[:, :, 0]] = prev_data
+                    else:
+                        out[sel] = prev_data
+                    del prev_fres, prev_data
         
         # check for None:
         if not accept_none and out is None:

@@ -625,6 +625,7 @@ class Downwind(Algorithm):
         self.print(
             f"Calculating {len(ovars)} variables at {points.shape[1]} points in {self.n_states} states"
         )
+
         point_results = mlist.run_calculation(
             self,
             models_data,
