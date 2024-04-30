@@ -139,14 +139,7 @@ class DataCalcModel(Model):
         # link weights from mdata to fdata:
         if FV.WEIGHT in data[0]:
             data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
-        
-        # ensure TXYH:
-        if len(data) > 1:
-            if FV.X in data[1] and FV.Y in data[1] and FV.H in data[1]:
-                data[1][FV.TXYH] = np.stack([data[1][FV.X], data[1][FV.Y], data[1][FV.H]], axis=-1)
-                data[1][FV.X] = data[1][FV.TXYH][..., 0]
-                data[1][FV.Y] = data[1][FV.TXYH][..., 1]
-                data[1][FV.H] = data[1][FV.TXYH][..., 2]
+            data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
                 
         # run model calculation:
         self.ensure_variables(algo, *data)

@@ -122,9 +122,9 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -192,12 +192,12 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: dict
-            The target point results
+        tdata: foxes.core.TData
+            The target point data
         weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
         downwind_index: int, optional
@@ -319,9 +319,9 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         rpoints: numpy.ndarray, optional
             The rotor points, or None for automatic for

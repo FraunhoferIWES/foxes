@@ -120,19 +120,15 @@ class Data(Dict):
             and dims[FV.X] == dims[FV.Y]
             and dims[FV.X] == dims[FV.H]
         ):
-            shp = tuple(list(data[FV.X].shape)+[3])
-            self[FV.TXYH] = np.zeros(shp, dtype=FC.DTYPE)
-
-            self[FV.TXYH][..., 0] = self[FV.X]
-            self[FV.TXYH][..., 1] = self[FV.Y]
-            self[FV.TXYH][..., 2] = self[FV.H]
+            self[FV.TXYH] = np.stack(
+                [self[FV.X], self[FV.Y], self[FV.H]], axis=-1
+            )
 
             self[FV.X] = self[FV.TXYH][..., 0]
             self[FV.Y] = self[FV.TXYH][..., 1]
             self[FV.H] = self[FV.TXYH][..., 2]
 
-            dms = tuple(list(dims[FV.X]) + [FC.XYH])
-            self.dims[FV.TXYH] = dms
+            self.dims[FV.TXYH] = tuple(list(dims[FV.X]) + [FC.XYH])
 
     def _run_entry_checks(self, name, data, dims):
         """ Run entry checks on new data """
