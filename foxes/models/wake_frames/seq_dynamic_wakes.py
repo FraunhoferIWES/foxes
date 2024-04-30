@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes.core.data import Data
+from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
 from foxes.algorithms import Sequential
@@ -112,7 +112,7 @@ class SeqDynamicWakes(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        tdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
@@ -191,7 +191,7 @@ class SeqDynamicWakes(WakeFrame):
             v: (FC.STATE, FC.TARGET, FC.TPOINT) 
             for v in hpdata.keys()
         }
-        hpdata = Data.from_points(
+        hpdata = TData.from_points(
             points=self._traces_p[None, :N, downwind_index],
             data=hpdata, dims=hpdims,
         )

@@ -131,14 +131,6 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
                 )
-            elif FC.TARGET in t[0]:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' requires combination with dimension '{FC.STATE}'"
-                )
-            elif FC.TPOINT in t[0] and FC.TARGET not in t[0]:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Dimension '{FC.TPOINT}' requires combination with dimension '{FC.TARGET}'"
-                )
             for d, s in zip(t[0], t[1].shape):
                 if d not in sizes:
                     sizes[d] = s
@@ -392,6 +384,7 @@ class Algorithm(Model):
                 f"points have wrong dimensions, expecting ({self.n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
         idata["data_vars"][FC.TARGETS] = ((FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH), points[:, :, None, :])
+        idata["data_vars"][FC.TWEIGHTS] = ((FC.TPOINT,), np.array([1.], dtype=FC.DTYPE))
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)

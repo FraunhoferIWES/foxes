@@ -161,7 +161,7 @@ class ModelBook:
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
-            #yawed=fm.wake_frames.YawedWakes(),
+            yawed=fm.wake_frames.YawedWakes(),
         )
         stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
         for s in stps:

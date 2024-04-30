@@ -192,13 +192,13 @@ class MultiHeightStates(States):
             isorg = False
         else:
             isorg = True
+            data = self.data_source
 
         if self.states_sel is not None:
             data = data.iloc[self.states_sel]
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
-        else:
-            data = data
+            
         self._N = len(data.index)
         self._inds = data.index.to_numpy()
 

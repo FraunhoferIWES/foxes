@@ -34,7 +34,7 @@ class Bastankhah2016Model(Model):
     MDATA_KEY = "Bastankhah2016Model"
     PARS = "pars"
     CHECK = "check"
-    SP_SEL = "st_sel"
+    ST_SEL = "st_sel"
     X0 = "x0"
 
     NEAR = "near"
@@ -328,7 +328,7 @@ class Bastankhah2016Model(Model):
                 out[self.SIGMA_Z_FAR] = sigma_z
 
         # update mdata:
-        out[self.SP_SEL] = st_sel
+        out[self.ST_SEL] = st_sel
         mdata[self.MDATA_KEY] = out
 
     def has_data(self, mdata, downwind_index, x):
@@ -569,7 +569,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             )
 
         # select targets:
-        st_sel = self.model.get_data(Bastankhah2016Model.SP_SEL, mdata)
+        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
         n_sp_sel = np.sum(st_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
         if np.any(st_sel):

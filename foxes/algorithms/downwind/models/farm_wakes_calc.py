@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 
-from foxes.core import FarmDataModel, Data
+from foxes.core import FarmDataModel, TData
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -67,7 +67,7 @@ class FarmWakesCalculation(FarmDataModel):
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
                 tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
-                pwake2tdata[pwake.name] = Data.from_tpoints(tpoints, tweights)
+                pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
 
         def _get_wdata(tdatap, wdeltas, s):
             """ Helper function for wake data extraction """

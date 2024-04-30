@@ -615,7 +615,7 @@ class Downwind(Algorithm):
         if persist_pdata:
             point_data = point_data.persist()
         self.print("\nInput point data:\n\n", point_data, "\n")
-
+        
         # check vars:
         ovars = mlist.output_point_vars(self)
         self.print(f"\nOutput point variables:", ", ".join(ovars))

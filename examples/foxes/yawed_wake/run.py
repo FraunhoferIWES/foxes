@@ -39,7 +39,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="yawed")
     parser.add_argument(
@@ -76,13 +76,13 @@ if __name__ == "__main__":
 
     # create algorithm
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=None,
     )
 

@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes.core.data import Data
+from foxes.core.data import MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -87,11 +87,11 @@ class Timelines(WakeFrame):
         mdata = algo.get_model_data(algo.states)["data_vars"]
         mdict = {v: d[1] for v, d in mdata.items()}
         mdims = {v: d[0] for v, d in mdata.items()}
-        mdata = Data(mdict, mdims, loop_dims=[FC.STATE])
+        mdata = MData(mdict, mdims, loop_dims=[FC.STATE])
         del mdict, mdims
 
         # prepare fdata:
-        fdata = Data({}, {}, loop_dims=[FC.STATE])
+        fdata = FData({}, {}, loop_dims=[FC.STATE])
 
         # prepare tdata:
         tdata = {
@@ -99,7 +99,7 @@ class Timelines(WakeFrame):
             for v in algo.states.output_point_vars(algo)
         }
         pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
-        tdata = Data.from_points(
+        tdata = TData.from_points(
             points=np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE), 
             data=tdata, 
             dims=pdims,
@@ -147,7 +147,7 @@ class Timelines(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        tdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target

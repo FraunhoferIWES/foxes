@@ -2,7 +2,7 @@
 Abstract classes and core functionality.
 """
 
-from .data import Data
+from .data import Data, MData, FData, TData
 from .model import Model
 from .data_calc_model import DataCalcModel
 from .states import States, ExtendedStates

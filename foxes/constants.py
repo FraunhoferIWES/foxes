@@ -25,7 +25,7 @@ TNAME = "tname"
 :group: foxes.constants
 """
 
-TARGET = "taget"
+TARGET = "target"
 """ Target identifier
 :group: foxes.constants
 """

@@ -3,7 +3,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes.core.data import Data
+from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -82,7 +82,7 @@ class Streamlines2D(WakeFrame):
 
                 # calculate next tangential vector:
                 svars = algo.states.output_point_vars(algo)
-                tdata = Data.from_points(
+                tdata = TData.from_points(
                     data[:, :, i, :3],
                     data={v: np.full((n_states, n_turbines, 1), np.nan, dtype=FC.DTYPE)
                           for v in svars}, 
@@ -185,7 +185,7 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        tdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target

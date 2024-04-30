@@ -6,7 +6,7 @@ import foxes.constants as FC
 from .farm_data_model import FarmDataModel
 from foxes.utils import wd2uv, uv2wd, all_subclasses
 
-from .data import Data
+from .data import TData
 
 
 class RotorModel(FarmDataModel):
@@ -364,13 +364,13 @@ class RotorModel(FarmDataModel):
             mdata.dims[self.RWEIGHTS] = (FC.TPOINT,)
             self.data_to_store(self.RWEIGHTS, algo, mdata)
 
-        tdata = Data.from_tpoints(rpoints, weights)
+        tdata = TData.from_tpoints(rpoints, weights)
         svars = algo.states.output_point_vars(algo)
         for v in svars:
             tdata.add(
                 v, 
                 data=np.full_like(rpoints[..., 0], np.nan), 
-                dims=(FC.STATE, FC.TURBINE, FC.TPOINT)
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT)
             )
 
         sres = algo.states.calculate(algo, mdata, fdata, tdata)

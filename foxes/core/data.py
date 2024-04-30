@@ -4,13 +4,10 @@ from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Data(Dict):
     """
-    Container for data and meta data.
-
-    Used during the calculation of single chunks,
-    usually for numpy data (not xarray data).
+    Container for numpy array data and 
+    the associated meta data.
 
     Attributes
     ----------
@@ -53,9 +50,9 @@ class Data(Dict):
 
         self.sizes = {}
         for v, d in data.items():
-            self.__run_entry_checks(v, d, dims[v])
+            self._run_entry_checks(v, d, dims[v])
 
-        self.__auto_update()
+        self._auto_update()
 
     @property
     def n_states(self):
@@ -83,52 +80,6 @@ class Data(Dict):
         """
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
 
-    @property
-    def n_targets(self):
-        """
-        The number of targets
-
-        Returns
-        -------
-        int:
-            The number of targets
-
-        """
-        return self.sizes[FC.TARGET] if FC.TARGET in self.sizes else None
-
-    @property
-    def n_tpoints(self):
-        """
-        The number of points per target
-
-        Returns
-        -------
-        int:
-            The number of points per target
-
-        """
-        return self.sizes[FC.TPOINT] if FC.TPOINT in self.sizes else None
-    
-    def tpoint_mean(self, variable):
-        """
-        Take the mean over target points
-
-        Parameters
-        ----------
-        variable: str
-            The variable name
-        
-        Returns
-        -------
-        data: numpy.ndarray
-            The reduced array, shape: 
-            (n_states, n_targets, ...)
-
-        """
-        return np.einsum(
-            'stp...,p->st...', self[variable], self[FC.TWEIGHTS]
-        )
-    
     def states_i0(self, counter=False, algo=None):
         """
         Get the state counter for first state in chunk
@@ -156,7 +107,8 @@ class Data(Dict):
         else:
             return self[FC.STATE][0]
 
-    def __auto_update(self):
+    def _auto_update(self):
+        """ Checks and operations after data changes """
         data = self
         dims = self.dims
 
@@ -165,25 +117,25 @@ class Data(Dict):
             and FV.X in data
             and FV.Y in data
             and FV.H in data
-            and dims[FV.X] == (FC.STATE, FC.TURBINE)
-            and dims[FV.Y] == (FC.STATE, FC.TURBINE)
-            and dims[FV.H] == (FC.STATE, FC.TURBINE)
+            and dims[FV.X] == dims[FV.Y]
+            and dims[FV.X] == dims[FV.H]
         ):
-            self[FV.TXYH] = np.zeros(
-                (self.n_states, self.n_turbines, 3), dtype=FC.DTYPE
-            )
+            shp = tuple(list(data[FV.X].shape)+[3])
+            self[FV.TXYH] = np.zeros(shp, dtype=FC.DTYPE)
 
-            self[FV.TXYH][:, :, 0] = self[FV.X]
-            self[FV.TXYH][:, :, 1] = self[FV.Y]
-            self[FV.TXYH][:, :, 2] = self[FV.H]
+            self[FV.TXYH][..., 0] = self[FV.X]
+            self[FV.TXYH][..., 1] = self[FV.Y]
+            self[FV.TXYH][..., 2] = self[FV.H]
 
-            self[FV.X] = self[FV.TXYH][:, :, 0]
-            self[FV.Y] = self[FV.TXYH][:, :, 1]
-            self[FV.H] = self[FV.TXYH][:, :, 2]
+            self[FV.X] = self[FV.TXYH][..., 0]
+            self[FV.Y] = self[FV.TXYH][..., 1]
+            self[FV.H] = self[FV.TXYH][..., 2]
 
-            self.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
+            dms = tuple(list(dims[FV.X]) + [FC.XYH])
+            self.dims[FV.TXYH] = dms
 
-    def __run_entry_checks(self, name, data, dims):
+    def _run_entry_checks(self, name, data, dims):
+        """ Run entry checks on new data """
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:
             if len(dims) != len(data.shape):
@@ -199,10 +151,6 @@ class Data(Dict):
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
                     )
                 
-        if FC.TARGETS in self and name not in [FC.TARGETS, FC.TWEIGHTS] + list(self.sizes.keys()):
-            if len(self[name].shape) < 3:
-                raise ValueError(f"Invalid target data '{name}': Shape {self[name].shape}, expecting {self[FC.TARGETS][...,0].shape}")
-
     def add(self, name, data, dims):
         """
         Add data entry
@@ -219,8 +167,8 @@ class Data(Dict):
         """
         self[name] = data
         self.dims[name] = dims
-        self.__run_entry_checks(name, data, dims)
-        self.__auto_update()
+        self._run_entry_checks(name, data, dims)
+        self._auto_update()
     
     def get_slice(self, s, dim_map={}, name=None, keep=True):
         """
@@ -253,12 +201,205 @@ class Data(Dict):
                 data[v] = self[v][s]
                 dims[v] = dim_map.get(d, d)
             except IndexError:
-                data[v] = self[v]
-                dims[v] = self.dims[v]
+                if keep:
+                    data[v] = self[v]
+                    dims[v] = self.dims[v]
         if name is None:
             name = self.name
-        return Data(data, dims, self.loop_dims, name)
+        return type(self)(data, dims, loop_dims=self.loop_dims, name=name)
 
+class MData(Data):
+    """
+    Container for foxes model data.
+
+    :group: core
+    
+    """
+    def __init__(self, *args, name="mdata", **kwargs):
+        """
+        Constructor
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for the base class
+        name: str
+            The data name
+        kwargs: dict, optional
+            Arguments for the base class
+
+        """
+        super().__init__(*args, name=name, **kwargs)
+
+class FData(Data):
+    """
+    Container for foxes farm data.
+
+    Each farm data entry has (n_states, n_turbines) shape,
+    except the dimensions.
+
+    :group: core
+    
+    """
+    def __init__(self, *args, name="fdata", **kwargs):
+        """
+        Constructor
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for the base class
+        name: str
+            The data name
+        kwargs: dict, optional
+            Arguments for the base class
+
+        """
+        super().__init__(*args, name=name, **kwargs)
+
+    def _run_entry_checks(self, name, data, dims):
+        """ Run entry checks on new data """
+        super()._run_entry_checks(name, data, dims)
+        data = self[name]
+        dims = self.dims[name]
+
+        if name not in self.sizes and name not in FC.TNAME:
+            dms = (FC.STATE, FC.TURBINE)
+            shp = (self.n_states, self.n_turbines)
+            if len(data.shape) < 2:
+                raise ValueError(f"FData '{self.name}': Invalid shape for '{name}', expecting {shp}, got {data.shape}")
+            if len(dims) < 2 or dims[:2] != dms:
+                raise ValueError(f"FData '{self.name}': Invalid dims for '{name}', expecting {dms}, got {dims}")
+            
+    def _auto_update(self):
+        """ Checks and operations after data changes """
+        super()._auto_update()
+        if len(self):
+            for x in [FC.STATE, FC.TURBINE]:
+                if x not in self.sizes:
+                    raise KeyError(f"FData '{self.name}': Missing '{x}' in sizes, got {sorted(list(self.sizes.keys()))}")
+            
+class TData(Data):
+    """
+    Container for foxes target data.
+    
+    Each target consists of a fixed number of
+    target points.
+
+    :group: core
+    
+    """
+    def __init__(self, *args, name="tdata", **kwargs):
+        """
+        Constructor
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for the base class
+        name: str
+            The data name
+        kwargs: dict, optional
+            Arguments for the base class
+
+        """
+        super().__init__(*args, name=name, **kwargs)
+
+    def _run_entry_checks(self, name, data, dims):
+        """ Run entry checks on new data """
+        super()._run_entry_checks(name, data, dims)
+        data = self[name]
+        dims = self.dims[name]
+
+        if name == FC.TARGETS:
+            dms = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
+            shp = (self.n_states, self.n_targets, self.n_tpoints, 3)
+            if dims != dms:
+                raise ValueError(f"TData '{self.name}': Invalid dims of {FC.TARGETS}, expecting {dms}, got {dims}")
+            if data.shape != shp:
+                raise ValueError(f"TData '{self.name}': Invalid shape of {FC.TARGETS}, expecting {shp}, got {data.shape}")
+
+        elif name == FC.TWEIGHTS:
+            dms = (FC.TPOINT,)
+            shp = (self.n_tpoints,)
+            if dims != dms:
+                raise ValueError(f"TData '{self.name}': Invalid dims of {FC.TWEIGHTS}, expecting {dms}, got {dims}")
+            if data.shape != shp:
+                raise ValueError(f"TData '{self.name}': Invalid shape of {FC.TWEIGHTS}, expecting {shp}, got {data.shape}")
+
+        elif FC.TARGETS not in self:
+            raise KeyError(f"TData '{self.name}': Missing '{FC.TARGETS}' before adding '{name}'")
+
+        elif FC.TWEIGHTS not in self:
+            raise KeyError(f"TData '{self.name}': Missing '{FC.TWEIGHTS}' before adding '{name}'")
+                                  
+        elif name not in self.sizes:
+            dms = (FC.STATE, FC.TARGET, FC.TPOINT)
+            shp = (self.n_states, self.n_targets, self.n_tpoints)
+            if len(data.shape) < 3:
+                raise ValueError(f"TData '{self.name}': Invalid shape for '{name}', expecting {shp}, got {data.shape}")
+            if len(dims) < 3 or dims[:3] != dms:
+                raise ValueError(f"TData '{self.name}': Invalid dims for '{name}', expecting {dms}, got {dims}")
+            
+    def _auto_update(self):
+        """ Checks and operations after data changes """
+        super()._auto_update()
+        if len(self):
+            for x in [FC.TARGETS, FC.TWEIGHTS]:
+                if x not in self:
+                    raise KeyError(f"TData '{self.name}': Missing '{x}' in data, got {sorted(list(self.keys()))}")
+                if x not in self.dims:
+                    raise KeyError(f"TData '{self.name}': Missing '{x}' in dims, got {sorted(list(self.dims.keys()))}")
+            for x in [FC.STATE, FC.TARGET, FC.TPOINT]:
+                if x not in self.sizes:
+                    raise KeyError(f"TData '{self.name}': Missing '{x}' in sizes, got {sorted(list(self.sizes.keys()))}")
+            
+    @property
+    def n_targets(self):
+        """
+        The number of targets
+
+        Returns
+        -------
+        int:
+            The number of targets
+
+        """
+        return self.sizes[FC.TARGET]
+
+    @property
+    def n_tpoints(self):
+        """
+        The number of points per target
+
+        Returns
+        -------
+        int:
+            The number of points per target
+
+        """
+        return self.sizes[FC.TPOINT]
+    
+    def tpoint_mean(self, variable):
+        """
+        Take the mean over target points
+
+        Parameters
+        ----------
+        variable: str
+            The variable name
+        
+        Returns
+        -------
+        data: numpy.ndarray
+            The reduced array, shape: 
+            (n_states, n_targets, ...)
+
+        """
+        return np.einsum(
+            'stp...,p->st...', self[variable], self[FC.TWEIGHTS]
+        )
+    
     @classmethod
     def from_points(
         cls,
@@ -299,7 +440,7 @@ class Data(Dict):
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = np.array([1], dtype=FC.DTYPE)
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        return Data(data, dims, [FC.STATE, FC.TARGET], name, **kwargs)
+        return cls(data, dims, [FC.STATE, FC.TARGET], name=name, **kwargs)
 
     @classmethod
     def from_tpoints(
@@ -344,8 +485,6 @@ class Data(Dict):
             )
         data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-        if tweights is not None:
-            data[FC.TWEIGHTS] = tweights
-            dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        return Data(data, dims, [FC.STATE], name, **kwargs)
-    
+        data[FC.TWEIGHTS] = tweights
+        dims[FC.TWEIGHTS] = (FC.TPOINT,)
+        return cls(data, dims, [FC.STATE], name=name, **kwargs)

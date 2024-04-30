@@ -205,7 +205,7 @@ class SelfSimilar(TurbineInductionModel):
         r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
         # select values
-        sp_sel = (ct > 0) & (x_R < 0)  # upstream
+        sp_sel = (ct > 0) & (x_R <= 0)  # upstream
         if np.any(sp_sel):
             # velocity eqn 10 from [1]
             xr = x_R[sp_sel]

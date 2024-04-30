@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import FarmDataModel, Data
+from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -87,7 +87,7 @@ class InitFarmData(FarmDataModel):
             fdata[FV.D][:, ti] = D 
 
         # calc WD and YAW at rotor centres:
-        tdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata[FV.WD] = sres[FV.WD][:, :, 0]
         del tdata, sres
