@@ -91,11 +91,11 @@ class DistSlicedWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         downwind_index: int
             The index in the downwind order
@@ -135,11 +135,11 @@ class DistSlicedWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         downwind_index: int
             The index of the wake causing turbine
@@ -198,9 +198,9 @@ class DistSlicedWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,

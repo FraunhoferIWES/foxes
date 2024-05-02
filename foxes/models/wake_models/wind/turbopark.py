@@ -123,11 +123,11 @@ class TurbOParkWake(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         downwind_index: int
             The index in the downwind order
@@ -352,11 +352,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         
         Returns
@@ -397,11 +397,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         downwind_index: int
             The index in the downwind order

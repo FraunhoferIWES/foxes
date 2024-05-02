@@ -128,9 +128,9 @@ class PowerMask(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,

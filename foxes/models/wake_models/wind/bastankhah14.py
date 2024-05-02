@@ -121,11 +121,11 @@ class Bastankhah2014(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         downwind_index: int
             The index in the downwind order
@@ -155,7 +155,7 @@ class Bastankhah2014(GaussianWakeModel):
         )
 
         # select targets:
-        st_sel = (x > 0) & (ct > 0.0)
+        st_sel = (x > 0) & (ct > 0)
         if np.any(st_sel):
             # apply selection:
             x = x[st_sel]
