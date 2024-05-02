@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     # create states
     states = foxes.input.states.SingleStateStates(
-        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
+            ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho,
     )
 
     # create wind farm

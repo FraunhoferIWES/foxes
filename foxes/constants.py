@@ -50,6 +50,16 @@ TWEIGHTS = "tpoint_weights"
 :group: foxes.constants
 """
 
+POINT = "point"
+""" Point identifier
+:group: foxes.constants
+"""
+
+POINTS = "points"
+""" Points identifier
+:group: foxes.constants
+"""
+
 AMB_TARGET_RESULTS = "amb_target_res"
 """ Identified for ambient target results
 :group: foxes.constants

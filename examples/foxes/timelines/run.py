@@ -83,7 +83,7 @@ if __name__ == "__main__":
     cks = (
         None
         if args.nodask
-        else {FC.STATE: args.chunksize, FC.TARGET: args.chunksize_points}
+        else {FC.STATE: args.chunksize, FC.POINT: args.chunksize_points}
     )
 
     mbook = foxes.models.ModelBook()

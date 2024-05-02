@@ -67,7 +67,7 @@ class Downwind(Algorithm):
         wake_frame="rotor_wd",
         partial_wakes=None,
         farm_controller="basic_ctrl",
-        chunks={FC.STATE: 1000, FC.TARGET: 4000},
+        chunks={FC.STATE: 1000, FC.POINT: 4000},
         wake_mirrors={},
         mbook=None,
         dbook=None,

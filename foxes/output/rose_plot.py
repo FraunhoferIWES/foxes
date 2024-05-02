@@ -170,7 +170,7 @@ class RosePlotOutput(Output):
         data[wd_var] = pd.cut(data["wd"], wdb, labels=wds)
         data[lgd] = pd.cut(data[lgd], var_bins, right=False, include_lowest=True)
 
-        grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd], observed=True)
+        grp = data[[wd_var, lgd, "frequency"]].groupby([wd_var, lgd], observed=False)
         data = grp.sum().reset_index()
 
         data[wd_var] = data[wd_var].astype(np.float64)

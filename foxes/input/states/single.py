@@ -213,7 +213,7 @@ class SingleStateStates(States):
             )
 
         if len(self._profiles):
-            z = tdata[FC.POINTS][:, :, 2]
+            z = tdata[FC.TARGETS][..., 2]
             for k, v in self.profdata.items():
                 tdata[k] = v
             for v, p in self._profiles.items():

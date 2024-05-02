@@ -164,6 +164,10 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
                 )
+            if FC.TARGET in self.chunks.keys():
+                raise ValueError(
+                    f"Dimension '{FC.TARGET}' cannot be chunked, maybe try '{FC.POINT}' instead?"
+                )
             xrdata = xrdata.chunk(
                 chunks={c: v for c, v in self.chunks.items() if c in sizes}
             )

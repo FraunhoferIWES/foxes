@@ -4,7 +4,7 @@ from xarray import Dataset
 from foxes.algorithms.downwind.downwind import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core.data import Data
+from foxes.core.data import MData, FData, TData
 
 from . import models as mdls
 
@@ -65,7 +65,7 @@ class Sequential(Downwind):
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.TARGET: 4000},
+        chunks={FC.STATE: None, FC.POINT: 4000},
         plugins=[],
         outputs=None,
         **kwargs,
@@ -158,14 +158,14 @@ class Sequential(Downwind):
                 print(f"Output farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            self._mdata = Data(
+            self._mdata = MData(
                 data={v: d[1] for v, d in self._mdata["data_vars"].items()},
                 dims={v: d[0] for v, d in self._mdata["data_vars"].items()},
                 loop_dims=[FC.STATE],
                 name="mdata",
             )
 
-            self._fdata = Data(
+            self._fdata = FData(
                 data={
                     v: np.zeros((self.n_states, self.n_turbines), dtype=FC.DTYPE)
                     for v in self.farm_vars
@@ -185,7 +185,7 @@ class Sequential(Downwind):
                 self.print(f"\nOutput point variables:", ", ".join(self._pvars), "\n")
 
                 n_points = self.points.shape[1]
-                self._tdata = Data.from_points(
+                self._tdata = TData.from_points(
                     self.points,
                     data={
                         v: np.zeros((self.n_states, n_points, 1), dtype=FC.DTYPE)
@@ -209,7 +209,7 @@ class Sequential(Downwind):
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
 
-            mdata = Data(
+            mdata = MData(
                 data={
                     v: d[self._i, None] if self._mdata.dims[v][0] == FC.STATE else d
                     for v, d in self._mdata.items()
@@ -219,7 +219,7 @@ class Sequential(Downwind):
                 name="mdata",
             )
 
-            fdata = Data(
+            fdata = FData(
                 data={
                     v: np.zeros((1, self.n_turbines), dtype=FC.DTYPE)
                     for v in self.farm_vars
@@ -252,7 +252,7 @@ class Sequential(Downwind):
 
             else:
                 n_points = self.points.shape[1]
-                tdata = Data.from_points(
+                tdata = TData.from_points(
                     self.points[self.counter, None],
                     data={
                         v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in self._pvars
@@ -371,7 +371,7 @@ class Sequential(Downwind):
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.MData
             The current model data
 
         """
@@ -384,7 +384,7 @@ class Sequential(Downwind):
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.FData
             The current farm data
 
         """
@@ -397,7 +397,7 @@ class Sequential(Downwind):
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.TData
             The current point data
 
         """
@@ -535,13 +535,13 @@ class Sequential(Downwind):
         pvars = plist.output_point_vars(self)
 
         mdata = self.get_models_idata()
-        mdata = Data(
+        mdata = MData(
             data={v: d[1] for v, d in mdata["data_vars"].items()},
             dims={v: d[0] for v, d in mdata["data_vars"].items()},
             loop_dims=[FC.STATE],
             name="mdata",
         )
-        mdata = Data(
+        mdata = MData(
             data={
                 v: d[self.states.counter, None] if mdata.dims[v][0] == FC.STATE else d
                 for v, d in mdata.items()
@@ -551,14 +551,14 @@ class Sequential(Downwind):
             name="mdata",
         )
 
-        fdata = Data(
+        fdata = FData(
             data={v: farm_results[v].to_numpy() for v in self.farm_vars},
             dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
             loop_dims=[FC.STATE],
             name="fdata",
         )
 
-        tdata = Data.from_points(
+        tdata = TData.from_points(
             points[0, None],
             data={v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in pvars},
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in pvars},

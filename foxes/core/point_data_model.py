@@ -101,7 +101,7 @@ class PointDataModel(DataCalcModel):
             The calculation results
 
         """
-        return super().run_calculation(
+        results = super().run_calculation(
             algo,
             *data,
             out_vars=out_vars,
@@ -109,6 +109,9 @@ class PointDataModel(DataCalcModel):
             out_core_vars=[FC.TPOINT, FC.VARS],
             **calc_pars,
         )
+        if results.sizes[FC.TPOINT] != 1:
+            raise ValueError(f"PointDataModel '{self.name}': Expecting dimension '{FC.TPOINT}' of size 1, found {results.sizes[FC.TPOINT]}")
+        return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
 
     def __add__(self, m):
         if isinstance(m, list):
