@@ -135,7 +135,7 @@ def run(args):
                                 dryres.append(d)
 
                         elif run_tutorial(tdir, args.nofig):
-                            raise Exception(f"\EXAMPLE {tdir} FAILED.")
+                            raise Exception(f"\nEXAMPLE {tdir} FAILED.")
 
                     counter += 1
 
