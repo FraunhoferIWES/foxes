@@ -11,7 +11,7 @@ import foxes.variables as FV
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=10
+        "-nt", "--n_t", help="The number of turbines", type=int, default=9
     )
     parser.add_argument(
         "-t",
@@ -28,14 +28,14 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default=None
     )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
-    parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
+    parser.add_argument("--ti", help="The TI value", type=float, default=0.03)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
         "-d",
