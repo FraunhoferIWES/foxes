@@ -68,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -92,10 +93,11 @@ if __name__ == "__main__":
     )
 
     """
-    o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-    fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
+        o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
+        fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
+        plt.show()
+        plt.close(fig)
     """
 
     farm = foxes.WindFarm()
@@ -108,9 +110,10 @@ if __name__ == "__main__":
     )
 
     """
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+    if not args.nofig:
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
     """
 
     algo = foxes.algorithms.Downwind(
@@ -144,25 +147,26 @@ if __name__ == "__main__":
     fr = fr.loc[sel]
     print(fr)
 
-    o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(
-        16,
-        FV.P,
-        [100, 1000, 2000, 4000, 5001, 7000],
-        turbine=0,
-        title="Power turbine 0",
-        figsize=(12, 6),
-        rect=[0.05, 0.1, 0.4, 0.8],
-    )
+    if not args.nofig:
+        o = foxes.output.RosePlotOutput(farm_results)
+        fig = o.get_figure(
+            16,
+            FV.P,
+            [100, 1000, 2000, 4000, 5001, 7000],
+            turbine=0,
+            title="Power turbine 0",
+            figsize=(12, 6),
+            rect=[0.05, 0.1, 0.4, 0.8],
+        )
 
-    o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(
-        16,
-        FV.P,
-        [100, 1000, 2000, 4000, 5001, 7000],
-        turbine=1,
-        title="Power turbine 1",
-        fig=fig,
-        rect=[0.35, 0.1, 0.8, 0.8],
-    )
-    plt.show()
+        o = foxes.output.RosePlotOutput(farm_results)
+        fig = o.get_figure(
+            16,
+            FV.P,
+            [100, 1000, 2000, 4000, 5001, 7000],
+            turbine=1,
+            title="Power turbine 1",
+            fig=fig,
+            rect=[0.35, 0.1, 0.8, 0.8],
+        )
+        plt.show()

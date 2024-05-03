@@ -78,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = (
@@ -108,7 +109,7 @@ if __name__ == "__main__":
         turbine_models=args.tmodels + [ttype.name],
     )
 
-    if args.show_layout:
+    if not args.nofig and args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
@@ -173,7 +174,7 @@ if __name__ == "__main__":
         print(f"Farm ambient power: {P0/1000:.1f} MW")
         print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
 
-        if args.animation:
+        if not args.nofig and args.animation:
             print("\nCalculating animation")
 
             fig, axs = plt.subplots(

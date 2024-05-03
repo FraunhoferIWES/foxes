@@ -52,6 +52,7 @@ if __name__ == "__main__":
         help="Don't use the iterative algorithm",
         action="store_true",
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     # create model book
@@ -149,46 +150,47 @@ if __name__ == "__main__":
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
     # horizontal flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    xmin = -2000
-    xmax = (args.nx - 1) * args.dx + 2000
-    g = o.gen_states_fig_xy(
-        args.var,
-        figsize=(7, 5),
-        resolution=20,
-        xmin=xmin,
-        xmax=xmax,
-        yspace=1000.0,
-        levels=40,
-        rotor_color="black",
-    )
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        xmin = -2000
+        xmax = (args.nx - 1) * args.dx + 2000
+        g = o.gen_states_fig_xy(
+            args.var,
+            figsize=(7, 5),
+            resolution=20,
+            xmin=xmin,
+            xmax=xmax,
+            yspace=1000.0,
+            levels=40,
+            rotor_color="black",
+        )
+        fig = next(g)
+        plt.show()
+        plt.close(fig)
 
-    # center line plot:
-    H = mbook.turbine_types[ttype.name].H
-    n_points = 10000
-    points = np.zeros((1, n_points, 3))
-    points[:, :, 0] = np.linspace(xmin, xmax, n_points)[None, :]
-    points[:, :, 2] = H
-    point_results = algo.calc_points(farm_results, points)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(points[0, :, 0], point_results[FV.WS][0, :])
-    ax.set_xlabel("x [m]")
-    ax.set_ylabel("Wind speed [m/s]")
-    plt.show()
-    plt.close(fig)
+        # center line plot:
+        H = mbook.turbine_types[ttype.name].H
+        n_points = 10000
+        points = np.zeros((1, n_points, 3))
+        points[:, :, 0] = np.linspace(xmin, xmax, n_points)[None, :]
+        points[:, :, 2] = H
+        point_results = algo.calc_points(farm_results, points)
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(points[0, :, 0], point_results[FV.WS][0, :])
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("Wind speed [m/s]")
+        plt.show()
+        plt.close(fig)
 
-    # front line plot:
-    points = np.zeros((1, n_points, 3))
-    points[:, :, 0] = -200
-    points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[None, :]
-    points[:, :, 2] = H
-    point_results = algo.calc_points(farm_results, points)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(point_results[FV.WS][0, :], points[0, :, 1])
-    ax.set_ylabel("y [m]")
-    ax.set_xlabel("Wind speed [m/s]")
-    plt.show()
-    plt.close(fig)
+        # front line plot:
+        points = np.zeros((1, n_points, 3))
+        points[:, :, 0] = -200
+        points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[None, :]
+        points[:, :, 2] = H
+        point_results = algo.calc_points(farm_results, points)
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(point_results[FV.WS][0, :], points[0, :, 1])
+        ax.set_ylabel("y [m]")
+        ax.set_xlabel("Wind speed [m/s]")
+        plt.show()
+        plt.close(fig)

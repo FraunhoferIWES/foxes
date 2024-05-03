@@ -128,6 +128,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -212,4 +213,5 @@ if __name__ == "__main__":
     ax.set_xlabel("y/D")
     ax.set_ylabel(vlab)
     ax.legend()
-    plt.show()
+    if not args.nofig:
+        plt.show()

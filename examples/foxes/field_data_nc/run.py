@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-npl", "--no_pre_load", help="Do not pre-load data", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     states = foxes.input.states.FieldDataNC(
@@ -131,6 +132,7 @@ if __name__ == "__main__":
         fr = farm_results.to_dataframe()
         print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-        o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-        o.get_mean_fig_xy(FV.WS, resolution=10)
-        plt.show()
+        if not args.nofig:
+            o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+            o.get_mean_fig_xy(FV.WS, resolution=10)
+            plt.show()

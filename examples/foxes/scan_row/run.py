@@ -64,6 +64,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     n_s = args.n_s
@@ -168,7 +169,7 @@ if __name__ == "__main__":
         print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
         print()
 
-        if args.calc_cline:
+        if not args.nofig and args.calc_cline:
             points = np.zeros((n_s, n_p, 3))
             points[:, :, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)[
                 None, :
@@ -195,7 +196,7 @@ if __name__ == "__main__":
             plt.show()
             plt.close(fig)
 
-        if args.calc_mean:
+        if not args.nofig and args.calc_mean:
             o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
             fig = o.get_mean_fig_xy(FV.WS, resolution=10)
             plt.show()

@@ -68,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -89,7 +90,7 @@ if __name__ == "__main__":
         farm, args.layout, turbine_models=args.tmodels + [ttype.name], H=170.0
     )
 
-    if args.show_layout:
+    if not args.nofig and args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
