@@ -63,7 +63,7 @@ class Algorithm(Model):
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
 
-        if FC.TARGET not in chunks:
+        if chunks is not None and FC.TARGET not in chunks:
             self.chunks[FC.TARGET] = chunks.get(FC.POINT, None)
 
         self._idata_mem = Dict()

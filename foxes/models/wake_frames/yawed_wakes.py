@@ -260,8 +260,6 @@ class YawedWakes(WakeFrame):
         )
         xyz[..., 1] = y[:, :, None]
 
-        #print("YAWED Y",y)
-
         return xyz
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
