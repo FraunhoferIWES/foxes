@@ -150,12 +150,15 @@ class SetFarmVars(TurbineModel):
         bsel[st_sel] = True
 
         for v in self.vars:
-            data = mdata[self.var(v)]
+            data = mdata[self.var(v)][ssel, order]
             hsel = ~np.isnan(data)
             tsel = bsel & hsel
-            
 
-            fdata[v] = data[ssel, order]
-            print("SETFV",v,fdata[v])
+            print("SETFV",v,np.where(tsel)[1],data[tsel])
+            print(order)
+            print(bsel)
+            raise Exception
+
+            fdata[v][tsel] = data[tsel]
 
         return {v: fdata[v] for v in self.vars}

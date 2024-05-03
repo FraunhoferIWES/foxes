@@ -34,7 +34,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear", "CrespoHernandez_max"],
+        default=["Bastankhah2016_linear", "CrespoHernandez_max_k002"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -100,26 +100,12 @@ if __name__ == "__main__":
     plt.show()
     plt.close(fig)
 
-    # xz flow plot
-    print("\nVertical flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, y=0, zmax=300, rotor_color="red")
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
-
     # yz flow plot
     print("\nVertical flow figure output:")
     o = foxes.output.FlowPlots2D(algo, farm_results)
     g = o.gen_states_fig_yz(
-        var=args.var,
-        resolution=10,
-        x=1700,
-        ymin=-200,
-        ymax=200,
-        zmax=300,
-        rotor_color="red",
-    )
+        args.var, resolution=10, x=750, ymin=-200,ymax=200,zmin=0,zmax=250,
+        rotor_color="red", verbosity=0)
     fig = next(g)
     plt.show()
     plt.close(fig)

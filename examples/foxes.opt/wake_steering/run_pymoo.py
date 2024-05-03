@@ -5,7 +5,7 @@ from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
 from foxes.opt.problems import OptFarmVars
-from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI
+from foxes.opt.objectives import MaxFarmPower
 import foxes.variables as FV
 
 if __name__ == "__main__":
@@ -24,11 +24,11 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["CrespoHernandez_quadratic_k002", "Bastankhah2016_linear_k004"],
+        default=["CrespoHernandez_quadratic", "Bastankhah2016_linear"],
         nargs="+",
     )
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
     )
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes model", default=None
@@ -110,8 +110,7 @@ if __name__ == "__main__":
     ) as runner:
         problem = OptFarmVars("opt_yawm", algo, runner=runner)
         problem.add_var(FV.YAWM, float, 0.0, -40.0, 40.0, level="turbine")
-        # problem.add_objective(MaxFarmPower(problem))
-        problem.add_objective(MinimalMaxTI(problem))
+        problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
 
         solver = Optimizer_pymoo(

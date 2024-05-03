@@ -77,6 +77,17 @@ class YawedWakes(WakeFrame):
         setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
+    def __repr__(self):
+        k = getattr(self, self.k_var)
+        s = super().__repr__()
+        s += f"("
+        if k is None:
+            s += f"k_var={self.k_var}"
+        else:
+            s += f"{self.k_var}={k}"
+        s += ")"
+        return s
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -160,9 +171,8 @@ class YawedWakes(WakeFrame):
             tdata=tdata,
             upcast=True,
             downwind_index=downwind_index,
+            accept_nan=False,
         )
-        print("YAWED yawm",fdata[FV.YAWM])
-        print(downwind_index, gamma[:, 0])
         gamma *= np.pi / 180
 
         # get k:
@@ -175,6 +185,7 @@ class YawedWakes(WakeFrame):
             tdata=tdata,
             upcast=True,
             downwind_index=downwind_index,
+            accept_nan=False,
         )
 
         # run model calculation:

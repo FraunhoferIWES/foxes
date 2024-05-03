@@ -180,7 +180,7 @@ class Bastankhah2016Model(Model):
         )
 
         # select targets:
-        st_sel = (x > 1e-5) & (ct > 0.0)
+        st_sel = (x > 0) & (ct > 0.0)
         if np.any(st_sel):
             # get ws:
             ws = super().get_data(
