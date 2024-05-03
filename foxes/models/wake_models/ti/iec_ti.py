@@ -68,7 +68,12 @@ class IECTIWake(TopHatWakeModel):
     def __repr__(self):
         k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"({self.k_var}={k}, sp={self.superpositions[FV.TI]})"
+        s += f"(sp={self.superpositions[FV.TI]}"
+        if k is None:
+            s += f", k_var={self.k_var}"
+        else:
+            s += f", {self.k_var}={k}"
+        s += ")"
         return s
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):

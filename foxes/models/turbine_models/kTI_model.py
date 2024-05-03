@@ -53,7 +53,7 @@ class kTI(TurbineModel):
     def __repr__(self):
         return (
             super().__repr__()
-            + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+            + f"(k_var={self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
         )
 
     def output_farm_vars(self, algo):

@@ -161,6 +161,8 @@ class YawedWakes(WakeFrame):
             upcast=True,
             downwind_index=downwind_index,
         )
+        print("YAWED yawm",fdata[FV.YAWM])
+        print(downwind_index, gamma[:, 0])
         gamma *= np.pi / 180
 
         # get k:
@@ -257,6 +259,8 @@ class YawedWakes(WakeFrame):
             algo, mdata, fdata, tdata, downwind_index, x, y
         )
         xyz[..., 1] = y[:, :, None]
+
+        #print("YAWED Y",y)
 
         return xyz
 

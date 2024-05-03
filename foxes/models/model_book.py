@@ -242,7 +242,7 @@ class ModelBook:
             "linear_amb",
             "linear_amb_lim",
             "quadratic",
-            "wquadratic_lim",
+            "quadratic_lim",
             "quadratic_amb",
             "quadratic_amb_lim",
             "cubic",

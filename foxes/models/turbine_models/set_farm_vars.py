@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.constants as FC
-
+import foxes.variables as FV
 
 class SetFarmVars(TurbineModel):
     """
@@ -143,14 +143,19 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        order = fdata[FV.ORDER]
+        ssel = fdata[FV.ORDER_SSEL]
+
         bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
         bsel[st_sel] = True
 
         for v in self.vars:
             data = mdata[self.var(v)]
             hsel = ~np.isnan(data)
-
             tsel = bsel & hsel
-            fdata[v][tsel] = data[tsel]
+            
+
+            fdata[v] = data[ssel, order]
+            print("SETFV",v,fdata[v])
 
         return {v: fdata[v] for v in self.vars}

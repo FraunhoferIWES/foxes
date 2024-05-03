@@ -48,7 +48,12 @@ class JensenWake(TopHatWakeModel):
     def __repr__(self):
         k = getattr(self, self.k_var)
         s = super().__repr__()
-        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
+        s += f"(sp={self.superpositions[FV.WS]}"
+        if k is None:
+            s += f", k_var={self.k_var}"
+        else:
+            s += f", {self.k_var}={k}"
+        s += ")"
         return s
 
     def calc_wake_radius(

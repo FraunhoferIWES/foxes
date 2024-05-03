@@ -63,6 +63,9 @@ class Algorithm(Model):
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
 
+        if FC.TARGET not in chunks:
+            self.chunks[FC.TARGET] = chunks.get(FC.POINT, None)
+
         self._idata_mem = Dict()
 
     def print(self, *args, vlim=1, **kwargs):
@@ -163,10 +166,6 @@ class Algorithm(Model):
             if FC.TPOINT in self.chunks.keys():
                 raise ValueError(
                     f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
-                )
-            if FC.TARGET in self.chunks.keys():
-                raise ValueError(
-                    f"Dimension '{FC.TARGET}' cannot be chunked, maybe try '{FC.POINT}' instead?"
                 )
             xrdata = xrdata.chunk(
                 chunks={c: v for c, v in self.chunks.items() if c in sizes}
