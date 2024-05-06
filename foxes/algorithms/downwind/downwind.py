@@ -1,6 +1,5 @@
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
-from foxes.models.wake_models import TopHatWakeModel
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -152,10 +151,10 @@ class Downwind(Algorithm):
             partial_wakes = partial_wakes[0]
         if isinstance(partial_wakes, str):
             for w in wake_models:
-                if isinstance(self.wake_models[w], TopHatWakeModel):
-                    pw = mbook.default_partial_wakes(self.wake_models[w])
-                else:
+                try:
                     pw = partial_wakes
+                except TypeError:
+                    pw = mbook.default_partial_wakes(self.wake_models[w])
                 self.partial_wakes[w] = self.mbook.partial_wakes[pw]
                 self.partial_wakes[w].name = pw
         elif isinstance(partial_wakes, list):
