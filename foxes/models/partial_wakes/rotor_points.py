@@ -45,6 +45,7 @@ class RotorPoints(PartialWakesModel):
         fdata, 
         tdata,
         amb_res, 
+        rpoint_weights,
         wake_deltas, 
         wmodel, 
         downwind_index
@@ -70,6 +71,8 @@ class RotorPoints(PartialWakesModel):
             of all rotors. Key: variable name, value
             np.ndarray of shape: 
             (n_states, n_turbines, n_rotor_points)
+        rpoint_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: np.ndarray of shape 

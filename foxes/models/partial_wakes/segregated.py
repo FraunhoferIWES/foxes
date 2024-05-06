@@ -86,6 +86,7 @@ class PartialSegregated(PartialWakesModel):
         fdata, 
         tdata,
         amb_res, 
+        rpoint_weights,
         wake_deltas, 
         wmodel, 
         downwind_index
@@ -111,6 +112,8 @@ class PartialSegregated(PartialWakesModel):
             of all rotors. Key: variable name, value
             np.ndarray of shape: 
             (n_states, n_turbines, n_rotor_points)
+        rpoint_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: np.ndarray of shape 
@@ -128,17 +131,28 @@ class PartialSegregated(PartialWakesModel):
             of shape (n_states, n_rotor_points)
 
         """
-        ares = {v: d[:, downwind_index, None] for v, d in amb_res.items()}
-        n_states, __, n_rotor_points = next(iter(ares.values())).shape
+        n_states = fdata.n_states
+        n_rotor_points = len(rpoint_weights)
         gweights = tdata[FC.TWEIGHTS]
 
-        wdel = {}
-        for v, d in wake_deltas.items():
-            wdel[v] = np.zeros((n_states, 1, n_rotor_points))
-            wdel[v][:] = np.einsum('sp,p->s', d[:, downwind_index], 
-                                   gweights)[:, None, None]
-        
+        wdel = {v: d[:, downwind_index, None].copy() for v, d in wake_deltas.items()}
+
+        if n_rotor_points == 1:
+            ares = {v: d[:, downwind_index, None] for v, d in amb_res.items()}
+        else:
+            ares = {}
+            for v in wake_deltas.keys():
+                ares[v] = np.zeros_like(wdel[v])
+                ares[v][:] = np.einsum(
+                    'sp,p->s', amb_res[v][:, downwind_index], rpoint_weights
+                    )[:, None, None]
+
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
-        return {v: d[:, 0] for v, d in wdel.items()}
+        for v in wdel.keys():
+            hdel = np.zeros((n_states, n_rotor_points), dtype=FC.DTYPE)
+            hdel[:] = np.einsum('sp,p->s', wdel[v][:, 0], gweights)[:, None]
+            wdel[v] = hdel
+        
+        return wdel
     

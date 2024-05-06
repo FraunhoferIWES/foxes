@@ -126,7 +126,7 @@ class WSQuadratic(WakeSuperposition):
                 upcast=True,
             )[st_sel, None]
 
-            wake_delta[st_sel] += (scale * wake_model_result) ** 2
+            wake_delta[st_sel] += (scale * wake_model_result)**2
 
         return wake_delta
 
