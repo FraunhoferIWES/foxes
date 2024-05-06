@@ -40,9 +40,9 @@ if __name__ == "__main__":
         default=["RHB", "Bastankhah2014_linear_lim_k004"],
         nargs="+",
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="grid9")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default="grid9", nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default="rotor_points", nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)

@@ -137,15 +137,16 @@ class PartialSegregated(PartialWakesModel):
 
         wdel = {v: d[:, downwind_index, None].copy() for v, d in wake_deltas.items()}
 
-        if n_rotor_points == 1:
+        if n_rotor_points == tdata.n_tpoints:
             ares = {v: d[:, downwind_index, None] for v, d in amb_res.items()}
         else:
             ares = {}
-            for v in wake_deltas.keys():
-                ares[v] = np.zeros_like(wdel[v])
+            for v, d in amb_res.items():
+                ares[v] = np.zeros((n_states, 1, tdata.n_tpoints), dtype=FC.DTYPE)
                 ares[v][:] = np.einsum(
-                    'sp,p->s', amb_res[v][:, downwind_index], rpoint_weights
+                    'sp,p->s', d[:, downwind_index], rpoint_weights
                     )[:, None, None]
+                
 
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
