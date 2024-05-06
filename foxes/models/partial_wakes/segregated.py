@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import PartialWakesModel
 import foxes.variables as FV
+import foxes.constants as FC
 
 class PartialSegregated(PartialWakesModel):
     """
@@ -83,6 +84,7 @@ class PartialSegregated(PartialWakesModel):
         algo, 
         mdata, 
         fdata, 
+        tdata,
         amb_res, 
         wake_deltas, 
         wmodel, 
@@ -102,6 +104,8 @@ class PartialSegregated(PartialWakesModel):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.Data
+            The target point data
         amb_res: dict
             The ambient results at the target points
             of all rotors. Key: variable name, value
@@ -126,12 +130,13 @@ class PartialSegregated(PartialWakesModel):
         """
         ares = {v: d[:, downwind_index, None] for v, d in amb_res.items()}
         n_states, __, n_rotor_points = next(iter(ares.values())).shape
+        gweights = tdata[FC.TWEIGHTS]
 
-        gweights = self.rotor.rotor_point_weights()
         wdel = {}
         for v, d in wake_deltas.items():
             wdel[v] = np.zeros((n_states, 1, n_rotor_points))
-            wdel[v][:] = np.einsum('sp,p->s', d[:, downwind_index], gweights)[:, None, None]
+            wdel[v][:] = np.einsum('sp,p->s', d[:, downwind_index], 
+                                   gweights)[:, None, None]
         
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 

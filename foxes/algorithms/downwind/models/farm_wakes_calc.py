@@ -75,10 +75,10 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake):
+        def _evaluate(tdata, amb_res, wake_res, wdeltas, oi, wmodel, pwake):
             """ Helper function for data evaluation at turbines """
-            wres = pwake.finalize_wakes(algo, mdata, fdata, amb_res, 
-                                        wdeltas, wmodel, oi)
+            wres = pwake.finalize_wakes(algo, mdata, fdata, tdata,
+                                        amb_res, wdeltas, wmodel, oi)
             
             hres = {v: d[:, oi, None] for v, d in wake_res.items()}
             for v, d in wres.items():
@@ -106,7 +106,7 @@ class FarmWakesCalculation(FarmDataModel):
                 run_up = wname
                 for oi in range(n_turbines):
                     if oi > 0:
-                        _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(tdatap, amb_res, wake_res, wdeltas, oi, wmodel, pwake)
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
@@ -117,7 +117,7 @@ class FarmWakesCalculation(FarmDataModel):
                 run_down = wname
                 for oi in range(n_turbines-1, -1, -1):
                     if oi < n_turbines - 1:
-                        _evaluate(amb_res, wake_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(tdatap, amb_res, wake_res, wdeltas, oi, wmodel, pwake)
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])

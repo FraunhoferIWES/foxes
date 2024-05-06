@@ -122,8 +122,8 @@ class FarmWakesCalculation(FarmDataModel):
                     pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
             
             for oi in range(n_turbines):
-                wres = pwake.finalize_wakes(algo, mdata, fdata, amb_res, 
-                                            wdeltas, wmodel, oi)
+                wres = pwake.finalize_wakes(algo, mdata, fdata, tdatap,
+                                            amb_res, wdeltas, wmodel, oi)
                 for v, d in wres.items():
                     if v in wake_res:
                         wake_res[v][:, oi] += d

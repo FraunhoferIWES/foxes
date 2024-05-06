@@ -128,6 +128,7 @@ class PartialWakesModel(Model):
         algo, 
         mdata, 
         fdata, 
+        tdata,
         amb_res, 
         wake_deltas, 
         wmodel, 
@@ -147,6 +148,8 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.Data
+            The target point data
         amb_res: dict
             The ambient results at the target points
             of all rotors. Key: variable name, value
