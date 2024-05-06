@@ -1,3 +1,5 @@
+import numpy as np
+
 from foxes.core import FarmDataModel
 import foxes.variables as FV
 
@@ -70,6 +72,15 @@ class ReorderFarmOutput(FarmDataModel):
         """
         ssel = fdata[FV.ORDER_SSEL]
         order_inv = fdata[FV.ORDER_INV]
-        return {v: fdata[v][ssel, order_inv]
-                if v != FV.ORDER else fdata[v]
-                for v in self.output_farm_vars(algo)}
+        
+        out = {}
+        for v in self.output_farm_vars(algo):
+            if (
+                v != FV.ORDER
+                and np.any(fdata[v] != fdata[v][0, 0, None, None])
+            ):
+                out[v] = fdata[v][ssel, order_inv]
+            else:
+                out[v] = fdata[v]
+
+        return out

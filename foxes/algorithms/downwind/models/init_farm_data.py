@@ -111,12 +111,15 @@ class InitFarmData(FarmDataModel):
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
-        fdata[FV.D] = fdata[FV.D][ssel, order]
-        fdata[FV.WD] = fdata[FV.WD][ssel, order]
+        for v in [FV.D, FV.WD, FV.WEIGHT]:
+            if np.any(fdata[v] != fdata[v][0, 0, None, None]):
+                fdata[v] = fdata[v][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
         for k in mdata.keys():
-            if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE):
-                    mdata[k] = mdata[k][ssel, order]
-        fdata[FV.WEIGHT] = fdata[FV.WEIGHT][ssel, order]
+            if (
+                tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE)
+                and np.any(mdata[k] != mdata[k][0, 0, None, None])
+            ): 
+                mdata[k] = mdata[k][ssel, order]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
