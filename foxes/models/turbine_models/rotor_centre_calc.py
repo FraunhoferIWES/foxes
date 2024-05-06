@@ -82,7 +82,7 @@ class RotorCentreCalc(TurbineModel):
         return list(self.calc_vars.keys())
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -92,13 +92,13 @@ class RotorCentreCalc(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -107,29 +107,25 @@ class RotorCentreCalc(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        # prepare point data:
-        pdata = {FC.POINTS: fdata[FV.TXYH]}
-        dims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        for v in self.calc_vars.values():
-            pdata[v] = np.zeros_like(pdata[FC.POINTS][:, :, 0])
-            dims[v] = (FC.STATE, FC.POINT)
-        pdata = Data(
-            name=f"{self.name}_pdata",
-            data=pdata,
-            dims=dims,
-            loop_dims=[FC.STATE, FC.POINT],
+        # prepare target point data:
+        tdata = Data.from_points(
+            fdata[FV.TXYH],
+            data={v: np.zeros_like(fdata[FV.X][:, :, None])
+                for v in self.calc_vars.values()},
+            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT)
+                  for v in self.calc_vars.values()},
+            name=f"{self.name}_tdata",
         )
-        del dims
 
         # run ambient calculation:
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
+        res = algo.states.calculate(algo, mdata, fdata, tdata)
         for v, a in FV.var2amb.items():
             if v in res:
                 res[a] = res[v].copy()
-        pdata.update(res)
+        tdata.update(res)
 
         # run wake calculation:
-        res = self._wcalc.calculate(algo, mdata, fdata, pdata)
+        res = self._wcalc.calculate(algo, mdata, fdata, tdata)
 
         # extract results:
         out = {v: fdata[v] for v in self.calc_vars.keys()}

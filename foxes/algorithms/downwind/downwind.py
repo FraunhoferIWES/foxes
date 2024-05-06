@@ -1,5 +1,6 @@
 from foxes.core import Algorithm, FarmDataModelList
 from foxes.core import PointDataModel, PointDataModelList, FarmController
+from foxes.models.wake_models import TopHatWakeModel
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -18,14 +19,16 @@ class Downwind(Algorithm):
     ----------
     states: foxes.core.States
         The ambient states
-    wake_models: list of foxes.core.WakeModel
-        The wake models, applied to all turbines
+    wake_models: dict
+        The wake models. Key: wake model name,
+        value: foxes.core.WakeModel
     rotor_model: foxes.core.RotorModel
         The rotor model, for all turbines
     wake_frame: foxes.core.WakeFrame
         The wake frame
-    partial_wakes_model: foxes.core.PartialWakesModel
-        The partial wakes model
+    partial_wakes: dict
+        The partial wakes mapping. Key: wake model name,
+        value: foxes.core.PartialWakesModel
     farm_controller: foxes.core.FarmController
         The farm controller
     n_states: int
@@ -34,6 +37,145 @@ class Downwind(Algorithm):
     :group: algorithms.downwind
 
     """
+
+    DEFAULT_FARM_OUTPUTS = [
+        FV.X,
+        FV.Y,
+        FV.H,
+        FV.D,
+        FV.AMB_WD,
+        FV.AMB_REWS,
+        FV.AMB_TI,
+        FV.AMB_RHO,
+        FV.AMB_P,
+        FV.WD,
+        FV.REWS,
+        FV.YAW,
+        FV.TI,
+        FV.CT,
+        FV.P,
+        FV.ORDER,
+        FV.WEIGHT,
+    ]
+
+    def __init__(
+        self,
+        farm,
+        states,
+        wake_models,
+        rotor_model="centre",
+        wake_frame="rotor_wd",
+        partial_wakes=None,
+        farm_controller="basic_ctrl",
+        chunks={FC.STATE: 1000, FC.POINT: 4000},
+        wake_mirrors={},
+        mbook=None,
+        dbook=None,
+        verbosity=1,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        farm: foxes.WindFarm
+            The wind farm
+        states: foxes.core.States
+            The ambient states
+        wake_models: list of str
+            The wake models, applied to all turbines.
+            Will be looked up in the model book
+        rotor_model: str
+            The rotor model, for all turbines. Will be
+            looked up in the model book
+        wake_frame: str
+            The wake frame. Will be looked up in the
+            model book
+        partial_wakes: dict, list or str, optional
+            The partial wakes mapping. Key: wake model name,
+            value: partial wake model name
+        farm_controller: str
+            The farm controller. Will be
+            looked up in the model book
+        chunks: dict
+            The chunks choice for running in parallel with dask,
+            e.g. `{"state": 1000}` for chunks of 1000 states
+        wake_mirrors: dict
+            Switch on wake mirrors for wake models.
+            Key: wake model name, value: list of heights
+        mbook: foxes.ModelBook, optional
+            The model book
+        dbook: foxes.DataBook, optional
+            The data book, or None for default
+        verbosity: int
+            The verbosity level, 0 means silent
+
+        """
+        if mbook is None:
+            mbook = fm.ModelBook()
+            
+        super().__init__(mbook, farm, chunks, verbosity, dbook)
+
+        self.states = states
+        self.n_states = None
+        self.states_data = None
+
+        self.rotor_model = self.mbook.rotor_models[rotor_model]
+        self.rotor_model.name = rotor_model
+
+        self.wake_frame = self.mbook.wake_frames[wake_frame]
+        self.wake_frame.name = wake_frame
+
+        self.wake_models = {}
+        for w in wake_models:
+            m = self.mbook.wake_models[w]
+            m.name = w
+
+            # optionally add wake mirrors:
+            if w in wake_mirrors:
+                hts = wake_mirrors[w]
+                if isinstance(m, fm.wake_models.WakeMirror):
+                    if list(m.heights) != list(hts):
+                        raise ValueError(
+                            f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}"
+                        )
+                else:
+                    self.wake_models[w] = fm.wake_models.WakeMirror(m, heights=hts)
+
+            else:
+                self.wake_models[w] = m
+
+        self.partial_wakes = {}
+        if partial_wakes is None:
+            partial_wakes = {}
+        if isinstance(partial_wakes, list) and len(partial_wakes) == 1:
+            partial_wakes = partial_wakes[0]
+        if isinstance(partial_wakes, str):
+            for w in wake_models:
+                if isinstance(self.wake_models[w], TopHatWakeModel):
+                    pw = mbook.default_partial_wakes(self.wake_models[w])
+                else:
+                    pw = partial_wakes
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw
+        elif isinstance(partial_wakes, list):
+            for i, w in enumerate(wake_models):
+                if i >= len(partial_wakes):
+                    raise IndexError(f"Not enough partial wakes in list {partial_wakes}, expecting {len(wake_models)}")
+                pw = partial_wakes[i]
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw 
+        else:
+            for w in wake_models:
+                if w in partial_wakes:
+                    pw = partial_wakes[w]
+                else:
+                    pw = mbook.default_partial_wakes(self.wake_models[w])
+                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
+                self.partial_wakes[w].name = pw
+
+        self.farm_controller = self.mbook.farm_controllers[farm_controller]
+        self.farm_controller.name = farm_controller
 
     @classmethod
     def get_model(cls, name):
@@ -52,97 +194,7 @@ class Downwind(Algorithm):
 
         """
         return getattr(mdls, name)
-
-    def __init__(
-        self,
-        mbook,
-        farm,
-        states,
-        wake_models,
-        rotor_model="centre",
-        wake_frame="rotor_wd",
-        partial_wakes_model="auto",
-        farm_controller="basic_ctrl",
-        chunks={FC.STATE: 1000, FC.POINT: 10000},
-        wake_mirrors={},
-        dbook=None,
-        verbosity=1,
-    ):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        mbook: foxes.ModelBook
-            The model book
-        farm: foxes.WindFarm
-            The wind farm
-        states: foxes.core.States
-            The ambient states
-        wake_models: list of str
-            The wake models, applied to all turbines.
-            Will be looked up in the model book
-        rotor_model: str
-            The rotor model, for all turbines. Will be
-            looked up in the model book
-        wake_frame: str
-            The wake frame. Will be looked up in the
-            model book
-        partial_wakes_model: str
-            The partial wakes model. Will be
-            looked up in the model book
-        farm_controller: str
-            The farm controller. Will be
-            looked up in the model book
-        chunks: dict
-            The chunks choice for running in parallel with dask,
-            e.g. `{"state": 1000}` for chunks of 1000 states
-        wake_mirrors: dict
-            Switch on wake mirrors for wake models.
-            Key: wake model name, value: list of heights
-        dbook: foxes.DataBook, optional
-            The data book, or None for default
-        verbosity: int
-            The verbosity level, 0 means silent
-
-        """
-        super().__init__(mbook, farm, chunks, verbosity, dbook)
-
-        self.states = states
-        self.n_states = None
-        self.states_data = None
-
-        self.rotor_model = self.mbook.rotor_models[rotor_model]
-        self.rotor_model.name = rotor_model
-
-        self.partial_wakes_model = self.mbook.partial_wakes[partial_wakes_model]
-        self.partial_wakes_model.name = partial_wakes_model
-
-        self.wake_frame = self.mbook.wake_frames[wake_frame]
-        self.wake_frame.name = wake_frame
-
-        self.wake_models = []
-        for w in wake_models:
-            m = self.mbook.wake_models[w]
-            m.name = w
-
-            # optionally add wake mirrors:
-            if w in wake_mirrors:
-                hts = wake_mirrors[w]
-                if isinstance(m, fm.wake_models.WakeMirror):
-                    if list(m.heights) != list(hts):
-                        raise ValueError(
-                            f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}"
-                        )
-                else:
-                    self.wake_models.append(fm.wake_models.WakeMirror(m, heights=hts))
-
-            else:
-                self.wake_models.append(m)
-
-        self.farm_controller = self.mbook.farm_controllers[farm_controller]
-        self.farm_controller.name = farm_controller
-
+    
     def _print_deco(self, func_name, n_points=None):
         """
         Helper function for printing model names
@@ -160,12 +212,15 @@ class Downwind(Algorithm):
             print(f"  states   : {self.states}")
             print(f"  rotor    : {self.rotor_model}")
             print(f"  controller: {self.farm_controller}")
-            print(f"  partialwks: {self.partial_wakes_model}")
             print(f"  wake frame: {self.wake_frame}")
             print(deco)
             print(f"  wakes:")
-            for i, w in enumerate(self.wake_models):
+            for i, w in enumerate(self.wake_models.values()):
                 print(f"    {i}) {w}")
+            print(deco)
+            print(f"  partial wakes:")
+            for i, (w, p) in enumerate(self.partial_wakes.items()):
+                print(f"    {i}) {w}: {p}")
             print(deco)
             print(f"  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
@@ -226,8 +281,9 @@ class Downwind(Algorithm):
             self.rotor_model,
             self.farm_controller,
             self.wake_frame,
-            self.partial_wakes_model,
-        ] + self.wake_models
+        ]
+        mdls += list(self.wake_models.values())
+        mdls += list(self.partial_wakes.values())
 
         return mdls
 
@@ -245,6 +301,7 @@ class Downwind(Algorithm):
 
     def _collect_farm_models(
         self,
+        outputs,
         calc_parameters,
         ambient,
     ):
@@ -253,13 +310,11 @@ class Downwind(Algorithm):
         """
         # prepare:
         calc_pars = []
-        t2f = fm.farm_models.Turbine2FarmModel
         mlist = FarmDataModelList(models=[])
         mlist.name = f"{self.name}_calc"
 
-        # 0) set XHYD:
-        m = fm.turbine_models.SetXYHD()
-        mlist.models.append(t2f(m))
+        # 0) set initial data:
+        mlist.models.append(self.get_model("InitFarmData")())
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 1) run pre-rotor turbine models via farm controller:
@@ -267,35 +322,31 @@ class Downwind(Algorithm):
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = True
 
-        # 2) calculate yaw from wind direction at rotor centre:
-        mlist.models.append(fm.rotor_models.CentreRotor(calc_vars=[FV.WD, FV.YAW]))
-        mlist.models[-1].name = "calc_yaw_" + mlist.models[-1].name
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 3) calculate ambient rotor results:
+        # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1].update(
             {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
         )
 
-        # 4) calculate turbine order:
-        mlist.models.append(self.get_model("CalcOrder")())
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 5) run post-rotor turbine models via farm controller:
+        # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = False
 
-        # 6) copy results to ambient, requires self.farm_vars:
+        # 4) copy results to ambient, requires self.farm_vars:
         self.farm_vars = mlist.output_farm_vars(self)
         mlist.models.append(self.get_model("SetAmbFarmResults")())
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
-        # 7) calculate wake effects:
+        # 5) calculate wake effects:
         if not ambient:
             mlist.models.append(self.get_model("FarmWakesCalculation")())
+            calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+
+        # 6) reorder back to state-turbine dimensions:
+        if outputs != False:
+            mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         return mlist, calc_pars
@@ -304,22 +355,25 @@ class Downwind(Algorithm):
         """Helper function that gathers the farm variables"""
         self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
-    def _run_farm_calc(self, mlist, *data, **kwargs):
+    def _run_farm_calc(self, mlist, *data, outputs=None, **kwargs):
         """Helper function for running the main farm calculation"""
         self.print(
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
+        out_vars = self.farm_vars if outputs is None else outputs
         farm_results = mlist.run_calculation(
-            self, *data, out_vars=self.farm_vars, **kwargs
+            self, *data, out_vars=out_vars, **kwargs
         )
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in farm_results:
-            farm_results[FV.ORDER] = farm_results[FV.ORDER].astype(FC.ITYPE)
+        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+            if v in farm_results:
+                farm_results[v] = farm_results[v].astype(FC.ITYPE)
 
         return farm_results
 
     def calc_farm(
         self,
+        outputs=None,
         calc_parameters={},
         persist=True,
         finalize=True,
@@ -335,6 +389,8 @@ class Downwind(Algorithm):
         calc_parameters: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
+        outputs: list of str, optional
+            The output variables, or None for defaults
         persist: bool
             Switch for forcing dask to load all model data
             into memory
@@ -362,7 +418,9 @@ class Downwind(Algorithm):
         self._print_deco("calc_farm")
 
         # collect models:
-        mlist, calc_pars = self._collect_farm_models(calc_parameters, ambient)
+        if outputs == "default":
+            outputs = self.DEFAULT_FARM_OUTPUTS
+        mlist, calc_pars = self._collect_farm_models(outputs, calc_parameters, ambient)
 
         # initialize models:
         if not mlist.initialized:
@@ -370,12 +428,19 @@ class Downwind(Algorithm):
             self._calc_farm_vars(mlist)
         self._print_model_oder(mlist, calc_pars)
 
+        # update outputs:
+        if outputs is None:
+            outputs = self.farm_vars
+        else:
+            outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
+        
         # get input model data:
         models_data = self.get_models_data()
         if persist:
             models_data = models_data.persist()
         self.print("\nInput data:\n\n", models_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+        self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
+        self.print(f"\nOutput variables:", ", ".join(outputs))
         self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
@@ -383,6 +448,7 @@ class Downwind(Algorithm):
             mlist,
             models_data,
             parameters=calc_pars,
+            outputs=outputs,
             **kwargs,
         )
         del models_data
@@ -549,7 +615,7 @@ class Downwind(Algorithm):
         if persist_pdata:
             point_data = point_data.persist()
         self.print("\nInput point data:\n\n", point_data, "\n")
-
+        
         # check vars:
         ovars = mlist.output_point_vars(self)
         self.print(f"\nOutput point variables:", ", ".join(ovars))
@@ -559,6 +625,7 @@ class Downwind(Algorithm):
         self.print(
             f"Calculating {len(ovars)} variables at {points.shape[1]} points in {self.n_states} states"
         )
+
         point_results = mlist.run_calculation(
             self,
             models_data,

@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes.core.data import Data
+from foxes.core.data import MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -87,28 +87,30 @@ class Timelines(WakeFrame):
         mdata = algo.get_model_data(algo.states)["data_vars"]
         mdict = {v: d[1] for v, d in mdata.items()}
         mdims = {v: d[0] for v, d in mdata.items()}
-        mdata = Data(mdict, mdims, loop_dims=[FC.STATE])
+        mdata = MData(mdict, mdims, loop_dims=[FC.STATE])
         del mdict, mdims
 
         # prepare fdata:
-        fdata = Data({}, {}, loop_dims=[FC.STATE])
+        fdata = FData({}, {}, loop_dims=[FC.STATE])
 
-        # prepare pdata:
-        pdata = {
-            v: np.zeros((algo.n_states, 1), dtype=FC.DTYPE)
+        # prepare tdata:
+        tdata = {
+            v: np.zeros((algo.n_states, 1, 1), dtype=FC.DTYPE)
             for v in algo.states.output_point_vars(algo)
         }
-        pdata[FC.POINTS] = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        pdims.update({v: (FC.STATE, FC.POINT) for v in pdata.keys()})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
+        pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
+        tdata = TData.from_points(
+            points=np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE), 
+            data=tdata, 
+            dims=pdims,
+        )
 
         # calculate:
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
+        res = algo.states.calculate(algo, mdata, fdata, tdata)
         if len(dt) == 1:
-            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, :2] * dt[:, None]
+            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2] * dt[:, None]
         else:
-            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, :2] * dt[:, None]
+            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, 0, :2] * dt[:, None]
             self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
 
         """ DEBUG
@@ -131,9 +133,9 @@ class Timelines(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -142,19 +144,18 @@ class Timelines(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        pdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
             coosx[:, ti, :] = self.get_wake_coos(
-                algo, mdata, fdata, pdata, np.full(n_states, ti)
-            )[..., 0]
+                algo, mdata, fdata, tdata, ti
+            )[:, :, 0, 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -164,41 +165,47 @@ class Timelines(WakeFrame):
 
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            tdata, 
+            downwind_index,
+        ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
-
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+            
         """
-
         # prepare:
-        n_states = mdata.n_states
-        n_points = pdata.n_points
-        points = pdata[FC.POINTS]
-        stsel = (np.arange(n_states), states_source_turbine)
-        rxyz = fdata[FV.TXYH][stsel]
+        targets = tdata[FC.TARGETS]
+        n_states, n_targets, n_tpoints = targets.shape[:3]
+        n_points = n_targets * n_tpoints
+        points = targets.reshape(n_states, n_points, 3)
+        rxyz = fdata[FV.TXYH][:, downwind_index]
 
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        D[:] = fdata[FV.D][stsel][:, None]
+        D[:] = fdata[FV.D][:, downwind_index, None]
 
         i0 = mdata.states_i0(counter=True, algo=algo)
         i1 = i0 + mdata.n_states
@@ -256,14 +263,18 @@ class Timelines(WakeFrame):
                 break
 
         # turbines that cause wake:
-        pdata.add(FC.STATE_SOURCE_TURBINE, states_source_turbine, (FC.STATE,))
+        tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
 
         # states that cause wake for each target point:
-        pdata.add(FC.STATES_SEL, trace_si, (FC.STATE, FC.POINT))
+        tdata.add(
+            FC.STATES_SEL, 
+            trace_si.reshape(n_states, n_targets, n_tpoints), 
+            (FC.STATE, FC.TARGET, FC.TPOINT)
+        )
 
-        return wcoos
+        return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
 
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -272,13 +283,12 @@ class Timelines(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -288,5 +298,4 @@ class Timelines(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-
         raise NotImplementedError

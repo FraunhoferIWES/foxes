@@ -1,7 +1,6 @@
 import numpy as np
 
 from foxes.models.wake_models.gaussian import GaussianWakeModel
-from foxes.utils import sqrt_reg
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -107,39 +106,13 @@ class TurbOParkWake(GaussianWakeModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
-        """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
-
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
     ):
         """
@@ -150,73 +123,69 @@ class TurbOParkWake(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
-
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # select targets:
-        sp_sel = (x > 1e-5) & (ct > 0.0)
-        if np.any(sp_sel):
+        st_sel = (x > 1e-5) & (ct > 0.0)
+        if np.any(st_sel):
             # apply selection:
-            x = x[sp_sel]
-            ct = ct[sp_sel]
+            x = x[st_sel]
+            ct = ct[st_sel]
 
             # get D:
             D = self.get_data(
                 FV.D,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
-            )
-            D = D[sp_sel]
+            )[st_sel]
 
             # get TI:
             ati = self.get_data(
                 FV.AMB_TI,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
-            )
-            ati = ati[sp_sel]
+            )[st_sel]
 
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
@@ -258,12 +227,12 @@ class TurbOParkWake(GaussianWakeModel):
 
         # case no targets:
         else:
-            sp_sel = np.zeros_like(x, dtype=bool)
-            n_sp = np.sum(sp_sel)
+            st_sel = np.zeros_like(x, dtype=bool)
+            n_sp = np.sum(st_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
-        return {FV.WS: (ampld, sigma)}, sp_sel
+        return {FV.WS: (ampld, sigma)}, st_sel
 
 
 class TurbOParkWakeIX(GaussianWakeModel):
@@ -375,52 +344,49 @@ class TurbOParkWakeIX(GaussianWakeModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.TData
+            The target point data
+        
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled 
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
-
-        # find TI wake models:
+        # find TI wake model:
         self._tiwakes = []
-        for w in algo.wake_models:
+        for w in algo.wake_models.values():
             if w is not self:
-                wdel = {}
-                w.init_wake_deltas(algo, mdata, fdata, pdata, wdel)
+                wdel = w.new_wake_deltas(algo, mdata, fdata, tdata)
                 if self.ti_var in wdel:
                     self._tiwakes.append(w)
         if self.ti_var not in FV.amb2var and len(self._tiwakes) == 0:
             raise KeyError(
                 f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}"
             )
+    
+        return super().new_wake_deltas(algo, mdata, fdata, tdata)
 
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
     ):
         """
@@ -431,60 +397,57 @@ class TurbOParkWakeIX(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
-        """
-
+        """      
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # select targets:
-        sp_sel = (x > 1e-5) & (ct > 0.0)
-        if np.any(sp_sel):
+        st_sel = (x > 1e-5) & (ct > 0.0)
+        if np.any(st_sel):
             # apply selection:
-            # x = x[sp_sel]
-            ct = ct[sp_sel]
+            # x = x[st_sel]
+            ct = ct[st_sel]
 
             # get D:
             D = self.get_data(
                 FV.D,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
-            )
-            D = D[sp_sel]
+            )[st_sel]
 
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
@@ -498,7 +461,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 algo,
                 mdata,
                 fdata,
-                states_source_turbine,
+                downwind_index,
                 [self.ti_var],
                 x,
                 dx=self.dx,
@@ -508,13 +471,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             )[:, :, 0]
 
             # calculate sigma (eqn 1, plus epsilon from eqn 4 for x = 0)
-            sigma = D * epsilon + self.A * ti_ix[sp_sel]
-
-            del (
-                x,
-                sbeta,
-                epsilon,
-            )
+            sigma = D * epsilon + self.A * ti_ix[st_sel]
+            del x, epsilon
 
             # calculate amplitude, same as in Bastankhah model (eqn 7)
             ct_eff = ct / (8 * (sigma / D) ** 2)
@@ -522,12 +480,12 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         # case no targets:
         else:
-            sp_sel = np.zeros_like(x, dtype=bool)
-            n_sp = np.sum(sp_sel)
+            st_sel = np.zeros_like(x, dtype=bool)
+            n_sp = np.sum(st_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
-        return {FV.WS: (ampld, sigma)}, sp_sel
+        return {FV.WS: (ampld, sigma)}, st_sel
 
     def finalize(self, algo, verbosity=0):
         """

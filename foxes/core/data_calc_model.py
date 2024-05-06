@@ -5,7 +5,7 @@ from dask.distributed import progress
 from dask.diagnostics import ProgressBar
 
 from .model import Model
-from .data import Data
+from .data import MData, FData, TData
 from foxes.utils.runners import DaskRunner
 import foxes.constants as FC
 import foxes.variables as FV
@@ -73,7 +73,6 @@ class DataCalcModel(Model):
         """
         Wrapper that mitigates between apply_ufunc and `calculate`.
         """
-
         n_prev = len(init_vars)
         if n_prev:
             prev = ldata[:n_prev]
@@ -81,13 +80,21 @@ class DataCalcModel(Model):
 
         # reconstruct original data:
         data = []
-        for hvars in dvars:
+        for i, hvars in enumerate(dvars):
             v2l = {v: lvars.index(v) for v in hvars if v in lvars}
             v2e = {v: evars.index(v) for v in hvars if v in evars}
 
             hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
             hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-            data.append(Data(hdata, hdims, loop_dims))
+
+            if i == 0:
+                data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            elif i == 1:
+                data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            elif i == 2:
+                data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            else:
+                raise NotImplementedError(f"Not more than 3 data sets implemented, found {len(dvars)}")
 
             del hdata, hdims, v2l, v2e
 
@@ -102,7 +109,7 @@ class DataCalcModel(Model):
                 raise ValueError(f"Model '{self.name}': Failed to find loop dimension")
 
         # add zero output data arrays:
-        odims = {v: out_dims for v in out_vars}
+        odims = {v: tuple(out_dims) for v in out_vars}
         odata = {
             v: (
                 np.full(oshape, np.nan, dtype=FC.DTYPE)
@@ -112,35 +119,30 @@ class DataCalcModel(Model):
             for v in out_vars
             if v not in data[-1]
         }
-        if (
-            n_prev
-            and FV.TXYH not in odata
-            and FV.X in odata
-            and FV.X in odata
-            and FV.Y in odata
-            and FV.H in odata
-        ):
-            txyh = np.zeros((data[0].n_states, data[0].n_turbines, 3), dtype=FC.DTYPE)
-            txyh[..., 0] = odata[FV.X]
-            txyh[..., 1] = odata[FV.Y]
-            txyh[..., 2] = odata[FV.H]
-            odata[FV.TXYH] = txyh
-            odims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
-            del txyh
+
         if len(data) == 1:
-            data.append(Data(odata, odims, loop_dims))
+            data.append(FData(odata, odims, loop_dims))
         else:
             odata.update(data[-1])
             odims.update(data[-1].dims)
-            data[-1] = Data(odata, odims, loop_dims)
+            if len(data) == 2:
+                data[-1] = FData(odata, odims, loop_dims)
+            else:
+                data[-1] = TData(odata, odims, loop_dims)
         del odims, odata
 
-        # link chunk state indices from mdata to fdata and pdata:
+        # link chunk state indices from mdata to fdata and tdata:
         if FC.STATE in data[0]:
             for d in data[1:]:
                 d[FC.STATE] = data[0][FC.STATE]
-
+        
+        # link weights from mdata to fdata:
+        if FV.WEIGHT in data[0]:
+            data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
+            data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
+                
         # run model calculation:
+        self.ensure_variables(algo, *data)
         results = self.calculate(algo, *data, **calc_pars)
 
         # replace missing results by first input data with matching shape:

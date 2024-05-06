@@ -77,6 +77,17 @@ class YawedWakes(WakeFrame):
         setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
+    def __repr__(self):
+        k = getattr(self, self.k_var)
+        s = super().__repr__()
+        s += f"("
+        if k is None:
+            s += f"k_var={self.k_var}"
+        else:
+            s += f"{self.k_var}={k}"
+        s += ")"
+        return s
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -132,9 +143,9 @@ class YawedWakes(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -145,7 +156,7 @@ class YawedWakes(WakeFrame):
         """
         return self.base_frame.calc_order(algo, mdata, fdata)
 
-    def _update_y(self, algo, mdata, fdata, pdata, states_source_turbine, x, y):
+    def _update_y(self, algo, mdata, fdata, tdata, downwind_index, x, y):
         """
         Helper function for y deflection
         """
@@ -153,39 +164,41 @@ class YawedWakes(WakeFrame):
         # get gamma:
         gamma = self.get_data(
             FV.YAWM,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="wfs",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             upcast=True,
-            states_source_turbine=states_source_turbine,
+            downwind_index=downwind_index,
+            accept_nan=False,
         )
         gamma *= np.pi / 180
 
         # get k:
         k = self.get_data(
             self.k_var,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="sf",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
             upcast=True,
-            states_source_turbine=states_source_turbine,
+            downwind_index=downwind_index,
+            accept_nan=False,
         )
 
         # run model calculation:
         self.model.calc_data(
-            algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k
+            algo, mdata, fdata, tdata, downwind_index, x, gamma, k
         )
 
         # select targets:
-        sp_sel = self.model.get_data(Bastankhah2016Model.SP_SEL, mdata)
-        if np.any(sp_sel):
+        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
+        if np.any(st_sel):
             # prepare:
-            n_sp_sel = np.sum(sp_sel)
-            ydef = np.zeros((n_sp_sel,), dtype=FC.DTYPE)
+            n_st_sel = np.sum(st_sel)
+            ydef = np.zeros((n_st_sel,), dtype=FC.DTYPE)
 
             # collect data:
             near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
@@ -208,47 +221,59 @@ class YawedWakes(WakeFrame):
                 ydef[far] = delta
 
             # apply deflection:
-            y[sp_sel] -= ydef
+            y[st_sel] -= ydef
 
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            tdata, 
+            downwind_index,
+        ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
-
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+            
         """
-
         # get unyawed results:
         xyz = self.base_frame.get_wake_coos(
-            algo, mdata, fdata, pdata, states_source_turbine
+            algo, mdata, fdata, tdata, downwind_index,
         )
-        x = xyz[:, :, 0]
-        y = xyz[:, :, 1]
+
+        # take rotor average:
+        xy = np.einsum('stpd,p->std', xyz[..., :2], tdata[FC.TWEIGHTS])
+        x = xy[:, :, 0]
+        y = xy[:, :, 1]
 
         # apply deflection:
-        self._update_y(algo, mdata, fdata, pdata, states_source_turbine, x, y)
+        self._update_y(
+            algo, mdata, fdata, tdata, downwind_index, x, y
+        )
+        xyz[..., 1] = y[:, :, None]
 
         return xyz
 
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -257,13 +282,12 @@ class YawedWakes(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -274,7 +298,7 @@ class YawedWakes(WakeFrame):
 
         """
         points = self.base_frame.get_centreline_points(
-            algo, mdata, fdata, states_source_turbine, x
+            algo, mdata, fdata, downwind_index, x
         )
 
         nx = np.zeros_like(points)
@@ -291,7 +315,7 @@ class YawedWakes(WakeFrame):
         del nx, nz
 
         y = np.zeros_like(x)
-        self._update_y(algo, mdata, fdata, None, states_source_turbine, x, y)
+        self._update_y(algo, mdata, fdata, None, downwind_index, x, y)
 
         points += y[:, :, None] * ny
 

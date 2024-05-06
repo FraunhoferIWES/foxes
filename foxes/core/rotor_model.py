@@ -6,7 +6,7 @@ import foxes.constants as FC
 from .farm_data_model import FarmDataModel
 from foxes.utils import wd2uv, uv2wd, all_subclasses
 
-from .data import Data
+from .data import TData
 
 
 class RotorModel(FarmDataModel):
@@ -40,6 +40,10 @@ class RotorModel(FarmDataModel):
         """
         super().__init__()
         self.calc_vars = calc_vars
+        
+        self.RPOINTS = self.var("rpoints")
+        self.RWEIGHTS = self.var("rweights")
+        self.AMBRES = self.var("amb_res")
 
     def output_farm_vars(self, algo):
         """
@@ -118,9 +122,9 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -152,17 +156,17 @@ class RotorModel(FarmDataModel):
 
         return points
 
-    def _set_res(self, fdata, v, res, stsel):
+    def _set_res(self, fdata, v, res, downwind_index):
         """
         Helper function for results setting
         """
-        if stsel is None:
+        if downwind_index is None:
             fdata[v] = res.copy()
         elif res.shape[1] == 1:
-            fdata[v][stsel] = res[:, 0]
+            fdata[v][:, downwind_index] = res[:, 0]
         else:
             raise ValueError(
-                f"Rotor model '{self.name}': states_turbine is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
+                f"Rotor model '{self.name}': downwind_index is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
             )
 
     def eval_rpoint_results(
@@ -170,9 +174,9 @@ class RotorModel(FarmDataModel):
         algo,
         mdata,
         fdata,
-        rpoint_results,
+        tdata,
         weights,
-        states_turbine=None,
+        downwind_index=None,
         copy_to_ambient=False,
     ):
         """
@@ -188,32 +192,21 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        rpoint_results: dict
-            The results at rotor points. Keys: variable str.
-            Values: numpy.ndarray, shape if `states_turbine`
-            is None: (n_states, n_turbines, n_rpoints).
-            Else: (n_states, 1, n_rpoints)
+        tdata: foxes.core.TData
+            The target point data
         weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
-        states_turbine: numpy.ndarray of int, optional
-            The turbine indices, one per state. Shape: (n_states,)
-        copy_to_ambient: bool, optional
+        downwind_index: int, optional
+            The index in the downwind order
+        copy_to_ambient: bool
             If `True`, the fdata results are copied to ambient
             variables after calculation
 
         """
-
-        n_states = mdata.n_states
-        n_turbines = algo.n_turbines
-        if states_turbine is not None:
-            stsel = (np.arange(n_states), states_turbine)
-        else:
-            stsel = None
-
         uvp = None
         uv = None
         if (
@@ -224,8 +217,8 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            wd = rpoint_results[FV.WD]
-            ws = rpoint_results[FV.WS]
+            wd = tdata[FV.WD]
+            ws = tdata[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = np.einsum("stpd,p->std", uvp, weights)
 
@@ -235,12 +228,12 @@ class RotorModel(FarmDataModel):
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
-                self._set_res(fdata, v, wd, stsel)
+                self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
 
             elif v == FV.WS:
                 ws = np.linalg.norm(uv, axis=-1)
-                self._set_res(fdata, v, ws, stsel)
+                self._set_res(fdata, v, ws, downwind_index)
                 del ws
                 vdone.append(v)
         del uv, wd
@@ -250,17 +243,17 @@ class RotorModel(FarmDataModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            if stsel is None:
+            if downwind_index is None:
                 yaw = fdata[FV.YAW].copy()
             else:
-                yaw = fdata[FV.YAW][stsel][:, None]
+                yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
                 if v == FV.REWS:
                     rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
-                    self._set_res(fdata, v, rews, stsel)
+                    self._set_res(fdata, v, rews, downwind_index)
                     del rews
                     vdone.append(v)
 
@@ -278,7 +271,7 @@ class RotorModel(FarmDataModel):
                         )
                     else:
                         rews2 = np.sqrt(np.einsum("stp,p->st", wsp**2, weights))
-                    self._set_res(fdata, v, rews2, stsel)
+                    self._set_res(fdata, v, rews2, downwind_index)
                     del rews2
                     vdone.append(v)
 
@@ -293,7 +286,7 @@ class RotorModel(FarmDataModel):
                         ) ** (1.0 / 3.0)
                     else:
                         rews3 = (np.einsum("stp,p->st", wsp**3, weights)) ** (1.0 / 3.0)
-                    self._set_res(fdata, v, rews3, stsel)
+                    self._set_res(fdata, v, rews3, downwind_index)
                     del rews3
                     vdone.append(v)
 
@@ -302,8 +295,8 @@ class RotorModel(FarmDataModel):
 
         for v in self.calc_vars:
             if v not in vdone:
-                res = np.einsum("stp,p->st", rpoint_results[v], weights)
-                self._set_res(fdata, v, res, stsel)
+                res = np.einsum("stp,p->st", tdata[v], weights)
+                self._set_res(fdata, v, res, downwind_index)
             if copy_to_ambient and v in FV.var2amb:
                 fdata[FV.var2amb[v]] = fdata[v].copy()
 
@@ -317,7 +310,7 @@ class RotorModel(FarmDataModel):
         store_rpoints=False,
         store_rweights=False,
         store_amb_res=False,
-        states_turbine=None,
+        downwind_index=None,
     ):
         """
         Calculate ambient rotor effective results.
@@ -326,9 +319,9 @@ class RotorModel(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         rpoints: numpy.ndarray, optional
             The rotor points, or None for automatic for
@@ -343,8 +336,8 @@ class RotorModel(FarmDataModel):
         store_amb_res: bool, optional
             Switch for storing ambient rotor point reults as they
             come from the states to mdata
-        states_turbine: numpy.ndarray of int, optional
-            The turbine indices, one per state. Shape: (n_states,)
+        downwind_index: int, optional
+            Only compute for index in the downwind order
 
         Returns
         -------
@@ -355,56 +348,45 @@ class RotorModel(FarmDataModel):
         """
 
         if rpoints is None:
-            rpoints = mdata.get(FC.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
+            rpoints = mdata.get(self.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
         if store_rpoints:
-            mdata[FC.RPOINTS] = rpoints
-            mdata.dims[FC.RPOINTS] = (FC.STATE, FC.TURBINE, FC.RPOINT, FC.XYH)
-            self.data_to_store(FC.RPOINTS, algo, mdata)
+            mdata[self.RPOINTS] = rpoints
+            mdata.dims[self.RPOINTS] = (FC.STATE, FC.TURBINE, FC.TPOINT, FC.XYH)
+            self.data_to_store(self.RPOINTS, algo, mdata)
 
-        if states_turbine is not None:
-            n_states = mdata.n_states
-            stsel = (np.arange(n_states), states_turbine)
-            rpoints = rpoints[stsel][:, None]
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
-        n_points = n_turbines * n_rpoints
+        if downwind_index is not None:
+            rpoints = rpoints[:, downwind_index, None]
 
         if weights is None:
-            weights = mdata.get(FC.RWEIGHTS, self.rotor_point_weights())
+            weights = mdata.get(FC.TWEIGHTS, self.rotor_point_weights())
         if store_rweights:
-            mdata[FC.RWEIGHTS] = weights
-            mdata.dims[FC.RWEIGHTS] = (FC.RPOINT,)
-            self.data_to_store(FC.RWEIGHTS, algo, mdata)
+            mdata[self.RWEIGHTS] = weights
+            mdata.dims[self.RWEIGHTS] = (FC.TPOINT,)
+            self.data_to_store(self.RWEIGHTS, algo, mdata)
 
+        tdata = TData.from_tpoints(rpoints, weights)
         svars = algo.states.output_point_vars(algo)
-        points = rpoints.reshape(n_states, n_points, 3)
-        pdata = {FC.POINTS: points}
-        pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-        pdata.update(
-            {v: np.full((n_states, n_points), np.nan, dtype=FC.DTYPE) for v in svars}
-        )
-        pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
-        pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-        del pdims, points
-
-        sres = algo.states.calculate(algo, mdata, fdata, pdata)
-        pdata.update(sres)
-        del sres
-
-        rpoint_results = {}
         for v in svars:
-            rpoint_results[v] = pdata[v].reshape(n_states, n_turbines, n_rpoints)
+            tdata.add(
+                v, 
+                data=np.full_like(rpoints[..., 0], np.nan), 
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT)
+            )
+
+        sres = algo.states.calculate(algo, mdata, fdata, tdata)
+        tdata.update(sres)
 
         if store_amb_res:
-            mdata[FC.AMB_RPOINT_RESULTS] = rpoint_results
-            self.data_to_store(FC.AMB_RPOINT_RESULTS, algo, mdata)
+            mdata[self.AMBRES] = sres.copy()
+            self.data_to_store(self.AMBRES, algo, mdata)
 
         self.eval_rpoint_results(
             algo,
             mdata,
             fdata,
-            rpoint_results,
+            tdata,
             weights,
-            states_turbine,
+            downwind_index,
             copy_to_ambient=True,
         )
 

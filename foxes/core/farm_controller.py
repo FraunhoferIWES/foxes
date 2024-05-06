@@ -16,9 +16,6 @@ class FarmController(FarmDataModel):
         The turbine type of each turbine
     turbine_model_names: list of str
         Names of all turbine models found in the farm
-    turbine_model_sels: numpy.ndarray of bool
-        Selection flags for all turbine models,
-        shape: (n_states, n_turbines, n_models)
     pre_rotor_models: foxes.core.FarmDataModelList
         The turbine models with pre-rotor flag
     post_rotor_models: foxes.core.FarmDataModelList
@@ -46,7 +43,6 @@ class FarmController(FarmDataModel):
 
         self.turbine_types = None
         self.turbine_model_names = None
-        self.turbine_model_sels = None
         self.pre_rotor_models = None
         self.post_rotor_models = None
 
@@ -223,29 +219,30 @@ class FarmController(FarmDataModel):
             algo, pre_rotor=False, models=postr_models
         )
         tmsels = tmsels_pre + tmsels_post
+        self._tmall = [np.all(t) for t in tmsels]
         self.turbine_model_names = mnames_pre + mnames_post
         if len(self.turbine_model_names):
-            self.turbine_model_sels = np.stack(tmsels, axis=2)
+            self._tmsels = np.stack(tmsels, axis=2)
         else:
             raise ValueError(f"Controller '{self.name}': No turbine model found.")
 
-    def __get_pars(self, algo, models, ptype, mdata=None, st_sel=None, from_data=True):
+    def __get_pars(self, algo, models, ptype, mdata=None, downwind_index=None):
         """
         Private helper function for gathering model parameters.
         """
-        if from_data:
-            s = mdata[FC.TMODEL_SELS]
-        else:
-            s = self.turbine_model_sels
-        if st_sel is not None:
-            s = s & st_sel[:, :, None]
-
-        pars = [
-            {"st_sel": s[:, :, self.turbine_model_names.index(m.name)]} for m in models
-        ]
-        for mi, m in enumerate(models):
+        pars = []
+        for m in models:
+            mi = self.turbine_model_names.index(m.name)
+            if self._tmall[mi]:
+                s = np.s_[:, :] if downwind_index is None else np.s_[:, downwind_index]
+            else:
+                if downwind_index is None:
+                    s = mdata[FC.TMODEL_SELS][:, :, mi]
+                else:
+                    s = np.s_[mdata[FC.TMODEL_SELS][:, downwind_index, mi], downwind_index]
+            pars.append({"st_sel": s})
             if m.name in self.pars:
-                pars[mi].update(self.pars[m.name][ptype])
+                pars[-1].update(self.pars[m.name][ptype])
 
         return pars
 
@@ -288,11 +285,14 @@ class FarmController(FarmDataModel):
 
         """
         idata = super().load_data(algo, verbosity)
+
         idata["coords"][FC.TMODELS] = self.turbine_model_names
         idata["data_vars"][FC.TMODEL_SELS] = (
             (FC.STATE, FC.TURBINE, FC.TMODELS),
-            self.turbine_model_sels,
+            self._tmsels,
         )
+        self._tmsels = None
+
         return idata
 
     def output_farm_vars(self, algo):
@@ -317,7 +317,7 @@ class FarmController(FarmDataModel):
             )
         )
 
-    def calculate(self, algo, mdata, fdata, pre_rotor, st_sel=None):
+    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
         """ "
         The main model calculation.
 
@@ -328,16 +328,15 @@ class FarmController(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         pre_rotor: bool
             Flag for running pre-rotor or post-rotor
             models
-        st_sel: numpy.ndarray of bool, optional
-            Selection of states and turbines, shape:
-            (n_states, n_turbines). None for all.
+        downwind_index: int, optional
+            The index in the downwind order
 
         Returns
         -------
@@ -347,9 +346,8 @@ class FarmController(FarmDataModel):
 
         """
         s = self.pre_rotor_models if pre_rotor else self.post_rotor_models
-        pars = self.__get_pars(algo, s.models, "calc", mdata, st_sel, from_data=True)
+        pars = self.__get_pars(algo, s.models, "calc", mdata, downwind_index)
         res = s.calculate(algo, mdata, fdata, parameters=pars)
-        self.turbine_model_sels = mdata[FC.TMODEL_SELS]
         return res
 
     def finalize(self, algo, verbosity=0):
@@ -366,4 +364,3 @@ class FarmController(FarmDataModel):
         """
         super().finalize(algo, verbosity)
         self.turbine_model_names = None
-        self.turbine_model_sels = None

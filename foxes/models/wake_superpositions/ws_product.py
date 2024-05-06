@@ -63,48 +63,51 @@ class WSProduct(WakeSuperposition):
         """
         return [FV.AMB_REWS] if self.scale_amb else [FV.REWS]
 
-    def calc_wakes_plus_wake(
+    def add_wake(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
-        sel_sp,
+        tdata,
+        downwind_index,
+        st_sel,
         variable,
         wake_delta,
         wake_model_result,
     ):
         """
-        Add a wake delta to previous wake deltas.
+        Add a wake delta to previous wake deltas,
+        at rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        sel_sp: numpy.ndarray of bool
-            The selection of points, shape: (n_states, n_points)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        st_sel: numpy.ndarray of bool
+            The selection of targets, shape: (n_states, n_targets)
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray
-            The original wake deltas, shape: (n_states, n_points)
+            The original wake deltas, shape: 
+            (n_states, n_targets, n_tpoints, ...)
         wake_model_result: numpy.ndarray
-            The new wake deltas of the selected points,
-            shape: (n_sel_sp,)
+            The new wake deltas of the selected rotors,
+            shape: (n_st_sel, n_tpoints, ...)
 
         Returns
         -------
         wdelta: numpy.ndarray
-            The updated wake deltas, shape: (n_states, n_points)
+            The updated wake deltas, shape: 
+            (n_states, n_targets, n_tpoints, ...)
 
         """
         if variable not in [FV.REWS, FV.REWS2, FV.REWS3, FV.WS]:
@@ -112,11 +115,11 @@ class WSProduct(WakeSuperposition):
                 f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
             )
 
-        if np.any(sel_sp):
+        if np.any(st_sel):
             if np.max(np.abs(wake_delta)) < 1e-14:
                 wake_delta[:] = 1
 
-            wake_delta[sel_sp] *= 1 + wake_model_result
+            wake_delta[st_sel] *= 1 + wake_model_result
 
         return wake_delta
 
@@ -125,7 +128,6 @@ class WSProduct(WakeSuperposition):
         algo,
         mdata,
         fdata,
-        pdata,
         variable,
         amb_results,
         wake_delta,
@@ -138,24 +140,25 @@ class WSProduct(WakeSuperposition):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray
-            The ambient results, shape: (n_states, n_points)
+            The ambient results at targets, 
+            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
-            The wake deltas, shape: (n_states, n_points)
+            The wake deltas at targets, shape: 
+            (n_states, n_targets, n_tpoints)
 
         Returns
         -------
         final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
-            results by simple plus operation. Shape: (n_states, n_points)
+            results by simple plus operation. Shape: 
+            (n_states, n_targets, n_tpoints)
 
         """
         w = amb_results * (wake_delta - 1)

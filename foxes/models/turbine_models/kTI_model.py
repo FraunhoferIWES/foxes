@@ -53,7 +53,7 @@ class kTI(TurbineModel):
     def __repr__(self):
         return (
             super().__repr__()
-            + f"({self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
+            + f"(k_var={self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
         )
 
     def output_farm_vars(self, algo):
@@ -74,7 +74,7 @@ class kTI(TurbineModel):
         return [self.k_var]
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -84,13 +84,13 @@ class kTI(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -99,20 +99,23 @@ class kTI(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        kTI = self.get_data(
-            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+        kti = self.get_data(
+            FV.KTI, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
         kb = self.get_data(
-            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+            FV.KB, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
         ti = self.get_data(
-            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata, upcast=True
+            self.ti_var, FC.STATE_TURBINE, lookup="sf", fdata=fdata,
+            upcast=True
         )[st_sel]
 
         k = fdata.get(
             self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
         )
 
-        k[st_sel] = kTI * ti + kb
+        k[st_sel] = kti * ti + kb
 
         return {self.k_var: k}

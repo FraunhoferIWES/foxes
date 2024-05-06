@@ -19,8 +19,6 @@ to the latest version of the code.
 """
 
 import os
-import glob
-import sys
 import argparse
 from contextlib import contextmanager
 import subprocess
@@ -49,7 +47,7 @@ def clean():
     return 0
 
 
-def run_tutorial(path):
+def run_tutorial(path, nofig):
     try:
         with cd(path):
             if os.path.isfile("README.md") or os.path.isfile("run.py"):
@@ -72,6 +70,8 @@ def run_tutorial(path):
                             if "run.py" in s:
                                 i = s.index("run.py")
                                 commands.append(["python"] + s[i:])
+                                if nofig:
+                                    commands[-1] += ["--nofig"]
 
                 if len(commands) == 0:
                     print(f"\nNO COMMAND FOUND IN README.md\n")
@@ -96,8 +96,56 @@ def run_tutorial(path):
         print(f"\nFAILED TO ENTER DIRECTORY {path}\n")
         return 1
 
+def run(args):
 
-if __name__ == "__main__":
+    incld = args.include
+    excld = args.exclude
+
+    counter = 0
+    dryres = []
+    for w in sorted(os.walk(".")):
+        for d in sorted(w[1]):
+            tdir = os.path.join(w[0], d)
+
+            if args.incopt or args.forceopt or not "optimization" in tdir:
+                ok = True
+                for k in excld:
+                    if k in tdir:
+                        ok = False
+                        break
+                if ok and incld is not None:
+                    for k in incld:
+                        if not k in tdir:
+                            ok = False
+                            break
+                if args.forceopt and not "optimization" in tdir:
+                    ok = False
+
+                if ok:
+                    if counter >= args.step:
+                        if not (args.dry or args.Dry):
+                            print("\nEXAMPLE", counter)
+
+                        if args.dry:
+                            if os.path.isfile(os.path.join(tdir, "README.md")):
+                                dryres.append(tdir)
+
+                        elif args.Dry:
+                            if os.path.isfile(os.path.join(tdir, "README.md")):
+                                dryres.append(d)
+
+                        elif run_tutorial(tdir, args.nofig):
+                            raise Exception(f"\nEXAMPLE {tdir} FAILED.")
+
+                    counter += 1
+
+    if args.dry or args.Dry:
+        for r in sorted(dryres):
+            print(r)
+    else:
+        print("\nTutorials OK.")
+
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-i",
@@ -146,51 +194,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--step", help="Set the start step, default=0", type=int, default=0
     )
-    args = parser.parse_args()
+    parser.add_argument("-nf", "--nofig", help="Skip all figures", action="store_true")
+    return parser.parse_args()
 
-    incld = args.include
-    excld = args.exclude
-
-    counter = 0
-    dryres = []
-    for w in sorted(os.walk(".")):
-        for d in sorted(w[1]):
-            tdir = os.path.join(w[0], d)
-
-            if args.incopt or args.forceopt or not "optimization" in tdir:
-                ok = True
-                for k in excld:
-                    if k in tdir:
-                        ok = False
-                        break
-                if ok and incld is not None:
-                    for k in incld:
-                        if not k in tdir:
-                            ok = False
-                            break
-                if args.forceopt and not "optimization" in tdir:
-                    ok = False
-
-                if ok:
-                    if counter >= args.step:
-                        if not (args.dry or args.Dry):
-                            print("\nEXAMPLE", counter)
-
-                        if args.dry:
-                            if os.path.isfile(os.path.join(tdir, "README.md")):
-                                dryres.append(tdir)
-
-                        elif args.Dry:
-                            if os.path.isfile(os.path.join(tdir, "README.md")):
-                                dryres.append(d)
-
-                        elif run_tutorial(tdir):
-                            raise Exception(f"\EXAMPLE {tdir} FAILED.")
-
-                    counter += 1
-
-    if args.dry or args.Dry:
-        for r in sorted(dryres):
-            print(r)
-    else:
-        print("\nTutorials OK.")
+if __name__ == "__main__":
+    args = parse_args()
+    run(args)

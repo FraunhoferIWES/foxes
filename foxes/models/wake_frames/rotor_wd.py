@@ -44,9 +44,9 @@ class RotorWD(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -57,45 +57,50 @@ class RotorWD(WakeFrame):
         """
         n = np.mean(wd2uv(fdata[self.var_wd], axis=1), axis=-1)
         xy = fdata[FV.TXYH][:, :, :2]
-
         order = np.argsort(np.einsum("std,sd->st", xy, n), axis=-1)
 
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            tdata, 
+            downwind_index,
+        ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
-
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+            
         """
-        points = pdata[FC.POINTS]
-        n_states = mdata.n_states
-        stsel = (np.arange(n_states), states_source_turbine)
-
-        xyz = fdata[FV.TXYH][stsel]
-        delta = points - xyz[:, None, :]
+        n_states = tdata.n_states
+        targets = tdata[FC.TARGETS]
+        
+        xyz = fdata[FV.TXYH][:, downwind_index]
+        delta = targets - xyz[:, None, None, :]
         del xyz
 
-        wd = fdata[self.var_wd][stsel]
+        wd = fdata[self.var_wd][:, downwind_index]
 
         nax = np.zeros((n_states, 3, 3), dtype=FC.DTYPE)
         n = nax[:, 0, :2]
@@ -105,11 +110,11 @@ class RotorWD(WakeFrame):
         nax[:, 2, 2] = 1
         del wd
 
-        coos = np.einsum("spd,sad->spa", delta, nax)
+        coos = np.einsum("stpd,sad->stpa", delta, nax)
 
         return coos
-
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -118,13 +123,12 @@ class RotorWD(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -134,11 +138,8 @@ class RotorWD(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        n_states = mdata.n_states
-        stsel = (np.arange(n_states), states_source_turbine)
-
-        wd = fdata[self.var_wd][stsel]
+        wd = fdata[self.var_wd][:, downwind_index]
         n = np.append(wd2uv(wd, axis=-1), np.zeros_like(wd)[:, None], axis=-1)
 
-        xyz = fdata[FV.TXYH][stsel]
+        xyz = fdata[FV.TXYH][:, downwind_index]
         return xyz[:, None, :] + x[:, :, None] * n[:, None, :]

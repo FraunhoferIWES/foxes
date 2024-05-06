@@ -34,18 +34,19 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear", "CrespoHernandez_max"],
+        default=["Bastankhah2016_linear", "CrespoHernandez_max_k002"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="yawed")
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     # create model book
@@ -76,13 +77,13 @@ if __name__ == "__main__":
 
     # create algorithm
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=None,
     )
 
@@ -90,39 +91,26 @@ if __name__ == "__main__":
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
 
-    # xy horizontal flow plot
-    print("\nHorizontal flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(
-        args.var, resolution=10, xmin=-100, xmax=3000, rotor_color="red"
-    )
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
+        # xy horizontal flow plot
+        print("\nHorizontal flow figure output:")
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_xy(
+            args.var, resolution=10, xmin=-100, xmax=3000, rotor_color="red"
+        )
+        fig = next(g)
+        plt.show()
+        plt.close(fig)
 
-    # xz flow plot
-    print("\nVertical flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(args.var, resolution=10, y=0, zmax=300, rotor_color="red")
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
-
-    # yz flow plot
-    print("\nVertical flow figure output:")
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_yz(
-        var=args.var,
-        resolution=10,
-        x=1700,
-        ymin=-200,
-        ymax=200,
-        zmax=300,
-        rotor_color="red",
-    )
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+        # yz flow plot
+        print("\nVertical flow figure output:")
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_yz(
+            args.var, resolution=10, x=750, ymin=-200,ymax=200,zmin=0,zmax=250,
+            rotor_color="red", verbosity=0)
+        fig = next(g)
+        plt.show()
+        plt.close(fig)
 
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)

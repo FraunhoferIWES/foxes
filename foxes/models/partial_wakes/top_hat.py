@@ -1,13 +1,13 @@
 import numpy as np
 
-from foxes.core import PartialWakesModel, Data
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 from foxes.utils.two_circles import calc_area
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .centre import PartialCentre
 
-class PartialTopHat(PartialWakesModel):
+class PartialTopHat(PartialCentre):
     """
     Partial wakes for top-hat models.
 
@@ -23,21 +23,17 @@ class PartialTopHat(PartialWakesModel):
 
     """
 
-    def __init__(self, wake_models=None, wake_frame=None, rotor_model=None):
+    def __init__(self, rotor_model=None):
         """
         Constructor.
 
         Parameters
         ----------
-        wake_models: list of foxes.core.WakeModel, optional
-            The wake models, default are the ones from the algorithm
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, default is the one from the algorithm
         rotor_model: foxes.core.RotorModel, optional
             The rotor model, default is the one from the algorithm
 
         """
-        super().__init__(wake_models, wake_frame)
+        super().__init__()
         self.rotor_model = rotor_model
 
     def initialize(self, algo, verbosity=0):
@@ -57,12 +53,6 @@ class PartialTopHat(PartialWakesModel):
 
         super().initialize(algo, verbosity)
 
-        for w in self.wake_models:
-            if not isinstance(w, TopHatWakeModel):
-                raise TypeError(
-                    f"Partial wakes '{self.name}': Cannot be applied to wake model '{w.name}', since not a TopHatWakeModel"
-                )
-
         self.WCOOS_ID = self.var("WCOOS_ID")
         self.WCOOS_X = self.var("WCOOS_X")
         self.WCOOS_R = self.var("WCOOS_R")
@@ -79,211 +69,105 @@ class PartialTopHat(PartialWakesModel):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def new_wake_deltas(self, algo, mdata, fdata):
-        """
-        Creates new initial wake deltas, filled
-        with zeros.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-
-        Returns
-        -------
-        wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
-
-        """
-        pdata = Data.from_points(points=fdata[FV.TXYH])
-
-        wake_deltas = {}
-        for w in self.wake_models:
-            w.init_wake_deltas(algo, mdata, fdata, pdata, wake_deltas)
-
-        return wake_deltas, pdata
-
-    def contribute_to_wake_deltas(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         wake_deltas,
+        wmodel,  
     ):
         """
-        Modifies wake deltas by contributions from the
-        specified wake source turbines.
+        Modifies wake deltas at target points by 
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray of int
-            For each state, one turbine index corresponding
-            to the wake causing turbine. Shape: (n_states,)
-        wake_deltas: Any
-            The wake deltas object created by the
-            `new_wake_deltas` function
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         """
-        n_states = mdata.n_states
-        n_points = fdata.n_turbines
-        stsel = (np.arange(n_states), states_source_turbine)
-
-        if (
-            self.WCOOS_ID not in mdata
-            or mdata[self.WCOOS_ID] != states_source_turbine[0]
-        ):
-            wcoos = self.wake_frame.get_wake_coos(
-                algo, mdata, fdata, pdata, states_source_turbine
+        if not isinstance(wmodel, TopHatWakeModel):
+            raise TypeError(
+                f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not a TopHatWakeModel"
             )
-            mdata[self.WCOOS_ID] = states_source_turbine[0]
-            mdata[self.WCOOS_X] = wcoos[:, :, 0]
-            mdata[self.WCOOS_R] = np.linalg.norm(wcoos[:, :, 1:3], axis=-1)
-            wcoos[:, :, 1:3] = 0
-        else:
-            wcoos = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            wcoos[:, :, 0] = mdata[self.WCOOS_X]
+        
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, tdata, downwind_index
+        )
+        x = wcoos[:, :, 0, 0]
+        yz = wcoos[:, :, 0, 1:3]
+        del wcoos
 
-        ct = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        ct[:] = fdata[FV.CT][stsel][:, None]
-        x = mdata[self.WCOOS_X]
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_TARGET,
+            lookup="w",
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            algo=algo,
+            upcast=True,
+        )
 
-        sel0 = (ct > 0.0) & (x > 0.0)
+        sel0 = (ct > 0) & (x > 0)
         if np.any(sel0):
-            R = mdata[self.WCOOS_R]
-            r = np.zeros_like(R)
-            D = fdata[FV.D]
+            R = np.linalg.norm(yz, axis=-1)
+            del yz
 
-            for w in self.wake_models:
-                wr = w.calc_wake_radius(
-                    algo, mdata, fdata, pdata, states_source_turbine, x, ct
-                )
+            D = self.get_data(
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                algo=algo,
+                upcast=True,
+            )
 
-                sel_sp = sel0 & (wr > R - D / 2)
-                if np.any(sel_sp):
-                    hx = x[sel_sp]
-                    hct = ct[sel_sp]
-                    hwr = wr[sel_sp]
+            wr = wmodel.calc_wake_radius(algo, mdata, fdata,
+                            tdata, downwind_index, x, ct)
 
-                    clw = w.calc_centreline_wake_deltas(
-                        algo,
-                        mdata,
-                        fdata,
-                        pdata,
-                        states_source_turbine,
-                        sel_sp,
-                        hx,
-                        hwr,
-                        hct,
-                    )
-                    del hx, hct
+            st_sel = sel0 & (wr > R - D / 2)
+            if np.any(st_sel):
+                x = x[st_sel]
+                ct = ct[st_sel]
+                wr = wr[st_sel]
+                R = R[st_sel]
+                D = D[st_sel]
 
-                    hR = R[sel_sp]
-                    hD = D[sel_sp]
-                    weights = calc_area(hD / 2, hwr, hR) / (np.pi * (hD / 2) ** 2)
-                    del hD, hwr, hR
+                clw = wmodel.calc_centreline(
+                        algo, mdata, fdata, tdata, downwind_index,
+                        st_sel, x, wr, ct)
 
-                    for v, d in clw.items():
-                        try:
-                            superp = w.superp[v]
-                        except KeyError:
-                            raise KeyError(
-                                f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{w.name}', found {sorted(list(w.superp.keys()))}"
-                            )
+                weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
 
-                        wake_deltas[v] = superp.calc_wakes_plus_wake(
-                            algo,
-                            mdata,
-                            fdata,
-                            pdata,
-                            states_source_turbine,
-                            sel_sp,
-                            v,
-                            wake_deltas[v],
-                            weights * d,
+                for v, d in clw.items():
+                    try:
+                        superp = wmodel.superp[v]
+                    except KeyError:
+                        raise KeyError(
+                            f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {sorted(list(wmodel.superp.keys()))}"
                         )
 
-    def evaluate_results(
-        self,
-        algo,
-        mdata,
-        fdata,
-        pdata,
-        wake_deltas,
-        states_turbine,
-        amb_res=None,
-    ):
-        """
-        Updates the farm data according to the wake
-        deltas.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-            Modified in-place by this function
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
-        states_turbine: numpy.ndarray of int
-            For each state, the index of one turbine
-            for which to evaluate the wake deltas.
-            Shape: (n_states,)
-        amb_res: dict, optional
-            Ambient states results. Keys: var str, values:
-            numpy.ndarray of shape (n_states, n_points)
-
-        """
-        weights = algo.rotor_model.from_data_or_store(FC.RWEIGHTS, algo, mdata)
-        rpoints = algo.rotor_model.from_data_or_store(FC.RPOINTS, algo, mdata)
-        n_states, n_turbines, n_rpoints, __ = rpoints.shape
-
-        amb_res_in = amb_res is not None
-        if not amb_res_in:
-            amb_res = algo.rotor_model.from_data_or_store(
-                FC.AMB_RPOINT_RESULTS, algo, mdata
-            )
-
-        wres = {}
-        st_sel = (np.arange(n_states), states_turbine)
-        for v, ares in amb_res.items():
-            wres[v] = ares.reshape(n_states, n_turbines, n_rpoints)[st_sel]
-
-        wdel = {}
-        for v, d in wake_deltas.items():
-            wdel[v] = d.reshape(n_states, n_turbines, 1)[st_sel]
-        for w in self.wake_models:
-            w.finalize_wake_deltas(algo, mdata, fdata, pdata, wres, wdel)
-
-        for v in wres.keys():
-            if v in wake_deltas:
-                wres[v] += wdel[v]
-                if amb_res_in:
-                    amb_res[v][st_sel] = wres[v]
-            wres[v] = wres[v][:, None]
-
-        self.rotor_model.eval_rpoint_results(
-            algo, mdata, fdata, wres, weights, states_turbine=states_turbine
-        )
+                    wake_deltas[v] = superp.add_wake(
+                        algo, mdata, fdata, tdata, downwind_index, st_sel, 
+                        v, wake_deltas[v], weights[:, None]*d[:, None])

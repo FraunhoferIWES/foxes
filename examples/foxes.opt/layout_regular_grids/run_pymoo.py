@@ -24,7 +24,7 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
+        "-p", "--pwakes", help="The partial wakes model", default=None
     )
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
@@ -96,13 +96,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         verbosity=0,
     )
 

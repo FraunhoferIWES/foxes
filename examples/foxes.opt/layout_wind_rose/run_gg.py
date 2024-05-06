@@ -36,7 +36,7 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
+        "-p", "--pwakes", help="The partial wakes model", default=None
     )
     parser.add_argument("--ti", help="The TI value", type=float, default=0.04)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         xy_base=np.array([500.0, 500.0]),
         xy_step=np.array([50.0, 50.0]),
         n_turbines=args.n_t,
-        turbine_models=["layout_opt", ttype.name],
+        turbine_models=[ttype.name],
     )
 
     states = foxes.input.states.StatesTable(
@@ -105,13 +105,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         verbosity=0,
     )
 

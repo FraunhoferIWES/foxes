@@ -16,7 +16,7 @@ class Calculator(TurbineModel):
     func: Function
         The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
         where inX and outY are numpy.ndarrays and
-        st_sel is the boolean state-turbine selection.
+        st_sel is the state-turbine selection slice or array.
         All arrays have shape (n_states, n_turbines).
 
     :group: models.turbine_models
@@ -36,7 +36,7 @@ class Calculator(TurbineModel):
         func: Function
             The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
             where inX and outY are numpy.ndarrays and
-            st_sel is the boolean state-turbine selection.
+            st_sel is the state-turbine selection slice or array.
             All arrays have shape (n_states, n_turbines).
         kwargs: dict, optional
             Additional arguments for TurbineModel
@@ -65,7 +65,7 @@ class Calculator(TurbineModel):
         return self.out_vars
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -75,13 +75,13 @@ class Calculator(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------

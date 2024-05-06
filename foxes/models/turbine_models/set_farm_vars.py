@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import TurbineModel
 import foxes.constants as FC
-
+import foxes.variables as FV
 
 class SetFarmVars(TurbineModel):
     """
@@ -118,7 +118,7 @@ class SetFarmVars(TurbineModel):
         return idata
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -128,13 +128,13 @@ class SetFarmVars(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -143,23 +143,17 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        allt = np.all(st_sel)
+        order = fdata[FV.ORDER]
+        ssel = fdata[FV.ORDER_SSEL]
+
+        bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+        bsel[st_sel] = True
 
         for v in self.vars:
-            data = mdata[self.var(v)]
+            data = mdata[self.var(v)][ssel, order]
             hsel = ~np.isnan(data)
-            hallt = np.all(hsel)
+            tsel = bsel & hsel
 
-            if allt and hallt:
-                fdata[v][:] = data
-
-            else:
-                if v not in fdata:
-                    fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-
-                tsel = st_sel & hsel
-                fdata[v][tsel] = data[tsel]
+            fdata[v][tsel] = data[tsel]
 
         return {v: fdata[v] for v in self.vars}

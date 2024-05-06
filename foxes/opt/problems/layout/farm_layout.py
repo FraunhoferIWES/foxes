@@ -1,11 +1,11 @@
 import numpy as np
 
-from foxes.opt.core import FarmVarsProblem
+from foxes.opt.core.farm_opt_problem import FarmOptProblem
 import foxes.variables as FV
 import foxes.constants as FC
 
 
-class FarmLayoutOptProblem(FarmVarsProblem):
+class FarmLayoutOptProblem(FarmOptProblem):
     """
     The turbine positioning optimization problem
 
@@ -79,118 +79,57 @@ class FarmLayoutOptProblem(FarmVarsProblem):
         out[:] = b.p_max()[None, :]
         return out.reshape(self.n_sel_turbines * 2)
 
-    def initialize(self, verbosity=1, **kwargs):
+    def update_problem_individual(self, vars_int, vars_float):
         """
-        Initialize the object.
+        Update the algo and other data using
+        the latest optimization variables.
 
-        Parameters
-        ----------
-        verbosity: int
-            The verbosity level, 0 = silent
-        kwargs: dict, optional
-            Additional parameters for super class init
-
-        """
-        super().initialize(
-            pre_rotor_vars=[FV.X, FV.Y],
-            post_rotor_vars=[],
-            verbosity=verbosity,
-            **kwargs,
-        )
-
-    def opt2farm_vars_individual(self, vars_int, vars_float):
-        """
-        Translates optimization variables to farm variables
-
-        Parameters
-        ----------
-        vars_int: numpy.ndarray
-            The integer optimization variable values,
-            shape: (n_vars_int,)
-        vars_float: numpy.ndarray
-            The float optimization variable values,
-            shape: (n_vars_float,)
-
-        Returns
-        -------
-        farm_vars: dict
-            The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape:
-            (n_states, n_sel_turbines)
-
-        """
-        farm_vars = {
-            FV.X: np.zeros((self.algo.n_states, self.n_sel_turbines), dtype=FC.DTYPE),
-            FV.Y: np.zeros((self.algo.n_states, self.n_sel_turbines), dtype=FC.DTYPE),
-        }
-        xy = vars_float.reshape(self.n_sel_turbines, 2)
-        farm_vars[FV.X][:] = xy[None, :, 0]
-        farm_vars[FV.Y][:] = xy[None, :, 1]
-
-        return farm_vars
-
-    def opt2farm_vars_population(self, vars_int, vars_float, n_states):
-        """
-        Translates optimization variables to farm variables
-
-        Parameters
-        ----------
-        vars_int: numpy.ndarray
-            The integer optimization variable values,
-            shape: (n_pop, n_vars_int)
-        vars_float: numpy.ndarray
-            The float optimization variable values,
-            shape: (n_pop, n_vars_float)
-        n_states: int
-            The number of original (non-pop) states
-
-        Returns
-        -------
-        farm_vars: dict
-            The foxes farm variables. Key: var name,
-            value: numpy.ndarray with values, shape:
-            (n_pop, n_states, n_sel_turbines)
-
-        """
-        n_pop = len(vars_float)
-        farm_vars = {
-            FV.X: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
-            FV.Y: np.zeros((n_pop, n_states, self.n_sel_turbines), dtype=FC.DTYPE),
-        }
-        xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
-        farm_vars[FV.X][:] = xy[:, None, :, 0]
-        farm_vars[FV.Y][:] = xy[:, None, :, 1]
-
-        return farm_vars
-
-    def finalize_individual(self, vars_int, vars_float, verbosity=1):
-        """
-        Finalization, given the champion data.
+        This function is called before running the farm
+        calculation.
 
         Parameters
         ----------
         vars_int: np.array
-            The optimal integer variable values, shape: (n_vars_int,)
+            The integer variable values, shape: (n_vars_int,)
         vars_float: np.array
-            The optimal float variable values, shape: (n_vars_float,)
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        problem_results: Any
-            The results of the variable application
-            to the problem
-        objs: np.array
-            The objective function values, shape: (n_objectives,)
-        cons: np.array
-            The constraints values, shape: (n_constraints,)
+            The float variable values, shape: (n_vars_float,)
 
         """
-        res, objs, cons = super().finalize_individual(vars_int, vars_float, verbosity)
+        super().update_problem_individual(vars_int, vars_float)
 
         xy = vars_float.reshape(self.n_sel_turbines, 2)
         for i, ti in enumerate(self.sel_turbines):
-            self.farm.turbines[ti].xy = xy[i]
+            t = self.algo.farm.turbines[ti]
+            t.xy = xy[i]
 
-        return res, objs, cons
+    def update_problem_population(self, vars_int, vars_float):
+        """
+        Update the algo and other data using
+        the latest optimization variables.
+
+        This function is called before running the farm
+        calculation.
+
+        Parameters
+        ----------
+        vars_int: np.array
+            The integer variable values, shape: (n_pop, n_vars_int,)
+        vars_float: np.array
+            The float variable values, shape: (n_pop, n_vars_float,)
+
+        """
+        super().update_problem_population(vars_int, vars_float)
+
+        n_pop = len(vars_float)
+        n_ostates = self._org_n_states
+        n_states = n_pop * n_ostates
+
+        xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
+        sxy = np.zeros((n_pop, n_ostates, self.n_sel_turbines, 2), dtype=vars_float.dtype)
+        sxy[:] = xy[:, None, :, :]
+        sxy = sxy.reshape(n_states, self.n_sel_turbines, 2)
+        del xy
+
+        for i, ti in enumerate(self.sel_turbines):
+            t = self.algo.farm.turbines[ti]
+            t.xy = sxy[:, i]

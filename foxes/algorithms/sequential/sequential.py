@@ -4,7 +4,7 @@ from xarray import Dataset
 from foxes.algorithms.downwind.downwind import Downwind
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core.data import Data
+from foxes.core.data import MData, FData, TData
 
 from . import models as mdls
 
@@ -30,7 +30,8 @@ class Sequential(Downwind):
         The points of interest, shape: (n_states, n_points, 3)
     plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
         The plugins, updated with every iteration
-
+    outputs: list of str
+        The output variables
     :group: algorithms.sequential
 
     """
@@ -58,15 +59,15 @@ class Sequential(Downwind):
 
     def __init__(
         self,
-        mbook,
         farm,
         states,
         *args,
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.POINT: 10000},
+        chunks={FC.STATE: None, FC.POINT: 4000},
         plugins=[],
+        outputs=None,
         **kwargs,
     ):
         """
@@ -74,8 +75,6 @@ class Sequential(Downwind):
 
         Parameters
         ----------
-        mbook: foxes.ModelBook
-            The model book
         farm: foxes.WindFarm
             The wind farm
         states: foxes.core.States
@@ -93,18 +92,22 @@ class Sequential(Downwind):
             The xarray.Dataset chunk parameters
         plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
             The plugins, updated with every iteration
+        outputs: list of str, optional
+            The output variables
         kwargs: dict, optional
             Additional arguments for Downwind
 
         """
         super().__init__(
-            mbook, farm, mdls.SeqState(states), *args, chunks=chunks, **kwargs
+            farm, mdls.SeqState(states), *args, 
+            chunks=chunks, **kwargs
         )
         self.ambient = ambient
         self.calc_pars = calc_pars
         self.states0 = self.states.states
         self.points = points
         self.plugins = plugins
+        self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
 
         self._i = None
 
@@ -135,7 +138,7 @@ class Sequential(Downwind):
             self._counter = 0
 
             self._mlist, self._calc_pars = self._collect_farm_models(
-                self.calc_pars, self.ambient
+                self.outputs, self.calc_pars, self.ambient
             )
             if not self._mlist.initialized:
                 self._mlist.initialize(self, self.verbosity)
@@ -155,14 +158,14 @@ class Sequential(Downwind):
                 print(f"Output farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            self._mdata = Data(
+            self._mdata = MData(
                 data={v: d[1] for v, d in self._mdata["data_vars"].items()},
                 dims={v: d[0] for v, d in self._mdata["data_vars"].items()},
                 loop_dims=[FC.STATE],
                 name="mdata",
             )
 
-            self._fdata = Data(
+            self._fdata = FData(
                 data={
                     v: np.zeros((self.n_states, self.n_turbines), dtype=FC.DTYPE)
                     for v in self.farm_vars
@@ -182,14 +185,13 @@ class Sequential(Downwind):
                 self.print(f"\nOutput point variables:", ", ".join(self._pvars), "\n")
 
                 n_points = self.points.shape[1]
-                self._pdata = Data.from_points(
+                self._tdata = TData.from_points(
                     self.points,
                     data={
-                        v: np.zeros((self.n_states, n_points), dtype=FC.DTYPE)
+                        v: np.zeros((self.n_states, n_points, 1), dtype=FC.DTYPE)
                         for v in self._pvars
                     },
-                    dims={v: (FC.STATE, FC.POINT) for v in self._pvars},
-                    name="pdata",
+                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
                 )
 
             for p in self.plugins:
@@ -207,7 +209,7 @@ class Sequential(Downwind):
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
 
-            mdata = Data(
+            mdata = MData(
                 data={
                     v: d[self._i, None] if self._mdata.dims[v][0] == FC.STATE else d
                     for v, d in self._mdata.items()
@@ -217,7 +219,7 @@ class Sequential(Downwind):
                 name="mdata",
             )
 
-            fdata = Data(
+            fdata = FData(
                 data={
                     v: np.zeros((1, self.n_turbines), dtype=FC.DTYPE)
                     for v in self.farm_vars
@@ -234,7 +236,7 @@ class Sequential(Downwind):
                 self._fdata[v][self._i] = d[0]
 
             fres = Dataset(
-                coords={FC.STATE: [self.index], FC.TURBINE: np.arange(self.n_turbines)},
+                coords={FC.STATE: [self.index]},
                 data_vars={v: ((FC.STATE, FC.TURBINE), d) for v, d in fres.items()},
             )
             fres[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
@@ -250,25 +252,24 @@ class Sequential(Downwind):
 
             else:
                 n_points = self.points.shape[1]
-                pdata = Data.from_points(
+                tdata = TData.from_points(
                     self.points[self.counter, None],
                     data={
-                        v: np.zeros((1, n_points), dtype=FC.DTYPE) for v in self._pvars
+                        v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in self._pvars
                     },
-                    dims={v: (FC.STATE, FC.POINT) for v in self._pvars},
-                    name="pdata",
+                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
                 )
 
                 pres = self._plist.calculate(
-                    self, mdata, fdata, pdata, parameters=self._calc_pars_p
+                    self, mdata, fdata, tdata, parameters=self._calc_pars_p
                 )
 
                 for v, d in pres.items():
-                    self._pdata[v][self._i] = d[0]
+                    self._tdata[v][self._i] = d[0]
 
                 pres = Dataset(
-                    coords={FC.STATE: [self.index], FC.POINT: np.arange(n_points)},
-                    data_vars={v: ((FC.STATE, FC.POINT), d) for v, d in pres.items()},
+                    coords={FC.STATE: [self.index]},
+                    data_vars={v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()},
                 )
 
                 for p in self.plugins:
@@ -330,6 +331,26 @@ class Sequential(Downwind):
         """
         return self.states._indx if self.iterating else None
 
+    def states_i0(self, counter, algo=None):
+        """
+        Returns counter or index
+
+        Parameters
+        ----------
+        counter: bool
+            Flag for counter
+        algo: object, optional
+            Dummy argument, due to consistency with
+            foxes.core.Data.states_i0
+        
+        Returns
+        -------
+        i0: int
+            The counter or index
+
+        """
+        return self.counter if counter else self.index
+
     @property
     def weight(self):
         """
@@ -350,7 +371,7 @@ class Sequential(Downwind):
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.MData
             The current model data
 
         """
@@ -363,24 +384,24 @@ class Sequential(Downwind):
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.FData
             The current farm data
 
         """
         return self._fdata
 
     @property
-    def pdata(self):
+    def tdata(self):
         """
         Get the current point data
 
         Returns
         -------
-        d: foxes.core.Data
+        d: foxes.core.TData
             The current point data
 
         """
-        return self._pdata if self.points is not None and self.iterating else None
+        return self._tdata if self.points is not None and self.iterating else None
 
     @property
     def farm_results(self):
@@ -403,6 +424,19 @@ class Sequential(Downwind):
             results[FV.ORDER] = results[FV.ORDER].astype(FC.ITYPE)
 
         return results
+
+    @property
+    def prev_farm_results(self):
+        """
+        Alias for farm_results
+
+        Returns
+        -------
+        results: xarray.Dataset
+            The overall farm results
+
+        """
+        return self.farm_results
 
     @property
     def cur_farm_results(self):
@@ -449,7 +483,7 @@ class Sequential(Downwind):
                 FC.POINT: np.arange(n_points),
                 FC.XYH: np.arange(3),
             },
-            data_vars={v: (self._pdata.dims[v], d) for v, d in self._pdata.items()},
+            data_vars={v: (self._tdata.dims[v], d) for v, d in self._tdata.items()},
         )
 
         return results
@@ -477,7 +511,7 @@ class Sequential(Downwind):
                 FC.XYH: np.arange(3),
             },
             data_vars={
-                v: (self._pdata.dims[v], d[i, None]) for v, d in self._pdata.items()
+                v: (self._tdata.dims[v], d[i, None]) for v, d in self._tdata.items()
             },
         )
 
@@ -501,13 +535,13 @@ class Sequential(Downwind):
         pvars = plist.output_point_vars(self)
 
         mdata = self.get_models_idata()
-        mdata = Data(
+        mdata = MData(
             data={v: d[1] for v, d in mdata["data_vars"].items()},
             dims={v: d[0] for v, d in mdata["data_vars"].items()},
             loop_dims=[FC.STATE],
             name="mdata",
         )
-        mdata = Data(
+        mdata = MData(
             data={
                 v: d[self.states.counter, None] if mdata.dims[v][0] == FC.STATE else d
                 for v, d in mdata.items()
@@ -517,24 +551,24 @@ class Sequential(Downwind):
             name="mdata",
         )
 
-        fdata = Data(
+        fdata = FData(
             data={v: farm_results[v].to_numpy() for v in self.farm_vars},
             dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
             loop_dims=[FC.STATE],
             name="fdata",
         )
 
-        pdata = Data.from_points(
+        tdata = TData.from_points(
             points[0, None],
-            data={v: np.zeros((1, n_points), dtype=FC.DTYPE) for v in pvars},
-            dims={v: (FC.STATE, FC.POINT) for v in pvars},
-            name="pdata",
+            data={v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in pvars},
+            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in pvars},
+            name="tdata",
         )
 
-        pres = plist.calculate(self, mdata, fdata, pdata, parameters=calc_pars)
+        pres = plist.calculate(self, mdata, fdata, tdata, parameters=calc_pars)
         pres = Dataset(
-            coords={FC.STATE: self.states.index(), FC.POINT: np.arange(n_points)},
-            data_vars={v: ((FC.STATE, FC.POINT), d) for v, d in pres.items()},
+            coords={FC.STATE: self.states.index()},
+            data_vars={v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()},
         )
 
         # plist.finalize(self, self.verbosity)

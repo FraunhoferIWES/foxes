@@ -29,7 +29,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-w",
@@ -71,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -88,9 +89,10 @@ if __name__ == "__main__":
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.05},
     )
 
-    o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-    fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
-    plt.show()
+    if not args.nofig:
+        o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
+        fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
+        plt.show()
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_from_file(
@@ -102,19 +104,19 @@ if __name__ == "__main__":
         turbine_models=[ttype.name, "kTI_02"] + args.tmodels,
     )
 
-    if args.show_layout:
+    if not args.nofig and args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 
@@ -142,7 +144,7 @@ if __name__ == "__main__":
         print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
         print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
 
-        if args.calc_mean:
+        if not args.nofig and args.calc_mean:
             o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
             fig = o.get_mean_fig_xy(FV.WS, resolution=30)
             plt.show()

@@ -14,6 +14,7 @@ from foxes.core import (
     WakeSuperposition,
     WakeModel,
     AxialInductionModel,
+    TurbineInductionModel,
 )
 
 
@@ -148,25 +149,21 @@ class ModelBook:
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
-            distsliced=fm.partial_wakes.PartialDistSlicedWake(),
             centre=fm.partial_wakes.PartialCentre(),
-            auto=fm.partial_wakes.Mapped(),
         )
         nlst = list(range(2, 11)) + [20]
         for n in nlst:
             self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
         for n in nlist:
-            self.partial_wakes[f"distsliced{n**2}"] = (
-                fm.partial_wakes.PartialDistSlicedWake(n)
-            )
-        for n in nlist:
-            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n)
+            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n=n)
 
         self.wake_frames = Dict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
             yawed=fm.wake_frames.YawedWakes(),
+            yawed_k002=fm.wake_frames.YawedWakes(k=0.02),
+            yawed_k004=fm.wake_frames.YawedWakes(k=0.04),
         )
         stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
         for s in stps:
@@ -247,7 +244,7 @@ class ModelBook:
             "linear_amb",
             "linear_amb_lim",
             "quadratic",
-            "wquadratic_lim",
+            "quadratic_lim",
             "quadratic_amb",
             "quadratic_amb_lim",
             "cubic",
@@ -417,12 +414,11 @@ class ModelBook:
             )
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
         self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
         self.wake_models[f"SelfSimilar2020"] = (
             fm.wake_models.induction.SelfSimilar2020()
         )
-
-        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
 
         self.sources = Dict(
             name="sources",
@@ -518,6 +514,33 @@ class ModelBook:
             bclass = self.base_classes[model_type]
             self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
         return self.sources[model_type][name]
+    
+    def default_partial_wakes(self, wake_model):
+        """
+        Gets a default partial wakes model name
+        for a given wake model
+        
+        Parameters
+        ----------
+        wake_model: foxes.core.WakeModel
+            The wake model
+            
+        Returns
+        -------
+        pwake: str
+            The partial wake model name
+
+        """
+        if isinstance(wake_model, TurbineInductionModel):
+            return "grid9"
+        elif isinstance(wake_model, fm.wake_models.TopHatWakeModel):
+            return "top_hat"
+        elif isinstance(wake_model, fm.wake_models.AxisymmetricWakeModel):
+            return "axiwake6"
+        elif isinstance(wake_model, fm.wake_models.DistSlicedWakeModel):
+            return "grid9"
+        else:
+            raise TypeError(f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'")
 
     def finalize(self, algo, verbosity=0):
         """

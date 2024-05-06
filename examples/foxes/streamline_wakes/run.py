@@ -25,7 +25,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     cks = (
@@ -111,13 +112,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.wake_frame,
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 
@@ -137,17 +138,18 @@ if __name__ == "__main__":
         fr = farm_results.to_dataframe()
         print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-        o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-        for fig in o.gen_states_fig_xy(
-            FV.WS,
-            resolution=10,
-            figsize=(8, 8),
-            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
-            quiver_n=15,
-            xmin=0,
-            xmax=2500,
-            ymin=0,
-            ymax=2500,
-        ):
-            plt.show()
-            plt.close(fig)
+        if not args.nofig:
+            o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+            for fig in o.gen_states_fig_xy(
+                FV.WS,
+                resolution=10,
+                figsize=(8, 8),
+                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
+                quiver_n=15,
+                xmin=0,
+                xmax=2500,
+                ymin=0,
+                ymax=2500,
+            ):
+                plt.show()
+                plt.close(fig)

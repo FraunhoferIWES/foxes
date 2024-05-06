@@ -470,5 +470,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7
 
+- Python versions:
+  - Now supporting Python 3.12
+- Core:
+  - Speedup in comparison with version 0.6.x by internally handling all turbine data in downwind order, and then translating it back to farm order after computations are complete
+  
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7](https://github.com/FraunhoferIWES/foxes/commits/v0.7)

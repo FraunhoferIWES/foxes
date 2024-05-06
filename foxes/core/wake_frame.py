@@ -9,7 +9,6 @@ import foxes.variables as FV
 from .data import Data
 from .model import Model
 
-
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -51,41 +50,50 @@ class WakeFrame(Model):
         pass
 
     @abstractmethod
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+            self, 
+            algo, 
+            mdata, 
+            fdata, 
+            tdata, 
+            downwind_index,
+        ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
         pass
-
+    
     def get_wake_modelling_data(
         self,
         algo,
         variable,
-        states_source_turbine,
+        downwind_index,
         fdata,
-        pdata,
+        tdata,
+        target,
         states0=None,
+        upcast=False,
     ):
         """
         Return data that is required for computing the
@@ -97,27 +105,59 @@ class WakeFrame(Model):
             The algorithm, needed for data from previous iteration
         variable: str
             The variable, serves as data key
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        fdata: foxes.core.Data
+        downwind_index: int, optional
+            The index in the downwind order
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.TData
+            The target point data
+        target: str, optional
+            The dimensions identifier for the output, 
+            FC.STATE_TURBINE, FC.STATE_TARGET,
+            FC.STATE_TARGET_TPOINT
         states0: numpy.ndarray, optional
             The states of wake creation
+        upcast: bool
+            Flag for ensuring targets dimension,
+            otherwise dimension 1 is entered
+
+        Returns
+        -------
+        data: numpy.ndarray
+            Data for wake modelling, shape: 
+            (n_states, n_turbines) or (n_states, n_target)
+        dims: tuple
+            The data dimensions
 
         """
         n_states = fdata.n_states
-        n_points = pdata.n_points
-        s = np.arange(n_states) if states0 is None else states0
+        s = np.s_[:] if states0 is None else states0
 
-        out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        out[:] = fdata[variable][s, states_source_turbine][:, None]
+        if not upcast:
+            if target == FC.STATE_TARGET_TPOINT:
+                out = fdata[variable][s, downwind_index, None, None]
+                dims = (FC.STATE, 1, 1)
+            else:
+                out = fdata[variable][s, downwind_index, None]
+                dims = (FC.STATE, 1)
+        elif target == FC.STATE_TURBINE:
+            out = np.zeros((n_states, fdata.n_turbines), dtype=FC.DTYPE)
+            out[:] = fdata[variable][s, downwind_index, None]
+            dims = (FC.STATE, FC.TURBINE)
+        elif target == FC.STATE_TARGET:
+            out = np.zeros((n_states, tdata.n_targets), dtype=FC.DTYPE)
+            out[:] = fdata[variable][s, downwind_index, None]
+            dims = (FC.STATE, FC.TARGET)
+        elif target == FC.STATE_TARGET_TPOINT:
+            out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
+            out[:] = fdata[variable][s, downwind_index, None, None]
+            dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+        else:
+            raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}")
 
-        return out
+        return out, dims
 
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -126,13 +166,12 @@ class WakeFrame(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -151,7 +190,7 @@ class WakeFrame(Model):
         algo,
         mdata,
         fdata,
-        states_source_turbine,
+        downwind_index,
         variables,
         x,
         dx,
@@ -166,13 +205,12 @@ class WakeFrame(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         variables: list of str
             The variables to be integrated
         x: numpy.ndarray
@@ -209,21 +247,21 @@ class WakeFrame(Model):
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
         pts = self.get_centreline_points(
-            algo, mdata, fdata, states_source_turbine, xpts
+            algo, mdata, fdata, downwind_index, xpts
         )
 
         # run ambient calculation:
-        pdata = Data.from_points(
+        tdata = Data.from_points(
             pts,
-            data={v: np.full((n_states, n_steps), np.nan, dtype=FC.DTYPE) for v in vrs},
-            dims={v: (FC.STATE, FC.POINT) for v in vrs},
+            data={v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs},
+            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )
-        res = algo.states.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
+        res = algo.states.calculate(algo, mdata, fdata, tdata)
+        tdata.update(res)
         amb2var = algo.get_model("SetAmbPointResults")()
         amb2var.initialize(algo, verbosity=0)
-        res = amb2var.calculate(algo, mdata, fdata, pdata)
-        pdata.update(res)
+        res = amb2var.calculate(algo, mdata, fdata, tdata)
+        tdata.update(res)
         del res, amb2var
 
         # find out if all vars ambient:
@@ -237,16 +275,16 @@ class WakeFrame(Model):
         if not ambient:
             wcalc = algo.get_model("PointWakesCalculation")(wake_models=wake_models)
             wcalc.initialize(algo, verbosity=0)
-            wsrc = states_source_turbine if self_wake else None
-            res = wcalc.calculate(algo, mdata, fdata, pdata, states_source_turbine=wsrc)
-            pdata.update(res)
+            wsrc = downwind_index if self_wake else None
+            res = wcalc.calculate(algo, mdata, fdata, tdata, downwind_index=wsrc)
+            tdata.update(res)
             del wcalc, res
 
         # collect integration results:
         iresults = np.zeros((n_states, n_ix, n_vars), dtype=FC.DTYPE)
         for vi, v in enumerate(variables):
             for i in range(n_steps):
-                iresults[:, i + 1, vi] = iresults[:, i, vi] + pdata[v][:, i] * dx
+                iresults[:, i + 1, vi] = iresults[:, i, vi] + tdata[v][:, i, 0] * dx
 
         # interpolate to x of interest:
         qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)

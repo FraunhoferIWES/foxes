@@ -169,6 +169,81 @@ class PCtFile(TurbineType):
 
         return super().load_data(algo, verbosity)
 
+    def modify_cutin(
+            self, 
+            modify_ct, 
+            modify_P, 
+            steps=20, 
+            iterations=100, 
+            a=0.55, 
+            b=0.55,
+        ):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+        
+        Parameters
+        ----------
+        variable: str
+            The target variable
+        modify_ct: bool
+            Flag for modification of the ct curve
+        modify_P: bool
+            Flag for modification of the power curve
+        steps: int
+            The number of wind speed steps between 0 and 
+            the cutin wind speed
+        iterations: int
+            The number of iterations
+        a: float
+            Coefficient for iterative mixing
+        b: float
+            Coefficient for iterative mixing
+
+        """
+        if modify_ct or modify_P:
+            
+            ws = self.data_ws
+            ct = self.data_ct
+            P = self.data_P
+
+            i = 0
+            try:
+                while (
+                    i < len(ws)
+                    and (not modify_ct or ct[i] < 1e-5) 
+                    and (not modify_P or P[i] < 0.1)
+                ):
+                    i += 1
+            except IndexError:
+                raise IndexError(f"Turbine type '{self.name}': Failed not determine cutin wind speed. ws = {ws}, ct = {ct}, P = {P}")
+
+            if ws[i] > 0:
+                ws = ws[i:]
+                ct = ct[i:]
+                P = P[i:]
+
+                new_ws = np.linspace(0., ws[0], steps+1, dtype=ws.dtype)
+                new_ct = np.zeros_like(new_ws)
+                new_P = np.zeros_like(new_ws)
+
+                if modify_ct:
+                    new_ct[-1] = ct[0]
+                    for it in range(iterations):
+                        new_ct[1:-1] = a * new_ct[:-2] + (1 - a) * new_ct[2:]
+
+                if modify_P:
+                    new_P[-1] = P[0]
+                    for it in range(iterations):
+                        new_P[1:-1] = b * new_P[:-2] + (1 - b) * new_P[2:]
+
+                self.data_ws = np.concatenate([new_ws[:-1], ws], axis=0)
+                self.data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
+                self.data_P = np.concatenate([new_P[:-1], P], axis=0) 
+                
+        else:
+            super().modify_cutin(modify_ct, modify_P)
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.
@@ -180,9 +255,9 @@ class PCtFile(TurbineType):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         st_sel: numpy.ndarray of bool
             The state-turbine selection,

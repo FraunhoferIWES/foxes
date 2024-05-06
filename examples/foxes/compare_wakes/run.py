@@ -12,14 +12,14 @@ def calc(runner, mbook, farm, states, wakes, points, args):
     cks = None if args.nodask else {FC.STATE: args.chunksize}
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
-        rotor_model=args.rotor,
+        states,
         wake_models=wakes,
+        rotor_model=args.rotor,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
         chunks=cks,
+        mbook=mbook,
         verbosity=0,
     )
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
     parser.add_argument(
         "-dfz",
@@ -124,6 +124,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
     args = parser.parse_args()
 
     mbook = foxes.models.ModelBook()
@@ -206,7 +207,8 @@ if __name__ == "__main__":
                 ax.grid()
 
         ax.legend(loc="best")
-        plt.show()
+        if not args.nofig:
+            plt.show()
         plt.close(fig)
 
         # x line:
@@ -241,4 +243,5 @@ if __name__ == "__main__":
             ax.legend(loc="best")
             ax.grid()
 
-    plt.show()
+    if not args.nofig:
+        plt.show()
