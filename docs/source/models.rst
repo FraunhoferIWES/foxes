@@ -1,18 +1,27 @@
 Models
 ======
 
+Model types
+-----------
+
 Any *foxes* run relies on a number of model choices by the user:
 
-* :ref:`Rotor models`: Evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged background wind speed.
+* :ref:`Rotor models`: Evaluate the flow field at the rotor and compute ambient rotor equivalent quantities.
 * :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
 * :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
-* :ref:`Wake models`: Compute wake deltas for flow quantities in the wake. 
-* *partial wakes model*: Evaluates rotor disc averages of wake effects, i.e., the partial wakes model computes the rotor effective wake deltas. 
+* :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
+* :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * *turbine models*: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. For example, depending on the rotor effective wind speed and wind direction, a turbine model might correct the power and thrust coefficients that were provided by the turbine type model (wind sector management).
 * *point models* (optional): They calculate point-based data, like those from the ambient input states. For example, if WRF based input data provides a time series of turbulent kinetic energy (TKE) this can be translated into turbulence intensity (TI) by a point model, as required by other models in `foxes`.
 
 All concrete models are stored in the so-called :code:`ModelBook` object under 
 a name string, see :ref:`this example<The model book>`.
+
+Rotor models
+------------
+Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
+background wind speed. See :ref:`Rotor model visualizations` for detailed explanations
+and rotor point visualizations.
 
 Turbine types
 -------------
@@ -61,11 +70,22 @@ Wake frames
 -----------
 Wake frames determine the path of wake propagation, for example parallel to the 
 wind direction at the rotor, or along a streamline, and the local coordinate system 
-that follows the centreline of the wake.
+that follows the centreline of the wake. 
 
-The available wake frame classes are listed :ref:`here<foxes.models.wake_frames>`
-in the API. The :ref:`default model book<The model book>` contains many pre-defined wake
-frames, for example:
+Wake frames also determine the downwind
+order of the turbines, so chosing straight wakes for cases with spatially 
+heterogeneous background flow can cause wrong results in multiple ways.
+
+The wake coordinates are defined as follows:
+
+* The origin is at the rotor centre,
+* the `x` coordinate folows the centreline path of the wake,
+* the `z` coordinate starts pointing upwards at the rotor, then follows the centreline orthogonally,
+* the `y` coordinate closes the right-handed coordinate frame, i.e., it follows from the cross product of `z` with `x`.
+
+The available wake frame classes are listed 
+:ref:`here in the API<foxes.models.wake_frames>`. The :ref:`default model book<The model book>` 
+contains many pre-defined wake frames, for example:
 
 * `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
 * `yawed`, `yawed_k002`, `yawed_k004`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
@@ -77,7 +97,52 @@ Wake models
 -----------
 Wake models compute wake deltas for flow quantities in the wake. Wind speed deficits and turbulence 
 intensity deltas are often computed by two separate wake models, but could also stem from a single model. 
-Wake superposition is part of the responsibility of the wake model.
 
 The wake model classes can be found :ref:`here in the API<foxes.models.wake_models>`.
-They are structured according to their mathematical nature:
+They are organized into three sub-packages, according to their purpose and target variables: 
+
+* :ref:`wind<foxes.models.wake_models.wind>`: Wind deficit models, computing negative deltas for the wind speed variable `WS`,
+* :ref:`ti<foxes.models.wake_models.ti>`: Positive wake deltas acting on the variable `TI`, modelling the turbulence increase within the wake region,
+* :ref:`induction<foxes.models.wake_models.induction>`: Individual turbine induction models acting as wind speed deltas, which, in combination, model wind farm blockage effects.
+
+Note that `wind` and `ti` wake models affect downstream turbines, while `induction` models 
+mainly affect upstream and stream-orthogonal turbines. During calulations, a list of
+wake models is expected, so in principle, a wind deficit model, a TI wake model and a turbine
+induction model can be combined. If an induction model is included in the
+list of model selections, the :ref:`Iterative algorithm` has to be applied.
+
+All wake model classes are implemented according to their mathematical nature, i.e.,
+if applicable, they are derived from one of the following types:
+
+* :ref:`DistSlicedWakeModel<foxes.models.wake_models.DistSlicedWakeModel>`: The wake delta depends on the wake frame coordinate `x` differently than on `(y, z)`, e.g., the `x` dependency can be factorized.
+* :ref:`AxisymmetricWakeModel<foxes.models.wake_models.AxisymmetricWakeModel>`: Dist-sliced wake with axial symmetry, i.e., the wake can be described by `x` and a radial wake frame coordinate `r`.
+* :ref:`GaussianWakeModel<foxes.models.wake_models.GaussianWakeModel>`: Axisymmetric wake that follows a Gaussian function, where the standard deviation `sigma(x)` depends on `x` only.
+* :ref:`TopHatWakeModel<foxes.models.wake_models.TopHatWakeModel>`: Axisymmetric wake that is independent of `r` within the top-hat shape, and zero outside.
+
+The reasoning behind this is that the partial wakes models can then
+build upon the underlying shape of the wake.
+
+Wake superposition is part of the responsibility of the wake model. Most models expect
+a choice of the underlying :ref:`wake superposition model<foxes.models.wake_superpositions>`
+in their constructor, in terms of their respective name in the :ref:`model book<The model book>`.
+Examples are `ws_linear` for linear wind deficit superposition, or `ti_quadratic`
+for quadratic TI wake increase superposition.
+
+The list of wake models in the :ref:`default model book<The model book>` is long,
+but that is mainly due to the resulting combinations of wake model
+classes with superposition models and wake parameter choices.
+
+Partial wakes
+-------------
+Partial wakes models compute rotor disc averages of wake effects, i.e., 
+the partial wakes models calculate the rotor effective wake deltas. 
+
+Some of the partial wakes models make use of the mathematical structure of 
+the associated wake model:
+
+* :ref:`PartialCentre<foxes.models.partial_wakes.PartialCentre>`: Only evaluate wakes at rotor centres. This is fast, but not accurate.
+* :ref:`RotorPoints<foxes.models.partial_wakes.RotorPoints>`: Evaluate the wake model at exactly the rotor points, then take the average of the combined result. For large number of rotor points this is accurate, but potentially slow.
+* :ref:`PartialTopHat<foxes.models.partial_wakes.PartialTopHat>`: Compute the overlap of the wake circle with the rotor disc. This is mathematically exact and fast, but limited to wakes with top-hat shapes.
+* :ref:`PartialAxiwake<foxes.models.partial_wakes.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
+* :ref:`PartialSegregated<foxes.models.partial_wakes.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
+* :ref:`PartialGrid<foxes.models.partial_wakes.PartialGrid>`: Segregated partial wakes evaluated at points of a :ref:`grid-type rotor<GridRotor>` (which is usually not equal to the selected rotor model).
