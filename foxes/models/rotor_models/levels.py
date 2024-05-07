@@ -51,7 +51,8 @@ class LevelRotor(RotorModel):
         self.nint = nint
 
     def __repr__(self):
-        return super().__repr__() + f"(n={self.n})"
+        r = "" if self.reduce else ", reduce=False"
+        return f"{self.name} {type(self).__name__}(n={self.n}){r}"
 
     def initialize(self, algo, verbosity=0):
         """

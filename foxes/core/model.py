@@ -38,8 +38,7 @@ class Model(ABC):
         self.__initialized = False
 
     def __repr__(self):
-        t = type(self).__name__
-        return f"{self.name} ({t})"
+        return f"{self.name} {type(self).__name__}"
 
     @property
     def model_id(self):
