@@ -129,7 +129,9 @@ class Algorithm(Model):
                             f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
                         )
                     if len(t[0]) < 3 or t[0][2] != FC.TPOINT:
-                        raise KeyError(f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}")
+                        raise KeyError(
+                            f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}"
+                        )
             elif FC.TURBINE in t[0]:
                 raise ValueError(
                     f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
@@ -386,8 +388,14 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
-        idata["data_vars"][FC.TARGETS] = ((FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH), points[:, :, None, :])
-        idata["data_vars"][FC.TWEIGHTS] = ((FC.TPOINT,), np.array([1.], dtype=FC.DTYPE))
+        idata["data_vars"][FC.TARGETS] = (
+            (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH),
+            points[:, :, None, :],
+        )
+        idata["data_vars"][FC.TWEIGHTS] = (
+            (FC.TPOINT,),
+            np.array([1.0], dtype=FC.DTYPE),
+        )
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)

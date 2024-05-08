@@ -12,6 +12,7 @@ class YAW2YAWM(TurbineModel):
     :group: models.turbine_models
 
     """
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -57,7 +58,7 @@ class YAW2YAWM(TurbineModel):
         """
         yaw = fdata[FV.YAW][st_sel]
         wd = fdata[FV.WD][st_sel]
-        
+
         yawm = fdata[FV.YAWM]
         yawm[st_sel] = delta_wd(wd, yaw)
 

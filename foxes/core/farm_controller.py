@@ -239,7 +239,9 @@ class FarmController(FarmDataModel):
                 if downwind_index is None:
                     s = mdata[FC.TMODEL_SELS][:, :, mi]
                 else:
-                    s = np.s_[mdata[FC.TMODEL_SELS][:, downwind_index, mi], downwind_index]
+                    s = np.s_[
+                        mdata[FC.TMODEL_SELS][:, downwind_index, mi], downwind_index
+                    ]
             pars.append({"st_sel": s})
             if m.name in self.pars:
                 pars[-1].update(self.pars[m.name][ptype])

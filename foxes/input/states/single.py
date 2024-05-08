@@ -187,29 +187,33 @@ class SingleStateStates(States):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
         if self.ws is not None:
             tdata[FV.WS] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
-                self.ws, dtype=FC.DTYPE
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                self.ws,
+                dtype=FC.DTYPE,
             )
         if self.wd is not None:
             tdata[FV.WD] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
-                self.wd, dtype=FC.DTYPE
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                self.wd,
+                dtype=FC.DTYPE,
             )
         if self.ti is not None:
             tdata[FV.TI] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
-                self.ti, dtype=FC.DTYPE
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                self.ti,
+                dtype=FC.DTYPE,
             )
         if self.rho is not None:
             tdata[FV.RHO] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
-                self.rho, dtype=FC.DTYPE
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                self.rho,
+                dtype=FC.DTYPE,
             )
 
         if len(self._profiles):

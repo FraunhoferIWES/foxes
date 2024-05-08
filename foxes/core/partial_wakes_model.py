@@ -41,7 +41,7 @@ class PartialWakesModel(Model):
         Returns
         -------
         rpoints: numpy.ndarray
-            The wake calculation points, shape: 
+            The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
         rweights: numpy.ndarray
             The target point weights, shape: (n_tpoints,)
@@ -73,7 +73,7 @@ class PartialWakesModel(Model):
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
 
         """
@@ -87,10 +87,10 @@ class PartialWakesModel(Model):
         tdata,
         downwind_index,
         wake_deltas,
-        wmodel,  
+        wmodel,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -114,26 +114,21 @@ class PartialWakesModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index
-        )
-        wmodel.contribute(
-            algo, mdata, fdata, tdata, downwind_index, 
-            wcoos, wake_deltas
-        )
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
     def finalize_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
+        algo,
+        mdata,
+        fdata,
         tdata,
-        amb_res, 
+        amb_res,
         rpoint_weights,
-        wake_deltas, 
-        wmodel, 
-        downwind_index
+        wake_deltas,
+        wmodel,
+        downwind_index,
     ):
         """
         Updates the wake_deltas at the selected target
@@ -154,24 +149,24 @@ class PartialWakesModel(Model):
         amb_res: dict
             The ambient results at the target points
             of all rotors. Key: variable name, value
-            np.ndarray of shape: 
+            np.ndarray of shape:
             (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
             The wake deltas. Key: variable name,
-            value: np.ndarray of shape 
+            value: np.ndarray of shape
             (n_states, n_turbines, n_tpoints)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
-        
+
         Returns
         -------
         final_wake_deltas: dict
-            The final wake deltas at the selected downwind 
-            turbines. Key: variable name, value: np.ndarray 
+            The final wake deltas at the selected downwind
+            turbines. Key: variable name, value: np.ndarray
             of shape (n_states, n_rotor_points)
 
         """

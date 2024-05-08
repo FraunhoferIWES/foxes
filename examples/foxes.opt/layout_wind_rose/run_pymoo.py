@@ -34,9 +34,7 @@ if __name__ == "__main__":
         default=["Bastankhah025_quadratic_k002"],
         nargs="+",
     )
-    parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default=None
-    )
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model", default=None)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.04)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(

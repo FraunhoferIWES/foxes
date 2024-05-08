@@ -74,7 +74,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-npl", "--no_pre_load", help="Do not pre-load data", action="store_true"
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     states = foxes.input.states.FieldDataNC(

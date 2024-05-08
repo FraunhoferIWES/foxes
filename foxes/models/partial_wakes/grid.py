@@ -23,6 +23,4 @@ class PartialGrid(PartialSegregated):
             Parameters for GridRotor
 
         """
-        super().__init__(
-            GridRotor(*args, calc_vars=[], **kwargs)
-        )
+        super().__init__(GridRotor(*args, calc_vars=[], **kwargs))

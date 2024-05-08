@@ -58,9 +58,11 @@ class SelfSimilar(TurbineInductionModel):
         self.gamma = gamma
 
     def __repr__(self):
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         return f"{type(self).__name__}(gamma={self.gamma}, induction={iname})"
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -105,11 +107,11 @@ class SelfSimilar(TurbineInductionModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
@@ -146,7 +148,7 @@ class SelfSimilar(TurbineInductionModel):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -170,7 +172,7 @@ class SelfSimilar(TurbineInductionModel):
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
 
-        """  
+        """
         # get ct
         ct = self.get_data(
             FV.CT,
@@ -208,7 +210,7 @@ class SelfSimilar(TurbineInductionModel):
         )
 
         # get x, r and R etc. Rounding for safe x < 0 condition below
-        x_R = np.round(wake_coos[..., 0]/R, 12)
+        x_R = np.round(wake_coos[..., 0] / R, 12)
         r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
         # select values
@@ -217,9 +219,7 @@ class SelfSimilar(TurbineInductionModel):
             # velocity eqn 10 from [1]
             xr = x_R[sp_sel]
             blockage = (
-                ws[sp_sel] 
-                * self._a(ct[sp_sel], xr) 
-                * self._rad_fn(xr, r_R[sp_sel])
+                ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
             )
             wake_deltas[FV.WS][sp_sel] -= blockage
 

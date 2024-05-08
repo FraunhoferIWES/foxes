@@ -121,9 +121,9 @@ class SeqDynamicWakes(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(
-                algo, mdata, fdata, tdata, ti
-            )[:, :, 0, 0]
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+                :, :, 0, 0
+            ]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -134,13 +134,13 @@ class SeqDynamicWakes(WakeFrame):
         return order
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -163,7 +163,7 @@ class SeqDynamicWakes(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
         # prepare:
         n_states = 1
@@ -190,16 +190,16 @@ class SeqDynamicWakes(WakeFrame):
             v: np.zeros((1, N, 1), dtype=FC.DTYPE)
             for v in algo.states.output_point_vars(algo)
         }
-        hpdims = {
-            v: (FC.STATE, FC.TARGET, FC.TPOINT) 
-            for v in hpdata.keys()
-        }
+        hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
         hpdata = TData.from_points(
             points=self._traces_p[None, :N, downwind_index],
-            data=hpdata, dims=hpdims,
+            data=hpdata,
+            dims=hpdims,
         )
         res = algo.states.calculate(algo, mdata, fdata, hpdata)
-        self._traces_v[:N, downwind_index, :2] = wd2uv(res[FV.WD][0, :, 0], res[FV.WS][0, :, 0])
+        self._traces_v[:N, downwind_index, :2] = wd2uv(
+            res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+        )
         del hpdata, hpdims, res
 
         # project:
@@ -212,7 +212,9 @@ class SeqDynamicWakes(WakeFrame):
         nx = self._traces_v[tri, downwind_index, :2]
         nx /= np.linalg.norm(nx, axis=1)[:, None]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-        wcoos[0, :, 0] = np.einsum("pd,pd->p", delp, nx) + self._traces_l[tri, downwind_index]
+        wcoos[0, :, 0] = (
+            np.einsum("pd,pd->p", delp, nx) + self._traces_l[tri, downwind_index]
+        )
         wcoos[0, :, 1] = np.einsum("pd,pd->p", delp, ny)
 
         # turbines that cause wake:
@@ -220,9 +222,9 @@ class SeqDynamicWakes(WakeFrame):
 
         # states that cause wake for each target point:
         tdata.add(
-            FC.STATES_SEL, 
-            tri[None, :].reshape(n_states, n_targets, n_tpoints), 
-            (FC.STATE, FC.TARGET, FC.TPOINT)
+            FC.STATES_SEL,
+            tri[None, :].reshape(n_states, n_targets, n_tpoints),
+            (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
         return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
@@ -255,7 +257,7 @@ class SeqDynamicWakes(WakeFrame):
         tdata: foxes.core.TData
             The target point data
         target: str, optional
-            The dimensions identifier for the output, 
+            The dimensions identifier for the output,
             FC.STATE_TARGET, FC.STATE_TARGET_TPOINT
         states0: numpy.ndarray, optional
             The states of wake creation
@@ -266,7 +268,7 @@ class SeqDynamicWakes(WakeFrame):
         Returns
         -------
         data: numpy.ndarray
-            Data for wake modelling, shape: 
+            Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
         dims: tuple
             The data dimensions
@@ -292,17 +294,18 @@ class SeqDynamicWakes(WakeFrame):
                 if n_tpoints == 1:
                     data = data[:, :, 0]
                 else:
-                    data = np.einsum('stp,p->st', data, tdata[FC.TWEIGHTS])
+                    data = np.einsum("stp,p->st", data, tdata[FC.TWEIGHTS])
                 return data, (FC.STATE, FC.TARGET)
             elif target == FC.STATE_TARGET_TPOINT:
                 return data, (FC.STATE, FC.TARGET, FC.TPOINT)
             else:
-                raise ValueError(f"Cannot handle target '{target}', choices are {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}")
+                raise ValueError(
+                    f"Cannot handle target '{target}', choices are {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
+                )
 
         else:
             return super().get_wake_modelling_data(
-                algo, variable, downwind_index, fdata, tdata, 
-                target, states0, upcast
+                algo, variable, downwind_index, fdata, tdata, target, states0, upcast
             )
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):

@@ -84,19 +84,20 @@ class Streamlines2D(WakeFrame):
                 svars = algo.states.output_point_vars(algo)
                 tdata = TData.from_points(
                     data[:, :, i, :3],
-                    data={v: np.full((n_states, n_turbines, 1), np.nan, dtype=FC.DTYPE)
-                          for v in svars}, 
-                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) 
-                           for v in svars}, 
+                    data={
+                        v: np.full((n_states, n_turbines, 1), np.nan, dtype=FC.DTYPE)
+                        for v in svars
+                    },
+                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in svars},
                 )
-                data[:, :, i, 3] = algo.states.calculate(
-                    algo, mdata, fdata, tdata
-                )[FV.WD][:, :, 0]
+                data[:, :, i, 3] = algo.states.calculate(algo, mdata, fdata, tdata)[
+                    FV.WD
+                ][:, :, 0]
 
                 sel = np.isnan(data[:, :, i, 3])
                 if np.any(sel):
                     data[sel, i, 3] = data[sel, i - 1, 3]
-        
+
         return data
 
     def get_streamline_data(self, algo, mdata, fdata):
@@ -125,7 +126,7 @@ class Streamlines2D(WakeFrame):
         ):
             mdata[self.DATA] = self._calc_streamlines(algo, mdata, fdata)
             mdata.dims[self.DATA] = (FC.STATE, FC.TURBINE, self.STEPS, self.SDAT)
-        
+
         return mdata[self.DATA]
 
     def _calc_coos(self, algo, mdata, fdata, targets, downwind_index):
@@ -143,9 +144,9 @@ class Streamlines2D(WakeFrame):
         data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]
         dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
         selp = np.argmin(dists, axis=2)
-        data = np.take_along_axis(
-            data[:, None], selp[:, :, None, None], axis=2
-        )[:, :, 0]
+        data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[
+            :, :, 0
+        ]
         slen = self.step * selp
         del dists, selp
 
@@ -158,7 +159,7 @@ class Streamlines2D(WakeFrame):
         coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
 
-        return coos.reshape(n_states, n_targets,n_tpoints, 3)
+        return coos.reshape(n_states, n_targets, n_tpoints, 3)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -191,9 +192,9 @@ class Streamlines2D(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(
-                algo, mdata, fdata, tdata, ti
-            )[:, :, 0, 0]
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+                :, :, 0, 0
+            ]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -204,13 +205,13 @@ class Streamlines2D(WakeFrame):
         return order
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -233,11 +234,9 @@ class Streamlines2D(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
-        return self._calc_coos(
-            algo, mdata, fdata, tdata[FC.TARGETS], downwind_index
-        )
+        return self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

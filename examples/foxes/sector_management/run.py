@@ -68,7 +68,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -127,7 +129,17 @@ if __name__ == "__main__":
         chunks=cks,
     )
 
-    outputs = [FV.WD, FV.AMB_WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]
+    outputs = [
+        FV.WD,
+        FV.AMB_WD,
+        FV.H,
+        FV.AMB_REWS,
+        FV.REWS,
+        FV.AMB_P,
+        FV.MAX_P,
+        FV.P,
+        FV.WEIGHT,
+    ]
 
     with DaskRunner(
         scheduler=args.scheduler,

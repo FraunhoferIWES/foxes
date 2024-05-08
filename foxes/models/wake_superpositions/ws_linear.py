@@ -22,6 +22,7 @@ class WSLinear(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
+
     def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
         """
         Constructor.
@@ -46,7 +47,7 @@ class WSLinear(WakeSuperposition):
     def __repr__(self):
         a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
-    
+
     def input_farm_vars(self, algo):
         """
         The variables which are needed for running
@@ -99,7 +100,7 @@ class WSLinear(WakeSuperposition):
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray
-            The original wake deltas, shape: 
+            The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
         wake_model_result: numpy.ndarray
             The new wake deltas of the selected rotors,
@@ -108,7 +109,7 @@ class WSLinear(WakeSuperposition):
         Returns
         -------
         wdelta: numpy.ndarray
-            The updated wake deltas, shape: 
+            The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
         """
@@ -128,11 +129,11 @@ class WSLinear(WakeSuperposition):
                 downwind_index=downwind_index,
                 upcast=True,
             )[st_sel, None]
-            
+
             wake_delta[st_sel] += scale * wake_model_result
 
         return wake_delta
-    
+
     def calc_final_wake_delta(
         self,
         algo,
@@ -157,17 +158,17 @@ class WSLinear(WakeSuperposition):
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray
-            The ambient results at targets, 
+            The ambient results at targets,
             shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
-            The wake deltas at targets, shape: 
+            The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
         final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
-            results by simple plus operation. Shape: 
+            results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
 
         """

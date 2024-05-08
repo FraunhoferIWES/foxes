@@ -568,9 +568,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             )
 
             # run calculation:
-            self.model.calc_data(
-                algo, mdata, fdata, tdata, downwind_index, x, gamma, k
-            )
+            self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
         st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)

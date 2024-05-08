@@ -2,6 +2,7 @@ import importlib
 import importlib.util
 import sys
 
+
 def import_module(name, package=None, hint=None):
     """
     Imports a module dynamically.
@@ -31,22 +32,23 @@ def import_module(name, package=None, hint=None):
         hint = hint if hint is not None else f"pip install {name}"
         raise ModuleNotFoundError(f"Module '{mdl}' not found, maybe try '{hint}'")
 
+
 def load_module(name, path):
     """
     Imports a module from file path
-    
+
     Parameters
     ----------
     name: str
         The name of the module
     path: str
         The path to the python file
-    
+
     Returns
     -------
     module:
         The module object
-    
+
     :group: utils
 
     """

@@ -125,7 +125,9 @@ class FarmLayoutOptProblem(FarmOptProblem):
         n_states = n_pop * n_ostates
 
         xy = vars_float.reshape(n_pop, self.n_sel_turbines, 2)
-        sxy = np.zeros((n_pop, n_ostates, self.n_sel_turbines, 2), dtype=vars_float.dtype)
+        sxy = np.zeros(
+            (n_pop, n_ostates, self.n_sel_turbines, 2), dtype=vars_float.dtype
+        )
         sxy[:] = xy[:, None, :, :]
         sxy = sxy.reshape(n_states, self.n_sel_turbines, 2)
         del xy

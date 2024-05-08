@@ -184,9 +184,12 @@ class LookupTable(TurbineModel):
         """
         data = {
             v: self.get_data(
-                self.input_vars[0], FC.STATE_TURBINE, lookup="fs", 
-                fdata=fdata, upcast=True
-            )[st_sel] 
+                self.input_vars[0],
+                FC.STATE_TURBINE,
+                lookup="fs",
+                fdata=fdata,
+                upcast=True,
+            )[st_sel]
             for v in self.input_vars
         }
         dims = {

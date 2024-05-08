@@ -94,7 +94,9 @@ class DataCalcModel(Model):
             elif i == 2:
                 data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
             else:
-                raise NotImplementedError(f"Not more than 3 data sets implemented, found {len(dvars)}")
+                raise NotImplementedError(
+                    f"Not more than 3 data sets implemented, found {len(dvars)}"
+                )
 
             del hdata, hdims, v2l, v2e
 
@@ -135,12 +137,12 @@ class DataCalcModel(Model):
         if FC.STATE in data[0]:
             for d in data[1:]:
                 d[FC.STATE] = data[0][FC.STATE]
-        
+
         # link weights from mdata to fdata:
         if FV.WEIGHT in data[0]:
             data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
             data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
-                
+
         # run model calculation:
         self.ensure_variables(algo, *data)
         results = self.calculate(algo, *data, **calc_pars)

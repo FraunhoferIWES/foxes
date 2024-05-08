@@ -57,7 +57,7 @@ def test():
             **kwargs,
         )
 
-        #f Algo is foxes.algorithms.Iterative:
+        # f Algo is foxes.algorithms.Iterative:
         #    algo.set_urelax("post_rotor", CT=0.9)
 
         with foxes.utils.runners.DaskRunner() as runner:
@@ -83,7 +83,7 @@ def test():
             print(delta.min(), delta.max())
 
             for v, lim in lims.items():
-                chk = delta[v].abs().loc[df["AMB_REWS"]>7]
+                chk = delta[v].abs().loc[df["AMB_REWS"] > 7]
                 print(f"CASE {(Algo.__name__, frame, v, lim)}:", chk.max())
 
             assert (chk < lim).all()

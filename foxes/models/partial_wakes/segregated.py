@@ -4,6 +4,7 @@ from foxes.core import PartialWakesModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class PartialSegregated(PartialWakesModel):
     """
     Add the averaged wake effects to the separately
@@ -31,11 +32,11 @@ class PartialSegregated(PartialWakesModel):
 
         """
         super().__init__()
-        
+
         self.rotor = rotor_model
         self.YZ = self.var("YZ")
         self.W = self.var(FV.WEIGHT)
-        
+
     def __repr__(self):
         return f"{type(self).__name__}(rotor_model={self.rotor.name})"
 
@@ -68,7 +69,7 @@ class PartialSegregated(PartialWakesModel):
         Returns
         -------
         rpoints: numpy.ndarray
-            The wake calculation points, shape: 
+            The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
         rweights: numpy.ndarray
             The target point weights, shape: (n_tpoints,)
@@ -76,20 +77,20 @@ class PartialSegregated(PartialWakesModel):
         """
         return (
             self.rotor.get_rotor_points(algo, mdata, fdata),
-            self.rotor.rotor_point_weights()
+            self.rotor.rotor_point_weights(),
         )
 
     def finalize_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
+        algo,
+        mdata,
+        fdata,
         tdata,
-        amb_res, 
+        amb_res,
         rpoint_weights,
-        wake_deltas, 
-        wmodel, 
-        downwind_index
+        wake_deltas,
+        wmodel,
+        downwind_index,
     ):
         """
         Updates the wake_deltas at the selected target
@@ -110,24 +111,24 @@ class PartialSegregated(PartialWakesModel):
         amb_res: dict
             The ambient results at the target points
             of all rotors. Key: variable name, value
-            np.ndarray of shape: 
+            np.ndarray of shape:
             (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
             The wake deltas. Key: variable name,
-            value: np.ndarray of shape 
+            value: np.ndarray of shape
             (n_states, n_turbines, n_tpoints)
         wmodel: foxes.core.WakeModel
             The wake model
         downwind_index: int
             The index in the downwind order
-        
+
         Returns
         -------
         final_wake_deltas: dict
-            The final wake deltas at the selected downwind 
-            turbines. Key: variable name, value: np.ndarray 
+            The final wake deltas at the selected downwind
+            turbines. Key: variable name, value: np.ndarray
             of shape (n_states, n_rotor_points)
 
         """
@@ -143,17 +144,15 @@ class PartialSegregated(PartialWakesModel):
             ares = {}
             for v, d in amb_res.items():
                 ares[v] = np.zeros((n_states, 1, tdata.n_tpoints), dtype=FC.DTYPE)
-                ares[v][:] = np.einsum(
-                    'sp,p->s', d[:, downwind_index], rpoint_weights
-                    )[:, None, None]
-                
+                ares[v][:] = np.einsum("sp,p->s", d[:, downwind_index], rpoint_weights)[
+                    :, None, None
+                ]
 
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
         for v in wdel.keys():
             hdel = np.zeros((n_states, n_rotor_points), dtype=FC.DTYPE)
-            hdel[:] = np.einsum('sp,p->s', wdel[v][:, 0], gweights)[:, None]
+            hdel[:] = np.einsum("sp,p->s", wdel[v][:, 0], gweights)[:, None]
             wdel[v] = hdel
-        
+
         return wdel
-    

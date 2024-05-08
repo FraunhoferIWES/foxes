@@ -40,7 +40,7 @@ class RotorModel(FarmDataModel):
         """
         super().__init__()
         self.calc_vars = calc_vars
-        
+
         self.RPOINTS = self.var("rpoints")
         self.RWEIGHTS = self.var("rweights")
         self.AMBRES = self.var("amb_res")
@@ -368,9 +368,9 @@ class RotorModel(FarmDataModel):
         svars = algo.states.output_point_vars(algo)
         for v in svars:
             tdata.add(
-                v, 
-                data=np.full_like(rpoints[..., 0], np.nan), 
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT)
+                v,
+                data=np.full_like(rpoints[..., 0], np.nan),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
             )
 
         sres = algo.states.calculate(algo, mdata, fdata, tdata)

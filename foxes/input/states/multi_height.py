@@ -198,7 +198,7 @@ class MultiHeightStates(States):
             data = data.iloc[self.states_sel]
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
-            
+
         self._N = len(data.index)
         self._inds = data.index.to_numpy()
 
@@ -330,7 +330,7 @@ class MultiHeightStates(States):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -338,7 +338,7 @@ class MultiHeightStates(States):
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
         h = mdata[self.H]
-        z = tdata[FC.TARGETS][..., 2].reshape(n_states, n_targets*n_tpoints)
+        z = tdata[FC.TARGETS][..., 2].reshape(n_states, n_targets * n_tpoints)
         n_h = len(h)
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
@@ -369,10 +369,14 @@ class MultiHeightStates(States):
                 raise KeyError(
                     f"States '{self.name}': Found variable '{FV.WD}', but missing variable '{FV.WS}'"
                 )
-            uv = np.einsum("shd,sph->spd", uvh, ires).reshape(n_states, n_targets, n_tpoints, 2)
+            uv = np.einsum("shd,sph->spd", uvh, ires).reshape(
+                n_states, n_targets, n_tpoints, 2
+            )
             del uvh
 
-        ires = np.einsum("svh,sph->vsp", mdata[self.DATA], ires).reshape(n_vars, n_states, n_targets, n_tpoints)
+        ires = np.einsum("svh,sph->vsp", mdata[self.DATA], ires).reshape(
+            n_vars, n_states, n_targets, n_tpoints
+        )
 
         results = {}
         for v in self.ovars:

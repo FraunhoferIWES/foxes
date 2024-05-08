@@ -4,6 +4,7 @@ from foxes.core import TurbineModel
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 class SetFarmVars(TurbineModel):
     """
     Set farm data variables to given data.
@@ -16,6 +17,7 @@ class SetFarmVars(TurbineModel):
     :group: models.turbine_models
 
     """
+
     def __init__(self, pre_rotor=False):
         """
         Constructor.
@@ -169,7 +171,7 @@ class SetFarmVars(TurbineModel):
                     i0 = fdata.states_i0()
                     hsel = tsel[:, ti]
                     ssel = i0 + np.where(hsel)[0]
-                    t.xy[ssel, i] = data[hsel, ti] 
+                    t.xy[ssel, i] = data[hsel, ti]
 
             # special case of rotor diameter and hub height:
             if v in [FV.D, FV.H]:
@@ -185,7 +187,7 @@ class SetFarmVars(TurbineModel):
                     i0 = fdata.states_i0()
                     hsel = tsel[:, ti]
                     ssel = i0 + np.where(hsel)[0]
-                    x[ssel] = data[hsel, ti] 
+                    x[ssel] = data[hsel, ti]
 
             fdata[v][tsel] = data[tsel]
 

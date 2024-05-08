@@ -76,13 +76,13 @@ class FarmOrder(WakeFrame):
         return order
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -105,11 +105,9 @@ class FarmOrder(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
-        return self.base_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index
-        )
+        return self.base_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

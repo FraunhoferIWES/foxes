@@ -44,7 +44,9 @@ class RankineHalfBody(TurbineInductionModel):
         self.induction = induction
 
     def __repr__(self):
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         return f"{type(self).__name__}(induction={iname})"
 
     def sub_models(self):
@@ -91,11 +93,11 @@ class RankineHalfBody(TurbineInductionModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
@@ -103,9 +105,9 @@ class RankineHalfBody(TurbineInductionModel):
             FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0]),
             FV.WD: np.zeros_like(tdata[FC.TARGETS][..., 0]),
             "U": np.zeros_like(tdata[FC.TARGETS][..., 0]),
-            "V": np.zeros_like(tdata[FC.TARGETS][..., 0])
+            "V": np.zeros_like(tdata[FC.TARGETS][..., 0]),
         }
-    
+
     def contribute(
         self,
         algo,
@@ -117,7 +119,7 @@ class RankineHalfBody(TurbineInductionModel):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -141,7 +143,7 @@ class RankineHalfBody(TurbineInductionModel):
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
 
-        """        
+        """
         # get ct:
         ct = self.get_data(
             FV.CT,
@@ -240,7 +242,7 @@ class RankineHalfBody(TurbineInductionModel):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape 
+            values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas object at the selected target
@@ -255,7 +257,9 @@ class RankineHalfBody(TurbineInductionModel):
 
         # wake deltas are in wake frame, rotate back to global frame:
         ny = np.stack((-nx[..., 1], nx[..., 0]), axis=-1)
-        delta_uv = wake_deltas["U"][:, :, :, None] * nx + wake_deltas["V"][:, :, :, None] * ny
+        delta_uv = (
+            wake_deltas["U"][:, :, :, None] * nx + wake_deltas["V"][:, :, :, None] * ny
+        )
         del ws0, nx, ny
 
         # add ambient result to wake deltas:

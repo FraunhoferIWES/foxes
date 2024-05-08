@@ -110,10 +110,11 @@ class RotorCentreCalc(TurbineModel):
         # prepare target point data:
         tdata = Data.from_points(
             fdata[FV.TXYH],
-            data={v: np.zeros_like(fdata[FV.X][:, :, None])
-                for v in self.calc_vars.values()},
-            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT)
-                  for v in self.calc_vars.values()},
+            data={
+                v: np.zeros_like(fdata[FV.X][:, :, None])
+                for v in self.calc_vars.values()
+            },
+            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self.calc_vars.values()},
             name=f"{self.name}_tdata",
         )
 

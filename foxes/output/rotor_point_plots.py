@@ -7,10 +7,11 @@ from foxes.input.states import SingleStateStates
 from foxes.core import WindFarm
 from foxes.algorithms import Downwind
 
+
 class RotorPointPlot:
     """
     Visualizes rotor points and their weights.
-    
+
     Attributes
     ----------
     rotor_model: foxes.core.RotorModel
@@ -19,19 +20,20 @@ class RotorPointPlot:
         The algorithm
 
     :group: output
-    
+
     """
+
     def __init__(self, rotor_model, algo=None):
         """
         Constructor.
-        
+
         Parameters
         ----------
         rotor_model: foxes.core.RotorModel
             The rotor model
         algo: foxes.core.Algorithm, optional
             The algorithm
-        
+
         """
         self.rotor_model = rotor_model
         self.algo = algo
@@ -40,18 +42,18 @@ class RotorPointPlot:
             farm = WindFarm()
             states = SingleStateStates(ws=9, wd=270, ti=0.1, rho=1.225)
             self.algo = Downwind(farm, states, [])
-    
+
     def get_point_figure(
-            self,
-            ax=None,
-            fig=None,
-            figsize=(5, 5),
-            title=None,
-            **kwargs,
-        ):
+        self,
+        ax=None,
+        fig=None,
+        figsize=(5, 5),
+        title=None,
+        **kwargs,
+    ):
         """
         Get a scatter plot of the rotor points.
-        
+
         Parameters
         ----------
         ax: matplotlib.Axes, optional
@@ -76,21 +78,18 @@ class RotorPointPlot:
             ax = fig.add_subplot(111)
         else:
             ax = fig.axes[0] if ax is None else ax
-        
+
         if not self.rotor_model.initialized:
             self.rotor_model.initialize(self.algo)
 
         points = self.rotor_model.design_points()
-        weights = self.rotor_model.rotor_point_weights()*100
+        weights = self.rotor_model.rotor_point_weights() * 100
 
         cmap = colormaps[kwargs.pop("cmap", "viridis_r")]
         wlist = np.sort(np.unique(weights))
 
-        im = ax.scatter(points[:, 1], points[:, 2], 
-                        c=weights, cmap=cmap, **kwargs)
-        ax.add_patch(
-            plt.Circle((0, 0), 1, color='black', fill=False, alpha=0.8)
-        )
+        im = ax.scatter(points[:, 1], points[:, 2], c=weights, cmap=cmap, **kwargs)
+        ax.add_patch(plt.Circle((0, 0), 1, color="black", fill=False, alpha=0.8))
 
         ax.set_xlabel("x/D")
         ax.set_ylabel("y/D")
@@ -101,10 +100,10 @@ class RotorPointPlot:
         ax.set_aspect("equal", adjustable="box")
 
         tlabels = [f"{wlist[-1]:.02f}"]
-        for i in range(len(wlist)-2, -1, -1):
+        for i in range(len(wlist) - 2, -1, -1):
             w = wlist[i]
-            w1 = wlist[i+1]
-            if (w1-w)/(wlist[-1] - wlist[0]) > 0.05:
+            w1 = wlist[i + 1]
+            if (w1 - w) / (wlist[-1] - wlist[0]) > 0.05:
                 tlabels.insert(0, f"{w:.2f}")
             elif i == 0:
                 tlabels[0] = ""

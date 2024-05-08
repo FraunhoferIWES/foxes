@@ -112,7 +112,7 @@ class Downwind(Algorithm):
         """
         if mbook is None:
             mbook = fm.ModelBook()
-            
+
         super().__init__(mbook, farm, chunks, verbosity, dbook)
 
         self.states = states
@@ -160,10 +160,12 @@ class Downwind(Algorithm):
         elif isinstance(partial_wakes, list):
             for i, w in enumerate(wake_models):
                 if i >= len(partial_wakes):
-                    raise IndexError(f"Not enough partial wakes in list {partial_wakes}, expecting {len(wake_models)}")
+                    raise IndexError(
+                        f"Not enough partial wakes in list {partial_wakes}, expecting {len(wake_models)}"
+                    )
                 pw = partial_wakes[i]
                 self.partial_wakes[w] = self.mbook.partial_wakes[pw]
-                self.partial_wakes[w].name = pw 
+                self.partial_wakes[w].name = pw
         else:
             for w in wake_models:
                 if w in partial_wakes:
@@ -193,7 +195,7 @@ class Downwind(Algorithm):
 
         """
         return getattr(mdls, name)
-    
+
     def _print_deco(self, func_name, n_points=None):
         """
         Helper function for printing model names
@@ -360,9 +362,7 @@ class Downwind(Algorithm):
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
         out_vars = self.farm_vars if outputs is None else outputs
-        farm_results = mlist.run_calculation(
-            self, *data, out_vars=out_vars, **kwargs
-        )
+        farm_results = mlist.run_calculation(self, *data, out_vars=out_vars, **kwargs)
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
             if v in farm_results:
@@ -432,7 +432,7 @@ class Downwind(Algorithm):
             outputs = self.farm_vars
         else:
             outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
-        
+
         # get input model data:
         models_data = self.get_models_data()
         if persist:
@@ -614,7 +614,7 @@ class Downwind(Algorithm):
         if persist_pdata:
             point_data = point_data.persist()
         self.print("\nInput point data:\n\n", point_data, "\n")
-        
+
         # check vars:
         ovars = mlist.output_point_vars(self)
         self.print(f"\nOutput point variables:", ", ".join(ovars))

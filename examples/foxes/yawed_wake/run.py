@@ -46,7 +46,9 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     # create model book
@@ -106,8 +108,16 @@ if __name__ == "__main__":
         print("\nVertical flow figure output:")
         o = foxes.output.FlowPlots2D(algo, farm_results)
         g = o.gen_states_fig_yz(
-            args.var, resolution=10, x=750, ymin=-200,ymax=200,zmin=0,zmax=250,
-            rotor_color="red", verbosity=0)
+            args.var,
+            resolution=10,
+            x=750,
+            ymin=-200,
+            ymax=200,
+            zmin=0,
+            zmax=250,
+            rotor_color="red",
+            verbosity=0,
+        )
         fig = next(g)
         plt.show()
         plt.close(fig)

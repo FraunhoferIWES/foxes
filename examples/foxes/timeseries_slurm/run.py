@@ -78,7 +78,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}

@@ -65,11 +65,11 @@ class WakeMirror(WakeModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
@@ -86,7 +86,7 @@ class WakeMirror(WakeModel):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -113,8 +113,7 @@ class WakeMirror(WakeModel):
         """
         hh = fdata[FV.H][:, downwind_index].copy()
         self.wmodel.contribute(
-            algo, mdata, fdata, tdata, downwind_index, 
-            wake_coos, wake_deltas
+            algo, mdata, fdata, tdata, downwind_index, wake_coos, wake_deltas
         )
 
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
@@ -123,12 +122,12 @@ class WakeMirror(WakeModel):
 
             fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
 
-            nwcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, 
-                        tdata, downwind_index)
+            nwcoos = algo.wake_frame.get_wake_coos(
+                algo, mdata, fdata, tdata, downwind_index
+            )
 
             self.wmodel.contribute(
-                algo, mdata, fdata, tdata, downwind_index, 
-                nwcoos, wake_deltas
+                algo, mdata, fdata, tdata, downwind_index, nwcoos, wake_deltas
             )
 
         fdata[FV.H][:, downwind_index] = hh
@@ -156,7 +155,7 @@ class WakeMirror(WakeModel):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape 
+            values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas object at the selected target
@@ -165,8 +164,13 @@ class WakeMirror(WakeModel):
 
         """
         self.wmodel.finalize_wake_deltas(
-            algo, mdata, fdata, amb_results, wake_deltas,
+            algo,
+            mdata,
+            fdata,
+            amb_results,
+            wake_deltas,
         )
+
 
 class GroundMirror(WakeMirror):
     """

@@ -22,6 +22,7 @@ class WSMax(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
+
     def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
         """
         Constructor.
@@ -38,7 +39,7 @@ class WSMax(WakeSuperposition):
 
         """
         super().__init__()
-        
+
         self.scale_amb = scale_amb
         self.lim_low = lim_low
         self.lim_high = lim_high
@@ -46,7 +47,7 @@ class WSMax(WakeSuperposition):
     def __repr__(self):
         a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
         return f"{type(self).__name__}({a})"
-    
+
     def input_farm_vars(self, algo):
         """
         The variables which are needed for running
@@ -99,7 +100,7 @@ class WSMax(WakeSuperposition):
         variable: str
             The variable name for which the wake deltas applies
         wake_delta: numpy.ndarray
-            The original wake deltas, shape: 
+            The original wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
         wake_model_result: numpy.ndarray
             The new wake deltas of the selected rotors,
@@ -108,7 +109,7 @@ class WSMax(WakeSuperposition):
         Returns
         -------
         wdelta: numpy.ndarray
-            The updated wake deltas, shape: 
+            The updated wake deltas, shape:
             (n_states, n_targets, n_tpoints, ...)
 
         """
@@ -160,17 +161,17 @@ class WSMax(WakeSuperposition):
         variable: str
             The variable name for which the wake deltas applies
         amb_results: numpy.ndarray
-            The ambient results at targets, 
+            The ambient results at targets,
             shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
-            The wake deltas at targets, shape: 
+            The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
 
         Returns
         -------
         final_wake_delta: numpy.ndarray
             The final wake delta, which will be added to the ambient
-            results by simple plus operation. Shape: 
+            results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
 
         """

@@ -98,10 +98,7 @@ class Sequential(Downwind):
             Additional arguments for Downwind
 
         """
-        super().__init__(
-            farm, mdls.SeqState(states), *args, 
-            chunks=chunks, **kwargs
-        )
+        super().__init__(farm, mdls.SeqState(states), *args, chunks=chunks, **kwargs)
         self.ambient = ambient
         self.calc_pars = calc_pars
         self.states0 = self.states.states
@@ -255,7 +252,8 @@ class Sequential(Downwind):
                 tdata = TData.from_points(
                     self.points[self.counter, None],
                     data={
-                        v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in self._pvars
+                        v: np.zeros((1, n_points, 1), dtype=FC.DTYPE)
+                        for v in self._pvars
                     },
                     dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
                 )
@@ -269,7 +267,10 @@ class Sequential(Downwind):
 
                 pres = Dataset(
                     coords={FC.STATE: [self.index]},
-                    data_vars={v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()},
+                    data_vars={
+                        v: ((FC.STATE, FC.TARGET, FC.TPOINT), d)
+                        for v, d in pres.items()
+                    },
                 )
 
                 for p in self.plugins:
@@ -342,7 +343,7 @@ class Sequential(Downwind):
         algo: object, optional
             Dummy argument, due to consistency with
             foxes.core.Data.states_i0
-        
+
         Returns
         -------
         i0: int
@@ -568,7 +569,9 @@ class Sequential(Downwind):
         pres = plist.calculate(self, mdata, fdata, tdata, parameters=calc_pars)
         pres = Dataset(
             coords={FC.STATE: self.states.index()},
-            data_vars={v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()},
+            data_vars={
+                v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()
+            },
         )
 
         # plist.finalize(self, self.verbosity)

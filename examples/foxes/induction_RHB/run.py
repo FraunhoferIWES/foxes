@@ -52,7 +52,9 @@ if __name__ == "__main__":
         help="Don't use the iterative algorithm",
         action="store_true",
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     # create model book
@@ -123,7 +125,7 @@ if __name__ == "__main__":
         ]
     )
     print()
-    
+
     # results by turbine
     turbine_results = o.reduce_states(
         {
@@ -185,7 +187,9 @@ if __name__ == "__main__":
         # front line plot:
         points = np.zeros((1, n_points, 3))
         points[:, :, 0] = -200
-        points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[None, :]
+        points[:, :, 1] = np.linspace(-500.0, args.ny * args.dy + 500, n_points)[
+            None, :
+        ]
         points[:, :, 2] = H
         point_results = algo.calc_points(farm_results, points)
         fig, ax = plt.subplots(figsize=(10, 5))

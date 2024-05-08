@@ -71,7 +71,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -81,7 +83,8 @@ if __name__ == "__main__":
     mbook.turbine_types[ttype.name] = ttype
 
     sdata = foxes.input.states.create.random_timseries_data(
-            args.n_times, seed=args.seed)
+        args.n_times, seed=args.seed
+    )
     states = foxes.input.states.Timeseries(
         data_source=sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
@@ -89,19 +92,27 @@ if __name__ == "__main__":
     )
 
     farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_random(farm, args.n_turbines, 
-        min_dist=500, turbine_models=args.tmodels + [ttype.name],
-        seed=args.seed
+    foxes.input.farm_layout.add_random(
+        farm,
+        args.n_turbines,
+        min_dist=500,
+        turbine_models=args.tmodels + [ttype.name],
+        seed=args.seed,
     )
 
     if not args.nofig:
-        #fig, axs= plt.subplots(2, 1, figsize=(12,6))
-        #foxes.output.FarmLayoutOutput(farm).get_figure(ax=axs[0])
+        # fig, axs= plt.subplots(2, 1, figsize=(12,6))
+        # foxes.output.FarmLayoutOutput(farm).get_figure(ax=axs[0])
 
         o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-        fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20],
-                           figsize=(14.5, 7), rect=[0.01, 0.05, 0.45, 0.85])
-        
+        fig = o.get_figure(
+            16,
+            FV.AMB_WS,
+            [0, 3.5, 6, 10, 15, 20],
+            figsize=(14.5, 7),
+            rect=[0.01, 0.05, 0.45, 0.85],
+        )
+
         ax = plt.Axes(fig, rect=[0.3, 0.1, 0.8, 0.8])
         fig.add_axes(ax)
         foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax)

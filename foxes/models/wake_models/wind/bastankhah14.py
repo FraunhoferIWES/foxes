@@ -68,7 +68,9 @@ class Bastankhah2014(GaussianWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         s = f"{type(self).__name__}"
         s += f"({self.superpositions[FV.WS]}, induction={iname}"
         if k is None:

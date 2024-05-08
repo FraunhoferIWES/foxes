@@ -331,7 +331,7 @@ class StatesTable(States):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -339,12 +339,16 @@ class StatesTable(States):
             if v in tdata:
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
             else:
-                tdata[v] = np.zeros((tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
+                tdata[v] = np.zeros(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE
+                )
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         for v, f in self.fixed_vars.items():
-            tdata[v] = np.full((tdata.n_states, tdata.n_targets, tdata.n_tpoints), f, dtype=FC.DTYPE)
+            tdata[v] = np.full(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), f, dtype=FC.DTYPE
+            )
 
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():

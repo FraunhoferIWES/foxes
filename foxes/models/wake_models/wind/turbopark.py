@@ -70,7 +70,9 @@ class TurbOParkWake(GaussianWakeModel):
         self.induction = induction
 
     def __repr__(self):
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         s = f"{type(self).__name__}"
         s += f"({self.superpositions[FV.WS]}, A={self.A}, induction={iname})"
         return s
@@ -307,7 +309,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.induction = induction
 
     def __repr__(self):
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         s = f"{type(self).__name__}({self.superpositions[FV.WS]}"
         s += f", ti={self.ti_var}, dx={self.dx}, A={self.A}, induction={iname})"
         return s
@@ -356,11 +360,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
@@ -375,7 +379,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             raise KeyError(
                 f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}"
             )
-    
+
         return super().new_wake_deltas(algo, mdata, fdata, tdata)
 
     def calc_amplitude_sigma(
@@ -415,7 +419,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
 
-        """      
+        """
         # get ct:
         ct = self.get_data(
             FV.CT,

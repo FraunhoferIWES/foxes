@@ -9,6 +9,7 @@ import foxes.variables as FV
 from .data import Data
 from .model import Model
 
+
 class WakeFrame(Model):
     """
     Abstract base class for wake frames.
@@ -51,13 +52,13 @@ class WakeFrame(Model):
 
     @abstractmethod
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -83,7 +84,7 @@ class WakeFrame(Model):
 
         """
         pass
-    
+
     def get_wake_modelling_data(
         self,
         algo,
@@ -112,7 +113,7 @@ class WakeFrame(Model):
         tdata: foxes.core.TData
             The target point data
         target: str, optional
-            The dimensions identifier for the output, 
+            The dimensions identifier for the output,
             FC.STATE_TURBINE, FC.STATE_TARGET,
             FC.STATE_TARGET_TPOINT
         states0: numpy.ndarray, optional
@@ -124,7 +125,7 @@ class WakeFrame(Model):
         Returns
         -------
         data: numpy.ndarray
-            Data for wake modelling, shape: 
+            Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
         dims: tuple
             The data dimensions
@@ -153,7 +154,9 @@ class WakeFrame(Model):
             out[:] = fdata[variable][s, downwind_index, None, None]
             dims = (FC.STATE, FC.TARGET, FC.TPOINT)
         else:
-            raise ValueError(f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}")
+            raise ValueError(
+                f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}"
+            )
 
         return out, dims
 
@@ -246,14 +249,14 @@ class WakeFrame(Model):
         xs = np.arange(xmin, xmin + n_ix * dx, dx)
         xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
         xpts[:] = xs[None, 1:]
-        pts = self.get_centreline_points(
-            algo, mdata, fdata, downwind_index, xpts
-        )
+        pts = self.get_centreline_points(algo, mdata, fdata, downwind_index, xpts)
 
         # run ambient calculation:
         tdata = Data.from_points(
             pts,
-            data={v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs},
+            data={
+                v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs
+            },
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )
         res = algo.states.calculate(algo, mdata, fdata, tdata)

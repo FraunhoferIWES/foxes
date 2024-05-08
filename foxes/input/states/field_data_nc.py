@@ -443,7 +443,7 @@ class FieldDataNC(States):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -451,7 +451,7 @@ class FieldDataNC(States):
         n_states = tdata.n_states
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints
-        points = tdata[FC.TARGETS].reshape(n_states, n_targets*n_tpoints, 3)
+        points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
         n_states = fdata.n_states
 

@@ -103,8 +103,8 @@ class Timelines(WakeFrame):
         }
         pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
         tdata = TData.from_points(
-            points=np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE), 
-            data=tdata, 
+            points=np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE),
+            data=tdata,
             dims=pdims,
         )
 
@@ -156,9 +156,9 @@ class Timelines(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(
-                algo, mdata, fdata, tdata, ti
-            )[:, :, 0, 0]
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+                :, :, 0, 0
+            ]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -169,13 +169,13 @@ class Timelines(WakeFrame):
         return order
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -198,7 +198,7 @@ class Timelines(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
         # prepare:
         targets = tdata[FC.TARGETS]
@@ -270,9 +270,9 @@ class Timelines(WakeFrame):
 
         # states that cause wake for each target point:
         tdata.add(
-            FC.STATES_SEL, 
-            trace_si.reshape(n_states, n_targets, n_tpoints), 
-            (FC.STATE, FC.TARGET, FC.TPOINT)
+            FC.STATES_SEL,
+            trace_si.reshape(n_states, n_targets, n_tpoints),
+            (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
         return wcoos.reshape(n_states, n_targets, n_tpoints, 3)

@@ -4,9 +4,10 @@ import foxes.variables as FV
 import foxes.constants as FC
 from .rotor_points import RotorPoints
 
+
 class PartialCentre(RotorPoints):
     """
-    Partial wakes calculated only at the 
+    Partial wakes calculated only at the
     rotor centre point.
 
     :group: models.partial_wakes
@@ -30,7 +31,7 @@ class PartialCentre(RotorPoints):
         Returns
         -------
         rpoints: numpy.ndarray
-            The wake calculation points, shape: 
+            The wake calculation points, shape:
             (n_states, n_turbines, n_tpoints, 3)
         rweights: numpy.ndarray
             The target point weights, shape: (n_tpoints,)

@@ -45,7 +45,9 @@ class JensenWake(TopHatWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         s = f"{type(self).__name__}"
         s += f"({self.superpositions[FV.WS]}, induction={iname}"
         if k is None:
@@ -114,7 +116,7 @@ class JensenWake(TopHatWakeModel):
             upcast=False,
         )
 
-        return D/2 + k * x
+        return D / 2 + k * x
 
     def calc_centreline(
         self,
@@ -161,17 +163,20 @@ class JensenWake(TopHatWakeModel):
             varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
-        R = self.get_data(
-            FV.D,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=True,
-        )[st_sel] / 2
-        
+        R = (
+            self.get_data(
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=True,
+            )[st_sel]
+            / 2
+        )
+
         twoa = 2 * self.induction.ct2a(ct)
 
         return {FV.WS: -((R / wake_r) ** 2) * twoa}

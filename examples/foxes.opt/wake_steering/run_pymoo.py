@@ -30,9 +30,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
-    parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default=None
-    )
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model", default=None)
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
     parser.add_argument("--ti", help="The TI value", type=float, default=0.03)

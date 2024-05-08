@@ -120,13 +120,9 @@ class PointWakesCalculation(PointDataModel):
             shape (n_states, n_targets, n_tpoints, ...)
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index
-        )
-        wmodel.contribute(
-            algo, mdata, fdata, tdata, downwind_index, wcoos, wdeltas
-        )
-                    
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wdeltas)
+
     def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
         """ "
         The main model calculation.
@@ -151,32 +147,32 @@ class PointWakesCalculation(PointDataModel):
         Returns
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
-        
+
         res = {}
-        wmodels = algo.wake_models.values() if self.wake_models is None else self.wake_models
+        wmodels = (
+            algo.wake_models.values() if self.wake_models is None else self.wake_models
+        )
         for wmodel in wmodels:
             wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
             if len(set(self.pvars).intersection(wdeltas.keys())):
-                
+
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
-                        self.contribute(
-                            algo, mdata, fdata, tdata, oi, wmodel, wdeltas
-                        )
-                        
+                        self.contribute(algo, mdata, fdata, tdata, oi, wmodel, wdeltas)
+
                 else:
                     self.contribute(
                         algo, mdata, fdata, tdata, downwind_index, wmodel, wdeltas
                     )
-                
+
                 for v in self.pvars:
                     if v not in res and v in tdata:
                         res[v] = tdata[v].copy()
-                        
+
                 wmodel.finalize_wake_deltas(algo, mdata, fdata, res, wdeltas)
 
                 for v in res.keys():
@@ -188,5 +184,5 @@ class PointWakesCalculation(PointDataModel):
 
         if self.emodels is not None:
             self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)
-        
+
         return {v: tdata[v] for v in self.pvars}

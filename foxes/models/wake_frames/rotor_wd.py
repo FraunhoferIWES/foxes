@@ -62,13 +62,13 @@ class RotorWD(WakeFrame):
         return order
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -91,11 +91,11 @@ class RotorWD(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
         n_states = tdata.n_states
         targets = tdata[FC.TARGETS]
-        
+
         xyz = fdata[FV.TXYH][:, downwind_index]
         delta = targets - xyz[:, None, None, :]
         del xyz
@@ -113,7 +113,7 @@ class RotorWD(WakeFrame):
         coos = np.einsum("stpd,sad->stpa", delta, nax)
 
         return coos
-    
+
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given

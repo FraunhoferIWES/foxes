@@ -514,17 +514,17 @@ class ModelBook:
             bclass = self.base_classes[model_type]
             self.sources[model_type][name] = bclass.new(class_name, *args, **kwargs)
         return self.sources[model_type][name]
-    
+
     def default_partial_wakes(self, wake_model):
         """
         Gets a default partial wakes model name
         for a given wake model
-        
+
         Parameters
         ----------
         wake_model: foxes.core.WakeModel
             The wake model
-            
+
         Returns
         -------
         pwake: str
@@ -540,7 +540,9 @@ class ModelBook:
         elif isinstance(wake_model, fm.wake_models.DistSlicedWakeModel):
             return "grid9"
         else:
-            raise TypeError(f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'")
+            raise TypeError(
+                f"No default partial wakes model defined for wake model type '{type(wake_model).__name__}'"
+            )
 
     def finalize(self, algo, verbosity=0):
         """

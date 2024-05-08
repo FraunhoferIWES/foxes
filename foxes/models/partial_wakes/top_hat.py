@@ -7,6 +7,7 @@ import foxes.constants as FC
 
 from .centre import PartialCentre
 
+
 class PartialTopHat(PartialCentre):
     """
     Partial wakes for top-hat models.
@@ -77,10 +78,10 @@ class PartialTopHat(PartialCentre):
         tdata,
         downwind_index,
         wake_deltas,
-        wmodel,  
+        wmodel,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -108,10 +109,8 @@ class PartialTopHat(PartialCentre):
             raise TypeError(
                 f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not a TopHatWakeModel"
             )
-        
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index
-        )
+
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         x = wcoos[:, :, 0, 0]
         yz = wcoos[:, :, 0, 1:3]
         del wcoos
@@ -143,8 +142,9 @@ class PartialTopHat(PartialCentre):
                 upcast=True,
             )
 
-            wr = wmodel.calc_wake_radius(algo, mdata, fdata,
-                            tdata, downwind_index, x, ct)
+            wr = wmodel.calc_wake_radius(
+                algo, mdata, fdata, tdata, downwind_index, x, ct
+            )
 
             st_sel = sel0 & (wr > R - D / 2)
             if np.any(st_sel):
@@ -155,8 +155,8 @@ class PartialTopHat(PartialCentre):
                 D = D[st_sel]
 
                 clw = wmodel.calc_centreline(
-                        algo, mdata, fdata, tdata, downwind_index,
-                        st_sel, x, wr, ct)
+                    algo, mdata, fdata, tdata, downwind_index, st_sel, x, wr, ct
+                )
 
                 weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
 
@@ -169,5 +169,13 @@ class PartialTopHat(PartialCentre):
                         )
 
                     wake_deltas[v] = superp.add_wake(
-                        algo, mdata, fdata, tdata, downwind_index, st_sel, 
-                        v, wake_deltas[v], weights[:, None]*d[:, None])
+                        algo,
+                        mdata,
+                        fdata,
+                        tdata,
+                        downwind_index,
+                        st_sel,
+                        v,
+                        wake_deltas[v],
+                        weights[:, None] * d[:, None],
+                    )

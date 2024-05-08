@@ -30,7 +30,7 @@ class PointDataModel(DataCalcModel):
     def ensure_variables(self, algo, mdata, fdata, tdata):
         """
         Add variables to tdata, initialized with NaN
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -45,9 +45,13 @@ class PointDataModel(DataCalcModel):
         """
         for v in self.output_point_vars(algo):
             if v not in tdata:
-                tdata[v] = np.full((tdata.n_states, tdata.n_targets, tdata.n_tpoints), np.nan, dtype=FC.DTYPE)
+                tdata[v] = np.full(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    np.nan,
+                    dtype=FC.DTYPE,
+                )
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-    
+
     @abstractmethod
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
@@ -71,7 +75,7 @@ class PointDataModel(DataCalcModel):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """
@@ -110,7 +114,9 @@ class PointDataModel(DataCalcModel):
             **calc_pars,
         )
         if results.sizes[FC.TPOINT] != 1:
-            raise ValueError(f"PointDataModel '{self.name}': Expecting dimension '{FC.TPOINT}' of size 1, found {results.sizes[FC.TPOINT]}")
+            raise ValueError(
+                f"PointDataModel '{self.name}': Expecting dimension '{FC.TPOINT}' of size 1, found {results.sizes[FC.TPOINT]}"
+            )
         return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
 
     def __add__(self, m):
@@ -195,7 +201,7 @@ class PointDataModelList(PointDataModel):
         for m in self.models:
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
-    
+
     def calculate(self, algo, mdata, fdata, tdata, parameters=None):
         """ "
         The main model calculation.
@@ -220,7 +226,7 @@ class PointDataModelList(PointDataModel):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape 
+            Values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
 
         """

@@ -65,7 +65,9 @@ class IECTIWake(TopHatWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         s = f"{type(self).__name__}"
         s += f"({self.superpositions[FV.TI]}, induction={iname}"
         if k is None:
@@ -89,17 +91,15 @@ class IECTIWake(TopHatWakeModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        return {
-            FV.TI: np.zeros_like(tdata[FC.TARGETS][..., 0])
-        }
+        return {FV.TI: np.zeros_like(tdata[FC.TARGETS][..., 0])}
 
     def calc_wake_radius(
         self,

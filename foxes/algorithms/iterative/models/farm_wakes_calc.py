@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from foxes.core import FarmDataModel, TData
 
+
 class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
@@ -99,7 +100,7 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
 
         def _get_wdata(tdatap, wdeltas, s):
-            """ Helper function for wake data extraction """
+            """Helper function for wake data extraction"""
             tdata = tdatap.get_slice(s, keep=True)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
@@ -112,31 +113,29 @@ class FarmWakesCalculation(FarmDataModel):
             wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
 
             for oi in range(n_turbines):
-                
+
                 if oi > 0:
                     tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
                     pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
 
                 if oi < n_turbines - 1:
-                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
+                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
                     pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
-            
+
             for oi in range(n_turbines):
-                wres = pwake.finalize_wakes(algo, mdata, fdata, tdatap,
-                                            amb_res, weights, wdeltas, 
-                                            wmodel, oi)
+                wres = pwake.finalize_wakes(
+                    algo, mdata, fdata, tdatap, amb_res, weights, wdeltas, wmodel, oi
+                )
                 for v, d in wres.items():
                     if v in wake_res:
                         wake_res[v][:, oi] += d
 
             del pwake, tdatap, wdeltas
-        
-        rotor.eval_rpoint_results(
-            algo, mdata, fdata, wake_res, weights
-        )
+
+        rotor.eval_rpoint_results(algo, mdata, fdata, wake_res, weights)
         res = algo.farm_controller.calculate(algo, mdata, fdata, pre_rotor=False)
         if self.urelax is not None:
             res = self.urelax.calculate(algo, mdata, fdata, res)
         fdata.update(res)
-            
+
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

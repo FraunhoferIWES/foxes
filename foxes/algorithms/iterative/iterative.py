@@ -44,14 +44,7 @@ class Iterative(Downwind):
         except AttributeError:
             return super().get_model(name)
 
-    def __init__(
-            self, 
-            *args, 
-            max_it=None, 
-            conv_crit="default", 
-            mod_cutin={}, 
-            **kwargs
-        ):
+    def __init__(self, *args, max_it=None, conv_crit="default", mod_cutin={}, **kwargs):
         """
         Constructor.
 
@@ -73,7 +66,7 @@ class Iterative(Downwind):
 
         self.max_it = 2 * self.farm.n_turbines if max_it is None else max_it
         self.conv_crit = (
-            self.get_model("DefaultConv")() if conv_crit=="default" else conv_crit
+            self.get_model("DefaultConv")() if conv_crit == "default" else conv_crit
         )
         self.prev_farm_results = None
         self._it = None
@@ -101,10 +94,10 @@ class Iterative(Downwind):
             raise ValueError(f"Attempt to set_urelax after initialization")
         if self._urelax is None:
             self._urelax = Dict(
-                first={}, 
-                pre_rotor={}, 
-                post_rotor={}, 
-                pre_wake={}, 
+                first={},
+                pre_rotor={},
+                post_rotor={},
+                pre_wake={},
                 last={},
             )
         self._urelax[entry_point].update(urel)
@@ -152,7 +145,7 @@ class Iterative(Downwind):
     ):
         """
         Helper function that creates model list
-        """      
+        """
         if self._it == 0:
             self._mlist0, self._calc_pars0 = super()._collect_farm_models(
                 outputs=False,
@@ -175,7 +168,9 @@ class Iterative(Downwind):
                     n += 1
 
                 if len(self._urelax["post_rotor"]):
-                    self._mlist0.insert(4 + n, mdls.URelax(**self._urelax["post_rotor"]))
+                    self._mlist0.insert(
+                        4 + n, mdls.URelax(**self._urelax["post_rotor"])
+                    )
                     self._calc_pars0.insert(4 + n, {})
                     self._reamb = True
                     n += 1
@@ -208,24 +203,26 @@ class Iterative(Downwind):
                     urelax = mdls.URelax(**self._urelax["pre_wake"])
 
                 # add model that calculates wake effects:
-                mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=urelax))
+                mlist.models.append(
+                    self.get_model("FarmWakesCalculation")(urelax=urelax)
+                )
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
                 # add under-relaxation:
                 if self._urelax is not None and len(self._urelax["last"]):
                     mlist.append(mdls.URelax(**self._urelax["last"]))
                     calc_pars.append({})
-            
+
             # rotate back from downwind order:
             else:
 
                 # add model that calculates wake effects:
-                #mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
-                #calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
+                # mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
+                # calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
                 mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-            
+
             return mlist, calc_pars
 
     def _calc_farm_vars(self, mlist):
@@ -261,9 +258,8 @@ class Iterative(Downwind):
 
         """
         outputs = kwargs.pop("outputs", self.DEFAULT_FARM_OUTPUTS)
-        outputs = list(set(outputs + 
-                           [FV.ORDER_SSEL, FV.ORDER_INV, FV.WEIGHT]))
-        
+        outputs = list(set(outputs + [FV.ORDER_SSEL, FV.ORDER_INV, FV.WEIGHT]))
+
         fres = None
         self._it = -1
         self._final_run = False
@@ -274,19 +270,20 @@ class Iterative(Downwind):
 
             self.prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
-            
+
             if self.conv_crit is not None:
                 conv = self.conv_crit.check_converged(
                     self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
                 )
 
                 if conv:
-                    self.print(f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0)
+                    self.print(
+                        f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
+                    )
                     self.print("Starting final run")
                     self._final_run = True
                     fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
                     break
-            
 
             if self._it == 0:
                 self.verbosity -= 1

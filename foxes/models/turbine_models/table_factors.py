@@ -30,6 +30,7 @@ class TableFactors(TurbineModel):
     :group: models.turbine_models
 
     """
+
     def __init__(
         self,
         data_source,

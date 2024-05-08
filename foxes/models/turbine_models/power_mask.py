@@ -33,13 +33,7 @@ class PowerMask(TurbineModel):
 
     """
 
-    def __init__(
-            self, 
-            var_ws_P=FV.REWS3, 
-            factor_P=1.0e3, 
-            P_lim=100, 
-            induction="Betz"
-        ):
+    def __init__(self, var_ws_P=FV.REWS3, factor_P=1.0e3, P_lim=100, induction="Betz"):
         """
         Constructor.
 
@@ -63,10 +57,12 @@ class PowerMask(TurbineModel):
         self.induction = induction
 
     def __repr__(self):
-        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
         a = f"var_ws_P={self.var_ws_P}, P_lim={self.P_lim}, induction={iname}"
         return f"{type(self).__name__}({a})"
-    
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -95,7 +91,7 @@ class PowerMask(TurbineModel):
 
         """
         return [self.induction]
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -156,9 +152,13 @@ class PowerMask(TurbineModel):
         # select power entries for which this is active:
         sel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
         sel[st_sel] = True
-        sel = sel & ~np.isnan(max_P) & (
-            ((max_P < P_rated) & (P > max_P))
-            | ((max_P > P_rated) & (P > P_rated - self.P_lim))
+        sel = (
+            sel
+            & ~np.isnan(max_P)
+            & (
+                ((max_P < P_rated) & (P > max_P))
+                | ((max_P > P_rated) & (P > P_rated - self.P_lim))
+            )
         )
         if np.any(sel):
             # apply selection:

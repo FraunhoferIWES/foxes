@@ -114,7 +114,7 @@ class WsRho2PCtFromTwo(TurbineType):
 
         self._P = None
         self._ct = None
-    
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

@@ -19,9 +19,9 @@ class WakeModel(Model):
     @property
     def affects_downwind(self):
         """
-        Flag for downwind or upwind effects 
+        Flag for downwind or upwind effects
         on other turbines
-        
+
         Returns
         -------
         dwnd: bool
@@ -44,17 +44,15 @@ class WakeModel(Model):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        
+
         Returns
         -------
         wake_deltas: dict
-            Key: variable name, value: The zero filled 
+            Key: variable name, value: The zero filled
             wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        return {
-            FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])
-        }
+        return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
 
     @abstractmethod
     def contribute(
@@ -68,7 +66,7 @@ class WakeModel(Model):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -118,7 +116,7 @@ class WakeModel(Model):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape 
+            values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas object at the selected target
@@ -163,6 +161,7 @@ class WakeModel(Model):
             )
             raise KeyError(estr)
 
+
 class TurbineInductionModel(WakeModel):
     """
     Abstract base class for turbine induction models.
@@ -174,9 +173,9 @@ class TurbineInductionModel(WakeModel):
     @property
     def affects_downwind(self):
         """
-        Flag for downwind or upwind effects 
+        Flag for downwind or upwind effects
         on other turbines
-        
+
         Returns
         -------
         dwnd: bool
@@ -184,4 +183,3 @@ class TurbineInductionModel(WakeModel):
 
         """
         return False
-    

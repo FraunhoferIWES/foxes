@@ -203,12 +203,10 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             tdata=tdata,
             downwind_index=downwind_index,
             algo=algo,
-            upcast=True
+            upcast=True,
         )
 
-        wake_r = self.calc_wake_radius(
-            algo, mdata, fdata, tdata, downwind_index, x, ct
-        )
+        wake_r = self.calc_wake_radius(algo, mdata, fdata, tdata, downwind_index, x, ct)
 
         wdeltas = {}
         st_sel = (ct > 0) & (x > 0) & np.any(r < wake_r[:, :, None], axis=2)
@@ -219,12 +217,11 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             wake_r = wake_r[st_sel]
 
             cl_del = self.calc_centreline(
-                algo, mdata, fdata, tdata, downwind_index, 
-                st_sel, x, wake_r, ct
+                algo, mdata, fdata, tdata, downwind_index, st_sel, x, wake_r, ct
             )
 
             isin = r < wake_r[:, None]
             for v, wdel in cl_del.items():
-                wdeltas[v] = np.where(isin, wdel[:, None], 0.)
+                wdeltas[v] = np.where(isin, wdel[:, None], 0.0)
 
         return wdeltas, st_sel

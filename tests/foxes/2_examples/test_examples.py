@@ -9,12 +9,12 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-    rdir = thisdir.parent.parent.parent/"examples/foxes"
-    rpath = rdir/"run_all.py"
+    rdir = thisdir.parent.parent.parent / "examples/foxes"
+    rpath = rdir / "run_all.py"
     print(rpath)
 
     run_all = load_module("run_all", rpath)
-    
+
     args = argparse.Namespace()
     args.include = None
     args.exclude = []
@@ -24,9 +24,10 @@ def test():
     args.dry = False
     args.Dry = False
     args.nofig = True
-    
+
     os.chdir(rdir)
     run_all.run(args)
+
 
 if __name__ == "__main__":
     test()

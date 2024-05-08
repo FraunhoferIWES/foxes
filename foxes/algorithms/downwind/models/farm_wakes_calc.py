@@ -70,27 +70,29 @@ class FarmWakesCalculation(FarmDataModel):
                 pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
 
         def _get_wdata(tdatap, wdeltas, s):
-            """ Helper function for wake data extraction """
+            """Helper function for wake data extraction"""
             tdata = tdatap.get_slice(s, keep=True)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
         def _evaluate(tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake):
-            """ Helper function for data evaluation at turbines """
-            wres = pwake.finalize_wakes(algo, mdata, fdata, tdata,
-                                        amb_res, weights, wdeltas, 
-                                        wmodel, oi)
-            
+            """Helper function for data evaluation at turbines"""
+            wres = pwake.finalize_wakes(
+                algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi
+            )
+
             hres = {v: d[:, oi, None] for v, d in wake_res.items()}
             for v, d in wres.items():
                 if v in wake_res:
                     hres[v] += d[:, None]
 
-            rotor.eval_rpoint_results(algo, mdata, fdata, hres, weights, 
-                                      downwind_index=oi)
+            rotor.eval_rpoint_results(
+                algo, mdata, fdata, hres, weights, downwind_index=oi
+            )
 
             res = algo.farm_controller.calculate(
-                algo, mdata, fdata, pre_rotor=False, downwind_index=oi)
+                algo, mdata, fdata, pre_rotor=False, downwind_index=oi
+            )
             fdata.update(res)
 
         wake_res = deepcopy(amb_res)
@@ -101,30 +103,50 @@ class FarmWakesCalculation(FarmDataModel):
             pwake = algo.partial_wakes[wname]
             tdatap = pwake2tdata[pwake.name]
             wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
-            
+
             # downwind:
             if wmodel.affects_downwind:
                 run_up = wname
                 for oi in range(n_turbines):
                     if oi > 0:
-                        _evaluate(tdatap, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(
+                            tdatap,
+                            amb_res,
+                            weights,
+                            wake_res,
+                            wdeltas,
+                            oi,
+                            wmodel,
+                            pwake,
+                        )
 
                     if oi < n_turbines - 1:
-                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi+1:])
+                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
                         pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
-                    
+
             # upwind:
             else:
                 run_down = wname
-                for oi in range(n_turbines-1, -1, -1):
+                for oi in range(n_turbines - 1, -1, -1):
                     if oi < n_turbines - 1:
-                        _evaluate(tdatap, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake)
+                        _evaluate(
+                            tdatap,
+                            amb_res,
+                            weights,
+                            wake_res,
+                            wdeltas,
+                            oi,
+                            wmodel,
+                            pwake,
+                        )
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
                         pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
-            
+
             if run_up is not None and run_down is not None:
-                raise KeyError(f"Wake model '{run_up}' is an upwind model, wake model '{run_down}' is a downwind model: Require iterative algorithm")
+                raise KeyError(
+                    f"Wake model '{run_up}' is an upwind model, wake model '{run_down}' is a downwind model: Require iterative algorithm"
+                )
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -96,6 +96,7 @@ def run_tutorial(path, nofig):
         print(f"\nFAILED TO ENTER DIRECTORY {path}\n")
         return 1
 
+
 def run(args):
 
     incld = args.include
@@ -144,6 +145,7 @@ def run(args):
             print(r)
     else:
         print("\nTutorials OK.")
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -196,6 +198,7 @@ def parse_args():
     )
     parser.add_argument("-nf", "--nofig", help="Skip all figures", action="store_true")
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     args = parse_args()

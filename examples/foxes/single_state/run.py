@@ -59,7 +59,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
-    parser.add_argument("-nf", "--nofig", help="Do not show figures", action="store_true")
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     # create model book
@@ -81,7 +83,10 @@ if __name__ == "__main__":
 
     # create states
     states = foxes.input.states.SingleStateStates(
-            ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho,
+        ws=args.ws,
+        wd=args.wd,
+        ti=args.ti,
+        rho=args.rho,
     )
 
     # create wind farm
@@ -182,7 +187,9 @@ if __name__ == "__main__":
 
         # horizontal flow plot
         o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_xy(args.var, resolution=10, rotor_color="red", figsize=(10, 3))
+        g = o.gen_states_fig_xy(
+            args.var, resolution=10, rotor_color="red", figsize=(10, 3)
+        )
         fig = next(g)
         plt.show()
         plt.close(fig)

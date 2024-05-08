@@ -128,7 +128,7 @@ class DistSlicedWakeModel(WakeModel):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -178,7 +178,7 @@ class DistSlicedWakeModel(WakeModel):
                 st_sel,
                 v,
                 wake_deltas[v],
-                hdel
+                hdel,
             )
 
     def finalize_wake_deltas(
@@ -204,7 +204,7 @@ class DistSlicedWakeModel(WakeModel):
             The farm data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape 
+            values: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas object at the selected target
@@ -214,4 +214,5 @@ class DistSlicedWakeModel(WakeModel):
         """
         for v, s in self.superp.items():
             wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, v, amb_results[v], wake_deltas[v])
+                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
+            )

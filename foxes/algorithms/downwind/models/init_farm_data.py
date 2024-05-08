@@ -34,8 +34,18 @@ class InitFarmData(FarmDataModel):
             The output variable names
 
         """
-        return [FV.X, FV.Y, FV.H, FV.D, FV.WD, FV.YAW, 
-                FV.ORDER, FV.WEIGHT, FV.ORDER_SSEL, FV.ORDER_INV]
+        return [
+            FV.X,
+            FV.Y,
+            FV.H,
+            FV.D,
+            FV.WD,
+            FV.YAW,
+            FV.ORDER,
+            FV.WEIGHT,
+            FV.ORDER_SSEL,
+            FV.ORDER_INV,
+        ]
 
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -79,18 +89,18 @@ class InitFarmData(FarmDataModel):
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:
                 i0 = fdata.states_i0()
-                s = np.s_[i0:i0+fdata.n_states]
+                s = np.s_[i0 : i0 + fdata.n_states]
                 fdata[FV.TXYH][:, ti, :2] = t.xy[s]
 
-            H = t.H 
+            H = t.H
             if H is None:
                 H = algo.farm_controller.turbine_types[ti].H
-            fdata[FV.TXYH][:, ti, 2] = H 
+            fdata[FV.TXYH][:, ti, 2] = H
 
-            D = t.D 
+            D = t.D
             if D is None:
                 D = algo.farm_controller.turbine_types[ti].D
-            fdata[FV.D][:, ti] = D 
+            fdata[FV.D][:, ti] = D
 
         # calc WD and YAW at rotor centres:
         tdata = TData.from_points(points=fdata[FV.TXYH])
@@ -116,10 +126,9 @@ class InitFarmData(FarmDataModel):
                 fdata[v] = fdata[v][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()
         for k in mdata.keys():
-            if (
-                tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE)
-                and np.any(mdata[k] != mdata[k][0, 0, None, None])
-            ): 
+            if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
+                mdata[k] != mdata[k][0, 0, None, None]
+            ):
                 mdata[k] = mdata[k][ssel, order]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

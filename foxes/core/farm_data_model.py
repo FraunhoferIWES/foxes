@@ -55,7 +55,7 @@ class FarmDataModel(DataCalcModel):
     def ensure_variables(self, algo, mdata, fdata):
         """
         Add variables to fdata, initialized with NaN
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm

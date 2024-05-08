@@ -86,7 +86,7 @@ class YawedWakes(WakeFrame):
             s += f"{self.k_var}={k}"
         s += ")"
         return s
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -188,9 +188,7 @@ class YawedWakes(WakeFrame):
         )
 
         # run model calculation:
-        self.model.calc_data(
-            algo, mdata, fdata, tdata, downwind_index, x, gamma, k
-        )
+        self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
         st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
@@ -223,13 +221,13 @@ class YawedWakes(WakeFrame):
             y[st_sel] -= ydef
 
     def get_wake_coos(
-            self, 
-            algo, 
-            mdata, 
-            fdata, 
-            tdata, 
-            downwind_index,
-        ):
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
         Calculate wake coordinates of rotor points.
 
@@ -252,22 +250,24 @@ class YawedWakes(WakeFrame):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-            
+
         """
         # get unyawed results:
         xyz = self.base_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index,
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            downwind_index,
         )
 
         # take rotor average:
-        xy = np.einsum('stpd,p->std', xyz[..., :2], tdata[FC.TWEIGHTS])
+        xy = np.einsum("stpd,p->std", xyz[..., :2], tdata[FC.TWEIGHTS])
         x = xy[:, :, 0]
         y = xy[:, :, 1]
 
         # apply deflection:
-        self._update_y(
-            algo, mdata, fdata, tdata, downwind_index, x, y
-        )
+        self._update_y(algo, mdata, fdata, tdata, downwind_index, x, y)
         xyz[..., 1] = y[:, :, None]
 
         return xyz

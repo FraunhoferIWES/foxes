@@ -234,11 +234,12 @@ class Model(ABC):
             otherwise dimension 1 is entered
 
         """
+
         def _geta(a):
             sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
                 try:
-                    if a == "states_i0": 
+                    if a == "states_i0":
                         out = s.states_i0(counter=True, algo=algo)
                         if out is not None:
                             return out
@@ -290,7 +291,9 @@ class Model(ABC):
                         out[:] = a
                         out_dims = (FC.STATE, FC.TARGET)
                     elif target == FC.STATE_TARGET_TPOINT:
-                        out = np.full((n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE)
+                        out = np.full(
+                            (n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE
+                        )
                         out[:] = a
                         out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
                     else:
@@ -337,10 +340,15 @@ class Model(ABC):
                 and algo is not None
             ):
                 out, out_dims = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, downwind_index, fdata, 
-                    tdata=tdata, target=target, upcast=upcast
+                    algo,
+                    variable,
+                    downwind_index,
+                    fdata,
+                    tdata=tdata,
+                    target=target,
+                    upcast=upcast,
                 )
-            
+
             if out is not None:
                 break
 
@@ -350,7 +358,7 @@ class Model(ABC):
                 if upcast:
                     out0 = out
                     out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0  
+                    out[:] = out0
                     out_dims = dims
                     del out0
                 else:
@@ -358,19 +366,21 @@ class Model(ABC):
 
             elif out_dims == (FC.STATE, FC.TURBINE):
                 if downwind_index is None:
-                    raise KeyError(f"Require downwind_index for target {target} and out dims {out_dims}")    
+                    raise KeyError(
+                        f"Require downwind_index for target {target} and out dims {out_dims}"
+                    )
                 out0 = out[:, downwind_index, None]
                 if len(dims) == 3:
                     out0 = out0[:, :, None]
                 if upcast:
                     out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0  
+                    out[:] = out0
                     out_dims = dims
                 else:
                     out = out0
                     out_dims = (FC.STATE, 1) if len(dims) == 2 else (FC.STATE, 1, 1)
                 del out0
-                
+
             elif out_dims == (FC.STATE, 1):
                 out0 = out
                 if len(dims) == 3:
@@ -398,7 +408,9 @@ class Model(ABC):
                 del out0
 
             else:
-                raise NotImplementedError(f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}")
+                raise NotImplementedError(
+                    f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}"
+                )
 
         # data from other chunks, only with iterations:
         if (
@@ -409,13 +421,21 @@ class Model(ABC):
             and FC.STATES_SEL in tdata
         ):
             if out_dims != dims:
-                raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}")
+                raise ValueError(
+                    f"Model '{self.name}': Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}"
+                )
             if downwind_index is None:
-                raise KeyError(f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration")
+                raise KeyError(
+                    f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration"
+                )
             if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
-                raise ValueError(f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}")
+                raise ValueError(
+                    f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
+                )
             if algo is None:
-                raise ValueError(f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo")
+                raise ValueError(
+                    f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
+                )
 
             i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
@@ -437,7 +457,7 @@ class Model(ABC):
                     else:
                         out[sel] = prev_data
                     del prev_fres, prev_data
-        
+
         # check for None:
         if not accept_none and out is None:
             raise ValueError(
@@ -478,7 +498,9 @@ class Model(ABC):
             )
 
         self._store[i0][name] = deepcopy(data[name])
-        self._store[i0].dims[name] = deepcopy(data.dims[name]) if name in data.dims else None
+        self._store[i0].dims[name] = (
+            deepcopy(data.dims[name]) if name in data.dims else None
+        )
 
     def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
         """
@@ -508,7 +530,7 @@ class Model(ABC):
         """
         if name in data:
             return (data[name], data.dims[name]) if ret_dims else data[name]
-        
+
         i0 = data.states_i0(counter=True, algo=algo)
         if not safe or (i0 in self._store and name in self._store[i0]):
             if ret_dims:
@@ -517,4 +539,3 @@ class Model(ABC):
                 return self._store[i0][name]
         else:
             return (None, None) if ret_dims else None
-
