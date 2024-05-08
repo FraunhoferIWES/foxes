@@ -44,10 +44,20 @@ Contents
         installation
 
     .. toctree::
+        :maxdepth: 1
+
+        overview
+
+    .. toctree::
+        :maxdepth: 2
+
+        models
+
+    .. toctree::
         :maxdepth: 2
 
         examples
-        
+
     .. toctree::
         :maxdepth: 1
 

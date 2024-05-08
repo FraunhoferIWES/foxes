@@ -3,7 +3,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes.core.data import Data
+from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -47,9 +47,11 @@ class Streamlines2D(WakeFrame):
         self.cl_ipars = cl_ipars
 
         self.DATA = self.var("DATA")
+        self.STEPS = self.var("STEPS")
+        self.SDAT = self.var("SDAT")
 
     def __repr__(self):
-        return super().__repr__() + f"(step={self.step})"
+        return f"{type(self).__name__}(step={self.step})"
 
     def _calc_streamlines(self, algo, mdata, fdata):
         """
@@ -80,19 +82,17 @@ class Streamlines2D(WakeFrame):
 
                 # calculate next tangential vector:
                 svars = algo.states.output_point_vars(algo)
-                pdata = {FC.POINTS: data[:, :, i, :3]}
-                pdims = {FC.POINTS: (FC.STATE, FC.POINT, FC.XYH)}
-                pdata.update(
-                    {
-                        v: np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                tdata = TData.from_points(
+                    data[:, :, i, :3],
+                    data={
+                        v: np.full((n_states, n_turbines, 1), np.nan, dtype=FC.DTYPE)
                         for v in svars
-                    }
+                    },
+                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in svars},
                 )
-                pdims.update({v: (FC.STATE, FC.POINT) for v in svars})
-                pdata = Data(pdata, pdims, loop_dims=[FC.STATE, FC.POINT])
-                data[:, :, i, 3] = algo.states.calculate(algo, mdata, fdata, pdata)[
+                data[:, :, i, 3] = algo.states.calculate(algo, mdata, fdata, tdata)[
                     FV.WD
-                ]
+                ][:, :, 0]
 
                 sel = np.isnan(data[:, :, i, 3])
                 if np.any(sel):
@@ -108,9 +108,9 @@ class Streamlines2D(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -125,22 +125,23 @@ class Streamlines2D(WakeFrame):
             mdata[self.DATA][:, :, 0, :3] == fdata[FV.TXYH]
         ):
             mdata[self.DATA] = self._calc_streamlines(algo, mdata, fdata)
+            mdata.dims[self.DATA] = (FC.STATE, FC.TURBINE, self.STEPS, self.SDAT)
 
         return mdata[self.DATA]
 
-    def _calc_coos(self, algo, mdata, fdata, points, states_source_turbine):
+    def _calc_coos(self, algo, mdata, fdata, targets, downwind_index):
         """
         Helper function, calculates streamline coordinates
         for given points and given turbine
         """
 
         # prepare:
-        n_states = mdata.n_states
-        n_points = points.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
+        n_states, n_targets, n_tpoints = targets.shape[:3]
+        n_points = n_targets * n_tpoints
+        points = targets.reshape(n_states, n_points, 3)
 
         # find nearest streamline points:
-        data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
+        data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]
         dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
         selp = np.argmin(dists, axis=2)
         data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[
@@ -158,7 +159,7 @@ class Streamlines2D(WakeFrame):
         coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
 
-        return coos
+        return coos.reshape(n_states, n_targets, n_tpoints, 3)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -171,9 +172,9 @@ class Streamlines2D(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -185,15 +186,15 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
-        pdata = Data.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(points=fdata[FV.TXYH])
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(
-                algo, mdata, fdata, pdata, np.full(n_states, ti)
-            )[..., 0]
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+                :, :, 0, 0
+            ]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -203,36 +204,41 @@ class Streamlines2D(WakeFrame):
 
         return order
 
-    def get_wake_coos(self, algo, mdata, fdata, pdata, states_source_turbine):
+    def get_wake_coos(
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
         """
-        Calculate wake coordinates.
+        Calculate wake coordinates of rotor points.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        return self._calc_coos(
-            algo, mdata, fdata, pdata[FC.POINTS], states_source_turbine
-        )
+        return self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
 
-    def get_centreline_points(self, algo, mdata, fdata, states_source_turbine, x):
+    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
         values of x.
@@ -241,13 +247,12 @@ class Streamlines2D(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
             The wake frame x coordinates, shape: (n_states, n_points)
 
@@ -263,8 +268,7 @@ class Streamlines2D(WakeFrame):
 
         # get streamline points:
         n_states, n_points = x.shape
-        st_sel = (np.arange(n_states), states_source_turbine)
-        data = self.get_streamline_data(algo, mdata, fdata)[st_sel]
+        data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]
         spts = data[:, :, :3]
         n_spts = spts.shape[1]
         xs = self.step * np.arange(n_spts)

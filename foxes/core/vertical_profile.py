@@ -27,14 +27,14 @@ class VerticalProfile(Model):
         return []
 
     @abstractmethod
-    def calculate(self, data, heights):
+    def calculate(self, tdata, heights):
         """
         Run the profile calculation.
 
         Parameters
         ----------
-        data: dict
-            The input data
+        tdata: dict
+            The target point data
         heights: numpy.ndarray
             The evaluation heights
 

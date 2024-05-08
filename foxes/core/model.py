@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC
 from itertools import count
+from copy import deepcopy
 
 import foxes.constants as FC
 from .data import Data
@@ -37,8 +38,7 @@ class Model(ABC):
         self.__initialized = False
 
     def __repr__(self):
-        t = type(self).__name__
-        return f"{self.name} ({t})"
+        return f"{type(self).__name__}()"
 
     @property
     def model_id(self):
@@ -187,12 +187,12 @@ class Model(ABC):
         lookup="smfp",
         mdata=None,
         fdata=None,
-        pdata=None,
-        states_source_turbine=None,
-        upcast=False,
+        tdata=None,
+        downwind_index=None,
         accept_none=False,
         accept_nan=True,
         algo=None,
+        upcast=False,
     ):
         """
         Getter for a data entry in the model object
@@ -203,26 +203,24 @@ class Model(ABC):
         variable: str
             The variable, serves as data key
         target: str, optional
-            The dimensions identifier for the output, e.g
-            FC.STATE_TURBINE, FC.STATE_POINT
+            The dimensions identifier for the output,
+            FC.STATE_TURBINE, FC.STATE_TARGET or
+            FC.STATE_TARGET_TPOINT
         lookup: str
             The order of data sources. Combination of:
             's' for self,
             'm' for mdata,
             'f' for fdata,
-            'p' for pdata,
+            't' for tdata,
             'w' for wake modelling data
         mdata: foxes.core.Data, optional
             The model data
         fdata: foxes.core.Data, optional
             The farm data
-        pdata: foxes.core.Data, optional
-            The evaluation point data
-        states_source_turbine: numpy.ndarray, optional
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        upcast: bool, optional
-            Upcast array to dims if data is scalar
+        tdata: foxes.core.Data, optional
+            The target point data
+        downwind_index: int, optional
+            The index in the downwind order
         data_prio: bool
             First search the data source, then the object
         accept_none: bool
@@ -231,145 +229,234 @@ class Model(ABC):
             Do not throw an error if data entry is np.nan
         algo: foxes.core.Algorithm, optional
             The algorithm, needed for data from previous iteration
+        upcast: bool
+            Flag for ensuring targets dimension,
+            otherwise dimension 1 is entered
 
         """
 
         def _geta(a):
-            sources = [s for s in [mdata, fdata, pdata, algo, self] if s is not None]
+            sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
-                if a == "states_i0":
-                    out = s.states_i0(counter=True, algo=algo)
-                    if out is not None:
-                        return out
-                else:
-                    try:
+                try:
+                    if a == "states_i0":
+                        out = s.states_i0(counter=True, algo=algo)
+                        if out is not None:
+                            return out
+                    else:
                         out = getattr(s, a)
                         if out is not None:
                             return out
-                    except AttributeError:
-                        pass
+                except AttributeError:
+                    pass
             raise KeyError(
-                f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, pdata, algo?"
+                f"Model '{self.name}': Failed to determine '{a}'. Maybe add to arguments of get_data: mdata, fdata, tdata, algo?"
             )
 
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
             n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
-        elif target == FC.STATE_POINT:
-            n_points = _geta("n_points")
-            dims = (FC.STATE, FC.POINT)
+            shp = (n_states, n_turbines)
+        elif target == FC.STATE_TARGET:
+            n_targets = _geta("n_targets")
+            dims = (FC.STATE, FC.TARGET)
+            shp = (n_states, n_targets)
+        elif target == FC.STATE_TARGET_TPOINT:
+            n_targets = _geta("n_targets")
+            n_tpoints = _geta("n_tpoints")
+            dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+            shp = (n_states, n_targets, n_tpoints)
         else:
             raise KeyError(
-                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_POINT}"
+                f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
 
         out = None
+        out_dims = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
                 a = getattr(self, variable)
-
-                if a is not None and upcast:
-                    if target == FC.STATE_TURBINE:
+                if a is not None:
+                    if not upcast:
+                        out = a
+                        out_dims = None
+                    elif target == FC.STATE_TURBINE:
                         out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
                         out[:] = a
-                    elif target == FC.STATE_POINT:
-                        out = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+                        out_dims = (FC.STATE, FC.TURBINE)
+                    elif target == FC.STATE_TARGET:
+                        out = np.full((n_states, n_targets), np.nan, dtype=FC.DTYPE)
                         out[:] = a
-                    else:
-                        raise KeyError(
-                            f"Model '{self.name}': Wrong parameter 'target = {target}' for 'upcast = True' in get_data. Choose: FC.STATE_TURBINE, FC.STATE_POINT"
+                        out_dims = (FC.STATE, FC.TARGET)
+                    elif target == FC.STATE_TARGET_TPOINT:
+                        out = np.full(
+                            (n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE
                         )
-
-                else:
-                    out = a
+                        out[:] = a
+                        out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+                    else:
+                        raise NotImplementedError
 
             # lookup mdata:
             elif (
                 s == "m"
                 and mdata is not None
                 and variable in mdata
-                and len(mdata.dims[variable]) > 1
-                and tuple(mdata.dims[variable][:2]) == dims
+                and tuple(mdata.dims[variable]) == dims
             ):
                 out = mdata[variable]
+                out_dims = dims
 
             # lookup fdata:
             elif (
                 s == "f"
                 and fdata is not None
                 and variable in fdata
-                and len(fdata.dims[variable]) > 1
-                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
+                and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
             ):
-                # direct fdata:
-                if target == FC.STATE_TURBINE:
-                    out = fdata[variable]
-
-                # translate state-turbine to state-point data:
-                elif target == FC.STATE_POINT and states_source_turbine is not None:
-                    # from fdata, uniform for points:
-                    st_sel = (np.arange(n_states), states_source_turbine)
-                    out = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-                    out[:] = fdata[variable][st_sel][:, None]
-
-                    # from previous iteration, if requested:
-                    if pdata is not None and FC.STATES_SEL in pdata:
-                        if not np.all(
-                            states_source_turbine == pdata[FC.STATE_SOURCE_TURBINE]
-                        ):
-                            raise ValueError(
-                                f"Model '{self.name}': Mismatch of 'states_source_turbine'. Expected {list(pdata[FC.STATE_SOURCE_TURBINE])}, got {list(states_source_turbine)}"
-                            )
-
-                        i0 = _geta("states_i0")
-                        sp = pdata[FC.STATES_SEL]
-                        sel = sp < i0
-                        if np.any(sel):
-                            if algo is None or not hasattr(algo, "prev_farm_results"):
-                                raise KeyError(
-                                    f"Model '{self.name}': Argument algo is either not given, or not an iterative algorithm"
-                                )
-
-                            prev_fdata = getattr(algo, "prev_farm_results")
-                            if prev_fdata is None:
-                                out[sel] = 0
-                            else:
-                                st = np.zeros_like(sp)
-                                st[:] = states_source_turbine[:, None]
-                                out[sel] = prev_fdata[variable].to_numpy()[
-                                    sp[sel], st[sel]
-                                ]
+                out = fdata[variable]
+                out_dims = (FC.STATE, FC.TURBINE)
 
             # lookup pdata:
             elif (
-                s == "p"
-                and pdata is not None
-                and variable in pdata
-                and len(pdata.dims[variable]) > 1
-                and tuple(pdata.dims[variable][:2]) == dims
+                s == "t"
+                and tdata is not None
+                and variable in tdata
+                and tuple(tdata.dims[variable]) == (FC.STATE, FC.TARGET, FC.TPOINT)
             ):
-                out = pdata[variable]
+                out = tdata[variable]
+                out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
 
             # lookup wake modelling data:
             elif (
                 s == "w"
-                and target == FC.STATE_POINT
                 and fdata is not None
-                and pdata is not None
+                and tdata is not None
                 and variable in fdata
-                and len(fdata.dims[variable]) > 1
-                and tuple(fdata.dims[variable][:2]) == (FC.STATE, FC.TURBINE)
-                and states_source_turbine is not None
+                and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
+                and downwind_index is not None
                 and algo is not None
             ):
-                out = algo.wake_frame.get_wake_modelling_data(
-                    algo, variable, states_source_turbine, fdata, pdata
+                out, out_dims = algo.wake_frame.get_wake_modelling_data(
+                    algo,
+                    variable,
+                    downwind_index,
+                    fdata,
+                    tdata=tdata,
+                    target=target,
+                    upcast=upcast,
                 )
 
             if out is not None:
                 break
+
+        # cast dimensions:
+        if out_dims != dims:
+            if out_dims is None:
+                if upcast:
+                    out0 = out
+                    out = np.zeros(shp, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                    del out0
+                else:
+                    out_dims = tuple([1 for _ in dims])
+
+            elif out_dims == (FC.STATE, FC.TURBINE):
+                if downwind_index is None:
+                    raise KeyError(
+                        f"Require downwind_index for target {target} and out dims {out_dims}"
+                    )
+                out0 = out[:, downwind_index, None]
+                if len(dims) == 3:
+                    out0 = out0[:, :, None]
+                if upcast:
+                    out = np.zeros(shp, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                else:
+                    out = out0
+                    out_dims = (FC.STATE, 1) if len(dims) == 2 else (FC.STATE, 1, 1)
+                del out0
+
+            elif out_dims == (FC.STATE, 1):
+                out0 = out
+                if len(dims) == 3:
+                    out0 = out0[:, :, None]
+                    out_dims = (FC.STATE, 1, 1)
+                if upcast:
+                    out = np.zeros(shp, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                else:
+                    out = out0
+                del out0
+
+            elif out_dims == (FC.STATE, 1, 1):
+                out0 = out
+                if len(dims) == 2:
+                    out0 = out0[:, :, 0]
+                    out_dims = (FC.STATE, 1)
+                if upcast:
+                    out = np.zeros(shp, dtype=FC.DTYPE)
+                    out[:] = out0
+                    out_dims = dims
+                else:
+                    out = out0
+                del out0
+
+            else:
+                raise NotImplementedError(
+                    f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}"
+                )
+
+        # data from other chunks, only with iterations:
+        if (
+            target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
+            and fdata is not None
+            and variable in fdata
+            and tdata is not None
+            and FC.STATES_SEL in tdata
+        ):
+            if out_dims != dims:
+                raise ValueError(
+                    f"Model '{self.name}': Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}"
+                )
+            if downwind_index is None:
+                raise KeyError(
+                    f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration"
+                )
+            if tdata[FC.STATE_SOURCE_ORDERI] != downwind_index:
+                raise ValueError(
+                    f"Model '{self.name}': Expecting downwind_index {tdata[FC.STATE_SOURCE_ORDERI]}, got {downwind_index}"
+                )
+            if algo is None:
+                raise ValueError(
+                    f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
+                )
+
+            i0 = _geta("states_i0")
+            sts = tdata[FC.STATES_SEL]
+            if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
+                # find the mean index and round it to nearest integer:
+                sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
+                sts = (sts + 0.5).astype(FC.ITYPE)
+            sel = sts < i0
+            if np.any(sel):
+                if not hasattr(algo, "prev_farm_results"):
+                    raise KeyError(
+                        f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
+                    )
+                prev_fres = getattr(algo, "prev_farm_results")
+                if prev_fres is not None:
+                    prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
+                    if target == FC.STATE_TARGET:
+                        out[sel[:, :, 0]] = prev_data
+                    else:
+                        out[sel] = prev_data
+                    del prev_fres, prev_data
 
         # check for None:
         if not accept_none and out is None:
@@ -410,8 +497,10 @@ class Model(ABC):
                 data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
             )
 
-        self._store[i0][name] = data[name]
-        self._store[i0].dims[name] = data.dims[name] if name in data.dims else None
+        self._store[i0][name] = deepcopy(data[name])
+        self._store[i0].dims[name] = (
+            deepcopy(data.dims[name]) if name in data.dims else None
+        )
 
     def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
         """
@@ -450,35 +539,3 @@ class Model(ABC):
                 return self._store[i0][name]
         else:
             return (None, None) if ret_dims else None
-
-    '''
-    @classmethod
-    def reduce_states(cls, sel_states, objs):
-        """
-        Modifies the given objects by selecting a
-        subset of states.
-
-        Parameters
-        ----------
-        sel_states: list of int
-            The states selection
-        objs: list of foxes.core.Data
-            The objects, e.g. [mdata, fdata, pdata]
-
-        Returns
-        -------
-        mobjs: list of foxes.core.Data
-            The modified objects with reduced
-            states dimension
-
-        """
-        out = []
-        for o in objs:
-            data = {
-                v: d[sel_states] if o.dims[v][0] == FC.STATE else d
-                for v, d in o.items()
-            }
-            out.append(Data(data, o.dims, loop_dims=o.loop_dims, name=o.name))
-
-        return out
-        '''

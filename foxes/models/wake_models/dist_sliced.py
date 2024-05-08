@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import numpy as np
 
 from foxes.core import WakeModel
 
@@ -73,13 +74,13 @@ class DistSlicedWakeModel(WakeModel):
         super().initialize(algo, verbosity, force)
 
     @abstractmethod
-    def calc_wakes_spsel_x_yz(
+    def calc_wakes_x_yz(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         yz,
     ):
@@ -90,77 +91,74 @@ class DistSlicedWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
             The yz values for each x value, shape:
-            (n_states, n_points, n_yz_per_x, 2)
+            (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         pass
 
-    def contribute_to_wake_deltas(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at target points by
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
 
         """
-        x = wake_coos[:, :, 0]
-        yz = wake_coos[:, :, None, 1:3]
+        # rounding for safe x > 0 conditions
+        x = np.round(wake_coos[:, :, 0, 0], 12)
+        yz = wake_coos[..., 1:3]
 
-        wdeltas, sp_sel = self.calc_wakes_spsel_x_yz(
-            algo, mdata, fdata, pdata, states_source_turbine, x, yz
+        wdeltas, st_sel = self.calc_wakes_x_yz(
+            algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
         for v, hdel in wdeltas.items():
@@ -171,16 +169,16 @@ class DistSlicedWakeModel(WakeModel):
                     f"Model '{self.name}': Missing wake superposition entry for variable '{v}', found {sorted(list(self.superp.keys()))}"
                 )
 
-            wake_deltas[v] = superp.calc_wakes_plus_wake(
+            wake_deltas[v] = superp.add_wake(
                 algo,
                 mdata,
                 fdata,
-                pdata,
-                states_source_turbine,
-                sp_sel,
+                tdata,
+                downwind_index,
+                st_sel,
                 v,
                 wake_deltas[v],
-                hdel[:, 0],
+                hdel,
             )
 
     def finalize_wake_deltas(
@@ -188,7 +186,6 @@ class DistSlicedWakeModel(WakeModel):
         algo,
         mdata,
         fdata,
-        pdata,
         amb_results,
         wake_deltas,
     ):
@@ -201,24 +198,21 @@ class DistSlicedWakeModel(WakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_points)
+            values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta
-            applies, values: numpy.ndarray with shape
-            (n_states, n_points, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_points) afterwards
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
 
         """
         for v, s in self.superp.items():
             wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, pdata, v, amb_results[v], wake_deltas[v]
+                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
             )

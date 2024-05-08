@@ -1,0 +1,232 @@
+Models
+======
+
+Model types
+-----------
+
+The results of *foxes* runs depend on a number of model choices by the user:
+
+* :ref:`Rotor models`: Evaluate the flow field at the rotor and compute ambient rotor equivalent quantities.
+* :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
+* :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
+* :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
+* :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
+* :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
+* :ref:`Turbine types`: Turbine types are turbine models that define the rotor and provide power and thrust coefficients.
+* :ref:`Point models`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states. 
+* :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
+
+All concrete models are stored in the so-called :code:`ModelBook` object under 
+a name string, see :ref:`this example<The model book>`.
+
+Rotor models
+------------
+Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
+background wind speed. See :ref:`here<Rotor model visualizations>` for a list of available
+models and rotor point visualizations.
+
+Turbine types
+-------------
+Turbine type models define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
+They are either chosen from the provided :ref:`static data<Power and thrust curves>` by their model name (e.g. *DTU10MW*), 
+or added to the model book. 
+
+For example, a turbine type of a 5 MW turbine based on a csv file with 
+columns *ws* for wind speed, *P* for power and *ct* for thrust 
+coefficients can be added as
+
+    .. code-block:: python
+
+        mbook = foxes.ModelBook()
+        mbook.turbine_types["turbine1"] = foxes.models.turbine_types.PCtFile(
+            "turbine1.csv",
+            col_ws="ws",
+            col_P="P",
+            col_ct="ct",
+            D=100.5,
+            H=120,
+            P_nominal=5000,
+            P_unit="kW",
+        )
+
+If the file name follows the convention 
+
+:code:`name-<power>MW-D<rotor diameter>-H<hub height>.csv`
+
+where `d` replaces the dot for digits, then the above could be reduced to
+
+    .. code-block:: python
+
+        mbook.turbine_types["turbine1"] = foxes.models.turbine_types.PCtFile(
+            "turbine1-5MW-D100d5-H120.csv",
+            col_ws="ws",
+            col_P="P",
+            col_ct="ct",
+        )
+
+Turbine type models can also be based on other input data, e.g. `cp` instead 
+of power, or other input files. The list of available turbine type classes
+can be found :ref:`here<foxes.models.turbine_types>` in the API. 
+
+Wake frames
+-----------
+Wake frames determine the path of wake propagation, for example parallel to the 
+wind direction at the rotor, or along a streamline, and the local coordinate system 
+that follows the centreline of the wake. 
+
+Wake frames also determine the downwind
+order of the turbines, so chosing straight wakes for cases with spatially 
+heterogeneous background flow can cause wrong results in multiple ways.
+
+The wake coordinates are defined as follows:
+
+* The origin is at the rotor centre,
+* the `x` coordinate folows the centreline path of the wake,
+* the `z` coordinate starts pointing upwards at the rotor, then follows the centreline orthogonally,
+* the `y` coordinate closes the right-handed coordinate frame, i.e., it follows from the cross product of `z` with `x`.
+
+The available wake frame classes are listed 
+:ref:`here in the API<foxes.models.wake_frames>`. The :ref:`default model book<The model book>` 
+contains many pre-defined wake frames, for example:
+
+* `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
+* `yawed`, `yawed_k002`, `yawed_k004`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
+* `streamlines_X`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `X = 1, 5, 10, 50, 100, 500` seconds. See :ref:`this example<Heterogeneous flow>`.
+* `timelines`, `timelines_X`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step of `X = 1s, 10s, 30s, 1min, 10min, 30min`. See :ref:`this example<Dynamic wakes 1>`.
+* `seq_dyn_wakes`, `seq_dyn_wakes_X`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step of `X = 1s, 10s, 30s, 1min, 10min, 30min`. See :ref:`this example<Dynamic wakes 2>`.
+
+Wake models
+-----------
+Wake models compute wake deltas for flow quantities in the wake. Wind speed deficits and turbulence 
+intensity deltas are often computed by two separate wake models, but could also stem from a single model. 
+
+The wake model classes can be found :ref:`here in the API<foxes.models.wake_models>`.
+They are organized into three sub-packages, according to their purpose and target variables: 
+
+* :ref:`wind<foxes.models.wake_models.wind>`: Wind deficit models, computing negative deltas for the wind speed variable `WS`,
+* :ref:`ti<foxes.models.wake_models.ti>`: Positive wake deltas acting on the variable `TI`, modelling the turbulence increase within the wake region,
+* :ref:`induction<foxes.models.wake_models.induction>`: Individual turbine induction models acting as wind speed deltas, which, in combination, model wind farm blockage effects.
+
+Note that `wind` and `ti` wake models affect downstream turbines, while `induction` models 
+mainly affect upstream and stream-orthogonal turbines. During calulations, a list of
+wake models is expected, so in principle, a wind deficit model, a TI wake model and a turbine
+induction model can be combined. If an induction model is included in the
+list of model selections, the :ref:`Iterative algorithm` has to be applied.
+
+All wake model classes are implemented according to their mathematical nature, i.e.,
+if applicable, they are derived from one of the following types:
+
+* :ref:`DistSlicedWakeModel<foxes.models.wake_models.DistSlicedWakeModel>`: The wake delta depends on the wake frame coordinate `x` differently than on `(y, z)`, e.g., the `x` dependency can be factorized.
+* :ref:`AxisymmetricWakeModel<foxes.models.wake_models.AxisymmetricWakeModel>`: Dist-sliced wake with axial symmetry, i.e., the wake can be described by `x` and a radial wake frame coordinate `r`.
+* :ref:`GaussianWakeModel<foxes.models.wake_models.GaussianWakeModel>`: Axisymmetric wake that follows a Gaussian function, where the standard deviation `sigma(x)` depends on `x` only.
+* :ref:`TopHatWakeModel<foxes.models.wake_models.TopHatWakeModel>`: Axisymmetric wake that is independent of `r` within the top-hat shape, and zero outside.
+
+The reasoning behind this is that the partial wakes models can then
+build upon the underlying shape of the wake.
+
+Wake superposition is part of the responsibility of the wake model. Most models expect
+a choice of the underlying :ref:`wake superposition model<foxes.models.wake_superpositions>`
+in their constructor, in terms of their respective name in the :ref:`model book<The model book>`.
+Examples are `ws_linear` for linear wind deficit superposition, or `ti_quadratic`
+for quadratic TI wake increase superposition.
+
+The list of wake models in the :ref:`default model book<The model book>` is long,
+but that is mainly due to the resulting combinations of wake model
+classes with superposition models and wake parameter choices.
+
+Partial wakes
+-------------
+Partial wakes models compute rotor disc averages of wake effects, i.e., 
+the partial wakes models calculate the rotor effective wake deltas. 
+
+Some of the partial wakes models make use of the mathematical structure of 
+the associated wake model:
+
+* :ref:`PartialCentre<foxes.models.partial_wakes.PartialCentre>`: Only evaluate wakes at rotor centres. This is fast, but not accurate.
+* :ref:`RotorPoints<foxes.models.partial_wakes.RotorPoints>`: Evaluate the wake model at exactly the rotor points, then take the average of the combined result. For large number of rotor points this is accurate, but potentially slow.
+* :ref:`PartialTopHat<foxes.models.partial_wakes.PartialTopHat>`: Compute the overlap of the wake circle with the rotor disc. This is mathematically exact and fast, but limited to wakes with top-hat shapes.
+* :ref:`PartialAxiwake<foxes.models.partial_wakes.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
+* :ref:`PartialSegregated<foxes.models.partial_wakes.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
+* :ref:`PartialGrid<foxes.models.partial_wakes.PartialGrid>`: Segregated partial wakes evaluated at points of a :ref:`grid-type rotor<GridRotor>` (which is usually not equal to the selected rotor model).
+
+In the :ref:`default model book<The model book>`, concrete instances of the above partial wakes models
+can be found under the names
+
+* `centre`: The centre point model,
+* `rotor_points`: The rotor points model,
+* `top_hat`: The top-hat model,
+* `axiwakeN`: The axiwake model, with `N = 2, 3, ..., 10, 20`, representing `n` steps for the discretization of the integral over each downstream rotor,
+* `gridN`: The grid model with `N = 4, 9, 16, 25, 36, ..., 100, 400` points.
+
+Partial wakes are now chosen when costructing the algorithm object.
+There are several ways of specifying partial wakes model choices for 
+the selected wake models:
+
+* by a dictionary, which maps wake model names to model choices (or default choices, if not found),
+* or by a list, where the mapping to the wake models is in order of appearance, 
+* or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
+* or by `None`, which means all models are mapped to the default choice.
+
+A verification of the different partial wakes models 
+is carried out in this example: :ref:`Partial wakes verification`
+All types approach the correct rotor average for high point
+counts, but with different efficiency.
+
+Turbine models
+--------------
+Each wind turbine within the wind farm can have individual turbine model choices. 
+For each state and turbine, those compute data from currently existing data. 
+
+The list of available turbine model classes can be found 
+:ref:`here in the API<foxes.models.turbine_models>`. For example:
+
+* :ref:`kTI<foxes.models.turbine_models.kTI>`: Computes the wake expansion coefficient `k` as a linear function of `TI`: `k = kb + kTI * TI`. All models that do not specify `k` explicitly (i.e, `k=None` in the constructor), will then use this result when computing wake deltas.
+* :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
+* :ref:`PowerMask<foxes.models.turbine_models.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see :ref:`this example<Power mask>`.
+* :ref:`SectorManagement<foxes.models.turbine_models.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see :ref:`this example<Wind sector management>`.
+* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and `YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
+* :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
+* :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
+
+Turbine types
+-------------
+Turbine types are turbine models that define basic rotor data, like rotor diameter,
+hub height and nominal power, and evaluate the power and thrust coefficient curves.
+
+The currently available turbine types are listed :ref:`here in the API<foxes.models.turbine_types>`.
+Notice that several inputs are supported, e.g. power or power coefficient curves, 
+air density dependent data, etc.
+
+Point models
+------------
+Calculate point-based data during the evaluation of `algo.calc_points()`, 
+or as a modification of ambient states.
+
+Point models can be added to ambient states objects, simply by the `+` operation.
+
+The list of available point models can be found :ref:`here in the API<foxes.models.point_models>`.
+For example:
+
+* :ref:`WakeDeltas<foxes.models.point_models.WakeDeltas>`: Subtract backgrounds from waked results.
+* :ref:`TKE2TI<foxes.models.point_models.TKE2TI>`: Compute `TI` from turbulent kinetic energy data, as for example provided by mesoscale simulations.
+
+Vertical profiles
+-----------------
+Analytical vertical profiles transform uniform ambient states into height dependent inflow.
+
+The list of available vertical profiles can be found :ref:`here in the API<foxes.models.vertical_profiles>`.
+they can be added to uniform ambient states as in the following example, here for
+a Monin-Obukhof dependent log-profile:
+
+    .. code-block:: python
+
+        states = foxes.input.states.StatesTable(
+            data_source="abl_states_6000.csv.gz",
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO, FV.MOL],
+            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.MOL: "mol"},
+            fixed_vars={FV.RHO: 1.225, FV.Z0: 0.05, FV.H: 100.0},
+            profiles={FV.WS: "ABLLogWsProfile"},
+        )
+
+Notice the required variable `FV.H`, denoting the reference height of the
+provided wind data, as well as roughness length `FV.Z0` and Monin-Obukhof length `FV.MOL`.

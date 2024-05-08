@@ -273,8 +273,8 @@ class DefaultConv(ConvVarDelta):
         """
         super().__init__(
             {
-                FV.REWS: 1e-5,
-                FV.TI: 1e-6,
-                FV.CT: 1e-6,
+                FV.REWS: 1e-6,
+                FV.TI: 1e-7,
+                FV.CT: 1e-7,
             }
         )

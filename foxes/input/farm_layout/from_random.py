@@ -3,18 +3,19 @@ import numpy as np
 from foxes.utils import random_xy_square
 from foxes.core import Turbine
 
+
 def add_random(
-        farm, 
-        n_turbines, 
-        min_dist, 
-        centre=[0, 0], 
-        seed=None,
-        verbosity=1, 
-        **turbine_parameters,
-    ):
+    farm,
+    n_turbines,
+    min_dist,
+    centre=[0, 0],
+    seed=None,
+    verbosity=1,
+    **turbine_parameters,
+):
     """
     Add turbines that lie randomly within a square
-    
+
     Parameters
     ----------
     farm: foxes.WindFarm

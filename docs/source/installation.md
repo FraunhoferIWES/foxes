@@ -1,6 +1,6 @@
 # Installation
 
-## Requirements
+## Installation via pip
 
 The supported Python versions are:
 
@@ -8,8 +8,7 @@ The supported Python versions are:
 - `Python 3.9`
 - `Python 3.10`
 - `Python 3.11`
-
-## Installation via pip
+- `Python 3.12`
 
 ### Virtual Python environment
 
@@ -59,6 +58,14 @@ pip install -e .
 The last line makes sure that all your code changes are included whenever importing `foxes`. Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
 ## Installation via conda
+
+The supported Python versions are:
+
+- `Python 3.8`
+- `Python 3.9`
+- `Python 3.10`
+- `Python 3.11`
+- `Python 3.12`
 
 ### Preparation
 

@@ -1,4 +1,6 @@
 import importlib
+import importlib.util
+import sys
 
 
 def import_module(name, package=None, hint=None):
@@ -29,3 +31,30 @@ def import_module(name, package=None, hint=None):
         mdl = name if package is None else f"{package}.{name}"
         hint = hint if hint is not None else f"pip install {name}"
         raise ModuleNotFoundError(f"Module '{mdl}' not found, maybe try '{hint}'")
+
+
+def load_module(name, path):
+    """
+    Imports a module from file path
+
+    Parameters
+    ----------
+    name: str
+        The name of the module
+    path: str
+        The path to the python file
+
+    Returns
+    -------
+    module:
+        The module object
+
+    :group: utils
+
+    """
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+
+    return module

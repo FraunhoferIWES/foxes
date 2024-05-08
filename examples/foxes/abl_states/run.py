@@ -26,15 +26,15 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="level4")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default="grid4", nargs="+"
     )
     parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Jensen_linear_k007"],
+        default=["CrespoHernandez_quadratic_k002", "Bastankhah2016_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument(
@@ -60,6 +60,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+    )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
 
@@ -88,13 +91,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
-        rotor_model=args.rotor,
+        states,
         wake_models=args.wakes,
+        rotor_model=args.rotor,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 

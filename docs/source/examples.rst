@@ -6,7 +6,6 @@ available in the `notebooks <https://github.com/FraunhoferIWES/foxes/tree/main/n
 folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github repository.
 
     .. toctree::
-        notebooks/overview
         notebooks/model_book
         notebooks/single_row
         notebooks/timeseries
@@ -21,3 +20,4 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/sequential
         notebooks/blockage_farm
         notebooks/blockage_comparison
+        notebooks/partial_wakes

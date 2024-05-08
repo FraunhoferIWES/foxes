@@ -45,10 +45,8 @@ class Bastankhah2014(GaussianWakeModel):
 
         Parameters
         ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind speed deficit superposition.
         k: float, optional
             The wake growth parameter k. If not given here
             it will be searched in the farm data.
@@ -70,8 +68,16 @@ class Bastankhah2014(GaussianWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        s = super().__repr__()
-        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        s = f"{type(self).__name__}"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}"
+        if k is None:
+            s += f", k_var={self.k_var}"
+        else:
+            s += f", {self.k_var}={k}"
+        s += ")"
         return s
 
     def sub_models(self):
@@ -104,38 +110,13 @@ class Bastankhah2014(GaussianWakeModel):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
-        """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        wake_deltas[FV.WS] = np.zeros((mdata.n_states, pdata.n_points), dtype=FC.DTYPE)
-
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
     ):
         """
@@ -146,72 +127,69 @@ class Bastankhah2014(GaussianWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         # get ct:
         ct = self.get_data(
             FV.CT,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # select targets:
-        sp_sel = (x > 1e-5) & (ct > 0.0)
-        if np.any(sp_sel):
+        st_sel = (x > 0) & (ct > 0)
+        if np.any(st_sel):
             # apply selection:
-            x = x[sp_sel]
-            ct = ct[sp_sel]
+            x = x[st_sel]
+            ct = ct[st_sel]
 
             # get D:
             D = self.get_data(
                 FV.D,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
-            )
-            D = D[sp_sel]
+            )[st_sel]
 
             # get k:
             k = self.get_data(
                 self.k_var,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="sw",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
-            )
-            k = k[sp_sel]
+            )[st_sel]
 
             # calculate sigma:
             # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
@@ -226,9 +204,9 @@ class Bastankhah2014(GaussianWakeModel):
 
         # case no targets:
         else:
-            sp_sel = np.zeros_like(x, dtype=bool)
-            n_sp = np.sum(sp_sel)
+            st_sel = np.zeros_like(x, dtype=bool)
+            n_sp = np.sum(st_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
 
-        return {FV.WS: (ampld, sigma)}, sp_sel
+        return {FV.WS: (ampld, sigma)}, st_sel

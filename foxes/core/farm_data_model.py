@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import numpy as np
 
 from .data_calc_model import DataCalcModel
 import foxes.constants as FC
@@ -51,6 +52,27 @@ class FarmDataModel(DataCalcModel):
         """
         return []
 
+    def ensure_variables(self, algo, mdata, fdata):
+        """
+        Add variables to fdata, initialized with NaN
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+
+        """
+        n_states = fdata.n_states
+        n_turbines = fdata.n_turbines
+        for v in self.output_farm_vars(algo):
+            if v not in fdata:
+                fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                fdata.dims[v] = (FC.STATE, FC.TURBINE)
+
     @abstractmethod
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -63,9 +85,9 @@ class FarmDataModel(DataCalcModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -218,9 +240,9 @@ class FarmDataModelList(FarmDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         parameters: list of dict, optional
             A list of parameter dicts, one for each model

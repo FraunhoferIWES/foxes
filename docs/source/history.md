@@ -463,5 +463,36 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New function `random_xy_square`, generates random xy positions with minimal distance
 - Examples:
   - New example: `random_timeseries`, computes a random farm in a random timeseries. Both sizes are defined by user input
+- Bug fixes:
+  - Fix for bug in `gen_states_fig_xz` and `gen_states_fig_xz` with parameter `x_direction`, which had no effect on the image
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)
+
+## v0.7
+
+- Python versions:
+  - Now supporting Python 3.12
+- Documentation:
+  - New page `Models`, summarizing and explaining the *foxes* model choices.
+- Core:
+  - Speed-up in comparison with version 0.6.x, by internally handling all turbine data in downwind order, and then translating it back to farm order once computations are complete.
+  - Internally, all point evaluation data is now translated into so called "target" data, where each target is understood as being composed of a certain number of target points. During wake computations, these are the points per rotor (as defined by partial wakes models). For computations at user given points, the points are interpreted as targets with a single target point each. Final point output data is then given to the user again with point index coodinates, i.e., in the same format as in previous versions.
+  - New data classes: `MData`, `FData`, `TData`, all derived from the foxes `Data` class. These specialize model, farm and target data, respectively, during model calculations.
+- Algorithms:
+  - All algorithm constructors now take `farm, states, wake_models` as the first three arguments. If no model book is given, the default `ModelBook()` will be used.
+  - Partial wakes are now chosen either 
+    - by a dictionary, which maps wake model names to model choices (or default choices, if not found),
+    - or by a list, where the mapping to the wake models is in order of appearance, 
+    - or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
+    - or by `None`, which means all models are mapped to the default choice.
+- Partial wakes:
+  - New `PartialSegregated` abstract model, from which the `PartialGrid` model is derived. Segregated models now average background results and wake deltas separatly, and then add the results. Notice that with the choice of `RotorPoints` partial wakes, the mathematically correct average over a discretized rotor is calculated. This is more accurate, but it may be slower than some models (e.g. for `PartialAxiWake` models) or not applicable for some rotor choices (e.g. the `LevelRotor`, where a wake average makes no sense). 
+- Outputs:
+  - New output `RotorPointPlot`, creating rotor point plots.
+- Notebooks:
+  - New notebook `rotor_models.ipynb`, visualizing rotor points.
+  - New notebook `partial_wakes.ipynb`, verifying partial wakes models.
+- Bug fixes:
+  - Various fixes here and there.
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7](https://github.com/FraunhoferIWES/foxes/commits/v0.7)

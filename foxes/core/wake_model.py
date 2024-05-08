@@ -1,6 +1,9 @@
 from abc import abstractmethod
+import numpy as np
 
 from foxes.utils import all_subclasses
+import foxes.variables as FV
+import foxes.constants as FC
 
 from .model import Model
 
@@ -13,70 +16,79 @@ class WakeModel(Model):
 
     """
 
-    @abstractmethod
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
+    @property
+    def affects_downwind(self):
         """
-        Initialize wake delta storage.
+        Flag for downwind or upwind effects
+        on other turbines
 
-        They are added on the fly to the wake_deltas dict.
+        Returns
+        -------
+        dwnd: bool
+            Flag for downwind effects by this model
+
+        """
+        return True
+
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+        """
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled
+            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
 
         """
-        pass
+        return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
 
     @abstractmethod
-    def contribute_to_wake_deltas(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         wake_coos,
         wake_deltas,
     ):
         """
-        Calculate the contribution to the wake deltas
-        by this wake model.
-
-        Modifies wake_deltas on the fly.
+        Modifies wake deltas at target points by
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
-            points, shape: (n_states, n_points, 3)
+            points, shape: (n_states, n_targets, n_tpoints, 3)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
 
         """
         pass
@@ -86,7 +98,6 @@ class WakeModel(Model):
         algo,
         mdata,
         fdata,
-        pdata,
         amb_results,
         wake_deltas,
     ):
@@ -99,21 +110,18 @@ class WakeModel(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
         amb_results: dict
             The ambient results, key: variable name str,
-            values: numpy.ndarray with shape (n_states, n_points)
+            values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
         wake_deltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the wake delta
-            applies, values: numpy.ndarray with shape
-            (n_states, n_points, ...) before evaluation,
-            numpy.ndarray with shape (n_states, n_points) afterwards
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
 
         """
         pass
@@ -152,3 +160,26 @@ class WakeModel(Model):
                 )
             )
             raise KeyError(estr)
+
+
+class TurbineInductionModel(WakeModel):
+    """
+    Abstract base class for turbine induction models.
+
+    :group: core
+
+    """
+
+    @property
+    def affects_downwind(self):
+        """
+        Flag for downwind or upwind effects
+        on other turbines
+
+        Returns
+        -------
+        dwnd: bool
+            Flag for downwind effects by this model
+
+        """
+        return False

@@ -25,6 +25,31 @@ TNAME = "tname"
 :group: foxes.constants
 """
 
+TARGET = "target"
+""" Target identifier
+:group: foxes.constants
+"""
+
+TARGETS = "targets"
+""" Targets identifier
+:group: foxes.constants
+"""
+
+TPOINT = "target_point"
+""" Target point identifier
+:group: foxes.constants
+"""
+
+TPOINTS = "target_points"
+""" Points per target identifier
+:group: foxes.constants
+"""
+
+TWEIGHTS = "tpoint_weights"
+""" Target point weights identifier
+:group: foxes.constants
+"""
+
 POINT = "point"
 """ Point identifier
 :group: foxes.constants
@@ -35,23 +60,8 @@ POINTS = "points"
 :group: foxes.constants
 """
 
-RPOINT = "rotor_point"
-""" Rotor point identifier
-:group: foxes.constants
-"""
-
-RPOINTS = "rotor_points"
-""" Rotor points identifier
-:group: foxes.constants
-"""
-
-RWEIGHTS = "rotor_weights"
-""" Rotor point weights identifier
-:group: foxes.constants
-"""
-
-AMB_RPOINT_RESULTS = "amb_rpoint_res"
-""" Identified for ambient rotor point results
+AMB_TARGET_RESULTS = "amb_target_res"
+""" Identified for ambient target results
 :group: foxes.constants
 """
 
@@ -81,18 +91,23 @@ STATES_SEL = "states_sel"
 :group: foxes.constants
 """
 
-STATE_SOURCE_TURBINE = "state_source_turbine"
-"""Identifier for the source turbines per state
-:group: foxes.constants
-"""
-
 STATE_TURBINE = "state-turbine"
 """Identifier for state-turbine dimensions
 :group: foxes.constants
 """
 
-STATE_POINT = "state-point"
-"""Identifier for state-point dimensions
+STATE_TARGET = "state-target"
+"""Identifier for state-target dimensions
+:group: foxes.constants
+"""
+
+STATE_TARGET_TPOINT = "state-target-tpoint"
+"""Identifier for state-target-tpoints dimensions
+:group: foxes.constants
+"""
+
+STATE_SOURCE_ORDERI = "state-source-orderi"
+"""Identifier for order index of wake causing turbines
 :group: foxes.constants
 """
 

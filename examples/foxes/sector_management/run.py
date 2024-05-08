@@ -35,7 +35,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-w",
@@ -68,6 +68,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -92,10 +95,11 @@ if __name__ == "__main__":
     )
 
     """
-    o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-    fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
+        o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
+        fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20])
+        plt.show()
+        plt.close(fig)
     """
 
     farm = foxes.WindFarm()
@@ -108,21 +112,34 @@ if __name__ == "__main__":
     )
 
     """
-    ax = foxes.output.FarmLayoutOutput(farm).get_figure()
-    plt.show()
-    plt.close(ax.get_figure())
+    if not args.nofig:
+        ax = foxes.output.FarmLayoutOutput(farm).get_figure()
+        plt.show()
+        plt.close(ax.get_figure())
     """
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
+
+    outputs = [
+        FV.WD,
+        FV.AMB_WD,
+        FV.H,
+        FV.AMB_REWS,
+        FV.REWS,
+        FV.AMB_P,
+        FV.MAX_P,
+        FV.P,
+        FV.WEIGHT,
+    ]
 
     with DaskRunner(
         scheduler=args.scheduler,
@@ -130,7 +147,7 @@ if __name__ == "__main__":
         threads_per_worker=args.threads_per_worker,
     ) as runner:
         time0 = time.time()
-        farm_results = runner.run(algo.calc_farm)
+        farm_results = runner.run(algo.calc_farm, kwargs={"outputs": outputs})
         time1 = time.time()
 
     print("\nCalc time =", time1 - time0, "\n")
@@ -140,27 +157,28 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     sel = fr[FV.MAX_P].dropna().index
     fr = fr.loc[sel]
-    print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.MAX_P, FV.P, FV.WEIGHT]])
+    print(fr)
 
-    o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(
-        16,
-        FV.P,
-        [100, 1000, 2000, 4000, 5001, 7000],
-        turbine=0,
-        title="Power turbine 0",
-        figsize=(12, 6),
-        rect=[0.05, 0.1, 0.4, 0.8],
-    )
+    if not args.nofig:
+        o = foxes.output.RosePlotOutput(farm_results)
+        fig = o.get_figure(
+            16,
+            FV.P,
+            [100, 1000, 2000, 4000, 5001, 7000],
+            turbine=0,
+            title="Power turbine 0",
+            figsize=(12, 6),
+            rect=[0.05, 0.1, 0.4, 0.8],
+        )
 
-    o = foxes.output.RosePlotOutput(farm_results)
-    fig = o.get_figure(
-        16,
-        FV.P,
-        [100, 1000, 2000, 4000, 5001, 7000],
-        turbine=1,
-        title="Power turbine 1",
-        fig=fig,
-        rect=[0.35, 0.1, 0.8, 0.8],
-    )
-    plt.show()
+        o = foxes.output.RosePlotOutput(farm_results)
+        fig = o.get_figure(
+            16,
+            FV.P,
+            [100, 1000, 2000, 4000, 5001, 7000],
+            turbine=1,
+            title="Power turbine 1",
+            fig=fig,
+            rect=[0.35, 0.1, 0.8, 0.8],
+        )
+        plt.show()

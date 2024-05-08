@@ -1,5 +1,3 @@
-import numpy as np
-
 from foxes.core import TurbineModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -33,7 +31,7 @@ class YAW2YAWM(TurbineModel):
         return [FV.YAWM]
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -43,13 +41,13 @@ class YAW2YAWM(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -58,12 +56,8 @@ class YAW2YAWM(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        yaw = self.get_data(
-            FV.YAW, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
-        )[st_sel]
-        wd = self.get_data(
-            FV.WD, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
-        )[st_sel]
+        yaw = fdata[FV.YAW][st_sel]
+        wd = fdata[FV.WD][st_sel]
 
         yawm = fdata[FV.YAWM]
         yawm[st_sel] = delta_wd(wd, yaw)

@@ -60,6 +60,30 @@ class TurbineType(TurbineModel):
                 f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}"
             )
 
+    def __repr__(self):
+        a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}"
+        return f"{type(self).__name__}({a})"
+
+    def modify_cutin(self, modify_ct, modify_P):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+
+        Parameters
+        ----------
+        variable: str
+            The target variable
+        modify_ct: bool
+            Flag for modification of the ct curve
+        modify_P: bool
+            Flag for modification of the power curve
+
+        """
+        if modify_ct or modify_P:
+            raise NotImplementedError(
+                f"Turbine type '{self.name}': Continuous cutin not implemented for modify_ct = {modify_ct}, modify_P = {modify_P}"
+            )
+
     @classmethod
     def new(cls, ttype_type, *args, **kwargs):
         """

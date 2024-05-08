@@ -192,13 +192,13 @@ class MultiHeightStates(States):
             isorg = False
         else:
             isorg = True
+            data = self.data_source
 
         if self.states_sel is not None:
             data = data.iloc[self.states_sel]
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
-        else:
-            data = data
+
         self._N = len(data.index)
         self._inds = data.index.to_numpy()
 
@@ -308,7 +308,7 @@ class MultiHeightStates(States):
         """
         return self._weights
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -319,24 +319,29 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.TData
+            The target point data
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
         h = mdata[self.H]
-        z = pdata[FC.POINTS][:, :, 2]
+        z = tdata[FC.TARGETS][..., 2].reshape(n_states, n_targets * n_tpoints)
         n_h = len(h)
         vrs = list(mdata[self.VARS])
+        n_vars = len(vrs)
 
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
         np.fill_diagonal(coeffs, 1.0)
@@ -364,24 +369,29 @@ class MultiHeightStates(States):
                 raise KeyError(
                     f"States '{self.name}': Found variable '{FV.WD}', but missing variable '{FV.WS}'"
                 )
-            uv = np.einsum("shd,sph->spd", uvh, ires)
+            uv = np.einsum("shd,sph->spd", uvh, ires).reshape(
+                n_states, n_targets, n_tpoints, 2
+            )
             del uvh
 
-        ires = np.einsum("svh,sph->svp", mdata[self.DATA], ires)
+        ires = np.einsum("svh,sph->vsp", mdata[self.DATA], ires).reshape(
+            n_vars, n_states, n_targets, n_tpoints
+        )
 
         results = {}
         for v in self.ovars:
-            results[v] = pdata[v]
             if has_wd and v == FV.WD:
                 results[v] = uv2wd(uv, axis=-1)
             elif has_wd and v == FV.WS:
                 results[v] = np.linalg.norm(uv, axis=-1)
             elif v in self.fixed_vars:
+                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
                 results[v][:] = self.fixed_vars[v]
             elif v in self._solo.keys():
-                results[v][:] = mdata[self.var(v)][:, None]
+                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+                results[v][:] = mdata[self.var(v)][:, None, None]
             else:
-                results[v] = ires[:, vrs.index(v)]
+                results[v] = ires[vrs.index(v)]
 
         return results
 

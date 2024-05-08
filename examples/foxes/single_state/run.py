@@ -52,12 +52,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
 
@@ -80,7 +83,10 @@ if __name__ == "__main__":
 
     # create states
     states = foxes.input.states.SingleStateStates(
-        ws=args.ws, wd=args.wd, ti=args.ti, rho=args.rho
+        ws=args.ws,
+        wd=args.wd,
+        ti=args.ti,
+        rho=args.rho,
     )
 
     # create wind farm
@@ -108,15 +114,15 @@ if __name__ == "__main__":
     # create algorithm
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
-        partial_wakes_model=args.pwakes,
-        chunks=None,
+        partial_wakes=args.pwakes,
         wake_mirrors=mirrors,
+        mbook=mbook,
+        chunks=None,
         verbosity=1,
     )
 
@@ -137,6 +143,7 @@ if __name__ == "__main__":
         farm_df[
             [
                 FV.X,
+                FV.ORDER,
                 FV.WD,
                 FV.AMB_REWS,
                 FV.REWS,
@@ -176,21 +183,25 @@ if __name__ == "__main__":
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
-    # horizontal flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xy(args.var, resolution=10, rotor_color="red", figsize=(10, 3))
-    fig = next(g)
-    plt.show()
-    plt.close(fig)
+    if not args.nofig:
 
-    # vertical flow plot
-    o = foxes.output.FlowPlots2D(algo, farm_results)
-    g = o.gen_states_fig_xz(
-        args.var,
-        resolution=10,
-        x_direction=np.mod(args.wd, 360.0),
-        rotor_color="red",
-        figsize=(10, 3),
-    )
-    fig = next(g)
-    plt.show()
+        # horizontal flow plot
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_xy(
+            args.var, resolution=10, rotor_color="red", figsize=(10, 3)
+        )
+        fig = next(g)
+        plt.show()
+        plt.close(fig)
+
+        # vertical flow plot
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        g = o.gen_states_fig_xz(
+            args.var,
+            resolution=10,
+            x_direction=np.mod(args.wd, 360.0),
+            rotor_color="red",
+            figsize=(10, 3),
+        )
+        fig = next(g)
+        plt.show()

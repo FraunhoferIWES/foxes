@@ -5,13 +5,13 @@ from iwopy.interfaces.pymoo import Optimizer_pymoo
 
 import foxes
 from foxes.opt.problems import OptFarmVars
-from foxes.opt.objectives import MaxFarmPower, MinimalMaxTI
+from foxes.opt.objectives import MaxFarmPower
 import foxes.variables as FV
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-nt", "--n_t", help="The number of turbines", type=int, default=10
+        "-nt", "--n_t", help="The number of turbines", type=int, default=9
     )
     parser.add_argument(
         "-t",
@@ -24,18 +24,16 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear", "CrespoHernandez_quadratic"],
+        default=["CrespoHernandez_quadratic", "Bastankhah2016_linear"],
         nargs="+",
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
-    parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="auto"
-    )
+    parser.add_argument("-p", "--pwakes", help="The partial wakes model", default=None)
     parser.add_argument("--ws", help="The wind speed", type=float, default=9.0)
     parser.add_argument("--wd", help="The wind direction", type=float, default=270.0)
-    parser.add_argument("--ti", help="The TI value", type=float, default=0.08)
+    parser.add_argument("--ti", help="The TI value", type=float, default=0.03)
     parser.add_argument("--rho", help="The air density", type=float, default=1.225)
     parser.add_argument(
         "-d",
@@ -91,13 +89,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="yawed",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         verbosity=0,
     )
 
@@ -110,8 +108,7 @@ if __name__ == "__main__":
     ) as runner:
         problem = OptFarmVars("opt_yawm", algo, runner=runner)
         problem.add_var(FV.YAWM, float, 0.0, -40.0, 40.0, level="turbine")
-        # problem.add_objective(MaxFarmPower(problem))
-        problem.add_objective(MinimalMaxTI(problem))
+        problem.add_objective(MaxFarmPower(problem))
         problem.initialize()
 
         solver = Optimizer_pymoo(

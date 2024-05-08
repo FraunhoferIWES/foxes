@@ -1,7 +1,7 @@
 import numpy as np
+from copy import deepcopy
 
-import foxes.variables as FV
-from foxes.core import FarmDataModel
+from foxes.core import FarmDataModel, TData
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -11,12 +11,6 @@ class FarmWakesCalculation(FarmDataModel):
     :group: algorithms.downwind.models
 
     """
-
-    def __init__(self):
-        """
-        Constructor.
-        """
-        super().__init__()
 
     def output_farm_vars(self, algo):
         """
@@ -37,33 +31,6 @@ class FarmWakesCalculation(FarmDataModel):
             algo
         ) + algo.farm_controller.output_farm_vars(algo)
         return list(dict.fromkeys(ovars))
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return [self.pwakes]
-
-    def initialize(self, algo, verbosity=0):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        self.pwakes = algo.partial_wakes_model
-        super().initialize(algo, verbosity)
 
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -88,33 +55,98 @@ class FarmWakesCalculation(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        torder = fdata[FV.ORDER]
-        n_order = torder.shape[1]
-        n_states = mdata.n_states
+        # collect ambient rotor results and weights:
+        rotor = algo.rotor_model
+        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
+        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
 
-        def _evaluate(algo, mdata, fdata, pdata, wdeltas, o):
-            self.pwakes.evaluate_results(
-                algo, mdata, fdata, pdata, wdeltas, states_turbine=o
+        # generate all wake evaluation points
+        # (n_states, n_order, n_rpoints)
+        pwake2tdata = {}
+        for wname, wmodel in algo.wake_models.items():
+            pwake = algo.partial_wakes[wname]
+            if pwake.name not in pwake2tdata:
+                tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
+                pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
+
+        def _get_wdata(tdatap, wdeltas, s):
+            """Helper function for wake data extraction"""
+            tdata = tdatap.get_slice(s, keep=True)
+            wdelta = {v: d[s] for v, d in wdeltas.items()}
+            return tdata, wdelta
+
+        def _evaluate(tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake):
+            """Helper function for data evaluation at turbines"""
+            wres = pwake.finalize_wakes(
+                algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi
             )
 
-            trbs = np.zeros((n_states, algo.n_turbines), dtype=bool)
-            np.put_along_axis(trbs, o[:, None], True, axis=1)
+            hres = {v: d[:, oi, None] for v, d in wake_res.items()}
+            for v, d in wres.items():
+                if v in wake_res:
+                    hres[v] += d[:, None]
+
+            rotor.eval_rpoint_results(
+                algo, mdata, fdata, hres, weights, downwind_index=oi
+            )
 
             res = algo.farm_controller.calculate(
-                algo, mdata, fdata, pre_rotor=False, st_sel=trbs
+                algo, mdata, fdata, pre_rotor=False, downwind_index=oi
             )
             fdata.update(res)
 
-        wdeltas, pdata = self.pwakes.new_wake_deltas(algo, mdata, fdata)
-        for oi in range(n_order):
-            o = torder[:, oi]
+        wake_res = deepcopy(amb_res)
+        n_turbines = mdata.n_turbines
+        run_up = None
+        run_down = None
+        for wname, wmodel in algo.wake_models.items():
+            pwake = algo.partial_wakes[wname]
+            tdatap = pwake2tdata[pwake.name]
+            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
 
-            if oi > 0:
-                _evaluate(algo, mdata, fdata, pdata, wdeltas, o)
+            # downwind:
+            if wmodel.affects_downwind:
+                run_up = wname
+                for oi in range(n_turbines):
+                    if oi > 0:
+                        _evaluate(
+                            tdatap,
+                            amb_res,
+                            weights,
+                            wake_res,
+                            wdeltas,
+                            oi,
+                            wmodel,
+                            pwake,
+                        )
 
-            if oi < n_order - 1:
-                self.pwakes.contribute_to_wake_deltas(
-                    algo, mdata, fdata, pdata, o, wdeltas
+                    if oi < n_turbines - 1:
+                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
+                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+
+            # upwind:
+            else:
+                run_down = wname
+                for oi in range(n_turbines - 1, -1, -1):
+                    if oi < n_turbines - 1:
+                        _evaluate(
+                            tdatap,
+                            amb_res,
+                            weights,
+                            wake_res,
+                            wdeltas,
+                            oi,
+                            wmodel,
+                            pwake,
+                        )
+
+                    if oi > 0:
+                        tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
+                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+
+            if run_up is not None and run_down is not None:
+                raise KeyError(
+                    f"Wake model '{run_up}' is an upwind model, wake model '{run_down}' is a downwind model: Require iterative algorithm"
                 )
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
