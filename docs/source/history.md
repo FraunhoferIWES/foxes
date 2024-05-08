@@ -487,6 +487,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
     - or by `None`, which means all models are mapped to the default choice.
 - Partial wakes:
   - New `PartialSegregated` abstract model, from which the `PartialGrid` model is derived. Segregated models now average background results and wake deltas separatly, and then add the results. Notice that with the choice of `RotorPoints` partial wakes, the mathematically correct average over a discretized rotor is calculated. This is more accurate, but it may be slower than some models (e.g. for `PartialAxiWake` models) or not applicable for some rotor choices (e.g. the `LevelRotor`, where a wake average makes no sense). 
+- Outputs:
+  - New output `RotorPointPlot`, creating rotor point plots.
+- Notebooks:
+  - New notebook `rotor_models.ipynb`, visualizing rotor points.
+  - New notebook `partial_wakes.ipynb`, verifying partial wakes models.
 - Bug fixes:
   - Various fixes here and there.
 

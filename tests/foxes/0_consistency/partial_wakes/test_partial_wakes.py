@@ -15,14 +15,14 @@ def test():
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
     cases = [
-        ("grid100", "rotor_points", None),
+        ("grid400", "rotor_points", None),
         ("grid4", "rotor_points", 0.15),
-        ("grid9", "rotor_points", 0.06),
-        ("centre", "axiwake5", 0.04),
-        ("centre", "axiwake10", 0.038),
-        ("centre", "grid9", 0.06),
-        ("centre", "grid16", 0.04),
-        ("centre", "grid36", 0.016),
+        ("grid9", "rotor_points", 0.07),
+        ("centre", "axiwake5", 0.03),
+        ("centre", "axiwake10", 0.0081),
+        ("centre", "grid9", 0.07),
+        ("centre", "grid16", 0.05),
+        ("centre", "grid36", 0.025),
     ]
 
     ck = {FC.STATE: c}
