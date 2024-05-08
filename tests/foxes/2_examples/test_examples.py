@@ -13,20 +13,21 @@ def test():
     rpath = rdir / "run_all.py"
     print(rpath)
 
-    run_all = load_module("run_all", rpath)
+    if rpath.is_file():
+        run_all = load_module("run_all", rpath)
 
-    args = argparse.Namespace()
-    args.include = None
-    args.exclude = []
-    args.incopt = False
-    args.forceopt = False
-    args.step = 0
-    args.dry = False
-    args.Dry = False
-    args.nofig = True
+        args = argparse.Namespace()
+        args.include = None
+        args.exclude = []
+        args.incopt = False
+        args.forceopt = False
+        args.step = 0
+        args.dry = False
+        args.Dry = False
+        args.nofig = True
 
-    os.chdir(rdir)
-    run_all.run(args)
+        os.chdir(rdir)
+        run_all.run(args)
 
 
 if __name__ == "__main__":
