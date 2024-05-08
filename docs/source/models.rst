@@ -4,15 +4,17 @@ Models
 Model types
 -----------
 
-Any *foxes* run relies on a number of model choices by the user:
+The results of *foxes* runs depend on a number of model choices by the user:
 
 * :ref:`Rotor models`: Evaluate the flow field at the rotor and compute ambient rotor equivalent quantities.
 * :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
 * :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
-* *turbine models*: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. For example, depending on the rotor effective wind speed and wind direction, a turbine model might correct the power and thrust coefficients that were provided by the turbine type model (wind sector management).
-* *point models* (optional): They calculate point-based data, like those from the ambient input states. For example, if WRF based input data provides a time series of turbulent kinetic energy (TKE) this can be translated into turbulence intensity (TI) by a point model, as required by other models in `foxes`.
+* :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
+* :ref:`Turbine types`: Turbine types are turbine models that define the rotor and provide power and thrust coefficients.
+* :ref:`Point models`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states. 
+* :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
 
 All concrete models are stored in the so-called :code:`ModelBook` object under 
 a name string, see :ref:`this example<The model book>`.
@@ -166,6 +168,65 @@ the selected wake models:
 * or by `None`, which means all models are mapped to the default choice.
 
 A verification of the different partial wakes models 
-is carried out here: :ref:`Partial wakes verification`
+is carried out in this example: :ref:`Partial wakes verification`
 All types approach the correct rotor average for high point
 counts, but with different efficiency.
+
+Turbine models
+--------------
+Each wind turbine within the wind farm can have individual turbine model choices. 
+For each state and turbine, those compute data from currently existing data. 
+
+The list of available turbine model classes can be found 
+:ref:`here in the API<foxes.models.turbine_models>`. For example:
+
+* :ref:`kTI<foxes.models.turbine_models.kTI>`: Computes the wake expansion coefficient `k` as a linear function of `TI`: `k = kb + kTI * TI`. All models that do not specify `k` explicitly (i.e, `k=None` in the constructor), will then use this result when computing wake deltas.
+* :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
+* :ref:`PowerMask<foxes.models.turbine_models.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see :ref:`this example<Power mask>`.
+* :ref:`SectorManagement<foxes.models.turbine_models.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see :ref:`this example<Wind sector management>`.
+* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and `YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
+* :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
+* :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
+
+Turbine types
+-------------
+Turbine types are turbine models that define basic rotor data, like rotor diameter,
+hub height and nominal power, and evaluate the power and thrust coefficient curves.
+
+The currently available turbine types are listed :ref:`here in the API<foxes.models.turbine_types>`.
+Notice that several inputs are supported, e.g. power or power coefficient curves, 
+air density dependent data, etc.
+
+Point models
+------------
+Calculate point-based data during the evaluation of `algo.calc_points()`, 
+or as a modification of ambient states.
+
+Point models can be added to ambient states objects, simply by the `+` operation.
+
+The list of available point models can be found :ref:`here in the API<foxes.models.point_models>`.
+For example:
+
+* :ref:`WakeDeltas<foxes.models.point_models.WakeDeltas>`: Subtract backgrounds from waked results.
+* :ref:`TKE2TI<foxes.models.point_models.TKE2TI>`: Compute `TI` from turbulent kinetic energy data, as for example provided by mesoscale simulations.
+
+Vertical profiles
+-----------------
+Analytical vertical profiles transform uniform ambient states into height dependent inflow.
+
+The list of available vertical profiles can be found :ref:`here in the API<foxes.models.vertical_profiles>`.
+they can be added to uniform ambient states as in the following example, here for
+a Monin-Obukhof dependent log-profile:
+
+    .. code-block:: python
+
+        states = foxes.input.states.StatesTable(
+            data_source="abl_states_6000.csv.gz",
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO, FV.MOL],
+            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.MOL: "mol"},
+            fixed_vars={FV.RHO: 1.225, FV.Z0: 0.05, FV.H: 100.0},
+            profiles={FV.WS: "ABLLogWsProfile"},
+        )
+
+Notice the required variable `FV.H`, denoting the reference height of the
+provided wind data, as well as roughness length `FV.Z0` and Monin-Obukhof length `FV.MOL`.
