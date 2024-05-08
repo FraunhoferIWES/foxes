@@ -496,3 +496,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Various fixes here and there.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7](https://github.com/FraunhoferIWES/foxes/commits/v0.7)
+
+## v0.7.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.1](https://github.com/FraunhoferIWES/foxes/commits/v0.7.1)
