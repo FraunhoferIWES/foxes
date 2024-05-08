@@ -47,7 +47,7 @@ class Calculator(TurbineModel):
         self.func = func
 
     def __repr__(self):
-        a = f"{self.in_vars}, {self.out:vars}"
+        a = f"{self.in_vars}, {self.out_vars}"
         return f"{type(self).__name__}({a})"
     
     def output_farm_vars(self, algo):

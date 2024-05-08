@@ -62,6 +62,11 @@ class PowerMask(TurbineModel):
         self.P_lim = P_lim
         self.induction = induction
 
+    def __repr__(self):
+        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        a = f"var_ws_P={self.var_ws_P}, P_lim={self.P_lim}, induction={iname}"
+        return f"{type(self).__name__}({a})"
+    
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

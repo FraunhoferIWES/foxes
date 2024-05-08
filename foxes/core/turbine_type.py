@@ -60,6 +60,10 @@ class TurbineType(TurbineModel):
                 f"Turbine type '{self.name}': Unkown P_unit '{P_unit}', expecting {list(FC.P_UNITS.keys())}"
             )
 
+    def __repr__(self):
+        a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}"
+        return f"{type(self).__name__}({a})"
+    
     def modify_cutin(self, modify_ct, modify_P):
         """
         Modify the data such that a discontinuity

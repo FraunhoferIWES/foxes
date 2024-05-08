@@ -13,7 +13,6 @@ class YAWM2YAW(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

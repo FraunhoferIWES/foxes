@@ -101,6 +101,10 @@ class PCtFile(TurbineType):
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
 
+    def __repr__(self):
+        a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
+        return f"{type(self).__name__}({a})"
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -279,7 +283,7 @@ class PCtFile(TurbineType):
             # that in the partial load region the
             # correct value is reconstructed:
             rho = fdata[FV.RHO][st_sel]
-            rews2 *= (self.rho / rho) ** 0.5
+            #rews2 *= (self.rho / rho) ** 0.5
             rews3 *= (self.rho / rho) ** (1.0 / 3.0)
             del rho
 

@@ -18,7 +18,6 @@ class Thrust2Ct(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def __init__(self, thrust_var=FV.T, var_ws_ct=FV.REWS2):
         """
         Constructor.
@@ -35,6 +34,10 @@ class Thrust2Ct(TurbineModel):
         self.thrust_var = thrust_var
         self.WSCT = var_ws_ct
 
+    def __repr__(self):
+        a = f"thrust_var={self.thrust_var}, var_ws_ct={self.WSCT}"
+        return f"{type(self).__name__}({a})"
+    
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

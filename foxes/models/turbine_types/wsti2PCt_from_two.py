@@ -123,6 +123,10 @@ class WsTI2PCtFromTwo(TurbineType):
         self._P = None
         self._ct = None
 
+    def __repr__(self):
+        a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
+        return f"{type(self).__name__}({a})"
+    
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
