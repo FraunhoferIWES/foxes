@@ -79,8 +79,7 @@ class YawedWakes(WakeFrame):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        s = super().__repr__()
-        s += f"("
+        s = f"{type(self).__name__}("
         if k is None:
             s += f"k_var={self.k_var}"
         else:

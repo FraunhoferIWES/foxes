@@ -47,10 +47,8 @@ class TurbOParkWake(GaussianWakeModel):
 
         Parameters
         ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind deficit superposition
         A: float
             The wake growth parameter A.
         sbeta_factor: float
@@ -72,8 +70,9 @@ class TurbOParkWake(GaussianWakeModel):
         self.induction = induction
 
     def __repr__(self):
-        s = super().__repr__()
-        s += f"(A={self.A}, sp={self.superpositions[FV.WS]})"
+        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        s = f"{type(self).__name__}"
+        s += f"({self.superpositions[FV.WS]}, A={self.A}, induction={iname})"
         return s
 
     def sub_models(self):
@@ -278,10 +277,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         Parameters
         ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind deficit superposition
         dx: float
             The step size of the integral
         A: float, optional
@@ -310,8 +307,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.induction = induction
 
     def __repr__(self):
-        s = super().__repr__()
-        s += f"(ti={self.ti_var}, dx={self.dx}, A={self.A}, sp={self.superpositions[FV.WS]})"
+        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        s = f"{type(self).__name__}({self.superpositions[FV.WS]}"
+        s += f", ti={self.ti_var}, dx={self.dx}, A={self.A}, induction={iname})"
         return s
 
     def sub_models(self):

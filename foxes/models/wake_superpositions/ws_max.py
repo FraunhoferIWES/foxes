@@ -22,7 +22,6 @@ class WSMax(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
-
     def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
         """
         Constructor.
@@ -39,11 +38,15 @@ class WSMax(WakeSuperposition):
 
         """
         super().__init__()
-
+        
         self.scale_amb = scale_amb
         self.lim_low = lim_low
         self.lim_high = lim_high
 
+    def __repr__(self):
+        a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
+        return f"{type(self).__name__}({a})"
+    
     def input_farm_vars(self, algo):
         """
         The variables which are needed for running

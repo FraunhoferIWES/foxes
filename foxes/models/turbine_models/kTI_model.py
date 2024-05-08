@@ -51,10 +51,12 @@ class kTI(TurbineModel):
         setattr(self, FV.KB, 0 if kb is None else kb)
 
     def __repr__(self):
-        return (
-            super().__repr__()
-            + f"(k_var={self.k_var}, kTI={getattr(self, FV.KTI)}, ti={self.ti_var})"
-        )
+        kti = getattr(self, FV.KTI)
+        kb = getattr(self, FV.KB)
+        ti = getattr(self, self.ti_var)
+        tiv = f", ti_val={ti}" if ti is not None else ""
+        a = f"kTI={kti}, kb={kb}, ti_var={self.ti_var}{tiv}, k_var={self.k_var}"
+        return f"{type(self).__name__}({a})"
 
     def output_farm_vars(self, algo):
         """

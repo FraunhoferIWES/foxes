@@ -47,6 +47,9 @@ class Timelines(WakeFrame):
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 
+    def __repr__(self):
+        return f"{type(self).__name__}(dt_min={self.dt_min})"
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.

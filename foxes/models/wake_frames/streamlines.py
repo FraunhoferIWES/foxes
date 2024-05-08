@@ -51,7 +51,7 @@ class Streamlines2D(WakeFrame):
         self.SDAT = self.var("SDAT")
 
     def __repr__(self):
-        return super().__repr__() + f"(step={self.step})"
+        return f"{type(self).__name__}(step={self.step})"
 
     def _calc_streamlines(self, algo, mdata, fdata):
         """

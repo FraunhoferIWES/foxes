@@ -55,7 +55,7 @@ class GridRotor(RotorModel):
 
     def __repr__(self):
         r = "" if self.reduce else ", reduce=False"
-        return f"{self.name} {type(self).__name__}(n={self.n}){r}"
+        return f"{type(self).__name__}(n={self.n}){r}"
 
     def initialize(self, algo, verbosity=0):
         """

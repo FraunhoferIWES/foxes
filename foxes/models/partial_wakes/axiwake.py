@@ -41,7 +41,7 @@ class PartialAxiwake(PartialCentre):
         self.n = n
 
     def __repr__(self):
-        return super().__repr__() + f"(n={self.n})"
+        return f"{type(self).__name__}(n={self.n})"
 
     def contribute(
         self,

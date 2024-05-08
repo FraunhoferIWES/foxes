@@ -43,6 +43,10 @@ class RankineHalfBody(TurbineInductionModel):
         super().__init__()
         self.induction = induction
 
+    def __repr__(self):
+        iname = self.induction if isinstance(self.induction, str) else self.induction.name
+        return f"{type(self).__name__}(induction={iname})"
+
     def sub_models(self):
         """
         List of all sub-models

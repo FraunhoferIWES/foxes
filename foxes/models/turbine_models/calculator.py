@@ -22,7 +22,6 @@ class Calculator(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def __init__(self, in_vars, out_vars, func, **kwargs):
         """
         Constructor.
@@ -47,6 +46,10 @@ class Calculator(TurbineModel):
         self.out_vars = out_vars
         self.func = func
 
+    def __repr__(self):
+        a = f"{self.in_vars}, {self.out:vars}"
+        return f"{type(self).__name__}({a})"
+    
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

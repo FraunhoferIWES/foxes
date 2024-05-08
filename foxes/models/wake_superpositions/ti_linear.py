@@ -17,7 +17,6 @@ class TILinear(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
-
     def __init__(self, superp_to_amb="quadratic"):
         """
         Constructor.
@@ -32,6 +31,9 @@ class TILinear(WakeSuperposition):
         super().__init__()
         self.superp_to_amb = superp_to_amb
 
+    def __repr__(self):
+        return f"{type(self).__name__}(superp_to_amb={self.superp_to_amb})"
+    
     def add_wake(
         self,
         algo,

@@ -37,7 +37,7 @@ class PartialSegregated(PartialWakesModel):
         self.W = self.var(FV.WEIGHT)
         
     def __repr__(self):
-        return super().__repr__() + f"[{self.rotor}]"
+        return f"{type(self).__name__}(rotor_model={self.rotor.name})"
 
     def sub_models(self):
         """

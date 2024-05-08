@@ -27,7 +27,6 @@ class WSProduct(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
-
     def __init__(self, lim_low=None, lim_high=None):
         """
         Constructor.
@@ -45,6 +44,10 @@ class WSProduct(WakeSuperposition):
         self.lim_low = lim_low
         self.lim_high = lim_high
 
+    def __repr__(self):
+        a = f"lim_low={self.lim_low}, lim_high={self.lim_high}"
+        return f"{type(self).__name__}({a})"
+    
     def input_farm_vars(self, algo):
         """
         The variables which are needed for running

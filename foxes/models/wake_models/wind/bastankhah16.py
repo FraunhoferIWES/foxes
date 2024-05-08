@@ -426,10 +426,8 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Parameters
         ----------
-        superposition: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind deficit superposition
         k: float
             The wake growth parameter k. If not given here
             it will be searched in the farm data, by default None
@@ -458,8 +456,9 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        s = super().__repr__()
-        s += f"(sp={self.superpositions[FV.WS]}"
+        iname = self.model_pars.get("induction", "Madsen")
+        s = f"{type(self).__name__}"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}"
         if k is None:
             s += f", k_var={self.k_var}"
         else:

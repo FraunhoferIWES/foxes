@@ -19,7 +19,6 @@ class TIPow(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
-
     def __init__(self, pow, superp_to_amb="quadratic"):
         """
         Constructor.
@@ -37,6 +36,9 @@ class TIPow(WakeSuperposition):
         self.pow = pow
         self.superp_to_amb = superp_to_amb
 
+    def __repr__(self):
+        return f"{type(self).__name__}(pow={self.pow}, superp_to_amb={self.superp_to_amb})"
+    
     def add_wake(
         self,
         algo,

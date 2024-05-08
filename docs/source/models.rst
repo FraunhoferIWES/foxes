@@ -20,8 +20,8 @@ a name string, see :ref:`this example<The model book>`.
 Rotor models
 ------------
 Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
-background wind speed. See :ref:`Rotor model visualizations` for detailed explanations
-and rotor point visualizations.
+background wind speed. See :ref:`here<Rotor model visualizations>` for a list of available
+models and rotor point visualizations.
 
 Turbine types
 -------------
@@ -146,3 +146,13 @@ the associated wake model:
 * :ref:`PartialAxiwake<foxes.models.partial_wakes.PartialAxiwake>`: Compute the numerical integral of axi-symmetric wakes with the rotor disc. This needs less evaluation points than grid-type wake averaging.
 * :ref:`PartialSegregated<foxes.models.partial_wakes.PartialSegregated>`: Abstract base class for segregated wake averaging, which means adding the averaged wake to the averaged background result (in contrast to `RotorPoints`).
 * :ref:`PartialGrid<foxes.models.partial_wakes.PartialGrid>`: Segregated partial wakes evaluated at points of a :ref:`grid-type rotor<GridRotor>` (which is usually not equal to the selected rotor model).
+
+In the :ref:`default model book<The model book>`, concrete instances of the above partial wakes models
+can be found under the names
+
+* `centre`: The centre point model,
+* `rotor_points`: The rotor points model,
+* `top_hat`: The top-hat model,
+* `axiwakeN`: The axiwake model, with `N = 2, 3, ..., 10, 20`, representing `n` steps for the discretization of the integral over each downstream rotor,
+* `gridN`: The grid model with `N = 4, 9, 16, 25, 36, ..., 100, 400` points.
+
