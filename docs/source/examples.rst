@@ -20,3 +20,4 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/sequential
         notebooks/blockage_farm
         notebooks/blockage_comparison
+        notebooks/partial_wakes

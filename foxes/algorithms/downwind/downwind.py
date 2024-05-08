@@ -312,14 +312,14 @@ class Downwind(Algorithm):
         mlist = FarmDataModelList(models=[])
         mlist.name = f"{self.name}_calc"
 
-        # 0) set initial data:
-        mlist.models.append(self.get_model("InitFarmData")())
-        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
-        # 1) run pre-rotor turbine models via farm controller:
+        # 0) run pre-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
         calc_pars[-1]["pre_rotor"] = True
+
+        # 1) set initial data:
+        mlist.models.append(self.get_model("InitFarmData")())
+        calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)

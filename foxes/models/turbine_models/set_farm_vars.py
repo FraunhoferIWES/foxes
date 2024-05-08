@@ -142,8 +142,12 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        order = fdata[FV.ORDER]
-        ssel = fdata[FV.ORDER_SSEL]
+        if self.pre_rotor:
+            order = np.s_[:]
+            ssel = np.s_[:]
+        else:
+            order = fdata[FV.ORDER]
+            ssel = fdata[FV.ORDER_SSEL]
 
         bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
         bsel[st_sel] = True
@@ -152,6 +156,36 @@ class SetFarmVars(TurbineModel):
             data = mdata[self.var(v)][ssel, order]
             hsel = ~np.isnan(data)
             tsel = bsel & hsel
+
+            # special case of turbine positions:
+            if v in [FV.X, FV.Y]:
+                i = [FV.X, FV.Y].index(v)
+                for ti in np.where(tsel)[1]:
+                    t = algo.farm.turbines[ti]
+                    if len(t.xy.shape) == 1:
+                        xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
+                        xy[:] = t.xy[None, :]
+                        t.xy = xy
+                    i0 = fdata.states_i0()
+                    hsel = tsel[:, ti]
+                    ssel = i0 + np.where(hsel)[0]
+                    t.xy[ssel, i] = data[hsel, ti] 
+
+            # special case of rotor diameter and hub height:
+            if v in [FV.D, FV.H]:
+                for ti in np.where(tsel)[1]:
+                    t = algo.farm.turbines[ti]
+                    x = np.zeros(algo.n_states, dtype=FC.DTYPE)
+                    if v == FV.D:
+                        x[:] = t.D
+                        t.D = x
+                    else:
+                        x[:] = t.H
+                        t.H = x
+                    i0 = fdata.states_i0()
+                    hsel = tsel[:, ti]
+                    ssel = i0 + np.where(hsel)[0]
+                    x[ssel] = data[hsel, ti] 
 
             fdata[v][tsel] = data[tsel]
 

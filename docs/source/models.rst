@@ -156,3 +156,16 @@ can be found under the names
 * `axiwakeN`: The axiwake model, with `N = 2, 3, ..., 10, 20`, representing `n` steps for the discretization of the integral over each downstream rotor,
 * `gridN`: The grid model with `N = 4, 9, 16, 25, 36, ..., 100, 400` points.
 
+Partial wakes are now chosen when costructing the algorithm object.
+There are several ways of specifying partial wakes model choices for 
+the selected wake models:
+
+* by a dictionary, which maps wake model names to model choices (or default choices, if not found),
+* or by a list, where the mapping to the wake models is in order of appearance, 
+* or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
+* or by `None`, which means all models are mapped to the default choice.
+
+A verification of the different partial wakes models 
+is carried out here: :ref:`Partial wakes verification`
+All types approach the correct rotor average for high point
+counts, but with different efficiency.
