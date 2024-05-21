@@ -12,7 +12,6 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
-* :ref:`Turbine types`: Turbine types are turbine models that define the rotor and provide power and thrust coefficients.
 * :ref:`Point models`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states. 
 * :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
 
@@ -22,8 +21,7 @@ a name string, see :ref:`this example<The model book>`.
 Rotor models
 ------------
 Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
-background wind speed. See :ref:`here<Rotor model visualizations>` for a list of available
-models and rotor point visualizations.
+background wind speed. The list of available models and also rotor point visualizations can be found :ref:`in this example<Rotor model visualizations>`.
 
 Turbine types
 -------------
@@ -187,15 +185,6 @@ The list of available turbine model classes can be found
 * :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and `YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
-
-Turbine types
--------------
-Turbine types are turbine models that define basic rotor data, like rotor diameter,
-hub height and nominal power, and evaluate the power and thrust coefficient curves.
-
-The currently available turbine types are listed :ref:`here in the API<foxes.models.turbine_types>`.
-Notice that several inputs are supported, e.g. power or power coefficient curves, 
-air density dependent data, etc.
 
 Point models
 ------------
