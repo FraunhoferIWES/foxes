@@ -499,5 +499,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7.1
 
-
+- Utils:
+  - New utility `Factory`, creating class instances from selections of allowed parameter choises
+  - New utility `FDict`, a dictionary that supports factories
+- Bug fixes:
+  - Bug fixed with `TurbOParkIX`, that prevented it from running
+  
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.1](https://github.com/FraunhoferIWES/foxes/commits/v0.7.1)

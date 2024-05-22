@@ -1,6 +1,6 @@
 import foxes.models as fm
 import foxes.variables as FV
-from foxes.utils import Dict
+from foxes.utils import Dict, FDict
 
 from foxes.core import (
     PointDataModel,
@@ -79,14 +79,18 @@ class ModelBook:
         self.point_models = Dict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
-        self.rotor_models = Dict(name="rotor_models")
+        self.rotor_models = FDict(name="rotor_models")
         rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor(calc_vars=rvars)
         nlist = list(range(2, 11)) + [20]
+        self.rotor_models.add_factory(
+            fm.rotor_models.GridRotor,
+            "grid<n2>",
+            kwargs=dict(calc_vars=rvars, reduce=True),
+            var2arg={"n2": "n"},
+            n2={str(n**2): n for n in nlist},
+        )
         for n in nlist:
-            self.rotor_models[f"grid{n**2}"] = fm.rotor_models.GridRotor(
-                calc_vars=rvars, n=n, reduce=True
-            )
             self.rotor_models[f"level{n}"] = fm.rotor_models.LevelRotor(
                 calc_vars=rvars, n=n, reduce=True
             )
@@ -237,7 +241,7 @@ class ModelBook:
             fm.axial_induction_models.MadsenAxialInduction()
         )
 
-        self.wake_models = Dict(name="wake_models")
+        self.wake_models = FDict(name="wake_models")
         slist = [
             "linear",
             "linear_lim",
@@ -256,140 +260,131 @@ class ModelBook:
             "product",
             "product_lim",
         ]
-        for s in slist:
-            self.wake_models[f"Jensen_{s}"] = fm.wake_models.wind.JensenWake(
-                superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k002"] = fm.wake_models.wind.JensenWake(
-                k=0.02, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k004"] = fm.wake_models.wind.JensenWake(
-                k=0.04, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k007"] = fm.wake_models.wind.JensenWake(
-                k=0.07, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"Jensen_{s}_k0075"] = fm.wake_models.wind.JensenWake(
-                k=0.075, superposition=f"ws_{s}"
-            )
 
-            self.wake_models[f"Bastankhah2014_{s}"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    superposition=f"ws_{s}", sbeta_factor=0.2
-                )
-            )
-            self.wake_models[f"Bastankhah2014_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}"
-                )
-            )
-            self.wake_models[f"Bastankhah2014_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}"
-                )
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.JensenWake,
+            "Jensen_<superposition>",
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.JensenWake,
+            "Jensen_<superposition>_<k>",
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04, "k007": 0.07, "k0075": 0.075},
+        )
 
-            self.wake_models[f"Bastankhah2014B_{s}"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    superposition=f"ws_{s}", sbeta_factor=0.2, induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2014B_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.02, sbeta_factor=0.2, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2014B_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.04, sbeta_factor=0.2, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah2014_<superposition>",
+            kwargs=dict(sbeta_factor=0.2),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah2014_<superposition>_<k>",
+            kwargs=dict(sbeta_factor=0.2),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah2014B_<superposition>",
+            kwargs=dict(sbeta_factor=0.2, induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah2014B_<superposition>_<k>",
+            kwargs=dict(sbeta_factor=0.2, induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah025_<superposition>",
+            kwargs=dict(sbeta_factor=0.25),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah025_<superposition>_<k>",
+            kwargs=dict(sbeta_factor=0.25),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah025B_<superposition>",
+            kwargs=dict(sbeta_factor=0.25, induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "Bastankhah025B_<superposition>_<k>",
+            kwargs=dict(sbeta_factor=0.25, induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
 
-            self.wake_models[f"Bastankhah025_{s}"] = fm.wake_models.wind.Bastankhah2014(
-                superposition=f"ws_{s}", sbeta_factor=0.25
-            )
-            self.wake_models[f"Bastankhah025_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25
-                )
-            )
-            self.wake_models[f"Bastankhah025_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25
-                )
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2016,
+            "Bastankhah2016_<superposition>",
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2016,
+            "Bastankhah2016_<superposition>_<k>",
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2016,
+            "Bastankhah2016B_<superposition>",
+            kwargs=dict(induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.Bastankhah2016,
+            "Bastankhah2016B_<superposition>_<k>",
+            kwargs=dict(induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
 
-            self.wake_models[f"Bastankhah025B_{s}"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah025B_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.02, superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah025B_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2014(
-                    k=0.04, superposition=f"ws_{s}", sbeta_factor=0.25, induction="Betz"
-                )
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWake,
+            "TurbOPark_<superposition>",
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWake,
+            "TurbOPark_<superposition>_<k>",
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWake,
+            "TurbOParkB_<superposition>",
+            kwargs=dict(induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWake,
+            "TurbOParkB_<superposition>_<k>",
+            kwargs=dict(induction="Betz"),
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+        )
 
-            self.wake_models[f"Bastankhah2016_{s}"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}")
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.02)
-            )
-            self.wake_models[f"Bastankhah2016_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2016(superposition=f"ws_{s}", k=0.04)
-            )
-
-            self.wake_models[f"Bastankhah2016B_{s}"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2016B_{s}_k002"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", k=0.02, induction="Betz"
-                )
-            )
-            self.wake_models[f"Bastankhah2016B_{s}_k004"] = (
-                fm.wake_models.wind.Bastankhah2016(
-                    superposition=f"ws_{s}", k=0.04, induction="Betz"
-                )
-            )
-
-            self.wake_models[f"TurbOPark_{s}_A002"] = fm.wake_models.wind.TurbOParkWake(
-                A=0.02, superposition=f"ws_{s}"
-            )
-            self.wake_models[f"TurbOPark_{s}_A004"] = fm.wake_models.wind.TurbOParkWake(
-                A=0.04, superposition=f"ws_{s}"
-            )
-
-            self.wake_models[f"TurbOParkB_{s}_A002"] = (
-                fm.wake_models.wind.TurbOParkWake(
-                    A=0.02, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-            self.wake_models[f"TurbOParkB_{s}_A004"] = (
-                fm.wake_models.wind.TurbOParkWake(
-                    A=0.04, superposition=f"ws_{s}", induction="Betz"
-                )
-            )
-
-            As = [0.02, 0.04]
-            dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
-            for A in As:
-                for dx in dxs:
-                    a = str(A).replace(".", "")
-                    d = str(dx).replace(".", "") if dx < 1 else int(dx)
-                    self.wake_models[f"TurbOParkIX_{s}_A{a}_dx{d}"] = (
-                        fm.wake_models.wind.TurbOParkWakeIX(
-                            A=A, superposition=f"ws_{s}", dx=dx
-                        )
-                    )
+        dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWakeIX,
+            "TurbOParkIX_<superposition>_<k>_<dx>",
+            superposition={s: f"ws_{s}" for s in slist},
+            k={"k002": 0.02, "k004": 0.04},
+            dx={f"dx{str(dx).replace('.', '') if dx < 1 else int(dx)}": dx 
+                for dx in dxs},
+        )
 
         slist = ["linear", "quadratic", "cubic", "quartic", "max"]
         for s in slist:
@@ -468,6 +463,7 @@ class ModelBook:
             String that has to be part of the model name
 
         """
+
         for k in sorted(list(self.sources.keys())):
             ms = self.sources[k]
             if subset is None or k in subset:
@@ -477,6 +473,11 @@ class ModelBook:
                     for mname in sorted(list(ms.keys())):
                         if search is None or search in mname:
                             print(f"{mname}: {ms[mname]}")
+                    if isinstance(ms, FDict):
+                        for f in ms.factories:
+                            if search is None or search in f.name_template:
+                                print()
+                                print(f)
                 else:
                     print("(none)")
                 print()

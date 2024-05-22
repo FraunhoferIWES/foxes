@@ -6,7 +6,7 @@ from foxes.utils import all_subclasses
 import foxes.constants as FC
 import foxes.variables as FV
 
-from .data import Data
+from .data import MData, FData, TData
 from .model import Model
 
 
@@ -37,9 +37,9 @@ class WakeFrame(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -252,7 +252,7 @@ class WakeFrame(Model):
         pts = self.get_centreline_points(algo, mdata, fdata, downwind_index, xpts)
 
         # run ambient calculation:
-        tdata = Data.from_points(
+        tdata = TData.from_points(
             pts,
             data={
                 v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs
