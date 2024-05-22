@@ -19,8 +19,8 @@ class Factory:
     var2arg: dict
         Mapping from variable to constructor argument
     options: dict
-        For each variable, e.g. A, B or C, the dict that
-        maps a str to the actual value
+        For each variable, e.g. A, B or C, the list or dict 
+        or function that maps a str to the actual value
 
     :group: utils
     
@@ -51,8 +51,8 @@ class Factory:
         var2arg: dict
             Mapping from variable to constructor argument
         options: dict
-            For each variable, e.g. A, B or C, the dict that
-            maps a str to the actual value
+            For each variable, e.g. A, B or C, the list or dict 
+            or function that maps a str to the actual value
         
         """
         self.base = base
@@ -83,23 +83,23 @@ class Factory:
                     _find_var(tmpl[j+1:])
         
         _find_var(name_template[i+1:])
-        for v in wlist[1:]:
-            if v not in options:
-                raise KeyError(f"Factory '{name_template}': Missing options for variable '{v}'")
         self._wlist = wlist
         
         self.options = Dict(name=f"{self.base_name}_options")
         for v, o  in options.items():
             if v not in self.variables:
-                raise KeyError(f"Factory '{name_template}': Missing variable '{v}' in template")
+                raise KeyError(f"Factory '{name_template}': Variable '{v}' found in options, but not in template")
             if isinstance(o, list) or isinstance(o, tuple):
                 o = {str(k): k for k in o}
-            elif not isinstance(o, dict):
-                raise TypeError(f"Factory '{name_template}': Options for variable '{v}' are not a dict, but {type(o).__name__}")
-            for k in o.keys():
-                if not isinstance(k, str):
-                    raise TypeError(f"Factory '{name_template}': Found option for variable '{v}' that is not a str, {k}")
-            self.options[v] = Dict(name=f"{self.base_name}_options_{v}", **o)
+            if isinstance(o, dict):
+                for k in o.keys():
+                    if not isinstance(k, str):
+                        raise TypeError(f"Factory '{name_template}': Found option for variable '{v}' that is not a str, {k}")
+                self.options[v] = Dict(name=f"{self.base_name}_options_{v}", **o)
+            elif hasattr(o, "__call__"):
+                self.options[v] = o
+            else:
+                raise ValueError(f"Factory '{name_template}': Variable '{v}' has option of type '{type(v).__name__}'. Only list, tuple, dict or function are supported")
 
     @property
     def base_name(self):
