@@ -18,6 +18,9 @@ class Factory:
         Fixed arguments for the base class
     var2arg: dict
         Mapping from variable to constructor argument
+    hints: dict
+        Hints for print_toc, only for variables for which the
+        options are functions or missing
     options: dict
         For each variable, e.g. A, B or C, the list or dict 
         or function that maps a str to the actual value
@@ -32,6 +35,7 @@ class Factory:
             args=(),
             kwargs={},
             var2arg={},
+            hints={},
             **options,
         ):
         """
@@ -50,6 +54,9 @@ class Factory:
             Fixed arguments for the base class
         var2arg: dict
             Mapping from variable to constructor argument
+        hints: dict
+            Hints for print_toc, only for variables for which the
+            options are functions or missing
         options: dict
             For each variable, e.g. A, B or C, the list or dict 
             or function that maps a str to the actual value
@@ -60,18 +67,20 @@ class Factory:
         self.args = args
         self.kwargs = kwargs
         self.var2arg = var2arg
+        self.hints = hints
 
         i = name_template.find("<")
         if i < 0:
             raise ValueError(f"Factory '{name_template}': Expecting at least one variable in template, pattern '<..>'")
 
         self._bname = name_template[:i]
+        pre = [""]
         wlist = [self._bname]
         while wlist[0][-1] == "_":
              wlist[0] =  wlist[0][:-1]
 
         def _find_var(tmpl):
-            nonlocal wlist
+            nonlocal wlist, pre
             i = tmpl.find(">")
             if i < 0:
                 raise ValueError(f"Factory '{name_template}': Missing closing bracket '>' in '{tmpl}'")
@@ -80,10 +89,12 @@ class Factory:
                 tmpl = tmpl[i+1:]
                 j = tmpl.find("<")
                 if j >= 0:
+                    pre.append(tmpl[:j].replace("_", ""))
                     _find_var(tmpl[j+1:])
         
         _find_var(name_template[i+1:])
         self._wlist = wlist
+        self._pre = pre
         
         self.options = Dict(name=f"{self.base_name}_options")
         for v, o  in options.items():
@@ -131,12 +142,38 @@ class Factory:
         """ String representation """
         s = f"{self.name_template}: {self.base.__name__} with"
         for k, d in self.kwargs.items():
-            s += f"\n  {k}={d},"
+            s += f"\n  {k}={d}"
         for v in self.variables:
-            s += f"\n  {v} from {list(self.options[v])}"
-            s += "," if v != self.variables[-1] else ""
+            if v in self.options and isinstance(self.options[v], dict):
+                s += f"\n  {v} from {list(self.options[v])}"
+            else:
+                s += f"\n  {v}={self.hints.get(v, '(value)')}"
         return s
     
+    def check_match(self, name):
+        """
+        Tests if a name matches the template
+        
+        Parameters
+        ----------
+        name: str
+            The name to be checked
+
+        Returns
+        -------
+        success: bool
+            True if the template is matched
+        
+        """
+        if len(name) < len(self._bname) or name[:len(self._bname)] != self._bname:
+            return False
+        
+        wlist = name[len(self._bname):].split("_")
+        if len(wlist) != len(self.variables):
+            return False
+        
+        return True
+
     def construct(self, name):
         """
         Create an object of the base class.
@@ -158,11 +195,23 @@ class Factory:
         wlist = name[len(self._bname):].split("_")
         if len(wlist) != len(self.variables):
             raise ValueError(f"Factory '{self.name_template}': Name '{name}' not matching template")
-        
+        for i in range(len(wlist)):
+            l = len(self._pre[i])
+            if l > 0 and wlist[i][:l] != self._pre[i]:
+                raise ValueError(f"Factory '{self.name_template}': Name '{name}' not matching template")
+            wlist[i] = wlist[i][l:]
+
         kwargs = {}
         for i, v in enumerate(self.variables):
             w = self.var2arg.get(v, v)
-            kwargs[w] = self.options[v][wlist[i]]
+            if v in self.options:
+                o = self.options[v]
+                if hasattr(o, "__call__"):
+                    kwargs[w] = o(wlist[i])
+                else:
+                    kwargs[w] = self.options[v][wlist[i]]
+            else:
+                kwargs[w] = wlist[i]
         kwargs.update(self.kwargs)
 
         return self.base(*self.args, **kwargs)
@@ -173,13 +222,15 @@ class FDict(Dict):
     
     Attributes
     ----------
+    store_created: bool
+        Flag for storing created objects
     factories: list of foxes.utils.Factory
         The factories
     
     :group: utils
     
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, store_created=True, **kwargs):
         """
         Constructor.
         
@@ -187,11 +238,14 @@ class FDict(Dict):
         ----------
         args: tuple, optional
             Parameters for the base class
+        store_created: bool
+            Flag for storing created objects
         kwargs: dict, optional
             Parameters for the base class
         
         """
         super().__init__(*args, **kwargs)
+        self.store_created = store_created
         self.factories = []
 
     def add_factory(self, *args, **kwargs):
@@ -207,6 +261,14 @@ class FDict(Dict):
         
         """
         self.factories.append(Factory(*args, **kwargs))
+    
+    def __contains__(self, key):
+        found = super().__contains__(key)
+        if not found:
+            for f in self.factories:
+                if f.check_match(key):
+                    return True
+        return found
 
     def __getitem__(self, key):
         try:
@@ -214,7 +276,10 @@ class FDict(Dict):
         except KeyError:
             for f in self.factories:
                 try:
-                    return f.construct(key)
+                    obj = f.construct(key)
+                    if self.store_created:
+                        self[key] = obj
+                    return obj
                 except ValueError:
                     pass
 

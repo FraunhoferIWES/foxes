@@ -1,3 +1,4 @@
+from math import sqrt
 import foxes.models as fm
 import foxes.variables as FV
 from foxes.utils import Dict, FDict
@@ -82,18 +83,43 @@ class ModelBook:
         self.rotor_models = FDict(name="rotor_models")
         rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor(calc_vars=rvars)
-        nlist = list(range(2, 11)) + [20]
+
+        def _n2n(n2):
+            n2 = float(n2)
+            n = int(sqrt(n2))
+            if n**2 != n2:
+                raise Exception(f"GridRotor factory: Value {n2} is not the square of an integer")
+            return n
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>",
             kwargs=dict(calc_vars=rvars, reduce=True),
             var2arg={"n2": "n"},
-            n2={str(n**2): n for n in nlist},
+            n2=_n2n,
+            hints={"n2": "(Number of points in square grid)"},
         )
-        for n in nlist:
-            self.rotor_models[f"level{n}"] = fm.rotor_models.LevelRotor(
-                calc_vars=rvars, n=n, reduce=True
-            )
+        self.rotor_models.add_factory(
+            fm.rotor_models.GridRotor,
+            "raw_grid<n2>",
+            kwargs=dict(calc_vars=rvars, reduce=False),
+            var2arg={"n2": "n"},
+            n2=_n2n,
+            hints={"n2": "(Number of points in square grid)"},
+        )
+        self.rotor_models.add_factory(
+            fm.rotor_models.LevelRotor,
+            "level<n>",
+            kwargs=dict(calc_vars=rvars, reduce=True),
+            n=lambda x: int(x),
+            hints={"n": "(Number of vertical levels)"},
+        )
+        self.rotor_models.add_factory(
+            fm.rotor_models.LevelRotor,
+            "raw_level<n>",
+            kwargs=dict(calc_vars=rvars, reduce=False),
+            n=lambda x: int(x),
+            hints={"n": "(Number of vertical levels)"},
+        )
 
         self.turbine_types = Dict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
@@ -112,21 +138,46 @@ class ModelBook:
         if Pct_file is not None:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
-        self.turbine_models = Dict(
+        self.turbine_models = FDict(
             name="turbine_models",
             kTI=fm.turbine_models.kTI(),
-            kTI_02=fm.turbine_models.kTI(kTI=0.2),
-            kTI_04=fm.turbine_models.kTI(kTI=0.4),
-            kTI_05=fm.turbine_models.kTI(kTI=0.5),
             kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
-            kTI_amb_02=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.2),
-            kTI_amb_04=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.4),
-            kTI_amb_05=fm.turbine_models.kTI(ti_var=FV.AMB_TI, kTI=0.5),
             thrust2ct=fm.turbine_models.Thrust2Ct(),
             PMask=fm.turbine_models.PowerMask(),
             yaw2yawm=fm.turbine_models.YAW2YAWM(),
             yawm2yaw=fm.turbine_models.YAWM2YAW(),
         )
+        self.turbine_models.add_factory(
+            fm.turbine_models.kTI,
+            "kTI_<kTI>",
+            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+        )
+        self.turbine_models.add_factory(
+            fm.turbine_models.kTI,
+            "kTI_amb_<kTI>",
+            kwargs=dict(ti_var=FV.AMB_TI),
+            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+        )
+        self.turbine_models.add_factory(
+            fm.turbine_models.kTI,
+            "kTI_<kTI>_<kb>",
+            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"kTI": "(Value, e.g. 004 for 0.04)",
+                   "kb": "(Value, e.g. 004 for 0.04)"},
+        )
+        self.turbine_models.add_factory(
+            fm.turbine_models.kTI,
+            "kTI_amb_<kTI>_<kb>",
+            kwargs=dict(ti_var=FV.AMB_TI),
+            kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"kTI": "(Value, e.g. 004 for 0.04)",
+                   "kb": "(Value, e.g. 004 for 0.04)"},
+        )
+
         self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(
             {
                 f"{FV.WD}_HH": FV.WD,
@@ -149,58 +200,71 @@ class ModelBook:
             basic_ctrl=fm.farm_controllers.BasicFarmController(),
         )
 
-        self.partial_wakes = Dict(
+        self.partial_wakes = FDict(
             name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             centre=fm.partial_wakes.PartialCentre(),
         )
-        nlst = list(range(2, 11)) + [20]
-        for n in nlst:
-            self.partial_wakes[f"axiwake{n}"] = fm.partial_wakes.PartialAxiwake(n)
-        for n in nlist:
-            self.partial_wakes[f"grid{n**2}"] = fm.partial_wakes.PartialGrid(n=n)
+        self.partial_wakes.add_factory(
+            fm.partial_wakes.PartialAxiwake,
+            "axiwake<n>",
+            n=lambda x: int(x),
+            hints={"n": "(Number of evaluation points)"},
+        )
+        self.partial_wakes.add_factory(
+            fm.partial_wakes.PartialGrid,
+            "grid<n2>",
+            var2arg={"n2": "n"},
+            n2=_n2n,
+            hints={"n2": "(Number of points in square grid)"},
+        )
 
-        self.wake_frames = Dict(
+        self.wake_frames = FDict(
             name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
             yawed=fm.wake_frames.YawedWakes(),
-            yawed_k002=fm.wake_frames.YawedWakes(k=0.02),
-            yawed_k004=fm.wake_frames.YawedWakes(k=0.04),
         )
-        stps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0]
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}"] = fm.wake_frames.Streamlines2D(
-                step=s
-            )
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}_yawed"] = fm.wake_frames.YawedWakes(
-                base_frame=fm.wake_frames.Streamlines2D(step=s)
-            )
-        for s in stps:
-            self.wake_frames[f"streamlines_{int(s)}_farmo"] = fm.wake_frames.FarmOrder(
-                base_frame=fm.wake_frames.Streamlines2D(step=s)
-            )
-        dtlist = [
-            ("1s", 1 / 60),
-            ("10s", 1 / 6),
-            ("30s", 0.5),
-            ("1min", 1),
-            ("10min", 10),
-            ("30min", 30),
-        ]
+        self.wake_frames.add_factory(
+            fm.wake_frames.YawedWakes,
+            "yawed_k<k>",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"k": "(Value, e.g. 004 for 0.04)"},
+        )
+        self.wake_frames.add_factory(
+            fm.wake_frames.Streamlines2D,
+            "streamlines_<step>",
+            step=lambda x: float(x),
+            hints={"step": "(Step size in m)"},
+        )
+        self.wake_frames.add_factory(
+            fm.wake_frames.Streamlines2D,
+            "streamlines_<step>",
+            step=lambda x: float(x),
+            hints={"step": "(Step size in m)"},
+        )
+
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
-        for s, t in dtlist:
-            self.wake_frames[f"timelines_{s}"] = fm.wake_frames.Timelines(dt_min=t)
-        self.wake_frames["timelines_1km"] = fm.wake_frames.Timelines(
-            max_wake_length=1000.0
+        def _todt(x):
+            if x[-1] == "s":
+                return float(x[:-1])/60
+            elif x[-3:] == "min":
+                return float(x[:-3])
+        self.wake_frames.add_factory(
+            fm.wake_frames.Timelines,
+            "timelines_<dt>",
+            dt=_todt,
+            var2arg={"dt": "dt_min"},
+            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
-        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
-        for s, t in dtlist:
-            self.wake_frames[f"seq_dyn_wakes_{s}"] = fm.wake_frames.SeqDynamicWakes(
-                dt_min=t
-            )
+        self.wake_frames.add_factory(
+            fm.wake_frames.SeqDynamicWakes,
+            "seq_dyn_wakes_<dt>",
+            dt=_todt,
+            var2arg={"dt": "dt_min"},
+            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
+        )
 
         self.wake_superpositions = Dict(
             name="wake_superpositions",
@@ -264,13 +328,16 @@ class ModelBook:
         self.wake_models.add_factory(
             fm.wake_models.wind.JensenWake,
             "Jensen_<superposition>",
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.JensenWake,
-            "Jensen_<superposition>_<k>",
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04, "k007": 0.07, "k0075": 0.075},
+            "Jensen_<superposition>_k<k>",
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
 
         self.wake_models.add_factory(
