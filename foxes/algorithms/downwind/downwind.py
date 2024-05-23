@@ -217,17 +217,17 @@ class Downwind(Algorithm):
             print(deco)
             print(f"  wakes:")
             for i, w in enumerate(self.wake_models.values()):
-                print(f"    {i}) {w}")
+                print(f"    {i}) {w.name}: {w}")
             print(deco)
             print(f"  partial wakes:")
             for i, (w, p) in enumerate(self.partial_wakes.items()):
-                print(f"    {i}) {w}: {p}")
+                print(f"    {i}) {w}: {p.name}, {p}")
             print(deco)
             print(f"  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
-                print(f"    {i}) {m} [pre-rotor]")
+                print(f"    {i}) {m.name}: {m} [pre-rotor]")
             for i, m in enumerate(self.farm_controller.post_rotor_models.models):
-                print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m}")
+                print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}")
             print(deco)
             print()
 

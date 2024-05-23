@@ -306,24 +306,6 @@ class ModelBook:
         )
 
         self.wake_models = FDict(name="wake_models")
-        slist = [
-            "linear",
-            "linear_lim",
-            "linear_amb",
-            "linear_amb_lim",
-            "quadratic",
-            "quadratic_lim",
-            "quadratic_amb",
-            "quadratic_amb_lim",
-            "cubic",
-            "cubic_amb",
-            "quartic",
-            "quartic_amb",
-            "wmax",
-            "max_amb",
-            "product",
-            "product_lim",
-        ]
 
         self.wake_models.add_factory(
             fm.wake_models.wind.JensenWake,
@@ -344,136 +326,182 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>",
             kwargs=dict(sbeta_factor=0.2),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah2014_<superposition>_<k>",
+            "Bastankhah2014_<superposition>_k<k>",
             kwargs=dict(sbeta_factor=0.2),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014B_<superposition>",
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah2014B_<superposition>_<k>",
+            "Bastankhah2014B_<superposition>_k<k>",
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025_<superposition>",
             kwargs=dict(sbeta_factor=0.25),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah025_<superposition>_<k>",
+            "Bastankhah025_<superposition>_k<k>",
             kwargs=dict(sbeta_factor=0.25),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025B_<superposition>",
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
-            "Bastankhah025B_<superposition>_<k>",
+            "Bastankhah025B_<superposition>_k<k>",
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
 
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016_<superposition>",
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
-            "Bastankhah2016_<superposition>_<k>",
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            "Bastankhah2016_<superposition>_k<k>",
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016B_<superposition>",
             kwargs=dict(induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
-            "Bastankhah2016B_<superposition>_<k>",
+            "Bastankhah2016B_<superposition>_k<k>",
             kwargs=dict(induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
 
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOPark_<superposition>",
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
-            "TurbOPark_<superposition>_<k>",
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            "TurbOPark_<superposition>_k<k>",
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOParkB_<superposition>",
             kwargs=dict(induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
-            "TurbOParkB_<superposition>_<k>",
+            "TurbOParkB_<superposition>_k<k>",
             kwargs=dict(induction="Betz"),
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
         )
 
-        dxs = [0.01, 1.0, 5.0, 10.0, 50.0, 100.0]
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWakeIX,
-            "TurbOParkIX_<superposition>_<k>_<dx>",
-            superposition={s: f"ws_{s}" for s in slist},
-            k={"k002": 0.02, "k004": 0.04},
-            dx={f"dx{str(dx).replace('.', '') if dx < 1 else int(dx)}": dx 
-                for dx in dxs},
+            "TurbOParkIX_<superposition>_dx<dx>",
+            superposition=lambda s: f"ws_{s}",
+            dx=lambda x: float(x),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "dx": "(Integration step in m)"},
         )
 
-        slist = ["linear", "quadratic", "cubic", "quartic", "max"]
-        for s in slist:
-            self.wake_models[f"CrespoHernandez_{s}"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(superposition=f"ti_{s}")
-            )
-            self.wake_models[f"CrespoHernandez_ambti_{s}"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(
-                    superposition=f"ti_{s}", use_ambti=True
-                )
-            )
-            self.wake_models[f"CrespoHernandez_{s}_k002"] = (
-                fm.wake_models.ti.CrespoHernandezTIWake(k=0.02, superposition=f"ti_{s}")
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.wind.TurbOParkWakeIX,
+            "TurbOParkIX_<superposition>_k<k>_dx<dx>",
+            superposition=lambda s: f"ws_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            dx=lambda x: float(x),
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)",
+                   "dx": "(Integration step in m)"},
+        )
 
-            self.wake_models[f"IECTI2005_{s}"] = fm.wake_models.ti.IECTIWake(
-                superposition=f"ti_{s}", iec_type="2005"
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.ti.CrespoHernandezTIWake,
+            "CrespoHernandez_<superposition>",
+            kwargs=dict(use_ambti=False),
+            superposition=lambda s: f"ti_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
+        )
 
-            self.wake_models[f"IECTI2019_{s}"] = fm.wake_models.ti.IECTIWake(
-                superposition=f"ti_{s}", iec_type="2019"
-            )
+        self.wake_models.add_factory(
+            fm.wake_models.ti.CrespoHernandezTIWake,
+            "CrespoHernandez_<superposition>_k<k>",
+            kwargs=dict(use_ambti=False),
+            superposition=lambda s: f"ti_{s}",
+            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"superposition": "(Superposition, e.g. linear for ti_linear)",
+                   "k": "(Value, e.g. 004 for 0.04)"},
+        )
+
+        self.wake_models.add_factory(
+            fm.wake_models.ti.IECTIWake,
+            "IECTI2005_<superposition>",
+            kwargs=dict(iec_type="2005"),
+            superposition=lambda s: f"ti_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
+        )
+
+        self.wake_models.add_factory(
+            fm.wake_models.ti.IECTIWake,
+            "IECTI2019_<superposition>",
+            kwargs=dict(iec_type="2019"),
+            superposition=lambda s: f"ti_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
+        )
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
         self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()

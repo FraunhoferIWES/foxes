@@ -18,7 +18,7 @@ class Bastankhah2014(GaussianWakeModel):
 
     Attributes
     ----------
-    k: float, optional
+    k: float
         The wake growth parameter k. If not given here
         it will be searched in the farm data.
     sbeta_factor: float
