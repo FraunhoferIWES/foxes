@@ -276,6 +276,8 @@ class ModelBook:
             ws_linear_amb_lim=fm.wake_superpositions.WSLinear(
                 scale_amb=True, lim_low=1e-4
             ),
+            ws_linear_loc=fm.wake_superpositions.WSLinearLocal(),
+            ws_linear_loc_lim=fm.wake_superpositions.WSLinearLocal(lim_low=1e-4),
             ws_quadratic=fm.wake_superpositions.WSQuadratic(scale_amb=False),
             ws_quadratic_lim=fm.wake_superpositions.WSQuadratic(
                 scale_amb=False, lim_low=1e-4
@@ -284,12 +286,20 @@ class ModelBook:
             ws_quadratic_amb_lim=fm.wake_superpositions.WSQuadratic(
                 scale_amb=True, lim_low=1e-4
             ),
+            ws_quadratic_loc=fm.wake_superpositions.WSQuadraticLocal(),
+            ws_quadratic_loc_lim=fm.wake_superpositions.WSQuadraticLocal(lim_low=1e-4),
             ws_cubic=fm.wake_superpositions.WSPow(pow=3, scale_amb=False),
             ws_cubic_amb=fm.wake_superpositions.WSPow(pow=3, scale_amb=True),
+            ws_cubic_loc=fm.wake_superpositions.WSPowLocal(pow=3),
+            ws_cubic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=3, lim_low=1e-4),
             ws_quartic=fm.wake_superpositions.WSPow(pow=4, scale_amb=False),
             ws_quartic_amb=fm.wake_superpositions.WSPow(pow=4, scale_amb=True),
+            ws_quartic_loc=fm.wake_superpositions.WSPowLocal(pow=4),
+            ws_quartic_loc_lim=fm.wake_superpositions.WSPowLocal(pow=4, lim_low=1e-4),
             ws_max=fm.wake_superpositions.WSMax(scale_amb=False),
             ws_max_amb=fm.wake_superpositions.WSMax(scale_amb=True),
+            ws_max_loc=fm.wake_superpositions.WSMaxLocal(),
+            ws_max_loc_lim=fm.wake_superpositions.WSMaxLocal(lim_low=1e-4),
             ws_product=fm.wake_superpositions.WSProduct(),
             ws_product_lim=fm.wake_superpositions.WSProduct(lim_low=1e-4),
             ti_linear=fm.wake_superpositions.TILinear(superp_to_amb="quadratic"),
