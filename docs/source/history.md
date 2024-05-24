@@ -509,3 +509,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Bug fixed with `TurbOParkIX`, that prevented it from running
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.1](https://github.com/FraunhoferIWES/foxes/commits/v0.7.1)
+
+## v0.7.2
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.2](https://github.com/FraunhoferIWES/foxes/commits/v0.7.2)
