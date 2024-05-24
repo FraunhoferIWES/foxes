@@ -501,6 +501,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Models:
   - Improved `ModelBook`, adding some smartness thanks to model factories. Parameters are parsed from model name strings that follow given patterns. E.g., `Jensen_<superposition>_k<k>` represents all `JensenWake` models with any superposition model choice and and choice of k, and `Jensen_linear_k0075` would be an accepted name choice by the user.
+  - New wind speed superpositions `WSLinearLocal`, `WSQuadraticLocal`, `WSPowLocal`, `WSMaxLocal`: Adding dimensionless wind deficits, and then evaluating the overall effect for the ambient results at evaluation points (no scaling with rotor effective data)
 - Utils:
   - New utility `Factory`, creating class instances from selections of allowed parameter choises
   - New utility `FDict`, a dictionary that supports factories
