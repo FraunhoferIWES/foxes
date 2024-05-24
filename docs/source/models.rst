@@ -16,7 +16,8 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
 
 All concrete models are stored in the so-called :code:`ModelBook` object under 
-a name string, see :ref:`this example<The model book>`.
+a name string (or a name string template that is provided by a so-called model factory), 
+see :ref:`this example<The model book>`.
 
 Rotor models
 ------------
@@ -88,10 +89,10 @@ The available wake frame classes are listed
 contains many pre-defined wake frames, for example:
 
 * `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
-* `yawed`, `yawed_k002`, `yawed_k004`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
-* `streamlines_X`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `X = 1, 5, 10, 50, 100, 500` seconds. See :ref:`this example<Heterogeneous flow>`.
-* `timelines`, `timelines_X`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step of `X = 1s, 10s, 30s, 1min, 10min, 30min`. See :ref:`this example<Dynamic wakes 1>`.
-* `seq_dyn_wakes`, `seq_dyn_wakes_X`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step of `X = 1s, 10s, 30s, 1min, 10min, 30min`. See :ref:`this example<Dynamic wakes 2>`.
+* `yawed`, `yawed_k<k>`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
+* `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`this example<Heterogeneous flow>`.
+* `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 1>`.
+* `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 2>`.
 
 Wake models
 -----------
@@ -128,9 +129,29 @@ in their constructor, in terms of their respective name in the :ref:`model book<
 Examples are `ws_linear` for linear wind deficit superposition, or `ti_quadratic`
 for quadratic TI wake increase superposition.
 
-The list of wake models in the :ref:`default model book<The model book>` is long,
-but that is mainly due to the resulting combinations of wake model
-classes with superposition models and wake parameter choices.
+The list of wake model name templates in the :ref:`default model book<The model book>` is long,
+but that is mainly due to variations of various constructor argument choices. Typical examples are
+
+* `Jensen_<superposition>_k<k>`: The classic Jensen wind deficit model, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`.
+* `Bastankhah2014_<superposition>_k<k>`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014<https://doi.org/10.1016/j.renene.2014.01.002>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
+* `Bastankhah2016_<superposition>_k<k>`: The wind deficit model by `Bastankhah and Porté-Agel from 2016<https://doi.org/10.1017/jfm.2016.595>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
+* `TurbOPark_<superposition>_k<k>`: The Gaussian wind deficit model by `Pedersen et al. from 2022<https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
+* `CrespoHernandez_<superposition>_k<k>`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996<https://doi.org/10.1016/0167-6105(95)00033-X>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI, and any value for the wake growth parameter `k`. 
+* `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019<http://orbit.dtu.dk/files/3750291/2009_31.pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI. 
+
+The wake growth parameter `k` follows the convention in the above name templates that the
+dot after the zero is to be skipped, e.g., "004" represents the value 0.04. The `superposition` parameter is 
+for example `linear` for the choice `ws_linear` or `ti_linear`, depending if the wake model targets wind speed or TI
+(cf. the :ref:`model book<The model book>` example).
+
+There are also model name templates in the default model book for the above
+models that do not specify the `k` parameter, e.g.
+`Jensen_<superposition>` for the Jensen model. 
+In that case the `k` will be searched in the list of
+farm variables, which means that the values have to be provided by some other model.
+Typically this task is done by a :ref:`kTI<foxes.models.turbine_models.kTI>` turbine model,
+cf. Section :ref:`Turbine models` below, but also other turbine models (or an optimization)
+could address this variable.
 
 Partial wakes
 -------------
@@ -153,8 +174,8 @@ can be found under the names
 * `centre`: The centre point model,
 * `rotor_points`: The rotor points model,
 * `top_hat`: The top-hat model,
-* `axiwakeN`: The axiwake model, with `N = 2, 3, ..., 10, 20`, representing `n` steps for the discretization of the integral over each downstream rotor,
-* `gridN`: The grid model with `N = 4, 9, 16, 25, 36, ..., 100, 400` points.
+* `axiwake<n>`: The axiwake model, with `n` representing the number of steps for the discretization of the integral over each downstream rotor,
+* `grid<n2>`: The grid model with `n2` representing the number of points in a regular square grid.
 
 Partial wakes are now chosen when costructing the algorithm object.
 There are several ways of specifying partial wakes model choices for 

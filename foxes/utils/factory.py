@@ -69,37 +69,21 @@ class Factory:
         self.var2arg = var2arg
         self.hints = hints
 
-        i = name_template.find("<")
-        if i < 0:
+        parts = name_template.split(">")
+        if len(parts) < 2:
             raise ValueError(f"Factory '{name_template}': Expecting at least one variable in template, pattern '<..>'")
 
-        self._bname = name_template[:i]
-        pre = [""]
-        wlist = [self._bname]
-        while wlist[0][-1] == "_":
-             pre[0] += "_"
-             wlist[0] =  wlist[0][:-1]
-
-        def _find_var(tmpl):
-            nonlocal wlist, pre
-            i = tmpl.find(">")
-            if i < 0:
-                raise ValueError(f"Factory '{name_template}': Missing closing bracket '>' in '{tmpl}'")
-            wlist.append(tmpl[:i])
-            if i < len(tmpl) - 1:
-                tmpl = tmpl[i+1:]
-                j = tmpl.find("<")
-                if j >= 0:
-                    pre.append(tmpl[:j])
-                    _find_var(tmpl[j+1:])
-                else:
-                    pre.append(tmpl)
+        self._vars = []
+        self._pre = []
+        for i, p in enumerate(parts):
+            if i < len(parts) - 1:
+                parts2 = p.split("<")
+                if len(parts2) != 2:
+                    raise ValueError(f"Factory '{name_template}': incomplete pattern brackets '<..>'")
+                self._pre.append(parts2[0])
+                self._vars.append(parts2[1])
             else:
-                pre.append("")
-        
-        _find_var(name_template[i+1:])
-        self._wlist = wlist
-        self._pre = pre
+                self._pre.append(p)
 
         if len(self.variables) > 1:
             for vi, v in enumerate(self.variables):
@@ -107,7 +91,7 @@ class Factory:
                 if vi < len(self.variables) - 1 and p == "":
                     raise ValueError(f"Factory '{name_template}': Require indicator before variable '{v}' in template, e.g. '{v}<{v}>'")
         
-        self.options = Dict(name=f"{self.base_name}_options")
+        self.options = Dict(name=f"{self._pre[0]}_options")
         for v, o  in options.items():
             if v not in self.variables:
                 raise KeyError(f"Factory '{name_template}': Variable '{v}' found in options, but not in template")
@@ -117,24 +101,37 @@ class Factory:
                 for k in o.keys():
                     if not isinstance(k, str):
                         raise TypeError(f"Factory '{name_template}': Found option for variable '{v}' that is not a str, {k}")
-                self.options[v] = Dict(name=f"{self.base_name}_options_{v}", **o)
+                self.options[v] = Dict(name=f"{self._pre[0]}_options_{v}", **o)
             elif hasattr(o, "__call__"):
                 self.options[v] = o
             else:
                 raise ValueError(f"Factory '{name_template}': Variable '{v}' has option of type '{type(v).__name__}'. Only list, tuple, dict or function are supported")
-
+    
     @property
-    def base_name(self):
-        """ 
-        The base name of the name template
+    def name_prefix(self):
+        """
+        The beginning of the name template
         
         Returns
         -------
-        name: str
-            The base name
+        nbase: str
+            The beginning of the name template
         
         """
-        return self._wlist[0]
+        return self._pre[0]
+
+    @property
+    def name_suffix(self):
+        """
+        The ending of the name template
+        
+        Returns
+        -------
+        nbase: str
+            The ending of the name template
+        
+        """
+        return self._pre[-1]
     
     @property
     def variables(self):
@@ -147,7 +144,7 @@ class Factory:
             The variables
         
         """
-        return self._wlist[1:]
+        return self._vars
     
     def __str__(self):
         """ String representation """
@@ -176,12 +173,23 @@ class Factory:
             True if the template is matched
         
         """
-        if len(name) < len(self._bname) or name[:len(self._bname)] != self._bname:
-            return False
-        
-        wlist = name[len(self._bname):].split("_")
-        if len(wlist) != len(self.variables):
-            return False
+        data_str = name
+        for vi in range(len(self.variables)):
+            p = self._pre[vi]
+            i = data_str.find(p)
+            j = i + len(p)
+            if i < 0 or len(data_str) <= j:
+                return False
+            data_str = data_str[j:]
+
+            q = self._pre[vi+1]
+            if q != "":
+                i = data_str.find(q)
+                j = i + len(q)
+                if i < 0 or len(data_str) <= j:
+                    return False
+            else:
+                data_str = ""
         
         return True
 
@@ -200,10 +208,7 @@ class Factory:
             The instance of the base class
         
         """
-        if len(name) < len(self._bname) or name[:len(self._bname)] != self._bname:
-            raise ValueError(f"Factory '{self.name_template}': Name '{name}' not matching template")
-        data_str = name[len(self.base_name):]
-
+        data_str = name
         wlist = []
         for vi, v in enumerate(self.variables):
             p = self._pre[vi]
@@ -289,7 +294,11 @@ class FDict(Dict):
         i = len(self.factories)
         for gi in range(len(self.factories) - 1, -1, -1):
             g = self.factories[gi]
-            if g.base_name == f.base_name and len(f.variables) > len(g.variables):
+            if (
+                g.name_prefix == f.name_prefix 
+                and g.name_suffix == f.name_suffix
+                and len(f.variables) > len(g.variables)
+            ):
                 i = gi
 
         if i == len(self.factories):
