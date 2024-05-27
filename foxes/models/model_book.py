@@ -1,7 +1,7 @@
 from math import sqrt
 import foxes.models as fm
 import foxes.variables as FV
-from foxes.utils import Dict, FDict
+from foxes.utils import FDict
 
 from foxes.core import (
     PointDataModel,
@@ -25,42 +25,42 @@ class ModelBook:
 
     Attributes
     ----------
-    point_models: foxes.utils.Dict
+    point_models: foxes.utils.FDict
         The point models. Keys: model name str,
         values: foxes.core.PointDataModel
-    rotor_models: foxes.utils.Dict
+    rotor_models: foxes.utils.FDict
         The rotor models. Keys: model name str,
         values: foxes.core.RotorModel
-    turbine_types: foxes.utils.Dict
+    turbine_types: foxes.utils.FDict
         The turbine type models. Keys: model name str,
         values: foxes.core.TurbineType
-    turbine_models: foxes.utils.Dict
+    turbine_models: foxes.utils.FDict
         The turbine models. Keys: model name str,
         values: foxes.core.TurbineModel
-    farm_models: foxes.utils.Dict
+    farm_models: foxes.utils.FDict
         The farm models. Keys: model name str,
         values: foxes.core.FarmModel
-    farm_controllers: foxes.utils.Dict
+    farm_controllers: foxes.utils.FDict
         The farm controllers. Keys: model name str,
         values: foxes.core.FarmController
-    partial_wakes: foxes.utils.Dict
+    partial_wakes: foxes.utils.FDict
         The partial wakes. Keys: model name str,
         values: foxes.core.PartialWakeModel
-    wake_frames: foxes.utils.Dict
+    wake_frames: foxes.utils.FDict
         The wake frames. Keys: model name str,
         values: foxes.core.WakeFrame
-    wake_superpositions: foxes.utils.Dict
+    wake_superpositions: foxes.utils.FDict
         The wake superposition models. Keys: model name str,
         values: foxes.core.WakeSuperposition
-    wake_models: foxes.utils.Dict
+    wake_models: foxes.utils.FDict
         The wake models. Keys: model name str,
         values: foxes.core.WakeModel
-    induction_models: foxes.utils.Dict
+    induction_models: foxes.utils.FDict
         The induction models. Keys: model name str,
         values: foxes.core.AxialInductionModel
-    sources: foxes.utils.Dict
+    sources: foxes.utils.FDict
         All sources dict
-    base_classes: foxes.utils.Dict
+    base_classes: foxes.utils.FDict
         The base classes for all model types
 
     :group: models
@@ -77,7 +77,7 @@ class ModelBook:
             Path to power/ct curve file, for creation
             of default turbine type model
         """
-        self.point_models = Dict(name="point_models")
+        self.point_models = FDict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = FDict(name="rotor_models")
@@ -124,7 +124,7 @@ class ModelBook:
             hints={"n": "(Number of vertical levels)"},
         )
 
-        self.turbine_types = Dict(name="turbine_types")
+        self.turbine_types = FDict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
         self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile(
             "NREL-5MW-D126-H90.csv", rho=1.225
@@ -194,7 +194,7 @@ class ModelBook:
             }
         )
 
-        self.farm_models = Dict(
+        self.farm_models = FDict(
             name="farm_models",
             **{
                 f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m)
@@ -202,7 +202,7 @@ class ModelBook:
             },
         )
 
-        self.farm_controllers = Dict(
+        self.farm_controllers = FDict(
             name="farm_controllers",
             basic_ctrl=fm.farm_controllers.BasicFarmController(),
         )
@@ -275,7 +275,7 @@ class ModelBook:
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
 
-        self.wake_superpositions = Dict(
+        self.wake_superpositions = FDict(
             name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
             ws_linear_lim=fm.wake_superpositions.WSLinear(
@@ -318,11 +318,9 @@ class ModelBook:
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
-        self.axial_induction = Dict(name="induction_models")
-        self.axial_induction["Betz"] = fm.axial_induction_models.BetzAxialInduction()
-        self.axial_induction["Madsen"] = (
-            fm.axial_induction_models.MadsenAxialInduction()
-        )
+        self.axial_induction = FDict(name="induction_models")
+        self.axial_induction["Betz"] = fm.axial_induction.BetzAxialInduction()
+        self.axial_induction["Madsen"] = fm.axial_induction.MadsenAxialInduction()
 
         self.wake_models = FDict(name="wake_models")
 
@@ -553,7 +551,7 @@ class ModelBook:
             fm.wake_models.induction.SelfSimilar2020()
         )
 
-        self.sources = Dict(
+        self.sources = FDict(
             name="sources",
             point_models=self.point_models,
             rotor_models=self.rotor_models,
@@ -567,7 +565,7 @@ class ModelBook:
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
         )
-        self.base_classes = Dict(
+        self.base_classes = FDict(
             name="base_classes",
             point_models=PointDataModel,
             rotor_models=RotorModel,
@@ -696,7 +694,7 @@ class ModelBook:
 
         """
         for ms in self.sources.values():
-            if isinstance(ms, Dict):
+            if isinstance(ms, FDict):
                 for m in ms.values():
                     if m.initialized:
                         m.finalize(algo, verbosity)

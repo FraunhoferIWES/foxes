@@ -13,6 +13,6 @@ from . import wake_superpositions
 from . import farm_controllers
 from . import vertical_profiles
 from . import point_models
-from . import axial_induction_models
+from . import axial_induction
 
 from .model_book import ModelBook

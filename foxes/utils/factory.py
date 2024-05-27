@@ -244,8 +244,6 @@ class Factory:
             if pi > 0:
                 wlist.append(w)
 
-        print("HERE PSTART", self.name_template, name, self._pre, ":", wlist)
-
         kwargs = {}
         for vi, v in enumerate(self.variables):
             w = self.var2arg.get(v, v)
