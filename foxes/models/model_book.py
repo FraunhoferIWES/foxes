@@ -88,8 +88,11 @@ class ModelBook:
             n2 = float(n2)
             n = int(sqrt(n2))
             if n**2 != n2:
-                raise Exception(f"GridRotor factory: Value {n2} is not the square of an integer")
+                raise Exception(
+                    f"GridRotor factory: Value {n2} is not the square of an integer"
+                )
             return n
+
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>",
@@ -165,8 +168,10 @@ class ModelBook:
             "kTI_<kTI>_<kb>",
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)",
-                   "kb": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kb": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
@@ -174,8 +179,10 @@ class ModelBook:
             kwargs=dict(ti_var=FV.AMB_TI),
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)",
-                   "kb": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kb": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(
@@ -246,11 +253,13 @@ class ModelBook:
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+
         def _todt(x):
             if x[-1] == "s":
-                return float(x[:-1])/60
+                return float(x[:-1]) / 60
             elif x[-3:] == "min":
                 return float(x[:-3])
+
         self.wake_frames.add_factory(
             fm.wake_frames.Timelines,
             "timelines_<dt>",
@@ -328,8 +337,10 @@ class ModelBook:
             "Jensen_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -345,8 +356,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.2),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -361,8 +374,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -377,8 +392,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.25),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -393,8 +410,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -408,8 +427,10 @@ class ModelBook:
             "Bastankhah2016_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
@@ -424,8 +445,10 @@ class ModelBook:
             kwargs=dict(induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -439,8 +462,10 @@ class ModelBook:
             "TurbOPark_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
@@ -455,8 +480,10 @@ class ModelBook:
             kwargs=dict(induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -464,8 +491,10 @@ class ModelBook:
             "TurbOParkIX_<superposition>_dx<dx>",
             superposition=lambda s: f"ws_{s}",
             dx=lambda x: float(x),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "dx": "(Integration step in m)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "dx": "(Integration step in m)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -474,9 +503,11 @@ class ModelBook:
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             dx=lambda x: float(x),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)",
-                   "dx": "(Integration step in m)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+                "dx": "(Integration step in m)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -493,8 +524,10 @@ class ModelBook:
             kwargs=dict(use_ambti=False),
             superposition=lambda s: f"ti_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ti_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(

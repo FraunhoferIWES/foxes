@@ -227,7 +227,9 @@ class Downwind(Algorithm):
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
                 print(f"    {i}) {m.name}: {m} [pre-rotor]")
             for i, m in enumerate(self.farm_controller.post_rotor_models.models):
-                print(f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}")
+                print(
+                    f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
+                )
             print(deco)
             print()
 

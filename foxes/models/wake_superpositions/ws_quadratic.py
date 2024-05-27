@@ -179,6 +179,7 @@ class WSQuadratic(WakeSuperposition):
             w = np.minimum(w, self.lim_high - amb_results)
         return w
 
+
 class WSQuadraticLocal(WakeSuperposition):
     """
     Local quadratic supersposition of wind deficit results

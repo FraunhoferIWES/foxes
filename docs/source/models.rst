@@ -22,7 +22,7 @@ see :ref:`this example<The model book>`.
 Rotor models
 ------------
 Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
-background wind speed. The list of available models and also rotor point visualizations can be found :ref:`in this example<Rotor model visualizations>`.
+background wind speed. The list of available models and also rotor point visualizations can be found :ref:`in this overview<Rotor model visualizations>`.
 
 Turbine types
 -------------
@@ -203,7 +203,7 @@ The list of available turbine model classes can be found
 * :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
 * :ref:`PowerMask<foxes.models.turbine_models.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see :ref:`this example<Power mask>`.
 * :ref:`SectorManagement<foxes.models.turbine_models.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see :ref:`this example<Wind sector management>`.
-* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and `YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
+* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and :ref:`YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
 
