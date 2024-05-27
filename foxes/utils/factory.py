@@ -1,3 +1,5 @@
+import numpy as np
+
 from .dict import Dict
 
 class Factory:
@@ -79,7 +81,9 @@ class Factory:
             if i < len(parts) - 1:
                 parts2 = p.split("<")
                 if len(parts2) != 2:
-                    raise ValueError(f"Factory '{name_template}': incomplete pattern brackets '<..>'")
+                    raise ValueError(f"Factory '{name_template}': incomplete pattern brackets '<..>' between variables, e.g. '_'")
+                if i > 0 and len(parts2[0]) == 0:
+                    raise ValueError(f"Factory '{name_template}': Missing seperator like '_' in template between variables '{self._vars[-1]}' and '{parts[1]}'")
                 self._pre.append(parts2[0])
                 self._vars.append(parts2[1])
             else:
@@ -208,26 +212,22 @@ class Factory:
             The instance of the base class
         
         """
-        data_str = name
+        j = 0
         wlist = []
-        for vi, v in enumerate(self.variables):
-            p = self._pre[vi]
-            i = data_str.find(p)
-            j = i + len(p)
-            if i < 0 or len(data_str) <= j:
-                raise ValueError(f"Factory '{self.name_template}': Name '{name}' not matching template")
-            data_str = data_str[j:]
-
-            q = self._pre[vi+1]
-            if q != "":
-                i = data_str.find(q)
-                j = i + len(q)
-                if i < 0 or len(data_str) <= j:
+        for pi, p in enumerate(self._pre):
+            if len(p) > 0:
+                i = name[j:].find(p)
+                if i < 0 or (pi == 0 and  i > 0):
                     raise ValueError(f"Factory '{self.name_template}': Name '{name}' not matching template")
-                wlist.append(data_str[:i])
+                w = name[j:j+i]
+                j += i + len(p)
             else:
-                wlist.append(data_str)
-                data_str = ""
+                w = name[j:]
+            if pi > 0:
+                wlist.append(w)
+
+
+        print("HERE PSTART",self.name_template,name,self._pre,":",wlist)
 
         kwargs = {}
         for vi, v in enumerate(self.variables):          

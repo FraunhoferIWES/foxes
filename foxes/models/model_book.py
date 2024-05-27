@@ -100,7 +100,7 @@ class ModelBook:
         )
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
-            "raw_grid<n2>",
+            "grid<n2>_raw",
             kwargs=dict(calc_vars=rvars, reduce=False),
             var2arg={"n2": "n"},
             n2=_n2n,
@@ -115,7 +115,7 @@ class ModelBook:
         )
         self.rotor_models.add_factory(
             fm.rotor_models.LevelRotor,
-            "raw_level<n>",
+            "level<n>_raw",
             kwargs=dict(calc_vars=rvars, reduce=False),
             n=lambda x: int(x),
             hints={"n": "(Number of vertical levels)"},

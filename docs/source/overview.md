@@ -10,4 +10,4 @@ Running a wind farm simulation with `foxes` requires the following steps, usuall
 6. Optionally evaluate the flow field at arbitrary points of interest, also via the algorithm
 7. Post-process the results, for example using the `foxes.output` package
 
-The details will become clear in the subsequent examples within this section.
+The details will become clear in the _Models_ and _Examples_ sections.
