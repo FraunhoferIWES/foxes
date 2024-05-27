@@ -516,3 +516,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - Fix for bug with `Factory` that confused templates `A_B<..>` type with `B<..>` type templates 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.2](https://github.com/FraunhoferIWES/foxes/commits/v0.7.2)
+
+## v0.7.3
+
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
