@@ -134,7 +134,7 @@ class PointWakesCalculation(PointDataModel):
                     if v not in res and v in tdata:
                         res[v] = tdata[v].copy()
 
-                wmodel.finalize_wake_deltas(algo, mdata, fdata, res, wdeltas)
+                pwake.finalize_wakes_point_calc(algo, mdata, fdata, res, wdeltas, wmodel)
 
                 for v in res.keys():
                     if v in wdeltas:

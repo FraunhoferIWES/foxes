@@ -80,7 +80,7 @@ class PartialSegregated(PartialWakesModel):
             self.rotor.rotor_point_weights(),
         )
 
-    def finalize_wakes(
+    def finalize_wakes_farm_calc(
         self,
         algo,
         mdata,

@@ -156,7 +156,7 @@ class PartialWakesModel(Model):
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
-    def finalize_wakes(
+    def finalize_wakes_farm_calc(
         self,
         algo,
         mdata,
@@ -209,6 +209,42 @@ class PartialWakesModel(Model):
 
         """
         pass
+
+    def finalize_wakes_point_calc(
+        self,
+        algo,
+        mdata,
+        fdata,
+        amb_results,
+        wake_deltas,
+        wmodel,
+    ):
+        """
+        Finalize the wake calculation.
+
+        Modifies wake_deltas on the fly.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        amb_results: dict
+            The ambient results, key: variable name str,
+            values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
+        wake_deltas: dict
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
+        wmodel: foxes.core.WakeModel
+            The wake model
+
+        """
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, amb_results, wake_deltas)
 
     @classmethod
     def new(cls, pwake_type, **kwargs):

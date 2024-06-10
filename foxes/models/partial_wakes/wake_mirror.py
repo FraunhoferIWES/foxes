@@ -173,7 +173,7 @@ class WakeMirror(PartialWakesModel):
         """
         self.contribute_farm_calc(*args, **kwargs)
 
-    def finalize_wakes(self,*args, **kwargs):
+    def finalize_wakes_farm_calc(self,*args, **kwargs):
         """
         Updates the wake_deltas at the selected target
         downwind index.

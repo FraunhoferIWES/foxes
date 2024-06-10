@@ -39,7 +39,7 @@ class RotorPoints(PartialWakesModel):
             rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata),
         )
 
-    def finalize_wakes(
+    def finalize_wakes_farm_calc(
         self,
         algo,
         mdata,

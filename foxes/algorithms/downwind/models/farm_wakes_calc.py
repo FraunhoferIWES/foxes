@@ -77,7 +77,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         def _evaluate(tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake):
             """Helper function for data evaluation at turbines"""
-            wres = pwake.finalize_wakes(
+            wres = pwake.finalize_wakes_farm_calc(
                 algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi
             )
 
