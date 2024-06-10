@@ -226,6 +226,32 @@ class ModelBook:
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
         )
+        self.partial_wakes.add_factory(
+            fm.partial_wakes.GroundMirror,
+            "g_mirror_<pwake>",
+            var2arg={"pwake": "base"},
+            hints={"pwake": "(Base partial wakes model)"},
+        )
+        self.partial_wakes.add_factory(
+            fm.partial_wakes.WakeMirror,
+            "bl_mirror_h<height>_<pwake>",
+            var2arg={"pwake": "base", "height": "heights"},
+            height=lambda h: [float(h)],
+            hints={
+                "height": "Boundary layer height", 
+                "pwake": "(Base partial wakes model)"
+            },
+        )
+        self.partial_wakes.add_factory(
+            fm.partial_wakes.WakeMirror,
+            "gbl_mirror_h<height>_<pwake>",
+            var2arg={"pwake": "base", "height": "heights"},
+            height=lambda h: [0., float(h)],
+            hints={
+                "height": "Boundary layer height", 
+                "pwake": "(Base partial wakes model)"
+            },
+        )
 
         self.wake_frames = FDict(
             name="wake_frames",

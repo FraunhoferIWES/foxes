@@ -67,7 +67,6 @@ class Downwind(Algorithm):
         partial_wakes=None,
         farm_controller="basic_ctrl",
         chunks={FC.STATE: 1000, FC.POINT: 4000},
-        wake_mirrors={},
         mbook=None,
         dbook=None,
         verbosity=1,
@@ -99,9 +98,6 @@ class Downwind(Algorithm):
         chunks: dict
             The chunks choice for running in parallel with dask,
             e.g. `{"state": 1000}` for chunks of 1000 states
-        wake_mirrors: dict
-            Switch on wake mirrors for wake models.
-            Key: wake model name, value: list of heights
         mbook: foxes.ModelBook, optional
             The model book
         dbook: foxes.DataBook, optional
@@ -129,20 +125,7 @@ class Downwind(Algorithm):
         for w in wake_models:
             m = self.mbook.wake_models[w]
             m.name = w
-
-            # optionally add wake mirrors:
-            if w in wake_mirrors:
-                hts = wake_mirrors[w]
-                if isinstance(m, fm.wake_models.WakeMirror):
-                    if list(m.heights) != list(hts):
-                        raise ValueError(
-                            f"Wake model '{w}' is mirrored with heights {m.heights}, cannot apply WakeMirror with heights {hts}"
-                        )
-                else:
-                    self.wake_models[w] = fm.wake_models.WakeMirror(m, heights=hts)
-
-            else:
-                self.wake_models[w] = m
+            self.wake_models[w] = m
 
         self.partial_wakes = {}
         if partial_wakes is None:

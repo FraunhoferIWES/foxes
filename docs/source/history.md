@@ -519,6 +519,10 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7.3
 
+- Models:
+  - New partial wakes models `WakeMirror` and `GroundMirror`: Replacing the corresponding wake models from earlier versions. Choose from the model book e.g. by `g_mirror_<pwake>` for ground mirror and a base partial wakes model `pwake`.
+- Bug fixes:
+  - Fox for bug with wake mirrors and partial wakes
 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)

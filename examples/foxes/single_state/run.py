@@ -47,9 +47,6 @@ if __name__ == "__main__":
         default=["B_K1", "CH_K2"],
         nargs="+",
     )
-    parser.add_argument(
-        "-g", "--ground", help="switch on ground mirror", action="store_true"
-    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
@@ -105,12 +102,6 @@ if __name__ == "__main__":
             farm, args.layout, turbine_models=args.tmodels + [ttype.name]
         )
 
-    # optionally add wake ground mirror:
-    if args.ground:
-        mirrors = {w: [0] for w in args.wakes}
-    else:
-        mirrors = {}
-
     # create algorithm
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
@@ -120,7 +111,6 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
-        wake_mirrors=mirrors,
         mbook=mbook,
         chunks=None,
         verbosity=1,
