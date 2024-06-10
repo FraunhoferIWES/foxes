@@ -70,7 +70,7 @@ class PartialTopHat(PartialCentre):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def contribute(
+    def contribute_farm_calc(
         self,
         algo,
         mdata,

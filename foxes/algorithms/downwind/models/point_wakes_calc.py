@@ -115,44 +115,26 @@ class PointWakesCalculation(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-
-        # prepare:
+        res = {}
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
-        amb_res={v: tdata[FV.var2amb[v]] for v in self.pvars if v in FV.var2amb}
-        weights = np.ones(1, dtype=FC.DTYPE)
-
-        def _contribute(algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel, pwake):
-            pwake.contribute(algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel)
-            pwake.finalize_wakes(
-                algo, 
-                mdata, 
-                fdata, 
-                tdata, 
-                amb_res=amb_res,
-                rpoint_weights=weights,
-                wake_deltas=wdeltas,
-                wmodel=wmodel,
-                downwind_index=downwind_index,
-            )
-
-        # compute:
-        res = {}
         for wmodel in wmodels:
             pwake = algo.partial_wakes[wmodel.name]
-            wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdata, wmodel)
+            wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
             if len(set(self.pvars).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
-                        _contribute(algo, mdata, fdata, tdata, oi, wdeltas, wmodel, pwake)
+                        pwake.contribute_point_calc(algo, mdata, fdata, tdata, oi, wdeltas, wmodel)
                 else:
-                    _contribute(algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel, pwake)
+                    pwake.contribute_point_calc(algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel)
 
                 for v in self.pvars:
                     if v not in res and v in tdata:
                         res[v] = tdata[v].copy()
+
+                wmodel.finalize_wake_deltas(algo, mdata, fdata, res, wdeltas)
 
                 for v in res.keys():
                     if v in wdeltas:

@@ -79,7 +79,45 @@ class PartialWakesModel(Model):
         """
         return wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
 
-    def contribute(
+    def contribute_farm_calc(
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+        wake_deltas,
+        wmodel,
+    ):
+        """
+        Modifies wake deltas at target points by
+        contributions from the specified wake source turbines.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
+        wmodel: foxes.core.WakeModel
+            The wake model
+
+        """
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
+
+    def contribute_point_calc(
         self,
         algo,
         mdata,

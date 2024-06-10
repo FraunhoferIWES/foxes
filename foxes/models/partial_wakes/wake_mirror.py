@@ -112,7 +112,7 @@ class WakeMirror(PartialWakesModel):
         """
         return self._base.new_wake_deltas(*args, **kwargs)
     
-    def contribute(
+    def contribute_farm_calc(
         self,
         algo,
         mdata,
@@ -165,6 +165,13 @@ class WakeMirror(PartialWakesModel):
 
         # reset heights:
         fdata[FV.H][:, downwind_index] = hh
+
+    def contribute_point_calc(self, *args, **kwargs):
+        """
+        Modifies wake deltas at target points by
+        contributions from the specified wake source turbines.
+        """
+        self.contribute_farm_calc(*args, **kwargs)
 
     def finalize_wakes(self,*args, **kwargs):
         """

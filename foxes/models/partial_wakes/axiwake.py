@@ -44,7 +44,7 @@ class PartialAxiwake(PartialCentre):
     def __repr__(self):
         return f"{type(self).__name__}(n={self.n})"
 
-    def contribute(
+    def contribute_farm_calc(
         self,
         algo,
         mdata,

@@ -122,7 +122,7 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
-                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+                        pwake.contribute_farm_calc(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
 
             # upwind:
             else:
@@ -142,7 +142,7 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
-                        pwake.contribute(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+                        pwake.contribute_farm_calc(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
 
             if run_up is not None and run_down is not None:
                 raise KeyError(
