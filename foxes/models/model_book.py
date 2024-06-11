@@ -16,6 +16,7 @@ from foxes.core import (
     WakeModel,
     AxialInductionModel,
     TurbineInductionModel,
+    GroundModel,
 )
 
 
@@ -58,6 +59,9 @@ class ModelBook:
     induction_models: foxes.utils.FDict
         The induction models. Keys: model name str,
         values: foxes.core.AxialInductionModel
+    ground_models: foxes.utils.FDict
+        The ground models. Keys: model name str,
+        values: foxes.core.GroundModel
     sources: foxes.utils.FDict
         All sources dict
     base_classes: foxes.utils.FDict
@@ -225,32 +229,6 @@ class ModelBook:
             var2arg={"n2": "n"},
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
-        )
-        self.partial_wakes.add_factory(
-            fm.partial_wakes.GroundMirror,
-            "g_mirror_<pwake>",
-            var2arg={"pwake": "base"},
-            hints={"pwake": "(Base partial wakes model)"},
-        )
-        self.partial_wakes.add_factory(
-            fm.partial_wakes.WakeMirror,
-            "bl_mirror_h<height>_<pwake>",
-            var2arg={"pwake": "base", "height": "heights"},
-            height=lambda h: [float(h)],
-            hints={
-                "height": "Boundary layer height", 
-                "pwake": "(Base partial wakes model)"
-            },
-        )
-        self.partial_wakes.add_factory(
-            fm.partial_wakes.WakeMirror,
-            "gbl_mirror_h<height>_<pwake>",
-            var2arg={"pwake": "base", "height": "heights"},
-            height=lambda h: [0., float(h)],
-            hints={
-                "height": "Boundary layer height", 
-                "pwake": "(Base partial wakes model)"
-            },
         )
 
         self.wake_frames = FDict(
@@ -577,6 +555,17 @@ class ModelBook:
             fm.wake_models.induction.SelfSimilar2020()
         )
 
+        self.ground_models = FDict(name="ground_models")
+        self.ground_models["no_ground"] = fm.ground_models.NoGround()
+        self.ground_models["ground_mirror"] = fm.ground_models.GroundMirror()
+        self.ground_models.add_factory(
+            fm.ground_models.WakeMirror,
+            "blh_mirror_h<height>",
+            var2arg={"height": "heights"},
+            height=lambda h: [0., float(h)],
+            hints={"height": "(Boundary layer wake reflection height)"},
+        )
+
         self.sources = FDict(
             name="sources",
             point_models=self.point_models,
@@ -590,6 +579,7 @@ class ModelBook:
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
+            ground_models=self.ground_models,
         )
         self.base_classes = FDict(
             name="base_classes",
@@ -604,6 +594,7 @@ class ModelBook:
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
             axial_induction=AxialInductionModel,
+            ground_models=GroundModel,
         )
 
         for s in self.sources.values():

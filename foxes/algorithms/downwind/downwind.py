@@ -28,6 +28,9 @@ class Downwind(Algorithm):
     partial_wakes: dict
         The partial wakes mapping. Key: wake model name,
         value: foxes.core.PartialWakesModel
+    ground_models: dict
+        The ground models mapping. Key: wake model name,
+        value: foxes.core.GroundModel
     farm_controller: foxes.core.FarmController
         The farm controller
     n_states: int
@@ -65,6 +68,7 @@ class Downwind(Algorithm):
         rotor_model="centre",
         wake_frame="rotor_wd",
         partial_wakes=None,
+        ground_models=None,
         farm_controller="basic_ctrl",
         chunks={FC.STATE: 1000, FC.POINT: 4000},
         mbook=None,
@@ -92,6 +96,9 @@ class Downwind(Algorithm):
         partial_wakes: dict, list or str, optional
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
+        ground_models: dict, list or str, optional
+            The ground models mapping. Key: wake model name,
+            value: ground model name
         farm_controller: str
             The farm controller. Will be
             looked up in the model book
@@ -126,37 +133,59 @@ class Downwind(Algorithm):
             m = self.mbook.wake_models[w]
             m.name = w
             self.wake_models[w] = m
+        
+        def _set_wspecific(descr, target, values, deffunc, mbooks, checkw):
+            if values is None:
+                values = {}
+            if isinstance(values, list) and len(values) == 1:
+                values = values[0]
+            if isinstance(values, str):
+                for w in wake_models:
+                    try:
+                        pw = values
+                        if checkw:
+                            mbooks[pw].check_wmodel(self.wake_models[w], error=True)
+                    except TypeError:
+                        pw = deffunc(self.wake_models[w])
+                    target[w] = mbooks[pw]
+                    target[w].name = pw
+            elif isinstance(values, list):
+                for i, w in enumerate(wake_models):
+                    if i >= len(values):
+                        raise IndexError(
+                            f"Not enough {descr} in list {values}, expecting {len(wake_models)}"
+                        )
+                    pw = values[i]
+                    target[w] = mbooks[pw]
+                    target[w].name = pw
+            else:
+                for w in wake_models:
+                    if w in values:
+                        pw = values[w]
+                    else:
+                        pw = deffunc(self.wake_models[w])
+                    target[w] = mbooks[pw]
+                    target[w].name = pw
 
         self.partial_wakes = {}
-        if partial_wakes is None:
-            partial_wakes = {}
-        if isinstance(partial_wakes, list) and len(partial_wakes) == 1:
-            partial_wakes = partial_wakes[0]
-        if isinstance(partial_wakes, str):
-            for w in wake_models:
-                try:
-                    pw = partial_wakes
-                except TypeError:
-                    pw = mbook.default_partial_wakes(self.wake_models[w])
-                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
-                self.partial_wakes[w].name = pw
-        elif isinstance(partial_wakes, list):
-            for i, w in enumerate(wake_models):
-                if i >= len(partial_wakes):
-                    raise IndexError(
-                        f"Not enough partial wakes in list {partial_wakes}, expecting {len(wake_models)}"
-                    )
-                pw = partial_wakes[i]
-                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
-                self.partial_wakes[w].name = pw
-        else:
-            for w in wake_models:
-                if w in partial_wakes:
-                    pw = partial_wakes[w]
-                else:
-                    pw = mbook.default_partial_wakes(self.wake_models[w])
-                self.partial_wakes[w] = self.mbook.partial_wakes[pw]
-                self.partial_wakes[w].name = pw
+        _set_wspecific(
+            descr="partial wakes", 
+            target=self.partial_wakes, 
+            values=partial_wakes, 
+            deffunc=mbook.default_partial_wakes, 
+            mbooks=self.mbook.partial_wakes,
+            checkw=True,
+        )
+
+        self.ground_models = {}
+        _set_wspecific(
+            descr="ground models", 
+            target=self.ground_models, 
+            values=ground_models, 
+            deffunc=lambda w: "no_ground", 
+            mbooks=self.mbook.ground_models,
+            checkw=False,
+        )
 
         self.farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller

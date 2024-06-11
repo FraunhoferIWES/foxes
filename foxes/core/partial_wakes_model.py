@@ -22,6 +22,24 @@ class PartialWakesModel(Model):
     :group: core
 
     """
+    def check_wmodel(self, wmodel, error=True):
+        """
+        Checks the wake model type
+        
+        Parameters
+        ----------
+        wmodel: foxes.core.WakeModel
+            The wake model to be tested
+        error: bool
+            Flag for raising TypeError
+        
+        Returns
+        -------
+        chk: bool
+            True if wake model is compatible
+        
+        """
+        return True
 
     @abstractmethod
     def get_wake_points(self, algo, mdata, fdata):
@@ -66,9 +84,6 @@ class PartialWakesModel(Model):
             The target point data
         wmodel: foxes.core.WakeModel
             The wake model
-        wpoints: numpy.ndarray
-            The wake evaluation points,
-            shape: (n_states, n_turbines, n_tpoints, 3)
 
         Returns
         -------
@@ -79,45 +94,7 @@ class PartialWakesModel(Model):
         """
         return wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
 
-    def contribute_farm_calc(
-        self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wake_deltas,
-        wmodel,
-    ):
-        """
-        Modifies wake deltas at target points by
-        contributions from the specified wake source turbines.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        downwind_index: int
-            The index of the wake causing turbine
-            in the downwnd order
-        wake_deltas: dict
-            The wake deltas. Key: variable name,
-            value: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
-
-        """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
-
-    def contribute_point_calc(
+    def contribute(
         self,
         algo,
         mdata,
@@ -156,7 +133,7 @@ class PartialWakesModel(Model):
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
-    def finalize_wakes_farm_calc(
+    def finalize_wakes(
         self,
         algo,
         mdata,
@@ -209,42 +186,6 @@ class PartialWakesModel(Model):
 
         """
         pass
-
-    def finalize_wakes_point_calc(
-        self,
-        algo,
-        mdata,
-        fdata,
-        amb_results,
-        wake_deltas,
-        wmodel,
-    ):
-        """
-        Finalize the wake calculation.
-
-        Modifies wake_deltas on the fly.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-        wake_deltas: dict
-            The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_targets, n_tpoints)
-        wmodel: foxes.core.WakeModel
-            The wake model
-
-        """
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, amb_results, wake_deltas)
 
     @classmethod
     def new(cls, pwake_type, **kwargs):

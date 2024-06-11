@@ -8,4 +8,3 @@ from .top_hat import PartialTopHat
 from .axiwake import PartialAxiwake
 from .segregated import PartialSegregated
 from .grid import PartialGrid
-from .wake_mirror import WakeMirror, GroundMirror

@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
+    parser.add_argument("-g", "--grounds", help="The ground models", default=None, nargs="+")
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     parser.add_argument(
@@ -111,6 +112,7 @@ if __name__ == "__main__":
         wake_models=args.wakes,
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
+        ground_models=args.grounds,
         mbook=mbook,
         chunks=None,
         verbosity=1,

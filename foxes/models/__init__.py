@@ -14,5 +14,6 @@ from . import farm_controllers
 from . import vertical_profiles
 from . import point_models
 from . import axial_induction
+from . import ground_models
 
 from .model_book import ModelBook

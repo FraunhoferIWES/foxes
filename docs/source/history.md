@@ -519,8 +519,11 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7.3
 
+- Core:
+  - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
 - Models:
-  - New partial wakes models `WakeMirror` and `GroundMirror`: Replacing the corresponding wake models from earlier versions. Choose from the model book e.g. by `g_mirror_<pwake>` for ground mirror and a base partial wakes model `pwake`.
+  - New ground model `NoGround`, plain call of the partial wakes and wakes models
+  - New ground models `WakeMirror` and  `GroundMirror`, replacing the equivalent former wake models. Realizing wake reflection at horizontal planes.
 - Bug fixes:
   - Fox for bug with wake mirrors and partial wakes
 

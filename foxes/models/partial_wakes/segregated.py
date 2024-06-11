@@ -20,7 +20,6 @@ class PartialSegregated(PartialWakesModel):
     :group: models.partial_wakes
 
     """
-
     def __init__(self, rotor_model):
         """
         Constructor.
@@ -80,7 +79,7 @@ class PartialSegregated(PartialWakesModel):
             self.rotor.rotor_point_weights(),
         )
 
-    def finalize_wakes_farm_calc(
+    def finalize_wakes(
         self,
         algo,
         mdata,

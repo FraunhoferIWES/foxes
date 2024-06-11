@@ -121,20 +121,32 @@ class PointWakesCalculation(PointDataModel):
         )
         for wmodel in wmodels:
             pwake = algo.partial_wakes[wmodel.name]
-            wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
+            gmodel = algo.ground_models[wmodel.name]
+
+            wdeltas = gmodel.new_point_wake_deltas(
+                algo, mdata, fdata, tdata, wmodel)
+            
             if len(set(self.pvars).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
-                        pwake.contribute_point_calc(algo, mdata, fdata, tdata, oi, wdeltas, wmodel)
+                        gmodel.contribute_to_point_wakes(
+                            algo, mdata, fdata, tdata, oi,
+                            wdeltas, wmodel
+                        )
                 else:
-                    pwake.contribute_point_calc(algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel)
+                    gmodel.contribute_to_point_wakes(
+                        algo, mdata, fdata, tdata, downwind_index, 
+                        wdeltas, wmodel
+                    )
 
                 for v in self.pvars:
                     if v not in res and v in tdata:
                         res[v] = tdata[v].copy()
 
-                pwake.finalize_wakes_point_calc(algo, mdata, fdata, res, wdeltas, wmodel)
+                gmodel.finalize_point_wakes(
+                    algo, mdata, fdata, res, wdeltas, wmodel
+                )
 
                 for v in res.keys():
                     if v in wdeltas:

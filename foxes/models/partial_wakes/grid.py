@@ -10,7 +10,6 @@ class PartialGrid(PartialSegregated):
     :group: models.partial_wakes
 
     """
-
     def __init__(self, *args, **kwargs):
         """
         Constructor.

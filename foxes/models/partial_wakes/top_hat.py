@@ -23,7 +23,31 @@ class PartialTopHat(PartialCentre):
     :group: models.partial_wakes
 
     """
-
+    def check_wmodel(self, wmodel, error=True):
+        """
+        Checks the wake model type
+        
+        Parameters
+        ----------
+        wmodel: foxes.core.WakeModel
+            The wake model to be tested
+        error: bool
+            Flag for raising TypeError
+        
+        Returns
+        -------
+        chk: bool
+            True if wake model is compatible
+        
+        """
+        if not isinstance(wmodel, TopHatWakeModel):
+            if error:
+                raise TypeError(
+                    f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not a TopHatWakeModel"
+                )
+            return False
+        return True
+    
     def __init__(self, rotor_model=None):
         """
         Constructor.
@@ -70,7 +94,7 @@ class PartialTopHat(PartialCentre):
         """
         return super().sub_models() + [self.rotor_model]
 
-    def contribute_farm_calc(
+    def contribute(
         self,
         algo,
         mdata,
@@ -105,10 +129,7 @@ class PartialTopHat(PartialCentre):
             The wake model
 
         """
-        if not isinstance(wmodel, TopHatWakeModel):
-            raise TypeError(
-                f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not a TopHatWakeModel"
-            )
+        self.check_wmodel(wmodel, error=True)
 
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         x = wcoos[:, :, 0, 0]

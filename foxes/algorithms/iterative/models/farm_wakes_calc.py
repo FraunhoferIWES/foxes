@@ -109,6 +109,7 @@ class FarmWakesCalculation(FarmDataModel):
         n_turbines = mdata.n_turbines
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
+            gmodel = algo.ground_models[wname]
             tdatap = pwake2tdata[pwake.name]
             wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
 
@@ -116,15 +117,20 @@ class FarmWakesCalculation(FarmDataModel):
 
                 if oi > 0:
                     tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
-                    pwake.contribute_farm_calc(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+                    gmodel.contribute_to_farm_wakes(
+                        algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
+                    )
 
                 if oi < n_turbines - 1:
                     tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
-                    pwake.contribute_farm_calc(algo, mdata, fdata, tdata, oi, wdelta, wmodel)
+                    gmodel.contribute_to_farm_wakes(
+                        algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
+                    )
 
             for oi in range(n_turbines):
-                wres = pwake.finalize_wakes_farm_calc(
-                    algo, mdata, fdata, tdatap, amb_res, weights, wdeltas, wmodel, oi
+                wres = gmodel.finalize_farm_wakes(
+                    algo, mdata, fdata, tdatap, amb_res, weights, 
+                    wdeltas, wmodel, oi, pwake
                 )
                 for v, d in wres.items():
                     if v in wake_res:
