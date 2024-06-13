@@ -554,6 +554,9 @@ class ModelBook:
         self.wake_models[f"SelfSimilar2020"] = (
             fm.wake_models.induction.SelfSimilar2020()
         )
+        self.wake_models[f"VortexSheet"] = (
+            fm.wake_models.induction.VortexSheet()
+        )
 
         self.ground_models = FDict(name="ground_models")
         self.ground_models["no_ground"] = fm.ground_models.NoGround()
