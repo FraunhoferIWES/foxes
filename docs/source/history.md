@@ -524,13 +524,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Models:
   - New ground model `NoGround`, plain call of the partial wakes and wakes models
   - New ground models `WakeMirror` and  `GroundMirror`, replacing the equivalent former wake models. Realizing wake reflection at horizontal planes.
+  - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
 - Bug fixes:
   - Fox for bug with wake mirrors and partial wakes
 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
-
-## v0.7.4
-
-- Models:
-  - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
