@@ -18,4 +18,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    mbook, farm, states, algo = foxes.input.windio.read_case(args.windio_yaml)
+    algo = foxes.input.windio.read_windio(args.windio_yaml)
+    

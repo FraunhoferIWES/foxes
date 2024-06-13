@@ -9,7 +9,7 @@ site:
       ]
   energy_resource:
     name: NetCDF timeseries with 5000 states
-    wind_resource: !include windio_timeseries_5000B.nc
+    wind_resource: !include ../states/windio_timeseries_5000B.nc
 
 wind_farm: 
   name: One row with 5 turbines
@@ -23,4 +23,3 @@ wind_farm:
 attributes:
   flow_model:
     name: foxes
-
