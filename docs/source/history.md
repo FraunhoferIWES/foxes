@@ -529,3 +529,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
+
+## v0.7.4
+
+- Models:
+  - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
