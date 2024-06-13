@@ -7,7 +7,6 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
 
     .. toctree::
         notebooks/model_book
-        notebooks/rotor_models
         notebooks/single_row
         notebooks/timeseries
         notebooks/multi_height

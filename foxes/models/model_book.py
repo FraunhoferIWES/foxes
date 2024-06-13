@@ -1,7 +1,7 @@
 from math import sqrt
 import foxes.models as fm
 import foxes.variables as FV
-from foxes.utils import Dict, FDict
+from foxes.utils import FDict
 
 from foxes.core import (
     PointDataModel,
@@ -16,6 +16,7 @@ from foxes.core import (
     WakeModel,
     AxialInductionModel,
     TurbineInductionModel,
+    GroundModel,
 )
 
 
@@ -25,42 +26,45 @@ class ModelBook:
 
     Attributes
     ----------
-    point_models: foxes.utils.Dict
+    point_models: foxes.utils.FDict
         The point models. Keys: model name str,
         values: foxes.core.PointDataModel
-    rotor_models: foxes.utils.Dict
+    rotor_models: foxes.utils.FDict
         The rotor models. Keys: model name str,
         values: foxes.core.RotorModel
-    turbine_types: foxes.utils.Dict
+    turbine_types: foxes.utils.FDict
         The turbine type models. Keys: model name str,
         values: foxes.core.TurbineType
-    turbine_models: foxes.utils.Dict
+    turbine_models: foxes.utils.FDict
         The turbine models. Keys: model name str,
         values: foxes.core.TurbineModel
-    farm_models: foxes.utils.Dict
+    farm_models: foxes.utils.FDict
         The farm models. Keys: model name str,
         values: foxes.core.FarmModel
-    farm_controllers: foxes.utils.Dict
+    farm_controllers: foxes.utils.FDict
         The farm controllers. Keys: model name str,
         values: foxes.core.FarmController
-    partial_wakes: foxes.utils.Dict
+    partial_wakes: foxes.utils.FDict
         The partial wakes. Keys: model name str,
         values: foxes.core.PartialWakeModel
-    wake_frames: foxes.utils.Dict
+    wake_frames: foxes.utils.FDict
         The wake frames. Keys: model name str,
         values: foxes.core.WakeFrame
-    wake_superpositions: foxes.utils.Dict
+    wake_superpositions: foxes.utils.FDict
         The wake superposition models. Keys: model name str,
         values: foxes.core.WakeSuperposition
-    wake_models: foxes.utils.Dict
+    wake_models: foxes.utils.FDict
         The wake models. Keys: model name str,
         values: foxes.core.WakeModel
-    induction_models: foxes.utils.Dict
+    induction_models: foxes.utils.FDict
         The induction models. Keys: model name str,
         values: foxes.core.AxialInductionModel
-    sources: foxes.utils.Dict
+    ground_models: foxes.utils.FDict
+        The ground models. Keys: model name str,
+        values: foxes.core.GroundModel
+    sources: foxes.utils.FDict
         All sources dict
-    base_classes: foxes.utils.Dict
+    base_classes: foxes.utils.FDict
         The base classes for all model types
 
     :group: models
@@ -77,7 +81,7 @@ class ModelBook:
             Path to power/ct curve file, for creation
             of default turbine type model
         """
-        self.point_models = Dict(name="point_models")
+        self.point_models = FDict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = FDict(name="rotor_models")
@@ -88,8 +92,11 @@ class ModelBook:
             n2 = float(n2)
             n = int(sqrt(n2))
             if n**2 != n2:
-                raise Exception(f"GridRotor factory: Value {n2} is not the square of an integer")
+                raise Exception(
+                    f"GridRotor factory: Value {n2} is not the square of an integer"
+                )
             return n
+
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>",
@@ -121,7 +128,7 @@ class ModelBook:
             hints={"n": "(Number of vertical levels)"},
         )
 
-        self.turbine_types = Dict(name="turbine_types")
+        self.turbine_types = FDict(name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
         self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile(
             "NREL-5MW-D126-H90.csv", rho=1.225
@@ -165,8 +172,10 @@ class ModelBook:
             "kTI_<kTI>_<kb>",
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)",
-                   "kb": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kb": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
@@ -174,8 +183,10 @@ class ModelBook:
             kwargs=dict(ti_var=FV.AMB_TI),
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)",
-                   "kb": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kb": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.turbine_models["hubh_data"] = fm.turbine_models.RotorCentreCalc(
@@ -187,7 +198,7 @@ class ModelBook:
             }
         )
 
-        self.farm_models = Dict(
+        self.farm_models = FDict(
             name="farm_models",
             **{
                 f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m)
@@ -195,7 +206,7 @@ class ModelBook:
             },
         )
 
-        self.farm_controllers = Dict(
+        self.farm_controllers = FDict(
             name="farm_controllers",
             basic_ctrl=fm.farm_controllers.BasicFarmController(),
         )
@@ -246,11 +257,13 @@ class ModelBook:
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+
         def _todt(x):
             if x[-1] == "s":
-                return float(x[:-1])/60
+                return float(x[:-1]) / 60
             elif x[-3:] == "min":
                 return float(x[:-3])
+
         self.wake_frames.add_factory(
             fm.wake_frames.Timelines,
             "timelines_<dt>",
@@ -266,7 +279,7 @@ class ModelBook:
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
 
-        self.wake_superpositions = Dict(
+        self.wake_superpositions = FDict(
             name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
             ws_linear_lim=fm.wake_superpositions.WSLinear(
@@ -309,11 +322,9 @@ class ModelBook:
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
         )
 
-        self.axial_induction = Dict(name="induction_models")
-        self.axial_induction["Betz"] = fm.axial_induction_models.BetzAxialInduction()
-        self.axial_induction["Madsen"] = (
-            fm.axial_induction_models.MadsenAxialInduction()
-        )
+        self.axial_induction = FDict(name="induction_models")
+        self.axial_induction["Betz"] = fm.axial_induction.BetzAxialInduction()
+        self.axial_induction["Madsen"] = fm.axial_induction.MadsenAxialInduction()
 
         self.wake_models = FDict(name="wake_models")
 
@@ -328,8 +339,10 @@ class ModelBook:
             "Jensen_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -345,8 +358,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.2),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -361,8 +376,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -377,8 +394,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.25),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2014,
@@ -393,8 +412,10 @@ class ModelBook:
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -408,8 +429,10 @@ class ModelBook:
             "Bastankhah2016_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.Bastankhah2016,
@@ -424,8 +447,10 @@ class ModelBook:
             kwargs=dict(induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -439,8 +464,10 @@ class ModelBook:
             "TurbOPark_<superposition>_k<k>",
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
         self.wake_models.add_factory(
             fm.wake_models.wind.TurbOParkWake,
@@ -455,8 +482,10 @@ class ModelBook:
             kwargs=dict(induction="Betz"),
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -464,8 +493,10 @@ class ModelBook:
             "TurbOParkIX_<superposition>_dx<dx>",
             superposition=lambda s: f"ws_{s}",
             dx=lambda x: float(x),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "dx": "(Integration step in m)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "dx": "(Integration step in m)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -474,9 +505,11 @@ class ModelBook:
             superposition=lambda s: f"ws_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             dx=lambda x: float(x),
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)",
-                   "dx": "(Integration step in m)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+                "dx": "(Integration step in m)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -493,8 +526,10 @@ class ModelBook:
             kwargs=dict(use_ambti=False),
             superposition=lambda s: f"ti_{s}",
             k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)",
-                   "k": "(Value, e.g. 004 for 0.04)"},
+            hints={
+                "superposition": "(Superposition, e.g. linear for ti_linear)",
+                "k": "(Value, e.g. 004 for 0.04)",
+            },
         )
 
         self.wake_models.add_factory(
@@ -519,8 +554,22 @@ class ModelBook:
         self.wake_models[f"SelfSimilar2020"] = (
             fm.wake_models.induction.SelfSimilar2020()
         )
+        self.wake_models[f"VortexSheet"] = (
+            fm.wake_models.induction.VortexSheet()
+        )
 
-        self.sources = Dict(
+        self.ground_models = FDict(name="ground_models")
+        self.ground_models["no_ground"] = fm.ground_models.NoGround()
+        self.ground_models["ground_mirror"] = fm.ground_models.GroundMirror()
+        self.ground_models.add_factory(
+            fm.ground_models.WakeMirror,
+            "blh_mirror_h<height>",
+            var2arg={"height": "heights"},
+            height=lambda h: [0., float(h)],
+            hints={"height": "(Boundary layer wake reflection height)"},
+        )
+
+        self.sources = FDict(
             name="sources",
             point_models=self.point_models,
             rotor_models=self.rotor_models,
@@ -533,8 +582,9 @@ class ModelBook:
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
+            ground_models=self.ground_models,
         )
-        self.base_classes = Dict(
+        self.base_classes = FDict(
             name="base_classes",
             point_models=PointDataModel,
             rotor_models=RotorModel,
@@ -547,6 +597,7 @@ class ModelBook:
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
             axial_induction=AxialInductionModel,
+            ground_models=GroundModel,
         )
 
         for s in self.sources.values():
@@ -663,7 +714,7 @@ class ModelBook:
 
         """
         for ms in self.sources.values():
-            if isinstance(ms, Dict):
+            if isinstance(ms, FDict):
                 for m in ms.values():
                     if m.initialized:
                         m.finalize(algo, verbosity)

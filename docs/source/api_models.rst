@@ -10,6 +10,7 @@ This package contains all concrete model classes.
         =======================================  ============================================================
         :ref:`foxes.models.farm_controllers`     Wind farm controller models. They execute turbine models.
         :ref:`foxes.models.farm_models`          Wind farm models, i.e., turbine models for all turbines.
+        :ref:`foxes.models.ground_models`        Ground models, for example reflecting wakes
         :ref:`foxes.models.partial_wakes`        Partial wake models, computing rotor effective wake deltas.
         :ref:`foxes.models.point_models`         Point models, calculating results at points of interest.
         :ref:`foxes.models.rotor_models`         Rotor models, computing rotor effective ambient results.
@@ -36,6 +37,13 @@ The wind farm models, ie., turbine models that
 are applied to all turbines of the wind farm.
 
     .. python-apigen-group:: models.farm_models
+
+foxes.models.ground_models
+--------------------------
+The ground models, for example reflecting wakes
+from horizontal planes.
+
+    .. python-apigen-group:: models.ground_models
 
 foxes.models.partial_wakes
 --------------------------

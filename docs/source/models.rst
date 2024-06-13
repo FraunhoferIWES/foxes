@@ -12,6 +12,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
+* :ref:`Ground models`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
 * :ref:`Point models`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states. 
 * :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
 
@@ -22,7 +23,7 @@ see :ref:`this example<The model book>`.
 Rotor models
 ------------
 Rotor models evaluate the flow field at the rotor and compute ambient rotor equivalent quantities, for example the rotor averaged 
-background wind speed. The list of available models and also rotor point visualizations can be found :ref:`in this example<Rotor model visualizations>`.
+background wind speed. The list of available models and also rotor point visualizations can be found :ref:`in this overview<Rotor model visualizations>`.
 
 Turbine types
 -------------
@@ -203,9 +204,27 @@ The list of available turbine model classes can be found
 * :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>`: Set any farm variable to any state-turbine data array, or sub-array (nan values are ignored), either initially (`pre_rotor=True`) or after the wake calculation.
 * :ref:`PowerMask<foxes.models.turbine_models.PowerMask>`: Curtail or boost the turbine by re-setting the maximal power of the turbine, see :ref:`this example<Power mask>`.
 * :ref:`SectorManagement<foxes.models.turbine_models.SectorManagement>`: Modify farm variables if wind speed and/or wind direction values are within certain ranges, see :ref:`this example<Wind sector management>`.
-* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and `YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
+* :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and :ref:`YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
+
+
+Ground models
+-------------
+Add ground effects to the wake calculation, for example the reflection from horizontal planes.
+
+The list of available ground model classes can be found 
+:ref:`here in the API<foxes.models.ground_models>`. The following models are 
+accessible from the :ref:`default model book<The model book>`:
+
+* `no_ground`: Does not add any ground effects.
+* `ground_mirror`: Adds wake reflection from a horizontal plane at zero height.
+* `blh_mirror_h<height>`: Adds wake reflections from two horizontal planes, one at the ground and one at the specified height.
+
+Ground models can be selected globally for all wake models, by passing the model
+name to the `ground_models` argument of the algorithm constructor. Alternatively, a 
+dictionary mapping of wake model names to ground model names can be used, cf. the rules
+for :ref:`partial wakes model selections<Partial wakes>`.
 
 Point models
 ------------

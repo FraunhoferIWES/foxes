@@ -49,7 +49,7 @@ class WakeModel(Model):
         -------
         wake_deltas: dict
             Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
         return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}

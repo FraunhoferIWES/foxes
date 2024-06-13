@@ -67,7 +67,7 @@ The supported Python versions are:
 - `Python 3.11`
 - `Python 3.12`
 
-### Preparation
+### Preparation (optional)
 
 It is strongly recommend to use the `libmamba` dependency solver instead of the default solver. Install it once by
 

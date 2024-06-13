@@ -13,7 +13,6 @@ class PartialCentre(RotorPoints):
     :group: models.partial_wakes
 
     """
-
     def get_wake_points(self, algo, mdata, fdata):
         """
         Get the wake calculation points, and their

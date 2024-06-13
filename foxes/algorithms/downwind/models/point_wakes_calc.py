@@ -1,6 +1,7 @@
+import numpy as np
+from foxes.core import PointDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.core import PointDataModel
 
 
 class PointWakesCalculation(PointDataModel):
@@ -86,43 +87,6 @@ class PointWakesCalculation(PointDataModel):
         """
         return self.pvars
 
-    def contribute(
-        self,
-        algo,
-        mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wmodel,
-        wdeltas,
-    ):
-        """
-        Contribute to wake deltas from source turbines
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        tdata: foxes.core.Data
-            The target point data
-        downwind_index: int
-            The index in the downwind order
-        wmodel: foxes.core.WakeModel
-            The wake model
-        wdeltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_targets, n_tpoints, ...)
-
-        """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wdeltas)
-
     def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
         """ "
         The main model calculation.
@@ -151,29 +115,38 @@ class PointWakesCalculation(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-
         res = {}
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
         for wmodel in wmodels:
-            wdeltas = wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
+            pwake = algo.partial_wakes[wmodel.name]
+            gmodel = algo.ground_models[wmodel.name]
+
+            wdeltas = gmodel.new_point_wake_deltas(
+                algo, mdata, fdata, tdata, wmodel)
+            
             if len(set(self.pvars).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
-                        self.contribute(algo, mdata, fdata, tdata, oi, wmodel, wdeltas)
-
+                        gmodel.contribute_to_point_wakes(
+                            algo, mdata, fdata, tdata, oi,
+                            wdeltas, wmodel
+                        )
                 else:
-                    self.contribute(
-                        algo, mdata, fdata, tdata, downwind_index, wmodel, wdeltas
+                    gmodel.contribute_to_point_wakes(
+                        algo, mdata, fdata, tdata, downwind_index, 
+                        wdeltas, wmodel
                     )
 
                 for v in self.pvars:
                     if v not in res and v in tdata:
                         res[v] = tdata[v].copy()
 
-                wmodel.finalize_wake_deltas(algo, mdata, fdata, res, wdeltas)
+                gmodel.finalize_point_wakes(
+                    algo, mdata, fdata, res, wdeltas, wmodel
+                )
 
                 for v in res.keys():
                     if v in wdeltas:

@@ -22,3 +22,4 @@ from .wake_model import WakeModel, TurbineInductionModel
 from .wake_superposition import WakeSuperposition
 from .vertical_profile import VerticalProfile
 from .axial_induction_model import AxialInductionModel
+from .ground_model import GroundModel

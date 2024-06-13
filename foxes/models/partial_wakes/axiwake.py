@@ -44,6 +44,31 @@ class PartialAxiwake(PartialCentre):
     def __repr__(self):
         return f"{type(self).__name__}(n={self.n})"
 
+    def check_wmodel(self, wmodel, error=True):
+        """
+        Checks the wake model type
+        
+        Parameters
+        ----------
+        wmodel: foxes.core.WakeModel
+            The wake model to be tested
+        error: bool
+            Flag for raising TypeError
+        
+        Returns
+        -------
+        chk: bool
+            True if wake model is compatible
+        
+        """
+        if not isinstance(wmodel, AxisymmetricWakeModel):
+            if error:
+                raise TypeError(
+                    f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not an AxisymmetricWakeModel"
+                )
+            return False
+        return True
+
     def contribute(
         self,
         algo,
@@ -79,10 +104,8 @@ class PartialAxiwake(PartialCentre):
             The wake model
 
         """
-        if not isinstance(wmodel, AxisymmetricWakeModel):
-            raise TypeError(
-                f"Partial wakes '{self.name}': Cannot be applied to wake model '{wmodel.name}', since not an AxisymmetricWakeModel"
-            )
+        # check:
+        self.check_wmodel(wmodel, error=True)
 
         # prepare:
         n_states = mdata.n_states

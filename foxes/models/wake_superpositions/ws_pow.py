@@ -184,6 +184,7 @@ class WSPow(WakeSuperposition):
             w = np.minimum(w, self.lim_high - amb_results)
         return w
 
+
 class WSPowLocal(WakeSuperposition):
     """
     Local power supersposition of wind deficit results

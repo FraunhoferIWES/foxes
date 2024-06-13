@@ -182,6 +182,7 @@ class WSMax(WakeSuperposition):
             w = np.minimum(w, self.lim_high - amb_results)
         return w
 
+
 class WSMaxLocal(WakeSuperposition):
     """
     Local max supersposition of wind deficit results

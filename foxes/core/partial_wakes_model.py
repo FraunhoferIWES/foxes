@@ -22,6 +22,24 @@ class PartialWakesModel(Model):
     :group: core
 
     """
+    def check_wmodel(self, wmodel, error=True):
+        """
+        Checks the wake model type
+        
+        Parameters
+        ----------
+        wmodel: foxes.core.WakeModel
+            The wake model to be tested
+        error: bool
+            Flag for raising TypeError
+        
+        Returns
+        -------
+        chk: bool
+            True if wake model is compatible
+        
+        """
+        return True
 
     @abstractmethod
     def get_wake_points(self, algo, mdata, fdata):
@@ -66,9 +84,6 @@ class PartialWakesModel(Model):
             The target point data
         wmodel: foxes.core.WakeModel
             The wake model
-        wpoints: numpy.ndarray
-            The wake evaluation points,
-            shape: (n_states, n_turbines, n_tpoints, 3)
 
         Returns
         -------
