@@ -576,7 +576,7 @@ class MultiHeightNCStates(MultiHeightStates):
         dims = (FC.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
-            np.stack([data.data_vars[c].to_numpy().astype(FC.DTYPE) for c in cols.values()], axis=1)
+            np.stack([data.data_vars[c].to_numpy() for c in cols.values()], axis=1).astype(FC.DTYPE)
         )
 
         for v, d in self._solo.items():
