@@ -526,9 +526,9 @@ class MultiHeightNCStates(MultiHeightStates):
             data = self.data_source
 
         if self.states_sel is not None:
-            data = data.iloc[self.states_sel]
-        elif self.states_loc is not None:
-            data = data.loc[self.states_loc]
+            data = data.isel({self.state_coord: self.states_sel})
+        if self.states_loc is not None:
+            data = data.sel({self.state_coord: self.states_loc})
 
         self._N = data.sizes[self.state_coord]
         self._inds = data.coords[self.state_coord].to_numpy()
@@ -571,10 +571,6 @@ class MultiHeightNCStates(MultiHeightStates):
             data = data.sel({self.h_coord: self.heights})
         else:
             self.heights = data[self.h_coord].to_numpy()
-        if self.states_sel is not None:
-            data = data.sel({self.state_coord: self.states_sel})
-        if self.states_loc is not None:
-            data = data.loc[self.states_loc]
 
         self.H = self.var(FV.H)
         self.VARS = self.var("vars")
@@ -603,7 +599,6 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
-
     RDICT = {"index_col": 0, "parse_dates": [0]}
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):
