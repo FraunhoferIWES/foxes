@@ -576,13 +576,13 @@ class MultiHeightNCStates(MultiHeightStates):
         dims = (FC.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
-            np.stack([data.data_vars[c].to_numpy() for c in cols.values()], axis=1)
+            np.stack([data.data_vars[c].to_numpy().astype(FC.DTYPE) for c in cols.values()], axis=1)
         )
 
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
+            idata["data_vars"][self.var(v)] = ((FC.STATE,), d.astype(FC.DTYPE))
         self._solo = list(self._solo.keys())
-        
+
         return idata
     
 class MultiHeightTimeseries(MultiHeightStates):
