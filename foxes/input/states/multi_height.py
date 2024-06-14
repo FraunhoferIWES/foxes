@@ -438,6 +438,7 @@ class MultiHeightNCStates(MultiHeightStates):
             state_coord=FC.STATE,
             h_coord=FV.H,
             heights=None, 
+            format_times_func="default",
             xr_read_pars={}, 
             **kwargs,
         ):
@@ -458,6 +459,9 @@ class MultiHeightNCStates(MultiHeightStates):
             The output variables
         heights: list of float, optional
             The heights at which to search data
+        format_times_func: Function or 'default', optional
+            The function that maps state_coord values
+            to datetime dtype format
         xr_read_pars: dict, optional
             Parameters for xarray.open_dataset
         kwargs: dict, optional
@@ -475,6 +479,11 @@ class MultiHeightNCStates(MultiHeightStates):
         self.heights = heights
         self.h_coord = h_coord
         self.xr_read_pars = xr_read_pars
+
+        if format_times_func == "default":
+            self.format_times_func = lambda t: t.astype('datetime64[ns]')
+        else:
+            self.format_times_func = format_times_func
 
     def load_data(self, algo, verbosity=0):
         """
@@ -522,7 +531,9 @@ class MultiHeightNCStates(MultiHeightStates):
             data = data.loc[self.states_loc]
 
         self._N = data.sizes[self.state_coord]
-        self._inds = data.coords[self.state_coord].to_numpy().astype('datetime64[ns]')
+        self._inds = data.coords[self.state_coord].to_numpy()
+        if self.format_times_func is not None:
+            self._inds = self.format_times_func(self._inds)
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
