@@ -582,9 +582,7 @@ class MultiHeightNCStates(MultiHeightStates):
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
         self._solo = list(self._solo.keys())
-
-        print("HERE MHEIGHT NC LOAD",idata["coords"])
-
+        
         return idata
     
 class MultiHeightTimeseries(MultiHeightStates):
