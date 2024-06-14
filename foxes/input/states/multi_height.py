@@ -522,7 +522,7 @@ class MultiHeightNCStates(MultiHeightStates):
             data = data.loc[self.states_loc]
 
         self._N = data.sizes[self.state_coord]
-        self._inds = data.coords[self.state_coord].to_numpy()
+        self._inds = data.coords[self.state_coord].to_numpy().astype('datetime64[ns]')
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
