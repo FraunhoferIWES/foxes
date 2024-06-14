@@ -521,10 +521,14 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 - Core:
   - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
+- Inputs:
+  - New height dependen states: `MultiHeightNCStates` and `MultiHeightNCTimeseries`, same as `MultiHeightStates` and `MultiHeightTimeseries`, but starting from a netCDF file or `xarray.Dataset` input
 - Models:
   - New ground model `NoGround`, plain call of the partial wakes and wakes models
   - New ground models `WakeMirror` and  `GroundMirror`, replacing the equivalent former wake models. Realizing wake reflection at horizontal planes.
   - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
+- Examples:
+  - Example `multi_height`: Now based on `MultiHeightNCTimeseries`
 - Bug fixes:
   - Fox for bug with wake mirrors and partial wakes
 

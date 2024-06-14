@@ -7,16 +7,78 @@ from foxes.models import ModelBook
 from foxes.input.states import StatesTable
 from foxes.input.farm_layout import add_from_df
 from foxes.models.turbine_types import CpCtFromTwo
-from foxes.utils import import_module
+from foxes.utils import import_module, Dict
 from foxes.data import StaticData, WINDIO
 import foxes.constants as FC
 import foxes.variables as FV
 
+from .wind_resource_fields import read_wind_resource_field
 
 
 
+def _read_site(wio_site, data, verbosity):
+    """ Reads the site information """
+    if verbosity > 0:
+        print("Reading site")
+        print("  Name:", wio_site.pop("name", None))
+        print("  Contents:", [k for k in wio_site.keys()])
+    
+    # ignore boundaries:
+    if verbosity > 1:
+        print("  Ignoring boundaries")
+    
+    # read energy_resource:
+    energy_resource = Dict(wio_site["energy_resource"], name="energy_resource")
+    if verbosity > 1:
+        print("  Reading energy_resource")
+        print("    Name:", energy_resource.pop("name", None))
+        print("    Contents:", [k  for k in energy_resource.keys()])
 
-def read_windio(windio_yaml, verbosity=1):
+        # read wind_resource:
+        wind_resource = Dict(energy_resource["wind_resource"], name="wind_resource")
+        if verbosity > 1:
+            print("    Reading wind_resource")
+            print("      Name:", wind_resource.pop("name", None))
+            print("      Contents:", [k  for k in wind_resource.keys()])
+
+        # read fields
+        coords = Dict(name="coords")
+        fields = Dict(name="fields")
+        dims = Dict(name="dims")
+        for n, d in wind_resource.items():
+            if verbosity > 1:
+                print("        Reading", n)
+            read_wind_resource_field(n, d, coords, fields, dims)
+        if verbosity > 1:
+            print("      Coords:")
+            for c, d in coords.items():
+                print(f"        {c}: {d.shape}")
+            print("      Fields:")
+            for f, d in dims.items():
+                print(f"        {f}: {d}")
+
+        # case probability:
+        if "probability" in wind_resource:
+            if verbosity > 1:
+                print("    Creating states based on probability")
+        
+        # case weibull:
+        elif "weibull_a" in wind_resource:
+            if verbosity > 1:
+                print("    Creating states based on Weibull sectors")
+            raise NotImplementedError
+
+        # case time:
+        elif "time" in wind_resource:
+            if verbosity > 1:
+                print("    Creating states based on timeseries data")
+        
+
+
+        else:
+            raise KeyError(f"Expecting 'probability', 'weibull_a' or 'time' in wind_resource")
+
+def read_windio(windio_yaml, verbosity=2):
     """
     Reads a WindIO case
 
@@ -42,11 +104,23 @@ def read_windio(windio_yaml, verbosity=1):
             WINDIO, wio_file, check_raw=False
         ) 
 
+    if verbosity > 0:
+        print(f"Reading windio file {wio_file}")
+
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
     wio = yml_utils.load_yaml(wio_file)
 
-    print(wio)
+    if verbosity > 0:
+        print("  Name:", wio.pop("name", None))
+        print("  Contents:", [k for k in wio.keys()])
 
+    data = Dict(
+        algo_type=None,
+        farm=WindFarm(),
+        mbook=ModelBook()
+    )
+
+    _read_site(Dict(wio["site"], name="site"), data, verbosity)
 
 
 
