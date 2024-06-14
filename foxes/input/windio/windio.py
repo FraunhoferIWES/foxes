@@ -13,6 +13,7 @@ import foxes.constants as FC
 import foxes.variables as FV
 
 from .wind_resource_fields import read_wind_resource_field
+from .create_states import create_states
 
 
 
@@ -52,32 +53,13 @@ def _read_site(wio_site, data, verbosity):
         if verbosity > 1:
             print("      Coords:")
             for c, d in coords.items():
-                print(f"        {c}: {d.shape}")
+                print(f"        {c}: Shape {d.shape}")
             print("      Fields:")
             for f, d in dims.items():
-                print(f"        {f}: {d}")
+                print(f"        {f}: Dims {d}, shape {fields[f].shape}")
 
-        # case probability:
-        if "probability" in wind_resource:
-            if verbosity > 1:
-                print("    Creating states based on probability")
+    data["states"] = create_states(coords, fields, dims, verbosity)
         
-        # case weibull:
-        elif "weibull_a" in wind_resource:
-            if verbosity > 1:
-                print("    Creating states based on Weibull sectors")
-            raise NotImplementedError
-
-        # case time:
-        elif "time" in wind_resource:
-            if verbosity > 1:
-                print("    Creating states based on timeseries data")
-        
-
-
-        else:
-            raise KeyError(f"Expecting 'probability', 'weibull_a' or 'time' in wind_resource")
-
 def read_windio(windio_yaml, verbosity=2):
     """
     Reads a WindIO case
@@ -116,8 +98,9 @@ def read_windio(windio_yaml, verbosity=2):
 
     data = Dict(
         algo_type=None,
-        farm=WindFarm(),
-        mbook=ModelBook()
+        mbook=ModelBook(),
+        farm=None,
+        states=None,
     )
 
     _read_site(Dict(wio["site"], name="site"), data, verbosity)

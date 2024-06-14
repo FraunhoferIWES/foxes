@@ -611,7 +611,7 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     def __init__(
             self, 
             *args, 
-            time_coord="Time",
+            time_coord=FC.TIME,
             **kwargs,
         ):
         """

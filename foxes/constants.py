@@ -15,6 +15,11 @@ STATE = "state"
 :group: foxes.constants
 """
 
+TIME = "time"
+""" Time identifier
+:group: foxes.constants
+"""
+
 TURBINE = "turbine"
 """ Wind turbine identifier
 :group: foxes.constants
