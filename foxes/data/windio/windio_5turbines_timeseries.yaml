@@ -17,7 +17,7 @@ wind_farm:
       initial_layout:
           coordinates:
               x: [0, 0, 0, 0, 0]
-              y: [0, 0, 0, 0, 0]
+              y: [0, 600, 1150, 1730, 2400]
   turbines: !include DTU_10MW_turbine.yaml
 
 attributes:
