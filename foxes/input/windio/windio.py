@@ -15,9 +15,10 @@ import foxes.variables as FV
 from .read_fields import read_wind_resource_field
 from .get_states import get_states
 from .read_farm import read_layout, read_turbine_type
+from .runner import WindioRunner
 
 
-def _read_site(wio_site, data, verbosity):
+def _read_site(wio_site, algo_dict, verbosity):
     """ Reads the site information """
     if verbosity > 0:
         print("Reading site")
@@ -58,9 +59,9 @@ def _read_site(wio_site, data, verbosity):
         for f, d in dims.items():
             print(f"        {f}: Dims {d}, shape {fields[f].shape}")
 
-    data["states"] = get_states(coords, fields, dims, verbosity)
+    algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
-def _read_farm(wio_farm, data, verbosity):
+def _read_farm(wio_farm, algo_dict, verbosity):
     """ Reads the wind farm information """
     if verbosity > 0:
         print("Reading wind farm")
@@ -69,7 +70,7 @@ def _read_farm(wio_farm, data, verbosity):
 
     # read turbine type:
     turbines = Dict(wio_farm["turbines"], name="turbines")
-    ttype = read_turbine_type(turbines, data, verbosity)
+    ttype = read_turbine_type(turbines, algo_dict, verbosity)
 
     # read layouts:
     layouts = Dict(wio_farm["layouts"], name="layouts")
@@ -77,10 +78,7 @@ def _read_farm(wio_farm, data, verbosity):
         print("    Reading layouts")
         print("      Contents:", [k  for k in layouts.keys()])
     for lname, ldict in layouts.items():
-        if lname == "initial_layout":
-            read_layout(lname, ldict, data, ttype, verbosity)
-        elif verbosity > 0:
-            print(f"        Ignoring '{lname}'")
+        read_layout(lname, ldict, algo_dict, ttype, verbosity)
 
 def read_windio(windio_yaml, verbosity=2):
     """
@@ -118,10 +116,19 @@ def read_windio(windio_yaml, verbosity=2):
         print("  Name:", wio.pop("name", None))
         print("  Contents:", [k for k in wio.keys()])
 
-    data = Dict(mbook=ModelBook())
+    algo_dict = Dict(
+        algo_type="Downwind", 
+        mbook=ModelBook(), 
+        farm=WindFarm(),
+        verbosity=verbosity,
+    )
 
-    _read_site(Dict(wio["site"], name="site"), data, verbosity)
-    _read_farm(Dict(wio["wind_farm"], name="farm"), data, verbosity)
+    _read_site(Dict(wio["site"], name="site"), algo_dict, verbosity)
+    _read_farm(Dict(wio["wind_farm"], name="farm"), algo_dict, verbosity)
+
+    if verbosity > 0:
+        print("Creating windio runner")
+    return WindioRunner(algo_dict, verbosity=verbosity)
 
 if __name__ == "__main__":
     import argparse
@@ -130,4 +137,6 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", help="The windio yaml file", default="windio_5turbines_timeseries.yaml")
     args = parser.parse_args()
 
-    read_windio(args.file)
+    runner = read_windio(args.file)
+
+    runner.run()

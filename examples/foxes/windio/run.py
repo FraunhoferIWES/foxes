@@ -18,5 +18,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    algo = foxes.input.windio.read_windio(args.windio_yaml)
+    wio_runner = foxes.input.windio.read_windio(args.windio_yaml)
+
+    with wio_runner as runner:
+        runner.run()
+
+
     

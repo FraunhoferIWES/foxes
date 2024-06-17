@@ -2,17 +2,37 @@ import numpy as np
 import pandas as pd
 
 from foxes.utils import Dict
-from foxes.core import Turbine, TurbineType, WindFarm
+from foxes.core import Turbine, TurbineType
 
-def read_turbine_type(turbines, data, verbosity):
-    tname = turbines.pop("name")
+def read_turbine_type(wio_trbns, data, verbosity):
+    """
+    Reads the turbine type from windio
+    
+    Parameters
+    ----------
+    wio_trbns: dict
+        The windio turbines data
+    algo_dict: dict
+        The algorithm dictionary
+    verbosity: int
+        The verbosity level, 0=silent
+
+    Returns
+    -------
+    ttype: str
+        The turbine type model name
+    
+    :group: input.windio
+
+    """
+    tname = wio_trbns.pop("name")
     if verbosity > 1:
-        print("    Reading turbines")
+        print("    Reading wio_trbns")
         print("      Name:", tname)
-        print("      Contents:", [k  for k in turbines.keys()])
+        print("      Contents:", [k  for k in wio_trbns.keys()])
     
     # read performance:
-    performance = Dict(turbines["performance"], name="performance")
+    performance = Dict(wio_trbns["performance"], name="performance")
     if verbosity > 1:
         print("        Reading performance")
         print("          Contents:", [k  for k in performance.keys()])
@@ -46,8 +66,8 @@ def read_turbine_type(turbines, data, verbosity):
             col_ws_ct_file="ws",
             col_P="P",
             col_ct="ct",
-            H=turbines["hub_height"],
-            D=turbines["rotor_diameter"],
+            H=wio_trbns["hub_height"],
+            D=wio_trbns["rotor_diameter"],
         )
 
     # P, ct data:
@@ -79,8 +99,8 @@ def read_turbine_type(turbines, data, verbosity):
             col_ws_ct_file="ws",
             col_cp="cp",
             col_ct="ct",
-            H=turbines["hub_height"],
-            D=turbines["rotor_diameter"],
+            H=wio_trbns["hub_height"],
+            D=wio_trbns["rotor_diameter"],
         )
     
     else:
@@ -88,7 +108,7 @@ def read_turbine_type(turbines, data, verbosity):
 
     return tname
 
-def read_layout(lname, ldict, data, ttype, verbosity=1):
+def read_layout(lname, ldict, algo_dict, ttype, verbosity=1):
     """
     Read wind farm layout from windio input
 
@@ -98,14 +118,12 @@ def read_layout(lname, ldict, data, ttype, verbosity=1):
         The layout name
     ldict: dict
         The layout data
-    fields: dict
-        The fields data
-    dims: dict
-        The dimensions data
+    algo_dict: dict
+        The algorithm dictionary
     ttype: str
         Name of the turbine type model
     verbosity: int
-        The verbosity level
+        The verbosity level, 0=silent
     
     Returns
     -------
@@ -118,13 +136,12 @@ def read_layout(lname, ldict, data, ttype, verbosity=1):
     if verbosity > 1:
         print(f"        Reading '{lname}'")
     cdict = Dict(ldict["coordinates"], name="coordinates")
-    farm = WindFarm()
+    farm = algo_dict["farm"]
     for xy in zip(cdict["x"], cdict["y"]):
         farm.add_turbine(
             Turbine(xy=np.array(xy), turbine_models=[ttype]),
             verbosity=0,
         )
     if verbosity > 1:
-        print(f"          Added {farm.n_turbines} turbines of type '{ttype}'")
-    data["farm"] = farm
+        print(f"          Added {farm.n_turbines} wio_trbns of type '{ttype}'")
         
