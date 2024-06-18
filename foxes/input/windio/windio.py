@@ -2,19 +2,15 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from foxes.core import WindFarm, Algorithm
+from foxes.core import WindFarm
 from foxes.models import ModelBook
-from foxes.input.states import StatesTable
-from foxes.input.farm_layout import add_from_df
-from foxes.models.turbine_types import CpCtFromTwo
 from foxes.utils import import_module, Dict
 from foxes.data import StaticData, WINDIO
-import foxes.constants as FC
-import foxes.variables as FV
 
 from .read_fields import read_wind_resource_field
 from .get_states import get_states
 from .read_farm import read_layout, read_turbine_type
+from .read_attributes import read_attributes
 from .runner import WindioRunner
 
 
@@ -82,7 +78,10 @@ def _read_farm(wio_farm, algo_dict, verbosity):
 
 def read_windio(windio_yaml, verbosity=2):
     """
-    Reads a WindIO case
+    Reads a complete WindIO case.
+
+    This is the main entry point for windio case
+    calculations. 
 
     Parameters
     ----------
@@ -93,8 +92,9 @@ def read_windio(windio_yaml, verbosity=2):
 
     Returns
     -------
-    algo: foxes.core.Algorithm
-        The algorithm
+    runner: foxes.input.windio.WindioRunner
+        The windio runner, call its run function
+        for the complete exection
 
     :group: input.windio
 
@@ -126,9 +126,17 @@ def read_windio(windio_yaml, verbosity=2):
     _read_site(Dict(wio["site"], name="site"), algo_dict, verbosity)
     _read_farm(Dict(wio["wind_farm"], name="farm"), algo_dict, verbosity)
 
+    out_dicts = read_attributes(
+        Dict(wio["attributes"], name="attributes"), algo_dict, verbosity,
+    )
+
     if verbosity > 0:
         print("Creating windio runner")
-    return WindioRunner(algo_dict, verbosity=verbosity)
+    runner = WindioRunner(
+        algo_dict, output_dicts=out_dicts, verbosity=verbosity
+    )
+
+    return runner
 
 if __name__ == "__main__":
     import argparse

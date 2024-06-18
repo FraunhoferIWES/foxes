@@ -4,7 +4,7 @@ import pandas as pd
 from foxes.utils import Dict
 from foxes.core import Turbine, TurbineType
 
-def read_turbine_type(wio_trbns, data, verbosity):
+def read_turbine_type(wio_trbns, algo_dict, verbosity):
     """
     Reads the turbine type from windio
     
@@ -58,7 +58,7 @@ def read_turbine_type(wio_trbns, data, verbosity):
         if verbosity > 1:
             print(f"            Creating model '{tname}'")
             print(f"              Turbine type class: PCtFromTwo")
-        data["mbook"].turbine_types[tname] = TurbineType.new(
+        algo_dict["mbook"].turbine_types[tname] = TurbineType.new(
             ttype_type="PCtFromTwo", 
             data_source_P=data_P,
             data_source_ct=data_ct,
@@ -91,7 +91,7 @@ def read_turbine_type(wio_trbns, data, verbosity):
         if verbosity > 1:
             print(f"            Creating model '{tname}'")
             print(f"              Turbine type class: CpCtFromTwo")
-        data["mbook"].turbine_types[tname] = TurbineType.new(
+        algo_dict["mbook"].turbine_types[tname] = TurbineType.new(
             ttype_type="CpCtFromTwo", 
             data_source_cp=data_cp,
             data_source_ct=data_ct,

@@ -23,3 +23,41 @@ wind_farm:
 attributes:
   flow_model:
     name: foxes
+
+  analyses:
+
+    wind_deficit_model:
+      name: Bastankhah2014
+      wake_expansion_coefficient:
+        k_a: 0.04
+        k_b: 0.0001
+        free_stream_ti: false
+      ceps: 0.2
+      use_effective_ws: true
+
+    axial_induction_model: Madsen
+
+    deflection_model:
+      name: None
+    
+    turbulence_model:
+      name: CrespoHernandez
+    
+    superposition_model:
+      ws_superposition: Linear
+      ti_superposition: Quadratic
+
+    rotor_averaging:
+      grid: grid
+      n_x_grid_points: 4
+      n_y_grid_points: 4
+      background_averaging: center
+      wake_averaging: grid
+      wind_speed_exponent_for_power: 3
+      wind_speed_exponent_for_ct: 2
+
+    blockage_model:
+      name: None
+
+
+
