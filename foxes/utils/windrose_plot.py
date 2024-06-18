@@ -104,6 +104,7 @@ class TabWindroseAxes(WindroseAxes):
             angle = 360.0 / nsector
             dir_bins = np.arange(-angle / 2, 360.0 + angle, angle, dtype=float)
             dir_edges = dir_bins.tolist()
+
             dir_edges.pop(-1)
             dir_edges[0] = dir_edges.pop(-1)
             dir_bins[0] = 0.0
@@ -119,7 +120,6 @@ class TabWindroseAxes(WindroseAxes):
             bins,
             table,
         )
-
         return bins, nbins, nsector, colors, angles, kwargs
 
     def legend(self, loc="upper right", *args, **kwargs):

@@ -44,14 +44,14 @@ def calc(runner, args, rotor, sdata, pwake, cks):
     mbook.turbine_models["sety"].add_var(FV.Y, ydata)
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
-        rotor_model=rotor,
+        states,
         wake_models=args.wakes,
+        rotor_model=rotor,
         wake_frame="rotor_wd",
-        partial_wakes_model=pwake,
+        partial_wakes=pwake,
         chunks=cks,
+        mbook=mbook,
         verbosity=0,
     )
 
@@ -97,13 +97,13 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=["kTI_02"], nargs="+"
     )
     parser.add_argument(
-        "-r", "--rotors", help="The rotor model(s)", default=["grid100"], nargs="+"
+        "-r", "--rotors", help="The rotor model(s)", default=["grid400"], nargs="+"
     )
     parser.add_argument(
         "-p",
         "--pwakes",
         help="The partial wakes model(s)",
-        default=["distsliced9", "axiwake6", "rotor_points"],
+        default=["grid16", "axiwake6", "rotor_points"],
         nargs="+",
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)
@@ -127,6 +127,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+    )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
 
@@ -212,4 +215,5 @@ if __name__ == "__main__":
     ax.set_xlabel("y/D")
     ax.set_ylabel(vlab)
     ax.legend()
-    plt.show()
+    if not args.nofig:
+        plt.show()

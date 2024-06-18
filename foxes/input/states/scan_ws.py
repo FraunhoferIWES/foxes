@@ -129,7 +129,7 @@ class ScanWS(States):
         """
         return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=FC.DTYPE)
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -140,33 +140,29 @@ class ScanWS(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.TData
+            The target point data
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
-        pdata[FV.WS][:] = mdata[self.WS][:, None]
+        tdata[FV.WS] = np.zeros_like(tdata[FC.TARGETS][..., 0])
+        tdata[FV.WS][:] = mdata[self.WS][:, None, None]
 
         if self.wd is not None:
-            pdata[FV.WD] = np.full(
-                (pdata.n_states, pdata.n_points), self.wd, dtype=FC.DTYPE
-            )
+            tdata[FV.WD] = np.full_like(tdata[FV.WS], self.wd)
         if self.ti is not None:
-            pdata[FV.TI] = np.full(
-                (pdata.n_states, pdata.n_points), self.ti, dtype=FC.DTYPE
-            )
+            tdata[FV.TI] = np.full_like(tdata[FV.WS], self.ti)
         if self.rho is not None:
-            pdata[FV.RHO] = np.full(
-                (pdata.n_states, pdata.n_points), self.rho, dtype=FC.DTYPE
-            )
+            tdata[FV.RHO] = np.full_like(tdata[FV.WS], self.rho)
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in self.output_point_vars(algo)}

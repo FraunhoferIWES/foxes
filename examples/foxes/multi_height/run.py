@@ -27,9 +27,9 @@ if __name__ == "__main__":
         help="The P-ct-curve csv file (path or static)",
         default="NREL-5MW-D126-H90.csv",
     )
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="grid9")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default="level10")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
@@ -68,6 +68,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
+    )
     args = parser.parse_args()
 
     cks = None if args.nodask else {FC.STATE: args.chunksize}
@@ -89,19 +92,19 @@ if __name__ == "__main__":
         farm, args.layout, turbine_models=args.tmodels + [ttype.name], H=170.0
     )
 
-    if args.show_layout:
+    if not args.nofig and args.show_layout:
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 

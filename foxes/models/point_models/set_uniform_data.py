@@ -129,12 +129,12 @@ class SetUniformData(PointDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.TData
+            The target point data
 
         Returns
         -------

@@ -49,7 +49,7 @@ Evaluation Software"`
 }
  ```
 
-## Requirements
+## Installation via pip
 
 The supported Python versions are: 
 
@@ -57,8 +57,7 @@ The supported Python versions are:
 - `Python 3.9`
 - `Python 3.10`
 - `Python 3.11`
-
-## Installation via pip
+- `Python 3.12`
 
 ### Virtual Python environment
 
@@ -109,7 +108,15 @@ The last line makes sure that all your code changes are included whenever import
 
 ## Installation via conda
 
-### Preparation
+The supported Python versions are: 
+
+- `Python 3.8`
+- `Python 3.9`
+- `Python 3.10`
+- `Python 3.11`
+- `Python 3.12`
+
+### Preparation (optional)
 
 It is strongly recommend to use the `libmamba` dependency solver instead of the default solver. Install it once by
 
@@ -180,12 +187,10 @@ import foxes
 
 states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
 
-mbook = foxes.ModelBook()
-
 farm = foxes.WindFarm()
 foxes.input.farm_layout.add_from_file(farm, "test_farm_67.csv", turbine_models=["NREL5MW"])
 
-algo = foxes.algorithms.Downwind(mbook, farm, states, ["Jensen_linear_k007"])
+algo = foxes.algorithms.Downwind(farm, states, ["Jensen_linear_k007"])
 farm_results = algo.calc_farm()
 
 print(farm_results)

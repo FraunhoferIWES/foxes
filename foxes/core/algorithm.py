@@ -63,6 +63,9 @@ class Algorithm(Model):
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
 
+        if chunks is not None and FC.TARGET not in chunks:
+            self.chunks[FC.TARGET] = chunks.get(FC.POINT, None)
+
         self._idata_mem = Dict()
 
     def print(self, *args, vlim=1, **kwargs):
@@ -115,15 +118,24 @@ class Algorithm(Model):
                     raise ValueError(
                         f"Input {mtype} data entry '{v}': Dimension '{FC.STATE}' not at first position, got {t[0]}"
                     )
-                if FC.POINT in t[0] and t[0][1] != FC.POINT:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at second position, got {t[0]}"
-                    )
-            elif FC.POINT in t[0]:
-                if t[0][0] != FC.POINT:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.POINT}' not at first position, got {t[0]}"
-                    )
+                if FC.TURBINE in t[0]:
+                    if t[0][1] != FC.TURBINE:
+                        raise ValueError(
+                            f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' not at second position, got {t[0]}"
+                        )
+                if FC.TARGET in t[0]:
+                    if t[0][1] != FC.TARGET:
+                        raise ValueError(
+                            f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
+                        )
+                    if len(t[0]) < 3 or t[0][2] != FC.TPOINT:
+                        raise KeyError(
+                            f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}"
+                        )
+            elif FC.TURBINE in t[0]:
+                raise ValueError(
+                    f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
+                )
             for d, s in zip(t[0], t[1].shape):
                 if d not in sizes:
                     sizes[d] = s
@@ -153,9 +165,9 @@ class Algorithm(Model):
                 raise ValueError(
                     f"Dimension '{FC.TURBINE}' cannot be chunked, got chunks {self.chunks}"
                 )
-            if FC.RPOINT in self.chunks.keys():
+            if FC.TPOINT in self.chunks.keys():
                 raise ValueError(
-                    f"Dimension '{FC.RPOINT}' cannot be chunked, got chunks {self.chunks}"
+                    f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
                 )
             xrdata = xrdata.chunk(
                 chunks={c: v for c, v in self.chunks.items() if c in sizes}
@@ -376,7 +388,14 @@ class Algorithm(Model):
             raise ValueError(
                 f"points have wrong dimensions, expecting ({self.n_states}, {points.shape[1]}, 3), got {points.shape}"
             )
-        idata["data_vars"][FC.POINTS] = ((FC.STATE, FC.POINT, FC.XYH), points)
+        idata["data_vars"][FC.TARGETS] = (
+            (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH),
+            points[:, :, None, :],
+        )
+        idata["data_vars"][FC.TWEIGHTS] = (
+            (FC.TPOINT,),
+            np.array([1.0], dtype=FC.DTYPE),
+        )
 
         sizes = self.__get_sizes(idata, "point")
         return self.__get_xrdata(idata, sizes)

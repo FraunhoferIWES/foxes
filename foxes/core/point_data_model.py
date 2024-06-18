@@ -1,3 +1,4 @@
+import numpy as np
 from abc import abstractmethod
 
 from .data_calc_model import DataCalcModel
@@ -26,8 +27,33 @@ class PointDataModel(DataCalcModel):
         """
         return []
 
+    def ensure_variables(self, algo, mdata, fdata, tdata):
+        """
+        Add variables to tdata, initialized with NaN
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+        tdata: foxes.core.Data
+            The target point data
+
+        """
+        for v in self.output_point_vars(algo):
+            if v not in tdata:
+                tdata[v] = np.full(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    np.nan,
+                    dtype=FC.DTYPE,
+                )
+                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
 
@@ -38,18 +64,19 @@ class PointDataModel(DataCalcModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.TData
+            The target point data
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
         pass
@@ -78,14 +105,19 @@ class PointDataModel(DataCalcModel):
             The calculation results
 
         """
-        return super().run_calculation(
+        results = super().run_calculation(
             algo,
             *data,
             out_vars=out_vars,
-            loop_dims=[FC.STATE, FC.POINT],
-            out_core_vars=[FC.VARS],
+            loop_dims=[FC.STATE, FC.TARGET],
+            out_core_vars=[FC.TPOINT, FC.VARS],
             **calc_pars,
         )
+        if results.sizes[FC.TPOINT] != 1:
+            raise ValueError(
+                f"PointDataModel '{self.name}': Expecting dimension '{FC.TPOINT}' of size 1, found {results.sizes[FC.TPOINT]}"
+            )
+        return results.sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
 
     def __add__(self, m):
         if isinstance(m, list):
@@ -170,7 +202,7 @@ class PointDataModelList(PointDataModel):
             ovars += m.output_point_vars(algo)
         return list(dict.fromkeys(ovars))
 
-    def calculate(self, algo, mdata, fdata, pdata, parameters=None):
+    def calculate(self, algo, mdata, fdata, tdata, parameters=None):
         """ "
         The main model calculation.
 
@@ -181,12 +213,12 @@ class PointDataModelList(PointDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The point data
+        tdata: foxes.core.TData
+            The target point data
         parameters: list of dict, optional
             A list of parameter dicts, one for each model
 
@@ -194,7 +226,8 @@ class PointDataModelList(PointDataModel):
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
         if parameters is None:
@@ -209,7 +242,7 @@ class PointDataModelList(PointDataModel):
             )
 
         for mi, m in enumerate(self.models):
-            res = m.calculate(algo, mdata, fdata, pdata, **parameters[mi])
-            pdata.update(res)
+            res = m.calculate(algo, mdata, fdata, tdata, **parameters[mi])
+            tdata.update(res)
 
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in self.output_point_vars(algo)}

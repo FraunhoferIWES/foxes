@@ -725,6 +725,7 @@ class FlowPlots2D(SliceData):
             data_format="numpy",
             ret_states=True,
             ret_grid=True,
+            x_direction=x_direction,
             **kwargs,
         )
         x_pos, y_pos, z_pos, __ = gdata
@@ -898,6 +899,7 @@ class FlowPlots2D(SliceData):
             data_format="numpy",
             ret_states=True,
             ret_grid=True,
+            x_direction=x_direction,
             **kwargs,
         )
         x_pos, y_pos, z_pos, __ = gdata

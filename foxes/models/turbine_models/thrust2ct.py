@@ -35,6 +35,10 @@ class Thrust2Ct(TurbineModel):
         self.thrust_var = thrust_var
         self.WSCT = var_ws_ct
 
+    def __repr__(self):
+        a = f"thrust_var={self.thrust_var}, var_ws_ct={self.WSCT}"
+        return f"{type(self).__name__}({a})"
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -53,7 +57,7 @@ class Thrust2Ct(TurbineModel):
         return [FV.CT]
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -63,13 +67,13 @@ class Thrust2Ct(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------

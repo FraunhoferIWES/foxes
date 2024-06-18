@@ -37,7 +37,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes model", default="rotor_points"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-w",
@@ -69,6 +69,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+    )
+    parser.add_argument(
+        "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
 
@@ -110,13 +113,13 @@ if __name__ == "__main__":
     )
 
     algo = foxes.algorithms.Downwind(
-        mbook,
         farm,
-        states=states,
+        states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame="rotor_wd",
-        partial_wakes_model=args.pwakes,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
         chunks=cks,
     )
 

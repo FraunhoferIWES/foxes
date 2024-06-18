@@ -69,9 +69,9 @@ class CentreRotor(RotorModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         Returns
@@ -90,7 +90,7 @@ class CentreRotor(RotorModel):
         fdata,
         rpoint_results,
         weights,
-        states_turbine=None,
+        downwind_index=None,
         copy_to_ambient=False,
     ):
         """
@@ -106,9 +106,9 @@ class CentreRotor(RotorModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
         rpoint_results: dict
             The results at rotor points. Keys: variable str.
@@ -117,24 +117,20 @@ class CentreRotor(RotorModel):
             Else: (n_states, 1, n_rpoints)
         weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
-        states_turbine: numpy.ndarray of int, optional
-            The turbine indices, one per state. Shape: (n_states,)
-        copy_to_ambient: bool, optional
+        downwind_index: int, optional
+            The index in the downwind order
+        copy_to_ambient: bool
             If `True`, the fdata results are copied to ambient
             variables after calculation
 
         """
         if len(weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, rpoint_results, weights, states_turbine
+                algo, mdata, fdata, rpoint_results, weights, downwind_index
             )
 
         n_states = mdata.n_states
         n_turbines = algo.n_turbines
-
-        stsel = None
-        if states_turbine is not None:
-            stsel = (np.arange(n_states), states_turbine)
 
         uvp = None
         uv = None
@@ -160,11 +156,11 @@ class CentreRotor(RotorModel):
             if v == FV.WD or v == FV.YAW:
                 if wd is None:
                     wd = uv2wd(uv, axis=-1)
-                self._set_res(fdata, v, wd, stsel)
+                self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
 
             elif v == FV.WS:
-                self._set_res(fdata, v, ws[:, :, 0], stsel)
+                self._set_res(fdata, v, ws[:, :, 0], downwind_index)
                 del ws
                 vdone.append(v)
         del uv, wd
@@ -174,17 +170,17 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            if stsel is None:
+            if downwind_index is None:
                 yaw = fdata[FV.YAW]
             else:
-                yaw = fdata[FV.YAW][stsel][:, None]
+                yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum("stpd,std->stp", uvp, nax)
 
             for v in self.calc_vars:
                 if v == FV.REWS or v == FV.REWS2 or v == FV.REWS3:
                     rews = wsp[:, :, 0]
-                    self._set_res(fdata, v, rews, stsel)
+                    self._set_res(fdata, v, rews, downwind_index)
                     del rews
                     vdone.append(v)
 
@@ -194,7 +190,7 @@ class CentreRotor(RotorModel):
         for v in self.calc_vars:
             if v not in vdone:
                 res = rpoint_results[v][:, :, 0]
-                self._set_res(fdata, v, res, stsel)
+                self._set_res(fdata, v, res, downwind_index)
                 del res
             if copy_to_ambient and v in FV.var2amb:
                 fdata[FV.var2amb[v]] = fdata[v].copy()

@@ -22,55 +22,52 @@ class PartialWakesModel(Model):
     :group: core
 
     """
-
-    def __init__(self, wake_models=None, wake_frame=None):
+    def check_wmodel(self, wmodel, error=True):
         """
-        Constructor.
-
+        Checks the wake model type
+        
         Parameters
         ----------
-        wake_models: list of foxes.core.WakeModel
-            The wake model selection, None for all
-            from algorithm.
-        wake_frame: foxes.core.WakeFrame, optional
-            The wake frame, None takes from algorithm
-
-        """
-        super().__init__()
-
-        self._wmodels = wake_models
-        self._wframe = wake_frame
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
+        wmodel: foxes.core.WakeModel
+            The wake model to be tested
+        error: bool
+            Flag for raising TypeError
+        
         Returns
         -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
+        chk: bool
+            True if wake model is compatible
+        
         """
-        return self.wake_models + [self.wake_frame]
+        return True
 
-    def initialize(self, algo, verbosity=0):
+    @abstractmethod
+    def get_wake_points(self, algo, mdata, fdata):
         """
-        Initializes the model.
+        Get the wake calculation points, and their
+        weights.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
+        mdata: foxes.core.Data
+            The model data
+        fdata: foxes.core.Data
+            The farm data
+
+        Returns
+        -------
+        rpoints: numpy.ndarray
+            The wake calculation points, shape:
+            (n_states, n_turbines, n_tpoints, 3)
+        rweights: numpy.ndarray
+            The target point weights, shape: (n_tpoints,)
 
         """
-        self.wake_models = algo.wake_models if self._wmodels is None else self._wmodels
-        self.wake_frame = algo.wake_frame if self._wframe is None else self._wframe
-        super().initialize(algo, verbosity)
+        pass
 
-    @abstractmethod
-    def new_wake_deltas(self, algo, mdata, fdata):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata, wmodel):
         """
         Creates new initial wake deltas, filled
         with zeros.
@@ -83,88 +80,109 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.Data
             The farm data
+        tdata: foxes.core.Data
+            The target point data
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------
         wake_deltas: dict
-            Keys: Variable name str, values: any
-        pdata: foxes.core.Data
-            The evaluation point data
+            Key: variable name, value: The zero filled
+            wake deltas, shape: (n_states, n_turbines, n_tpoints, ...)
 
         """
-        pass
+        return wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
 
-    @abstractmethod
-    def contribute_to_wake_deltas(
+    def contribute(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         wake_deltas,
+        wmodel,
     ):
         """
-        Modifies wake deltas by contributions from the
-        specified wake source turbines.
+        Modifies wake deltas at target points by
+        contributions from the specified wake source turbines.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray of int
-            For each state, one turbine index corresponding
-            to the wake causing turbine. Shape: (n_states,)
-        wake_deltas: Any
-            The wake deltas object created by the
-            `new_wake_deltas` function
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints, ...)
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         """
-        pass
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
-    def evaluate_results(
+    def finalize_wakes(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
+        tdata,
+        amb_res,
+        rpoint_weights,
         wake_deltas,
-        states_turbine,
-        amb_res=None,
+        wmodel,
+        downwind_index,
     ):
         """
-        Updates the farm data according to the wake
-        deltas.
+        Updates the wake_deltas at the selected target
+        downwind index.
+
+        Modifies wake_deltas on the fly.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-            Modified in-place by this function
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: Any
-            The wake deltas object, created by the
-            `new_wake_deltas` function and filled
-            by `contribute_to_wake_deltas`
-        states_turbine: numpy.ndarray of int
-            For each state, the index of one turbine
-            for which to evaluate the wake deltas.
-            Shape: (n_states,)
-        amb_res: dict, optional
-            Ambient states results. Keys: var str, values:
-            numpy.ndarray of shape (n_states, n_points)
+        tdata: foxes.core.Data
+            The target point data
+        amb_res: dict
+            The ambient results at the target points
+            of all rotors. Key: variable name, value
+            np.ndarray of shape:
+            (n_states, n_turbines, n_rotor_points)
+        rpoint_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
+        wake_deltas: dict
+            The wake deltas. Key: variable name,
+            value: np.ndarray of shape
+            (n_states, n_turbines, n_tpoints)
+        wmodel: foxes.core.WakeModel
+            The wake model
+        downwind_index: int
+            The index in the downwind order
+
+        Returns
+        -------
+        final_wake_deltas: dict
+            The final wake deltas at the selected downwind
+            turbines. Key: variable name, value: np.ndarray
+            of shape (n_states, n_rotor_points)
 
         """
         pass

@@ -10,6 +10,7 @@ This package contains all concrete model classes.
         =======================================  ============================================================
         :ref:`foxes.models.farm_controllers`     Wind farm controller models. They execute turbine models.
         :ref:`foxes.models.farm_models`          Wind farm models, i.e., turbine models for all turbines.
+        :ref:`foxes.models.ground_models`        Ground models, for example reflecting wakes
         :ref:`foxes.models.partial_wakes`        Partial wake models, computing rotor effective wake deltas.
         :ref:`foxes.models.point_models`         Point models, calculating results at points of interest.
         :ref:`foxes.models.rotor_models`         Rotor models, computing rotor effective ambient results.
@@ -37,37 +38,44 @@ are applied to all turbines of the wind farm.
 
     .. python-apigen-group:: models.farm_models
 
+foxes.models.ground_models
+--------------------------
+The ground models, for example reflecting wakes
+from horizontal planes.
+
+    .. python-apigen-group:: models.ground_models
+
 foxes.models.partial_wakes
 --------------------------
-The partial wake models. They are responsible for 
+The :ref:`Partial wakes`: models. They are responsible for 
 computing rotor effective wake deltas.
 
     .. python-apigen-group:: models.partial_wakes
 
 foxes.models.point_models
 -------------------------
-The point models. They compute state-point data for 
+The :ref:`Point models`:. They compute state-point data for 
 given points of interest.
 
     .. python-apigen-group:: models.point_models
 
 foxes.models.rotor_models
 -------------------------
-The rotor models. They compute rotor effective ambient data
+The :ref:`Rotor models`:. They compute rotor effective ambient data
 from the ambient input states.
 
     .. python-apigen-group:: models.rotor_models
 
 foxes.models.turbine_models
 ---------------------------
-The turbine models. They compute state-turbine data based on 
+The :ref:`Turbine models`:. They compute state-turbine data based on 
 the currently available and model provided data.
 
     .. python-apigen-group:: models.turbine_models
 
 foxes.models.turbine_types
 --------------------------
-The turbine type models. These are turbine models that represent
+The :ref:`Turbine types`:. These are turbine models that represent
 the wind turbine machine, i.e, they specify rotor diameter, hub 
 height and compute power and thrust.
 
@@ -75,7 +83,7 @@ height and compute power and thrust.
 
 foxes.models.vertical_profiles
 ------------------------------
-The vertical profile models. They compute height dependent data
+The :ref:`Vertical profiles`:. They compute height dependent data
 in one dimension, e.g., wind speed profiles.
 
     .. python-apigen-group:: models.vertical_profiles
@@ -88,14 +96,14 @@ The axial induction models, basically providing a function `ct2a`.
 
 foxes.models.wake_frames
 ------------------------
-The wake frame models. They define the curves along which the wakes
+The :ref:`Wake frames`:. They define the curves along which the wakes
 propagate.
 
     .. python-apigen-group:: models.wake_frames
 
 foxes.models.wake_models
 ------------------------
-The wake models. They compute wake deltas due to source turbines at 
+The :ref:`Wake models`:. They compute wake deltas due to source turbines at 
 any set of evaluation points.
 
     .. toctree::

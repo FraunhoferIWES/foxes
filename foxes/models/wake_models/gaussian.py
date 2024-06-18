@@ -13,13 +13,13 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     """
 
     @abstractmethod
-    def calc_amplitude_sigma_spsel(
+    def calc_amplitude_sigma(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
     ):
         """
@@ -30,37 +30,36 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
 
         Returns
         -------
         amsi: tuple
             The amplitude and sigma, both numpy.ndarray
-            with shape (n_sp_sel,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            with shape (n_st_sel,)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
         pass
 
-    def calc_wakes_spsel_x_r(
+    def calc_wakes_x_r(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         r,
     ):
@@ -71,38 +70,37 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
             The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            (n_states, n_targets, n_yz_per_target)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_r_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_r_per_x)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
-        amsi, sp_sel = self.calc_amplitude_sigma_spsel(
-            algo, mdata, fdata, pdata, states_source_turbine, x
+        amsi, st_sel = self.calc_amplitude_sigma(
+            algo, mdata, fdata, tdata, downwind_index, x
         )
         wdeltas = {}
-        rsel = r[sp_sel]
+        rsel = r[st_sel]
         for v in amsi.keys():
             ampld, sigma = amsi[v]
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
 
-        return wdeltas, sp_sel
+        return wdeltas, st_sel

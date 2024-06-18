@@ -27,10 +27,8 @@ class JensenWake(TopHatWakeModel):
 
         Parameters
         ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind deficit superposition
         k: float, optional
             The wake growth parameter k. If not given here
             it will be searched in the farm data.
@@ -47,43 +45,25 @@ class JensenWake(TopHatWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        s = super().__repr__()
-        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        s = f"{type(self).__name__}"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}"
+        if k is None:
+            s += f", k_var={self.k_var}"
+        else:
+            s += f", {self.k_var}={k}"
+        s += ")"
         return s
-
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
-        """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
 
     def calc_wake_radius(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         ct,
     ):
@@ -94,65 +74,58 @@ class JensenWake(TopHatWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
-        r: numpy.ndarray
-            The radial values for each x value, shape:
-            (n_states, n_points, n_r_per_x, 2)
+            The x values, shape: (n_states, n_targets)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_states, n_points)
+            shape: (n_states, n_targets)
 
         Returns
         -------
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_states, n_points)
+            The wake radii, shape: (n_states, n_targets)
 
         """
-
-        R = (
-            self.get_data(
-                FV.D,
-                FC.STATE_POINT,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                pdata=pdata,
-                states_source_turbine=states_source_turbine,
-            )
-            / 2
+        D = self.get_data(
+            FV.D,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=False,
         )
 
         k = self.get_data(
             self.k_var,
-            FC.STATE_POINT,
+            FC.STATE_TARGET,
             lookup="sw",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
-            upcast=True,
-            states_source_turbine=states_source_turbine,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=False,
         )
 
-        return R + k * x
+        return D / 2 + k * x
 
-    def calc_centreline_wake_deltas(
+    def calc_centreline(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
-        sp_sel,
+        tdata,
+        downwind_index,
+        st_sel,
         x,
         wake_r,
         ct,
@@ -164,40 +137,45 @@ class JensenWake(TopHatWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
         x: numpy.ndarray
-            The x values, shape: (n_sp_sel,)
+            The x values, shape: (n_st_sel,)
         wake_r: numpy.ndarray
-            The wake radii, shape: (n_sp_sel,)
+            The wake radii, shape: (n_st_sel,)
         ct: numpy.ndarray
             The ct values of the wake-causing turbines,
-            shape: (n_sp_sel,)
+            shape: (n_st_sel,)
 
         Returns
         -------
         cl_del: dict
             The centre line wake deltas. Key: variable name str,
-            varlue: numpy.ndarray, shape: (n_sp_sel,)
+            varlue: numpy.ndarray, shape: (n_st_sel,)
 
         """
-        n_states = mdata.n_states
-        n_points = sp_sel.shape[1]
-        st_sel = (np.arange(n_states), states_source_turbine)
-
-        R = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        R[:] = fdata[FV.D][st_sel][:, None] / 2
-        R = R[sp_sel]
+        R = (
+            self.get_data(
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=True,
+            )[st_sel]
+            / 2
+        )
 
         twoa = 2 * self.induction.ct2a(ct)
 

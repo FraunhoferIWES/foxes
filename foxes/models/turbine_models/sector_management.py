@@ -162,7 +162,7 @@ class SectorManagement(TurbineModel):
         return self._tvars
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -172,13 +172,13 @@ class SectorManagement(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -187,7 +187,6 @@ class SectorManagement(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-
         # prepare:
         n_trbs = len(self._trbs)
         if n_trbs == fdata.n_turbines and np.all(

@@ -463,10 +463,70 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New function `random_xy_square`, generates random xy positions with minimal distance
 - Examples:
   - New example: `random_timeseries`, computes a random farm in a random timeseries. Both sizes are defined by user input
+- Bug fixes:
+  - Fix for bug in `gen_states_fig_xz` and `gen_states_fig_xz` with parameter `x_direction`, which had no effect on the image
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.6.2](https://github.com/FraunhoferIWES/foxes/commits/v0.6.2)
 
 ## v0.7
 
+- Python versions:
+  - Now supporting Python 3.12
+- Documentation:
+  - New page `Models`, summarizing and explaining the *foxes* model choices.
+- Core:
+  - Speed-up in comparison with version 0.6.x, by internally handling all turbine data in downwind order, and then translating it back to farm order once computations are complete.
+  - Internally, all point evaluation data is now translated into so called "target" data, where each target is understood as being composed of a certain number of target points. During wake computations, these are the points per rotor (as defined by partial wakes models). For computations at user given points, the points are interpreted as targets with a single target point each. Final point output data is then given to the user again with point index coodinates, i.e., in the same format as in previous versions.
+  - New data classes: `MData`, `FData`, `TData`, all derived from the foxes `Data` class. These specialize model, farm and target data, respectively, during model calculations.
+- Algorithms:
+  - All algorithm constructors now take `farm, states, wake_models` as the first three arguments. If no model book is given, the default `ModelBook()` will be used.
+  - Partial wakes are now chosen either 
+    - by a dictionary, which maps wake model names to model choices (or default choices, if not found),
+    - or by a list, where the mapping to the wake models is in order of appearance, 
+    - or by a string, in which case all models are either mapped to the given model, or, if that fails with `TypeError`, to their defaults,
+    - or by `None`, which means all models are mapped to the default choice.
+- Partial wakes:
+  - New `PartialSegregated` abstract model, from which the `PartialGrid` model is derived. Segregated models now average background results and wake deltas separatly, and then add the results. Notice that with the choice of `RotorPoints` partial wakes, the mathematically correct average over a discretized rotor is calculated. This is more accurate, but it may be slower than some models (e.g. for `PartialAxiWake` models) or not applicable for some rotor choices (e.g. the `LevelRotor`, where a wake average makes no sense). 
+- Outputs:
+  - New output `RotorPointPlot`, creating rotor point plots.
+- Notebooks:
+  - New notebook `rotor_models.ipynb`, visualizing rotor points.
+  - New notebook `partial_wakes.ipynb`, verifying partial wakes models.
+- Bug fixes:
+  - Various fixes here and there.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7](https://github.com/FraunhoferIWES/foxes/commits/v0.7)
+
+## v0.7.1
+
+- Models:
+  - Improved `ModelBook`, adding some smartness thanks to model factories. Parameters are parsed from model name strings that follow given patterns. E.g., `Jensen_<superposition>_k<k>` represents all `JensenWake` models with any superposition model choice and and choice of k, and `Jensen_linear_k0075` would be an accepted name choice by the user.
+  - New wind speed superpositions `WSLinearLocal`, `WSQuadraticLocal`, `WSPowLocal`, `WSMaxLocal`: Adding dimensionless wind deficits, and then evaluating the overall effect for the ambient results at evaluation points (no scaling with rotor effective data)
+- Utils:
+  - New utility `Factory`, creating class instances from selections of allowed parameter choises
+  - New utility `FDict`, a dictionary that supports factories
+- Bug fixes:
+  - Bug fixed with `TurbOParkIX`, that prevented it from running
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.1](https://github.com/FraunhoferIWES/foxes/commits/v0.7.1)
+
+## v0.7.2
+
+- Bug fixes:
+  - Fix for bug with `Factory` that confused templates `A_B<..>` type with `B<..>` type templates 
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.2](https://github.com/FraunhoferIWES/foxes/commits/v0.7.2)
+
+## v0.7.3
+
+- Core:
+  - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
+- Models:
+  - New ground model `NoGround`, plain call of the partial wakes and wakes models
+  - New ground models `WakeMirror` and  `GroundMirror`, replacing the equivalent former wake models. Realizing wake reflection at horizontal planes.
+  - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
+- Bug fixes:
+  - Fox for bug with wake mirrors and partial wakes
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)

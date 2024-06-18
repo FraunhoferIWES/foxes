@@ -34,7 +34,7 @@ class Bastankhah2016Model(Model):
     MDATA_KEY = "Bastankhah2016Model"
     PARS = "pars"
     CHECK = "check"
-    SP_SEL = "sp_sel"
+    ST_SEL = "st_sel"
     X0 = "x0"
 
     NEAR = "near"
@@ -117,8 +117,8 @@ class Bastankhah2016Model(Model):
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         gamma,
         k,
@@ -130,21 +130,20 @@ class Bastankhah2016Model(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         gamma: numpy.ndarray
-            The YAWM angles in radiants, shape: (n_states, n_points)
+            The YAWM angles in radiants, shape: (n_states, n_targets)
         k: numpy.ndarray
-            The k parameter values, shape: (n_states, n_points)
+            The k parameter values, shape: (n_states, n_targets)
 
         """
 
@@ -152,95 +151,95 @@ class Bastankhah2016Model(Model):
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
             mdata[FC.STATE][0],
-            states_source_turbine[0],
+            downwind_index,
             x.shape,
         )
 
         # get D:
         D = super().get_data(
             FV.D,
-            FC.STATE_POINT,
+            target=FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # get ct:
         ct = super().get_data(
             FV.CT,
-            FC.STATE_POINT,
+            target=FC.STATE_TARGET,
             lookup="w",
             algo=algo,
             fdata=fdata,
-            pdata=pdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
             upcast=True,
-            states_source_turbine=states_source_turbine,
         )
 
         # select targets:
-        sp_sel = (x > 1e-5) & (ct > 0.0)
-        if np.any(sp_sel):
+        st_sel = (x > 0) & (ct > 0.0)
+        if np.any(st_sel):
             # get ws:
             ws = super().get_data(
                 FV.REWS,
-                FC.STATE_POINT,
+                target=FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
             )
 
             # get TI:
             ti = super().get_data(
                 FV.TI,
-                FC.STATE_POINT,
+                target=FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
             )
 
             # get alpha:
             alpha = super().get_data(
                 FV.PA_ALPHA,
-                FC.STATE_POINT,
+                target=FC.STATE_TARGET,
                 lookup="ws",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
             )
 
             # get beta:
             beta = super().get_data(
                 FV.PA_BETA,
-                FC.STATE_POINT,
+                target=FC.STATE_TARGET,
                 lookup="ws",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
             )
 
             # apply filter:
-            x = x[sp_sel]
-            D = D[sp_sel]
-            ct = ct[sp_sel]
-            ws = ws[sp_sel]
-            ti = ti[sp_sel]
-            k = k[sp_sel]
-            gamma = gamma[sp_sel]
-            alpha = alpha[sp_sel]
-            beta = beta[sp_sel]
+            x = x[st_sel]
+            D = D[st_sel]
+            ct = ct[st_sel]
+            ws = ws[st_sel]
+            ti = ti[st_sel]
+            k = k[st_sel]
+            gamma = gamma[st_sel]
+            alpha = alpha[st_sel]
+            beta = beta[st_sel]
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
@@ -329,10 +328,10 @@ class Bastankhah2016Model(Model):
                 out[self.SIGMA_Z_FAR] = sigma_z
 
         # update mdata:
-        out[self.SP_SEL] = sp_sel
+        out[self.ST_SEL] = st_sel
         mdata[self.MDATA_KEY] = out
 
-    def has_data(self, mdata, states_source_turbine, x):
+    def has_data(self, mdata, downwind_index, x):
         """
         Check if data exists
 
@@ -340,7 +339,7 @@ class Bastankhah2016Model(Model):
         ----------
         mdata: foxes.core.Data
             The model data
-        states_source_turbine: numpy.ndarray
+        downwind_index: numpy.ndarray
             For each state, one turbine index for the
             wake causing turbine. Shape: (n_states,)
         x: numpy.ndarray
@@ -354,7 +353,7 @@ class Bastankhah2016Model(Model):
         """
         check = (
             mdata[FC.STATE][0],
-            states_source_turbine[0],
+            downwind_index,
             x.shape,
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
@@ -427,10 +426,8 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         Parameters
         ----------
-        superposition: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        superposition: str
+            The wind deficit superposition
         k: float
             The wake growth parameter k. If not given here
             it will be searched in the farm data, by default None
@@ -459,8 +456,14 @@ class Bastankhah2016(DistSlicedWakeModel):
 
     def __repr__(self):
         k = getattr(self, self.k_var)
-        s = super().__repr__()
-        s += f"({self.k_var}={k}, sp={self.superpositions[FV.WS]})"
+        iname = self.model_pars.get("induction", "Madsen")
+        s = f"{type(self).__name__}"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}"
+        if k is None:
+            s += f", k_var={self.k_var}"
+        else:
+            s += f", {self.k_var}={k}"
+        s += ")"
         return s
 
     def sub_models(self):
@@ -493,39 +496,13 @@ class Bastankhah2016(DistSlicedWakeModel):
             self.model = Bastankhah2016Model(**self.model_pars)
         super().initialize(algo, verbosity, force)
 
-    def init_wake_deltas(self, algo, mdata, fdata, pdata, wake_deltas):
-        """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        n_states = mdata.n_states
-        wake_deltas[FV.WS] = np.zeros((n_states, pdata.n_points), dtype=FC.DTYPE)
-
-    def calc_wakes_spsel_x_yz(
+    def calc_wakes_x_yz(
         self,
         algo,
         mdata,
         fdata,
-        pdata,
-        states_source_turbine,
+        tdata,
+        downwind_index,
         x,
         yz,
     ):
@@ -536,74 +513,70 @@ class Bastankhah2016(DistSlicedWakeModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index in the downwind order
         x: numpy.ndarray
-            The x values, shape: (n_states, n_points)
+            The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
             The yz values for each x value, shape:
-            (n_states, n_points, n_yz_per_x, 2)
+            (n_states, n_targets, n_yz_per_target, 2)
 
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
-            value: numpy.ndarray, shape: (n_sp_sel, n_yz_per_x)
-        sp_sel: numpy.ndarray of bool
-            The state-point selection, for which the wake
-            is non-zero, shape: (n_states, n_points)
+            value: numpy.ndarray, shape: (n_st_sel, n_yz_per_target)
+        st_sel: numpy.ndarray of bool
+            The state-target selection, for which the wake
+            is non-zero, shape: (n_states, n_targets)
 
         """
-
         # prepare:
         n_y_per_z = yz.shape[2]
 
         # calculate model data:
-        if not self.model.has_data(mdata, states_source_turbine, x):
+        if not self.model.has_data(mdata, downwind_index, x):
             # get gamma:
             gamma = self.get_data(
                 FV.YAWM,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="ws",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
+                downwind_index=downwind_index,
             )
             gamma *= np.pi / 180
 
             # get k:
             k = self.get_data(
                 self.k_var,
-                FC.STATE_POINT,
+                FC.STATE_TARGET,
                 lookup="sw",
                 algo=algo,
                 fdata=fdata,
-                pdata=pdata,
+                tdata=tdata,
                 upcast=True,
-                states_source_turbine=states_source_turbine,
+                downwind_index=downwind_index,
             )
 
             # run calculation:
-            self.model.calc_data(
-                algo, mdata, fdata, pdata, states_source_turbine, x, gamma, k
-            )
+            self.model.calc_data(algo, mdata, fdata, tdata, downwind_index, x, gamma, k)
 
         # select targets:
-        sp_sel = self.model.get_data(Bastankhah2016Model.SP_SEL, mdata)
-        n_sp_sel = np.sum(sp_sel)
+        st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
+        n_sp_sel = np.sum(st_sel)
         wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
-        if np.any(sp_sel):
+        if np.any(st_sel):
             # apply filter:
-            yz = yz[sp_sel]
+            yz = yz[st_sel]
 
             # collect data:
             near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)
@@ -650,4 +623,4 @@ class Bastankhah2016(DistSlicedWakeModel):
                     * np.exp(-0.5 * (z / sigma_z) ** 2)
                 )
 
-        return wdeltas, sp_sel
+        return wdeltas, st_sel

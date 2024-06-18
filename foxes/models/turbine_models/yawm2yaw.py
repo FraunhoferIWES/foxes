@@ -32,7 +32,7 @@ class YAWM2YAW(TurbineModel):
         return [FV.YAW]
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -42,13 +42,13 @@ class YAWM2YAW(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        st_sel: numpy.ndarray of bool
+        st_sel: slice or numpy.ndarray of bool
             The state-turbine selection,
-            shape: (n_states, n_turbines)
+            for shape: (n_states, n_turbines)
 
         Returns
         -------
@@ -57,12 +57,8 @@ class YAWM2YAW(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        yawm = self.get_data(
-            FV.YAWM, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
-        )[st_sel]
-        wd = self.get_data(
-            FV.WD, FC.STATE_TURBINE, lookup="f", fdata=fdata, upcast=True
-        )[st_sel]
+        yawm = fdata[FV.YAWM][st_sel]
+        wd = fdata[FV.WD][st_sel]
 
         yaw = fdata[FV.YAW]
         yaw[st_sel] = np.mod(wd + yawm, 360.0)

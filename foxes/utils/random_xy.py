@@ -1,15 +1,16 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
+
 def random_xy_square(
-        n, 
-        min_dist=500, 
-        xmax_ini=None, 
-        growth=1.02, 
-        seed=None, 
-        verbosity=1,
-    ):
-    """ 
+    n,
+    min_dist=500,
+    xmax_ini=None,
+    growth=1.02,
+    seed=None,
+    verbosity=1,
+):
+    """
     Creates random xy positions within a square,
     with mean (0, 0)
 
@@ -22,13 +23,13 @@ def random_xy_square(
     xmax_ini: float, optional
         The initial maximal distance of any coordinates
     growth: float
-        The growth factor of the initial radius, must be 
+        The growth factor of the initial radius, must be
         greater 1
     seed: int, optional
         The random seed
     verbosity: int
         The verbosity level. 0 = silent
-    
+
     Returns
     -------
     xy: numpy.ndarray

@@ -1,6 +1,7 @@
+import numpy as np
+from foxes.core import PointDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.core import PointDataModel
 
 
 class PointWakesCalculation(PointDataModel):
@@ -16,7 +17,7 @@ class PointWakesCalculation(PointDataModel):
     emodels_cpars: list of dict
         The calculation parameters for extra models
     wake_models: list of foxes.core.WakeModel
-        The wake models, default: from algo
+        The wake models to be used
 
     :group: algorithms.downwind.models
 
@@ -33,7 +34,7 @@ class PointWakesCalculation(PointDataModel):
         emodels_cpars: list of dict, optional
             The calculation parameters for extra models
         wake_models: list of foxes.core.WakeModel, optional
-            The wake models, default: from algo
+            Specific wake models to be used
 
         """
         super().__init__()
@@ -86,51 +87,7 @@ class PointWakesCalculation(PointDataModel):
         """
         return self.pvars
 
-    def contribute_to_wake_deltas(
-        self,
-        algo,
-        mdata,
-        fdata,
-        pdata,
-        states_source_turbine,
-        wmodels,
-        wdeltas,
-    ):
-        """
-        Contribute to wake deltas from source turbines
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        pdata: foxes.core.Data
-            The point data
-        states_source_turbine: numpy.ndarray
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,)
-        wmodels: list of foxes.core.WakeModel
-            The wake models
-        wdeltas: dict
-            The wake deltas, are being modified ob the fly.
-            Key: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
-
-        """
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, pdata, states_source_turbine
-        )
-
-        for w in wmodels:
-            w.contribute_to_wake_deltas(
-                algo, mdata, fdata, pdata, states_source_turbine, wcoos, wdeltas
-            )
-
-    def calculate(self, algo, mdata, fdata, pdata, states_source_turbine=None):
+    def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
         """ "
         The main model calculation.
 
@@ -145,55 +102,60 @@ class PointWakesCalculation(PointDataModel):
             The model data
         fdata: foxes.core.Data
             The farm data
-        pdata: foxes.core.Data
-            The point data
-        states_source_turbine: numpy.ndarray, optional
-            For each state, one turbine index for the
-            wake causing turbine. Shape: (n_states,).
-            Default: include all turbines
+        tdata: foxes.core.Data
+            The target point data
+        downwind_index: int
+            The index in the downwind order of the wake
+            causing turbine
 
         Returns
-        -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
+        res = {}
+        wmodels = (
+            algo.wake_models.values() if self.wake_models is None else self.wake_models
+        )
+        for wmodel in wmodels:
+            pwake = algo.partial_wakes[wmodel.name]
+            gmodel = algo.ground_models[wmodel.name]
 
-        torder = fdata[FV.ORDER].astype(FC.ITYPE)
-        n_order = torder.shape[1]
-        wake_models = algo.wake_models if self.wake_models is None else self.wake_models
+            wdeltas = gmodel.new_point_wake_deltas(
+                algo, mdata, fdata, tdata, wmodel)
+            
+            if len(set(self.pvars).intersection(wdeltas.keys())):
 
-        wdeltas = {}
-        wmodels = []
-        for w in wake_models:
-            hdeltas = {}
-            w.init_wake_deltas(algo, mdata, fdata, pdata, hdeltas)
-            if len(set(self.pvars).intersection(hdeltas.keys())):
-                wdeltas.update(hdeltas)
-                wmodels.append(w)
-            del hdeltas
+                if downwind_index is None:
+                    for oi in range(fdata.n_turbines):
+                        gmodel.contribute_to_point_wakes(
+                            algo, mdata, fdata, tdata, oi,
+                            wdeltas, wmodel
+                        )
+                else:
+                    gmodel.contribute_to_point_wakes(
+                        algo, mdata, fdata, tdata, downwind_index, 
+                        wdeltas, wmodel
+                    )
 
-        if states_source_turbine is None:
-            for oi in range(n_order):
-                o = torder[:, oi]
-                self.contribute_to_wake_deltas(
-                    algo, mdata, fdata, pdata, o, wmodels, wdeltas
+                for v in self.pvars:
+                    if v not in res and v in tdata:
+                        res[v] = tdata[v].copy()
+
+                gmodel.finalize_point_wakes(
+                    algo, mdata, fdata, res, wdeltas, wmodel
                 )
-        else:
-            self.contribute_to_wake_deltas(
-                algo, mdata, fdata, pdata, states_source_turbine, wmodels, wdeltas
-            )
 
-        amb_res = {v: pdata[FV.var2amb[v]] for v in wdeltas if v in FV.var2amb}
-        for w in wmodels:
-            w.finalize_wake_deltas(algo, mdata, fdata, pdata, amb_res, wdeltas)
+                for v in res.keys():
+                    if v in wdeltas:
+                        res[v] += wdeltas[v]
 
-        for v in self.pvars:
-            if v in wdeltas:
-                pdata[v] = amb_res[v] + wdeltas[v]
+        for v in res.keys():
+            tdata[v] = res[v]
 
         if self.emodels is not None:
-            self.emodels.calculate(algo, mdata, fdata, pdata, self.emodels_cpars)
+            self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)
 
-        return {v: pdata[v] for v in self.pvars}
+        return {v: tdata[v] for v in self.pvars}
