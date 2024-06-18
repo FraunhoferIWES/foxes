@@ -1,0 +1,63 @@
+name: 5 turbines and a wind timeseries
+
+site:
+  name: Site with wind timeseries data
+  boundaries:
+      polygons: [
+          x: [-10, -10, 1610, 1610],
+          y: [-10, 10, 10, -10]
+      ]
+  energy_resource:
+    name: NetCDF timeseries with 5000 states
+    wind_resource: !include ../states/windio_timeseries_5000.nc
+
+wind_farm: 
+  name: One row with 5 turbines
+  layouts:
+      initial_layout:
+          coordinates:
+              x: [0, 0, 0, 0, 0]
+              y: [0, 600, 1150, 1730, 2400]
+  turbines: !include DTU_10MW_turbine.yaml
+
+attributes:
+  flow_model:
+    name: foxes
+
+  analyses:
+
+    wind_deficit_model:
+      name: Bastankhah2014
+      wake_expansion_coefficient:
+        k_a: 0.04
+        k_b: 0.0001
+        free_stream_ti: false
+      ceps: 0.2
+      use_effective_ws: true
+
+    axial_induction_model: Madsen
+
+    deflection_model:
+      name: None
+    
+    turbulence_model:
+      name: CrespoHernandez
+    
+    superposition_model:
+      ws_superposition: Linear
+      ti_superposition: Quadratic
+
+    rotor_averaging:
+      grid: grid
+      n_x_grid_points: 4
+      n_y_grid_points: 4
+      background_averaging: center
+      wake_averaging: grid
+      wind_speed_exponent_for_power: 3
+      wind_speed_exponent_for_ct: 2
+
+    blockage_model:
+      name: None
+
+
+

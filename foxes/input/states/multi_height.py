@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from xarray import Dataset, open_dataset
 from pathlib import Path
 from scipy.interpolate import interp1d
 
@@ -106,7 +107,6 @@ class MultiHeightStates(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-        self._cmap = None
         self._solo = None
         self._weights = None
         self._N = None
@@ -227,14 +227,14 @@ class MultiHeightStates(States):
             data[col_w] = self._weights[:, 0]
 
         cols = []
-        self._cmap = {}
+        cmap = {}
         self._solo = {}
         for v in self.ovars:
             vcols = self._find_cols(v, data.columns)
             if len(vcols) == 1:
                 self._solo[v] = data[vcols[0]].to_numpy()
             elif len(vcols) > 1:
-                self._cmap[v] = (len(cols), len(cols) + len(vcols))
+                cmap[v] = (len(cols), len(cols) + len(vcols))
                 cols += vcols
         data = data[cols]
 
@@ -245,7 +245,7 @@ class MultiHeightStates(States):
         idata = super().load_data(algo, verbosity)
 
         idata["coords"][self.H] = self.heights
-        idata["coords"][self.VARS] = list(self._cmap.keys())
+        idata["coords"][self.VARS] = list(cmap.keys())
 
         n_hts = len(self.heights)
         n_vrs = int(len(data.columns) / n_hts)
@@ -257,6 +257,7 @@ class MultiHeightStates(States):
 
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
+        self._solo = list(self._solo.keys())
 
         return idata
 
@@ -397,7 +398,7 @@ class MultiHeightStates(States):
             elif v in self.fixed_vars:
                 results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
                 results[v][:] = self.fixed_vars[v]
-            elif v in self._solo.keys():
+            elif v in self._solo:
                 results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
                 results[v][:] = mdata[self.var(v)][:, None, None]
             else:
@@ -418,12 +419,189 @@ class MultiHeightStates(States):
 
         """
         super().finalize(algo, verbosity)
-        self._cmap = None
         self._solo = None
         self._weights = None
         self._N = None
 
+class MultiHeightNCStates(MultiHeightStates):
+    """
+    Multi-height states from xarray Dataset.
 
+    Attributes
+    ----------
+    data_source: str or xarray.Dataset
+        Either path to a file or data
+    state_coord: str
+        Name of the state coordinate
+    h_coord: str
+        Name of the height coordinate
+    xr_read_pars: dict
+        Parameters for xarray.open_dataset
+
+    :group: input.states
+
+    """
+    def __init__(
+            self, 
+            data_source, 
+            *args, 
+            state_coord=FC.STATE,
+            h_coord=FV.H,
+            heights=None, 
+            format_times_func="default",
+            xr_read_pars={}, 
+            **kwargs,
+        ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        data_source: str or pandas.DataFrame
+            Either path to a file or data
+        args: tuple, optional
+            Parameters for the base class
+        state_coord: str
+            Name of the state coordinate
+        h_coord: str
+            Name of the height coordinate
+        output_vars: list of str
+            The output variables
+        heights: list of float, optional
+            The heights at which to search data
+        format_times_func: Function or 'default', optional
+            The function that maps state_coord values
+            to datetime dtype format
+        xr_read_pars: dict, optional
+            Parameters for xarray.open_dataset
+        kwargs: dict, optional
+            Parameters for the base class
+
+        """
+        super().__init__(
+            data_source, 
+            *args, 
+            heights=[], 
+            pd_read_pars=None,
+            **kwargs,
+        )
+        self.state_coord = state_coord
+        self.heights = heights
+        self.h_coord = h_coord
+        self.xr_read_pars = xr_read_pars
+
+        if format_times_func == "default":
+            self.format_times_func = lambda t: t.astype('datetime64[ns]')
+        else:
+            self.format_times_func = format_times_func
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        if not isinstance(self.data_source, Dataset):
+            if not Path(self.data_source).is_file():
+                if verbosity:
+                    print(
+                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                    )
+                self.data_source = algo.dbook.get_file_path(
+                    STATES, self.data_source, check_raw=False
+                )
+                if verbosity:
+                    print(f"Path: {self.data_source}")
+            elif verbosity:
+                print(f"States '{self.name}': Reading file {self.data_source}")
+            data = open_dataset(self.data_source, **self.xr_read_pars)
+        else:
+            data = self.data_source
+
+        if self.states_sel is not None:
+            data = data.isel({self.state_coord: self.states_sel})
+        if self.states_loc is not None:
+            data = data.sel({self.state_coord: self.states_loc})
+
+        self._N = data.sizes[self.state_coord]
+        self._inds = data.coords[self.state_coord].to_numpy()
+        if self.format_times_func is not None:
+            self._inds = self.format_times_func(self._inds)
+
+        w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
+        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        if w_name in data.data_vars:
+            if data[w_name].dims != (self.state_coord,):
+                raise ValueError(f"Weights data '{w_name}': Expecting dims ({self.state_coord},), got {data[w_name]}")
+            self._weights[:] = data.data_vars[w_name].to_numpy()[:, None]
+        elif FV.WEIGHT in self.var2col:
+            raise KeyError(
+                f"Weight variable '{w_name}' defined in var2col, but not found in data_vars {list(data.data_vars.keys())}"
+            )
+        else:
+            self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+            self._weights[:] = 1.0 / self._N
+
+        cols = {}
+        self._solo = {}
+        for v in self.ovars:
+            c = self.var2col.get(v, v)
+            if c in self.fixed_vars:
+                pass
+            elif c in data.attrs:
+                self._solo[v] = np.full(self._N, data.attrs)
+            elif c in data.data_vars:
+                if data[c].dims == (self.state_coord,):
+                    self._solo[v] = data.data_vars[c].to_numpy()
+                elif data[c].dims == (self.state_coord, self.h_coord):
+                    cols[v] = c
+                else:
+                    raise ValueError(f"Variable '{c}': Expecting dims {(self.state_coord, self.h_coord)}, got {data[c].dims}")
+            else:
+                raise KeyError(f"Missing variable '{c}', found data_vars {sorted(list(data.data_vars.keys()))} and attrs {sorted(list(data.attrs.keys()))}")
+
+        if self.heights is not None:
+            data = data.sel({self.h_coord: self.heights})
+        else:
+            self.heights = data[self.h_coord].to_numpy()
+
+        self.H = self.var(FV.H)
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
+
+        idata = States.load_data(self, algo, verbosity)
+        idata["coords"][self.H] = self.heights
+        idata["coords"][self.VARS] = list(cols.keys())
+
+        dims = (FC.STATE, self.VARS, self.H)
+        idata["data_vars"][self.DATA] = (
+            dims,
+            np.stack([data.data_vars[c].to_numpy() for c in cols.values()], axis=1).astype(FC.DTYPE)
+        )
+
+        for v, d in self._solo.items():
+            idata["data_vars"][self.var(v)] = ((FC.STATE,), d.astype(FC.DTYPE))
+        self._solo = list(self._solo.keys())
+
+        return idata
+    
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -431,5 +609,32 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
-
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
+class MultiHeightNCTimeseries(MultiHeightNCStates):
+    """
+    Multi-height timeseries from xarray Dataset.
+
+    :group: input.states
+
+    """
+    def __init__(
+            self, 
+            *args, 
+            time_coord=FC.TIME,
+            **kwargs,
+        ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Parameters for the base class
+        time_coord: str
+            Name of the state coordinate
+        kwargs: dict, optional
+            Parameters for the base class
+
+        """
+        super().__init__(*args, state_coord=time_coord, **kwargs)

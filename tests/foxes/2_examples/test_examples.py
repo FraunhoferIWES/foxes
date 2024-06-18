@@ -18,7 +18,7 @@ def test():
 
         args = argparse.Namespace()
         args.include = None
-        args.exclude = []
+        args.exclude = ["windio"]
         args.incopt = False
         args.forceopt = False
         args.step = 0

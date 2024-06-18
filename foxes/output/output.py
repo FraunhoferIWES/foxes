@@ -97,13 +97,13 @@ class Output:
             print(n)
 
     @classmethod
-    def new(cls, model_type, *args, **kwargs):
+    def new(cls, output_type, *args, **kwargs):
         """
         Run-time output model factory.
 
         Parameters
         ----------
-        model_type: string
+        output_type: string
             The selected derived class name
         args: tuple, optional
             Additional parameters for the constructor
@@ -112,19 +112,19 @@ class Output:
 
         """
 
-        if model_type is None:
+        if output_type is None:
             return None
 
         allc = all_subclasses(cls)
-        found = model_type in [scls.__name__ for scls in allc]
+        found = output_type in [scls.__name__ for scls in allc]
 
         if found:
             for scls in allc:
-                if scls.__name__ == model_type:
+                if scls.__name__ == output_type:
                     return scls(*args, **kwargs)
 
         else:
             estr = "Output type '{}' is not defined, available types are \n {}".format(
-                model_type, sorted([i.__name__ for i in allc])
+                output_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)

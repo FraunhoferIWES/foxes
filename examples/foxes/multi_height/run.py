@@ -19,7 +19,7 @@ if __name__ == "__main__":
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
-        default="WRF-Timeseries-4464.csv.gz",
+        default="WRF-Timeseries-3000.nc",
     )
     parser.add_argument(
         "-t",
@@ -79,12 +79,12 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    states = foxes.input.states.MultiHeightTimeseries(
+    states = foxes.input.states.MultiHeightNCTimeseries(
         data_source=args.states,
+        time_coord="Time",
+        h_coord="height",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={},
-        heights=[50, 75, 90, 100, 150, 200, 250, 500],
-        fixed_vars={FV.TI: 0.05},
+        var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"},
     )
 
     farm = foxes.WindFarm()

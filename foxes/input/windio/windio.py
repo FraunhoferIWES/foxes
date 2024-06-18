@@ -1,300 +1,150 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-from foxes.core import WindFarm, Algorithm
+from foxes.core import WindFarm
 from foxes.models import ModelBook
-from foxes.input.farm_layout import add_from_df
-from foxes.models.turbine_types import PCtFromTwo, CpCtFromTwo
-from foxes.utils import import_module, exec_python
-import foxes.constants as FC
+from foxes.utils import import_module, Dict
+from foxes.data import StaticData, WINDIO
 
-from .read_states import read_Timeseries, read_StatesTable
-from .output import WIOOutput
+from .read_fields import read_wind_resource_field
+from .get_states import get_states
+from .read_farm import read_layout, read_turbine_type
+from .read_attributes import read_attributes
+from .runner import WindioRunner
 
-def read_resource(res, **site_pars):
+
+def _read_site(wio_site, algo_dict, verbosity):
+    """ Reads the site information """
+    if verbosity > 0:
+        print("Reading site")
+        print("  Name:", wio_site.pop("name", None))
+        print("  Contents:", [k for k in wio_site.keys()])
+    
+    # ignore boundaries:
+    if verbosity > 1:
+        print("  Ignoring boundaries")
+    
+    # read energy_resource:
+    energy_resource = Dict(wio_site["energy_resource"], name="energy_resource")
+    if verbosity > 1:
+        print("  Reading energy_resource")
+        print("    Name:", energy_resource.pop("name", None))
+        print("    Contents:", [k  for k in energy_resource.keys()])
+
+    # read wind_resource:
+    wind_resource = Dict(energy_resource["wind_resource"], name="wind_resource")
+    if verbosity > 1:
+        print("    Reading wind_resource")
+        print("      Name:", wind_resource.pop("name", None))
+        print("      Contents:", [k  for k in wind_resource.keys()])
+
+    # read fields
+    coords = Dict(name="coords")
+    fields = Dict(name="fields")
+    dims = Dict(name="dims")
+    for n, d in wind_resource.items():
+        if verbosity > 1:
+            print("        Reading", n)
+        read_wind_resource_field(n, d, coords, fields, dims)
+    if verbosity > 1:
+        print("      Coords:")
+        for c, d in coords.items():
+            print(f"        {c}: Shape {d.shape}")
+        print("      Fields:")
+        for f, d in dims.items():
+            print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+
+    algo_dict["states"] = get_states(coords, fields, dims, verbosity)
+
+def _read_farm(wio_farm, algo_dict, verbosity):
+    """ Reads the wind farm information """
+    if verbosity > 0:
+        print("Reading wind farm")
+        print("  Name:", wio_farm.pop("name", None))
+        print("  Contents:", [k for k in wio_farm.keys()])
+
+    # read turbine type:
+    turbines = Dict(wio_farm["turbines"], name="turbines")
+    ttype = read_turbine_type(turbines, algo_dict, verbosity)
+
+    # read layouts:
+    layouts = Dict(wio_farm["layouts"], name="layouts")
+    if verbosity > 1:
+        print("    Reading layouts")
+        print("      Contents:", [k  for k in layouts.keys()])
+    for lname, ldict in layouts.items():
+        read_layout(lname, ldict, algo_dict, ttype, verbosity)
+
+def read_windio(windio_yaml, verbosity=2):
     """
-    Reads a WindIO energy resource
+    Reads a complete WindIO case.
+
+    This is the main entry point for windio case
+    calculations. 
 
     Parameters
     ----------
-    res: dict
-        Data from the yaml file
-    fixed_vars: dict
-        Additional fixes variables that do
-        not occur in the yaml
-    site_pars: dict, optional
-        Additional arguments for read_resource
+    windio_yaml: str
+        Path to the windio yaml file
+    verbosity: int
+        The verbosity level, 0 = silent
 
     Returns
     -------
-    states: foxes.states.States
-        The states object
-
-    """
-    wres = res["wind_resource"]
-    if len(wres) != 1:
-        raise KeyError(f"Expecting exactly one entry in wind_resource, found: {list(wres.keys())}")
-
-    if "timeseries" in wres:
-        return read_Timeseries(wres["timeseries"], **site_pars)
-    else:
-        return read_StatesTable(wres, **site_pars)
-
-def read_site(site, **site_pars):
-    """
-    Reads a WindIO site
-
-    Parameters
-    ----------
-    site_data: dict
-        Data from the yaml file
-    site_pars: dict, optional
-        Additional arguments for read_resource
-
-    Returns
-    -------
-    states: foxes.states.States
-        The states object
-
-    """
-    res = site["energy_resource"]
-    states = read_resource(res, **site_pars)
-
-    return states
-
-def read_farm(fdict, mbook, tmdict, layout=-1, **kwargs):
-    """
-    Reads a WindIO wind farm
-
-    Parameters
-    ----------
-    farm_data: dict
-        Data from the yaml file
-    mbook: foxes.ModelBook
-        The model book
-    tmdict: dict
-        The turbine model dict
-    layout: str or int
-        The layout choice
-    kwargs: dict, optional
-        Additional parameters for add_from_df()
-
-    Returns
-    -------
-    farm: foxes.WindFarm
-        The wind farm
-
-    """
-    if isinstance(layout, str):
-        layout = fdict["layouts"][layout]
-    else:
-        lname = list(fdict["layouts"].keys())[layout]
-        layout = fdict["layouts"][lname]
-
-    x = np.array(layout["coordinates"]["x"], dtype=FC.DTYPE)
-    y = np.array(layout["coordinates"]["y"], dtype=FC.DTYPE)
-    N = len(x)
-    ldata = pd.DataFrame(index=range(N))
-    ldata.index.name = "index"
-    ldata["x"] = x
-    ldata["y"] = y
-
-    tdict = fdict["turbines"]
-    pdict = tdict["performance"]
-
-    D = float(tdict["rotor_diameter"])
-    H = float(tdict["hub_height"])
-
-    ct_ws = np.array(pdict["Ct_curve"]["Ct_wind_speeds"], dtype=FC.DTYPE)
-    ct_data = pd.DataFrame(index=range(len(ct_ws)))
-    ct_data["ws"] = ct_ws
-    ct_data["ct"] = np.array(pdict["Ct_curve"]["Ct_values"], dtype=FC.DTYPE)
-
-    if "Cp_curve" in pdict:
-        cp_ws = np.array(pdict["Cp_curve"]["Cp_wind_speeds"], dtype=FC.DTYPE)
-        cp_data = pd.DataFrame(index=range(len(cp_ws)))
-        cp_data["ws"] = cp_ws
-        cp_data["cp"] = np.array(pdict["Cp_curve"]["Cp_values"], dtype=FC.DTYPE)
-
-        mbook.turbine_types["windio_turbine"] = CpCtFromTwo(
-            cp_data, ct_data, col_ws_cp_file="ws", col_cp="cp", D=D, H=H
-        )
-
-    elif "power_curve" in pdict:
-        P_ws = np.array(pdict["power_curve"]["power_wind_speeds"], dtype=FC.DTYPE)
-        P_data = pd.DataFrame(index=range(len(P_ws)))
-        P_data["ws"] = P_ws
-        P_data["P"] = np.array(pdict["power_curve"]["power_values"], dtype=FC.DTYPE)
-
-        mbook.turbine_types["windio_turbine"] = PCtFromTwo(
-            P_data, ct_data, col_ws_P_file="ws", col_P="P", D=D, H=H
-        )
-
-    else:
-        raise KeyError(f"Missing 'Cp_curve' or 'power_curve' in performance dict, got: {list(pdict.keys())}")
-
-    models = []
-    tmnames = [m['model'] for m in tmdict]
-    if len(tmdict) and not "turbine_type" in tmnames:
-        raise ValueError(f"Missing 'turbine_type' among list of turbine models: {tmnames}")
-    elif not len(tmdict):
-        models.append("windio_turbine")
-    for mdict in tmdict:
-        mname = mdict.pop("model")
-        if mname != "turbine_type":
-            mclass = mdict.pop("class", None)
-            if mclass is None and len(mdict):
-                raise KeyError(f"Missing parameter 'class' for turbine model '{mname}', expected due to parameters {sorted(list(mdict.keys()))}")
-            mbook.get("turbine_models", mname, mclass, **mdict)
-        elif len(mdict):
-            raise ValueError(f"Turbine model 'turbine_type' does not support parameters: {sorted(list(mdict.keys()))}")
-        else:
-            mname = "windio_turbine"
-        models.append(mname)
-
-    farm = WindFarm(name=fdict["name"])
-    add_from_df(farm, ldata, col_x="x", col_y="y", turbine_models=models, **kwargs)
-
-    return farm
-
-def read_anlyses(analyses, mbook, farm, states):
-    """
-    Reads a WindIO wind farm
-
-    Parameters
-    ----------
-    analyses: dict
-        The analyses sub-dict of the case
-    mbook: foxes.ModelBook
-        The model book
-    farm: foxes.WindFarm
-        The wind farm
-    states: foxes.states.States
-        The states object
-
-    Returns
-    -------
-    algo: foxes.core.Algorithm
-        The algorithm
-
-    """   
-    def _get_models(mtype, wiokey=None, defaults=[]):
-        wiok = mtype if wiokey is None else wiokey
-        mdicts = analyses.get(wiok, [])
-        if not isinstance(mdicts, list):
-            mdicts = [mdicts]
-        if not len(mdicts):
-            return defaults
-        models = []
-        for mdict in mdicts:
-            mname = mdict.pop("model")
-            mclass = mdict.pop("class", None)
-            if mclass is None and len(mdict):
-                raise KeyError(f"Missing parameter 'class' for entry '{mname}' of model type '{mtype}', expected due to parameters {sorted(list(mdict.keys()))}")
-            mbook.get(mtype, mname, mclass, **mdict)
-            models.append(mname)
-        return models
-
-    rotor_model = _get_models("rotor_models", "rotor_model", ["center"])[0]
-    wake_models = _get_models("wake_models")
-    wake_frame = _get_models("wake_frames", "wake_frame", ["rotor_wd"])[0]
-    pwakes = _get_models("partial_wakes", defaults=["auto"])[0]
-    farm_controller = _get_models("farm_controllers", "farm_controller", ["basic_ctrl"])[0]
-
-    adict = analyses["algorithm"]
-    aclass = adict.pop("class")
-
-    return Algorithm.new(
-        aclass, 
-        mbook=mbook, 
-        farm=farm, 
-        states=states, 
-        rotor_model=rotor_model,
-        wake_models=wake_models, 
-        wake_frame=wake_frame,
-        partial_wakes_model=pwakes,
-        farm_controller=farm_controller,
-        **adict,
-    )
-
-def read_case(case_data, mbook=None, runner=None):
-    """
-    Reads a WindIO case
-
-    Parameters
-    ----------
-    case_data: dict
-        Data from the yaml file
-    mbook: foxes.models.ModelBook, optional
-        The model book to start from
-    runner: foxes.utils.runners.Runner, optional
-        The runner
-
-    Returns
-    -------
-    mbook: foxes.ModelBook
-        The model book
-    farm: foxes.WindFarm
-        The wind farm
-    states: foxes.states.States
-        The states object
-    algo: foxes.core.Algorithm
-        The algorithm
-    outputs: list of foxes.input.windio.WIOOutput
-        The output creating classes
+    runner: foxes.input.windio.WindioRunner
+        The windio runner, call its run function
+        for the complete exection
 
     :group: input.windio
 
     """
+
+    wio_file = Path(windio_yaml)
+    if not wio_file.is_file():
+        wio_file = StaticData().get_file_path(
+            WINDIO, wio_file, check_raw=False
+        ) 
+
+    if verbosity > 0:
+        print(f"Reading windio file {wio_file}")
+
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
-    case = exec_python(yml_utils.load_yaml(case_data))
-    mbook = ModelBook() if mbook is None else mbook
-    adict = case["attributes"]["analyses"]
-    olist = adict.pop("outputs", [])
+    wio = yml_utils.load_yaml(wio_file)
 
-    fdict = adict.pop("flow_model")
-    fname = fdict["name"]
-    if fname != "foxes":
-        raise KeyError(f"Expecting flow model name 'foxes', found '{fname}'")
+    if verbosity > 0:
+        print("  Name:", wio.pop("name", None))
+        print("  Contents:", [k for k in wio.keys()])
 
-    site_data = case["site"]
-    site_pars = adict.pop("site_parameters", {})
-    states = read_site(site_data, **site_pars)
+    algo_dict = Dict(
+        algo_type="Downwind", 
+        mbook=ModelBook(), 
+        farm=WindFarm(),
+        verbosity=verbosity,
+    )
 
-    farm_data = case["wind_farm"]
-    farm_pars = fdict.pop("farm_parameters", {})
-    tmdict = fdict.pop("turbine_models", {})
-    farm = read_farm(farm_data, mbook, tmdict, **farm_pars)
+    _read_site(Dict(wio["site"], name="site"), algo_dict, verbosity)
+    _read_farm(Dict(wio["wind_farm"], name="farm"), algo_dict, verbosity)
 
-    algo = read_anlyses(fdict, mbook, farm, states)
+    out_dicts = read_attributes(
+        Dict(wio["attributes"], name="attributes"), algo_dict, verbosity,
+    )
 
-    outputs = []
-    for oi, o in enumerate(olist):
+    if verbosity > 0:
+        print("Creating windio runner")
+    runner = WindioRunner(
+        algo_dict, output_dicts=out_dicts, verbosity=verbosity
+    )
 
-        ocls = o.pop("class")
-        ofun = o.pop("function")
-
-        oca = o.pop("class_pars", {})
-        if oca.pop("algo", False):
-            oca["algo"] = algo
-        if oca.pop("farm", False):
-            oca["farm"] = farm
-        if oca.pop("runner", False):
-            oca["runner"] = runner
-
-        o["name"] = o.pop("name", f"output_{oi:02d}")
-        o["needs_farm_results"] = oca.pop("farm_results", True)
-
-        outputs.append(WIOOutput(oclass=ocls, ofunction=ofun, ocargs=oca, **o))
-
-    return mbook, farm, states, algo, outputs
-
+    return runner
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("case_data", help="The case yaml file")
+    parser.add_argument("-f", "--file", help="The windio yaml file", default="windio_5turbines_timeseries.yaml")
     args = parser.parse_args()
 
-    read_case(args.case_data)
+    runner = read_windio(args.file)
+
+    runner.run()
