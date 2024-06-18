@@ -1,3 +1,0 @@
-[submodule "submodules/windIO"]
-	path = submodules/windIO
-	url = https://github.com/kilojoules/windIO.git
