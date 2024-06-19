@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
-from foxes.core.model import Model
+from foxes.core import Model, WakeK
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -48,7 +48,7 @@ class Bastankhah2016Model(Model):
     SIGMA_Z_FAR = "sigma_z_far"
     DELTA_FAR = "delta_far"
 
-    def __init__(self, alpha=0.58, beta=0.07, induction="Madsen"):
+    def __init__(self, alpha, beta, induction):
         """
         Constructor.
 
@@ -401,14 +401,17 @@ class Bastankhah2016(DistSlicedWakeModel):
         The model for computing common data
     model_pars: dict
         Model parameters
-    K: float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
     YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
-    k_var: str
-        The variable name for k
+    alpha: float
+        model parameter used to determine onset of far wake region
+    beta: float
+        model parameter used to determine onset of far wake region
+    induction: foxes.core.AxialInductionModel or str
+        The induction model
+    wake_k: dict, optional
+        Parameters for the WakeK class
 
     :group: models.wake_models.wind
 
@@ -417,9 +420,10 @@ class Bastankhah2016(DistSlicedWakeModel):
     def __init__(
         self,
         superposition,
-        k=None,
-        k_var=FV.K,
-        **kwargs,
+        alpha=0.58, 
+        beta=0.07, 
+        induction="Madsen",
+        **wake_k,
     ):
         """
         Constructor.
@@ -428,9 +432,6 @@ class Bastankhah2016(DistSlicedWakeModel):
         ----------
         superposition: str
             The wind deficit superposition
-        k: float
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data, by default None
         ct_max: float
             The maximal value for ct, values beyond will be limited
             to this number, by default 0.9999
@@ -438,32 +439,27 @@ class Bastankhah2016(DistSlicedWakeModel):
             model parameter used to determine onset of far wake region
         beta: float
             model parameter used to determine onset of far wake region
-        k_var: str
-            The variable name for k
-        kwargs: dict, optional
-            Additional parameters for the Bastankhah2016Model,
-            if not found in wake model
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.model = None
-        self.model_pars = kwargs
-        self.k_var = k_var
+        self.alpha = alpha
+        self.beta = beta
+        self.induction = induction
+        self.wake_k = WakeK(**wake_k)
 
-        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
-        iname = self.model_pars.get("induction", "Madsen")
+        iname = self.induction
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
     def sub_models(self):
@@ -476,7 +472,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             Names of all sub models
 
         """
-        return [self.model]
+        return [self.wake_k, self.model]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -493,7 +489,8 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         """
         if not self.initialized:
-            self.model = Bastankhah2016Model(**self.model_pars)
+            self.model = Bastankhah2016Model(
+                alpha=self.alpha, beta=self.beta, induction=self.induction)
         super().initialize(algo, verbosity, force)
 
     def calc_wakes_x_yz(
@@ -556,10 +553,8 @@ class Bastankhah2016(DistSlicedWakeModel):
             gamma *= np.pi / 180
 
             # get k:
-            k = self.get_data(
-                self.k_var,
+            k = self.wake_k(
                 FC.STATE_TARGET,
-                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,

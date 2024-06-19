@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -21,9 +22,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
     Attributes
     ----------
-    k: float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
     a_near: float
         Model parameter
     a_far: float
@@ -42,8 +40,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     near_wake_D: float
         The near wake distance in units of D,
         calculated from TI and ct if None
-    k_var: str
-        The variable name for k
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.ti
 
@@ -52,7 +50,6 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     def __init__(
         self,
         superposition,
-        k=None,
         use_ambti=False,
         sbeta_factor=0.25,
         near_wake_D=None,
@@ -61,8 +58,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         e1=0.83,
         e2=-0.0325,
         e3=-0.32,
-        k_var=FV.K,
-        **kwargs,
+        induction="Betz",
+        **wake_k,
     ):
         """
         Constructor.
@@ -94,11 +91,13 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             Model parameter
         k_var: str
             The variable name for k
-        kwargs: dict, optional
-            Additional parameters for the base class
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.TI: superposition}, **kwargs)
+        super().__init__(superpositions={FV.TI: superposition}, induction=induction)
 
         self.a_near = a_near
         self.a_far = a_far
@@ -108,24 +107,29 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         self.use_ambti = use_ambti
         self.sbeta_factor = sbeta_factor
         self.near_wake_D = near_wake_D
-        self.k_var = k_var
-
-        setattr(self, k_var, k)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.TI]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.wake_k]
+    
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.
@@ -200,10 +204,8 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         )
 
         # get k:
-        k = self.get_data(
-            self.k_var,
+        k = self.wake_k(
             FC.STATE_TARGET,
-            lookup="sw",
             algo=algo,
             fdata=fdata,
             tdata=tdata,

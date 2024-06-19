@@ -524,9 +524,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Inputs:
   - New height dependen states: `MultiHeightNCStates` and `MultiHeightNCTimeseries`, same as `MultiHeightStates` and `MultiHeightTimeseries`, but starting from a netCDF file or `xarray.Dataset` input
 - Models:
+  - New wake model helper class `WakeK`, handling the `k`, `ka`, `kb` choices for all wake models
   - New ground model `NoGround`, plain call of the partial wakes and wakes models
   - New ground models `WakeMirror` and  `GroundMirror`, replacing the equivalent former wake models. Realizing wake reflection at horizontal planes.
   - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
+- Utils:
+  - New utility `WakeKFactory` class, enabling the choice of either `k` or `ka, kb` directly from the wake model names in the model book.
 - Examples:
   - Example `multi_height`: Now based on `MultiHeightNCTimeseries`
 - Bug fixes:

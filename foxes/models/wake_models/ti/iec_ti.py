@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -21,11 +22,8 @@ class IECTIWake(TopHatWakeModel):
 
     Attributes
     ----------
-    opening_angle: float
-        The wake opening angle. The wake growth parameter k is calculated
-        based on the wake opening angle.
-    k_var: str
-        The variable name for k
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.ti
 
@@ -36,8 +34,8 @@ class IECTIWake(TopHatWakeModel):
         superposition,
         opening_angle=21.6,
         iec_type="2019",
-        k_var=FV.K,
-        **kwargs,
+        induction="Betz",
+        **wake_k,
     ):
         """
         Constructor.
@@ -46,37 +44,46 @@ class IECTIWake(TopHatWakeModel):
         ----------
         superposition: str
             The TI wake superposition.
-        opening_angle: float
+        opening_angle: float, optional
             The wake opening angle. The wake growth parameter k is calculated
             based on the wake opening angle.
-        k_var: str
-            The variable name for k
-        kwargs: dict, optional
-            Additional parameters for the base class
+        iec_type: str
+            Either '2005' or '2019'/'Frandsen'
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.TI: superposition}, **kwargs)
+        super().__init__(superpositions={FV.TI: superposition}, induction=induction)
 
-        k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
+        if opening_angle is not None:
+            if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
+                raise KeyError(f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both")
+            wake_k["k"] = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
         self.iec_type = iec_type
-        self.k_var = k_var
-        setattr(self, k_var, k)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.TI]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.wake_k]
+    
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.
@@ -138,10 +145,8 @@ class IECTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_targets)
 
         """
-        k = self.get_data(
-            self.k_var,
+        k = self.wake_k(
             FC.STATE_TARGET,
-            lookup="sw",
             algo=algo,
             fdata=fdata,
             tdata=tdata,
