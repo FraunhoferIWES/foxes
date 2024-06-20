@@ -1,6 +1,7 @@
 import pandas as pd
 from numbers import Number
 
+from foxes.core import States
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -106,6 +107,6 @@ def get_states(coords, fields, dims, verbosity=1):
         _get_SingleStateStates(coords, fields, dims, states_dict, verbosity) or
         _get_Timeseries(coords, fields, dims, states_dict, verbosity)
     ):
-        return states_dict
+        return States.new(**states_dict)
     else:
         raise ValueError(f"Failed to create states for coords {list(coords.keys())} and fields {list(fields.keys())} with dims {dims}")

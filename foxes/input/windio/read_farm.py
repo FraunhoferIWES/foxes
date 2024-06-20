@@ -68,6 +68,7 @@ def read_turbine_type(wio_trbns, algo_dict, verbosity):
             col_ct="ct",
             H=wio_trbns["hub_height"],
             D=wio_trbns["rotor_diameter"],
+            rho=1.225,
         )
 
     # P, ct data:
