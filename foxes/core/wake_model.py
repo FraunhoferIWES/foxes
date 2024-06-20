@@ -264,10 +264,15 @@ class WakeK(Model):
     
     @property
     def all_none(self):
-        """ Flag for k = ka = kb = None """
+        """ Flag for k=ka=kb=None """
         return (
             self._k is None and self._ka is None and self._kb is None
         )
+    
+    @property
+    def use_amb_ti(self):
+        """ Flag for using ambient ti """
+        return self.ti_var in FV.amb2var
 
     def __call__(
             self, 

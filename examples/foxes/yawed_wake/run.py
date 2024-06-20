@@ -34,7 +34,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear", "CrespoHernandez_max_k002"],
+        default=["Bastankhah2016_linear_ka02", "CrespoHernandez_quadratic_ka04"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="yawed")
     parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=["kTI_04"], nargs="+"
+        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
     parser.add_argument(
