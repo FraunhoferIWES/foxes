@@ -21,18 +21,18 @@ variables:
 cache:
   paths:
     - .cache/pip
-    - venv/
+    #- venv/
 
 before_script:
   - python --version  # For debugging
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
-  - pip install pip wheel --upgrade
+  - pip install pip wheel setuptools --upgrade
 
 test:
   script:
-    - pip install .[test]
+    - pip install .[test] --upgrade
     - pwd
     - flake8 foxes --count --select=E9,F63,F7,F82 --show-source --statistics
     - pytest tests
