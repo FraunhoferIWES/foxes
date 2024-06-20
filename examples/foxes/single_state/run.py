@@ -37,14 +37,14 @@ if __name__ == "__main__":
         "-m",
         "--tmodels",
         help="The turbine models",
-        default=["kTI_K1", "kTI_K2"],
+        default=[],
         nargs="+",
     )
     parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["B_K1", "CH_K2"],
+        default=["Bastankhah2014_linear_k004", "CrespoHernandez_quadratic_ambka04"],
         nargs="+",
     )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
@@ -66,18 +66,6 @@ if __name__ == "__main__":
     mbook = foxes.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-    mbook.turbine_models["kTI_K1"] = foxes.models.turbine_models.kTI(
-        kTI=0.2, k_var="K1", ti_var=FV.AMB_TI
-    )
-    mbook.turbine_models["kTI_K2"] = foxes.models.turbine_models.kTI(
-        kTI=0.4, k_var="K2", ti_var=FV.AMB_TI
-    )
-    mbook.wake_models["B_K1"] = foxes.models.wake_models.wind.Bastankhah2014(
-        superposition="ws_quadratic", sbeta_factor=0.25, k_var="K1"
-    )
-    mbook.wake_models["CH_K2"] = foxes.models.wake_models.ti.CrespoHernandezTIWake(
-        superposition="ti_max", k_var="K2", use_ambti=False
-    )
 
     # create states
     states = foxes.input.states.SingleStateStates(

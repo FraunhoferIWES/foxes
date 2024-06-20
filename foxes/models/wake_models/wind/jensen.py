@@ -1,5 +1,4 @@
-import numpy as np
-
+from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -11,17 +10,14 @@ class JensenWake(TopHatWakeModel):
 
     Attributes
     ----------
-    k: float, optional
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
-    k_var: str
-        The variable name for k
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
 
     """
 
-    def __init__(self, superposition, k=None, k_var=FV.K, **kwargs):
+    def __init__(self, superposition, induction="Betz", **wake_k):
         """
         Constructor.
 
@@ -29,32 +25,22 @@ class JensenWake(TopHatWakeModel):
         ----------
         superposition: str
             The wind deficit superposition
-        k: float, optional
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data.
-        k_var: str
-            The variable name for k
-        kwargs: dict, optional
-            Additional parameters for the base class
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition}, **kwargs)
-
-        self.k_var = k_var
-        setattr(self, k_var, k)
+        super().__init__(superpositions={FV.WS: superposition}, induction=induction)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
     def calc_wake_radius(
@@ -105,10 +91,8 @@ class JensenWake(TopHatWakeModel):
             upcast=False,
         )
 
-        k = self.get_data(
-            self.k_var,
+        k = self.wake_k(
             FC.STATE_TARGET,
-            lookup="sw",
             algo=algo,
             fdata=fdata,
             tdata=tdata,

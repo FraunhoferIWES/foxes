@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import numpy as np
 
-from foxes.utils import all_subclasses
+from foxes.utils import all_subclasses, Factory
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -183,3 +183,147 @@ class TurbineInductionModel(WakeModel):
 
         """
         return False
+
+
+class WakeK(Model):
+    """
+    Handler for the wake growth parameter k
+    
+    Attributes
+    ----------
+    k_var: str
+        The name of the k variable
+    ti_var: str
+        The name of the TI variable
+
+    :group: core
+
+    """
+    def __init__(
+            self, 
+            k=None, 
+            ka=None, 
+            kb=None, 
+            k_var=FV.K, 
+            ti_var=FV.TI,
+        ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        k: float, optional
+            The k value
+        ka: float, optional
+            The ka value in k = ka * TI + kb
+        kb: float, optional
+            The kb value in k = ka * TI + kb
+        k_var: str
+            The name of the k variable
+        ti_var: str
+            The name of the TI variable
+
+        """
+        super().__init__()
+        self._k = k
+        self._ka = ka
+        self._kb = kb
+        self.k_var = k_var
+        self.ti_var = ti_var
+
+        if k is not None and (
+            ka is not None or kb is not None
+        ):
+            raise ValueError("Got 'k' and also ('ka' or 'kb') as non-None parameters")
+        elif k is None and kb is not None and (ka is None or ka == 0):
+            raise ValueError(f"Got k={k}, ka={ka}, kb={kb}, use k={kb} instead")
+
+        setattr(self, self.k_var, None)
+    
+    def repr(self):
+        """ 
+        Provides the representative string
+        
+        Returns
+        -------
+        s: str
+            The representative string
+        
+        """
+        if self._k is not None:
+            s = f"{self.k_var}={self._k}"
+        elif (
+            self._ka is not None or self._kb is not None
+        ):
+            s = f"{self.k_var}={self._ka}*{self.ti_var}"
+            if self._kb is not None and self._kb > 0:
+                s += f"+{self._kb}"
+        else:
+            s = f"k_var={self.k_var}"
+        return s
+    
+    @property
+    def all_none(self):
+        """ Flag for k=ka=kb=None """
+        return (
+            self._k is None and self._ka is None and self._kb is None
+        )
+    
+    @property
+    def use_amb_ti(self):
+        """ Flag for using ambient ti """
+        return self.ti_var in FV.amb2var
+
+    def __call__(
+            self, 
+            *args, 
+            lookup_ti="w",
+            lookup_k="sw", 
+            ti=None,
+            amb_ti=None, 
+            **kwargs,
+        ):
+        """
+        Gets the k value
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for get_data
+        lookup_ti: str
+            The ti lookup order for get_data
+        lookup_k: str
+            The k lookup order for get_data
+        ti: numpy.ndarray, optional
+            ti data in the requested target shape,
+            if known
+        amb_ti: numpy.ndarray, optional
+            Ambient ti data in the requested target shape,
+            if known
+        kwargs: dict, optional
+            Arguments for get_data
+        
+        Returns
+        -------
+        k: numpy.ndarray
+            The k array as returned by get_data
+        
+        """
+        if self._k is not None:
+            setattr(self, self.k_var, self._k)
+        elif (
+            self._ka is not None or self._kb is not None
+        ):
+            if self.ti_var == FV.TI and ti is not None:
+                pass
+            elif self.ti_var == FV.AMB_TI and amb_ti is not None:
+                ti = amb_ti
+            else:
+                ti = self.get_data(
+                    self.ti_var, *args, lookup=lookup_ti, **kwargs)
+            kb = 0 if self._kb is None else self._kb
+            setattr(self, self.k_var, self._ka*ti + kb)
+
+        k = self.get_data(self.k_var, *args, lookup=lookup_k, **kwargs)
+        setattr(self, self.k_var, None)
+        return k

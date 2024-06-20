@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import WakeFrame
+from foxes.core import WakeFrame, WakeK, TData
 from foxes.models.wake_models.wind.bastankhah16 import (
     Bastankhah2016Model,
     Bastankhah2016,
@@ -28,62 +28,57 @@ class YawedWakes(WakeFrame):
         The model for computing common data
     model_pars: dict
         Model parameters
-    K: float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
     YAWM: float
         The yaw misalignment YAWM. If not given here
         it will be searched in the farm data.
     base_frame: foxes.core.WakeFrame
         The wake frame from which to start
-    k_var: str
-        The variable name for k
 
     :group: models.wake_frames
 
     """
-
     def __init__(
         self,
-        k=None,
         base_frame=RotorWD(),
-        k_var=FV.K,
-        **kwargs,
+        alpha=0.58, 
+        beta=0.07, 
+        induction="Madsen",
+        **wake_k,
     ):
         """
         Constructor.
 
         Parameters
         ----------
-        k: float, optional
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data, by default None
         base_frame: foxes.core.WakeFrame
             The wake frame from which to start
-        k_var: str
-            The variable name for k
-        kwargs: dict, optional
-            Additional parameters for the Bastankhah2016Model,
+        alpha: float
+            model parameter used to determine onset of far wake region,
             if not found in wake model
+        beta: float
+            model parameter used to determine onset of far wake region,
+            if not found in wake model
+        induction: foxes.core.AxialInductionModel or str
+            The induction model, if not found in wake model
+        wake_k: dict, optional
+            Parameters for the WakeK class, if not found in wake model
 
         """
         super().__init__()
 
         self.base_frame = base_frame
         self.model = None
-        self.model_pars = kwargs
-        self.k_var = k_var
+        self.alpha = alpha
+        self.beta = beta
+        self.induction = induction
+        self.wake_k = None
+        self._wake_k_pars = wake_k
 
-        setattr(self, k_var, k)
         setattr(self, FV.YAWM, 0.0)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         s = f"{type(self).__name__}("
-        if k is None:
-            s += f"k_var={self.k_var}"
-        else:
-            s += f"{self.k_var}={k}"
+        s += self.wake_k.repr() if self.wake_k is not None else ""
         s += ")"
         return s
 
@@ -97,7 +92,7 @@ class YawedWakes(WakeFrame):
             Names of all sub models
 
         """
-        return [self.base_frame, self.model]
+        return [self.wake_k, self.base_frame, self.model]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -114,20 +109,26 @@ class YawedWakes(WakeFrame):
 
         """
         if not self.initialized:
-            for w in algo.wake_models:
+            for w in algo.wake_models.values():
                 if isinstance(w, Bastankhah2016):
                     if not w.initialized:
                         w.initialize(algo, verbosity, force)
                     self.model = w.model
-                    if w.k_var == self.k_var:
-                        setattr(self, self.k_var, getattr(w, self.k_var))
+                    self.wake_k = w.wake_k
+                    break
             if self.model is None:
-                self.model = Bastankhah2016Model(**self.model_pars)
-            if self.k is None:
-                for w in algo.wake_models:
-                    if hasattr(w, "k_var") and w.k_var == self.k_var:
-                        setattr(self, self.k_var, getattr(w, self.k_var))
-                        break
+                self.model = Bastankhah2016Model(
+                    alpha=self.alpha, beta=self.beta, induction=self.induction
+                )
+            if self.wake_k is None:
+                wake_k = WakeK(**self._wake_k_pars)
+                if not wake_k.all_none:
+                    self.wake_k = wake_k
+                else:
+                    for w in algo.wake_models.values():
+                        if hasattr(w, "wake_k"):
+                            self. wake_k = w.wake_k
+                            break
 
         super().initialize(algo, verbosity, force)
 
@@ -175,10 +176,10 @@ class YawedWakes(WakeFrame):
         gamma *= np.pi / 180
 
         # get k:
-        k = self.get_data(
-            self.k_var,
+        k = self.wake_k(
             FC.STATE_TARGET,
-            lookup="sf",
+            lookup_ti="f",
+            lookup_k="sf",
             algo=algo,
             fdata=fdata,
             tdata=tdata,
@@ -299,6 +300,7 @@ class YawedWakes(WakeFrame):
         points = self.base_frame.get_centreline_points(
             algo, mdata, fdata, downwind_index, x
         )
+        tdata = TData.from_points(points)
 
         nx = np.zeros_like(points)
         nx[:, 0] = points[:, 1] - points[:, 0]
@@ -314,7 +316,7 @@ class YawedWakes(WakeFrame):
         del nx, nz
 
         y = np.zeros_like(x)
-        self._update_y(algo, mdata, fdata, None, downwind_index, x, y)
+        self._update_y(algo, mdata, fdata, tdata, downwind_index, x, y)
 
         points += y[:, :, None] * ny
 

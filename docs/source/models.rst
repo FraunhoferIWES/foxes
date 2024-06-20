@@ -8,8 +8,8 @@ The results of *foxes* runs depend on a number of model choices by the user:
 
 * :ref:`Rotor models`: Evaluate the flow field at the rotor and compute ambient rotor equivalent quantities.
 * :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
-* :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
+* :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
 * :ref:`Ground models`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
@@ -68,33 +68,6 @@ Turbine type models can also be based on other input data, e.g. `cp` instead
 of power, or other input files. The list of available turbine type classes
 can be found :ref:`here<foxes.models.turbine_types>` in the API. 
 
-Wake frames
------------
-Wake frames determine the path of wake propagation, for example parallel to the 
-wind direction at the rotor, or along a streamline, and the local coordinate system 
-that follows the centreline of the wake. 
-
-Wake frames also determine the downwind
-order of the turbines, so chosing straight wakes for cases with spatially 
-heterogeneous background flow can cause wrong results in multiple ways.
-
-The wake coordinates are defined as follows:
-
-* The origin is at the rotor centre,
-* the `x` coordinate folows the centreline path of the wake,
-* the `z` coordinate starts pointing upwards at the rotor, then follows the centreline orthogonally,
-* the `y` coordinate closes the right-handed coordinate frame, i.e., it follows from the cross product of `z` with `x`.
-
-The available wake frame classes are listed 
-:ref:`here in the API<foxes.models.wake_frames>`. The :ref:`default model book<The model book>` 
-contains many pre-defined wake frames, for example:
-
-* `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
-* `yawed`, `yawed_k<k>`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
-* `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`this example<Heterogeneous flow>`.
-* `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 1>`.
-* `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 2>`.
-
 Wake models
 -----------
 Wake models compute wake deltas for flow quantities in the wake. Wind speed deficits and turbulence 
@@ -133,26 +106,66 @@ for quadratic TI wake increase superposition.
 The list of wake model name templates in the :ref:`default model book<The model book>` is long,
 but that is mainly due to variations of various constructor argument choices. Typical examples are
 
-* `Jensen_<superposition>_k<k>`: The classic Jensen wind deficit model, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`.
-* `Bastankhah2014_<superposition>_k<k>`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
-* `Bastankhah2016_<superposition>_k<k>`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
-* `TurbOPark_<superposition>_k<k>`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed, and any value for the wake growth parameter `k`. 
-* `CrespoHernandez_<superposition>_k<k>`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI, and any value for the wake growth parameter `k`. 
+* `Jensen_<superposition>_[wake_k]`: The classic Jensen wind deficit model, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed.
+* `Bastankhah2014_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
+* `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
+* `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
+* `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI. 
 * `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019 <http://orbit.dtu.dk/files/3750291/2009_31.pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI. 
 
-The wake growth parameter `k` follows the convention in the above name templates that the
-dot after the zero is to be skipped, e.g., "004" represents the value 0.04. The `superposition` parameter is 
+Note that in all above cases, the `superposition` parameter is 
 for example `linear` for the choice `ws_linear` or `ti_linear`, depending if the wake model targets wind speed or TI
-(cf. the :ref:`model book<The model book>` example).
+(cf. the :ref:`model book<The model book>` example). The `[wake_k]` part of the model name can be replaced by one of the following patterns:
 
-There are also model name templates in the default model book for the above
-models that do not specify the `k` parameter, e.g.
-`Jensen_<superposition>` for the Jensen model. 
-In that case the `k` will be searched in the list of
-farm variables, which means that the values have to be provided by some other model.
-Typically this task is done by a :ref:`kTI<foxes.models.turbine_models.kTI>` turbine model,
-cf. Section :ref:`Turbine models` below, but also other turbine models (or an optimization)
-could address this variable.
+* `k<k>`, where `<k>` is to be replaced by the value for the wake growth factor `k`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
+* `ka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
+* `ambka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * AMB_TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
+* `ka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
+* `ambka<ka>_kb<kb>`, where `<ka>` and `<kb>` are to be replaced by the values for `ka` and `kb` in `k = ka * AMB_TI + kb`, both with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
+* nothing, e.g. `Bastankhah2014_linear`, which searches the value for `k` in the list of available farm data. This is intended to be used whenever a turbine model computes the `k` values, typically the the :ref:`kTI<foxes.models.turbine_models.kTI>` turbine model, or an optimizer.
+
+Examples for valid wake model choices are:
+
+* `Jensen_quadratic_k0075`
+* `Bastankhah2014_linear_ka02_kb0012`
+* `Bastankhah2016_linear_lim_ambka04`
+* `TurbOPark_quadratic_loc_k004`
+* `CrespoHernandez_max_ka0213_kb003`
+* `Bastankhah2014_linear`
+
+Wake frames
+-----------
+Wake frames determine the path of wake propagation, for example parallel to the 
+wind direction at the rotor, or along a streamline, and the local coordinate system 
+that follows the centreline of the wake. 
+
+Wake frames also determine the downwind
+order of the turbines, so chosing straight wakes for cases with spatially 
+heterogeneous background flow can cause wrong results in multiple ways.
+
+The wake coordinates are defined as follows:
+
+* The origin is at the rotor centre,
+* the `x` coordinate folows the centreline path of the wake,
+* the `z` coordinate starts pointing upwards at the rotor, then follows the centreline orthogonally,
+* the `y` coordinate closes the right-handed coordinate frame, i.e., it follows from the cross product of `z` with `x`.
+
+The available wake frame classes are listed 
+:ref:`here in the API<foxes.models.wake_frames>`. The :ref:`default model book<The model book>` 
+contains many pre-defined wake frames, for example:
+
+* `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
+* `yawed_[wake_k]`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
+* `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`this example<Heterogeneous flow>`.
+* `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 1>`.
+* `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 2>`.
+
+The `yawed` wake frame is based on the wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
+and when it is combined with the corresponding wake model `Bastankhah2016_<superposition>_[wake_k]` it picks up all
+model parameters from that instance.  For other wake models, the parameters can either be specified by adding a new instance
+of the :ref:`YawedWakes<foxes.models.wake_frames.YawedWakes>` class with the desired constructor call, or the defaults will 
+be taken. The `k` wake growth parameter is either specified by the rules described above in the :ref:`Wake models` section, or it will be
+picked automatically from the first wake model in the wake model list given to the algorithm.
 
 Partial wakes
 -------------

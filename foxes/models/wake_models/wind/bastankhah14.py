@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -18,27 +19,22 @@ class Bastankhah2014(GaussianWakeModel):
 
     Attributes
     ----------
-    k: float
-        The wake growth parameter k. If not given here
-        it will be searched in the farm data.
     sbeta_factor: float
         Factor multiplying sbeta
-    k_var: str
-        The variable name for k
     induction: foxes.core.AxialInductionModel or str
         The induction model
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
 
     """
-
     def __init__(
         self,
         superposition,
-        k=None,
         sbeta_factor=0.2,
-        k_var=FV.K,
         induction="Madsen",
+        **wake_k
     ):
         """
         Constructor.
@@ -47,37 +43,27 @@ class Bastankhah2014(GaussianWakeModel):
         ----------
         superposition: str
             The wind speed deficit superposition.
-        k: float, optional
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data.
         sbeta_factor: float
             Factor multiplying sbeta
-        k_var: str
-            The variable name for k
         induction: foxes.core.AxialInductionModel or str
             The induction model
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.sbeta_factor = sbeta_factor
-        self.k_var = k_var
         self.induction = induction
-
-        setattr(self, k_var, k)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
     def sub_models(self):
@@ -90,7 +76,7 @@ class Bastankhah2014(GaussianWakeModel):
             All sub models
 
         """
-        return [self.induction]
+        return [self.wake_k, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -180,10 +166,8 @@ class Bastankhah2014(GaussianWakeModel):
             )[st_sel]
 
             # get k:
-            k = self.get_data(
-                self.k_var,
+            k = self.wake_k(
                 FC.STATE_TARGET,
-                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,

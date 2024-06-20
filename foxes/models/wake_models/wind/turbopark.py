@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -18,8 +19,6 @@ class TurbOParkWake(GaussianWakeModel):
 
     Attributes
     ----------
-    k: float
-        The wake growth parameter k.
     sbeta_factor: float
         Factor multiplying sbeta
     c1: float
@@ -28,6 +27,8 @@ class TurbOParkWake(GaussianWakeModel):
         Factor from Frandsen turbulence model
     induction: foxes.core.AxialInductionModel or str
         The induction model
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
 
@@ -36,12 +37,11 @@ class TurbOParkWake(GaussianWakeModel):
     def __init__(
         self,
         superposition,
-        k=None,
         sbeta_factor=0.25,
         c1=1.5,
         c2=0.8,
-        k_var=FV.K,
         induction="Madsen",
+        **wake_k,
     ):
         """
         Constructor.
@@ -50,19 +50,16 @@ class TurbOParkWake(GaussianWakeModel):
         ----------
         superposition: str
             The wind deficit superposition
-        k: float, optional
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data.
         sbeta_factor: float
             Factor multiplying sbeta
         c1: float
             Factor from Frandsen turbulence model
         c2: float
             Factor from Frandsen turbulence model
-        k_var: str
-            The variable name for k
         induction: foxes.core.AxialInductionModel or str
             The induction model
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
         super().__init__(superpositions={FV.WS: superposition})
@@ -70,23 +67,16 @@ class TurbOParkWake(GaussianWakeModel):
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
         self.c2 = c2
-        self.k_var = k_var
         self.induction = induction
-
-        setattr(self, k_var, k)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += ")"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += self.wake_k.repr() + ")"
         return s
 
     def sub_models(self):
@@ -99,7 +89,7 @@ class TurbOParkWake(GaussianWakeModel):
             All sub models
 
         """
-        return [self.induction]
+        return [self.wake_k, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -198,19 +188,20 @@ class TurbOParkWake(GaussianWakeModel):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
-            )[st_sel]
+            )
 
             # get k:
-            k = self.get_data(
-                self.k_var,
+            k = self.wake_k(
                 FC.STATE_TARGET,
-                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
+                amb_ti=ati,
             )[st_sel]
+
+            ati = ati[st_sel]
 
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
@@ -270,20 +261,16 @@ class TurbOParkWakeIX(GaussianWakeModel):
     ----------
     dx: float
         The step size of the integral
-    k: float
-        The wake growth parameter k.
     sbeta_factor: float
         Factor multiplying sbeta
-    k_var: str
-        The variable name for k
-    ti_var:  str
-        The TI variable
     self_wake: bool
         Flag for considering only own wake in ti integral
     induction: foxes.core.AxialInductionModel or str
         The induction model
     ipars: dict
         Additional parameters for centreline integration
+    wake_k: foxes.core.WakeK
+        Handler for the wake growth parameter k
 
     :group: models.wake_models.wind
 
@@ -293,13 +280,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self,
         superposition,
         dx,
-        k=None,
         sbeta_factor=0.25,
-        k_var=FV.K,
-        ti_var=FV.TI,
         self_wake=True,
         induction="Madsen",
-        **ipars,
+        ipars={},
+        **wake_k,
     ):
         """
         Constructor.
@@ -310,48 +295,35 @@ class TurbOParkWakeIX(GaussianWakeModel):
             The wind deficit superposition
         dx: float
             The step size of the integral
-        k: float, optional
-            The wake growth parameter k. If not given here
-            it will be searched in the farm data.
         sbeta_factor: float
             Factor multiplying sbeta
-        k_var: str
-            The variable name for k
-        ti_var:  str
-            The TI variable
         self_wake: bool
             Flag for considering only own wake in ti integral
         induction: foxes.core.AxialInductionModel or str
             The induction model
-        ipars: dict, optional
+        ipars: dict
             Additional parameters for centreline integration
+        wake_k: dict, optional
+            Parameters for the WakeK class
 
         """
         super().__init__(superpositions={FV.WS: superposition})
 
         self.dx = dx
         self.sbeta_factor = sbeta_factor
-        self.k_var = k_var
-        self.ti_var = ti_var
         self.ipars = ipars
         self._tiwakes = None
         self.self_wake = self_wake
         self.induction = induction
-
-        setattr(self, k_var, k)
+        self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
-        k = getattr(self, self.k_var)
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, dx={self.dx}"
-        if k is None:
-            s += f", k_var={self.k_var}"
-        else:
-            s += f", {self.k_var}={k}"
-        s += f", ti_var={self.ti_var})"
+        s += f"({self.superpositions[FV.WS]}, induction={iname}, dx={self.dx}, "
+        s += self.wake_k.repr() + ")"
         return s
 
     def sub_models(self):
@@ -364,7 +336,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
             All sub models
 
         """
-        return [self.induction]
+        return [self.wake_k, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -411,11 +383,11 @@ class TurbOParkWakeIX(GaussianWakeModel):
         for w in algo.wake_models.values():
             if w is not self:
                 wdel = w.new_wake_deltas(algo, mdata, fdata, tdata)
-                if self.ti_var in wdel:
+                if self.wake_k.ti_var in wdel:
                     self._tiwakes.append(w)
-        if self.ti_var not in FV.amb2var and len(self._tiwakes) == 0:
+        if self.wake_k.ti_var not in FV.amb2var and len(self._tiwakes) == 0:
             raise KeyError(
-                f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.ti_var}"
+                f"Model '{self.name}': Missing wake model that computes wake delta for variable {self.wake_k.ti_var}"
             )
 
         return super().new_wake_deltas(algo, mdata, fdata, tdata)
@@ -490,10 +462,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
             )[st_sel]
 
             # get k:
-            k = self.get_data(
-                self.k_var,
+            k = self.wake_k(
                 FC.STATE_TARGET,
-                lookup="sw",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
@@ -514,7 +484,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 mdata,
                 fdata,
                 downwind_index,
-                [self.ti_var],
+                [self.wake_k.ti_var],
                 x,
                 dx=self.dx,
                 wake_models=self._tiwakes,
