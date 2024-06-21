@@ -519,8 +519,6 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7.3
 
-- Dependencies:
-  - Dropping support for `Python3.8`, since that does not support `numpy-2.0`
 - Core:
   - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
 - Inputs:

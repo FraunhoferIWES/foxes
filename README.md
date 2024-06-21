@@ -53,6 +53,7 @@ Evaluation Software"`
 
 The supported Python versions are: 
 
+- `Python 3.8`
 - `Python 3.9`
 - `Python 3.10`
 - `Python 3.11`
@@ -109,6 +110,7 @@ The last line makes sure that all your code changes are included whenever import
 
 The supported Python versions are: 
 
+- `Python 3.8`
 - `Python 3.9`
 - `Python 3.10`
 - `Python 3.11`
