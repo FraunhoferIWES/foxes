@@ -20,8 +20,8 @@ variables:
 # them in a virtualenv and cache it as well.
 cache:
   paths:
-    - .cache/pip
-    - venv/
+    #- .cache/pip
+    #- venv/
 
 before_script:
   - python --version
