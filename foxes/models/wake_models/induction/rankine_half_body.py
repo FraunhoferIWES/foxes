@@ -195,7 +195,7 @@ class RankineHalfBody(TurbineInductionModel):
         )
 
         # stagnation point condition
-        xs = -np.sqrt(m / (4 * ws))
+        xs = -np.sqrt(m / (4 * ws + 1e-15))
 
         # set values out of body shape
         st_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))

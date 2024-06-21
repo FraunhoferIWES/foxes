@@ -108,12 +108,12 @@ def get_grid_xy(
     n_states = farm_results[FV.H].shape[0]
 
     # get base rectangle:
-    x_min = xmin if xmin is not None else farm_results[FV.X].min() - xspace
-    y_min = ymin if ymin is not None else farm_results[FV.Y].min() - yspace
-    z_min = z if z is not None else farm_results[FV.H].min()
-    x_max = xmax if xmax is not None else farm_results[FV.X].max() + xspace
-    y_max = ymax if ymax is not None else farm_results[FV.Y].max() + yspace
-    z_max = z if z is not None else farm_results[FV.H].max()
+    x_min = xmin if xmin is not None else farm_results[FV.X].min().to_numpy() - xspace
+    y_min = ymin if ymin is not None else farm_results[FV.Y].min().to_numpy() - yspace
+    z_min = z if z is not None else farm_results[FV.H].min().to_numpy()
+    x_max = xmax if xmax is not None else farm_results[FV.X].max().to_numpy() + xspace
+    y_max = ymax if ymax is not None else farm_results[FV.Y].max().to_numpy() + yspace
+    z_max = z if z is not None else farm_results[FV.H].max().to_numpy()
 
     x_pos, x_res = np.linspace(
         x_min,
