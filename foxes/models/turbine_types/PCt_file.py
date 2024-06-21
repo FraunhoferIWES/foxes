@@ -103,6 +103,7 @@ class PCtFile(TurbineType):
 
     def __repr__(self):
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}, rho={self.rho}"
+        a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
     def output_farm_vars(self, algo):

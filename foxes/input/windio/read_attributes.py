@@ -186,7 +186,7 @@ def _read_deflection(deflection, induction, algo_dict, verbosity):
         print(f"      Created wake frame '{wname}':")
         print("       ", algo_dict["mbook"].wake_frames[wname])
     algo_dict["wake_frame"] = wname
-    
+   
 def _read_analysis(wio_ana, algo_dict, verbosity):
     """ Reads the windio analyses """
     if verbosity > 1:
@@ -228,14 +228,22 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
     _read_deflection(deflection, induction, algo_dict, verbosity)
 
-def read_attributes(wio_attrs, algo_dict, verbosity):
+def _read_outputs(wio_outs, algo_dict, verbosity):
+    """ Reads the outputs """
+    if verbosity > 1:
+        print("  Reading outputs")
+        print("    Contents:", [k  for k in wio_outs.keys()])
+    quit()
+    return []
+
+def read_attributes(wio, algo_dict, verbosity):
     """
     Reads the attributes part of windio
     
     Parameters
     ----------
-    wio_attrs: dict
-        The windio attributes data
+    wio: dict
+        The windio data
     algo_dict: dict
         The algorithm dictionary
     verbosity: int
@@ -249,6 +257,7 @@ def read_attributes(wio_attrs, algo_dict, verbosity):
     :group: input.windio
 
     """
+    wio_attrs = Dict(wio["attributes"], name="attributes")
     if verbosity > 0:
         print("Reading attributes")
         print("  Contents:", [k  for k in wio_attrs.keys()])
@@ -264,8 +273,11 @@ def read_attributes(wio_attrs, algo_dict, verbosity):
         if fmname != "foxes":
             raise ValueError(f"Can only run flow_model 'foxes', got '{fmname}'")
 
-    _read_analysis(Dict(wio_attrs["analysis"], name="analyses"), algo_dict, verbosity)
+    # read analysis:
+    wio_ana = Dict(wio_attrs["analysis"], name="analyses")
+    _read_analysis(wio_ana, algo_dict, verbosity)
     
-        
-    return []
+    # outputs:
+    outputs = Dict(wio_attrs["outputs"], name="outputs")
+    return _read_outputs(outputs, algo_dict, verbosity)
         
