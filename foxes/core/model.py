@@ -31,8 +31,9 @@ class Model(ABC):
             self._ids[t] = count(0)
         self._id = next(self._ids[t])
 
-        ext = "" if self._id == 0 else f"{self._id}"
-        self.name = f"{type(self).__name__}{ext}"
+        self.name = f"{type(self).__name__}"
+        if self._id > 0:
+            self.name += f"_instance{self._id}"
 
         self._store = {}
         self.__initialized = False

@@ -196,6 +196,103 @@ class PCtFromTwo(TurbineType):
 
         return super().load_data(algo, verbosity)
 
+    def modify_cutin(
+        self,
+        modify_ct,
+        modify_P,
+        steps=20,
+        iterations=100,
+        a=0.55,
+        b=0.55,
+    ):
+        """
+        Modify the data such that a discontinuity
+        at cutin wind speed is avoided
+
+        Parameters
+        ----------
+        variable: str
+            The target variable
+        modify_ct: bool
+            Flag for modification of the ct curve
+        modify_P: bool
+            Flag for modification of the power curve
+        steps: int
+            The number of wind speed steps between 0 and
+            the cutin wind speed
+        iterations: int
+            The number of iterations
+        a: float
+            Coefficient for iterative mixing
+        b: float
+            Coefficient for iterative mixing
+
+        """
+        if modify_ct:
+
+            ws = self._data_ws_ct
+            ct = self._data_ct
+
+            i = 0
+            try:
+                while (
+                    i < len(ws)
+                    and (not modify_ct or ct[i] < 1e-5)
+                ):
+                    i += 1
+            except IndexError:
+                raise IndexError(
+                    f"Turbine type '{self.name}': Failed not determine cutin wind speed. ws = {ws}, ct = {ct}"
+                )
+
+            if ws[i] > 0:
+                ws = ws[i:]
+                ct = ct[i:]
+
+                new_ws = np.linspace(0.0, ws[0], steps + 1, dtype=ws.dtype)
+                new_ct = np.zeros_like(new_ws)
+
+                new_ct[-1] = ct[0]
+                for it in range(iterations):
+                    new_ct[1:-1] = a * new_ct[:-2] + (1 - a) * new_ct[2:]
+
+                self._data_ws_ct = np.concatenate([new_ws[:-1], ws], axis=0)
+                self._data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
+
+        if modify_P:
+
+            ws = self._data_ws_P
+            P = self._data_P
+
+            i = 0
+            try:
+                while (
+                    i < len(ws)
+                    and (not modify_P or P[i] < 0.1)
+                ):
+                    i += 1
+            except IndexError:
+                raise IndexError(
+                    f"Turbine type '{self.name}': Failed not determine cutin wind speed. ws = {ws}, P = {P}"
+                )
+
+            if ws[i] > 0:
+                ws = ws[i:]
+                P = P[i:]
+
+                new_ws = np.linspace(0.0, ws[0], steps + 1, dtype=ws.dtype)
+                new_P = np.zeros_like(new_ws)
+
+                new_P[-1] = P[0]
+                for it in range(iterations):
+                    new_P[1:-1] = b * new_P[:-2] + (1 - b) * new_P[2:]
+
+                self._data_ws_P = np.concatenate([new_ws[:-1], ws], axis=0)
+                self._data_P = np.concatenate([new_P[:-1], P], axis=0)
+
+        if not modify_ct and not modify_P:
+            super().modify_cutin(modify_ct, modify_P)
+            
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.

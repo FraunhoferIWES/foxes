@@ -66,6 +66,7 @@ class WindioRunner:
         """ Runs the farm calculation """
         if not self.__initialized:
             self.initialize()
+        print("Running farm_calc")
         self.farm_results = self.algo.calc_farm()
     
     def run_outputs(self):

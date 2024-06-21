@@ -76,7 +76,7 @@ def _read_farm(wio_farm, algo_dict, verbosity):
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttype, verbosity)
 
-def read_windio(windio_yaml, verbosity=2):
+def read_windio(windio_yaml, verbosity=1):
     """
     Reads a complete WindIO case.
 
@@ -120,7 +120,8 @@ def read_windio(windio_yaml, verbosity=2):
         algo_type="Downwind", 
         mbook=ModelBook(), 
         farm=WindFarm(),
-        verbosity=verbosity,
+        wake_models=[],
+        verbosity=verbosity-1,
     )
 
     _read_site(Dict(wio["site"], name="site"), algo_dict, verbosity)
