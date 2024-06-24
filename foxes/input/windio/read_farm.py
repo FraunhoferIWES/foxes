@@ -3,8 +3,9 @@ import pandas as pd
 
 from foxes.utils import Dict
 from foxes.core import Turbine, TurbineType
+import foxes.variables as FV
 
-def read_turbine_type(wio_trbns, algo_dict, verbosity):
+def read_turbine_type(wio_trbns, algo_dict, ws_exp_P, ws_exp_ct, verbosity):
     """
     Reads the turbine type from windio
     
@@ -14,6 +15,10 @@ def read_turbine_type(wio_trbns, algo_dict, verbosity):
         The windio turbines data
     algo_dict: dict
         The algorithm dictionary
+    ws_exp_P: int
+        The REWS exponent for power
+    ws_exp_ct: int
+        The REWS exponent for ct
     verbosity: int
         The verbosity level, 0=silent
 
@@ -55,6 +60,11 @@ def read_turbine_type(wio_trbns, algo_dict, verbosity):
         data_P = pd.DataFrame(data={"ws": ws_P, "P": P})
         data_ct = pd.DataFrame(data={"ws": ws_ct, "ct": ct})
 
+        def _get_wse_var(wse):
+            if wse not in [1,2,3]:
+                raise ValueError(f"Expecting wind speed exponent 1, 2 or 3, got {wse}")
+            return FV.REWS if wse == 1 else (FV.REWS2 if wse == 2 else FV.REWS3)
+
         if verbosity > 1:
             print(f"            Creating model '{tname}'")
             print(f"              Turbine type class: PCtFromTwo")
@@ -68,8 +78,12 @@ def read_turbine_type(wio_trbns, algo_dict, verbosity):
             col_ct="ct",
             H=wio_trbns["hub_height"],
             D=wio_trbns["rotor_diameter"],
+            var_ws_ct=_get_wse_var(ws_exp_ct),
+            var_ws_P=_get_wse_var(ws_exp_P),
             rho=1.225,
         )
+        if verbosity > 1:
+            print("               ", algo_dict["mbook"].turbine_types[tname])
 
     # P, ct data:
     elif "Cp_curve" in performance:

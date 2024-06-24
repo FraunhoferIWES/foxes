@@ -14,8 +14,9 @@ from .read_attributes import read_attributes
 from .runner import WindioRunner
 
 
-def _read_site(wio_site, algo_dict, verbosity):
+def _read_site(wio, algo_dict, verbosity):
     """ Reads the site information """
+    wio_site = Dict(wio["site"], name="site")
     if verbosity > 0:
         print("Reading site")
         print("  Name:", wio_site.pop("name", None))
@@ -57,16 +58,26 @@ def _read_site(wio_site, algo_dict, verbosity):
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
-def _read_farm(wio_farm, algo_dict, verbosity):
+def _read_farm(wio, algo_dict, verbosity):
     """ Reads the wind farm information """
+    wio_farm = Dict(wio["wind_farm"], name="wind_farm")
     if verbosity > 0:
         print("Reading wind farm")
         print("  Name:", wio_farm.pop("name", None))
         print("  Contents:", [k for k in wio_farm.keys()])
+    
+    # find REWS exponents:
+    try:
+        rotor_averaging = wio["attributes"]["analysis"]["rotor_averaging"]
+        ws_exp_P = rotor_averaging["wind_speed_exponent_for_power"]
+        ws_exp_ct = rotor_averaging["wind_speed_exponent_for_ct"]
+    except KeyError:
+        ws_exp_P = 1
+        ws_exp_ct = 1
 
     # read turbine type:
     turbines = Dict(wio_farm["turbines"], name="turbines")
-    ttype = read_turbine_type(turbines, algo_dict, verbosity)
+    ttype = read_turbine_type(turbines, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
 
     # read layouts:
     layouts = Dict(wio_farm["layouts"], name="layouts")
@@ -124,12 +135,9 @@ def read_windio(windio_yaml, verbosity=1):
         verbosity=verbosity-1,
     )
 
-    _read_site(Dict(wio["site"], name="site"), algo_dict, verbosity)
-    _read_farm(Dict(wio["wind_farm"], name="farm"), algo_dict, verbosity)
-
-    out_dicts = read_attributes(
-        Dict(wio["attributes"], name="attributes"), algo_dict, verbosity,
-    )
+    _read_site(wio, algo_dict, verbosity)
+    _read_farm(wio, algo_dict, verbosity)
+    out_dicts = read_attributes(wio, algo_dict, verbosity,)
 
     if verbosity > 0:
         print("Creating windio runner")
