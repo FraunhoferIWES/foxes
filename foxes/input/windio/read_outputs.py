@@ -6,7 +6,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
-    """ Reads the turbine outputs """
+    """ Reads the turbine outputs request """
     if "turbine_outputs" in wio_outs:
         turbine_outputs = Dict(wio_outs["turbine_outputs"], name="turbine_outputs")
         turbine_nc_filename = turbine_outputs.pop("turbine_nc_filename", "turbine_outputs.nc")
@@ -34,11 +34,49 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
                     "run_kwargs": dict(
                         variables=[vmap[v] for v in output_variables],
                         name_map=ivmap,
-                        file_path=odir/turbine_nc_filename,
+                        to_file=odir/turbine_nc_filename,
                         verbosity=verbosity,
                     )
                 }, name = "turbine_outputs"))
 
+def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
+    """ Reads the flow field request """
+    if "flow_field" in wio_outs:
+        flow_field = Dict(wio_outs["flow_field"], name="flow_field")
+        flow_nc_filename = flow_field.pop("flow_nc_filename", "flow_field.nc")
+        output_variables = flow_field.pop("output_variables")
+        z_planes = Dict(flow_field.pop("z_planes"), name="z_planes")
+        z_sampling = z_planes["z_sampling"]
+        xy_sampling = z_planes["xy_sampling"]
+        if verbosity > 1:
+            print("      Reading flow_field")
+            print("        File name       :", flow_nc_filename)
+            print("        output_variables:", output_variables)
+            print("        z_sampling      :", z_sampling)
+            print("        xy_sampling     :", xy_sampling)
+
+        vmap = Dict(
+            wind_speed=FV.WS,
+            wind_direction=FV.WD,
+        )
+        
+        if xy_sampling == "default":
+            out_dicts.append(Dict({
+                        "output_type": "SliceData",
+                        "farm_results": True,
+                        "algo": True,
+                        "run_func": "get_states_data_xy",
+                        "run_kwargs": dict(
+                            resolution=30.,
+                            variables=[vmap[v] for v in output_variables],
+                            z=None if z_sampling == "hub_height" else z_sampling,
+                            to_file=odir/flow_nc_filename,
+                            verbosity=verbosity,
+                        )
+                    }, name = "flow_field"))
+        else:
+            raise NotImplementedError(f"xy_sampling '{xy_sampling}' is not supported (yet)")
+            
 def read_outputs(wio_outs, algo_dict, verbosity):
     """
     Reads the windio outputs
@@ -71,24 +109,7 @@ def read_outputs(wio_outs, algo_dict, verbosity):
     # read turbine_outputs:
     _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity)
 
-        
-            
     # read flow field:
-    if "flow_field" in wio_outs:
-        flow_field = Dict(wio_outs["flow_field"], name="flow_field")
-        flow_nc_filename = flow_field.pop("flow_nc_filename", "flow_field.nc")
-        if verbosity > 1:
-            print("      Reading flow_field")
-            print("        File name:", flow_nc_filename)
-            print("        Contents:", [k for k in flow_field.keys()])
-
-    # read power table:
-    if "power_table" in wio_outs:
-        power_table = Dict(wio_outs["power_table"], name="power_table")
-        power_table_nc_filename = flow_field.pop("flow_nc_filename", "power_table.nc")
-        if verbosity > 1:
-            print("  Reading power_table")
-            print("    File name:", power_table_nc_filename)
-            print("    Contents:", [k for k in power_table.keys()])
+    _read_flow_field(wio_outs, odir, out_dicts, verbosity)
 
     return out_dicts

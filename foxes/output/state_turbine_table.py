@@ -33,7 +33,7 @@ class StateTurbineTable(Output):
         self, 
         variables, 
         name_map={}, 
-        file_path=None, 
+        to_file=None, 
         **kwargs,
         ):
         """
@@ -45,7 +45,7 @@ class StateTurbineTable(Output):
             The output variables
         name_map: dict
             Map from foxes to output names
-        file_path: str, optional
+        to_file: str, optional
             The output file path, if writing is desired
         kwargs: dict, optional
             Additional parameters for write_nc
@@ -71,8 +71,8 @@ class StateTurbineTable(Output):
             }
         )
         
-        if file_path is not None:
-            write_nc(ds=ds, fpath=file_path, **kwargs)
+        if to_file is not None:
+            write_nc(ds=ds, fpath=to_file, **kwargs)
         
         return ds
     
