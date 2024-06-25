@@ -519,6 +519,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
 ## v0.7.3
 
+- Dependencies:
+  - Restriction to `numpy<2` due to an incompatibility of dependecy `autograd`
 - Core:
   - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
 - Inputs:

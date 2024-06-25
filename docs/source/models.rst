@@ -106,16 +106,19 @@ for quadratic TI wake increase superposition.
 The list of wake model name templates in the :ref:`default model book<The model book>` is long,
 but that is mainly due to variations of various constructor argument choices. Typical examples are
 
-* `Jensen_<superposition>_[wake_k]`: The classic Jensen wind deficit model, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed.
-* `Bastankhah2014_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
-* `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
-* `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed. 
-* `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI. 
-* `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019 <http://orbit.dtu.dk/files/3750291/2009_31.pdf>`_, with any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for TI. 
+* `Jensen_<superposition>_[wake_k]`: The classic Jensen wind deficit model,
+* `Bastankhah2014_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Bastankhah and Porté-Agel from 2014 <https://doi.org/10.1016/j.renene.2014.01.002>`_,
+* `Bastankhah2016_<superposition>_[wake_k]`: The wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
+* `TurbOPark_<superposition>_[wake_k]`: The Gaussian wind deficit model by `Pedersen et al. from 2022 <https://iopscience.iop.org/article/10.1088/1742-6596/2265/2/022063/pdf>`_,
+* `CrespoHernandez_<superposition>_[wake_k]`: The top-hat TI addition wake model by `Crespo and Hernandez from 1996 <https://doi.org/10.1016/0167-6105(95)00033-X>`_,
+* `IECTI2019_<superposition>`: The top-hat TI addition wake model by `Frandsen from 2019 <http://orbit.dtu.dk/files/3750291/2009_31.pdf>`_.
 
 Note that in all above cases, the `superposition` parameter is 
-for example `linear` for the choice `ws_linear` or `ti_linear`, depending if the wake model targets wind speed or TI
-(cf. the :ref:`model book<The model book>` example). The `[wake_k]` part of the model name can be replaced by one of the following patterns:
+any of the available :ref:`wake superposition models<foxes.models.wake_superpositions>` for wind speed or TI, depending on the model.
+Here the convention is that you write `linear` for the choice `ws_linear` or `ti_linear`, etc., depending if the wake model targets wind speed or TI
+(cf. the :ref:`model book<The model book>` example). 
+
+The `[wake_k]` part of the model name can be replaced by one of the following patterns:
 
 * `k<k>`, where `<k>` is to be replaced by the value for the wake growth factor `k`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
 * `ka<ka>`, where `<ka>` is to be replaced by the value for `ka` in `k = ka * TI`, with dot-skipping convention (e.g. `004` for the value `0.04`, etc.) 
