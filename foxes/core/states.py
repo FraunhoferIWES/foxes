@@ -159,12 +159,11 @@ class States(PointDataModel):
                 if scls.__name__ == states_type:
                     return scls(*args, **kwargs)
         else:
-            estr = (
-                "States type '{}' is not defined, available types are \n {}".format(
-                    states_type, sorted([i.__name__ for i in allc])
-                )
+            estr = "States type '{}' is not defined, available types are \n {}".format(
+                states_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)
+
 
 class ExtendedStates(States):
     """

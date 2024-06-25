@@ -47,19 +47,19 @@ class PartialAxiwake(PartialCentre):
     def check_wmodel(self, wmodel, error=True):
         """
         Checks the wake model type
-        
+
         Parameters
         ----------
         wmodel: foxes.core.WakeModel
             The wake model to be tested
         error: bool
             Flag for raising TypeError
-        
+
         Returns
         -------
         chk: bool
             True if wake model is compatible
-        
+
         """
         if not isinstance(wmodel, AxisymmetricWakeModel):
             if error:

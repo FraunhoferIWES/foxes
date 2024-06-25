@@ -133,7 +133,7 @@ class Downwind(Algorithm):
             m = self.mbook.wake_models[w]
             m.name = w
             self.wake_models[w] = m
-        
+
         def _set_wspecific(descr, target, values, deffunc, mbooks, checkw):
             if values is None:
                 values = {}
@@ -169,20 +169,20 @@ class Downwind(Algorithm):
 
         self.partial_wakes = {}
         _set_wspecific(
-            descr="partial wakes", 
-            target=self.partial_wakes, 
-            values=partial_wakes, 
-            deffunc=mbook.default_partial_wakes, 
+            descr="partial wakes",
+            target=self.partial_wakes,
+            values=partial_wakes,
+            deffunc=mbook.default_partial_wakes,
             mbooks=self.mbook.partial_wakes,
             checkw=True,
         )
 
         self.ground_models = {}
         _set_wspecific(
-            descr="ground models", 
-            target=self.ground_models, 
-            values=ground_models, 
-            deffunc=lambda w: "no_ground", 
+            descr="ground models",
+            target=self.ground_models,
+            values=ground_models,
+            deffunc=lambda w: "no_ground",
             mbooks=self.mbook.ground_models,
             checkw=False,
         )

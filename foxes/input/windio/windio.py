@@ -15,30 +15,30 @@ from .runner import WindioRunner
 
 
 def _read_site(wio, algo_dict, verbosity):
-    """ Reads the site information """
+    """Reads the site information"""
     wio_site = Dict(wio["site"], name="site")
     if verbosity > 0:
         print("Reading site")
         print("  Name:", wio_site.pop("name", None))
         print("  Contents:", [k for k in wio_site.keys()])
-    
+
     # ignore boundaries:
     if verbosity > 1:
         print("  Ignoring boundaries")
-    
+
     # read energy_resource:
     energy_resource = Dict(wio_site["energy_resource"], name="energy_resource")
     if verbosity > 1:
         print("  Reading energy_resource")
         print("    Name:", energy_resource.pop("name", None))
-        print("    Contents:", [k  for k in energy_resource.keys()])
+        print("    Contents:", [k for k in energy_resource.keys()])
 
     # read wind_resource:
     wind_resource = Dict(energy_resource["wind_resource"], name="wind_resource")
     if verbosity > 1:
         print("    Reading wind_resource")
         print("      Name:", wind_resource.pop("name", None))
-        print("      Contents:", [k  for k in wind_resource.keys()])
+        print("      Contents:", [k for k in wind_resource.keys()])
 
     # read fields
     coords = Dict(name="coords")
@@ -58,14 +58,15 @@ def _read_site(wio, algo_dict, verbosity):
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
+
 def _read_farm(wio, algo_dict, verbosity):
-    """ Reads the wind farm information """
+    """Reads the wind farm information"""
     wio_farm = Dict(wio["wind_farm"], name="wind_farm")
     if verbosity > 0:
         print("Reading wind farm")
         print("  Name:", wio_farm.pop("name", None))
         print("  Contents:", [k for k in wio_farm.keys()])
-    
+
     # find REWS exponents:
     try:
         rotor_averaging = wio["attributes"]["analysis"]["rotor_averaging"]
@@ -83,16 +84,17 @@ def _read_farm(wio, algo_dict, verbosity):
     layouts = Dict(wio_farm["layouts"], name="layouts")
     if verbosity > 1:
         print("    Reading layouts")
-        print("      Contents:", [k  for k in layouts.keys()])
+        print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttype, verbosity)
+
 
 def read_windio(windio_yaml, verbosity=1):
     """
     Reads a complete WindIO case.
 
     This is the main entry point for windio case
-    calculations. 
+    calculations.
 
     Parameters
     ----------
@@ -113,9 +115,7 @@ def read_windio(windio_yaml, verbosity=1):
 
     wio_file = Path(windio_yaml)
     if not wio_file.is_file():
-        wio_file = StaticData().get_file_path(
-            WINDIO, wio_file, check_raw=False
-        ) 
+        wio_file = StaticData().get_file_path(WINDIO, wio_file, check_raw=False)
 
     if verbosity > 0:
         print(f"Reading windio file {wio_file}")
@@ -128,30 +128,38 @@ def read_windio(windio_yaml, verbosity=1):
         print("  Contents:", [k for k in wio.keys()])
 
     algo_dict = Dict(
-        algo_type="Downwind", 
-        mbook=ModelBook(), 
+        algo_type="Downwind",
+        mbook=ModelBook(),
         farm=WindFarm(),
         wake_models=[],
-        verbosity=verbosity-1,
+        verbosity=verbosity - 1,
     )
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
-    out_dicts = read_attributes(wio, algo_dict, verbosity,)
+    out_dicts = read_attributes(
+        wio,
+        algo_dict,
+        verbosity,
+    )
 
     if verbosity > 0:
         print("Creating windio runner")
-    runner = WindioRunner(
-        algo_dict, output_dicts=out_dicts, verbosity=verbosity
-    )
+    runner = WindioRunner(algo_dict, output_dicts=out_dicts, verbosity=verbosity)
 
     return runner
+
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file", help="The windio yaml file", default="windio_5turbines_timeseries.yaml")
+    parser.add_argument(
+        "-f",
+        "--file",
+        help="The windio yaml file",
+        default="windio_5turbines_timeseries.yaml",
+    )
     args = parser.parse_args()
 
     runner = read_windio(args.file)

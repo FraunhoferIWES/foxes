@@ -413,6 +413,7 @@ class MultiHeightStates(States):
         self._weights = None
         self._N = None
 
+
 class MultiHeightNCStates(MultiHeightStates):
     """
     Multi-height states from xarray Dataset.
@@ -431,17 +432,18 @@ class MultiHeightNCStates(MultiHeightStates):
     :group: input.states
 
     """
+
     def __init__(
-            self, 
-            data_source, 
-            *args, 
-            state_coord=FC.STATE,
-            h_coord=FV.H,
-            heights=None, 
-            format_times_func="default",
-            xr_read_pars={}, 
-            **kwargs,
-        ):
+        self,
+        data_source,
+        *args,
+        state_coord=FC.STATE,
+        h_coord=FV.H,
+        heights=None,
+        format_times_func="default",
+        xr_read_pars={},
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -469,9 +471,9 @@ class MultiHeightNCStates(MultiHeightStates):
 
         """
         super().__init__(
-            data_source, 
-            *args, 
-            heights=[], 
+            data_source,
+            *args,
+            heights=[],
             pd_read_pars=None,
             **kwargs,
         )
@@ -481,7 +483,7 @@ class MultiHeightNCStates(MultiHeightStates):
         self.xr_read_pars = xr_read_pars
 
         if format_times_func == "default":
-            self.format_times_func = lambda t: t.astype('datetime64[ns]')
+            self.format_times_func = lambda t: t.astype("datetime64[ns]")
         else:
             self.format_times_func = format_times_func
 
@@ -539,7 +541,9 @@ class MultiHeightNCStates(MultiHeightStates):
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
         if w_name in data.data_vars:
             if data[w_name].dims != (self.state_coord,):
-                raise ValueError(f"Weights data '{w_name}': Expecting dims ({self.state_coord},), got {data[w_name]}")
+                raise ValueError(
+                    f"Weights data '{w_name}': Expecting dims ({self.state_coord},), got {data[w_name]}"
+                )
             self._weights[:] = data.data_vars[w_name].to_numpy()[:, None]
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
@@ -563,9 +567,13 @@ class MultiHeightNCStates(MultiHeightStates):
                 elif data[c].dims == (self.state_coord, self.h_coord):
                     cols[v] = c
                 else:
-                    raise ValueError(f"Variable '{c}': Expecting dims {(self.state_coord, self.h_coord)}, got {data[c].dims}")
+                    raise ValueError(
+                        f"Variable '{c}': Expecting dims {(self.state_coord, self.h_coord)}, got {data[c].dims}"
+                    )
             else:
-                raise KeyError(f"Missing variable '{c}', found data_vars {sorted(list(data.data_vars.keys()))} and attrs {sorted(list(data.attrs.keys()))}")
+                raise KeyError(
+                    f"Missing variable '{c}', found data_vars {sorted(list(data.data_vars.keys()))} and attrs {sorted(list(data.attrs.keys()))}"
+                )
 
         if self.heights is not None:
             data = data.sel({self.h_coord: self.heights})
@@ -583,7 +591,9 @@ class MultiHeightNCStates(MultiHeightStates):
         dims = (FC.STATE, self.VARS, self.H)
         idata["data_vars"][self.DATA] = (
             dims,
-            np.stack([data.data_vars[c].to_numpy() for c in cols.values()], axis=1).astype(FC.DTYPE)
+            np.stack(
+                [data.data_vars[c].to_numpy() for c in cols.values()], axis=1
+            ).astype(FC.DTYPE),
         )
 
         for v, d in self._solo.items():
@@ -591,7 +601,8 @@ class MultiHeightNCStates(MultiHeightStates):
         self._solo = list(self._solo.keys())
 
         return idata
-    
+
+
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -599,7 +610,9 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):
     """
@@ -608,12 +621,13 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     :group: input.states
 
     """
+
     def __init__(
-            self, 
-            *args, 
-            time_coord=FC.TIME,
-            **kwargs,
-        ):
+        self,
+        *args,
+        time_coord=FC.TIME,
+        **kwargs,
+    ):
         """
         Constructor.
 

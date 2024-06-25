@@ -23,22 +23,23 @@ class PartialTopHat(PartialCentre):
     :group: models.partial_wakes
 
     """
+
     def check_wmodel(self, wmodel, error=True):
         """
         Checks the wake model type
-        
+
         Parameters
         ----------
         wmodel: foxes.core.WakeModel
             The wake model to be tested
         error: bool
             Flag for raising TypeError
-        
+
         Returns
         -------
         chk: bool
             True if wake model is compatible
-        
+
         """
         if not isinstance(wmodel, TopHatWakeModel):
             if error:
@@ -47,7 +48,7 @@ class PartialTopHat(PartialCentre):
                 )
             return False
         return True
-    
+
     def __init__(self, rotor_model=None):
         """
         Constructor.

@@ -29,13 +29,8 @@ class Bastankhah2014(GaussianWakeModel):
     :group: models.wake_models.wind
 
     """
-    def __init__(
-        self,
-        superposition,
-        sbeta_factor=0.2,
-        induction="Madsen",
-        **wake_k
-    ):
+
+    def __init__(self, superposition, sbeta_factor=0.2, induction="Madsen", **wake_k):
         """
         Constructor.
 

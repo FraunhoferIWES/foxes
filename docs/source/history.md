@@ -522,7 +522,7 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 - Core:
   - New model type `GroundModel`, which manages the call of the partial wakes models in case of farm calculations and wake models in case of point calculations
 - Inputs:
-  - New height dependen states: `MultiHeightNCStates` and `MultiHeightNCTimeseries`, same as `MultiHeightStates` and `MultiHeightTimeseries`, but starting from a netCDF file or `xarray.Dataset` input
+  - New height dependent states: `MultiHeightNCStates` and `MultiHeightNCTimeseries`, same as `MultiHeightStates` and `MultiHeightTimeseries`, but starting from a netCDF file or `xarray.Dataset` input
 - Models:
   - New wake model helper class `WakeK`, handling the `k`, `ka`, `kb` choices for all wake models
   - New ground model `NoGround`, plain call of the partial wakes and wakes models
@@ -530,6 +530,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New induction model `VortexSheet`, which is a radial implementation of the centreline deficit model in Medici 2012 https://doi.org/10.1002/we.451
 - Utils:
   - New utility `WakeKFactory` class, enabling the choice of either `k` or `ka, kb` directly from the wake model names in the model book.
+- Inputs:
+  - Work on `windio`, but unfinished on their side when it comes to analysis requests
 - Examples:
   - Example `multi_height`: Now based on `MultiHeightNCTimeseries`
 - Bug fixes:

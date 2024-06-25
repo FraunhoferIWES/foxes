@@ -129,8 +129,16 @@ class FarmWakesCalculation(FarmDataModel):
 
             for oi in range(n_turbines):
                 wres = gmodel.finalize_farm_wakes(
-                    algo, mdata, fdata, tdatap, amb_res, weights, 
-                    wdeltas, wmodel, oi, pwake
+                    algo,
+                    mdata,
+                    fdata,
+                    tdatap,
+                    amb_res,
+                    weights,
+                    wdeltas,
+                    wmodel,
+                    oi,
+                    pwake,
                 )
                 for v, d in wres.items():
                     if v in wake_res:

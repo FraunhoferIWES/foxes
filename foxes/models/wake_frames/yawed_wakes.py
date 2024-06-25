@@ -37,11 +37,12 @@ class YawedWakes(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(
         self,
         base_frame=RotorWD(),
-        alpha=0.58, 
-        beta=0.07, 
+        alpha=0.58,
+        beta=0.07,
         induction="Madsen",
         **wake_k,
     ):
@@ -127,7 +128,7 @@ class YawedWakes(WakeFrame):
                 else:
                     for w in algo.wake_models.values():
                         if hasattr(w, "wake_k"):
-                            self. wake_k = w.wake_k
+                            self.wake_k = w.wake_k
                             break
 
         super().initialize(algo, verbosity, force)

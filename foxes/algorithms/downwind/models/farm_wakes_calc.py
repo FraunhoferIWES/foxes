@@ -75,12 +75,12 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(gmodel, tdata, amb_res, weights, wake_res, 
-                      wdeltas, oi, wmodel, pwake):
+        def _evaluate(
+            gmodel, tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake
+        ):
             """Helper function for data evaluation at turbines"""
             wres = gmodel.finalize_farm_wakes(
-                algo, mdata, fdata, tdata, amb_res, weights, 
-                wdeltas, wmodel, oi, pwake
+                algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi, pwake
             )
 
             hres = {v: d[:, oi, None] for v, d in wake_res.items()}
@@ -106,7 +106,8 @@ class FarmWakesCalculation(FarmDataModel):
             gmodel = algo.ground_models[wname]
             tdatap = pwake2tdata[pwake.name]
             wdeltas = gmodel.new_farm_wake_deltas(
-                algo, mdata, fdata, tdatap, wmodel, pwake)
+                algo, mdata, fdata, tdatap, wmodel, pwake
+            )
 
             # downwind:
             if wmodel.affects_downwind:

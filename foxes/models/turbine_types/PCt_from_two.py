@@ -236,10 +236,7 @@ class PCtFromTwo(TurbineType):
 
             i = 0
             try:
-                while (
-                    i < len(ws)
-                    and (not modify_ct or ct[i] < 1e-5)
-                ):
+                while i < len(ws) and (not modify_ct or ct[i] < 1e-5):
                     i += 1
             except IndexError:
                 raise IndexError(
@@ -267,10 +264,7 @@ class PCtFromTwo(TurbineType):
 
             i = 0
             try:
-                while (
-                    i < len(ws)
-                    and (not modify_P or P[i] < 0.1)
-                ):
+                while i < len(ws) and (not modify_P or P[i] < 0.1):
                     i += 1
             except IndexError:
                 raise IndexError(
@@ -293,7 +287,7 @@ class PCtFromTwo(TurbineType):
 
         if not modify_ct and not modify_P:
             super().modify_cutin(modify_ct, modify_P)
-            
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """ "
         The main model calculation.

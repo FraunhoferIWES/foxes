@@ -47,7 +47,7 @@ class VortexSheet(TurbineInductionModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         return f"{type(self).__name__}, induction={iname})"
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -102,7 +102,7 @@ class VortexSheet(TurbineInductionModel):
 
         """
         return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
-    
+
     def contribute(
         self,
         algo,
@@ -114,7 +114,7 @@ class VortexSheet(TurbineInductionModel):
         wake_deltas,
     ):
         """
-        Modifies wake deltas at target points by 
+        Modifies wake deltas at target points by
         contributions from the specified wake source turbines.
 
         Parameters
@@ -138,13 +138,13 @@ class VortexSheet(TurbineInductionModel):
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
 
-        """  
+        """
 
         # get x, y and z. Rounding for safe x < 0 condition
         x = np.round(wake_coos[..., 0], 12)
         y = wake_coos[..., 1]
         z = wake_coos[..., 2]
-        r = np.sqrt(y**2 +z**2)
+        r = np.sqrt(y**2 + z**2)
         r_sph = np.sqrt(r**2 + x**2)
 
         # get ct
@@ -183,27 +183,45 @@ class VortexSheet(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        sp_sel = (ct > 0) &  (x <= 0)
+        sp_sel = (ct > 0) & (x <= 0)
         ws_sel = ws[sp_sel]
         ct_sel = ct[sp_sel]
         r_sph_sel = r_sph[sp_sel]
         D_sel = D[sp_sel]
 
         if np.any(sp_sel):
-            blockage = (ws_sel * (1 - self.induction.ct2a(ct_sel)*((1 + 2*r_sph_sel/D_sel)*(1+(2*r_sph_sel/D_sel)**2))**(-0.5))) - ws_sel
+            blockage = (
+                ws_sel
+                * (
+                    1
+                    - self.induction.ct2a(ct_sel)
+                    * ((1 + 2 * r_sph_sel / D_sel) * (1 + (2 * r_sph_sel / D_sel) ** 2))
+                    ** (-0.5)
+                )
+            ) - ws_sel
             wake_deltas[FV.WS][sp_sel] += blockage
 
         if not self.pre_rotor_only:
-            sp_sel = (ct > 0) & (x > 0) & (r > D/2) # mirror in rotor plane and inverse blockage, but not directly behind rotor
+            sp_sel = (
+                (ct > 0) & (x > 0) & (r > D / 2)
+            )  # mirror in rotor plane and inverse blockage, but not directly behind rotor
             ws_sel = ws[sp_sel]
             ct_sel = ct[sp_sel]
             r_sph_sel = r_sph[sp_sel]
             D_sel = D[sp_sel]
             if np.any(sp_sel):
-                blockage = (ws_sel * (1 - self.induction.ct2a(ct_sel)*((1 + 2*r_sph_sel/D_sel)*(1+(2*r_sph_sel/D_sel)**2))**(-0.5))) - ws_sel
+                blockage = (
+                    ws_sel
+                    * (
+                        1
+                        - self.induction.ct2a(ct_sel)
+                        * (
+                            (1 + 2 * r_sph_sel / D_sel)
+                            * (1 + (2 * r_sph_sel / D_sel) ** 2)
+                        )
+                        ** (-0.5)
+                    )
+                ) - ws_sel
                 wake_deltas[FV.WS][sp_sel] += -blockage
 
         return wake_deltas
-
-   
-

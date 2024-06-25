@@ -129,7 +129,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         """
         return [self.wake_k]
-    
+
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.

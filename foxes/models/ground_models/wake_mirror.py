@@ -2,6 +2,7 @@ from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WakeMirror(GroundModel):
     """
     Wake reflection from ground and/or other horizontal planes.
@@ -10,10 +11,11 @@ class WakeMirror(GroundModel):
     ----------
     heights: list of float
         The reflection heights
-    
+
     :group: models.ground_models
 
     """
+
     def __init__(self, heights):
         """
         Constructor.
@@ -26,16 +28,16 @@ class WakeMirror(GroundModel):
         """
         super().__init__()
         self.heights = heights
-    
+
     def contribute_to_farm_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        downwind_index, 
-        wake_deltas, 
-        wmodel, 
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+        wake_deltas,
+        wmodel,
         pwake,
     ):
         """
@@ -78,8 +80,9 @@ class WakeMirror(GroundModel):
 
             fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
 
-            pwake.contribute(algo, mdata, fdata, tdata,
-                            downwind_index, wake_deltas, wmodel)
+            pwake.contribute(
+                algo, mdata, fdata, tdata, downwind_index, wake_deltas, wmodel
+            )
 
         # reset heights:
         fdata[FV.H][:, downwind_index] = hh
@@ -132,12 +135,17 @@ class WakeMirror(GroundModel):
 
             fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
 
-            wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-            wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
+            wcoos = algo.wake_frame.get_wake_coos(
+                algo, mdata, fdata, tdata, downwind_index
+            )
+            wmodel.contribute(
+                algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas
+            )
 
         # reset heights:
         fdata[FV.H][:, downwind_index] = hh
-    
+
+
 class GroundMirror(WakeMirror):
     """
     Wake reflection from the ground.
@@ -145,9 +153,9 @@ class GroundMirror(WakeMirror):
     :group: models.ground_models
 
     """
+
     def __init__(self):
         """
         Constructor.
         """
-        super().__init__(heights=[0.])
-        
+        super().__init__(heights=[0.0])
