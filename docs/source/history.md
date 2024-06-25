@@ -541,3 +541,8 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
+
+## v0.7.4
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.4](https://github.com/FraunhoferIWES/foxes/commits/v0.7.4)
