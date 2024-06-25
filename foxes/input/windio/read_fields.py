@@ -27,7 +27,7 @@ wio2foxes = {
 """
 foxes2wio = {d: k for k, d in wio2foxes.items()}
 
-def _read_nondimensional_coordinate(name, wio_data, coords, fields, dims):
+def _read_nondimensional_coordinate(name, wio_data, coords):
     """ read nondimensional coordinate 
     :group: input.windio
     """
@@ -36,7 +36,7 @@ def _read_nondimensional_coordinate(name, wio_data, coords, fields, dims):
         return True
     return False
 
-def _read_dimensional_coordinate(name, wio_data, coords, fields, dims):
+def _read_dimensional_coordinate(name, wio_data, coords):
     """ read dimensional coordinate 
     :group: input.windio
     """
@@ -47,16 +47,16 @@ def _read_dimensional_coordinate(name, wio_data, coords, fields, dims):
         return True
     return False
 
-def _read_multi_dimensional_coordinate(*args, **kwargs):
+def _read_multi_dimensional_coordinate(name, wio_data, coords):
     """ Read multi dimensional coordinate 
     :group: input.windio
     """
     return (
-        _read_nondimensional_coordinate(*args, **kwargs) or
-        _read_dimensional_coordinate(*args, **kwargs)
+        _read_nondimensional_coordinate(name, wio_data, coords) or
+        _read_dimensional_coordinate(name, wio_data, coords)
     )
 
-def _read_nondimensional_data(name, wio_data, coords, fields, dims):
+def _read_nondimensional_data(name, wio_data, fields, dims):
     """ read nondimensional data 
     :group: input.windio
     """
@@ -67,7 +67,7 @@ def _read_nondimensional_data(name, wio_data, coords, fields, dims):
         return True
     return False
 
-def _read_dimensional_data(name, wio_data, coords, fields, dims):
+def _read_dimensional_data(name, wio_data, fields, dims):
     """ read dimensional data 
     :group: input.windio
     """
@@ -81,13 +81,13 @@ def _read_dimensional_data(name, wio_data, coords, fields, dims):
         return True
     return False
 
-def _read_multi_dimensional_data(*args, **kwargs):
+def _read_multi_dimensional_data(name, wio_data, fields, dims):
     """ Read multi dimensional data 
     :group: input.windio 
     """
     return (
-        _read_nondimensional_data(*args, **kwargs) or
-        _read_dimensional_data(*args, **kwargs)
+        _read_nondimensional_data(name, wio_data, fields, dims) or
+        _read_dimensional_data(name, wio_data, fields, dims)
     )
 
 def read_wind_resource_field(name, wio_data, coords, fields, dims):
@@ -128,7 +128,7 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
         
     elif (
         name in ["time", "wind_turbine"] and
-        _read_multi_dimensional_coordinate(name, wio_data, coords, fields, dims)
+        _read_multi_dimensional_coordinate(name, wio_data, coords)
     ):
         return True
     
@@ -140,8 +140,8 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
             "y", 
             "height",
         ] and (
-            _read_multi_dimensional_coordinate(name, wio_data, coords, fields, dims) or
-            _read_multi_dimensional_data(name, wio_data, coords, fields, dims)
+            _read_multi_dimensional_coordinate(name, wio_data, coords) or
+            _read_multi_dimensional_data(name, wio_data, fields, dims)
         )
     ):
         return True
@@ -155,7 +155,7 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
             "z0",
             "k",
         ] and
-        _read_multi_dimensional_data(name, wio_data, coords, fields, dims)
+        _read_multi_dimensional_data(name, wio_data, fields, dims)
     ):
         return True
         

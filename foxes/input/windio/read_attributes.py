@@ -2,6 +2,8 @@ from foxes.utils import Dict
 from foxes.core import WakeModel, WakeFrame
 import foxes.variables as FV
 
+from .read_outputs import read_outputs
+
 def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbosity):
     """ Reads the wind deficit wake model """
 
@@ -228,14 +230,6 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
     _read_deflection(deflection, induction, algo_dict, verbosity)
 
-def _read_outputs(wio_outs, algo_dict, verbosity):
-    """ Reads the outputs """
-    if verbosity > 1:
-        print("  Reading outputs")
-        print("    Contents:", [k  for k in wio_outs.keys()])
-    quit()
-    return []
-
 def read_attributes(wio, algo_dict, verbosity):
     """
     Reads the attributes part of windio
@@ -278,6 +272,10 @@ def read_attributes(wio, algo_dict, verbosity):
     _read_analysis(wio_ana, algo_dict, verbosity)
     
     # outputs:
-    outputs = Dict(wio_attrs["outputs"], name="outputs")
-    return _read_outputs(outputs, algo_dict, verbosity)
+    out_dicts = []
+    if "outputs" in wio_attrs:
+        outputs = Dict(wio_attrs["outputs"], name="outputs")
+        out_dicts = read_outputs(outputs, algo_dict, verbosity)
+    
+    return out_dicts
         
