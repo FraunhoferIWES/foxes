@@ -66,7 +66,7 @@ POINTS = "points"
 """
 
 AMB_TARGET_RESULTS = "amb_target_res"
-""" Identified for ambient target results
+""" Identifier for ambient target results
 :group: foxes.constants
 """
 

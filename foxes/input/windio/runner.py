@@ -79,7 +79,12 @@ class WindioRunner:
             run_fname = odict.pop("run_func")
             run_args = odict.pop("run_args", ())
             run_kwargs = odict.pop("run_kwargs", {})
-            o = Output.new(**odict)
+            _odict = odict.copy()
+            if _odict.pop("farm_results", False):
+                _odict["farm_results"] = self.farm_results
+            if _odict.pop("algo", False):
+                _odict["algo"] = self.algo
+            o = Output.new(**_odict)
             f = getattr(o, run_fname)
             self.output_results.append(f(*run_args, **run_kwargs))
 

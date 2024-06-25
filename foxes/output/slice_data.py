@@ -21,7 +21,7 @@ class SliceData(Output):
     runner: foxes.utils.runners.Runner, optional
         The runner
 
-    :group: output.flow_plots_2d
+    :group: output
 
     """
 
