@@ -20,6 +20,7 @@ class PartialSegregated(PartialWakesModel):
     :group: models.partial_wakes
 
     """
+
     def __init__(self, rotor_model):
         """
         Constructor.

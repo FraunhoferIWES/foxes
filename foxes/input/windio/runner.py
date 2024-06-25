@@ -1,10 +1,11 @@
 from foxes.core import Algorithm
 from foxes.output import Output
 
+
 class WindioRunner:
     """
     Runner for windio input
-    
+
     Attributes
     ----------
     algo: foxes.core.Algorithm
@@ -21,10 +22,11 @@ class WindioRunner:
     :group: input.windio
 
     """
+
     def __init__(self, algo_dict, output_dicts=[], verbosity=1):
         """
         Conbstructor
-        
+
         Parameters
         ----------
         algo_dict: dict
@@ -42,35 +44,35 @@ class WindioRunner:
         self.output_results = None
 
         self.__initialized = False
-    
+
     def print(self, *args, **kwargs):
-        """ Print based on verbosity """
+        """Print based on verbosity"""
         if self.verbosity > 0:
             print(*args, **kwargs)
 
     def initialize(self):
-        """ Initializes the runner """
+        """Initializes the runner"""
         if isinstance(self.algo, dict):
             self.print(f"Creating algorithm '{self.algo['algo_type']}'")
             self.algo = Algorithm.new(**self.algo)
         if not self.algo.initialized:
             self.algo.initialize()
         self.__initialized = True
-    
+
     @property
     def initialized(self):
-        """ Flag for initialization """
+        """Flag for initialization"""
         return self.__initialized
-    
+
     def run_farm_calc(self):
-        """ Runs the farm calculation """
+        """Runs the farm calculation"""
         if not self.__initialized:
             self.initialize()
         print("Running farm_calc")
         self.farm_results = self.algo.calc_farm()
-    
+
     def run_outputs(self):
-        """ Runs the output calculation """
+        """Runs the output calculation"""
         self.output_results = []
         for odict in self.output_dicts:
             self.print("Running output:", odict["output_type"])
@@ -80,24 +82,24 @@ class WindioRunner:
             o = Output.new(**odict)
             f = getattr(o, run_fname)
             self.output_results.append(f(*run_args, **run_kwargs))
-    
+
     def run(self):
-        """ Runs all calculations """
+        """Runs all calculations"""
         self.run_farm_calc()
         self.run_outputs()
 
     def finalize(self):
-        """ Initializes the runner """
+        """Initializes the runner"""
         if self.algo.initialized:
             self.algo.finalize(clear_mem=True)
         self.algo = None
         self.farm_results = None
         self.output_results = None
         self.__initialized = False
-    
+
     def __enter__(self):
         self.initialize()
         return self
-    
+
     def __exit__(self, *args):
         self.finalize()

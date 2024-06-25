@@ -455,9 +455,7 @@ class ModelBook:
         self.wake_models[f"SelfSimilar2020"] = (
             fm.wake_models.induction.SelfSimilar2020()
         )
-        self.wake_models[f"VortexSheet"] = (
-            fm.wake_models.induction.VortexSheet()
-        )
+        self.wake_models[f"VortexSheet"] = fm.wake_models.induction.VortexSheet()
 
         self.ground_models = FDict(name="ground_models")
         self.ground_models["no_ground"] = fm.ground_models.NoGround()
@@ -466,7 +464,7 @@ class ModelBook:
             fm.ground_models.WakeMirror,
             "blh_mirror_h<height>",
             var2arg={"height": "heights"},
-            height=lambda h: [0., float(h)],
+            height=lambda h: [0.0, float(h)],
             hints={"height": "(Boundary layer wake reflection height)"},
         )
 

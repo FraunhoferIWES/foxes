@@ -57,7 +57,9 @@ class IECTIWake(TopHatWakeModel):
 
         if opening_angle is not None:
             if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
-                raise KeyError(f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both")
+                raise KeyError(
+                    f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
+                )
             wake_k["k"] = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
         self.iec_type = iec_type
@@ -83,7 +85,7 @@ class IECTIWake(TopHatWakeModel):
 
         """
         return [self.wake_k]
-    
+
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.

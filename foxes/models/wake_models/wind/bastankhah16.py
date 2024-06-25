@@ -420,8 +420,8 @@ class Bastankhah2016(DistSlicedWakeModel):
     def __init__(
         self,
         superposition,
-        alpha=0.58, 
-        beta=0.07, 
+        alpha=0.58,
+        beta=0.07,
         induction="Madsen",
         **wake_k,
     ):
@@ -490,7 +490,8 @@ class Bastankhah2016(DistSlicedWakeModel):
         """
         if not self.initialized:
             self.model = Bastankhah2016Model(
-                alpha=self.alpha, beta=self.beta, induction=self.induction)
+                alpha=self.alpha, beta=self.beta, induction=self.induction
+            )
         super().initialize(algo, verbosity, force)
 
     def calc_wakes_x_yz(

@@ -1,16 +1,18 @@
 from .model import Model
 
+
 class GroundModel(Model):
     """
     Base class for ground models.
     """
+
     def new_farm_wake_deltas(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        wmodel, 
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        wmodel,
         pwake,
     ):
         """
@@ -43,13 +45,13 @@ class GroundModel(Model):
 
     def contribute_to_farm_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        downwind_index, 
-        wake_deltas, 
-        wmodel, 
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+        wake_deltas,
+        wmodel,
         pwake,
     ):
         """
@@ -79,20 +81,19 @@ class GroundModel(Model):
             The partial wakes model
 
         """
-        pwake.contribute(algo, mdata, fdata, tdata,
-                         downwind_index, wake_deltas, wmodel)
+        pwake.contribute(algo, mdata, fdata, tdata, downwind_index, wake_deltas, wmodel)
 
     def finalize_farm_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        amb_res, 
-        rpoint_weights, 
-        wake_deltas, 
-        wmodel, 
-        downwind_index, 
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        amb_res,
+        rpoint_weights,
+        wake_deltas,
+        wmodel,
+        downwind_index,
         pwake,
     ):
         """
@@ -136,16 +137,23 @@ class GroundModel(Model):
 
         """
         return pwake.finalize_wakes(
-            algo, mdata, fdata, tdata, amb_res, rpoint_weights, 
-            wake_deltas, wmodel,downwind_index
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            amb_res,
+            rpoint_weights,
+            wake_deltas,
+            wmodel,
+            downwind_index,
         )
-        
+
     def new_point_wake_deltas(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
+        algo,
+        mdata,
+        fdata,
+        tdata,
         wmodel,
     ):
         """
@@ -172,7 +180,7 @@ class GroundModel(Model):
 
         """
         return wmodel.new_wake_deltas(algo, mdata, fdata, tdata)
-    
+
     def contribute_to_point_wakes(
         self,
         algo,
@@ -208,21 +216,16 @@ class GroundModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index
-        )
-        wmodel.contribute(
-            algo, mdata, fdata, tdata, downwind_index, 
-            wcoos, wake_deltas
-        )
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     def finalize_point_wakes(
         self,
-        algo, 
-        mdata, 
-        fdata, 
-        amb_results, 
-        wake_deltas, 
+        algo,
+        mdata,
+        fdata,
+        amb_results,
+        wake_deltas,
         wmodel,
     ):
         """
@@ -248,6 +251,4 @@ class GroundModel(Model):
             with shape (n_states, n_targets, n_tpoints)
 
         """
-        wmodel.finalize_wake_deltas(
-            algo, mdata, fdata, amb_results, wake_deltas
-        )
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, amb_results, wake_deltas)

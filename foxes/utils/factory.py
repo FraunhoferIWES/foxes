@@ -1,6 +1,7 @@
 from .dict import Dict
 import foxes.variables as FV
 
+
 class Factory:
     """
     Constructs objects from a choice of allowed
@@ -255,6 +256,7 @@ class Factory:
 
         return self.base(*self.args, **kwargs)
 
+
 class WakeKFactory:
     """
     A factory that automatically handles
@@ -268,10 +270,11 @@ class WakeKFactory:
     :group: utils
 
     """
+
     def __init__(self, base, name_template, *args, hints={}, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         base: class
@@ -298,7 +301,9 @@ class WakeKFactory:
         kw = kwargs.pop("kwargs", {})
 
         if i0 < 0:
-            raise ValueError(f"String '_[wake_k]' not found in name template '{name_template}'")
+            raise ValueError(
+                f"String '_[wake_k]' not found in name template '{name_template}'"
+            )
 
         # add case ka, kb:
         t = name_template[:i0] + "_ka<ka>_kb<kb>"
@@ -308,11 +313,18 @@ class WakeKFactory:
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         h["kb"] = "(Value, e.g. 001 for 0.01)"
         kw["ti_var"] = FV.TI
-        self.factories.append(Factory(
-            base, t, *args, hints=h, kwargs=kw.copy(), **kwargs,
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=h,
+                kwargs=kw.copy(),
+                **kwargs,
+                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            )
+        )
 
         # add case ambient ka, kb:
         t = name_template[:i0] + "_ambka<ka>_kb<kb>"
@@ -322,11 +334,18 @@ class WakeKFactory:
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         h["kb"] = "(Value, e.g. 001 for 0.01)"
         kw["ti_var"] = FV.AMB_TI
-        self.factories.append(Factory(
-            base, t, *args, hints=h, kwargs=kw.copy(), **kwargs,
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=h,
+                kwargs=kw.copy(),
+                **kwargs,
+                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            )
+        )
 
         # add case ka:
         t = name_template[:i0] + "_ka<ka>"
@@ -335,10 +354,17 @@ class WakeKFactory:
         h = hints.copy()
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         kw["ti_var"] = FV.TI
-        self.factories.append(Factory(
-            base, t, *args, hints=h, kwargs=kw.copy(), **kwargs,
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=h,
+                kwargs=kw.copy(),
+                **kwargs,
+                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            )
+        )
 
         # add case ka:
         t = name_template[:i0] + "_ambka<ka>"
@@ -347,10 +373,17 @@ class WakeKFactory:
         h = hints.copy()
         h["ka"] = "(Value, e.g. 04 for 0.4)"
         kw["ti_var"] = FV.AMB_TI
-        self.factories.append(Factory(
-            base, t, *args, hints=h, kwargs=kw.copy(), **kwargs,
-            ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=h,
+                kwargs=kw.copy(),
+                **kwargs,
+                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            )
+        )
 
         # add case k:
         t = name_template[:i0] + "_k<k>"
@@ -359,19 +392,33 @@ class WakeKFactory:
         h = hints.copy()
         h["k"] = "(Value, e.g. 004 for 0.04)"
         kw["ti_var"] = FV.TI
-        self.factories.append(Factory(
-            base, t, *args, hints=h, kwargs=kw.copy(), **kwargs,
-            k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=h,
+                kwargs=kw.copy(),
+                **kwargs,
+                k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            )
+        )
 
         # add case without k:
         t = name_template[:i0]
         if len(name_template) > i1:
             t += name_template[i1:]
         kw["ti_var"] = FV.TI
-        self.factories.append(Factory(
-            base, t, *args, hints=hints, kwargs=kw.copy(), **kwargs,
-        ))
+        self.factories.append(
+            Factory(
+                base,
+                t,
+                *args,
+                hints=hints,
+                kwargs=kw.copy(),
+                **kwargs,
+            )
+        )
 
     def __str__(self):
         """String representation"""
@@ -384,8 +431,11 @@ class WakeKFactory:
                 s += f"\n  {v} from {list(f0.options[v])}"
             else:
                 s += f"\n  {v}={f0.hints.get(v, '(value)')}"
-        s += f"\n  [wake_k]=(None or k<k> or ka<ka> or ka<ka>_kb<kb>, e.g. 004 for 0.04)"
+        s += (
+            f"\n  [wake_k]=(None or k<k> or ka<ka> or ka<ka>_kb<kb>, e.g. 004 for 0.04)"
+        )
         return s
+
 
 class FDict(Dict):
     """
