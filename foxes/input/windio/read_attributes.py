@@ -304,7 +304,7 @@ def read_attributes(wio, algo_dict, verbosity):
             print("      Name:", fmname)
             print("      Contents:", [k for k in flow_model.keys()])
         if fmname != "foxes":
-            raise ValueError(f"Can only run flow_model 'foxes', got '{fmname}'")
+            print(f"Running flow_model 'foxes', overruling choice '{fmname}'")
 
     # read analysis:
     wio_ana = Dict(wio_attrs["analysis"], name="analyses")
