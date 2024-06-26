@@ -137,7 +137,8 @@ def read_windio(windio_yaml, verbosity=1):
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
-    out_dicts = read_attributes(
+    
+    out_dicts, odir = read_attributes(
         wio,
         algo_dict,
         verbosity,
@@ -145,7 +146,13 @@ def read_windio(windio_yaml, verbosity=1):
 
     if verbosity > 0:
         print("Creating windio runner")
-    runner = WindioRunner(algo_dict, output_dicts=out_dicts, verbosity=verbosity)
+    runner = WindioRunner(
+                algo_dict, 
+                output_dir=odir,
+                output_dicts=out_dicts, 
+                wio_input_data=wio, 
+                verbosity=verbosity
+            )
 
     return runner
 

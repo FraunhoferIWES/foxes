@@ -130,6 +130,10 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
         "friction_velocity",
         "k",
         "epsilon",
+        "ABL_height",
+        "lapse_rate",
+        "capping_inversion_thickness",
+        "capping_inversion_strength",
     ]:
         print(f"Ignoring variable '{name}'")
         return False

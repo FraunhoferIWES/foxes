@@ -36,7 +36,10 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
                         name_map=ivmap,
                         to_file=odir/turbine_nc_filename,
                         verbosity=verbosity,
-                    )
+                    ),
+                    "output_yaml_update": {
+                        "power_table": f"include {turbine_nc_filename}",
+                    },
                 }, name = "turbine_outputs"))
 
 def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
@@ -72,11 +75,15 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                             z=None if z_sampling == "hub_height" else z_sampling,
                             to_file=odir/flow_nc_filename,
                             verbosity=verbosity,
-                        )
+                        ),
+                        "output_yaml_update": {
+                            "flow_field": f"include {flow_nc_filename}",
+                        },
                     }, name = "flow_field"))
         else:
             raise NotImplementedError(f"xy_sampling '{xy_sampling}' is not supported (yet)")
             
+        
 def read_outputs(wio_outs, algo_dict, verbosity):
     """
     Reads the windio outputs
@@ -94,6 +101,8 @@ def read_outputs(wio_outs, algo_dict, verbosity):
     -------
     out_dicts: list of dict
         The output dictionaries
+    odir: pathlib.Path
+        Path to the output folder
 
     :group: input.windio
 
@@ -112,4 +121,4 @@ def read_outputs(wio_outs, algo_dict, verbosity):
     # read flow field:
     _read_flow_field(wio_outs, odir, out_dicts, verbosity)
 
-    return out_dicts
+    return out_dicts, odir
