@@ -20,13 +20,13 @@ wio2foxes = {
     "turbulence_intensity": FV.TI,
     "LMO": FV.MOL,
     "z0": FV.Z0,
+    "reference_height": FV.H,
 }
 
 """ Mapping from foxes to windio variables
 :group: input.windio
 """
 foxes2wio = {d: k for k, d in wio2foxes.items()}
-
 
 def _read_nondimensional_coordinate(name, wio_data, coords):
     """read nondimensional coordinate
@@ -36,7 +36,6 @@ def _read_nondimensional_coordinate(name, wio_data, coords):
         coords[wio2foxes[name]] = wio_data
         return True
     return False
-
 
 def _read_dimensional_coordinate(name, wio_data, coords):
     """read dimensional coordinate
@@ -49,7 +48,6 @@ def _read_dimensional_coordinate(name, wio_data, coords):
         return True
     return False
 
-
 def _read_multi_dimensional_coordinate(name, wio_data, coords):
     """Read multi dimensional coordinate
     :group: input.windio
@@ -57,7 +55,6 @@ def _read_multi_dimensional_coordinate(name, wio_data, coords):
     return _read_nondimensional_coordinate(
         name, wio_data, coords
     ) or _read_dimensional_coordinate(name, wio_data, coords)
-
 
 def _read_nondimensional_data(name, wio_data, fields, dims):
     """read nondimensional data
@@ -69,7 +66,6 @@ def _read_nondimensional_data(name, wio_data, fields, dims):
         dims[v] = []
         return True
     return False
-
 
 def _read_dimensional_data(name, wio_data, fields, dims):
     """read dimensional data
@@ -95,8 +91,6 @@ def _read_multi_dimensional_data(name, wio_data, fields, dims):
     return _read_nondimensional_data(
         name, wio_data, fields, dims
     ) or _read_dimensional_data(name, wio_data, fields, dims)
-
-
 
 def read_wind_resource_field(
     name, 
@@ -144,11 +138,13 @@ def read_wind_resource_field(
         "capping_inversion_thickness",
         "capping_inversion_strength",
     ]:
-        if verbosity > 0:
-            print(f"Ignoring variable '{name}'")
+        if verbosity > 2:
+            print(f"        Ignoring variable '{name}'")
         return False
 
-    elif name in ["time", "wind_turbine"] and _read_multi_dimensional_coordinate(
+    if verbosity > 2:
+        print(f"        Reading variable '{name}'")
+    if name in ["time", "wind_turbine"] and _read_multi_dimensional_coordinate(
         name, wio_data, coords
     ):
         return True
@@ -171,7 +167,7 @@ def read_wind_resource_field(
         "turbulence_intensity",
         "LMO",
         "z0",
-        "k",
+        "reference_height",
     ] and _read_multi_dimensional_data(name, wio_data, fields, dims):
         return True
 

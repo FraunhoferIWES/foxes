@@ -45,8 +45,6 @@ def _read_site(wio, algo_dict, verbosity):
     fields = Dict(name="fields")
     dims = Dict(name="dims")
     for n, d in wind_resource.items():
-        if verbosity > 2:
-            print("        Reading", n)
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
     if verbosity > 2:
         print("      Coords:")

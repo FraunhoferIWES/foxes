@@ -63,7 +63,6 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
 
     return ka, kb, amb_ti
 
-
 def _read_turbulence(
     turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
 ):
@@ -72,7 +71,7 @@ def _read_turbulence(
     twake_def_map = Dict(
         {
             "CrespoHernandez": "CrespoHernandezTIWake",
-            "IEC-TI-2019": "IECTI2019",
+            "IEC-TI-2019": "IECTIWake",
         },
         name="twake_def_map",
     )
@@ -91,6 +90,9 @@ def _read_turbulence(
         print("      Name:", wname)
         print("      Contents:", [k for k in turbulence_model.keys()])
     tiwake_dict = dict(wmodel_type=twake_def_map[wname], induction=induction)
+    if wname == "IEC-TI-2019":
+        tiwake_dict["opening_angle"] = None
+        tiwake_dict["iec_type"] = "2019"
     if "wake_expansion_coefficient" in turbulence_model:
         kcoef = Dict(turbulence_model["wake_expansion_coefficient"], name="kcoef")
         ka = kcoef["k_a"]
@@ -190,7 +192,6 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        --> rotor_model     :", algo_dict["rotor_model"])
         print("        --> partial_wakes   :", algo_dict["partial_wakes"])
 
-
 def _read_deflection(deflection, induction, algo_dict, verbosity):
     """Reads deflection model"""
     defl_def_map = Dict(
@@ -218,7 +219,6 @@ def _read_deflection(deflection, induction, algo_dict, verbosity):
         print("       ", algo_dict["mbook"].wake_frames[wname])
     algo_dict["wake_frame"] = wname
 
-
 def _read_analysis(wio_ana, algo_dict, verbosity):
     """Reads the windio analyses"""
     if verbosity > 2:
@@ -239,7 +239,7 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
         },
         name="induction mapping",
     )
-    induction = imap[wio_ana["axial_induction_model"]]
+    induction = imap[wio_ana.get("axial_induction_model", "1D")]
     if verbosity > 2:
         print("    axial induction model:", induction)
 
