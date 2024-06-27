@@ -20,12 +20,21 @@ class SliceData(Output):
         The farm results
     runner: foxes.utils.runners.Runner, optional
         The runner
-
+    verbosity_delta: int
+        Verbosity threshold for printing calculation info
+            
     :group: output
 
     """
 
-    def __init__(self, algo, farm_results, runner=None, **kwargs):
+    def __init__(
+        self, 
+        algo, 
+        farm_results, 
+        runner=None, 
+        verbosity_delta=1,
+        **kwargs,
+        ):
         """
         Constructor.
 
@@ -37,6 +46,8 @@ class SliceData(Output):
             The farm results
         runner: foxes.utils.runners.Runner, optional
             The runner
+        verbosity_delta: int
+            Verbosity threshold for printing calculation info
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -45,6 +56,7 @@ class SliceData(Output):
         self.algo = algo
         self.fres = farm_results
         self.runner = runner
+        self.verbosity_delta = verbosity_delta
 
     def _data_mod(
         self,
@@ -134,7 +146,7 @@ class SliceData(Output):
             g_pts=g_pts,
             sel={FC.STATE: states_sel} if states_sel is not None else None,
             isel={FC.STATE: states_isel} if states_isel is not None else None,
-            verbosity=verbosity,
+            verbosity=verbosity-self.verbosity_delta,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()
@@ -282,7 +294,16 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xy(
-            self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
+            self.fres, 
+            resolution, 
+            xmin, 
+            ymin, 
+            xmax, 
+            ymax, 
+            z, 
+            xspace, 
+            yspace, 
+            verbosity-self.verbosity_delta,
         )
 
         data = self._calc_mean_data(
@@ -424,7 +445,7 @@ class SliceData(Output):
             y,
             xspace,
             zspace,
-            verbosity,
+            verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -567,7 +588,7 @@ class SliceData(Output):
             x,
             yspace,
             zspace,
-            verbosity,
+            verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 
@@ -632,7 +653,7 @@ class SliceData(Output):
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
-            verbosity=verbosity,
+            verbosity=verbosity-self.verbosity_delta,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()
@@ -773,7 +794,16 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xy(
-            self.fres, resolution, xmin, ymin, xmax, ymax, z, xspace, yspace, verbosity
+            self.fres, 
+            resolution, 
+            xmin, 
+            ymin, 
+            xmax, 
+            ymax, 
+            z, 
+            xspace, 
+            yspace, 
+            verbosity-self.verbosity_delta,
         )
 
         data = self._calc_states_data(
@@ -911,7 +941,7 @@ class SliceData(Output):
             y,
             xspace,
             zspace,
-            verbosity,
+            verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -1050,7 +1080,7 @@ class SliceData(Output):
             x,
             yspace,
             zspace,
-            verbosity,
+            verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 

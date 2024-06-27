@@ -17,7 +17,7 @@ def _get_SingleStateStates(coords, fields, dims, states_dict, verbosity):
         if not isinstance(c, Number):
             return False
 
-    if verbosity > 1:
+    if verbosity > 2:
         print("        selecting class 'SingleStateStates'")
 
     smap = {FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"}
@@ -50,7 +50,7 @@ def _get_Timeseries(coords, fields, dims, states_dict, verbosity):
     :group: input.windio
     """
     if len(coords) == 1 and FC.TIME in coords:
-        if verbosity > 1:
+        if verbosity > 2:
             print("        selecting class 'Timeseries'")
 
         data = {}
@@ -60,7 +60,7 @@ def _get_Timeseries(coords, fields, dims, states_dict, verbosity):
                 data[v] = d
             elif len(dims[v]) == 0:
                 fix[v] = d
-            elif verbosity > 1:
+            elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
         fix.update({v: d for v, d in fixval.items() if v not in data})
 
@@ -101,7 +101,7 @@ def get_states(coords, fields, dims, verbosity=1):
     :group: input.windio
 
     """
-    if verbosity > 1:
+    if verbosity > 2:
         print("      Preparing states")
 
     states_dict = {}

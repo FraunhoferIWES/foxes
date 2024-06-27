@@ -98,7 +98,14 @@ def _read_multi_dimensional_data(name, wio_data, fields, dims):
 
 
 
-def read_wind_resource_field(name, wio_data, coords, fields, dims):
+def read_wind_resource_field(
+    name, 
+    wio_data, 
+    coords, 
+    fields, 
+    dims, 
+    verbosity,
+    ):
     """
     Reads wind resource data into fields and dims
 
@@ -114,6 +121,8 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
         The fields dict, filled on the fly
     dims: dict
         The dimensions dict, filled on the fly
+    verbosity: int
+        The verbosity level, 0=silent
 
     Returns
     -------
@@ -135,7 +144,8 @@ def read_wind_resource_field(name, wio_data, coords, fields, dims):
         "capping_inversion_thickness",
         "capping_inversion_strength",
     ]:
-        print(f"Ignoring variable '{name}'")
+        if verbosity > 0:
+            print(f"Ignoring variable '{name}'")
         return False
 
     elif name in ["time", "wind_turbine"] and _read_multi_dimensional_coordinate(

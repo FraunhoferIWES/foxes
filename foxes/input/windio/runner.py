@@ -97,15 +97,15 @@ class WindioRunner:
             _write_yaml(wio_input_data, fpath)
             self._output_yaml["wind_energy_system"] = f"include {file_name_input_yaml}"
 
-    def print(self, *args, **kwargs):
+    def print(self, *args, level=1, **kwargs):
         """Print based on verbosity"""
-        if self.verbosity > 0:
+        if self.verbosity >= level:
             print(*args, **kwargs)
 
     def initialize(self):
         """Initializes the runner"""
         if isinstance(self.algo, dict):
-            self.print(f"Creating algorithm '{self.algo['algo_type']}'")
+            self.print(f"Creating algorithm '{self.algo['algo_type']}'", level=2)
             self.algo = Algorithm.new(**self.algo)
         if not self.algo.initialized:
             self.algo.initialize()
@@ -120,7 +120,7 @@ class WindioRunner:
         """Runs the farm calculation"""
         if not self.__initialized:
             self.initialize()
-        print("Running farm_calc")
+        self.print("Running farm_calc")
         self.farm_results = self.algo.calc_farm()
 
     def run_outputs(self):

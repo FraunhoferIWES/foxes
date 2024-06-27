@@ -11,7 +11,7 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
         turbine_outputs = Dict(wio_outs["turbine_outputs"], name="turbine_outputs")
         turbine_nc_filename = turbine_outputs.pop("turbine_nc_filename", "turbine_outputs.nc")
         output_variables = turbine_outputs["output_variables"]
-        if verbosity > 1:
+        if verbosity > 2:
             print("      Reading turbine_outputs")
             print("        File name:", turbine_nc_filename)
             print("        output_variables:", output_variables)
@@ -51,7 +51,7 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
         z_planes = Dict(flow_field.pop("z_planes"), name="z_planes")
         z_sampling = z_planes["z_sampling"]
         xy_sampling = z_planes["xy_sampling"]
-        if verbosity > 1:
+        if verbosity > 2:
             print("      Reading flow_field")
             print("        File name       :", flow_nc_filename)
             print("        output_variables:", output_variables)
@@ -68,6 +68,7 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                         "output_type": "SliceData",
                         "farm_results": True,
                         "algo": True,
+                        "verbosity_delta": 3,
                         "run_func": "get_states_data_xy",
                         "run_kwargs": dict(
                             resolution=30.,
@@ -110,7 +111,7 @@ def read_outputs(wio_outs, algo_dict, verbosity):
     out_dicts = []
     odir = Path(wio_outs.pop("output_folder", "results"))
     odir.mkdir(exist_ok=True, parents=True)
-    if verbosity > 1:
+    if verbosity > 2:
         print("  Reading outputs")
         print("    Output folder:", odir)
         print("    Contents:", [k for k in wio_outs.keys()])
