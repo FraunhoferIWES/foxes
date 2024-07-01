@@ -157,7 +157,7 @@ def read_layout(lname, ldict, algo_dict, ttype, verbosity=1):
     for xy in zip(cdict["x"], cdict["y"]):
         farm.add_turbine(
             Turbine(xy=np.array(xy), turbine_models=[ttype]),
-            verbosity=verbosity-4,
+            verbosity=verbosity-3,
         )
     if verbosity > 2:
         print(f"          Added {farm.n_turbines} wio_trbns of type '{ttype}'")

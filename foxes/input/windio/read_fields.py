@@ -83,7 +83,6 @@ def _read_dimensional_data(name, wio_data, fields, dims):
         return True
     return False
 
-
 def _read_multi_dimensional_data(name, wio_data, fields, dims):
     """Read multi dimensional data
     :group: input.windio

@@ -52,7 +52,10 @@ def _read_site(wio, algo_dict, verbosity):
             print(f"        {c}: Shape {d.shape}")
         print("      Fields:")
         for f, d in dims.items():
-            print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+            if len(d):
+                print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+            else:
+                print(f"        {f} = {fields[f]}")
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 

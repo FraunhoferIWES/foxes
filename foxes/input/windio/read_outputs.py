@@ -7,7 +7,7 @@ import foxes.constants as FC
 
 def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
     """ Reads the turbine outputs request """
-    if "turbine_outputs" in wio_outs:
+    if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get("report", True):
         turbine_outputs = Dict(wio_outs["turbine_outputs"], name="turbine_outputs")
         turbine_nc_filename = turbine_outputs.pop("turbine_nc_filename", "turbine_outputs.nc")
         output_variables = turbine_outputs["output_variables"]
@@ -44,7 +44,7 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
 
 def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
     """ Reads the flow field request """
-    if "flow_field" in wio_outs:
+    if "flow_field" in wio_outs and wio_outs["flow_field"].get("report", True):
         flow_field = Dict(wio_outs["flow_field"], name="flow_field")
         flow_nc_filename = flow_field.pop("flow_nc_filename", "flow_field.nc")
         output_variables = flow_field.pop("output_variables")

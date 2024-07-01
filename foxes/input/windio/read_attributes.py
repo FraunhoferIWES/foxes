@@ -25,11 +25,20 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
         },
         name="ws_sup_dict",
     )
-
+    ws_sup_amb_dict = Dict(
+        {
+            "Linear": "ws_linear_amb",
+            "Quadratic": "ws_quadratic_amb",
+        },
+        name="ws_sup_dict",
+    )
+    
     wname = wind_deficit.pop("name")
+    eff_ws = wind_deficit.pop("use_effective_ws", True)
     if verbosity > 2:
         print("    Reading wind_deficit_model")
-        print("      Name:", wname)
+        print("      Name    :", wname)
+        print("      Eff ws  :", eff_ws)
         print("      Contents:", [k for k in wind_deficit.keys()])
     wind_def_dict = Dict(wmodel_type=wind_def_map[wname], induction=induction)
     kcoef = Dict(wind_deficit["wake_expansion_coefficient"], name="kcoef")
@@ -53,7 +62,8 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
         if verbosity > 2:
             print(f"      Using sbeta_factor = {sbf}")
         wind_def_dict["sbeta_factor"] = sbf
-    wind_def_dict["superposition"] = ws_sup_dict[superposition["ws_superposition"]]
+    supd = ws_sup_dict if eff_ws else ws_sup_amb_dict
+    wind_def_dict["superposition"] = supd[superposition["ws_superposition"]]
 
     algo_dict["mbook"].wake_models[wname] = WakeModel.new(**wind_def_dict)
     if verbosity > 2:
@@ -89,37 +99,37 @@ def _read_turbulence(
         print("    Reading turbulence_model")
         print("      Name:", wname)
         print("      Contents:", [k for k in turbulence_model.keys()])
-    tiwake_dict = dict(wmodel_type=twake_def_map[wname], induction=induction)
-    if wname == "IEC-TI-2019":
-        tiwake_dict["opening_angle"] = None
-        tiwake_dict["iec_type"] = "2019"
-    if "wake_expansion_coefficient" in turbulence_model:
-        kcoef = Dict(turbulence_model["wake_expansion_coefficient"], name="kcoef")
-        ka = kcoef["k_a"]
-        kb = kcoef.get("k_b", 0.0)
-        amb_ti = kcoef.get("free_stream_ti", False)
-    if ka is None or ka == 0.0:
-        tiwake_dict["k"] = kb
+    if wname != "None":
+        tiwake_dict = dict(wmodel_type=twake_def_map[wname], induction=induction)
+        if wname == "IEC-TI-2019":
+            tiwake_dict["opening_angle"] = None
+            tiwake_dict["iec_type"] = "2019"
+        if "wake_expansion_coefficient" in turbulence_model:
+            kcoef = Dict(turbulence_model["wake_expansion_coefficient"], name="kcoef")
+            ka = kcoef["k_a"]
+            kb = kcoef.get("k_b", 0.0)
+            amb_ti = kcoef.get("free_stream_ti", False)
+        if ka is None or ka == 0.0:
+            tiwake_dict["k"] = kb
+            if verbosity > 2:
+                print("        Using k =", kb)
+        else:
+            ti_var = FV.AMB_TI if amb_ti else FV.TI
+            if verbosity > 2:
+                print(f"      Using k = {ka} * {ti_var} + {kb}")
+            tiwake_dict["k"] = None
+            tiwake_dict["ka"] = ka
+            tiwake_dict["kb"] = kb
+            tiwake_dict["ti_var"] = ti_var
+        tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
+
+        algo_dict["mbook"].wake_models[wname] = WakeModel.new(**tiwake_dict)
         if verbosity > 2:
-            print("        Using k =", kb)
-    else:
-        ti_var = FV.AMB_TI if amb_ti else FV.TI
-        if verbosity > 2:
-            print(f"      Using k = {ka} * {ti_var} + {kb}")
-        tiwake_dict["k"] = None
-        tiwake_dict["ka"] = ka
-        tiwake_dict["kb"] = kb
-        tiwake_dict["ti_var"] = ti_var
-    tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
+            print(f"      Created wake model '{wname}':")
+            print("       ", algo_dict["mbook"].wake_models[wname])
+        algo_dict["wake_models"].append(wname)
 
-    algo_dict["mbook"].wake_models[wname] = WakeModel.new(**tiwake_dict)
-    if verbosity > 2:
-        print(f"      Created wake model '{wname}':")
-        print("       ", algo_dict["mbook"].wake_models[wname])
-    algo_dict["wake_models"].append(wname)
-
-
-def _read_blockage(blockage_model, superposition, induction, algo_dict, verbosity):
+def _read_blockage(blockage_model, induction, algo_dict, verbosity):
     """Reads the blockage model"""
     indc_def_map = Dict(
         {
@@ -145,7 +155,6 @@ def _read_blockage(blockage_model, superposition, induction, algo_dict, verbosit
         algo_dict["wake_models"].append(wname)
         algo_dict["algo_type"] = "Iterative"
 
-
 def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
     """Reads the rotor averaging"""
     if verbosity > 2:
@@ -168,7 +177,7 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        wake_averaging      :", wake_averaging)
         print("        ws exponent power   :", wse_P)
         print("        ws exponent ct      :", wse_ct)
-    if background_averaging == "center":
+    if background_averaging in ["center", "centre"]:
         algo_dict["rotor_model"] = "centre"
     elif background_averaging == "grid":
         algo_dict["rotor_model"] = f"grid{nx*ny}"
@@ -176,7 +185,7 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         raise KeyError(
             f"Expecting background_averaging 'center' or 'grid', got '{background_averaging}'"
         )
-    if wake_averaging == "centre":
+    if wake_averaging in ["centre", "center"]:
         algo_dict["partial_wakes"] = "centre"
     elif wake_averaging == "grid":
         if background_averaging == "grid":
@@ -250,23 +259,35 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     )
 
     # turbulence model:
-    turbulence_model = Dict(wio_ana["turbulence_model"], name="turbulence_model")
-    _read_turbulence(
-        turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
-    )
+    if "turbulence_model" in wio_ana:
+        turbulence_model = Dict(wio_ana["turbulence_model"], name="turbulence_model")
+        _read_turbulence(
+            turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
+        )
+    elif verbosity > 0:
+        print("turbulence_model not found, not using a TI wake model")
 
     # blockage model:
-    blockage_model = Dict(wio_ana["blockage_model"], name="blockage_model")
-    _read_blockage(blockage_model, superposition, induction, algo_dict, verbosity)
-
+    if "blockage_model" in wio_ana:
+        blockage_model = Dict(wio_ana["blockage_model"], name="blockage_model")
+        _read_blockage(blockage_model, induction, algo_dict, verbosity)
+    elif verbosity > 0:
+        print("blockage_model not found, not using a turbine induction model")
+        
     # rotor_averaging:
-    rotor_averaging = Dict(wio_ana["rotor_averaging"], name="rotor_averaging")
-    _read_rotor_averaging(rotor_averaging, algo_dict, verbosity)
-
+    if "rotor_averaging" in wio_ana:
+        rotor_averaging = Dict(wio_ana["rotor_averaging"], name="rotor_averaging")
+        _read_rotor_averaging(rotor_averaging, algo_dict, verbosity)
+    elif verbosity > 0:
+        print("rotor_averaging not found, using default settings")
+        
     # deflection:
-    deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
-    _read_deflection(deflection, induction, algo_dict, verbosity)
-
+    if "deflection_model" in wio_ana:
+        deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
+        _read_deflection(deflection, induction, algo_dict, verbosity)
+    elif verbosity > 0:
+        print("deflection_model not found, using default settings")
+        
 def read_attributes(wio, algo_dict, verbosity):
     """
     Reads the attributes part of windio

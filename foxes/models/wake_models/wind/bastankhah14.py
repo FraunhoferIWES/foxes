@@ -140,7 +140,7 @@ class Bastankhah2014(GaussianWakeModel):
             downwind_index=downwind_index,
             upcast=True,
         )
-
+        
         # select targets:
         st_sel = (x > 0) & (ct > 0)
         if np.any(st_sel):
