@@ -1,7 +1,7 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: foxes
+  name: {{ data['name'] }}
   version: {{ data['version'] }}
 
 source:
@@ -13,9 +13,9 @@ build:
 
 requirements:
   build:
-    - python >=3.8
+    - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
@@ -28,9 +28,9 @@ requirements:
     - pyarrow
 
   run:
-    - python >=3.8
+    - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
@@ -54,8 +54,8 @@ test:
   commands:
     - pip check
     - pytest tests
-    
+
 about:
-  home: {{ data['url'] }}
+  home: {{ data['project_urls']['Source Code'] }}
   license: {{ data['license'] }}
-summary: {{ data['description'] }}
+summary: {{ data['long_description'] }}
