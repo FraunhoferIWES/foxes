@@ -1,3 +1,11 @@
+channels:
+  - conda-forge
+  - default
+
+dependencies:
+  - anaconda-client
+  - conda-build
+
 python:
   - 3.8
   - 3.9
