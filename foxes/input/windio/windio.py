@@ -17,25 +17,25 @@ from .runner import WindioRunner
 def _read_site(wio, algo_dict, verbosity):
     """Reads the site information"""
     wio_site = Dict(wio["site"], name="site")
-    if verbosity > 0:
+    if verbosity > 1:
         print("Reading site")
         print("  Name:", wio_site.pop("name", None))
         print("  Contents:", [k for k in wio_site.keys()])
 
     # ignore boundaries:
-    if verbosity > 1:
+    if verbosity > 2:
         print("  Ignoring boundaries")
 
     # read energy_resource:
     energy_resource = Dict(wio_site["energy_resource"], name="energy_resource")
-    if verbosity > 1:
+    if verbosity > 2:
         print("  Reading energy_resource")
         print("    Name:", energy_resource.pop("name", None))
         print("    Contents:", [k for k in energy_resource.keys()])
 
     # read wind_resource:
     wind_resource = Dict(energy_resource["wind_resource"], name="wind_resource")
-    if verbosity > 1:
+    if verbosity > 2:
         print("    Reading wind_resource")
         print("      Name:", wind_resource.pop("name", None))
         print("      Contents:", [k for k in wind_resource.keys()])
@@ -45,16 +45,17 @@ def _read_site(wio, algo_dict, verbosity):
     fields = Dict(name="fields")
     dims = Dict(name="dims")
     for n, d in wind_resource.items():
-        if verbosity > 1:
-            print("        Reading", n)
-        read_wind_resource_field(n, d, coords, fields, dims)
-    if verbosity > 1:
+        read_wind_resource_field(n, d, coords, fields, dims, verbosity)
+    if verbosity > 2:
         print("      Coords:")
         for c, d in coords.items():
             print(f"        {c}: Shape {d.shape}")
         print("      Fields:")
         for f, d in dims.items():
-            print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+            if len(d):
+                print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+            else:
+                print(f"        {f} = {fields[f]}")
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
@@ -62,7 +63,7 @@ def _read_site(wio, algo_dict, verbosity):
 def _read_farm(wio, algo_dict, verbosity):
     """Reads the wind farm information"""
     wio_farm = Dict(wio["wind_farm"], name="wind_farm")
-    if verbosity > 0:
+    if verbosity > 1:
         print("Reading wind farm")
         print("  Name:", wio_farm.pop("name", None))
         print("  Contents:", [k for k in wio_farm.keys()])
@@ -82,7 +83,7 @@ def _read_farm(wio, algo_dict, verbosity):
 
     # read layouts:
     layouts = Dict(wio_farm["layouts"], name="layouts")
-    if verbosity > 1:
+    if verbosity > 2:
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
@@ -123,7 +124,7 @@ def read_windio(windio_yaml, verbosity=1):
     yml_utils = import_module("windIO.utils.yml_utils", hint="pip install windio")
     wio = yml_utils.load_yaml(wio_file)
 
-    if verbosity > 0:
+    if verbosity > 1:
         print("  Name:", wio.pop("name", None))
         print("  Contents:", [k for k in wio.keys()])
 
@@ -132,20 +133,27 @@ def read_windio(windio_yaml, verbosity=1):
         mbook=ModelBook(),
         farm=WindFarm(),
         wake_models=[],
-        verbosity=verbosity - 1,
+        verbosity=verbosity-3,
     )
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
-    out_dicts = read_attributes(
+    
+    out_dicts, odir = read_attributes(
         wio,
         algo_dict,
         verbosity,
     )
 
-    if verbosity > 0:
+    if verbosity > 1:
         print("Creating windio runner")
-    runner = WindioRunner(algo_dict, output_dicts=out_dicts, verbosity=verbosity)
+    runner = WindioRunner(
+                algo_dict, 
+                output_dir=odir,
+                output_dicts=out_dicts, 
+                wio_input_data=wio, 
+                verbosity=verbosity
+            )
 
     return runner
 

@@ -1,0 +1,61 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: foxes
+  version: {{ data['version'] }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - python >=3.8
+    - matplotlib-base
+    - numpy <2
+    - pandas
+    - xarray
+    - dask
+    - distributed
+    - scipy
+    - windrose
+    - iwopy
+    - pyyaml
+    - netcdf4
+    - pyarrow
+
+  run:
+    - python >=3.8
+    - matplotlib-base
+    - numpy <2
+    - pandas
+    - xarray
+    - dask
+    - distributed
+    - scipy
+    - windrose
+    - iwopy
+    - pyyaml
+    - netcdf4
+    - pyarrow
+
+test:
+  imports:
+    - foxes
+  requires:
+    - pip
+    - pytest
+    - pymoo
+  source_files:
+    - tests
+  commands:
+    - pip check
+    - pytest tests
+    
+about:
+  home: {{ data['url'] }}
+  license: {{ data['license'] }}
+summary: {{ data['description'] }}

@@ -1,9 +1,6 @@
-import numpy as np
 import argparse
-import matplotlib.pyplot as plt
 
 import foxes
-import foxes.variables as FV
 
 if __name__ == "__main__":
     # define arguments and options:

@@ -48,7 +48,7 @@ class WindFarm:
         self.turbines.append(turbine)
         if verbosity > 0:
             print(
-                f"Turbine {turbine.index}, {turbine.name}: {', '.join(turbine.models)}"
+                f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
             )
 
     @property

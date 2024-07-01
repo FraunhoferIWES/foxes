@@ -541,3 +541,12 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
 
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.3](https://github.com/FraunhoferIWES/foxes/commits/v0.7.3)
+
+## v0.7.4
+
+- Input:
+  - Adding output options to `windio`
+- Output:
+  - New output `StateTurbineTable`, exporting state-turbine data to NetCDF
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.4](https://github.com/FraunhoferIWES/foxes/commits/v0.7.4)
