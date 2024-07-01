@@ -9,7 +9,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: publish-to-conda
-      uses: scmjo/conda-publish-action@master
+      uses: schmjo/conda-publish-action@master
       with:
         subdir: 'conda'
         anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
