@@ -1,11 +1,12 @@
 name: publish_conda
 
-on:
-  release:
-    types: [published]
-    
+on: push
+ 
 jobs:
   publish:
+    name: >-
+        Publish Python 🐍 distribution 📦 to confa-forge
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to conda-forge on tag pushes
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
