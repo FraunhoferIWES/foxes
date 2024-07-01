@@ -17,6 +17,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
+          miniconda-version: "latest"
           #environment-file: conda/conda_build_config.yaml
           activate-environment: true
           auto-update-conda: false
