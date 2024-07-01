@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           #environment-file: conda/conda_build_config.yaml
-          activate-environment: ""
+          activate-environment: true
           auto-update-conda: false
           auto-activate-base: true
           show-channel-urls: true
