@@ -1,7 +1,7 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: {{ data['name'] }}
+  name: foxes
   version: {{ data['version'] }}
 
 source:
@@ -15,7 +15,7 @@ requirements:
   build:
     - python
     - matplotlib-base
-    - numpy
+    - numpy <2
     - pandas
     - xarray
     - dask
@@ -30,7 +30,7 @@ requirements:
   run:
     - python
     - matplotlib-base
-    - numpy
+    - numpy <2
     - pandas
     - xarray
     - dask
@@ -58,7 +58,7 @@ test:
 about:
   home: {{ data['project_urls']['Source Code'] }}
   license: {{ data['license'] }}
-  summary: Farm Optimization and eXtended yield Evaluation Software
+  summary: {{ data['description'] }}
   description: |
     The software foxes is a modular wind farm simulation and wake
     modelling toolbox which is based on engineering wake models. It
