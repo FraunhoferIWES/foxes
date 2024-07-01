@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
-          #environment-file: conda/conda_build_config.yaml
+          environment-file: conda/conda_build_config.yaml
           activate-environment: true
-          auto-update-conda: false
+          auto-update-conda: true
           auto-activate-base: true
           show-channel-urls: true
       - name: Build and upload the conda packages
