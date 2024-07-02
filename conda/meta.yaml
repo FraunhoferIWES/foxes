@@ -15,25 +15,25 @@ requirements:
   build:
     - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
     - scipy
     - windrose
-    - iwopy
+    - iwopy >=0.2.2
     - pyyaml
   run:
     - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
     - distributed
     - scipy
     - windrose
-    - iwopy
+    - iwopy >=0.2.2
     - pyyaml
     - netcdf4
     - pyarrow
