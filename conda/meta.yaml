@@ -19,13 +19,11 @@ requirements:
     - pandas
     - xarray
     - dask
-    - distributed
     - scipy
     - windrose
     - iwopy
     - pyyaml
     - netcdf4
-    - pyarrow
 
   run:
     - python
