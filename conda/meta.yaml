@@ -23,8 +23,6 @@ requirements:
     - windrose
     - iwopy
     - pyyaml
-    - netcdf4
-
   run:
     - python
     - matplotlib-base
