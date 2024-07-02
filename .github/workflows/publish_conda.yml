@@ -1,17 +1,34 @@
 name: publish_conda
 
-on:
-  release:
-    types: [published]
-    
+on: push
+ 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  conda_deployment_with_new_tag:
+    name: Conda deployment for platform ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/')  # only publish on tag pushes
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
     steps:
-    - uses: actions/checkout@v2
-    - name: publish-to-conda
-      uses: fcakyon/conda-publish-action@v1.3
-      with:
-        subdir: 'conda'
-        anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
-        platforms: 'win osx linux'
+      - uses: actions/checkout@v4
+      - name: Conda environment creation and activation
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          environment-file: conda/build_env.yaml
+          auto-update-conda: false
+          auto-activate-base: false
+          show-channel-urls: true
+      - name: Build and upload the conda packages
+        uses: uibcdf/action-build-and-upload-conda-packages@main
+        with:
+          meta_yaml_dir: conda
+          python-version: ${{ matrix.python-version }}
+          user: schujo
+          label: main
+          token: ${{ secrets.ANACONDA_TOKEN }}
+          

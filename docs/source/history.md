@@ -550,3 +550,9 @@ Enjoy - we are awaiting comments and issues, thanks for testing.
   - New output `StateTurbineTable`, exporting state-turbine data to NetCDF
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.4](https://github.com/FraunhoferIWES/foxes/commits/v0.7.4)
+
+## v0.7.5
+
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.7.5](https://github.com/FraunhoferIWES/foxes/commits/v0.7.5)
