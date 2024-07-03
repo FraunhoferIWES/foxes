@@ -21,7 +21,6 @@ requirements:
     - dask
     - scipy
     - windrose
-    - iwopy >=0.2.2
     - pyyaml
   run:
     - python
@@ -33,7 +32,6 @@ requirements:
     - distributed
     - scipy
     - windrose
-    - iwopy >=0.2.2
     - pyyaml
     - netcdf4
     - pyarrow
@@ -44,7 +42,6 @@ test:
   requires:
     - pip
     - pytest
-    - pymoo
   source_files:
     - tests
   commands:

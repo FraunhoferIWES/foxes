@@ -71,6 +71,11 @@ Contents
     .. toctree::
         :maxdepth: 1
 
+        testing
+
+    .. toctree::
+        :maxdepth: 1
+
         history
 
 Contributing

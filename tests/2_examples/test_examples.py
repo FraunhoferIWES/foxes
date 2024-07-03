@@ -9,7 +9,7 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-    rdir = thisdir.parent.parent.parent / "examples/foxes"
+    rdir = thisdir.parent.parent.parent / "examples"
     rpath = rdir / "run_all.py"
     print(rpath)
 
