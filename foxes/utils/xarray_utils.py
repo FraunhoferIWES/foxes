@@ -1,3 +1,5 @@
+import netCDF4
+
 from foxes.variables import get_default_digits
 
 def write_nc(ds, fpath, round={}, complevel=9, verbosity=1, **kwargs):
