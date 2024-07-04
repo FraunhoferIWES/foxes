@@ -578,3 +578,8 @@ Compared to older versions, replace `foxes.opt` by `foxes_opt` in all your scrip
 If you are not running any optimizations, just don't do any of the above and enjoy the lighter version with less dependencies.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8](https://github.com/FraunhoferIWES/foxes/commits/v0.8)
+
+## v0.8.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.1](https://github.com/FraunhoferIWES/foxes/commits/v0.8.1)
