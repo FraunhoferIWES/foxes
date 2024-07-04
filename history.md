@@ -587,6 +587,7 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 ## v0.8.2
 
-
+- Removing `plotly_helpers.py` from `utils`
+- Updating dependencies
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.2](https://github.com/FraunhoferIWES/foxes/commits/v0.8.2)

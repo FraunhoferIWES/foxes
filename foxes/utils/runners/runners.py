@@ -1,8 +1,8 @@
 import dask
 from abc import abstractmethod, ABCMeta
 from copy import deepcopy
-from dask.distributed import Client, LocalCluster
-from dask.distributed import get_client
+from distributed import Client, LocalCluster
+from distributed import get_client
 from dask.diagnostics import ProgressBar
 
 
