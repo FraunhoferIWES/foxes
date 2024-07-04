@@ -59,6 +59,11 @@ Contents
         examples
 
     .. toctree::
+        :maxdepth: 2
+
+        optimization
+
+    .. toctree::
         :maxdepth: 1
 
         api

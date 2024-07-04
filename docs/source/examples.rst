@@ -15,7 +15,6 @@ folder of the `foxes <https://github.com/FraunhoferIWES/foxes>`_ github reposito
         notebooks/heterogeneous
         notebooks/power_mask
         notebooks/yawed_wake
-        notebooks/layout_opt
         notebooks/timelines
         notebooks/sequential
         notebooks/blockage_farm
