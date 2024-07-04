@@ -40,6 +40,10 @@ class WindioRunner:
         Name of the written input data file
     file_name_output_yaml: str
         Name of the written output data file
+    write_input_yaml: bool
+        Flag for writing file_name_input_yaml
+    write_output_yaml: bool
+        Flag for writing file_name_output_yaml
     verbosity: int
         The verbosity level, 0 = silent
 
@@ -55,6 +59,8 @@ class WindioRunner:
         wio_input_data=None, 
         file_name_input_yaml="recorded_input.yaml",
         file_name_output_yaml="recorded_output.yaml",
+        write_input_yaml=False,
+        write_output_yaml=False,
         verbosity=1,
         ):
         """
@@ -74,6 +80,10 @@ class WindioRunner:
             Name of the written input data file
         file_name_output_yaml: str
             Name of the written output data file
+        write_input_yaml: bool
+            Flag for writing file_name_input_yaml
+        write_output_yaml: bool
+            Flag for writing file_name_output_yaml
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -84,6 +94,8 @@ class WindioRunner:
         self.wio_input_data = wio_input_data
         self.file_name_input_yaml = file_name_input_yaml
         self.file_name_output_yaml = file_name_output_yaml
+        self.write_input_yaml = write_input_yaml
+        self.write_output_yaml = write_output_yaml
         self.verbosity = verbosity
         self.farm_results = None
         self.output_results = None
@@ -91,7 +103,7 @@ class WindioRunner:
         self.__initialized = False
         
         self._output_yaml = {}
-        if wio_input_data is not None and len(wio_input_data):
+        if self.write_input_yaml and len(wio_input_data):
             fpath = output_dir/file_name_input_yaml
             self.print(f"Writing file", fpath)
             _write_yaml(wio_input_data, fpath)
@@ -143,9 +155,10 @@ class WindioRunner:
             f = getattr(o, run_fname)
             self.output_results.append(f(*run_args, **run_kwargs))
             
-        fpath = self.output_dir/self.file_name_output_yaml
-        self.print(f"Writing file", fpath)
-        _write_yaml(self._output_yaml, fpath)
+        if self.write_output_yaml:
+            fpath = self.output_dir/self.file_name_output_yaml
+            self.print(f"Writing file", fpath)
+            _write_yaml(self._output_yaml, fpath)
             
     def run(self):
         """Runs all calculations"""

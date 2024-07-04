@@ -1,4 +1,6 @@
-def write_nc(ds, fpath, round="auto", complevel=5, verbosity=1, **kwargs):
+from foxes.variables import get_default_digits
+
+def write_nc(ds, fpath, round={}, complevel=9, verbosity=1, **kwargs):
     """
     Writes a dataset to netCFD file
 
@@ -6,9 +8,9 @@ def write_nc(ds, fpath, round="auto", complevel=5, verbosity=1, **kwargs):
     ----------
     fpath: str
         Path to the output file, should be nc
-    round: dict or str, optional
-        The rounding definitions, or auto for
-        default settings
+    round: dict
+        The rounding digits, falling back to defaults
+        if variable not found
     complevel: int
         The compression level
     verbosity: int
@@ -17,18 +19,19 @@ def write_nc(ds, fpath, round="auto", complevel=5, verbosity=1, **kwargs):
         Additional parameters for xarray.to_netcdf
 
     """
-
     if round is not None:
         for v in ds.coords.keys():
-            if v in round:
+            d = round.get(v, get_default_digits(v))
+            if d is not None:
                 if verbosity > 1:
-                    print(f"Rounding {v} to {round[v]} decimals")
-                ds[v].data = ds[v].data.round(decimals=round[v])
+                    print(f"Rounding {v} to {d} decimals")
+                ds[v].data = ds[v].data.round(decimals=d)
         for v in ds.data_vars.keys():
-            if v in round:
+            d = round.get(v, get_default_digits(v))
+            if d is not None:
                 if verbosity > 1:
-                    print(f"Rounding {v} to {round[v]} decimals")
-                ds[v].data = ds[v].data.round(decimals=round[v])
+                    print(f"Rounding {v} to {d} decimals")
+                ds[v].data = ds[v].data.round(decimals=d)
 
     if verbosity > 0:
         print("Writing file", fpath)

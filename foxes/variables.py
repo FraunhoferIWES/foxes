@@ -276,3 +276,39 @@ PA_BETA = "PA_beta"
 """ The beta parameter of the PorteAgel wake model
 :group: foxes.variables
 """
+
+DEFAULT_DIGITS = {
+    WD: 3,
+    WS: 4,
+    TI: 6,
+    RHO: 5,
+    P: 3,
+    CT: 6,
+    T: 3,
+    YLD: 3,
+    CAP: 5,
+    EFF: 5,
+}
+""" The default output digits
+:group: foxes.variables
+"""
+
+def get_default_digits(variable):
+    """
+    Gets the default numbber of output digits
+    
+    Parameters
+    ----------
+    variable: str
+        The variable name
+    
+    Returns
+    -------
+    digits: int
+        The default number of output digits
+        
+    """
+    v = amb2var.get(variable, variable)
+    if v in [REWS, REWS2, REWS3]:
+        v = WS
+    return DEFAULT_DIGITS.get(v, None)
