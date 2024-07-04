@@ -59,6 +59,11 @@ Contents
         examples
 
     .. toctree::
+        :maxdepth: 2
+
+        optimization
+
+    .. toctree::
         :maxdepth: 1
 
         api
@@ -67,6 +72,11 @@ Contents
         :maxdepth: 2
 
         notebooks/data
+
+    .. toctree::
+        :maxdepth: 1
+
+        testing
 
     .. toctree::
         :maxdepth: 1

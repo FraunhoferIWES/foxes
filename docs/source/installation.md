@@ -1,6 +1,6 @@
 # Installation
 
-## Installation via pip
+## Requirements
 
 The supported Python versions are:
 
@@ -9,6 +9,25 @@ The supported Python versions are:
 - `Python 3.10`
 - `Python 3.11`
 - `Python 3.12`
+
+## TLDR; Quick installation guide
+
+Either install via pip:
+
+```console
+pip install foxes
+```
+
+Alternatively, install via conda:
+
+```console
+conda install foxes -c conda-forge
+```
+
+More details, including guidelines for developers and 
+quicker conda installations, can be found below.
+
+## Installation via pip
 
 ### Virtual Python environment
 
@@ -46,6 +65,19 @@ This commands installs the version that correspond to the `main` branch at [gith
 pip install git+https://github.com/FraunhoferIWES/foxes@dev#egg=foxes
 ```
 
+If you are planning to run wind farm optimizations, please install the 
+[foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package:
+
+```console
+pip install foxes[opt]
+```
+
+or
+
+```console
+pip install foxes-opt
+```
+
 ### Developers
 
 For developers using `pip`, simply invoke the `-e` flag in the installation command in your local clone:
@@ -57,19 +89,14 @@ pip install -e .
 ```
 The last line makes sure that all your code changes are included whenever importing `foxes`. Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
 
+If you are planning to run wind farm optimizations, please also install the 
+[foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package as described above.
+
 ## Installation via conda
-
-The supported Python versions are:
-
-- `Python 3.8`
-- `Python 3.9`
-- `Python 3.10`
-- `Python 3.11`
-- `Python 3.12`
 
 ### Preparation (optional)
 
-It is strongly recommend to use the `libmamba` dependency solver instead of the default solver. Install it once by
+It is recommend to use the `libmamba` dependency solver instead of the default solver. Install it once by
 
 ```console
 conda install conda-libmamba-solver -n base -c conda-forge
@@ -111,7 +138,14 @@ The `foxes` package is available on the channel [conda-forge](https://anaconda.o
 conda install foxes -c conda-forge --solver=libmamba
 ```
 
-The `--solver=libmamba` is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.
+If you are planning to run wind farm optimizations, please install the 
+[foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package instead:
+
+```console
+conda install foxes-opt -c conda-forge --solver=libmamba
+```
+
+Note that the `--solver=libmamba` in both above commands is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.
 
 ### Developers
 
@@ -125,6 +159,14 @@ cd foxes
 conda develop .
 ```
 
-The last line makes sure that all your code changes are included whenever importing `foxes`. The `--solver=libmamba` is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.
-
+The last line makes sure that all your code changes are included whenever importing `foxes`. 
 Concerning the `git clone` line, we actually recommend that you fork `foxes` on GitHub and then replace that command by cloning your fork instead.
+
+If you are planning to run wind farm optimizations, please install the 
+[foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package in addition:
+
+```console
+conda install foxes-opt -c conda-forge --solver=libmamba
+```
+
+The `--solver=libmamba` is optional. Note that it is not necessary if you have set the `libmamba` solver as your default, see above.

@@ -15,27 +15,23 @@ requirements:
   build:
     - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
     - scipy
     - windrose
-    - iwopy
     - pyyaml
-    - netcdf4
-
   run:
     - python
     - matplotlib-base
-    - numpy <2
+    - numpy
     - pandas
     - xarray
     - dask
     - distributed
     - scipy
     - windrose
-    - iwopy
     - pyyaml
     - netcdf4
     - pyarrow
@@ -46,7 +42,6 @@ test:
   requires:
     - pip
     - pytest
-    - pymoo
   source_files:
     - tests
   commands:
