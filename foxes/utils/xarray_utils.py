@@ -1,3 +1,5 @@
+import netCDF4
+
 def write_nc(ds, fpath, round="auto", complevel=5, verbosity=1, **kwargs):
     """
     Writes a dataset to netCFD file
