@@ -19,9 +19,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    wio_runner = foxes.input.windio.read_windio(
-        args.windio_yaml, verbosity=args.verbosity
-    )
-
-    with wio_runner as runner:
-        runner.run()
+    try:
+        wio_runner = foxes.input.windio.read_windio(
+            args.windio_yaml, verbosity=args.verbosity
+        )
+        with wio_runner as runner:
+            runner.run()
+    except ModuleNotFoundError as e:
+        print(e.msg)
