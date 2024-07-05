@@ -35,6 +35,7 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
                         variables=[vmap[v] for v in output_variables],
                         name_map=ivmap,
                         to_file=odir/turbine_nc_filename,
+                        round={vw: FV.get_default_digits(vf) for vw, vf in vmap.items()},
                         verbosity=verbosity,
                     ),
                     "output_yaml_update": {
