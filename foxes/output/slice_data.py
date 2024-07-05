@@ -129,8 +129,6 @@ class SliceData(Output):
         label_map,
         vmin,
         vmax,
-        states_sel,
-        states_isel,
         weight_turbine,
         to_file,
         write_pars,
@@ -144,8 +142,6 @@ class SliceData(Output):
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
-            sel={FC.STATE: states_sel} if states_sel is not None else None,
-            isel={FC.STATE: states_isel} if states_isel is not None else None,
             verbosity=verbosity-self.verbosity_delta,
             **kwargs,
         )
@@ -197,7 +193,8 @@ class SliceData(Output):
 
     def get_mean_data_xy(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         xmin=None,
@@ -229,8 +226,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -294,16 +293,19 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xy(
-            self.fres, 
-            resolution, 
-            xmin, 
-            ymin, 
-            xmax, 
-            ymax, 
-            z, 
-            xspace, 
-            yspace, 
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            xmin=xmin,
+            ymin=ymin,
+            xmax=xmax,
+            ymax=ymax,
+            z=z,
+            xspace=xspace,
+            yspace=yspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
 
         data = self._calc_mean_data(
@@ -318,13 +320,13 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             weight_turbine,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 
@@ -335,7 +337,8 @@ class SliceData(Output):
 
     def get_mean_data_xz(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         x_direction=270,
@@ -368,8 +371,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -435,17 +440,20 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xz(
-            self.fres,
-            resolution,
-            x_direction,
-            xmin,
-            zmin,
-            xmax,
-            zmax,
-            y,
-            xspace,
-            zspace,
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            x_direction=x_direction,
+            xmin=xmin,
+            zmin=zmin,
+            xmax=xmax,
+            zmax=zmax,
+            y=y,
+            xspace=xspace,
+            zspace=zspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -461,13 +469,13 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             weight_turbine,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 
@@ -478,7 +486,8 @@ class SliceData(Output):
 
     def get_mean_data_yz(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         x_direction=270,
@@ -511,8 +520,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -578,17 +589,20 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_yz(
-            self.fres,
-            resolution,
-            x_direction,
-            ymin,
-            zmin,
-            ymax,
-            zmax,
-            x,
-            yspace,
-            zspace,
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            x_direction=x_direction,
+            ymin=ymin,
+            zmin=zmin,
+            ymax=ymax,
+            zmax=zmax,
+            x=x,
+            yspace=yspace,
+            zspace=zspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 
@@ -604,13 +618,13 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             weight_turbine,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 
@@ -635,8 +649,6 @@ class SliceData(Output):
         label_map,
         vmin,
         vmax,
-        states_sel,
-        states_isel,
         to_file,
         write_pars,
         ret_states,
@@ -645,10 +657,6 @@ class SliceData(Output):
     ):
         """Helper function for states data calculation"""
         # calculate point results:
-        if states_sel is not None:
-            kwargs["sel"] = {FC.STATE: states_sel}
-        if states_isel is not None:
-            kwargs["isel"] = {FC.STATE: states_isel}
         point_results = grids.calc_point_results(
             algo=self.algo,
             farm_results=self.fres,
@@ -700,7 +708,8 @@ class SliceData(Output):
 
     def get_states_data_xy(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         xmin=None,
@@ -731,8 +740,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -794,16 +805,19 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xy(
-            self.fres, 
-            resolution, 
-            xmin, 
-            ymin, 
-            xmax, 
-            ymax, 
-            z, 
-            xspace, 
-            yspace, 
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            xmin=xmin,
+            ymin=ymin,
+            xmax=xmax,
+            ymax=ymax,
+            z=z,
+            xspace=xspace,
+            yspace=yspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
 
         data = self._calc_states_data(
@@ -818,12 +832,12 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 
@@ -834,7 +848,8 @@ class SliceData(Output):
 
     def get_states_data_xz(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         x_direction=270,
@@ -866,8 +881,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -931,17 +948,20 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_xz(
-            self.fres,
-            resolution,
-            x_direction,
-            xmin,
-            zmin,
-            xmax,
-            zmax,
-            y,
-            xspace,
-            zspace,
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            x_direction=x_direction,
+            xmin=xmin,
+            zmin=zmin,
+            xmax=xmax,
+            zmax=zmax,
+            y=y,
+            xspace=xspace,
+            zspace=zspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -957,12 +977,12 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 
@@ -973,7 +993,8 @@ class SliceData(Output):
 
     def get_states_data_yz(
         self,
-        resolution,
+        resolution=None,
+        n_img_points=None,
         variables=None,
         data_format="xarray",
         x_direction=270,
@@ -1005,8 +1026,10 @@ class SliceData(Output):
 
         Parameters
         ----------
-        resolution: float
+        resolution: float, optional
             The resolution in m
+        n_img_points: tuple of int, optional
+            The number of image points (n, m) in the two directions
         variables: list of str, optional
             The variables, or None for all
         data_format: str
@@ -1070,17 +1093,20 @@ class SliceData(Output):
 
         """
         gdata = grids.get_grid_yz(
-            self.fres,
-            resolution,
-            x_direction,
-            ymin,
-            zmin,
-            ymax,
-            zmax,
-            x,
-            yspace,
-            zspace,
-            verbosity-self.verbosity_delta,
+            farm_results=self.fres,
+            resolution=resolution,
+            n_img_points=n_img_points,
+            x_direction=x_direction,
+            ymin=ymin,
+            zmin=zmin,
+            ymax=ymax,
+            zmax=zmax,
+            x=x,
+            yspace=yspace,
+            zspace=zspace,
+            states_sel=states_sel,
+            states_isel=states_isel,
+            verbosity=verbosity-self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 
@@ -1096,12 +1122,12 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            states_sel,
-            states_isel,
             to_file,
             write_pars,
             ret_states,
             verbosity,
+            states_sel=states_sel,
+            states_isel=states_isel,
             **kwargs,
         )
 

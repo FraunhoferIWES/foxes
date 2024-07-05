@@ -594,6 +594,7 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 ## v0.8.3
 
-
+- Outputs:
+  - Improved `SliceData` output: Now either specify `resolution` or `n_img_points`, e.g. `n_img_points=(100, 100)` for an image with 100 x 100 points
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.3](https://github.com/FraunhoferIWES/foxes/commits/v0.8.3)

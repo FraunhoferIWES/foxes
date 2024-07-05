@@ -545,6 +545,8 @@ class Downwind(Algorithm):
         finalize=True,
         ambient=False,
         chunked_results=False,
+        states_sel=None,
+        states_isel=None,
         **kwargs,
     ):
         """
@@ -574,6 +576,10 @@ class Downwind(Algorithm):
             Flag for ambient instead of waked calculation
         chunked_results: bool
             Flag for chunked results
+        states_sel: list, optional
+            Reduce to selected states
+        states_isel: list, optional
+            Reduce to the selected states indices
         kwargs: dict, optional
             Additional parameters for run_calculation
 
@@ -603,9 +609,18 @@ class Downwind(Algorithm):
         # initialize models:
         if not mlist.initialized:
             mlist.initialize(self, self.verbosity)
-
+            
+        # subset selections:
+        sel = {} if states_sel is None else {FC.STATE: states_sel}
+        isel = {} if states_isel is None else {FC.STATE: states_isel}
+        if states_isel is not None:
+            farm_results = farm_results.isel(isel)
+        if states_sel is not None:
+            farm_results = farm_results.sel(sel)
+        n_states = farm_results.sizes[FC.STATE]
+            
         # get input model data:
-        models_data = self.get_models_data()
+        models_data = self.get_models_data(sel=sel, isel=isel)
         if persist_mdata:
             models_data = models_data.persist()
         self.print("\nInput data:\n\n", models_data, "\n")
@@ -624,7 +639,7 @@ class Downwind(Algorithm):
             sinds = models_data.coords[FC.STATE]
         else:
             sinds = None
-        point_data = self.new_point_data(points, sinds)
+        point_data = self.new_point_data(points, sinds, n_states=n_states)
         if persist_pdata:
             point_data = point_data.persist()
         self.print("\nInput point data:\n\n", point_data, "\n")
@@ -636,7 +651,7 @@ class Downwind(Algorithm):
 
         # calculate:
         self.print(
-            f"Calculating {len(ovars)} variables at {points.shape[1]} points in {self.n_states} states"
+            f"Calculating {len(ovars)} variables at {points.shape[1]} points in {n_states} states"
         )
 
         point_results = mlist.run_calculation(

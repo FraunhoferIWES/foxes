@@ -64,6 +64,13 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
             wind_direction=FV.WD,
         )
         
+        if z_sampling in ["hub_height", "default"]:
+            z = None
+        elif isinstance(z_sampling, (int, float)):
+            z = z_sampling
+        else:
+            raise NotImplementedError(f"z_sampling '{z_sampling}' of type '{type(z_sampling).__name__}' is not supported (yet). Please give 'hub_height', 'default' or a float.")
+        
         if xy_sampling == "default":
             out_dicts.append(Dict({
                         "output_type": "SliceData",
@@ -72,9 +79,10 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                         "verbosity_delta": 3,
                         "run_func": "get_states_data_xy",
                         "run_kwargs": dict(
-                            resolution=30.,
+                            states_isel=[0,1],
+                            n_img_points=(300, 300),
                             variables=[vmap[v] for v in output_variables],
-                            z=None if z_sampling == "hub_height" else z_sampling,
+                            z=z,
                             to_file=odir/flow_nc_filename,
                             verbosity=verbosity,
                         ),

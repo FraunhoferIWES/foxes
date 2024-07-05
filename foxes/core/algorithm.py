@@ -334,7 +334,7 @@ class Algorithm(Model):
                 idata["data_vars"].update(hidata["data_vars"])
         return idata
 
-    def get_models_data(self, idata=None):
+    def get_models_data(self, idata=None, sel=None, isel=None):
         """
         Creates xarray from model input data.
 
@@ -345,19 +345,28 @@ class Algorithm(Model):
             a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
             and `coords`, a dict with entries `dim_name_str -> dim_array`.
             Take algorithm's idata object by default.
-
+        sel: dict, optional
+            Selection of coordinates in dataset
+        isel: dict, optional
+            Selection of coordinates in dataset
+            
         Returns
         -------
-        xarray.Dataset
+        ds: xarray.Dataset
             The model input data
 
         """
         if idata is None:
-            idata = self.get_models_idata()
+            idata = self.get_models_idata()   
         sizes = self.__get_sizes(idata, "models")
-        return self.__get_xrdata(idata, sizes)
+        ds = self.__get_xrdata(idata, sizes)
+        if isel is not None:
+            ds = ds.isel(isel)
+        if sel is not None:
+            ds = ds.sel(sel)
+        return ds
 
-    def new_point_data(self, points, states_indices=None):
+    def new_point_data(self, points, states_indices=None, n_states=None):
         """
         Creates a point data xarray object, containing only points.
 
@@ -367,6 +376,8 @@ class Algorithm(Model):
             The points, shape: (n_states, n_points, 3)
         states_indices: array_like, optional
             The indices of the states dimension
+        n_states: int, optional
+            The number of states
 
         Returns
         -------
@@ -374,7 +385,8 @@ class Algorithm(Model):
             A dataset containing the points data
 
         """
-
+        if n_states is None:
+            n_states = self.n_states
         if states_indices is None:
             idata = {"coords": {}, "data_vars": {}}
         else:
@@ -382,7 +394,7 @@ class Algorithm(Model):
 
         if (
             len(points.shape) != 3
-            or points.shape[0] != self.n_states
+            or points.shape[0] != n_states
             or points.shape[2] != 3
         ):
             raise ValueError(
