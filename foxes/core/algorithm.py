@@ -21,9 +21,6 @@ class Algorithm(Model):
         The model book
     farm: foxes.WindFarm
         The wind farm
-    chunks: dict
-        The chunks choice for running in parallel with dask,
-        e.g. `{"state": 1000}` for chunks of 1000 states
     verbosity: int
         The verbosity level, 0 means silent
     dbook: foxes.DataBook
@@ -33,7 +30,7 @@ class Algorithm(Model):
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None):
+    def __init__(self, mbook, farm, verbosity, dbook=None):
         """
         Constructor.
 
@@ -43,9 +40,6 @@ class Algorithm(Model):
             The model book
         farm: foxes.WindFarm
             The wind farm
-        chunks: dict
-            The chunks choice for running in parallel with dask,
-            e.g. `{"state": 1000}` for chunks of 1000 states
         verbosity: int
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
@@ -57,14 +51,10 @@ class Algorithm(Model):
         self.name = type(self).__name__
         self.mbook = mbook
         self.farm = farm
-        self.chunks = chunks
         self.verbosity = verbosity
         self.n_states = None
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
-
-        if chunks is not None and FC.TARGET not in chunks:
-            self.chunks[FC.TARGET] = chunks.get(FC.POINT, None)
 
         self._idata_mem = Dict()
 
@@ -84,102 +74,6 @@ class Algorithm(Model):
         """
         if self.verbosity >= vlim:
             print(*args, **kwargs)
-
-    def __get_sizes(self, idata, mtype):
-        """
-        Private helper function
-        """
-
-        sizes = {}
-        for v, t in idata["data_vars"].items():
-            if not isinstance(t, tuple) or len(t) != 2:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Not a tuple of size 2, got '{t}'"
-                )
-            if not isinstance(t[0], tuple):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': First tuple entry not a dimensions tuple, got '{t[0]}'"
-                )
-            for c in t[0]:
-                if not isinstance(c, str):
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': First tuple entry not a dimensions tuple, got '{t[0]}'"
-                    )
-            if not isinstance(t[1], np.ndarray):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Second entry is not a numpy array, got: {type(t[1]).__name__}"
-                )
-            if len(t[1].shape) != len(t[0]):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Wrong data shape, expecting {len(t[0])} dimensions, got {t[1].shape}"
-                )
-            if FC.STATE in t[0]:
-                if t[0][0] != FC.STATE:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.STATE}' not at first position, got {t[0]}"
-                    )
-                if FC.TURBINE in t[0]:
-                    if t[0][1] != FC.TURBINE:
-                        raise ValueError(
-                            f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' not at second position, got {t[0]}"
-                        )
-                if FC.TARGET in t[0]:
-                    if t[0][1] != FC.TARGET:
-                        raise ValueError(
-                            f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
-                        )
-                    if len(t[0]) < 3 or t[0][2] != FC.TPOINT:
-                        raise KeyError(
-                            f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}"
-                        )
-            elif FC.TURBINE in t[0]:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
-                )
-            for d, s in zip(t[0], t[1].shape):
-                if d not in sizes:
-                    sizes[d] = s
-                elif sizes[d] != s:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{d}' has wrong size, expecting {sizes[d]}, got {s}"
-                    )
-        for v, c in idata["coords"].items():
-            if v not in sizes:
-                raise KeyError(
-                    f"Input coords entry '{v}': Not used in farm data, found {sorted(list(sizes.keys()))}"
-                )
-            elif len(c) != sizes[v]:
-                raise ValueError(
-                    f"Input coords entry '{v}': Wrong coordinate size for '{v}': Expecting {sizes[v]}, got {len(c)}"
-                )
-
-        return sizes
-
-    def __get_xrdata(self, idata, sizes):
-        """
-        Private helper function
-        """
-        xrdata = xr.Dataset(**idata)
-        if self.chunks is not None:
-            if FC.TURBINE in self.chunks.keys():
-                raise ValueError(
-                    f"Dimension '{FC.TURBINE}' cannot be chunked, got chunks {self.chunks}"
-                )
-            if FC.TPOINT in self.chunks.keys():
-                raise ValueError(
-                    f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
-                )
-            xrdata = xrdata.chunk(
-                chunks={c: v for c, v in self.chunks.items() if c in sizes}
-            )
-        return xrdata
-
-    def chunked(self, ds):
-        return (
-            ds.chunk(chunks={c: v for c, v in self.chunks.items() if c in ds.coords})
-            if self.chunks is not None
-            else ds
-        )
 
     def initialize(self):
         """
@@ -358,8 +252,7 @@ class Algorithm(Model):
         """
         if idata is None:
             idata = self.get_models_idata()   
-        sizes = self.__get_sizes(idata, "models")
-        ds = self.__get_xrdata(idata, sizes)
+        ds = xr.Dataset(**idata)
         if isel is not None:
             ds = ds.isel(isel)
         if sel is not None:
@@ -409,8 +302,7 @@ class Algorithm(Model):
             np.array([1.0], dtype=FC.DTYPE),
         )
 
-        sizes = self.__get_sizes(idata, "point")
-        return self.__get_xrdata(idata, sizes)
+        return xr.Dataset(**idata)
 
     def finalize(self, clear_mem=False):
         """

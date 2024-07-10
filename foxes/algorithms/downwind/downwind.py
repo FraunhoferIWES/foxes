@@ -1,4 +1,4 @@
-from foxes.core import Algorithm, FarmDataModelList
+from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
 import foxes.models as fm
 import foxes.variables as FV
@@ -70,7 +70,6 @@ class Downwind(Algorithm):
         partial_wakes=None,
         ground_models=None,
         farm_controller="basic_ctrl",
-        chunks={FC.STATE: 1000, FC.POINT: 4000},
         mbook=None,
         dbook=None,
         verbosity=1,
@@ -102,9 +101,6 @@ class Downwind(Algorithm):
         farm_controller: str
             The farm controller. Will be
             looked up in the model book
-        chunks: dict
-            The chunks choice for running in parallel with dask,
-            e.g. `{"state": 1000}` for chunks of 1000 states
         mbook: foxes.ModelBook, optional
             The model book
         dbook: foxes.DataBook, optional
@@ -116,7 +112,7 @@ class Downwind(Algorithm):
         if mbook is None:
             mbook = fm.ModelBook()
 
-        super().__init__(mbook, farm, chunks, verbosity, dbook)
+        super().__init__(mbook, farm, verbosity, dbook)
 
         self.states = states
         self.n_states = None
@@ -376,7 +372,10 @@ class Downwind(Algorithm):
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
         out_vars = self.farm_vars if outputs is None else outputs
-        farm_results = mlist.run_calculation(self, *data, out_vars=out_vars, **kwargs)
+        
+        farm_results = get_engine().run_calculation(
+            self, mlist, *data, out_vars=out_vars, **kwargs)
+        
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
             if v in farm_results:
@@ -388,7 +387,6 @@ class Downwind(Algorithm):
         self,
         outputs=None,
         calc_parameters={},
-        persist=True,
         finalize=True,
         ambient=False,
         chunked_results=False,
@@ -404,9 +402,6 @@ class Downwind(Algorithm):
             Key: model name str, value: parameter dict
         outputs: list of str, optional
             The output variables, or None for defaults
-        persist: bool
-            Switch for forcing dask to load all model data
-            into memory
         finalize: bool
             Flag for finalization after calculation
         ambient: bool
@@ -422,7 +417,7 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
-        """
+        """      
         # initialize algorithm:
         if not self.initialized:
             self.initialize()
@@ -449,12 +444,9 @@ class Downwind(Algorithm):
 
         # get input model data:
         models_data = self.get_models_data()
-        if persist:
-            models_data = models_data.persist()
         self.print("\nInput data:\n\n", models_data, "\n")
         self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
         self.print(f"\nOutput variables:", ", ".join(outputs))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
         farm_results = self._run_farm_calc(

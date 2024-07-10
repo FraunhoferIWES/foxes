@@ -104,13 +104,15 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         ground_models=args.grounds,
         mbook=mbook,
-        chunks=None,
         verbosity=1,
     )
 
     # calculate farm results
-    farm_results = algo.calc_farm()
+    with foxes.engines.DaskEngine():
+        farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
+    
+    quit()
 
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)

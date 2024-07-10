@@ -15,6 +15,7 @@ from .data import (
 )  # noqa: F401
 
 from . import algorithms  # noqa: F401
+from . import engines  # noqa: F401
 from . import models  # noqa: F401
 from . import input  # noqa: F401
 from . import output  # noqa: F401

@@ -83,8 +83,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    cks = None if args.nodask else {FC.STATE: args.chunksize}
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -115,10 +113,16 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        chunks=cks,
         verbosity=1,
     )
+    
+    with foxes.engines.DaskEngine(chunk_size_states=args.chunksize, cluster="local"):
+        farm_results = algo.calc_farm()
 
+    print("\nFarm results:\n")
+    print(farm_results)
+    quit()
+    
     with DaskRunner(
         scheduler=args.scheduler,
         n_workers=args.n_workers,
