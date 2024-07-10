@@ -9,6 +9,125 @@ from foxes.core import Engine, MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
+def _wrap_calc(
+    *ldata,
+    algo,
+    dvars,
+    lvars,
+    ldims,
+    evars,
+    edims,
+    edata,
+    loop_dims,
+    out_vars,
+    out_coords,
+    calc_pars,
+    init_vars,
+    ensure_variables,
+    calculate,
+):
+    """
+    Wrapper that mitigates between apply_ufunc and `calculate`.
+    """
+    n_prev = len(init_vars)
+    if n_prev:
+        prev = ldata[:n_prev]
+        ldata = ldata[n_prev:]
+
+    # reconstruct original data:
+    data = []
+    for i, hvars in enumerate(dvars):
+        v2l = {v: lvars.index(v) for v in hvars if v in lvars}
+        v2e = {v: evars.index(v) for v in hvars if v in evars}
+
+        hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
+        hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
+
+        if i == 0:
+            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        elif i == 1:
+            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        elif i == 2:
+            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        else:
+            raise NotImplementedError(
+                f"Not more than 3 data sets implemented, found {len(dvars)}"
+            )
+
+        del hdata, hdims, v2l, v2e
+
+    # deduce output shape:
+    oshape = []
+    for li, l in enumerate(out_coords):
+        for i, dims in enumerate(ldims):
+            if l in dims:
+                oshape.append(ldata[i].shape[dims.index(l)])
+                break
+        if len(oshape) != li + 1:
+            raise ValueError(f"Failed to find loop dimension")
+
+    # add zero output data arrays:
+    odims = {v: tuple(out_coords) for v in out_vars}
+    odata = {
+        v: (
+            np.full(oshape, np.nan, dtype=FC.DTYPE)
+            if v not in init_vars
+            else prev[init_vars.index(v)].copy()
+        )
+        for v in out_vars
+        if v not in data[-1]
+    }
+
+    if len(data) == 1:
+        data.append(FData(odata, odims, loop_dims))
+    else:
+        odata.update(data[-1])
+        odims.update(data[-1].dims)
+        if len(data) == 2:
+            data[-1] = FData(odata, odims, loop_dims)
+        else:
+            data[-1] = TData(odata, odims, loop_dims)
+    del odims, odata
+
+    # link chunk state indices from mdata to fdata and tdata:
+    if FC.STATE in data[0]:
+        for d in data[1:]:
+            d[FC.STATE] = data[0][FC.STATE]
+
+    # link weights from mdata to fdata:
+    if FV.WEIGHT in data[0]:
+        data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
+        data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
+
+    # run model calculation:
+    ensure_variables(algo, *data)
+    results = calculate(algo, *data, **calc_pars)
+
+    # replace missing results by first input data with matching shape:
+    missing = set(out_vars).difference(results.keys())
+    if len(missing):
+        found = set()
+        for v in missing:
+            for dta in data:
+                if v in dta and dta[v].shape == tuple(oshape):
+                    results[v] = dta[v]
+                    found.add(v)
+                    break
+        missing -= found
+        if len(missing):
+            raise ValueError(
+                f"Missing results {list(missing)}, expected shape {oshape}"
+            )
+    del data
+
+    # create output:
+    n_vars = len(out_vars)
+    data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
+    for v in out_vars:
+        data[..., out_vars.index(v)] = results[v]
+
+    return data
+    
 class DaskEngine(Engine):
     """
     The dask engine for foxes calculations.
@@ -69,7 +188,7 @@ class DaskEngine(Engine):
     def initialize(self):
         """
         Initializes the engine.
-        """
+        """       
         if self.cluster == "local":         
             self.print("Launching local dask cluster..")
 
@@ -95,134 +214,15 @@ class DaskEngine(Engine):
             self.print(self._cluster)
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
         
-        self._dask_config0 = deepcopy(dask.config.config)
-        dask.config.set(**self.dask_config)
-        
         if self.progress_bar:
             self._pbar = ProgressBar()
             self._pbar.register()
+
+        #self._dask_config0 = deepcopy(dask.config.config)
+        dask.config.set(**self.dask_config)
         
         super().initialize()
-    
-    def _wrap_calc(
-        self,
-        *ldata,
-        algo,
-        model,
-        dvars,
-        lvars,
-        ldims,
-        evars,
-        edims,
-        edata,
-        loop_dims,
-        out_vars,
-        out_coords,
-        calc_pars,
-        init_vars,
-    ):
-        """
-        Wrapper that mitigates between apply_ufunc and `calculate`.
-        """
-        n_prev = len(init_vars)
-        if n_prev:
-            prev = ldata[:n_prev]
-            ldata = ldata[n_prev:]
 
-        # reconstruct original data:
-        data = []
-        for i, hvars in enumerate(dvars):
-            v2l = {v: lvars.index(v) for v in hvars if v in lvars}
-            v2e = {v: evars.index(v) for v in hvars if v in evars}
-
-            hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
-            hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-
-            if i == 0:
-                data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
-            elif i == 1:
-                data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
-            elif i == 2:
-                data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
-            else:
-                raise NotImplementedError(
-                    f"Not more than 3 data sets implemented, found {len(dvars)}"
-                )
-
-            del hdata, hdims, v2l, v2e
-
-        # deduce output shape:
-        oshape = []
-        for li, l in enumerate(out_coords):
-            for i, dims in enumerate(ldims):
-                if l in dims:
-                    oshape.append(ldata[i].shape[dims.index(l)])
-                    break
-            if len(oshape) != li + 1:
-                raise ValueError(f"Model '{self.name}': Failed to find loop dimension")
-
-        # add zero output data arrays:
-        odims = {v: tuple(out_coords) for v in out_vars}
-        odata = {
-            v: (
-                np.full(oshape, np.nan, dtype=FC.DTYPE)
-                if v not in init_vars
-                else prev[init_vars.index(v)].copy()
-            )
-            for v in out_vars
-            if v not in data[-1]
-        }
-
-        if len(data) == 1:
-            data.append(FData(odata, odims, loop_dims))
-        else:
-            odata.update(data[-1])
-            odims.update(data[-1].dims)
-            if len(data) == 2:
-                data[-1] = FData(odata, odims, loop_dims)
-            else:
-                data[-1] = TData(odata, odims, loop_dims)
-        del odims, odata
-
-        # link chunk state indices from mdata to fdata and tdata:
-        if FC.STATE in data[0]:
-            for d in data[1:]:
-                d[FC.STATE] = data[0][FC.STATE]
-
-        # link weights from mdata to fdata:
-        if FV.WEIGHT in data[0]:
-            data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
-            data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
-
-        # run model calculation:
-        model.ensure_variables(algo, *data)
-        results = model.calculate(algo, *data, **calc_pars)
-
-        # replace missing results by first input data with matching shape:
-        missing = set(out_vars).difference(results.keys())
-        if len(missing):
-            found = set()
-            for v in missing:
-                for dta in data:
-                    if v in dta and dta[v].shape == tuple(oshape):
-                        results[v] = dta[v]
-                        found.add(v)
-                        break
-            missing -= found
-            if len(missing):
-                raise ValueError(
-                    f"Model '{model.name}': Missing results {list(missing)}, expected shape {oshape}"
-                )
-        del data
-
-        # create output:
-        n_vars = len(out_vars)
-        data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
-        for v in out_vars:
-            data[..., out_vars.index(v)] = results[v]
-
-        return data
-    
     def chunk_data(self, data):
         """
         Applies the selected chunking
@@ -258,6 +258,7 @@ class DaskEngine(Engine):
         out_vars=[],
         sel=None,
         isel=None,
+        persist=True,
         **calc_pars,
     ):
         """
@@ -282,6 +283,8 @@ class DaskEngine(Engine):
             Selection of coordinate subsets
         isel: dict, optional
             Selection of coordinate subsets index values
+        persist: bool
+            Flag for persisting xarray Dataset objects
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -308,32 +311,32 @@ class DaskEngine(Engine):
         dvars = []
         ivars = []
         idims = []
-        for ds in [model_data, farm_data, point_data]:
-            if ds is not None:
-                
-                ds = self.chunk_data(ds)
-                
-                hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
-                ldata += [ds[v] for v in hvarsl]
-                ldims += [ds[v].dims for v in hvarsl]
-                lvars += hvarsl
+        data = [self.chunk_data(d) for d in [model_data, farm_data, point_data] if d is not None]
+        if persist:
+            data = [d.persist() for d in data]
+        for ds in data:
+            
+            hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
+            ldata += [ds[v] for v in hvarsl]
+            ldims += [ds[v].dims for v in hvarsl]
+            lvars += hvarsl
 
-                hvarse = [v for v in ds.keys() if v not in hvarsl]
-                edata += [ds[v].values for v in hvarse]
-                edims += [ds[v].dims for v in hvarse]
-                evars += hvarse
+            hvarse = [v for v in ds.keys() if v not in hvarsl]
+            edata += [ds[v].values for v in hvarse]
+            edims += [ds[v].dims for v in hvarse]
+            evars += hvarse
 
-                for c, d in ds.coords.items():
-                    if c in loopd:
-                        ldata.append(xr.DataArray(data=d.values, coords={c: d}, dims=[c]))
-                        ldims.append((c,))
-                        lvars.append(c)
-                    else:
-                        edata.append(d.values)
-                        edims.append((c,))
-                        evars.append(c)
+            for c, d in ds.coords.items():
+                if c in loopd:
+                    ldata.append(self.chunk_data(xr.DataArray(data=d.values, coords={c: d}, dims=[c])))
+                    ldims.append((c,))
+                    lvars.append(c)
+                else:
+                    edata.append(d.values)
+                    edims.append((c,))
+                    evars.append(c)
 
-                dvars.append(list(ds.keys()) + list(ds.coords.keys()))
+            dvars.append(list(ds.keys()) + list(ds.coords.keys()))
 
         # subset selection:
         if sel is not None:
@@ -363,7 +366,6 @@ class DaskEngine(Engine):
         out_coords = self.loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
             algo=algo,
-            model=model,
             dvars=dvars,
             lvars=lvars,
             ldims=ldims,
@@ -375,13 +377,15 @@ class DaskEngine(Engine):
             out_coords=out_coords,
             calc_pars=calc_pars,
             init_vars=ivars,
+            ensure_variables=model.ensure_variables,
+            calculate=model.calculate,
         )
 
         # run parallel computation:
         iidims = [[c for c in d if c not in loopd] for d in idims]
         icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
-            self._wrap_calc,
+            _wrap_calc,
             *ldata,
             input_core_dims=iidims + icdims,
             output_core_dims=[out_core_vars],
@@ -412,8 +416,7 @@ class DaskEngine(Engine):
         if self.progress_bar:
             self._pbar.unregister()
             
-        dask.config.set(**self._dask_config0)
-        del self._dask_config0
+        dask.config.refresh()
         
         super().finalize()
         

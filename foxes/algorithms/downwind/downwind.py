@@ -5,6 +5,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
 
+from foxes.engines import DaskEngine
 
 class Downwind(Algorithm):
     """
