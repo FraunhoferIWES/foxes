@@ -114,9 +114,9 @@ class Engine(ABC):
         if self.initialized:
             self.finalize()
     
-    def print(self, *args, **kwargs):
+    def print(self, *args, level=1, **kwargs):
         """ Prints based on verbosity """
-        if self.verbosity > 0:
+        if self.verbosity >= level:
             print(*args, **kwargs)
     
     @property

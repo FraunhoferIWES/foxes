@@ -1,7 +1,6 @@
 import numpy as np
 import xarray as xr
-import dill
-from multiprocessing import Process, Manager
+from multiprocess import Pool
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
@@ -9,26 +8,6 @@ from tqdm import tqdm
 from foxes.core import Engine, MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
-
-class DillProcess(Process):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._target = dill.dumps(self._target)  # Save the target function as bytes, using dill
-
-    def run(self):
-        if self._target:
-            self._target = dill.loads(self._target)    # Unpickle the target function before executing
-            self._target(*self._args, **self._kwargs)  # Execute the target function
-
-
-def _run_calc(model, out_coords, rdict, **calc_pars):
-    results = model.calculate(**calc_pars)
-    if out_coords == (FC.STATE, FC.TURBINE):
-        rdict.update(calc_pars["fdata"])
-    elif out_coords == (FC.STATE, FC.TARGET, FC.TPOINT):
-        rdict.update(calc_pars["tdata"])
-    rdict.update(results)
 
 class MultiprocessingEngine(Engine):
     """
@@ -62,14 +41,13 @@ class MultiprocessingEngine(Engine):
         """
         super().__init__(**kwargs)
         self.n_procs = n_procs
-        self._manager = None
+        self._Pool = None
 
     def initialize(self):
         """
         Initializes the engine.
         """      
-        #self._pool = Pool(processes=self.n_procs)
-        self._manager = Manager()
+        self._pool = Pool(processes=self.n_procs)
         super().initialize()
 
     def run_calculation(
@@ -151,9 +129,8 @@ class MultiprocessingEngine(Engine):
         # prepare and submit chunks:
         n_procs = cpu_count() if self.n_procs is None else self.n_procs
         n_chunks_all = n_chunks_states*n_chunks_targets
-        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
-        jobs = []
+        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         results = [[[]]*n_chunks_targets]*n_chunks_states
         i0_states = 0
         for chunki_states in range(n_chunks_states):
@@ -219,24 +196,12 @@ class MultiprocessingEngine(Engine):
                     for d in data[1:]:
                         d.add(FC.STATE, data[0][FC.STATE], data[0].dims[FC.STATE])
 
-                # run model calculation:
+                # submit model calculation:
                 model.ensure_variables(algo, *data)
-                """
                 results[chunki_states][chunki_points] = self._pool.apply_async(
                     model.calculate,
                     kwds=cpars,
                 )
-                """
-                #results[chunki_states][chunki_points] = DillProcess(model.calculate, kwds=cpars)
-                #results[chunki_states][chunki_points].start()
-                results[chunki_states][chunki_points] = self._manager.dict()
-                j = DillProcess(
-                    target=_run_calc, 
-                    args=(model, out_coords, results[chunki_states][chunki_points]), 
-                    kwargs=cpars,
-                )
-                j.start()
-                jobs.append(j)
                     
                 i0_targets = i1_targets
                 
@@ -252,17 +217,19 @@ class MultiprocessingEngine(Engine):
                 
         # receive results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
-        pbar = tqdm(total=len(jobs)) if self.verbosity > 0 else None
-        for j in jobs:
-            j.join()
-            pbar.update()
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
+        for chunki_states in range(n_chunks_states):
+            for chunki_points in range(n_chunks_targets):
+                r = results[chunki_states][chunki_points]
+                results[chunki_states][chunki_points] = r if isinstance(r, dict) else r.get()
+                if pbar is not None:
+                    pbar.update()
         if pbar is not None:
             pbar.close()
-        del jobs
-        
+            
         # combine results:
-        self.print("Combining results")
-        pbar = tqdm(total=len(out_vars)) if self.verbosity > 0 else None
+        self.print("Combining results", level=2)
+        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
         for v in out_vars:
             data_vars[v] = [out_coords, []]
@@ -293,12 +260,10 @@ class MultiprocessingEngine(Engine):
         """
         Finalizes the engine.
         """
-        #if self._pool is not None:
-        #    self._pool.close()
-        #    self._pool.terminate()
-        #    self._pool = None
-        if self._manager is not None:
-            self._manager.shutdown()
-            self._manager = None
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.terminate()
+            self._pool = None
  
         super().finalize()
+        
