@@ -215,7 +215,7 @@ class MultiprocessingEngine(Engine):
         if pbar is not None:
             pbar.close()
                 
-        # receive results:
+        # awaiting results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
         for chunki_states in range(n_chunks_states):
@@ -248,13 +248,14 @@ class MultiprocessingEngine(Engine):
             
             if pbar is not None:
                 pbar.update()
-        for v in out_vars:
-            data_vars[v] = tuple(data_vars[v])
         del results
         if pbar is not None:
             pbar.close()
 
-        return xr.Dataset(coords=coords, data_vars=data_vars)
+        return xr.Dataset(
+            coords=coords, 
+            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        )
         
     def finalize(self):
         """

@@ -243,7 +243,7 @@ class DaskEngine(Engine):
         if self.chunk_size_points is not None:
             cks[FC.TARGET] = self.chunk_size_points
         if len(set(cks.keys()).intersection(data.coords.keys())):
-            return data.chunk(cks)
+            return data.chunk({v: d for v, d in cks.items() if v in data.coords})
         else:
             return data
     
@@ -298,7 +298,8 @@ class DaskEngine(Engine):
         
         # prepare:
         out_coords = model.output_coords()
-        loopd = set(self.loop_dims)
+        loop_dims = [d for d in self.loop_dims if d in out_coords]
+        loopd = set(loop_dims)
 
         # extract loop-var dependent and independent data:
         ldata = []
@@ -359,12 +360,12 @@ class DaskEngine(Engine):
 
         # setup dask options:
         dargs = dict(output_sizes={FC.VARS: len(out_vars)})
-        out_core_vars = [d for d in out_coords if d not in self.loop_dims] + [FC.VARS]
+        out_core_vars = [d for d in out_coords if d not in loop_dims] + [FC.VARS]
         if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
             dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
             
         # setup arguments for wrapper function:
-        out_coords = self.loop_dims + list(set(out_core_vars).difference([FC.VARS]))
+        out_coords = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
             algo=algo,
             dvars=dvars,
@@ -373,7 +374,7 @@ class DaskEngine(Engine):
             evars=evars,
             edims=edims,
             edata=edata,
-            loop_dims=self.loop_dims,
+            loop_dims=loop_dims,
             out_vars=out_vars,
             out_coords=out_coords,
             calc_pars=calc_pars,

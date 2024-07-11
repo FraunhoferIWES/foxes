@@ -108,7 +108,11 @@ if __name__ == "__main__":
     )
 
     # calculate farm results
-    with foxes.engines.DaskEngine():
+    with foxes.engines.DaskEngine(
+        chunk_size_states=1000, 
+        chunk_size_points=4000, 
+        #cluster="local",
+    ):
         farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
     
