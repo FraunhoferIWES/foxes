@@ -116,8 +116,6 @@ if __name__ == "__main__":
         farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
     
-    quit()
-
     # add capacity and efficiency to farm results
     o = foxes.output.FarmResultsEval(farm_results)
     o.add_capacity(algo)
