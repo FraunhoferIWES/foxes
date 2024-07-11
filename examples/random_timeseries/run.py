@@ -130,9 +130,13 @@ if __name__ == "__main__":
         verbosity=1,
     )
 
-    with foxes.engines.DaskEngine(
+    #with foxes.engines.DaskEngine(
+    #    chunk_size_states=args.chunksize, 
+    #    #cluster="local",
+    #) as engine:
+    with foxes.engines.MultiprocessingEngine(
         chunk_size_states=args.chunksize, 
-        cluster="local",
+        #cluster="local",
     ) as engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
