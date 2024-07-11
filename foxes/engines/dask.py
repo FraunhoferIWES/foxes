@@ -218,7 +218,6 @@ class DaskEngine(Engine):
             self._pbar = ProgressBar()
             self._pbar.register()
 
-        #self._dask_config0 = deepcopy(dask.config.config)
         dask.config.set(**self.dask_config)
         
         super().initialize()
@@ -312,8 +311,6 @@ class DaskEngine(Engine):
         ivars = []
         idims = []
         data = [self.chunk_data(d) for d in [model_data, farm_data, point_data] if d is not None]
-        if persist:
-            data = [d.persist() for d in data]
         for ds in data:
             
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
@@ -337,7 +334,11 @@ class DaskEngine(Engine):
                     evars.append(c)
 
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
-
+        
+        # apply persist:
+        if persist:
+            ldata = [d.persist() for d in ldata]
+            
         # subset selection:
         if sel is not None:
             nldata = []
