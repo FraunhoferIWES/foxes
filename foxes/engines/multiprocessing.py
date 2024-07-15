@@ -104,6 +104,8 @@ class MultiprocessingEngine(Engine):
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        if farm_data is None:
+            farm_data = xr.Dataset()
             
         # determine states chunks:    
         n_chunks_states = 1
@@ -126,6 +128,7 @@ class MultiprocessingEngine(Engine):
             if missing > 0:
                 chunk_sizes_targets[-missing:] += 1
         
+        
         # prepare and submit chunks:
         n_procs = cpu_count() if self.n_procs is None else self.n_procs
         n_chunks_all = n_chunks_states*n_chunks_targets
@@ -136,13 +139,43 @@ class MultiprocessingEngine(Engine):
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             s_states = np.s_[i0_states:i1_states]
-            i0_targets = 0
+            i0_targets = 0                
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
                 s_targets = np.s_[i0_targets:i1_targets]
-                
                 cpars = deepcopy(calc_pars)
                 cpars["algo"] = algo
+                
+                # create mdata:
+                cpars["mdata"] = MData.from_dataset(model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
+
+                # create fdata:
+                if point_data is None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TURBINE)
+                else:
+                    cb = None
+                cpars["fdata"] = FData.from_dataset(
+                    farm_data, mdata=cpars["mdata"], s_states=s_states, callback=cb,
+                    loop_dims=[FC.STATE], copy=True)
+            
+                # create tdata:
+                if point_data is not None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        n_targets = i1_targets - i0_targets
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
+                    cpars["tdata"] = TData.from_dataset(
+                        point_data, mdata=cpars["mdata"], s_states=s_states, s_targets=s_targets,
+                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=True)
+                del cb
+                
+                """
                 for data, dname, cls in zip(
                     [model_data, farm_data, point_data], 
                     ["mdata", "fdata", "tdata"], 
@@ -195,9 +228,10 @@ class MultiprocessingEngine(Engine):
                 if FC.STATE in data[0]:
                     for d in data[1:]:
                         d.add(FC.STATE, data[0][FC.STATE], data[0].dims[FC.STATE])
+                """
 
                 # submit model calculation:
-                model.ensure_variables(algo, *data)
+                #model.ensure_variables(algo, *data)
                 results[chunki_states][chunki_points] = self._pool.apply_async(
                     model.calculate,
                     kwds=cpars,
@@ -205,7 +239,7 @@ class MultiprocessingEngine(Engine):
                     
                 i0_targets = i1_targets
                 
-                del cpars, data
+                del cpars
                 if pbar is not None:
                     pbar.update()
                     
