@@ -108,86 +108,90 @@ if __name__ == "__main__":
     )
 
     # calculate farm results
-    with foxes.engines.DaskEngine(
-        chunk_size_states=1000, 
+    #with foxes.engines.DaskEngine(
+    #    chunk_size_states=1000, 
+    #    chunk_size_points=4000, 
+    #    #cluster="local",
+    #):
+    with foxes.engines.MultiprocessingEngine(
+        chunk_size_states=1000,
         chunk_size_points=4000, 
-        #cluster="local",
     ):
         farm_results = algo.calc_farm()
-    print("\nResults data:\n", farm_results)
-    
-    # add capacity and efficiency to farm results
-    o = foxes.output.FarmResultsEval(farm_results)
-    o.add_capacity(algo)
-    o.add_capacity(algo, ambient=True)
-    o.add_efficiency()
+        print("\nResults data:\n", farm_results)
+        
+        # add capacity and efficiency to farm results
+        o = foxes.output.FarmResultsEval(farm_results)
+        o.add_capacity(algo)
+        o.add_capacity(algo, ambient=True)
+        o.add_efficiency()
 
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:\n")
-    print(
-        farm_df[
-            [
-                FV.X,
-                FV.ORDER,
-                FV.WD,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.CT,
-                FV.EFF,
+        # state-turbine results
+        farm_df = farm_results.to_dataframe()
+        print("\nFarm results data:\n")
+        print(
+            farm_df[
+                [
+                    FV.X,
+                    FV.ORDER,
+                    FV.WD,
+                    FV.AMB_REWS,
+                    FV.REWS,
+                    FV.AMB_TI,
+                    FV.TI,
+                    FV.AMB_P,
+                    FV.P,
+                    FV.CT,
+                    FV.EFF,
+                ]
             ]
-        ]
-    )
-    print()
-
-    # results by turbine
-    turbine_results = o.reduce_states(
-        {
-            FV.AMB_P: "mean",
-            FV.P: "mean",
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
-            FV.EFF: "mean",
-        }
-    )
-    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
-        algo=algo, annual=True, ambient=True
-    )
-    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
-    print("\nResults by turbine:\n")
-    print(turbine_results)
-
-    # power results
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
-
-    if not args.nofig:
-
-        # horizontal flow plot
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_xy(
-            args.var, resolution=10, rotor_color="red", figsize=(10, 3)
         )
-        fig = next(g)
-        plt.show()
-        plt.close(fig)
+        print()
 
-        # vertical flow plot
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        g = o.gen_states_fig_xz(
-            args.var,
-            resolution=10,
-            x_direction=np.mod(args.wd, 360.0),
-            rotor_color="red",
-            figsize=(10, 3),
+        # results by turbine
+        turbine_results = o.reduce_states(
+            {
+                FV.AMB_P: "mean",
+                FV.P: "mean",
+                FV.AMB_CAP: "mean",
+                FV.CAP: "mean",
+                FV.EFF: "mean",
+            }
         )
-        fig = next(g)
-        plt.show()
+        turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+            algo=algo, annual=True, ambient=True
+        )
+        turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
+        print("\nResults by turbine:\n")
+        print(turbine_results)
+
+        # power results
+        P0 = o.calc_mean_farm_power(ambient=True)
+        P = o.calc_mean_farm_power()
+        print(f"\nFarm power        : {P/1000:.1f} MW")
+        print(f"Farm ambient power: {P0/1000:.1f} MW")
+        print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+        print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
+
+        if not args.nofig:
+
+            # horizontal flow plot
+            o = foxes.output.FlowPlots2D(algo, farm_results)
+            g = o.gen_states_fig_xy(
+                args.var, resolution=10, rotor_color="red", figsize=(10, 3)
+            )
+            fig = next(g)
+            plt.show()
+            plt.close(fig)
+
+            # vertical flow plot
+            o = foxes.output.FlowPlots2D(algo, farm_results)
+            g = o.gen_states_fig_xz(
+                args.var,
+                resolution=10,
+                x_direction=np.mod(args.wd, 360.0),
+                rotor_color="red",
+                figsize=(10, 3),
+            )
+            fig = next(g)
+            plt.show()

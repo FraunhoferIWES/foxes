@@ -12,7 +12,6 @@ def calc_point_results(
     g_pts,
     farm_results=None,
     seq_iter=None,
-    runner=None,
     verbosity=0,
     **kwargs,
 ):
@@ -29,8 +28,6 @@ def calc_point_results(
         The farm results
     seq_iter: foxes.algorithms.sequential.SequentialIter, optional
         The sequential itarator
-    runner: foxes.utils.runners.Runner, optional
-        The runner
     verbosity: int
         The verbosity level, 0 = silent
     kwargs: dict, optional
@@ -41,11 +38,7 @@ def calc_point_results(
     if averb is not None:
         algo.verbosity = verbosity
     fres = farm_results if seq_iter is None else seq_iter.farm_results
-    if runner is None:
-        point_results = algo.calc_points(fres, points=g_pts, **kwargs)
-    else:
-        kwargs["points"] = g_pts
-        point_results = runner.run(algo.calc_points, args=(fres,), kwargs=kwargs)
+    point_results = algo.calc_points(fres, points=g_pts, **kwargs)
     if averb is not None:
         algo.verbosity = averb
 

@@ -87,12 +87,6 @@ if __name__ == "__main__":
         pre_load=not args.no_pre_load,
     )
 
-    cks = (
-        None
-        if args.nodask
-        else {FC.STATE: args.chunksize, "point": args.chunksize_points}
-    )
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -115,16 +109,19 @@ if __name__ == "__main__":
         wake_frame=args.wake_frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        chunks=cks,
     )
 
-    with DaskRunner(
-        scheduler=args.scheduler,
-        n_workers=args.n_workers,
-        threads_per_worker=args.threads_per_worker,
-    ) as runner:
+    #with foxes.engines.DaskEngine(
+    #    chunk_size_states=1000, 
+    #    chunk_size_points=4000, 
+    #    #cluster="local",
+    #):
+    with foxes.engines.MultiprocessingEngine(
+        chunk_size_states=1000,
+        chunk_size_points=4000, 
+    ):
         time0 = time.time()
-        farm_results = runner.run(algo.calc_farm)
+        farm_results = algo.calc_farm()
         time1 = time.time()
 
         print("\nCalc time =", time1 - time0, "\n")
@@ -135,6 +132,6 @@ if __name__ == "__main__":
         print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
         if not args.nofig:
-            o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+            o = foxes.output.FlowPlots2D(algo, farm_results)
             o.get_mean_fig_xy(FV.WS, resolution=10)
             plt.show()

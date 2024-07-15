@@ -679,15 +679,18 @@ class TData(Data):
                 if cb0 is not None:
                     cb0(data, dims)
                 
-                if s_targets is not None and FC.TARGET not in data:
-                    data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])[s_targets]
+                if FC.TARGET not in data:
+                    data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
                     dims[FC.TARGET] = (FC.TARGET,)
                 
                 for v, d in data.items():
                     if FC.TARGET in dims[v]:
-                        if len(dims[v]) < 3 or dims[v][:3] != (FC.STATE, FC.TARGET, FC.TPOINT):
+                        if dims[v] == (FC.TARGET,):
+                            data[v] = d[s_targets].copy()
+                        elif len(dims[v]) < 3 or dims[v][:3] != (FC.STATE, FC.TARGET, FC.TPOINT):
                             raise ValueError(f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}")
-                        data[v] = d[:, s_targets]
+                        else:
+                            data[v] = d[:, s_targets]
             cb1 = cb_targets 
             
         return super().from_dataset(ds, *args, callback=cb1, **kwargs)

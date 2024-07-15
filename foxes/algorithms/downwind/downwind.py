@@ -618,11 +618,8 @@ class Downwind(Algorithm):
             models_data = models_data.persist()
         self.print("\nInput data:\n\n", models_data, "\n")
         self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # chunk farm results:
-        if self.chunks is not None:
-            farm_results = self.chunked(farm_results)
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
@@ -640,23 +637,21 @@ class Downwind(Algorithm):
         # check vars:
         ovars = mlist.output_point_vars(self)
         self.print(f"\nOutput point variables:", ", ".join(ovars))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # calculate:
         self.print(
             f"Calculating {len(ovars)} variables at {points.shape[1]} points in {n_states} states"
         )
-
-        point_results = mlist.run_calculation(
+        point_results = get_engine().run_calculation(
             self,
+            mlist,
             models_data,
             farm_results,
             point_data,
             out_vars=ovars,
             parameters=calc_pars,
             **kwargs,
-        )
-
+        ).sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
         del models_data, farm_results, point_data
 
         # finalize models:

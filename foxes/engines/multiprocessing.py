@@ -6,7 +6,6 @@ from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
-import foxes.variables as FV
 import foxes.constants as FC
 
 class MultiprocessingEngine(Engine):
@@ -99,8 +98,6 @@ class MultiprocessingEngine(Engine):
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
         out_coords = model.output_coords()
-        if out_coords == (FC.STATE, FC.TARGET, FC.TPOINT):
-            out_coords = (FC.STATE, FC.POINT)
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
@@ -111,27 +108,35 @@ class MultiprocessingEngine(Engine):
         n_chunks_states = 1
         chunk_sizes_states = [n_states]
         if self.chunk_size_states is not None: 
-            n_chunks_states = int(n_states/self.chunk_size_states)
-            chunk_sizes_states = np.full(n_chunks_states, self.chunk_size_states, dtype=np.int32)
-            missing = n_states - n_chunks_states*self.chunk_size_states
+            chunk_size_states = min(n_states, self.chunk_size_states)
+            n_chunks_states = int(n_states/chunk_size_states)
+            chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
+            missing = n_states - n_chunks_states*chunk_size_states
             if missing > 0:
-                chunk_sizes_states[-missing:] += 1
+                extra = int(missing/n_chunks_states)
+                if extra > 0:
+                    chunk_sizes_states += extra
+                chunk_sizes_states[-1] += missing % n_chunks_states
                 
         # determine points chunks:        
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         n_chunks_targets = 1
         chunk_sizes_targets = [n_targets]
         if point_data is not None and self.chunk_size_points is not None:
-            n_chunks_targets = int(n_targets/self.chunk_size_points)
-            chunk_sizes_targets = np.full(n_chunks_targets, self.chunk_size_points, dtype=np.int32)
-            missing = n_targets - n_chunks_targets*self.chunk_size_points
+            chunk_size_points = min(n_targets, self.chunk_size_points)
+            n_chunks_targets = int(n_targets/chunk_size_points)
+            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_points, dtype=np.int32)
+            missing = n_targets - n_chunks_targets*chunk_size_points
             if missing > 0:
-                chunk_sizes_targets[-missing:] += 1
-        
+                extra = int(missing/n_chunks_targets)
+                if extra > 0:
+                    chunk_sizes_targets += extra
+                chunk_sizes_targets[-1] += missing % n_chunks_targets
         
         # prepare and submit chunks:
-        n_procs = cpu_count() if self.n_procs is None else self.n_procs
         n_chunks_all = n_chunks_states*n_chunks_targets
+        n_procs = cpu_count() if self.n_procs is None else self.n_procs
+        n_procs = min(n_procs, n_chunks_all)
         self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         results = [[[]]*n_chunks_targets]*n_chunks_states
@@ -152,9 +157,8 @@ class MultiprocessingEngine(Engine):
                 # create fdata:
                 if point_data is None:
                     def cb(data, dims):
-                        n_states = i1_states - i0_states
                         for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                            data[o] = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
                             dims[o] = (FC.STATE, FC.TURBINE)
                 else:
                     cb = None
@@ -165,73 +169,15 @@ class MultiprocessingEngine(Engine):
                 # create tdata:
                 if point_data is not None:
                     def cb(data, dims):
-                        n_states = i1_states - i0_states
-                        n_targets = i1_targets - i0_targets
                         for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                            data[o] = np.full((algo.n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
                             dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
                     cpars["tdata"] = TData.from_dataset(
                         point_data, mdata=cpars["mdata"], s_states=s_states, s_targets=s_targets,
                         callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=True)
                 del cb
-                
-                """
-                for data, dname, cls in zip(
-                    [model_data, farm_data, point_data], 
-                    ["mdata", "fdata", "tdata"], 
-                    [MData, FData, TData]
-                ):
-                    if data is not None:
-                        dats={}
-                        dims={}
-                        ldims = set([FC.STATE])
-                          
-                        # extract coordinates:
-                        for c, d in data.coords.items():
-                            if c == FC.STATE:
-                                dats[c] = d.to_numpy()[s_states].copy()
-                            elif c == FC.TARGET:
-                                dats[c] = d.to_numpy()[s_targets].copy()
-                            else:
-                                dats[c] = d.to_numpy().copy()
-                            dims[c] = d.dims
-                        if FC.STATE not in dats:
-                            dats[FC.STATE] = np.arange(i0_states, i1_states)
-                            dats[FC.STATE] = (FC.STATE,)
-                        if dname == "tdata" and FC.TARGET not in dats:
-                            dats[FC.TARGET] = np.arange(i0_targets, i1_targets)
-                            dats[FC.TARGET] = (FC.TARGET,)
-                        
-                        # extract data vars:
-                        for v, d in data.data_vars.items():
-                            dats[v] = d.to_numpy().copy()
-                            dims[v] = d.dims
-                            if dname == "tdata" and FC.TARGET in d.dims:
-                                assert len(d.dims) > 1 and d.dims[:2] == (FC.STATE, FC.TARGET)
-                                ldims.add(FC.TARGET)
-                                dats[v] = dats[v][s_states, s_targets] 
-                            elif FC.STATE in d.dims:
-                                assert d.dims[0] == FC.STATE
-                                dats[v] = dats[v][s_states]    
-                    
-                        ldims = [l for l in self.loop_dims if l in ldims]
-                        cpars[dname] = cls(dats, dims, loop_dims=ldims, name=dname)
-                        del dats, dims
-                    
-                    elif dname == "fdata":
-                        cpars[dname] = cls({}, {}, loop_dims=ldims, name=dname)
-                        
-                # link basic data from mdata to fdata and tdata:
-                data = [cpars[n] for n in ["mdata", "fdata", "tdata"] if n in cpars]
-                if FV.WEIGHT in data[0]:
-                    data[1].add(FV.WEIGHT, data[0][FV.WEIGHT], data[0].dims[FV.WEIGHT])
-                if FC.STATE in data[0]:
-                    for d in data[1:]:
-                        d.add(FC.STATE, data[0][FC.STATE], data[0].dims[FC.STATE])
-                """
 
                 # submit model calculation:
-                #model.ensure_variables(algo, *data)
                 results[chunki_states][chunki_points] = self._pool.apply_async(
                     model.calculate,
                     kwds=cpars,
@@ -274,10 +220,11 @@ class MultiprocessingEngine(Engine):
                     
             else:
                 for chunki_states in range(n_chunks_states):
-                    data_vars[v][1].append([[]])
+                    tres = []
                     for chunki_points in range(n_chunks_targets):
-                        data_vars[v][1][-1].append(results[chunki_states][chunki_points][v][:, :, 0])
-                    data_vars[v][1][-1] = np.concatenate(data_vars[v][1][-1], axis=1)
+                        tres.append(results[chunki_states][chunki_points][v])
+                    data_vars[v][1].append(np.concatenate(tres, axis=1))
+                del tres
             data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
             
             if pbar is not None:
