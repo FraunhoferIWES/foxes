@@ -110,29 +110,27 @@ class MultiprocessingEngine(Engine):
         if self.chunk_size_states is not None: 
             chunk_size_states = min(n_states, self.chunk_size_states)
             n_chunks_states = int(n_states/chunk_size_states)
+            chunk_size_states = int(n_states/n_chunks_states)
             chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
-            missing = n_states - n_chunks_states*chunk_size_states
-            if missing > 0:
-                extra = int(missing/n_chunks_states)
-                if extra > 0:
-                    chunk_sizes_states += extra
-                chunk_sizes_states[-1] += missing % n_chunks_states
+            extra = n_states - n_chunks_states*chunk_size_states
+            if extra > 0:
+                chunk_sizes_states[-extra:] += 1
+            assert np.sum(chunk_sizes_states) == n_states
                 
         # determine points chunks:        
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         n_chunks_targets = 1
         chunk_sizes_targets = [n_targets]
         if point_data is not None and self.chunk_size_points is not None:
-            chunk_size_points = min(n_targets, self.chunk_size_points)
-            n_chunks_targets = int(n_targets/chunk_size_points)
-            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_points, dtype=np.int32)
-            missing = n_targets - n_chunks_targets*chunk_size_points
-            if missing > 0:
-                extra = int(missing/n_chunks_targets)
-                if extra > 0:
-                    chunk_sizes_targets += extra
-                chunk_sizes_targets[-1] += missing % n_chunks_targets
-        
+            chunk_size_targets = min(n_targets, self.chunk_size_points)
+            n_chunks_targets = int(n_targets/chunk_size_targets)
+            chunk_size_targets = int(n_targets/n_chunks_targets)
+            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets, dtype=np.int32)
+            extra = n_targets - n_chunks_targets*chunk_size_targets
+            if extra > 0:
+                chunk_sizes_targets[-extra:] += 1
+            assert np.sum(chunk_sizes_targets) == n_targets
+                
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states*n_chunks_targets
         n_procs = cpu_count() if self.n_procs is None else self.n_procs
