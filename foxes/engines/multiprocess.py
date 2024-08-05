@@ -8,7 +8,7 @@ from tqdm import tqdm
 from foxes.core import Engine, MData, FData, TData
 import foxes.constants as FC
 
-class MultiprocessingEngine(Engine):
+class MultiprocessEngine(Engine):
     """
     The multiprocessing engine for foxes calculations.
     
@@ -137,12 +137,12 @@ class MultiprocessingEngine(Engine):
         n_procs = min(n_procs, n_chunks_all)
         self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
-        results = [[[]]*n_chunks_targets]*n_chunks_states
+        jobs = {}
         i0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             s_states = np.s_[i0_states:i1_states]
-            i0_targets = 0                
+            i0_targets = 0          
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
                 s_targets = np.s_[i0_targets:i1_targets]
@@ -150,13 +150,15 @@ class MultiprocessingEngine(Engine):
                 cpars["algo"] = algo
                 
                 # create mdata:
-                cpars["mdata"] = MData.from_dataset(model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
-
+                cpars["mdata"] = MData.from_dataset(
+                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
+                
                 # create fdata:
                 if point_data is None:
                     def cb(data, dims):
+                        n_states = i1_states - i0_states
                         for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
                             dims[o] = (FC.STATE, FC.TURBINE)
                 else:
                     cb = None
@@ -167,8 +169,10 @@ class MultiprocessingEngine(Engine):
                 # create tdata:
                 if point_data is not None:
                     def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        n_targets = i1_targets - i0_targets
                         for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((algo.n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
                             dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
                     cpars["tdata"] = TData.from_dataset(
                         point_data, mdata=cpars["mdata"], s_states=s_states, s_targets=s_targets,
@@ -176,7 +180,7 @@ class MultiprocessingEngine(Engine):
                 del cb
 
                 # submit model calculation:
-                results[chunki_states][chunki_points] = self._pool.apply_async(
+                jobs[(chunki_states, chunki_points)] = self._pool.apply_async(
                     model.calculate,
                     kwds=cpars,
                 )
@@ -196,14 +200,16 @@ class MultiprocessingEngine(Engine):
         # awaiting results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
+        results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
-                r = results[chunki_states][chunki_points]
-                results[chunki_states][chunki_points] = r if isinstance(r, dict) else r.get()
+                r = jobs.pop((chunki_states, chunki_points))
+                results[(chunki_states, chunki_points)] = r.get()
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
+        del jobs
             
         # combine results:
         self.print("Combining results", level=2)
@@ -213,14 +219,17 @@ class MultiprocessingEngine(Engine):
             data_vars[v] = [out_coords, []]
             
             if n_chunks_targets == 1:
+                alls=0
                 for chunki_states in range(n_chunks_states):
-                    data_vars[v][1].append(results[chunki_states][0][v])
-                    
+                    r = results[(chunki_states, 0)]
+                    data_vars[v][1].append(r[v])
+                    alls += data_vars[v][1][-1].shape[0]
             else:
                 for chunki_states in range(n_chunks_states):
                     tres = []
                     for chunki_points in range(n_chunks_targets):
-                        tres.append(results[chunki_states][chunki_points][v])
+                        r = results[(chunki_states, chunki_points)]
+                        tres.append(r[v])
                     data_vars[v][1].append(np.concatenate(tres, axis=1))
                 del tres
             data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)

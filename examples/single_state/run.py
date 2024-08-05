@@ -113,7 +113,7 @@ if __name__ == "__main__":
     #    chunk_size_points=4000, 
     #    #cluster="local",
     #):
-    with foxes.engines.MultiprocessingEngine(
+    with foxes.engines.MultiprocessEngine(
         chunk_size_states=1000,
         chunk_size_points=4000, 
     ):

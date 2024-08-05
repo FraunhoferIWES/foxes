@@ -134,7 +134,7 @@ if __name__ == "__main__":
     #    chunk_size_states=args.chunksize, 
     #    cluster="local",
     #):
-    with foxes.engines.MultiprocessingEngine(
+    with foxes.engines.MultiprocessEngine(
         chunk_size_states=args.chunksize, 
         n_procs=args.n_workers
     ):
