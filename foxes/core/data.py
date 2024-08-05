@@ -251,30 +251,30 @@ class Data(Dict):
             
         for c, d in ds.coords.items():
             if c == FC.STATE:
-                s = np.s[:] if s_states is None else s_states
+                s = np.s_[:] if s_states is None else s_states
                 data[c] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
             else:
                 data[c] = d.to_numpy().copy() if copy else d.to_numpy()
             dims[c] = d.dims
-     
+            
         n_states = None
         for v, d in ds.data_vars.items():
             if FC.STATE in d.dims:
                 if d.dims[0] != FC.STATE:
                     raise ValueError(f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}")
                 n_states = len(d.to_numpy())
-                s = np.s[:] if s_states is None else s_states
+                s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
             else:
                 data[v] = d.to_numpy().copy() if copy else d.to_numpy()
             dims[v] = d.dims
 
+        if callback is not None:
+            callback(data, dims)
+            
         if FC.STATE not in data and s_states is not None and n_states is not None:
             data[FC.STATE] = np.arange(n_states)[s_states]
             dims[FC.STATE] = (FC.STATE,)
-        
-        if callback is not None:
-            callback(data, dims)
         
         return cls(*args, data=data, dims=dims, **kwargs)
 
@@ -675,14 +675,10 @@ class TData(Data):
         if s_targets is None:
             cb1 = cb0
         else:
-            def cb_targets(data, dims):
-                if cb0 is not None:
-                    cb0(data, dims)
-                
+            def cb_targets(data, dims):               
                 if FC.TARGET not in data:
                     data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
                     dims[FC.TARGET] = (FC.TARGET,)
-                
                 for v, d in data.items():
                     if FC.TARGET in dims[v]:
                         if dims[v] == (FC.TARGET,):
@@ -691,6 +687,9 @@ class TData(Data):
                             raise ValueError(f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}")
                         else:
                             data[v] = d[:, s_targets]
+                if cb0 is not None:
+                    cb0(data, dims)
+                    
             cb1 = cb_targets 
             
         return super().from_dataset(ds, *args, callback=cb1, **kwargs)

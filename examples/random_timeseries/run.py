@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     #with foxes.engines.DaskEngine(
     #    chunk_size_states=args.chunksize, 
-    #    cluster="local",
+    #    #cluster="local",
     #):
     with foxes.engines.MultiprocessEngine(
         chunk_size_states=args.chunksize, 
