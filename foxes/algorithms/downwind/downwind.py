@@ -5,8 +5,6 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
 
-from foxes.engines import DaskEngine
-
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -72,8 +70,7 @@ class Downwind(Algorithm):
         ground_models=None,
         farm_controller="basic_ctrl",
         mbook=None,
-        dbook=None,
-        verbosity=1,
+        **kwargs,
     ):
         """
         Constructor.
@@ -104,16 +101,14 @@ class Downwind(Algorithm):
             looked up in the model book
         mbook: foxes.ModelBook, optional
             The model book
-        dbook: foxes.DataBook, optional
-            The data book, or None for default
-        verbosity: int
-            The verbosity level, 0 means silent
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
         if mbook is None:
             mbook = fm.ModelBook()
 
-        super().__init__(mbook, farm, verbosity, dbook)
+        super().__init__(mbook, farm, **kwargs)
 
         self.states = states
         self.n_states = None

@@ -7,27 +7,6 @@ __global_engine_data__ = dict(
     engine=None,
 )
 
-def get_engine(error=True):
-    """
-    Gets the global calculation engine
-    
-    Parameters
-    ----------
-    error: bool
-        Flag for raising ValueError if no
-        engine is found
-    
-    Returns
-    -------
-    engine: foxes.core.Engine
-        The foxes calculation engine
-        
-    """
-    engine = __global_engine_data__["engine"]
-    if error and engine is None:
-        raise ValueError("Engine not found.")
-    return engine
-
 class Engine(ABC):
     """
     Abstract base clas for foxes calculation engines
@@ -90,7 +69,7 @@ class Engine(ABC):
         Initializes the engine.
         """
         if not self.initialized:
-            if get_engine(error=False) is not None:
+            if get_engine(error=False, default=False) is not None:
                 raise ValueError(f"Cannot initialize engine '{type(self).__name__}', since engine already set to '{type(get_engine()).__name__}'")
             global __global_engine_data__
             __global_engine_data__["engine"] = self
@@ -212,3 +191,41 @@ class Engine(ABC):
                 engine_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)
+
+def get_engine(error=True, default=True):
+    """
+    Gets the global calculation engine
+    
+    Parameters
+    ----------
+    error: bool
+        Flag for raising ValueError if no
+        engine is found
+    default: bool or dict or Engine
+        Set default engine if not set yet
+    
+    Returns
+    -------
+    engine: foxes.core.Engine
+        The foxes calculation engine
+        
+    """
+    engine = __global_engine_data__["engine"]
+    if engine is None:
+        if isinstance(default, dict):
+            engine = Engine.new(**default)
+            print(f"Selecting default engine '{engine}'")
+            engine.initialize()
+            return engine
+        elif isinstance(default, Engine):
+            print(f"Selecting default engine '{default}'")
+            default.initialize()
+            return default
+        elif isinstance(default, bool) and default:
+            engine = Engine.new(engine_type="MultiprocessEngine")
+            print(f"Selecting default engine '{engine}'")
+            engine.initialize()
+            return engine
+        elif error:
+            raise ValueError("Engine not found.")
+    return engine

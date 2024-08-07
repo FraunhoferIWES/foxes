@@ -24,6 +24,7 @@ class MultiprocessEngine(Engine):
     def __init__(
         self, 
         n_procs=None,
+        chunk_size_points=None,
         **kwargs,
     ):
         """
@@ -34,11 +35,14 @@ class MultiprocessEngine(Engine):
         n_procs: int, optional
             The number of processes to be used,
             or None for automatic
+        chunk_size_points: int, optional
+            The size of a points chunk
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        super().__init__(**kwargs)
+        csp = chunk_size_points if chunk_size_points is not None else 30000
+        super().__init__(chunk_size_points=csp, **kwargs)
         self.n_procs = n_procs
         self._Pool = None
 
@@ -107,23 +111,26 @@ class MultiprocessEngine(Engine):
         # determine states chunks:    
         n_chunks_states = 1
         chunk_sizes_states = [n_states]
-        if self.chunk_size_states is not None: 
+        n_procs = cpu_count() if self.n_procs is None else self.n_procs
+        if self.chunk_size_states is None: 
+            chunk_size_states = max(int(n_states/n_procs), 1)
+        else: 
             chunk_size_states = min(n_states, self.chunk_size_states)
-            n_chunks_states = int(n_states/chunk_size_states)
-            chunk_size_states = int(n_states/n_chunks_states)
-            chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
-            extra = n_states - n_chunks_states*chunk_size_states
-            if extra > 0:
-                chunk_sizes_states[-extra:] += 1
-            assert np.sum(chunk_sizes_states) == n_states
+        n_chunks_states = int(n_states/chunk_size_states)
+        chunk_size_states = int(n_states/n_chunks_states)
+        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
+        extra = n_states - n_chunks_states*chunk_size_states
+        if extra > 0:
+            chunk_sizes_states[-extra:] += 1
+        assert np.sum(chunk_sizes_states) == n_states
                 
         # determine points chunks:        
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         n_chunks_targets = 1
         chunk_sizes_targets = [n_targets]
-        if point_data is not None and self.chunk_size_points is not None:
+        if point_data is not None:
             chunk_size_targets = min(n_targets, self.chunk_size_points)
-            n_chunks_targets = int(n_targets/chunk_size_targets)
+            n_chunks_targets = max(int(n_targets/chunk_size_targets), 1)
             chunk_size_targets = int(n_targets/n_chunks_targets)
             chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets, dtype=np.int32)
             extra = n_targets - n_chunks_targets*chunk_size_targets
@@ -133,7 +140,6 @@ class MultiprocessEngine(Engine):
                 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states*n_chunks_targets
-        n_procs = cpu_count() if self.n_procs is None else self.n_procs
         n_procs = min(n_procs, n_chunks_all)
         self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None

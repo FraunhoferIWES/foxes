@@ -6,6 +6,7 @@ from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
 import foxes.constants as FC
 
+from .engine import Engine
 
 class Algorithm(Model):
     """
@@ -30,7 +31,15 @@ class Algorithm(Model):
 
     """
 
-    def __init__(self, mbook, farm, verbosity, dbook=None):
+    def __init__(
+        self, 
+        mbook, 
+        farm, 
+        verbosity=1, 
+        dbook=None, 
+        engine=None,
+        **engine_pars,
+        ):
         """
         Constructor.
 
@@ -44,6 +53,10 @@ class Algorithm(Model):
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
+        engine: str
+            The engine class name
+        engine_pars: dict, optional
+            Parameters for the engine constructor
 
         """
         super().__init__()
@@ -55,8 +68,13 @@ class Algorithm(Model):
         self.n_states = None
         self.n_turbines = farm.n_turbines
         self.dbook = StaticData() if dbook is None else dbook
-
+        
         self._idata_mem = Dict()
+        
+        if engine is not None:
+            e = Engine.new(engine_type=engine, **engine_pars)
+            self.print(f"Selecting engine '{e}'")
+            e.initialize()
 
     def print(self, *args, vlim=1, **kwargs):
         """

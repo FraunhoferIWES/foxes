@@ -1,2 +1,2 @@
-from .dask import DaskEngine
+from .dask import DaskEngine, LocalClusterEngine
 from .multiprocess import MultiprocessEngine

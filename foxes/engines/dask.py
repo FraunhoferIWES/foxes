@@ -4,6 +4,7 @@ import xarray as xr
 from distributed import Client, LocalCluster, progress
 from dask.diagnostics import ProgressBar
 from copy import deepcopy
+from os import cpu_count
 
 from foxes.core import Engine, MData, FData, TData
 import foxes.variables as FV
@@ -144,6 +145,8 @@ class DaskEngine(Engine):
         Parameters for the client of the cluster
     progress_bar: bool
         Flag for showing progress bar
+    n_procs: int
+        The number of cpus
             
     :group: engines
     
@@ -154,6 +157,7 @@ class DaskEngine(Engine):
         cluster=None, 
         cluster_pars={}, 
         client_pars={}, 
+        n_procs=None,
         progress_bar=True,
         **kwargs,
     ):
@@ -170,6 +174,9 @@ class DaskEngine(Engine):
             Parameters for the cluster
         client_pars: dict
             Parameters for the client of the cluster
+        n_procs: int, optional
+            The number of processes to be used,
+            or None for automatic
         progress_bar: bool
             Flag for showing progress bar
         kwargs: dict, optional
@@ -182,6 +189,8 @@ class DaskEngine(Engine):
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
         self.progress_bar = progress_bar
+        self.n_procs = n_procs if n_procs is not None else cpu_count()
+        
         self._cluster = None
         self._client = None
 
@@ -192,7 +201,7 @@ class DaskEngine(Engine):
         if self.cluster == "local":         
             self.print("Launching local dask cluster..")
 
-            self._cluster = LocalCluster(**self.cluster_pars)
+            self._cluster = LocalCluster(n_workers=self.n_procs, **self.cluster_pars)
             self._client = Client(self._cluster, **self.client_pars)
             self.dask_config["scheduler"] = "distributed"
 
@@ -206,7 +215,7 @@ class DaskEngine(Engine):
 
             cargs = deepcopy(self.cluster_pars)
             nodes = cargs.pop("nodes", 1)
-            self._cluster = SLURMCluster(**cargs)
+            self._cluster = SLURMCluster(cores=self.n_procs, **cargs)
             self._cluster.scale(jobs=nodes)
             self._client = Client(self._cluster, **self.client_pars)
             self.dask_config["scheduler"] = "distributed"
@@ -238,10 +247,10 @@ class DaskEngine(Engine):
         
         """
         cks = {}
-        if self.chunk_size_states is not None:
-            cks[FC.STATE] = self.chunk_size_states
-        if self.chunk_size_points is not None:
-            cks[FC.TARGET] = self.chunk_size_points
+        cks[FC.STATE] = min(data.sizes[FC.STATE], self.chunk_size_states)
+        if FC.TARGET in data.sizes:
+            cks[FC.TARGET] = min(data.sizes[FC.TARGET], self.chunk_size_points)
+            
         if len(set(cks.keys()).intersection(data.coords.keys())):
             return data.chunk({v: d for v, d in cks.items() if v in data.coords})
         else:
@@ -296,11 +305,20 @@ class DaskEngine(Engine):
         super().run_calculation(model, model_data, farm_data,
                                 point_data, **calc_pars)
         
+        # find chunk sizes, if not given:
+        chunk_size_states0 = self.chunk_size_states
+        chunk_size_points0 = self.chunk_size_points
+        n_procs = len(self._client.scheduler_info()['workers']) if self._cluster is not None else self.n_procs
+        if self.chunk_size_states is None: 
+            self.chunk_size_states = max(int(model_data.sizes[FC.STATE]/n_procs), 1)
+        if self.chunk_size_points is None and point_data is not None:
+            self.chunk_size_points = max(int(point_data.sizes[FC.TARGET]/n_procs), 1)
+
         # prepare:
         out_coords = model.output_coords()
         loop_dims = [d for d in self.loop_dims if d in out_coords]
         loopd = set(loop_dims)
-
+        
         # extract loop-var dependent and independent data:
         ldata = []
         lvars = []
@@ -403,8 +421,12 @@ class DaskEngine(Engine):
         if self._client is not None and self.progress_bar:
             progress(results.persist())
 
+        # reset:
+        self.chunk_size_states = chunk_size_states0
+        self.chunk_size_points = chunk_size_points0
+
         # update data by calculation results:
-        return results.compute()
+        return results.compute(num_workers=self.n_procs)
     
     def finalize(self):
         """
@@ -421,4 +443,29 @@ class DaskEngine(Engine):
         dask.config.refresh()
         
         super().finalize()
+
+class LocalClusterEngine(DaskEngine):
+    """
+    The dask engine for foxes calculations on a local cluster.
+    
+    :group: engines
+    
+    """
+    def __init__(
+        self, 
+        *args,
+        **kwargs,
+    ):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for the DaskEngine class
+        kwargs: dict, optional
+            Additional parameters for the DaskEngine class
+            
+        """
+        super().__init__(*args, cluster="local", **kwargs)
         
