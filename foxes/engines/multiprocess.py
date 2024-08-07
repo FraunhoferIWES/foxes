@@ -181,7 +181,7 @@ class MultiprocessEngine(Engine):
                 
                 # create mdata:
                 cpars["mdata"] = MData.from_dataset(
-                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
+                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
                 
                 # create fdata:
                 if point_data is None:
@@ -194,7 +194,7 @@ class MultiprocessEngine(Engine):
                     cb = None
                 cpars["fdata"] = FData.from_dataset(
                     farm_data, mdata=cpars["mdata"], s_states=s_states, callback=cb,
-                    loop_dims=[FC.STATE], copy=True)
+                    loop_dims=[FC.STATE], copy=False)
             
                 # create tdata:
                 if point_data is not None:
@@ -206,7 +206,7 @@ class MultiprocessEngine(Engine):
                             dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
                     cpars["tdata"] = TData.from_dataset(
                         point_data, mdata=cpars["mdata"], s_states=s_states, s_targets=s_targets,
-                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=True)
+                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
                 del cb
 
                 # submit model calculation:
