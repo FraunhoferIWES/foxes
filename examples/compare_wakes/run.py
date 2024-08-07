@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 def calc(mbook, farm, states, wakes, points, args):

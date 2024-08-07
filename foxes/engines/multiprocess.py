@@ -99,6 +99,30 @@ class MultiprocessEngine(Engine):
         super().run_calculation(model, model_data, farm_data,
                                 point_data, **calc_pars)
         
+        # subset selection:
+        if sel is not None:
+            new_data = []
+            for data in [model_data, farm_data, point_data]:
+                if data is not None:
+                    s = {c: u for c, u in sel.items() if c in data.coords}
+                    if len(s):
+                        new_data.append(data.sel(s))
+                else:
+                    new_data.append(data)
+            model_data, farm_data, point_data = new_data
+            del new_data, s
+        if isel is not None:
+            new_data = []
+            for data in [model_data, farm_data, point_data]:
+                if data is not None:
+                    s = {c: u for c, u in isel.items() if c in data.coords}
+                    if len(s):
+                        new_data.append(data.isel(s))
+                else:
+                    new_data.append(data)
+            model_data, farm_data, point_data = new_data
+            del new_data, s
+            
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
         out_coords = model.output_coords()
@@ -107,7 +131,7 @@ class MultiprocessEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-            
+
         # determine states chunks:    
         n_chunks_states = 1
         chunk_sizes_states = [n_states]
@@ -205,7 +229,7 @@ class MultiprocessEngine(Engine):
                 
         # awaiting results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
+        pbar = tqdm(total=n_chunks_all) if n_states > 1 and self.verbosity > 0 else None
         results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):

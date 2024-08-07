@@ -368,7 +368,6 @@ class Downwind(Algorithm):
             f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
         )
         out_vars = self.farm_vars if outputs is None else outputs
-        
         farm_results = get_engine().run_calculation(
             self, mlist, *data, out_vars=out_vars, **kwargs)
         
