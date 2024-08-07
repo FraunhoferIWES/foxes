@@ -497,7 +497,7 @@ class Model(ABC):
             self._store[i0] = Data(
                 data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
             )
-
+        print("MODEL TOSTORE",i0,name)
         self._store[i0][name] = deepcopy(data[name])
         self._store[i0].dims[name] = (
             deepcopy(data.dims[name]) if name in data.dims else None
@@ -531,7 +531,7 @@ class Model(ABC):
         """
         if name in data:
             return (data[name], data.dims[name]) if ret_dims else data[name]
-
+        print("MODEL DATAORSTORE",list(self._store.keys()))
         i0 = data.states_i0(counter=True, algo=algo)
         if not safe or (i0 in self._store and name in self._store[i0]):
             if ret_dims:

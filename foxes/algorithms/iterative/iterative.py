@@ -232,14 +232,8 @@ class Iterative(Downwind):
 
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
-        print(data)
-        quit()
-        ir = (
-            None
-            if self.prev_farm_results is None
-            else self.chunked(self.prev_farm_results)
-        )
-        return super()._run_farm_calc(mlist, *data, initial_results=ir, **kwargs)
+        return super()._run_farm_calc(
+            mlist, *data, farm_data=self.prev_farm_results, **kwargs)
 
     def calc_farm(self, finalize=True, **kwargs):
         """
