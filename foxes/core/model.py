@@ -35,7 +35,6 @@ class Model(ABC):
         if self._id > 0:
             self.name += f"_instance{self._id}"
 
-        self._store = {}
         self.__initialized = False
 
     def __repr__(self):
@@ -178,7 +177,6 @@ class Model(ABC):
                 print(f"Finalizing model '{self.name}'")
             algo.del_model_data(self)
 
-            self._store = {}
             self.__initialized = False
 
     def get_data(
@@ -476,67 +474,3 @@ class Model(ABC):
                 pass
 
         return out
-
-    def data_to_store(self, name, algo, data):
-        """
-        Adds data from mdata to the local store, intended
-        for iterative runs.
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-
-        """
-        i0 = data.states_i0(counter=True, algo=algo)
-        if i0 not in self._store:
-            self._store[i0] = Data(
-                data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
-            )
-        print("MODEL TOSTORE",i0,name)
-        self._store[i0][name] = deepcopy(data[name])
-        self._store[i0].dims[name] = (
-            deepcopy(data.dims[name]) if name in data.dims else None
-        )
-
-    def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
-        """
-        Get data from mdata or local store
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-        ret_dims: bool
-            Return dimensions
-        safe: bool
-            Return None instead of error if
-            not found
-
-        Returns
-        -------
-        data: numpy.ndarray
-            The data
-        dims: tuple of dims, optional
-            The data dimensions
-
-        """
-        if name in data:
-            return (data[name], data.dims[name]) if ret_dims else data[name]
-        print("MODEL DATAORSTORE",list(self._store.keys()))
-        i0 = data.states_i0(counter=True, algo=algo)
-        if not safe or (i0 in self._store and name in self._store[i0]):
-            if ret_dims:
-                return self._store[i0][name], self._store[i0].dims[name]
-            else:
-                return self._store[i0][name]
-        else:
-            return (None, None) if ret_dims else None

@@ -224,7 +224,7 @@ class DaskEngine(Engine):
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
         
         if self.progress_bar:
-            self._pbar = ProgressBar()
+            self._pbar = ProgressBar(minimum=2)
             self._pbar.register()
 
         dask.config.set(**self.dask_config)
@@ -413,13 +413,15 @@ class DaskEngine(Engine):
             dask="parallelized",
             dask_gufunc_kwargs=dargs,
             kwargs=wargs,
-        )
+        ).persist()
+        
+        # main calculation:
+        if self._client is not None and self.progress_bar:
+            progress(results)
+        results = results.compute(num_workers=self.n_procs)
 
         # reorganize results Dataset:
         results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
-
-        if self._client is not None and self.progress_bar:
-            progress(results.persist())
 
         # reset:
         self.chunk_size_states = chunk_size_states0

@@ -57,8 +57,8 @@ class FarmWakesCalculation(FarmDataModel):
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+        weights = mdata[rotor.RWEIGHTS]
+        amb_res = mdata[rotor.AMBRES]
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)

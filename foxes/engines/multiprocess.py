@@ -229,7 +229,7 @@ class MultiprocessEngine(Engine):
                 
         # awaiting results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if n_states > 1 and self.verbosity > 0 else None
+        pbar = tqdm(total=n_chunks_all) if n_chunks_all > 1 and self.verbosity > 0 else None
         results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
