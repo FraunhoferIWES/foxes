@@ -1,8 +1,9 @@
 import dask
 import numpy as np
 import xarray as xr
-from distributed import Client, LocalCluster, progress, Future
+from distributed import Client, LocalCluster, progress
 from dask.diagnostics import ProgressBar
+from dask_jobqueue import SLURMCluster
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
@@ -210,8 +211,6 @@ class DaskEngine(Engine):
             self.print(f"Dashboard: {self._client.dashboard_link}\n")
             
         elif self.cluster == "slurm":
-            from dask_jobqueue import SLURMCluster
-
             self.print("Launching dask cluster on HPC using SLURM..")
 
             cargs = deepcopy(self.cluster_pars)
@@ -434,8 +433,7 @@ class DaskEngine(Engine):
         
         super().finalize()
 
-
-def _run_local_cluster(
+def _run_on_cluster(
     algo, 
     model, 
     *data, 
@@ -445,6 +443,7 @@ def _run_local_cluster(
     fdata_size,
     loop_dims,
     **cpars):
+    """ Helper function running on a cluster """
     
     mdata = MData(
         data={names[i]: data[i] for i in range(mdata_size)},
@@ -478,12 +477,7 @@ class LocalClusterEngine(DaskEngine):
     :group: engines
     
     """
-    def __init__(
-        self, 
-        *args,
-        chunk_size_points=None,
-        **kwargs,
-    ):
+    def __init__(self, *args, chunk_size_points=None, **kwargs):
         """
         Constructor.
         
@@ -647,7 +641,7 @@ class LocalClusterEngine(DaskEngine):
                           
                 # submit model calculation:
                 jobs[(chunki_states, chunki_points)] = self._client.submit(
-                    _run_local_cluster,
+                    _run_on_cluster,
                     falgo, 
                     fmodel,
                     *data,
@@ -717,5 +711,26 @@ class LocalClusterEngine(DaskEngine):
             coords=coords, 
             data_vars={v: tuple(d) for v, d in data_vars.items()},
         )
+
+class SlurmClusterEngine(LocalClusterEngine):
+    """
+    The dask engine for foxes calculations on a SLURM cluster.
+    
+    :group: engines
+    
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor.
         
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for the LocalClusterEngine class
+        kwargs: dict, optional
+            Additional parameters for the LocalClusterEngine class
+            
+        """
+        super().__init__(*args, **kwargs)
+        self.cluster = "slurm"
         
