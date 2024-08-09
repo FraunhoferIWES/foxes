@@ -4,6 +4,7 @@ import xarray as xr
 from distributed import Client, LocalCluster, progress
 from dask.diagnostics import ProgressBar
 from dask_jobqueue import SLURMCluster
+from dask import delayed, compute
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
@@ -12,128 +13,9 @@ from foxes.core import Engine, MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
-def _wrap_calc(
-    *ldata,
-    algo,
-    dvars,
-    lvars,
-    ldims,
-    evars,
-    edims,
-    edata,
-    loop_dims,
-    out_vars,
-    out_coords,
-    calc_pars,
-    init_vars,
-    ensure_variables,
-    calculate,
-):
+class DaskBaseEngine(Engine):
     """
-    Wrapper that mitigates between apply_ufunc and `calculate`.
-    """
-    n_prev = len(init_vars)
-    if n_prev:
-        prev = ldata[:n_prev]
-        ldata = ldata[n_prev:]
-
-    # reconstruct original data:
-    data = []
-    for i, hvars in enumerate(dvars):
-        v2l = {v: lvars.index(v) for v in hvars if v in lvars}
-        v2e = {v: evars.index(v) for v in hvars if v in evars}
-
-        hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
-        hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-
-        if i == 0:
-            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
-        elif i == 1:
-            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
-        elif i == 2:
-            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
-        else:
-            raise NotImplementedError(
-                f"Not more than 3 data sets implemented, found {len(dvars)}"
-            )
-
-        del hdata, hdims, v2l, v2e
-
-    # deduce output shape:
-    oshape = []
-    for li, l in enumerate(out_coords):
-        for i, dims in enumerate(ldims):
-            if l in dims:
-                oshape.append(ldata[i].shape[dims.index(l)])
-                break
-        if len(oshape) != li + 1:
-            raise ValueError(f"Failed to find loop dimension")
-
-    # add zero output data arrays:
-    odims = {v: tuple(out_coords) for v in out_vars}
-    odata = {
-        v: (
-            np.full(oshape, np.nan, dtype=FC.DTYPE)
-            if v not in init_vars
-            else prev[init_vars.index(v)].copy()
-        )
-        for v in out_vars
-        if v not in data[-1]
-    }
-
-    if len(data) == 1:
-        data.append(FData(odata, odims, loop_dims))
-    else:
-        odata.update(data[-1])
-        odims.update(data[-1].dims)
-        if len(data) == 2:
-            data[-1] = FData(odata, odims, loop_dims)
-        else:
-            data[-1] = TData(odata, odims, loop_dims)
-    del odims, odata
-
-    # link chunk state indices from mdata to fdata and tdata:
-    if FC.STATE in data[0]:
-        for d in data[1:]:
-            d[FC.STATE] = data[0][FC.STATE]
-
-    # link weights from mdata to fdata:
-    if FV.WEIGHT in data[0]:
-        data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
-        data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
-
-    # run model calculation:
-    ensure_variables(algo, *data)
-    results = calculate(algo, *data, **calc_pars)
-
-    # replace missing results by first input data with matching shape:
-    missing = set(out_vars).difference(results.keys())
-    if len(missing):
-        found = set()
-        for v in missing:
-            for dta in data:
-                if v in dta and dta[v].shape == tuple(oshape):
-                    results[v] = dta[v]
-                    found.add(v)
-                    break
-        missing -= found
-        if len(missing):
-            raise ValueError(
-                f"Missing results {list(missing)}, expected shape {oshape}"
-            )
-    del data
-
-    # create output:
-    n_vars = len(out_vars)
-    data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
-    for v in out_vars:
-        data[..., out_vars.index(v)] = results[v]
-
-    return data
-    
-class DaskEngine(Engine):
-    """
-    The dask engine for foxes calculations.
+    Abstract base class for foxes calculations with dask.
     
     Parameters
     ----------
@@ -256,6 +138,148 @@ class DaskEngine(Engine):
         else:
             return data
     
+    def finalize(self):
+        """
+        Finalizes the engine.
+        """
+        if self.cluster is not None:
+            self.print("\n\nShutting down dask cluster")
+            self._client.close()
+            self._cluster.close()
+        
+        if self.progress_bar:
+            self._pbar.unregister()
+            
+        dask.config.refresh()
+        
+        super().finalize()
+        
+def _run_as_ufunc(
+    *ldata,
+    algo,
+    dvars,
+    lvars,
+    ldims,
+    evars,
+    edims,
+    edata,
+    loop_dims,
+    out_vars,
+    out_coords,
+    calc_pars,
+    init_vars,
+    ensure_variables,
+    calculate,
+):
+    """
+    Wrapper that mitigates between apply_ufunc and `calculate`.
+    """
+    n_prev = len(init_vars)
+    if n_prev:
+        prev = ldata[:n_prev]
+        ldata = ldata[n_prev:]
+
+    # reconstruct original data:
+    data = []
+    for i, hvars in enumerate(dvars):
+        v2l = {v: lvars.index(v) for v in hvars if v in lvars}
+        v2e = {v: evars.index(v) for v in hvars if v in evars}
+
+        hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
+        hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
+
+        if i == 0:
+            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        elif i == 1:
+            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        elif i == 2:
+            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
+        else:
+            raise NotImplementedError(
+                f"Not more than 3 data sets implemented, found {len(dvars)}"
+            )
+
+        del hdata, hdims, v2l, v2e
+
+    # deduce output shape:
+    oshape = []
+    for li, l in enumerate(out_coords):
+        for i, dims in enumerate(ldims):
+            if l in dims:
+                oshape.append(ldata[i].shape[dims.index(l)])
+                break
+        if len(oshape) != li + 1:
+            raise ValueError(f"Failed to find loop dimension")
+
+    # add zero output data arrays:
+    odims = {v: tuple(out_coords) for v in out_vars}
+    odata = {
+        v: (
+            np.full(oshape, np.nan, dtype=FC.DTYPE)
+            if v not in init_vars
+            else prev[init_vars.index(v)].copy()
+        )
+        for v in out_vars
+        if v not in data[-1]
+    }
+
+    if len(data) == 1:
+        data.append(FData(odata, odims, loop_dims))
+    else:
+        odata.update(data[-1])
+        odims.update(data[-1].dims)
+        if len(data) == 2:
+            data[-1] = FData(odata, odims, loop_dims)
+        else:
+            data[-1] = TData(odata, odims, loop_dims)
+    del odims, odata
+
+    # link chunk state indices from mdata to fdata and tdata:
+    if FC.STATE in data[0]:
+        for d in data[1:]:
+            d[FC.STATE] = data[0][FC.STATE]
+
+    # link weights from mdata to fdata:
+    if FV.WEIGHT in data[0]:
+        data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
+        data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
+
+    # run model calculation:
+    ensure_variables(algo, *data)
+    results = calculate(algo, *data, **calc_pars)
+
+    # replace missing results by first input data with matching shape:
+    missing = set(out_vars).difference(results.keys())
+    if len(missing):
+        found = set()
+        for v in missing:
+            for dta in data:
+                if v in dta and dta[v].shape == tuple(oshape):
+                    results[v] = dta[v]
+                    found.add(v)
+                    break
+        missing -= found
+        if len(missing):
+            raise ValueError(
+                f"Missing results {list(missing)}, expected shape {oshape}"
+            )
+    del data
+
+    # create output:
+    n_vars = len(out_vars)
+    data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
+    for v in out_vars:
+        data[..., out_vars.index(v)] = results[v]
+
+    return data
+    
+class XArrayEngine(DaskBaseEngine):
+    """
+    The engine for foxes calculations via xarray.apply_ufunc.
+    
+    :group: engines
+    
+    """
     def run_calculation(
         self, 
         algo,
@@ -392,7 +416,7 @@ class DaskEngine(Engine):
         iidims = [[c for c in d if c not in loopd] for d in idims]
         icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
-            _wrap_calc,
+            _run_as_ufunc,
             *ldata,
             input_core_dims=iidims + icdims,
             output_core_dims=[out_core_vars],
@@ -416,23 +440,210 @@ class DaskEngine(Engine):
 
         # update data by calculation results:
         return results.compute(num_workers=self.n_procs)
-    
-    def finalize(self):
-        """
-        Finalizes the engine.
-        """
-        if self.cluster is not None:
-            self.print("\n\nShutting down dask cluster")
-            self._client.close()
-            self._cluster.close()
-        
-        if self.progress_bar:
-            self._pbar.unregister()
-            
-        dask.config.refresh()
-        
-        super().finalize()
 
+@delayed
+def _run_lazy(
+    algo, 
+    model, 
+    *data, 
+    **cpars
+    ):
+    """ Helper function for lazy running """
+    return model.calculate(algo, *data, **cpars)
+
+class DaskEngine(DaskBaseEngine):
+    """
+    The dask engine for delayed foxes calculations.
+    
+    :group: engines
+    
+    """
+    def __init__(self, *args, chunk_size_points=None, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for the DaskBaseEngine class
+        chunk_size_points: int, optional
+            The size of a points chunk
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
+        """
+        csp = chunk_size_points if chunk_size_points is not None else 10000
+        super().__init__(*args, cluster=None, chunk_size_points=csp, **kwargs)
+        
+    def run_calculation(
+        self, 
+        algo,
+        model, 
+        model_data=None, 
+        farm_data=None, 
+        point_data=None, 
+        out_vars=[],
+        sel=None,
+        isel=None,
+        **calc_pars,
+    ):
+        """
+        Runs the model calculation
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm object
+        model: foxes.core.DataCalcModel
+            The model that whose calculate function 
+            should be run
+        model_data: xarray.Dataset
+            The initial model data
+        farm_data: xarray.Dataset
+            The initial farm data
+        point_data: xarray.Dataset
+            The initial point data
+        out_vars: list of str, optional
+            Names of the output variables
+        sel: dict, optional
+            Selection of coordinate subsets
+        isel: dict, optional
+            Selection of coordinate subsets index values
+        calc_pars: dict, optional
+            Additional parameters for the model.calculate()
+        
+        Returns
+        -------
+        results: xarray.Dataset
+            The model results
+            
+        """
+        # subset selection:
+        model_data, farm_data, point_data = self.select_subsets(
+            model_data, farm_data, point_data, sel=sel, isel=isel)
+        
+        # basic checks:
+        Engine.run_calculation(self, algo, model, model_data, farm_data,
+                                point_data, **calc_pars)
+
+        # prepare:
+        n_states = model_data.sizes[FC.STATE] 
+        out_coords = model.output_coords()
+        coords = {}
+        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        if farm_data is None:
+            farm_data = xr.Dataset()
+        
+        # calculate chunk sizes:
+        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
+        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        n_chunks_states = len(chunk_sizes_states)
+        n_chunks_targets = len(chunk_sizes_targets)
+        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
+                    
+        # prepare chunks:
+        n_chunks_all = n_chunks_states*n_chunks_targets
+        n_procs = min(n_procs, n_chunks_all)
+
+        # submit chunks:
+        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
+        results = {}
+        i0_states = 0
+        for chunki_states in range(n_chunks_states):
+            i1_states = i0_states + chunk_sizes_states[chunki_states]
+            s_states = np.s_[i0_states:i1_states]
+            i0_targets = 0          
+            for chunki_points in range(n_chunks_targets):
+                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
+                s_targets = np.s_[i0_targets:i1_targets]
+                
+                # create mdata:
+                mdata = MData.from_dataset(
+                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
+                
+                # create fdata:
+                if point_data is None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TURBINE)
+                else:
+                    cb = None
+                fdata = FData.from_dataset(
+                    farm_data, mdata=mdata, s_states=s_states, callback=cb,
+                    loop_dims=[FC.STATE], copy=False)
+            
+                # create tdata:
+                tdata = None
+                if point_data is not None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        n_targets = i1_targets - i0_targets
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
+                    tdata = TData.from_dataset(
+                        point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
+                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
+                del cb
+                
+                # submit model calculation:
+                data = [d for d in [mdata, fdata, tdata] if d is not None]
+                results[(chunki_states, chunki_points)] = _run_lazy(algo, model, *data, **calc_pars)
+                del data, mdata, fdata, tdata
+                    
+                i0_targets = i1_targets
+        
+                if pbar is not None:
+                    pbar.update()
+                    
+            i0_states = i1_states
+            
+        del model_data, farm_data, point_data, calc_pars
+        if pbar is not None:
+            pbar.close()
+
+        # wait for results:
+        self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+        results = compute(results)[0]
+        
+        # combine results:
+        self.print("Combining results", level=2)
+        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
+        data_vars = {}
+        for v in out_vars:
+            data_vars[v] = [out_coords, []]
+            
+            if n_chunks_targets == 1:
+                alls=0
+                for chunki_states in range(n_chunks_states):
+                    r = results[(chunki_states, 0)]
+                    data_vars[v][1].append(r[v])
+                    alls += data_vars[v][1][-1].shape[0]
+            else:
+                for chunki_states in range(n_chunks_states):
+                    tres = []
+                    for chunki_points in range(n_chunks_targets):
+                        r = results[(chunki_states, chunki_points)]
+                        tres.append(r[v])
+                    data_vars[v][1].append(np.concatenate(tres, axis=1))
+                del tres
+            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+            
+            if pbar is not None:
+                pbar.update()
+        del results
+        if pbar is not None:
+            pbar.close()
+        
+        return xr.Dataset(
+            coords=coords, 
+            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        )
+        
 def _run_on_cluster(
     algo, 
     model, 
@@ -442,7 +653,8 @@ def _run_on_cluster(
     mdata_size,
     fdata_size,
     loop_dims,
-    **cpars):
+    **cpars
+    ):
     """ Helper function running on a cluster """
     
     mdata = MData(
@@ -470,7 +682,7 @@ def _run_on_cluster(
 
     return model.calculate(algo, *data, **cpars)
 
-class LocalClusterEngine(DaskEngine):
+class LocalClusterEngine(DaskBaseEngine):
     """
     The dask engine for foxes calculations on a local cluster.
     
@@ -484,7 +696,7 @@ class LocalClusterEngine(DaskEngine):
         Parameters
         ----------
         args: tuple, optional
-            Additional parameters for the DaskEngine class
+            Additional parameters for the DaskBaseEngine class
         chunk_size_points: int, optional
             The size of a points chunk
         kwargs: dict, optional
@@ -504,7 +716,6 @@ class LocalClusterEngine(DaskEngine):
         out_vars=[],
         sel=None,
         isel=None,
-        persist=True,
         **calc_pars,
     ):
         """
@@ -529,8 +740,6 @@ class LocalClusterEngine(DaskEngine):
             Selection of coordinate subsets
         isel: dict, optional
             Selection of coordinate subsets index values
-        persist: bool
-            Flag for persisting xarray Dataset objects
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -556,8 +765,6 @@ class LocalClusterEngine(DaskEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        loop_dims = [d for d in self.loop_dims if d in out_coords]
-        loopd = set(loop_dims)
         
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -733,4 +940,3 @@ class SlurmClusterEngine(LocalClusterEngine):
         """
         super().__init__(*args, **kwargs)
         self.cluster = "slurm"
-        
