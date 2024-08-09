@@ -191,12 +191,8 @@ class Iterative(Downwind):
 
         else:
             # prepare:
-            # TODO: Introduce data that is passed from last iteration,
-            # such that re-running ambient computations is not necessary, i.e.:
-            # calc_pars = []
-            # mlist = FarmDataModelList()
-            calc_pars = self._calc_pars0 
-            mlist = FarmDataModelList(models=self._mlist0.models)
+            calc_pars = []
+            mlist = FarmDataModelList(models=[])
 
             # do not rotate back from downwind order:
             if not self._final_run:
@@ -219,11 +215,6 @@ class Iterative(Downwind):
 
             # rotate back from downwind order:
             else:
-
-                # add model that calculates wake effects:
-                # mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
-                # calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
                 mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 

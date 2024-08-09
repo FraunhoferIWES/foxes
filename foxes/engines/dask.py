@@ -10,6 +10,7 @@ from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
+from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -449,7 +450,9 @@ def _run_lazy(
     **cpars
     ):
     """ Helper function for lazy running """
-    return model.calculate(algo, *data, **cpars)
+    results = model.calculate(algo, *data, **cpars)
+    chunk_store = algo.reset_chunk_store()
+    return results, chunk_store
 
 class DaskEngine(DaskBaseEngine):
     """
@@ -534,6 +537,8 @@ class DaskEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
+        chunk_store = algo.reset_chunk_store()
+        goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -589,10 +594,16 @@ class DaskEngine(DaskBaseEngine):
                         point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
                         callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
                 del cb
-                
+
+                # set chunk store data:
+                key = (chunki_states, chunki_points)
+                algo._chunk_store = Dict(name=chunk_store.name)
+                if key in chunk_store:
+                    algo._chunk_store[key] = chunk_store.pop(key)
+                    
                 # submit model calculation:
                 data = [d for d in [mdata, fdata, tdata] if d is not None]
-                results[(chunki_states, chunki_points)] = _run_lazy(algo, model, *data, **calc_pars)
+                results[key] = _run_lazy(algo, model, *data, **calc_pars)
                 del data, mdata, fdata, tdata
                     
                 i0_targets = i1_targets
@@ -607,7 +618,8 @@ class DaskEngine(DaskBaseEngine):
             pbar.close()
 
         # wait for results:
-        self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+        if n_chunks_all > 1 or self.verbosity > 1:
+            self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         results = compute(results)[0]
         
         # combine results:
@@ -615,24 +627,30 @@ class DaskEngine(DaskBaseEngine):
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
         for v in out_vars:
-            data_vars[v] = [out_coords, []]
-            
-            if n_chunks_targets == 1:
-                alls=0
-                for chunki_states in range(n_chunks_states):
-                    r = results[(chunki_states, 0)]
-                    data_vars[v][1].append(r[v])
-                    alls += data_vars[v][1][-1].shape[0]
+            if v in results[(0, 0)][0]:
+                data_vars[v] = [out_coords, []]
+                
+                if n_chunks_targets == 1:
+                    alls=0
+                    for chunki_states in range(n_chunks_states):
+                        r, cstore = results[(chunki_states, 0)]
+                        data_vars[v][1].append(r[v])
+                        alls += data_vars[v][1][-1].shape[0]
+                        algo._chunk_store.update(cstore)
+                else:
+                    for chunki_states in range(n_chunks_states):
+                        tres = []
+                        for chunki_points in range(n_chunks_targets):
+                            r, cstore = results[(chunki_states, chunki_points)]
+                            tres.append(r[v])
+                            algo._chunk_store.update(cstore)
+                        data_vars[v][1].append(np.concatenate(tres, axis=1))
+                    del tres
+                del r, cstore
+                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
             else:
-                for chunki_states in range(n_chunks_states):
-                    tres = []
-                    for chunki_points in range(n_chunks_targets):
-                        r = results[(chunki_states, chunki_points)]
-                        tres.append(r[v])
-                    data_vars[v][1].append(np.concatenate(tres, axis=1))
-                del tres
-            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-            
+                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+                
             if pbar is not None:
                 pbar.update()
         del results
@@ -680,7 +698,10 @@ def _run_on_cluster(
 
     data = [d for d in [mdata, fdata, tdata] if d is not None]
 
-    return model.calculate(algo, *data, **cpars)
+    results = model.calculate(algo, *data, **cpars)
+    chunk_store = algo.reset_chunk_store()
+    
+    return results, chunk_store
 
 class LocalClusterEngine(DaskBaseEngine):
     """
@@ -765,6 +786,8 @@ class LocalClusterEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
+        chunk_store = algo.reset_chunk_store()
+        goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -776,7 +799,6 @@ class LocalClusterEngine(DaskBaseEngine):
         # prepare chunks:
         n_chunks_all = n_chunks_states*n_chunks_targets
         n_procs = min(n_procs, n_chunks_all)
-        falgo = self._client.scatter(algo, broadcast=True)
         fmodel = self._client.scatter(model, broadcast=True)
         cpars = calc_pars#{v: self._client.scatter(d, broadcast=True) for v, d in calc_pars.items()}
         
@@ -825,6 +847,13 @@ class LocalClusterEngine(DaskBaseEngine):
                         callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
                 del cb
 
+                # set chunk store data:
+                key = (chunki_states, chunki_points)
+                algo._chunk_store = Dict(name=chunk_store.name)
+                if key in chunk_store:
+                    algo._chunk_store[key] = chunk_store.pop(key)
+                falgo = self._client.scatter(algo)
+                    
                 # scatter data:
                 data = []
                 names = []
@@ -847,7 +876,7 @@ class LocalClusterEngine(DaskBaseEngine):
                 all_data.append(data)
                           
                 # submit model calculation:
-                jobs[(chunki_states, chunki_points)] = self._client.submit(
+                jobs[key] = self._client.submit(
                     _run_on_cluster,
                     falgo, 
                     fmodel,
@@ -877,37 +906,41 @@ class LocalClusterEngine(DaskBaseEngine):
         results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
-                r = jobs.get((chunki_states, chunki_points))
-                results[(chunki_states, chunki_points)] = r.result()
+                key = (chunki_states, chunki_points)
+                results[key], cstore = jobs.get(key).result()
+                algo._chunk_store.update(cstore)
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
-        del all_data
+        del all_data, cstore
 
         # combine results:
         self.print("Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
         for v in out_vars:
-            data_vars[v] = [out_coords, []]
-            
-            if n_chunks_targets == 1:
-                alls=0
-                for chunki_states in range(n_chunks_states):
-                    r = results[(chunki_states, 0)]
-                    data_vars[v][1].append(r[v])
-                    alls += data_vars[v][1][-1].shape[0]
+            if v in results[(0, 0)]:
+                data_vars[v] = [out_coords, []]
+                
+                if n_chunks_targets == 1:
+                    alls=0
+                    for chunki_states in range(n_chunks_states):
+                        r = results[(chunki_states, 0)]
+                        data_vars[v][1].append(r[v])
+                        alls += data_vars[v][1][-1].shape[0]
+                else:
+                    for chunki_states in range(n_chunks_states):
+                        tres = []
+                        for chunki_points in range(n_chunks_targets):
+                            r = results[(chunki_states, chunki_points)]
+                            tres.append(r[v])
+                        data_vars[v][1].append(np.concatenate(tres, axis=1))
+                    del tres
+                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
             else:
-                for chunki_states in range(n_chunks_states):
-                    tres = []
-                    for chunki_points in range(n_chunks_targets):
-                        r = results[(chunki_states, chunki_points)]
-                        tres.append(r[v])
-                    data_vars[v][1].append(np.concatenate(tres, axis=1))
-                del tres
-            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-            
+                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+                
             if pbar is not None:
                 pbar.update()
         del results

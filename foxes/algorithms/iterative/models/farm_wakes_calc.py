@@ -2,6 +2,7 @@ import numpy as np
 from copy import deepcopy
 
 from foxes.core import FarmDataModel, TData
+import foxes.constants as FC
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -86,12 +87,9 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         # collect ambient rotor results and weights:
-        # TODO: Introduce data that is passed from last iteration,
-        # such that re-running ambient computations is not necessary.
-        # This means replacing this by picking from such data instead:
         rotor = algo.rotor_model
-        weights = mdata[rotor.RWEIGHTS]
-        amb_res = mdata[rotor.AMBRES]
+        weights = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
+        amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)

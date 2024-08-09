@@ -1,5 +1,5 @@
 from foxes.core import PartialWakesModel
-
+import foxes.constants as FC
 
 class RotorPoints(PartialWakesModel):
     """
@@ -33,10 +33,9 @@ class RotorPoints(PartialWakesModel):
             The target point weights, shape: (n_tpoints,)
 
         """
-        rotor = algo.rotor_model
         return (
-            rotor.from_data_or_store(rotor.RPOINTS, algo, mdata),
-            rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata),
+            algo.get_from_chunk_store(FC.ROTOR_POINTS, mdata=mdata),
+            algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata),
         )
 
     def finalize_wakes(

@@ -537,6 +537,21 @@ class TData(Data):
         """
         return np.einsum("stp...,p->st...", self[variable], self[FC.TWEIGHTS])
 
+    def targets_i0(self):
+        """
+        Get the target counter for first target in chunk
+
+        Returns
+        -------
+        int:
+            The target index for first target in chunk
+
+        """
+        if FC.TARGET not in self:
+            return None
+        else:
+            return self[FC.TARGET][0]
+        
     @classmethod
     def from_points(
         cls,

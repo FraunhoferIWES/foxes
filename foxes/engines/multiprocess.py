@@ -2,11 +2,17 @@ import numpy as np
 import xarray as xr
 from multiprocess import Pool
 from copy import deepcopy
-from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
+from foxes.utils import Dict
 import foxes.constants as FC
+
+def _run_as_proc(algo, model, data, **cpars):
+    """ Helper function for running in multiprocessing process """
+    results = model.calculate(algo, *data, **cpars)
+    chunk_store = algo.reset_chunk_store()
+    return results, chunk_store
 
 class MultiprocessEngine(Engine):
     """
@@ -112,6 +118,8 @@ class MultiprocessEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
+        chunk_store = algo.reset_chunk_store()
+        goal_data = farm_data if point_data is None else point_data
             
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -134,11 +142,9 @@ class MultiprocessEngine(Engine):
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
                 s_targets = np.s_[i0_targets:i1_targets]
-                cpars = deepcopy(calc_pars)
-                cpars["algo"] = algo
                 
                 # create mdata:
-                cpars["mdata"] = MData.from_dataset(
+                mdata = MData.from_dataset(
                     model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
                 
                 # create fdata:
@@ -150,8 +156,8 @@ class MultiprocessEngine(Engine):
                             dims[o] = (FC.STATE, FC.TURBINE)
                 else:
                     cb = None
-                cpars["fdata"] = FData.from_dataset(
-                    farm_data, mdata=cpars["mdata"], s_states=s_states, callback=cb,
+                fdata = FData.from_dataset(
+                    farm_data, mdata=mdata, s_states=s_states, callback=cb,
                     loop_dims=[FC.STATE], copy=False)
             
                 # create tdata:
@@ -162,65 +168,80 @@ class MultiprocessEngine(Engine):
                         for o in set(out_vars).difference(data.keys()):
                             data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
                             dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
-                    cpars["tdata"] = TData.from_dataset(
-                        point_data, mdata=cpars["mdata"], s_states=s_states, s_targets=s_targets,
+                    tdata = TData.from_dataset(
+                        point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
                         callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
+                else:
+                    tdata = None
                 del cb
+                
+                # set chunk store data:
+                key = (chunki_states, chunki_points)
+                algo._chunk_store = Dict(name=chunk_store.name)
+                if key in chunk_store:
+                    algo._chunk_store[key] = chunk_store.pop(key)
 
                 # submit model calculation:
-                jobs[(chunki_states, chunki_points)] = self._pool.apply_async(
-                    model.calculate,
-                    kwds=cpars,
+                data = [d for d in [mdata, fdata, tdata] if d is not None]
+                jobs[key] = self._pool.apply_async(
+                    _run_as_proc, 
+                    args=(algo, model, data), 
+                    kwds=calc_pars,
                 )
+                del data, mdata, fdata, tdata
                     
                 i0_targets = i1_targets
                 
-                del cpars
                 if pbar is not None:
                     pbar.update()
                     
             i0_states = i1_states
             
-        del model_data, farm_data, point_data, calc_pars
+        del model_data, calc_pars, chunk_store, farm_data, point_data
         if pbar is not None:
             pbar.close()
                 
         # wait for results:
-        self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+        if n_chunks_all > 1 or self.verbosity > 1:
+            self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if n_chunks_all > 1 and self.verbosity > 0 else None
         results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
-                r = jobs.pop((chunki_states, chunki_points))
-                results[(chunki_states, chunki_points)] = r.get()
+                key = (chunki_states, chunki_points)
+                results[key], cstore = jobs.pop((chunki_states, chunki_points)).get()
+                algo._chunk_store.update(cstore)
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
-        del jobs
+        del jobs, cstore
             
         # combine results:
         self.print("Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
         for v in out_vars:
-            data_vars[v] = [out_coords, []]
-            
-            if n_chunks_targets == 1:
-                alls=0
-                for chunki_states in range(n_chunks_states):
-                    r = results[(chunki_states, 0)]
-                    data_vars[v][1].append(r[v])
-                    alls += data_vars[v][1][-1].shape[0]
+            if v in results[(0, 0)]:
+                data_vars[v] = [out_coords, []]
+                
+                if n_chunks_targets == 1:
+                    alls=0
+                    for chunki_states in range(n_chunks_states):
+                        r = results[(chunki_states, 0)]
+                        data_vars[v][1].append(r[v])
+                        alls += data_vars[v][1][-1].shape[0]
+                else:
+                    for chunki_states in range(n_chunks_states):
+                        tres = []
+                        for chunki_points in range(n_chunks_targets):
+                            r = results[(chunki_states, chunki_points)]
+                            tres.append(r[v])
+                        data_vars[v][1].append(np.concatenate(tres, axis=1))
+                    del tres
+                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
             else:
-                for chunki_states in range(n_chunks_states):
-                    tres = []
-                    for chunki_points in range(n_chunks_targets):
-                        r = results[(chunki_states, chunki_points)]
-                        tres.append(r[v])
-                    data_vars[v][1].append(np.concatenate(tres, axis=1))
-                del tres
-            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
             
             if pbar is not None:
                 pbar.update()

@@ -253,10 +253,11 @@ class Engine(ABC):
             The model results
             
         """
+        n_states = model_data.sizes[FC.STATE]
         if point_data is None:
-            self.print(f"Calculating {model_data.sizes[FC.STATE]} states for {algo.n_turbines} turbines")
+            self.print(f"Calculating {n_states} states for {algo.n_turbines} turbines")
         else:
-            self.print(f"Calculating data at {point_data.sizes[FC.TARGET]} points for {model_data.sizes[FC.STATE]} states")
+            self.print(f"Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states")
         if not self.initialized:
             raise ValueError(f"Engine '{type(self).__name__}' not initialized")
 

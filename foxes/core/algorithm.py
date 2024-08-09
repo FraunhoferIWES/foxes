@@ -75,6 +75,8 @@ class Algorithm(Model):
             e = Engine.new(engine_type=engine, **engine_pars)
             self.print(f"Selecting engine '{e}'")
             e.initialize()
+        
+        self._chunk_store = Dict(name="chunk_store")
 
     def print(self, *args, vlim=1, **kwargs):
         """
@@ -321,6 +323,68 @@ class Algorithm(Model):
         )
 
         return xr.Dataset(**idata)
+    
+    def add_to_chunk_store(self, name, data, mdata, tdata=None, copy=True):
+        """
+        Add data to the chunk store
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        data: numpy.ndarray
+            The data
+        mdata: foxes.core.MData
+            The mdata object
+        tdata: foxes.core.TData, optional
+            The tdata object
+        copy: bool
+            Flag for copying incoming data
+            
+        """
+        i0 = int(mdata.states_i0(counter=True, algo=self))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        key = (i0, t0)
+        if key not in self._chunk_store:
+            self._chunk_store[key] = Dict(name=f"chunk_store_{i0}_{t0}")
+        self._chunk_store[key][name] = data.copy() if copy else data
+        
+    def get_from_chunk_store(self, name, mdata, tdata=None):
+        """
+        Get data to the chunk store
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        mdata: foxes.core.MData
+            The mdata object
+        tdata: foxes.core.TData, optional
+            The tdata object
+        
+        Returns
+        -------
+        data: numpy.ndarray
+            The data
+        
+        """
+        i0 = int(mdata.states_i0(counter=True, algo=self))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        return self._chunk_store[(i0, t0)][name]
+    
+    def reset_chunk_store(self):
+        """
+        Resets the chunk store
+        
+        Returns
+        -------
+        chunk_store: foxes.utils.Dict
+            The chunk store before resetting
+        
+        """
+        chunk_store = self._chunk_store
+        self._chunk_store = Dict(name="chunk_store")
+        return chunk_store
 
     def finalize(self, clear_mem=False):
         """
@@ -335,6 +399,7 @@ class Algorithm(Model):
         super().finalize(self, self.verbosity)
         if clear_mem:
             self._idata_mem = Dict()
+            self.reset_chunk_store()
 
     @classmethod
     def new(cls, algo_type, *args, **kwargs):
