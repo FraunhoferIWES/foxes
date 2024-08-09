@@ -191,8 +191,12 @@ class Iterative(Downwind):
 
         else:
             # prepare:
-            calc_pars = []
-            mlist = FarmDataModelList(models=[])
+            # TODO: Introduce data that is passed from last iteration,
+            # such that re-running ambient computations is not necessary, i.e.:
+            # calc_pars = []
+            # mlist = FarmDataModelList()
+            calc_pars = self._calc_pars0 
+            mlist = FarmDataModelList(models=self._mlist0.models)
 
             # do not rotate back from downwind order:
             if not self._final_run:

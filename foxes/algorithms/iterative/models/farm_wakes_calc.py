@@ -86,6 +86,9 @@ class FarmWakesCalculation(FarmDataModel):
 
         """
         # collect ambient rotor results and weights:
+        # TODO: Introduce data that is passed from last iteration,
+        # such that re-running ambient computations is not necessary.
+        # This means replacing this by picking from such data instead:
         rotor = algo.rotor_model
         weights = mdata[rotor.RWEIGHTS]
         amb_res = mdata[rotor.AMBRES]
