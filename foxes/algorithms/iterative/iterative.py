@@ -228,7 +228,20 @@ class Iterative(Downwind):
     def _run_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
         return super()._run_farm_calc(
-            mlist, *data, farm_data=self.prev_farm_results, **kwargs)
+            mlist, *data, farm_data=self.prev_farm_results, iterative=True, **kwargs)
+
+    @property
+    def final_iteration(self):
+        """
+        Flag for the final iteration
+        
+        Returns
+        -------
+        flag: bool
+            Flag for the final iteration
+        
+        """
+        return self._final_run
 
     def calc_farm(self, finalize=True, **kwargs):
         """

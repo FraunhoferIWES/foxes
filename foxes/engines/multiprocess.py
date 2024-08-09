@@ -1,17 +1,15 @@
 import numpy as np
 import xarray as xr
 from multiprocess import Pool
-from copy import deepcopy
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
-from foxes.utils import Dict
 import foxes.constants as FC
 
-def _run_as_proc(algo, model, data, **cpars):
+def _run_as_proc(algo, model, data, iterative, **cpars):
     """ Helper function for running in multiprocessing process """
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store()
+    chunk_store = algo.reset_chunk_store() if iterative else {}
     return results, chunk_store
 
 class MultiprocessEngine(Engine):
@@ -69,6 +67,7 @@ class MultiprocessEngine(Engine):
         out_vars=[],
         sel=None,
         isel=None,
+        iterative=False,
         **calc_pars,
     ):
         """
@@ -93,6 +92,8 @@ class MultiprocessEngine(Engine):
             Selection of coordinate subsets
         isel: dict, optional
             Selection of coordinate subsets index values
+        iterative: bool
+            Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -118,7 +119,7 @@ class MultiprocessEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store()
+        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
             
         # calculate chunk sizes:
@@ -177,15 +178,15 @@ class MultiprocessEngine(Engine):
                 
                 # set chunk store data:
                 key = (chunki_states, chunki_points)
-                algo._chunk_store = Dict(name=chunk_store.name)
-                if key in chunk_store:
+                algo.reset_chunk_store()
+                if iterative and key in chunk_store:
                     algo._chunk_store[key] = chunk_store.pop(key)
 
                 # submit model calculation:
                 data = [d for d in [mdata, fdata, tdata] if d is not None]
                 jobs[key] = self._pool.apply_async(
                     _run_as_proc, 
-                    args=(algo, model, data), 
+                    args=(algo, model, data, iterative), 
                     kwds=calc_pars,
                 )
                 del data, mdata, fdata, tdata
@@ -210,12 +211,15 @@ class MultiprocessEngine(Engine):
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
                 results[key], cstore = jobs.pop((chunki_states, chunki_points)).get()
-                algo._chunk_store.update(cstore)
+                if iterative:
+                    algo._chunk_store.update(cstore)
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
         del jobs, cstore
+        if not iterative or algo.final_iteration:
+            algo.reset_chunk_store()
             
         # combine results:
         self.print("Combining results", level=2)

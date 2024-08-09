@@ -292,6 +292,7 @@ class XArrayEngine(DaskBaseEngine):
         sel=None,
         isel=None,
         persist=True,
+        iterative=False,
         **calc_pars,
     ):
         """
@@ -318,6 +319,8 @@ class XArrayEngine(DaskBaseEngine):
             Selection of coordinate subsets index values
         persist: bool
             Flag for persisting xarray Dataset objects
+        iterative: bool
+            Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -446,12 +449,13 @@ class XArrayEngine(DaskBaseEngine):
 def _run_lazy(
     algo, 
     model, 
+    iterative,
     *data, 
     **cpars
     ):
     """ Helper function for lazy running """
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store()
+    chunk_store = algo.reset_chunk_store() if iterative else {}
     return results, chunk_store
 
 class DaskEngine(DaskBaseEngine):
@@ -488,6 +492,7 @@ class DaskEngine(DaskBaseEngine):
         out_vars=[],
         sel=None,
         isel=None,
+        iterative=False,
         **calc_pars,
     ):
         """
@@ -512,6 +517,8 @@ class DaskEngine(DaskBaseEngine):
             Selection of coordinate subsets
         isel: dict, optional
             Selection of coordinate subsets index values
+        iterative: bool
+            Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -537,7 +544,7 @@ class DaskEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store()
+        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
@@ -597,13 +604,13 @@ class DaskEngine(DaskBaseEngine):
 
                 # set chunk store data:
                 key = (chunki_states, chunki_points)
-                algo._chunk_store = Dict(name=chunk_store.name)
-                if key in chunk_store:
+                algo.reset_chunk_store()
+                if iterative and key in chunk_store:
                     algo._chunk_store[key] = chunk_store.pop(key)
                     
                 # submit model calculation:
                 data = [d for d in [mdata, fdata, tdata] if d is not None]
-                results[key] = _run_lazy(algo, model, *data, **calc_pars)
+                results[key] = _run_lazy(algo, model, iterative, *data, **calc_pars)
                 del data, mdata, fdata, tdata
                     
                 i0_targets = i1_targets
@@ -616,7 +623,9 @@ class DaskEngine(DaskBaseEngine):
         del model_data, farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
-
+        if not iterative or algo.final_iteration:
+            algo.reset_chunk_store()
+            
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
@@ -636,14 +645,16 @@ class DaskEngine(DaskBaseEngine):
                         r, cstore = results[(chunki_states, 0)]
                         data_vars[v][1].append(r[v])
                         alls += data_vars[v][1][-1].shape[0]
-                        algo._chunk_store.update(cstore)
+                        if iterative:
+                            algo._chunk_store.update(cstore)
                 else:
                     for chunki_states in range(n_chunks_states):
                         tres = []
                         for chunki_points in range(n_chunks_targets):
                             r, cstore = results[(chunki_states, chunki_points)]
                             tres.append(r[v])
-                            algo._chunk_store.update(cstore)
+                            if iterative:
+                                algo._chunk_store.update(cstore)
                         data_vars[v][1].append(np.concatenate(tres, axis=1))
                     del tres
                 del r, cstore
@@ -671,6 +682,7 @@ def _run_on_cluster(
     mdata_size,
     fdata_size,
     loop_dims,
+    iterative,
     **cpars
     ):
     """ Helper function running on a cluster """
@@ -699,7 +711,7 @@ def _run_on_cluster(
     data = [d for d in [mdata, fdata, tdata] if d is not None]
 
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store()
+    chunk_store = algo.reset_chunk_store() if iterative else {}
     
     return results, chunk_store
 
@@ -737,6 +749,7 @@ class LocalClusterEngine(DaskBaseEngine):
         out_vars=[],
         sel=None,
         isel=None,
+        iterative=False,
         **calc_pars,
     ):
         """
@@ -761,6 +774,8 @@ class LocalClusterEngine(DaskBaseEngine):
             Selection of coordinate subsets
         isel: dict, optional
             Selection of coordinate subsets index values
+        iterative: bool
+            Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
         
@@ -786,7 +801,7 @@ class LocalClusterEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store()
+        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
@@ -849,8 +864,8 @@ class LocalClusterEngine(DaskBaseEngine):
 
                 # set chunk store data:
                 key = (chunki_states, chunki_points)
-                algo._chunk_store = Dict(name=chunk_store.name)
-                if key in chunk_store:
+                algo.reset_chunk_store()
+                if iterative and key in chunk_store:
                     algo._chunk_store[key] = chunk_store.pop(key)
                 falgo = self._client.scatter(algo)
                     
@@ -886,6 +901,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     mdata_size=len(mdata),
                     fdata_size=len(fdata),
                     loop_dims=ldims,
+                    iterative=iterative,
                     **cpars,
                 )
                     
@@ -908,13 +924,16 @@ class LocalClusterEngine(DaskBaseEngine):
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
                 results[key], cstore = jobs.get(key).result()
-                algo._chunk_store.update(cstore)
+                if iterative:
+                    algo._chunk_store.update(cstore)
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
         del all_data, cstore
-
+        if not iterative or algo.final_iteration:
+            algo.reset_chunk_store()
+            
         # combine results:
         self.print("Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
