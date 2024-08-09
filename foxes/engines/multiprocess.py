@@ -96,33 +96,14 @@ class MultiprocessEngine(Engine):
             The model results
             
         """
-        super().run_calculation(model, model_data, farm_data,
-                                point_data, **calc_pars)
-        
         # subset selection:
-        if sel is not None:
-            new_data = []
-            for data in [model_data, farm_data, point_data]:
-                if data is not None:
-                    s = {c: u for c, u in sel.items() if c in data.coords}
-                    if len(s):
-                        new_data.append(data.sel(s))
-                else:
-                    new_data.append(data)
-            model_data, farm_data, point_data = new_data
-            del new_data, s
-        if isel is not None:
-            new_data = []
-            for data in [model_data, farm_data, point_data]:
-                if data is not None:
-                    s = {c: u for c, u in isel.items() if c in data.coords}
-                    if len(s):
-                        new_data.append(data.isel(s))
-                else:
-                    new_data.append(data)
-            model_data, farm_data, point_data = new_data
-            del new_data, s
-            
+        model_data, farm_data, point_data = self.select_subsets(
+            model_data, farm_data, point_data, sel=sel, isel=isel)
+        
+        # basic checks:
+        super().run_calculation(algo, model, model_data, farm_data,
+                                point_data, **calc_pars)
+
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
         out_coords = model.output_coords()
@@ -131,36 +112,13 @@ class MultiprocessEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-
-        # determine states chunks:    
-        n_chunks_states = 1
-        chunk_sizes_states = [n_states]
-        n_procs = cpu_count() if self.n_procs is None else self.n_procs
-        if self.chunk_size_states is None: 
-            chunk_size_states = max(int(n_states/n_procs), 1)
-        else: 
-            chunk_size_states = min(n_states, self.chunk_size_states)
-        n_chunks_states = int(n_states/chunk_size_states)
-        chunk_size_states = int(n_states/n_chunks_states)
-        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
-        extra = n_states - n_chunks_states*chunk_size_states
-        if extra > 0:
-            chunk_sizes_states[-extra:] += 1
-        assert np.sum(chunk_sizes_states) == n_states
-                
-        # determine points chunks:        
+            
+        # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_chunks_targets = 1
-        chunk_sizes_targets = [n_targets]
-        if point_data is not None:
-            chunk_size_targets = min(n_targets, self.chunk_size_points)
-            n_chunks_targets = max(int(n_targets/chunk_size_targets), 1)
-            chunk_size_targets = int(n_targets/n_chunks_targets)
-            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets, dtype=np.int32)
-            extra = n_targets - n_chunks_targets*chunk_size_targets
-            if extra > 0:
-                chunk_sizes_targets[-extra:] += 1
-            assert np.sum(chunk_sizes_targets) == n_targets
+        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        n_chunks_states = len(chunk_sizes_states)
+        n_chunks_targets = len(chunk_sizes_targets)
+        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
                 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states*n_chunks_targets
@@ -227,7 +185,7 @@ class MultiprocessEngine(Engine):
         if pbar is not None:
             pbar.close()
                 
-        # awaiting results:
+        # wait for results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if n_chunks_all > 1 and self.verbosity > 0 else None
         results = {}

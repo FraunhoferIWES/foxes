@@ -1,10 +1,11 @@
 import dask
 import numpy as np
 import xarray as xr
-from distributed import Client, LocalCluster, progress
+from distributed import Client, LocalCluster, progress, Future
 from dask.diagnostics import ProgressBar
 from copy import deepcopy
 from os import cpu_count
+from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
 import foxes.variables as FV
@@ -302,7 +303,12 @@ class DaskEngine(Engine):
             The model results
             
         """
-        super().run_calculation(model, model_data, farm_data,
+        # subset selection:
+        model_data, farm_data, point_data = self.select_subsets(
+            model_data, farm_data, point_data, sel=sel, isel=isel)
+        
+        # basic checks:
+        super().run_calculation(algo, model, model_data, farm_data,
                                 point_data, **calc_pars)
         
         # find chunk sizes, if not given:
@@ -357,24 +363,6 @@ class DaskEngine(Engine):
         # apply persist:
         if persist:
             ldata = [d.persist() for d in ldata]
-            
-        # subset selection:
-        if sel is not None:
-            nldata = []
-            for ds in ldata:
-                s = {k: v for k, v in sel.items() if k in ds.coords}
-                if len(s):
-                    nldata.append(ds.sel(s))
-            ldata = nldata
-            del nldata
-        if isel is not None:
-            nldata = []
-            for ds in ldata:
-                s = {k: v for k, v in isel.items() if k in ds.coords}
-                if len(s):
-                    nldata.append(ds.isel(s))
-            ldata = nldata
-            del nldata
 
         # setup dask options:
         dargs = dict(output_sizes={FC.VARS: len(out_vars)})
@@ -446,6 +434,43 @@ class DaskEngine(Engine):
         
         super().finalize()
 
+
+def _run_local_cluster(
+    algo, 
+    model, 
+    *data, 
+    names,
+    dims,
+    mdata_size,
+    fdata_size,
+    loop_dims,
+    **cpars):
+    
+    mdata = MData(
+        data={names[i]: data[i] for i in range(mdata_size)},
+        dims={names[i]: dims[i] for i in range(mdata_size)},
+        loop_dims=loop_dims[0],
+    )
+    
+    fdata_end = mdata_size + fdata_size
+    fdata = FData(
+        data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
+        dims={names[i]: dims[i] for i in range(mdata_size, fdata_end)},
+        loop_dims=loop_dims[1],
+    )
+
+    tdata = None
+    if len(data) >  fdata_end:
+        tdata = TData(
+            data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
+            dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
+            loop_dims=loop_dims[2],
+        )
+
+    data = [d for d in [mdata, fdata, tdata] if d is not None]
+
+    return model.calculate(algo, *data, **cpars)
+
 class LocalClusterEngine(DaskEngine):
     """
     The dask engine for foxes calculations on a local cluster.
@@ -456,6 +481,7 @@ class LocalClusterEngine(DaskEngine):
     def __init__(
         self, 
         *args,
+        chunk_size_points=None,
         **kwargs,
     ):
         """
@@ -465,9 +491,231 @@ class LocalClusterEngine(DaskEngine):
         ----------
         args: tuple, optional
             Additional parameters for the DaskEngine class
+        chunk_size_points: int, optional
+            The size of a points chunk
         kwargs: dict, optional
-            Additional parameters for the DaskEngine class
+            Additional parameters for the base class
             
         """
-        super().__init__(*args, cluster="local", **kwargs)
+        csp = chunk_size_points if chunk_size_points is not None else 10000
+        super().__init__(*args, cluster="local", chunk_size_points=csp, **kwargs)
+        
+    def run_calculation(
+        self, 
+        algo,
+        model, 
+        model_data=None, 
+        farm_data=None, 
+        point_data=None, 
+        out_vars=[],
+        sel=None,
+        isel=None,
+        persist=True,
+        **calc_pars,
+    ):
+        """
+        Runs the model calculation
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm object
+        model: foxes.core.DataCalcModel
+            The model that whose calculate function 
+            should be run
+        model_data: xarray.Dataset
+            The initial model data
+        farm_data: xarray.Dataset
+            The initial farm data
+        point_data: xarray.Dataset
+            The initial point data
+        out_vars: list of str, optional
+            Names of the output variables
+        sel: dict, optional
+            Selection of coordinate subsets
+        isel: dict, optional
+            Selection of coordinate subsets index values
+        persist: bool
+            Flag for persisting xarray Dataset objects
+        calc_pars: dict, optional
+            Additional parameters for the model.calculate()
+        
+        Returns
+        -------
+        results: xarray.Dataset
+            The model results
+            
+        """
+        # subset selection:
+        model_data, farm_data, point_data = self.select_subsets(
+            model_data, farm_data, point_data, sel=sel, isel=isel)
+        
+        # basic checks:
+        Engine.run_calculation(self, algo, model, model_data, farm_data,
+                                point_data, **calc_pars)
+
+        # prepare:
+        n_states = model_data.sizes[FC.STATE] 
+        out_coords = model.output_coords()
+        coords = {}
+        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        if farm_data is None:
+            farm_data = xr.Dataset()
+        loop_dims = [d for d in self.loop_dims if d in out_coords]
+        loopd = set(loop_dims)
+        
+        # calculate chunk sizes:
+        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
+        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        n_chunks_states = len(chunk_sizes_states)
+        n_chunks_targets = len(chunk_sizes_targets)
+        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
+                    
+        # prepare chunks:
+        n_chunks_all = n_chunks_states*n_chunks_targets
+        n_procs = min(n_procs, n_chunks_all)
+        falgo = self._client.scatter(algo, broadcast=True)
+        fmodel = self._client.scatter(model, broadcast=True)
+        cpars = calc_pars#{v: self._client.scatter(d, broadcast=True) for v, d in calc_pars.items()}
+        
+        # submit chunks:
+        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes")
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
+        jobs = {}
+        i0_states = 0
+        all_data = []
+        for chunki_states in range(n_chunks_states):
+            i1_states = i0_states + chunk_sizes_states[chunki_states]
+            s_states = np.s_[i0_states:i1_states]
+            i0_targets = 0          
+            for chunki_points in range(n_chunks_targets):
+                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
+                s_targets = np.s_[i0_targets:i1_targets]
+                
+                # create mdata:
+                mdata = MData.from_dataset(
+                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
+                
+                # create fdata:
+                if point_data is None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TURBINE)
+                else:
+                    cb = None
+                fdata = FData.from_dataset(
+                    farm_data, mdata=mdata, s_states=s_states, callback=cb,
+                    loop_dims=[FC.STATE], copy=False)
+            
+                # create tdata:
+                tdata = None
+                if point_data is not None:
+                    def cb(data, dims):
+                        n_states = i1_states - i0_states
+                        n_targets = i1_targets - i0_targets
+                        for o in set(out_vars).difference(data.keys()):
+                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                            dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
+                    tdata = TData.from_dataset(
+                        point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
+                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
+                del cb
+
+                # scatter data:
+                data = []
+                names = []
+                dims = []
+                ldims = [mdata.loop_dims, fdata.loop_dims]
+                for k, d in mdata.items():
+                    data.append(self._client.scatter(d))
+                    names.append(k)
+                    dims.append(mdata.dims[k])
+                for k, d in fdata.items():
+                    data.append(self._client.scatter(d))
+                    names.append(k)
+                    dims.append(fdata.dims[k])
+                if tdata is not None:
+                    ldims.append(tdata.loop_dims)
+                    for k, d in tdata.items():
+                        data.append(self._client.scatter(d))
+                        names.append(k)
+                        dims.append(tdata.dims[k])
+                all_data.append(data)
+                          
+                # submit model calculation:
+                jobs[(chunki_states, chunki_points)] = self._client.submit(
+                    _run_local_cluster,
+                    falgo, 
+                    fmodel,
+                    *data,
+                    names=names,
+                    dims=dims,
+                    mdata_size=len(mdata),
+                    fdata_size=len(fdata),
+                    loop_dims=ldims,
+                    **cpars,
+                )
+                    
+                i0_targets = i1_targets
+        
+                if pbar is not None:
+                    pbar.update()
+                    
+            i0_states = i1_states
+            
+        del model_data, farm_data, point_data, calc_pars
+        if pbar is not None:
+            pbar.close()
+            
+        # wait for results:
+        self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+        pbar = tqdm(total=n_chunks_all) if n_chunks_all > 1 and self.verbosity > 0 else None
+        results = {}
+        for chunki_states in range(n_chunks_states):
+            for chunki_points in range(n_chunks_targets):
+                r = jobs.get((chunki_states, chunki_points))
+                results[(chunki_states, chunki_points)] = r.result()
+                if pbar is not None:
+                    pbar.update()
+        if pbar is not None:
+            pbar.close()
+        del all_data
+
+        # combine results:
+        self.print("Combining results", level=2)
+        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
+        data_vars = {}
+        for v in out_vars:
+            data_vars[v] = [out_coords, []]
+            
+            if n_chunks_targets == 1:
+                alls=0
+                for chunki_states in range(n_chunks_states):
+                    r = results[(chunki_states, 0)]
+                    data_vars[v][1].append(r[v])
+                    alls += data_vars[v][1][-1].shape[0]
+            else:
+                for chunki_states in range(n_chunks_states):
+                    tres = []
+                    for chunki_points in range(n_chunks_targets):
+                        r = results[(chunki_states, chunki_points)]
+                        tres.append(r[v])
+                    data_vars[v][1].append(np.concatenate(tres, axis=1))
+                del tres
+            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+            
+            if pbar is not None:
+                pbar.update()
+        del results
+        if pbar is not None:
+            pbar.close()
+        
+        return xr.Dataset(
+            coords=coords, 
+            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        )
+        
         

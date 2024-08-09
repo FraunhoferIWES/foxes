@@ -1,4 +1,6 @@
+import numpy as np
 from abc import ABC, abstractmethod
+from os import cpu_count
 
 from foxes.utils import all_subclasses
 import foxes.constants as FC
@@ -117,6 +119,101 @@ class Engine(ABC):
             return [FC.STATE]
         else:
             return [FC.STATE, FC.TARGET]
+
+    def select_subsets(self, *datasets, sel=None, isel=None):
+        """
+        Takes subsets of datasets
+        
+        Parameters
+        ----------
+        datasets: tuple
+            The xarray.Dataset or xarray.Dataarray objects
+        sel: dict, optional
+            The selection dictionary
+        isel: dict, optional
+            The index selection dictionary
+        
+        Returns
+        -------
+        subsets: list
+            The subsets of the input data
+        
+        """
+
+        if sel is not None:
+            new_datasets = []
+            for data in datasets:
+                if data is not None:
+                    s = {c: u for c, u in sel.items() if c in data.coords}
+                    new_datasets.append(data.sel(s) if len(s) else data)
+                else:
+                    new_datasets.append(data)
+            datasets = new_datasets
+
+        if isel is not None:
+            new_datasets = []
+            for data in datasets:
+                if data is not None:
+                    s = {c: u for c, u in isel.items() if c in data.coords}
+                    new_datasets.append(data.isel(s) if len(s) else data)
+                else:
+                    new_datasets.append(data)
+            datasets = new_datasets
+        
+        return datasets
+
+    def calc_chunk_sizes(self, n_states, n_targets=1):
+        """
+        Computes the sizes of states and points chunks
+        
+        Parameters
+        ----------
+        n_states: int
+            The number of states
+        n_targets: int
+            The number of point targets
+            
+        Returns
+        -------
+        n_procs: int
+            The number of processes to be used
+        chunk_sizes_states: numpy.ndarray
+            The sizes of all states chunks, shape: (n_chunks_states,)
+        chunk_sizes_targets: numpy.ndarray
+            The sizes of all targets chunks, shape: (n_chunks_targets,)
+            
+        """
+
+        # determine states chunks:    
+        n_chunks_states = 1
+        chunk_sizes_states = [n_states]
+        n_procs = cpu_count() if self.n_procs is None else self.n_procs
+        if self.chunk_size_states is None: 
+            chunk_size_states = max(int(n_states/n_procs), 1)
+        else: 
+            chunk_size_states = min(n_states, self.chunk_size_states)
+        n_chunks_states = int(n_states/chunk_size_states)
+        chunk_size_states = int(n_states/n_chunks_states)
+        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
+        extra = n_states - n_chunks_states*chunk_size_states
+        if extra > 0:
+            chunk_sizes_states[-extra:] += 1
+        assert np.sum(chunk_sizes_states) == n_states
+                
+        # determine points chunks:        
+        n_chunks_targets = 1
+        chunk_sizes_targets = [n_targets]
+        if n_targets > 1:
+            chunk_size_targets = min(n_targets, self.chunk_size_points)
+            n_chunks_targets = max(int(n_targets/chunk_size_targets), 1)
+            chunk_size_targets = int(n_targets/n_chunks_targets)
+            chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets, dtype=np.int32)
+            extra = n_targets - n_chunks_targets*chunk_size_targets
+            if extra > 0:
+                chunk_sizes_targets[-extra:] += 1
+            assert np.sum(chunk_sizes_targets) == n_targets
+
+        return n_procs, chunk_sizes_states, chunk_sizes_targets
             
     @abstractmethod
     def run_calculation(
@@ -156,6 +253,10 @@ class Engine(ABC):
             The model results
             
         """
+        if point_data is None:
+            self.print(f"Calculating {model_data.sizes[FC.STATE]} states for {algo.n_turbines} turbines")
+        else:
+            self.print(f"Calculating data at {point_data.sizes[FC.TARGET]} points for {model_data.sizes[FC.STATE]} states")
         if not self.initialized:
             raise ValueError(f"Engine '{type(self).__name__}' not initialized")
 

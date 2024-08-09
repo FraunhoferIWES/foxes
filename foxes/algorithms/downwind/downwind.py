@@ -364,9 +364,6 @@ class Downwind(Algorithm):
 
     def _run_farm_calc(self, mlist, *data, outputs=None, **kwargs):
         """Helper function for running the main farm calculation"""
-        self.print(
-            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
-        )
         out_vars = self.farm_vars if outputs is None else outputs
         farm_results = get_engine().run_calculation(
             self, mlist, *data, out_vars=out_vars, **kwargs)
@@ -633,9 +630,6 @@ class Downwind(Algorithm):
         self.print(f"\nOutput point variables:", ", ".join(ovars))
 
         # calculate:
-        self.print(
-            f"Calculating {len(ovars)} variables at {points.shape[1]} points in {n_states} states"
-        )
         point_results = get_engine().run_calculation(
             self,
             mlist,

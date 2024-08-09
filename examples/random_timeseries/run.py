@@ -134,6 +134,9 @@ if __name__ == "__main__":
 
         print("\nFarm results:\n")
         print(farm_results)
+        print(farm_results.to_dataframe()[[
+            FV.AMB_WD, FV.AMB_TI, FV.AMB_REWS, FV.AMB_CT, FV.AMB_P,
+            FV.TI, FV.REWS, FV.CT, FV.P]])
         print("\nCalc time =", time1 - time0, "\n")
 
         o = foxes.output.FarmResultsEval(farm_results)
