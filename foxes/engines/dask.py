@@ -565,53 +565,29 @@ class DaskEngine(DaskBaseEngine):
         i0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
-            s_states = np.s_[i0_states:i1_states]
             i0_targets = 0          
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-                s_targets = np.s_[i0_targets:i1_targets]
                 
-                # create mdata:
-                mdata = MData.from_dataset(
-                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
-                
-                # create fdata:
-                if point_data is None:
-                    def cb(data, dims):
-                        n_states = i1_states - i0_states
-                        for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
-                            dims[o] = (FC.STATE, FC.TURBINE)
-                else:
-                    cb = None
-                fdata = FData.from_dataset(
-                    farm_data, mdata=mdata, s_states=s_states, callback=cb,
-                    loop_dims=[FC.STATE], copy=False)
-            
-                # create tdata:
-                tdata = None
-                if point_data is not None:
-                    def cb(data, dims):
-                        n_states = i1_states - i0_states
-                        n_targets = i1_targets - i0_targets
-                        for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
-                            dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
-                    tdata = TData.from_dataset(
-                        point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
-                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
-                del cb
-
-                # set chunk store data:
-                key = (chunki_states, chunki_points)
-                algo.reset_chunk_store()
-                if iterative and key in chunk_store:
-                    algo._chunk_store[key] = chunk_store.pop(key)
+                # get this chunk's data:
+                data = self.get_chunk_input_data(
+                    algo=algo,
+                    model_data=model_data, 
+                    farm_data=farm_data, 
+                    point_data=point_data, 
+                    chunki_states=chunki_states, 
+                    chunki_points=chunki_points,
+                    states_i0_i1=(i0_states, i1_states),
+                    targets_i0_i1=(i0_targets, i1_targets),
+                    out_vars=out_vars,
+                    iterative=iterative,
+                    chunk_store=chunk_store,
+                )
                     
                 # submit model calculation:
-                data = [d for d in [mdata, fdata, tdata] if d is not None]
-                results[key] = _run_lazy(algo, model, iterative, *data, **calc_pars)
-                del data, mdata, fdata, tdata
+                results[(chunki_states, chunki_points)] = _run_lazy(
+                    algo, model, iterative, *data, **calc_pars)
+                del data
                     
                 i0_targets = i1_targets
         
@@ -620,57 +596,25 @@ class DaskEngine(DaskBaseEngine):
                     
             i0_states = i1_states
             
-        del model_data, farm_data, point_data, calc_pars
+        del farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
-        if not iterative or algo.final_iteration:
-            algo.reset_chunk_store()
             
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         results = compute(results)[0]
         
-        # combine results:
-        self.print("Combining results", level=2)
-        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
-        data_vars = {}
-        for v in out_vars:
-            if v in results[(0, 0)][0]:
-                data_vars[v] = [out_coords, []]
-                
-                if n_chunks_targets == 1:
-                    alls=0
-                    for chunki_states in range(n_chunks_states):
-                        r, cstore = results[(chunki_states, 0)]
-                        data_vars[v][1].append(r[v])
-                        alls += data_vars[v][1][-1].shape[0]
-                        if iterative:
-                            algo._chunk_store.update(cstore)
-                else:
-                    for chunki_states in range(n_chunks_states):
-                        tres = []
-                        for chunki_points in range(n_chunks_targets):
-                            r, cstore = results[(chunki_states, chunki_points)]
-                            tres.append(r[v])
-                            if iterative:
-                                algo._chunk_store.update(cstore)
-                        data_vars[v][1].append(np.concatenate(tres, axis=1))
-                    del tres
-                del r, cstore
-                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-            else:
-                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
-                
-            if pbar is not None:
-                pbar.update()
-        del results
-        if pbar is not None:
-            pbar.close()
-        
-        return xr.Dataset(
-            coords=coords, 
-            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        return self.combine_results(
+            algo=algo,
+            results=results,
+            model_data=model_data,
+            out_vars=out_vars,
+            out_coords=out_coords,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
+            goal_data=goal_data,
+            iterative=iterative,
         )
         
 def _run_on_cluster(
@@ -685,7 +629,7 @@ def _run_on_cluster(
     iterative,
     **cpars
     ):
-    """ Helper function running on a cluster """
+    """ Helper function for running on a cluster """
     
     mdata = MData(
         data={names[i]: data[i] for i in range(mdata_size)},
@@ -825,81 +769,48 @@ class LocalClusterEngine(DaskBaseEngine):
         all_data = []
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
-            s_states = np.s_[i0_states:i1_states]
             i0_targets = 0          
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-                s_targets = np.s_[i0_targets:i1_targets]
                 
-                # create mdata:
-                mdata = MData.from_dataset(
-                    model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
-                
-                # create fdata:
-                if point_data is None:
-                    def cb(data, dims):
-                        n_states = i1_states - i0_states
-                        for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
-                            dims[o] = (FC.STATE, FC.TURBINE)
-                else:
-                    cb = None
-                fdata = FData.from_dataset(
-                    farm_data, mdata=mdata, s_states=s_states, callback=cb,
-                    loop_dims=[FC.STATE], copy=False)
-            
-                # create tdata:
-                tdata = None
-                if point_data is not None:
-                    def cb(data, dims):
-                        n_states = i1_states - i0_states
-                        n_targets = i1_targets - i0_targets
-                        for o in set(out_vars).difference(data.keys()):
-                            data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
-                            dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
-                    tdata = TData.from_dataset(
-                        point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
-                        callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
-                del cb
-
-                # set chunk store data:
-                key = (chunki_states, chunki_points)
-                algo.reset_chunk_store()
-                if iterative and key in chunk_store:
-                    algo._chunk_store[key] = chunk_store.pop(key)
+                # get this chunk's data:
+                data = self.get_chunk_input_data(
+                    algo=algo,
+                    model_data=model_data, 
+                    farm_data=farm_data, 
+                    point_data=point_data, 
+                    chunki_states=chunki_states, 
+                    chunki_points=chunki_points,
+                    states_i0_i1=(i0_states, i1_states),
+                    targets_i0_i1=(i0_targets, i1_targets),
+                    out_vars=out_vars,
+                    iterative=iterative,
+                    chunk_store=chunk_store,
+                )
                 falgo = self._client.scatter(algo)
                     
                 # scatter data:
-                data = []
+                fut_data = []
                 names = []
                 dims = []
-                ldims = [mdata.loop_dims, fdata.loop_dims]
-                for k, d in mdata.items():
-                    data.append(self._client.scatter(d))
-                    names.append(k)
-                    dims.append(mdata.dims[k])
-                for k, d in fdata.items():
-                    data.append(self._client.scatter(d))
-                    names.append(k)
-                    dims.append(fdata.dims[k])
-                if tdata is not None:
-                    ldims.append(tdata.loop_dims)
-                    for k, d in tdata.items():
-                        data.append(self._client.scatter(d))
+                ldims = [d.loop_dims for d in data]
+                for dt in data:
+                    for k, d in dt.items():
+                        fut_data.append(self._client.scatter(d))
                         names.append(k)
-                        dims.append(tdata.dims[k])
-                all_data.append(data)
+                        dims.append(dt.dims[k])
+                all_data.append(fut_data)
                           
                 # submit model calculation:
-                jobs[key] = self._client.submit(
+                jobs[(chunki_states, chunki_points)] = self._client.submit(
                     _run_on_cluster,
                     falgo, 
                     fmodel,
-                    *data,
+                    *fut_data,
                     names=names,
                     dims=dims,
-                    mdata_size=len(mdata),
-                    fdata_size=len(fdata),
+                    mdata_size=len(data[0]),
+                    fdata_size=len(data[1]),
                     loop_dims=ldims,
                     iterative=iterative,
                     **cpars,
@@ -912,7 +823,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     
             i0_states = i1_states
             
-        del model_data, farm_data, point_data, calc_pars
+        del farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
             
@@ -923,52 +834,23 @@ class LocalClusterEngine(DaskBaseEngine):
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
-                results[key], cstore = jobs.get(key).result()
-                if iterative:
-                    algo._chunk_store.update(cstore)
+                results[key] = jobs.get(key).result()
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:
             pbar.close()
-        del all_data, cstore
-        if not iterative or algo.final_iteration:
-            algo.reset_chunk_store()
+        del all_data
             
-        # combine results:
-        self.print("Combining results", level=2)
-        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
-        data_vars = {}
-        for v in out_vars:
-            if v in results[(0, 0)]:
-                data_vars[v] = [out_coords, []]
-                
-                if n_chunks_targets == 1:
-                    alls=0
-                    for chunki_states in range(n_chunks_states):
-                        r = results[(chunki_states, 0)]
-                        data_vars[v][1].append(r[v])
-                        alls += data_vars[v][1][-1].shape[0]
-                else:
-                    for chunki_states in range(n_chunks_states):
-                        tres = []
-                        for chunki_points in range(n_chunks_targets):
-                            r = results[(chunki_states, chunki_points)]
-                            tres.append(r[v])
-                        data_vars[v][1].append(np.concatenate(tres, axis=1))
-                    del tres
-                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-            else:
-                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
-                
-            if pbar is not None:
-                pbar.update()
-        del results
-        if pbar is not None:
-            pbar.close()
-        
-        return xr.Dataset(
-            coords=coords, 
-            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        return self.combine_results(
+            algo=algo,
+            results=results,
+            model_data=model_data,
+            out_vars=out_vars,
+            out_coords=out_coords,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
+            goal_data=goal_data,
+            iterative=iterative,
         )
 
 class SlurmClusterEngine(LocalClusterEngine):

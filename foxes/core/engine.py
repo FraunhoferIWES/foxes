@@ -1,7 +1,10 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from os import cpu_count
+from tqdm import tqdm
+from xarray import Dataset
 
+from foxes.core import MData, FData, TData
 from foxes.utils import all_subclasses
 import foxes.constants as FC
 
@@ -183,7 +186,6 @@ class Engine(ABC):
             The sizes of all targets chunks, shape: (n_chunks_targets,)
             
         """
-
         # determine states chunks:    
         n_chunks_states = 1
         chunk_sizes_states = [n_states]
@@ -214,7 +216,192 @@ class Engine(ABC):
             assert np.sum(chunk_sizes_targets) == n_targets
 
         return n_procs, chunk_sizes_states, chunk_sizes_targets
+                     
+    def get_chunk_input_data(
+        self,
+        algo,
+        model_data, 
+        farm_data, 
+        point_data, 
+        chunki_states, 
+        chunki_points,
+        states_i0_i1,
+        targets_i0_i1,
+        out_vars,
+        iterative,
+        chunk_store,
+    ):
+        """
+        Extracts the data for a single chunk calculation
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm object
+        model_data: xarray.Dataset
+            The initial model data
+        farm_data: xarray.Dataset
+            The initial farm data
+        point_data: xarray.Dataset
+            The initial point data
+        chunki_states: int
+            The index of the states chunk
+        chunki_points: int
+            The index of the targets chunk
+        states_i0_i1: tuple
+            The (start, end) values of the states
+        targets_i0_i1: tuple
+            The (start, end) values of the targets     
+        out_vars: list of str
+            Names of the output variables
+        iterative: bool
+            Flag for use within the iterative algorithm
+        chunk_store: foxes.utils.Dict
+            The chunk store from the algorithm
             
+        Returns
+        -------
+        data: list of foxes.core.Data
+            Either [mdata, fdata] or [mdata, fdata, tdata]
+        
+        """
+        # prepare:
+        i0_states, i1_states = states_i0_i1
+        i0_targets, i1_targets = targets_i0_i1
+        s_states = np.s_[i0_states:i1_states]
+        s_targets = np.s_[i0_targets:i1_targets]
+        
+        # create mdata:
+        mdata = MData.from_dataset(
+            model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
+        
+        # create fdata:
+        if point_data is None:
+            def cb(data, dims):
+                n_states = i1_states - i0_states
+                for o in set(out_vars).difference(data.keys()):
+                    data[o] = np.full((n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+                    dims[o] = (FC.STATE, FC.TURBINE)
+        else:
+            cb = None
+        fdata = FData.from_dataset(
+            farm_data, mdata=mdata, s_states=s_states, callback=cb,
+            loop_dims=[FC.STATE], copy=False)
+    
+        # create tdata:
+        tdata = None
+        if point_data is not None:
+            def cb(data, dims):
+                n_states = i1_states - i0_states
+                n_targets = i1_targets - i0_targets
+                for o in set(out_vars).difference(data.keys()):
+                    data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                    dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
+            tdata = TData.from_dataset(
+                point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
+                callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
+        del cb
+
+        # set chunk store data:
+        key = (chunki_states, chunki_points)
+        algo.reset_chunk_store()
+        if iterative and key in chunk_store:
+            algo._chunk_store[key] = chunk_store.pop(key)
+            
+        return [d for d in [mdata, fdata, tdata] if d is not None]
+               
+    def combine_results(
+        self,
+        algo,
+        results,
+        model_data,
+        out_vars,
+        out_coords,
+        n_chunks_states,
+        n_chunks_targets,
+        goal_data,
+        iterative,
+    ):
+        """
+        Combines chunk results into final Dataset
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm object
+        results: dict
+            The results from the chunk calculations,
+            key: (chunki_states, chunki_targets),
+            value: dict with numpy.ndarray values
+        model_data: xarray.Dataset
+            The initial model data
+        out_vars: list of str
+            Names of the output variables
+        out_coords: list of str
+            Names of the output coordinates
+        n_chunks_states: int
+            The number of states chunks
+        n_chunks_targets: int
+            The number of targets chunks
+        goal_data: foxes.core.Data
+            Either fdata or tdata
+        iterative: bool
+            Flag for use within the iterative algorithm
+              
+        Returns
+        -------
+        ds: xarray.Dataset
+            The final results dataset
+            
+        """
+        self.print("Combining results", level=2)
+        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
+        data_vars = {}
+        for v in out_vars:
+            if v in results[(0, 0)][0]:
+                data_vars[v] = [out_coords, []]
+                
+                if n_chunks_targets == 1:
+                    alls=0
+                    for chunki_states in range(n_chunks_states):
+                        r, cstore = results[(chunki_states, 0)]
+                        data_vars[v][1].append(r[v])
+                        alls += data_vars[v][1][-1].shape[0]
+                        if iterative:
+                            algo._chunk_store.update(cstore)
+                else:
+                    for chunki_states in range(n_chunks_states):
+                        tres = []
+                        for chunki_points in range(n_chunks_targets):
+                            r, cstore = results[(chunki_states, chunki_points)]
+                            tres.append(r[v])
+                            if iterative:
+                                algo._chunk_store.update(cstore)
+                        data_vars[v][1].append(np.concatenate(tres, axis=1))
+                    del tres
+                del r, cstore
+                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+            else:
+                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+                
+            if pbar is not None:
+                pbar.update()
+        del results
+        if pbar is not None:
+            pbar.close()
+
+        if not iterative or algo.final_iteration:
+            algo.reset_chunk_store()
+            
+        coords = {}
+        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+            
+        return Dataset(
+            coords=coords, 
+            data_vars={v: tuple(d) for v, d in data_vars.items()},
+        )
+        
     @abstractmethod
     def run_calculation(
         self, 
