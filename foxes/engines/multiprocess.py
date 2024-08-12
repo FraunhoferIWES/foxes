@@ -1,9 +1,8 @@
-import numpy as np
 import xarray as xr
 from multiprocess import Pool
 from tqdm import tqdm
 
-from foxes.core import Engine, MData, FData, TData
+from foxes.core import Engine
 import foxes.constants as FC
 
 def _run_as_proc(algo, model, data, iterative, **cpars):

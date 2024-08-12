@@ -473,8 +473,8 @@ class Engine(ABC):
                 multiprocess="MultiprocessEngine",
                 local_cluster="LocalClusterEngine",
                 slurm_cluster="SlurmClusterEngine",
+                numpy="NumpyEngine",
             ).get(engine_type, engine_type)
-
 
         allc = all_subclasses(cls)
         found = engine_type in [scls.__name__ for scls in allc]
