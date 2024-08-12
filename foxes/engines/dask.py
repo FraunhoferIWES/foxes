@@ -839,7 +839,6 @@ class LocalClusterEngine(DaskBaseEngine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-        del all_data
             
         return self.combine_results(
             algo=algo,
