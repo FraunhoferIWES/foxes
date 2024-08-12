@@ -428,15 +428,10 @@ class XArrayEngine(DaskBaseEngine):
             dask="parallelized",
             dask_gufunc_kwargs=dargs,
             kwargs=wargs,
-        ).persist()
+        )
         
-        # main calculation:
-        if self._client is not None and self.progress_bar:
-            progress(results)
-        results = results.compute(num_workers=self.n_procs)
-
-        # reorganize results Dataset:
-        results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
+        results = results.assign_coords(
+            {FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
 
         # reset:
         self.chunk_size_states = chunk_size_states0

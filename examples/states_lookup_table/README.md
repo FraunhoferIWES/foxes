@@ -11,5 +11,5 @@ python3 run.py -h
 ## Run command
 Run for P_percent choice 55% by
 ```
-python3 run.py 55
+python3 run.py -P 55
 ```
