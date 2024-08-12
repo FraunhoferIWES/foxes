@@ -12,8 +12,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     ----------
     orientation: str
         The orientation, either "yx", "xz" or "yz"
-    runner: foxes.utils.runners.Runner
-        The runner
     pars: dict
         Additional parameters for plotting
 
@@ -21,7 +19,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
     """
 
-    def __init__(self, orientation, runner=None, **pars):
+    def __init__(self, orientation, **pars):
         """
         Constructor.
 
@@ -29,15 +27,12 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         ----------
         orientation: str
             The orientation, either "yx", "xz" or "yz"
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         pars: dict, optional
             Additional parameters for plotting
 
         """
         super().__init__()
         self.orientation = orientation
-        self.runner = runner
         self.pars = pars
 
         if "title" in self.pars and callable(self.pars["title"]):
@@ -74,7 +69,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         """
         super().update(algo, fres, pres)
 
-        o = FlowPlots2D(algo, fres, self.runner)
+        o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
             self.pars["title"] = self._tfun(algo.states.counter, algo.states.index()[0])

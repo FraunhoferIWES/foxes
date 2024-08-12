@@ -574,7 +574,6 @@ class Downwind(Algorithm):
             dimensions (state, point)
 
         """
-
         if not self.initialized:
             self.initialize()
         if not ambient and farm_results is None:

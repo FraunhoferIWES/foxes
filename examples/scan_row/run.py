@@ -168,9 +168,7 @@ if __name__ == "__main__":
         print("\nPOINTS:\n", points[0])
 
         time0 = time.time()
-
-        point_results = runner.run(algo.calc_points, args=(farm_results, points))
-
+        point_results = algo.calc_points(farm_results, points)
         time1 = time.time()
         print("\nCalc time =", time1 - time0, "\n")
 

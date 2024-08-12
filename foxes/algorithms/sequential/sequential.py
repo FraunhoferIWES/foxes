@@ -65,7 +65,6 @@ class Sequential(Downwind):
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.POINT: 4000},
         plugins=[],
         outputs=None,
         **kwargs,
@@ -98,7 +97,7 @@ class Sequential(Downwind):
             Additional arguments for Downwind
 
         """
-        super().__init__(farm, mdls.SeqState(states), *args, chunks=chunks, **kwargs)
+        super().__init__(farm, mdls.SeqState(states), *args, **kwargs)
         self.ambient = ambient
         self.calc_pars = calc_pars
         self.states0 = self.states.states
@@ -146,6 +145,9 @@ class Sequential(Downwind):
             if self.verbosity > 0:
                 s = "\n".join(
                     [
+                        f"  {v}: ({v},) {type(d[0]).__name__}, shape ({len(d)},)"
+                        for v, d in self._mdata["coords"].items()
+                    ] + [
                         f"  {v}: {d[0]} {d[1].dtype}, shape {d[1].shape}"
                         for v, d in self._mdata["data_vars"].items()
                     ]
@@ -156,8 +158,14 @@ class Sequential(Downwind):
                 print()
 
             self._mdata = MData(
-                data={v: d[1] for v, d in self._mdata["data_vars"].items()},
-                dims={v: d[0] for v, d in self._mdata["data_vars"].items()},
+                data={
+                    **{v: np.array(d) for v, d in self._mdata["coords"].items()},
+                    **{v: d[1] for v, d in self._mdata["data_vars"].items()}
+                },
+                dims={
+                    **{v: (v,) for v in self._mdata["coords"].keys()},
+                    **{v: d[0] for v, d in self._mdata["data_vars"].items()}
+                },
                 loop_dims=[FC.STATE],
                 name="mdata",
             )
@@ -225,6 +233,7 @@ class Sequential(Downwind):
                 loop_dims=[FC.STATE],
                 name="fdata",
             )
+            fdata.add(FC.STATE, mdata[FC.STATE], mdata.dims[FC.STATE])
 
             fres = self._mlist.calculate(self, mdata, fdata, parameters=self._calc_pars)
             fres[FV.WEIGHT] = self.weight[None, :]
@@ -415,9 +424,11 @@ class Sequential(Downwind):
             The overall farm results
 
         """
+        coords = {FC.STATE: self._inds, FC.TURBINE: np.arange(self.n_turbines)}
         results = Dataset(
-            coords={FC.STATE: self._inds, FC.TURBINE: np.arange(self.n_turbines)},
-            data_vars={v: (self._fdata.dims[v], d) for v, d in self._fdata.items()},
+            coords=coords,
+            data_vars={v: (self._fdata.dims[v], d) 
+                       for v, d in self._fdata.items() if v not in coords},
         )
 
         results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
@@ -518,15 +529,54 @@ class Sequential(Downwind):
 
         return results
 
-    def calc_farm(self, *args, **kwargs):
+    def calc_farm(self):
+        """
+        Calculate farm data.
+
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+
+        """
         if not self.iterating:
             raise ValueError(f"calc_farm call is only allowed during iterations")
-
         return self.cur_farm_results
 
-    def calc_points(self, farm_results, points):
+    def calc_points(
+        self, 
+        farm_results, 
+        points,
+        states_sel=None,
+        states_isel=None,
+    ):
+        """
+        Calculate data at a given set of points.
+
+        Parameters
+        ----------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+        points: numpy.ndarray
+            The points of interest, shape: (n_states, n_points, 3)
+        states_sel: list, optional
+            Reduce to selected states
+        states_isel: list, optional
+            Reduce to the selected states indices
+
+        Returns
+        -------
+        point_results: xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+
+        """
         if not self.iterating:
             raise ValueError(f"calc_points call is only allowed during iterations")
+        if states_sel is not None or states_isel is not None:
+            raise ValueError("calc_points does not support states_sel and states_isel")
 
         n_points = points.shape[1]
 
@@ -537,8 +587,14 @@ class Sequential(Downwind):
 
         mdata = self.get_models_idata()
         mdata = MData(
-            data={v: d[1] for v, d in mdata["data_vars"].items()},
-            dims={v: d[0] for v, d in mdata["data_vars"].items()},
+            data={
+                **{v: np.array(d) for v, d in mdata["coords"].items()},
+                **{v: d[1] for v, d in mdata["data_vars"].items()}
+            },
+            dims={
+                **{v: (v,) for v in mdata["coords"].keys()},
+                **{v: d[0] for v, d in mdata["data_vars"].items()}
+            },
             loop_dims=[FC.STATE],
             name="mdata",
         )
@@ -558,6 +614,7 @@ class Sequential(Downwind):
             loop_dims=[FC.STATE],
             name="fdata",
         )
+        fdata.add(FC.STATE, mdata[FC.STATE], mdata.dims[FC.STATE])
 
         tdata = TData.from_points(
             points[0, None],

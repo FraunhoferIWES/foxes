@@ -31,7 +31,7 @@ class SliceData(Output):
         farm_results, 
         verbosity_delta=1,
         **kwargs,
-        ):
+    ):
         """
         Constructor.
 
