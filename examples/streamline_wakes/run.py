@@ -106,7 +106,6 @@ if __name__ == "__main__":
         chunk_size_points=args.chunksize_points,
     )
 
-
     time0 = time.time()
     farm_results = algo.calc_farm()
     time1 = time.time()

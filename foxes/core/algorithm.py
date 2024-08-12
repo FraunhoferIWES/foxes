@@ -39,7 +39,7 @@ class Algorithm(Model):
         dbook=None, 
         engine=None,
         **engine_pars,
-        ):
+    ):
         """
         Constructor.
 
@@ -73,8 +73,10 @@ class Algorithm(Model):
         
         if engine is not None:
             e = Engine.new(engine_type=engine, **engine_pars)
-            self.print(f"Selecting engine '{e}'")
+            self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
             e.initialize()
+        elif len(engine_pars):
+            self.print(f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}")
         
         self._chunk_store = Dict(name="chunk_store")
 

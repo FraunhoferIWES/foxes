@@ -118,7 +118,6 @@ class MultiprocessEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
             
         # calculate chunk sizes:
@@ -147,13 +146,9 @@ class MultiprocessEngine(Engine):
                     model_data=model_data, 
                     farm_data=farm_data, 
                     point_data=point_data, 
-                    chunki_states=chunki_states, 
-                    chunki_points=chunki_points,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
-                    iterative=iterative,
-                    chunk_store=chunk_store,
                 )
 
                 # submit model calculation:
@@ -171,7 +166,7 @@ class MultiprocessEngine(Engine):
                     
             i0_states = i1_states
             
-        del calc_pars, chunk_store, farm_data, point_data
+        del calc_pars, farm_data, point_data
         if pbar is not None:
             pbar.close()
                 

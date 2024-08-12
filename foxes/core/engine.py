@@ -223,13 +223,9 @@ class Engine(ABC):
         model_data, 
         farm_data, 
         point_data, 
-        chunki_states, 
-        chunki_points,
         states_i0_i1,
         targets_i0_i1,
         out_vars,
-        iterative,
-        chunk_store,
     ):
         """
         Extracts the data for a single chunk calculation
@@ -244,20 +240,12 @@ class Engine(ABC):
             The initial farm data
         point_data: xarray.Dataset
             The initial point data
-        chunki_states: int
-            The index of the states chunk
-        chunki_points: int
-            The index of the targets chunk
         states_i0_i1: tuple
             The (start, end) values of the states
         targets_i0_i1: tuple
             The (start, end) values of the targets     
         out_vars: list of str
             Names of the output variables
-        iterative: bool
-            Flag for use within the iterative algorithm
-        chunk_store: foxes.utils.Dict
-            The chunk store from the algorithm
             
         Returns
         -------
@@ -300,13 +288,6 @@ class Engine(ABC):
             tdata = TData.from_dataset(
                 point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
                 callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
-        del cb
-
-        # set chunk store data:
-        key = (chunki_states, chunki_points)
-        algo.reset_chunk_store()
-        if iterative and key in chunk_store:
-            algo._chunk_store[key] = chunk_store.pop(key)
             
         return [d for d in [mdata, fdata, tdata] if d is not None]
                

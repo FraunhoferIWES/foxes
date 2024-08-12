@@ -108,13 +108,9 @@ class NumpyEngine(Engine):
             model_data=model_data, 
             farm_data=farm_data, 
             point_data=point_data, 
-            chunki_states=0, 
-            chunki_points=0,
             states_i0_i1=(0, n_states),
             targets_i0_i1=(0, n_targets),
             out_vars=out_vars,
-            iterative=iterative,
-            chunk_store=algo._chunk_store,
         )
         
         results = {}

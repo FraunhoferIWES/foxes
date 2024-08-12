@@ -74,7 +74,10 @@ class DaskBaseEngine(Engine):
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
         self.progress_bar = progress_bar
-        self.n_procs = n_procs if n_procs is not None else cpu_count()
+        
+        self.n_procs = n_procs
+        if n_procs is None and not len(cluster_pars):
+            self.n_procs = cpu_count()
         
         self._cluster = None
         self._client = None
@@ -98,7 +101,7 @@ class DaskBaseEngine(Engine):
 
             cargs = deepcopy(self.cluster_pars)
             nodes = cargs.pop("nodes", 1)
-            self._cluster = SLURMCluster(cores=self.n_procs, **cargs)
+            self._cluster = SLURMCluster(**cargs)
             self._cluster.scale(jobs=nodes)
             self._client = Client(self._cluster, **self.client_pars)
             self.dask_config["scheduler"] = "distributed"
@@ -450,7 +453,7 @@ def _run_lazy(
     ):
     """ Helper function for lazy running """
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
+    chunk_store = algo._chunk_store if iterative else {}
     return results, chunk_store
 
 class DaskEngine(DaskBaseEngine):
@@ -539,7 +542,6 @@ class DaskEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
@@ -570,13 +572,9 @@ class DaskEngine(DaskBaseEngine):
                     model_data=model_data, 
                     farm_data=farm_data, 
                     point_data=point_data, 
-                    chunki_states=chunki_states, 
-                    chunki_points=chunki_points,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
-                    iterative=iterative,
-                    chunk_store=chunk_store,
                 )
                     
                 # submit model calculation:
@@ -650,7 +648,7 @@ def _run_on_cluster(
     data = [d for d in [mdata, fdata, tdata] if d is not None]
 
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
+    chunk_store = algo._chunk_store if iterative else {}
     
     return results, chunk_store
 
@@ -740,7 +738,6 @@ class LocalClusterEngine(DaskBaseEngine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
-        chunk_store = algo.reset_chunk_store() if iterative else {}
         goal_data = farm_data if point_data is None else point_data
         
         # calculate chunk sizes:
@@ -774,13 +771,9 @@ class LocalClusterEngine(DaskBaseEngine):
                     model_data=model_data, 
                     farm_data=farm_data, 
                     point_data=point_data, 
-                    chunki_states=chunki_states, 
-                    chunki_points=chunki_points,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
-                    iterative=iterative,
-                    chunk_store=chunk_store,
                 )
                 falgo = self._client.scatter(algo)
                     

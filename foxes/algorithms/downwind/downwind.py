@@ -107,7 +107,7 @@ class Downwind(Algorithm):
         """
         if mbook is None:
             mbook = fm.ModelBook()
-
+            
         super().__init__(mbook, farm, **kwargs)
 
         self.states = states
