@@ -1,7 +1,7 @@
 import dask
 import numpy as np
 import xarray as xr
-from distributed import Client, LocalCluster, progress
+from distributed import Client, LocalCluster
 from dask.diagnostics import ProgressBar
 from dask_jobqueue import SLURMCluster
 from dask import delayed, compute
@@ -392,7 +392,7 @@ class XArrayEngine(DaskBaseEngine):
         
         # apply persist:
         if persist:
-            ldata = [d.persist() for d in ldata]
+            ldata = [d.persist() for d in ldata]          
 
         # setup dask options:
         dargs = dict(output_sizes={FC.VARS: len(out_vars)})
