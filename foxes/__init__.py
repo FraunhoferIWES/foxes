@@ -3,7 +3,7 @@ Farm Optimization and eXtended yield Evaluation Software
     
 """
 
-from .core import Engine, WindFarm, Turbine  # noqa: F401
+from .core import Engine, WindFarm, Turbine, get_engine, reset_engine  # noqa: F401
 from .models import ModelBook  # noqa: F401
 from .data import (
     parse_Pct_file_name,

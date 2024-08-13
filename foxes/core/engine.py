@@ -487,6 +487,8 @@ def get_engine(error=True, default=True):
     -------
     engine: foxes.core.Engine
         The foxes calculation engine
+    
+    :group: core
         
     """
     engine = __global_engine_data__["engine"]
@@ -508,3 +510,15 @@ def get_engine(error=True, default=True):
         elif error:
             raise ValueError("Engine not found.")
     return engine
+
+def reset_engine():
+    """
+    Resets the global calculation engine
+    
+    :group: core
+    
+    """
+    engine = get_engine(error=False, default=False)
+    if engine is not None:
+        engine.finalize()
+        
