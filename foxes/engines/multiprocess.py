@@ -27,7 +27,6 @@ class MultiprocessEngine(Engine):
     def __init__(
         self, 
         n_procs=None,
-        chunk_size_points=None,
         **kwargs,
     ):
         """
@@ -38,14 +37,11 @@ class MultiprocessEngine(Engine):
         n_procs: int, optional
             The number of processes to be used,
             or None for automatic
-        chunk_size_points: int, optional
-            The size of a points chunk
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        csp = chunk_size_points if chunk_size_points is not None else 30000
-        super().__init__(chunk_size_points=csp, **kwargs)
+        super().__init__(**kwargs)
         self.n_procs = n_procs
         self._Pool = None
 

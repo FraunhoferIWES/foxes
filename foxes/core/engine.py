@@ -206,7 +206,10 @@ class Engine(ABC):
         n_chunks_targets = 1
         chunk_sizes_targets = [n_targets]
         if n_targets > 1:
-            chunk_size_targets = min(n_targets, self.chunk_size_points)
+            if self.chunk_size_points is None: 
+                chunk_size_targets = n_targets
+            else: 
+                chunk_size_targets = min(n_targets, self.chunk_size_points)
             n_chunks_targets = max(int(n_targets/chunk_size_targets), 1)
             chunk_size_targets = int(n_targets/n_chunks_targets)
             chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets, dtype=np.int32)

@@ -10,7 +10,6 @@ from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
-from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -136,7 +135,7 @@ class DaskBaseEngine(Engine):
         cks[FC.STATE] = min(data.sizes[FC.STATE], self.chunk_size_states)
         if FC.TARGET in data.sizes:
             cks[FC.TARGET] = min(data.sizes[FC.TARGET], self.chunk_size_points)
-            
+        
         if len(set(cks.keys()).intersection(data.coords.keys())):
             return data.chunk({v: d for v, d in cks.items() if v in data.coords})
         else:
@@ -344,11 +343,12 @@ class XArrayEngine(DaskBaseEngine):
         # find chunk sizes, if not given:
         chunk_size_states0 = self.chunk_size_states
         chunk_size_points0 = self.chunk_size_points
-        n_procs = len(self._client.scheduler_info()['workers']) if self._cluster is not None else self.n_procs
-        if self.chunk_size_states is None: 
-            self.chunk_size_states = max(int(model_data.sizes[FC.STATE]/n_procs), 1)
-        if self.chunk_size_points is None and point_data is not None:
-            self.chunk_size_points = max(int(point_data.sizes[FC.TARGET]/n_procs), 1)
+        n_states = model_data.sizes[FC.STATE]
+        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
+        __, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        self.chunk_size_states = np.min(chunk_sizes_states)
+        self.chunk_size_points = np.min(chunk_sizes_targets)
+        self.print(f"Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}")#, level=2)
 
         # prepare:
         out_coords = model.output_coords()
@@ -463,7 +463,7 @@ class DaskEngine(DaskBaseEngine):
     :group: engines
     
     """
-    def __init__(self, *args, chunk_size_points=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Constructor.
         
@@ -471,14 +471,12 @@ class DaskEngine(DaskBaseEngine):
         ----------
         args: tuple, optional
             Additional parameters for the DaskBaseEngine class
-        chunk_size_points: int, optional
-            The size of a points chunk
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        csp = chunk_size_points if chunk_size_points is not None else 10000
-        super().__init__(*args, cluster=None, chunk_size_points=csp, **kwargs)
+        super().__init__(*args, cluster=None, cluster_pars={}, 
+                         client_pars={}, **kwargs)
         
     def run_calculation(
         self, 
@@ -659,7 +657,7 @@ class LocalClusterEngine(DaskBaseEngine):
     :group: engines
     
     """
-    def __init__(self, *args, chunk_size_points=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Constructor.
         
@@ -667,14 +665,11 @@ class LocalClusterEngine(DaskBaseEngine):
         ----------
         args: tuple, optional
             Additional parameters for the DaskBaseEngine class
-        chunk_size_points: int, optional
-            The size of a points chunk
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        csp = chunk_size_points if chunk_size_points is not None else 10000
-        super().__init__(*args, cluster="local", chunk_size_points=csp, **kwargs)
+        super().__init__(*args, cluster="local", **kwargs)
         
     def run_calculation(
         self, 
