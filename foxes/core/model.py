@@ -1,10 +1,8 @@
 import numpy as np
 from abc import ABC
 from itertools import count
-from copy import deepcopy
 
 import foxes.constants as FC
-from .data import Data
 
 
 class Model(ABC):
@@ -36,6 +34,7 @@ class Model(ABC):
             self.name += f"_instance{self._id}"
 
         self.__initialized = False
+        self.__running = False
 
     def __repr__(self):
         return f"{type(self).__name__}()"
@@ -94,7 +93,7 @@ class Model(ABC):
 
         """
         return []
-
+    
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
@@ -118,6 +117,8 @@ class Model(ABC):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+        if self.initialized:
+            raise ValueError(f"Model '{self.name}': Cannot call load_data after initialization")
         return {"coords": {}, "data_vars": {}}
 
     def initialize(self, algo, verbosity=0, force=False):
@@ -134,6 +135,8 @@ class Model(ABC):
             Overwrite existing data
 
         """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot initialize while running")
         if not self.initialized:
             pr = False
             for m in self.sub_models():
@@ -151,6 +154,68 @@ class Model(ABC):
 
             self.__initialized = True
 
+    @property
+    def running(self):
+        """
+        Flag for currently running models
+        
+        Returns
+        -------
+        flag: bool
+            True if currently running
+        
+        """
+        return self.__running
+    
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot call set_running while running")
+        for m in self.sub_models():
+            if not m.running:
+                m.set_running(large_model_data, verbosity=verbosity)
+                
+        if verbosity > 0:
+            print(f"Model '{self.name}': running")
+        self.__running = True
+        
+        return large_model_data
+
+    def unset_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if not self.running:
+            raise ValueError(f"Model '{self.name}': Cannot call unset_running when not running")
+        for m in self.sub_models():
+            if m.running:
+                m.unset_running(large_model_data, verbosity=verbosity)
+                
+        if verbosity > 0:
+            print(f"Model '{self.name}': not running")
+        self.__running = False
+        
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
@@ -163,6 +228,8 @@ class Model(ABC):
             The verbosity level, 0 = silent
 
         """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot finalize while running")
         if self.initialized:
             pr = False
             for m in self.sub_models():

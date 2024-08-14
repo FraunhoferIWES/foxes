@@ -41,6 +41,8 @@ class NumpyEngine(Engine):
         farm_data=None, 
         point_data=None, 
         out_vars=[],
+        chunk_store={},
+        large_model_data={},
         sel=None,
         isel=None,
         iterative=False,
@@ -64,6 +66,11 @@ class NumpyEngine(Engine):
             The initial point data
         out_vars: list of str, optional
             Names of the output variables
+        chunk_store: foxes.utils.Dict
+            The chunk store
+        large_model_data: dict
+            Large data storage. Key: model name. 
+            Value: dict, large model data
         sel: dict, optional
             Selection of coordinate subsets
         isel: dict, optional
@@ -84,8 +91,7 @@ class NumpyEngine(Engine):
             model_data, farm_data, point_data, sel=sel, isel=isel)
         
         # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data,
-                                point_data, **calc_pars)
+        super().run_calculation(algo, model, model_data, farm_data, point_data)
         
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
@@ -97,6 +103,7 @@ class NumpyEngine(Engine):
         if farm_data is None:
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
+        algo.reset_chunk_store(chunk_store)
             
         # calculate:
         
@@ -116,7 +123,7 @@ class NumpyEngine(Engine):
         results = {}
         results[(0, 0)] = (
             model.calculate(algo, *data, **calc_pars),
-            algo._chunk_store
+            algo.chunk_store
         )
 
         return self.combine_results(

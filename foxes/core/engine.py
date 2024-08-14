@@ -352,7 +352,7 @@ class Engine(ABC):
                         data_vars[v][1].append(r[v])
                         alls += data_vars[v][1][-1].shape[0]
                         if iterative:
-                            algo._chunk_store.update(cstore)
+                            algo.chunk_store.update(cstore)
                 else:
                     for chunki_states in range(n_chunks_states):
                         tres = []
@@ -360,7 +360,7 @@ class Engine(ABC):
                             r, cstore = results[(chunki_states, chunki_points)]
                             tres.append(r[v])
                             if iterative:
-                                algo._chunk_store.update(cstore)
+                                algo.chunk_store.update(cstore)
                         data_vars[v][1].append(np.concatenate(tres, axis=1))
                     del tres
                 del r, cstore
@@ -387,16 +387,7 @@ class Engine(ABC):
         )
         
     @abstractmethod
-    def run_calculation(
-        self, 
-        algo,
-        model, 
-        model_data=None, 
-        farm_data=None, 
-        point_data=None, 
-        out_vars=[],
-        **calc_pars,
-    ):
+    def run_calculation(self, algo, model, model_data, farm_data, point_data=None):
         """
         Runs the model calculation
         
@@ -413,11 +404,7 @@ class Engine(ABC):
             The initial farm data
         point_data: xarray.Dataset
             The initial point data
-        out_vars: list of str, optional
-            Names of the output variables
-        calc_pars: dict, optional
-            Additional parameters for the model.calculate()
-        
+            
         Returns
         -------
         results: xarray.Dataset
@@ -431,7 +418,9 @@ class Engine(ABC):
             self.print(f"Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states")
         if not self.initialized:
             raise ValueError(f"Engine '{type(self).__name__}' not initialized")
-
+        if not model.initialized:
+            raise ValueError(f"Model '{model.name}' not initialized")
+        
     @classmethod
     def new(cls, engine_type, *args, **kwargs):
         """

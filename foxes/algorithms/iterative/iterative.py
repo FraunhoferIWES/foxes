@@ -225,9 +225,9 @@ class Iterative(Downwind):
         if self._it == 0:
             super()._calc_farm_vars(mlist)
 
-    def _run_farm_calc(self, mlist, *data, **kwargs):
+    def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
-        return super()._run_farm_calc(
+        return super()._launch_parallel_farm_calc(
             mlist, *data, farm_data=self.prev_farm_results, iterative=True, **kwargs)
 
     @property
@@ -297,7 +297,7 @@ class Iterative(Downwind):
             self.print("\n")
             self.finalize()
             for m in self._mlist0.models:
-                if m not in self.all_models():
+                if m not in self.sub_models():
                     m.finalize(self, self.verbosity)
             del self._mlist0, self._calc_pars0
 

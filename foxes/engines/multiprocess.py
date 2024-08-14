@@ -5,8 +5,9 @@ from tqdm import tqdm
 from foxes.core import Engine
 import foxes.constants as FC
 
-def _run_as_proc(algo, model, data, iterative, **cpars):
+def _run_as_proc(algo, model, data, iterative, chunk_store, **cpars):
     """ Helper function for running in multiprocessing process """
+    algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
     return results, chunk_store
@@ -60,6 +61,8 @@ class MultiprocessEngine(Engine):
         farm_data=None, 
         point_data=None, 
         out_vars=[],
+        chunk_store={},
+        large_model_data={},
         sel=None,
         isel=None,
         iterative=False,
@@ -83,6 +86,11 @@ class MultiprocessEngine(Engine):
             The initial point data
         out_vars: list of str, optional
             Names of the output variables
+        chunk_store: foxes.utils.Dict
+            The chunk store
+        large_model_data: dict
+            Large data storage. Key: model name. 
+            Value: dict, large model data
         sel: dict, optional
             Selection of coordinate subsets
         isel: dict, optional
@@ -103,8 +111,7 @@ class MultiprocessEngine(Engine):
             model_data, farm_data, point_data, sel=sel, isel=isel)
         
         # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data,
-                                point_data, **calc_pars)
+        super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
@@ -115,6 +122,9 @@ class MultiprocessEngine(Engine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
+        
+        # set model to running:
+        model.set_running(large_model_data, self.verbosity-2)
             
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -146,20 +156,23 @@ class MultiprocessEngine(Engine):
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
                 )
+                
+                # extract chunk store:
+                cstore = {k: d for k, d in chunk_store.items() if k[1] == chunki_points}
 
                 # submit model calculation:
                 jobs[(chunki_states, chunki_points)] = self._pool.apply_async(
                     _run_as_proc, 
-                    args=(algo, model, data, iterative), 
+                    args=(algo, model, data, iterative, cstore), 
                     kwds=calc_pars,
                 )
-                del data
+                del data, cstore
                     
                 i0_targets = i1_targets
                 
                 if pbar is not None:
                     pbar.update()
-                    
+                 
             i0_states = i1_states
             
         del calc_pars, farm_data, point_data
@@ -179,7 +192,10 @@ class MultiprocessEngine(Engine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-            
+
+        # reset model to not running:
+        model.unset_running(large_model_data, self.verbosity-2)
+        
         return self.combine_results(
             algo=algo,
             results=results,
