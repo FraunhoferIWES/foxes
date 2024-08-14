@@ -293,9 +293,8 @@ class Downwind(Algorithm):
         """
         Initializes the algorithm.
         """
-        
         self.init_states()
-        
+
         self.print(f"\nInitializing algorithm '{self.name}'")
         super().initialize()
 
