@@ -598,12 +598,14 @@ class DaskEngine(DaskBaseEngine):
                 )
 
                 # extract chunk store:
-                cstore = {k: d for k, d in chunk_store.items() 
+                cstore = {k: deepcopy(d) for k, d in chunk_store.items() 
                           if k[1] == chunki_points}
                 
                 # submit model calculation:
                 results[(chunki_states, chunki_points)] = _run_lazy(
-                    algo, model, iterative, cstore, *data, **calc_pars)
+                    deepcopy(algo), deepcopy(model), iterative, 
+                    cstore, *data, **calc_pars
+                )
                 del data, cstore
                     
                 i0_targets = i1_targets

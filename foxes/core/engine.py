@@ -264,7 +264,7 @@ class Engine(ABC):
         
         # create mdata:
         mdata = MData.from_dataset(
-            model_data, s_states=s_states, loop_dims=[FC.STATE], copy=False)
+            model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
         
         # create fdata:
         if point_data is None:
@@ -277,7 +277,7 @@ class Engine(ABC):
             cb = None
         fdata = FData.from_dataset(
             farm_data, mdata=mdata, s_states=s_states, callback=cb,
-            loop_dims=[FC.STATE], copy=False)
+            loop_dims=[FC.STATE], copy=True)
     
         # create tdata:
         tdata = None
@@ -290,7 +290,7 @@ class Engine(ABC):
                     dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
             tdata = TData.from_dataset(
                 point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
-                callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=False)
+                callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=True)
             
         return [d for d in [mdata, fdata, tdata] if d is not None]
                
