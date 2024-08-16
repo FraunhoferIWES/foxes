@@ -85,8 +85,6 @@ class Algorithm(Model):
             The wind farm
         
         """
-        if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot access farm while running")
         return self.__farm    
     
     @property
@@ -472,12 +470,11 @@ class Algorithm(Model):
         super().set_running(large_data, verbosity)
 
         large_data[self.name].update(dict(
-            farm=self.__farm,
             mbook=self.__mbook,
             dbook=self.__dbook,
             idata_mem=self.__idata_mem,
         ))
-        del self.__farm, self.__mbook, self.__dbook, self.__idata_mem
+        del self.__mbook, self.__dbook, self.__idata_mem
 
     def unset_running(self, large_data, verbosity=0):
         """
@@ -495,7 +492,6 @@ class Algorithm(Model):
         super().unset_running(large_data, verbosity)
         
         data = large_data.get(self.name)
-        self.__farm = data["farm"]
         self.__mbook = data["mbook"]
         self.__dbook = data["dbook"]
         self.__idata_mem = data["idata_mem"]

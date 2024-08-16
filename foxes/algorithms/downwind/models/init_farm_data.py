@@ -47,25 +47,6 @@ class InitFarmData(FarmDataModel):
             FV.ORDER_INV,
         ]
 
-    def initialize(self, algo, verbosity=0, force=False):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-        force: bool
-            Overwrite existing data
-
-        """
-        super().initialize(algo, verbosity, force)
-        
-        self._xydh = [(t.xy, t.D, t.H) for t in algo.farm.turbines]
-        self._chd = [(t.H, t.D) for t in  algo.farm_controller.turbine_types]
-        
     def calculate(self, algo, mdata, fdata):
         """ "
         The main model calculation.
@@ -102,20 +83,24 @@ class InitFarmData(FarmDataModel):
 
         # set X, Y, H, D:
         fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
-        for ti in range(algo.n_turbines):
-            
-            xy, D, H = self._xydh[ti]
-            cD, cH = self._chd[ti]
+        for ti, t in enumerate(algo.farm.turbines):
 
-            if len(xy.shape) == 1:
-                fdata[FV.TXYH][:, ti, :2] = xy[None, :]
+            if len(t.xy.shape) == 1:
+                fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:
                 i0 = fdata.states_i0()
                 s = np.s_[i0 : i0 + fdata.n_states]
-                fdata[FV.TXYH][:, ti, :2] = xy[s]
+                fdata[FV.TXYH][:, ti, :2] = t.xy[s]
 
-            fdata[FV.TXYH][:, ti, 2] = H if H is not None else cH
-            fdata[FV.D][:, ti] = D if D is not None else cD
+            H = t.H
+            if H is None:
+                H = algo.farm_controller.turbine_types[ti].H
+            fdata[FV.TXYH][:, ti, 2] = H
+
+            D = t.D
+            if D is None:
+                D = algo.farm_controller.turbine_types[ti].D
+            fdata[FV.D][:, ti] = D
 
         # calc WD and YAW at rotor centres:
         tdata = TData.from_points(points=fdata[FV.TXYH])
