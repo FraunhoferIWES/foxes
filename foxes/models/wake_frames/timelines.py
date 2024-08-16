@@ -25,7 +25,6 @@ class Timelines(WakeFrame):
     :group: models.wake_frames
 
     """
-
     def __init__(self, max_wake_length=2e4, cl_ipars={}, dt_min=None):
         """
         Constructor.
@@ -210,7 +209,7 @@ class Timelines(WakeFrame):
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
 
-        i0 = mdata.states_i0(counter=True, algo=algo)
+        i0 = mdata.states_i0(counter=True)
         i1 = i0 + mdata.n_states
         dxy = self._dxy[:i1]
 

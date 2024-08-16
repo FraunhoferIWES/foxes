@@ -310,7 +310,7 @@ class Model(ABC):
             for s in sources:
                 try:
                     if a == "states_i0":
-                        out = s.states_i0(counter=True, algo=algo)
+                        out = s.states_i0(counter=True)
                         if out is not None:
                             return out
                     else:

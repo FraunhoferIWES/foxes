@@ -88,7 +88,7 @@ class InitFarmData(FarmDataModel):
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:
-                i0 = fdata.states_i0()
+                i0 = fdata.states_i0(counter=True)
                 s = np.s_[i0 : i0 + fdata.n_states]
                 fdata[FV.TXYH][:, ti, :2] = t.xy[s]
 

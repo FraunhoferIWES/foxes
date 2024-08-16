@@ -222,6 +222,7 @@ class Sequential(Downwind):
                 dims={v: d for v, d in self._mdata.dims.items()},
                 loop_dims=[FC.STATE],
                 name="mdata",
+                states_i0=0,
             )
 
             fdata = FData(
@@ -232,6 +233,7 @@ class Sequential(Downwind):
                 dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
                 loop_dims=[FC.STATE],
                 name="fdata",
+                states_i0=0,
             )
             fdata.add(FC.STATE, mdata[FC.STATE], mdata.dims[FC.STATE])
 
@@ -265,6 +267,7 @@ class Sequential(Downwind):
                         for v in self._pvars
                     },
                     dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
+                    states_i0=0,
                 )
 
                 pres = self._plist.calculate(
@@ -597,6 +600,7 @@ class Sequential(Downwind):
             },
             loop_dims=[FC.STATE],
             name="mdata",
+            states_i0=0,
         )
         mdata = MData(
             data={
@@ -606,6 +610,7 @@ class Sequential(Downwind):
             dims={v: d for v, d in mdata.dims.items()},
             loop_dims=[FC.STATE],
             name="mdata",
+            states_i0=0,
         )
 
         fdata = FData(
@@ -613,6 +618,7 @@ class Sequential(Downwind):
             dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
             loop_dims=[FC.STATE],
             name="fdata",
+            states_i0=0,
         )
         fdata.add(FC.STATE, mdata[FC.STATE], mdata.dims[FC.STATE])
 
@@ -621,6 +627,7 @@ class Sequential(Downwind):
             data={v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in pvars},
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in pvars},
             name="tdata",
+            states_i0=0,
         )
 
         pres = plist.calculate(self, mdata, fdata, tdata, parameters=calc_pars)
