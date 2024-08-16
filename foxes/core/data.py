@@ -24,8 +24,14 @@ class Data(Dict):
     :group: core
 
     """
-
-    def __init__(self, data, dims, loop_dims, name="data"):
+    def __init__(
+        self, 
+        data, 
+        dims, 
+        loop_dims, 
+        states_i0=None, 
+        name="data",
+    ):
         """
         Constructor.
 
@@ -39,6 +45,8 @@ class Data(Dict):
         loop_dims: array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
+        states_i0: int, optional
+            The index of the first state
         name: str
             The data container name
 
@@ -48,6 +56,8 @@ class Data(Dict):
         self.update(data)
         self.dims = dims
         self.loop_dims = loop_dims
+        
+        self.__states_i0 = states_i0
 
         self.sizes = {}
         for v, d in data.items():
@@ -81,7 +91,7 @@ class Data(Dict):
         """
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
 
-    def states_i0(self, counter=False, algo=None):
+    def states_i0(self, counter=False):
         """
         Get the state counter for first state in chunk
 
@@ -89,8 +99,6 @@ class Data(Dict):
         ----------
         counter: bool
             Return the state counter instead of the index
-        algo: foxes.core.Algorithm, optional
-            The algorithm, required for state counter
 
         Returns
         -------
@@ -102,9 +110,9 @@ class Data(Dict):
         if FC.STATE not in self:
             return None
         elif counter:
-            if algo is None:
-                raise KeyError(f"{self.name}: Missing algo for deducing state counter")
-            return np.argwhere(algo.states.index() == self[FC.STATE][0])[0][0]
+            if self.__states_i0 is None:
+                raise KeyError(f"Data '{self.name}': states_i0 requested but not set")
+            return self.__states_i0
         else:
             return self[FC.STATE][0]
 

@@ -19,14 +19,8 @@ class Algorithm(Model):
 
     Attributes
     ----------
-    mbook: foxes.models.ModelBook
-        The model book
-    farm: foxes.WindFarm
-        The wind farm
     verbosity: int
         The verbosity level, 0 means silent
-    dbook: foxes.DataBook
-        The data book, or None for default
 
     :group: core
 
@@ -63,12 +57,11 @@ class Algorithm(Model):
         super().__init__()
 
         self.name = type(self).__name__
-        
-        self.farm = farm
         self.verbosity = verbosity
         self.n_states = None
         self.n_turbines = farm.n_turbines
         
+        self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
         self.__idata_mem = Dict(name="idata_mem")
@@ -80,6 +73,21 @@ class Algorithm(Model):
             e.initialize()
         elif len(engine_pars):
             self.print(f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}")
+    
+    @property
+    def farm(self):
+        """
+        The wind farm
+        
+        Returns
+        -------
+        mb: foxes.core.WindFarm
+            The wind farm
+        
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot access farm while running")
+        return self.__farm    
     
     @property
     def mbook(self):
@@ -392,7 +400,7 @@ class Algorithm(Model):
             Flag for copying incoming data
             
         """
-        i0 = int(mdata.states_i0(counter=True, algo=self))
+        i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
         key = (i0, t0)
         if key not in self.chunk_store:
@@ -418,7 +426,7 @@ class Algorithm(Model):
             The data
         
         """
-        i0 = int(mdata.states_i0(counter=True, algo=self))
+        i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
         return self.chunk_store[(i0, t0)][name]
     
@@ -460,15 +468,17 @@ class Algorithm(Model):
         verbosity: int
             The verbosity level, 0 = silent
             
-        """
+        """        
         super().set_running(large_data, verbosity)
 
-        large_data[self.name] = dict(
+        large_data[self.name].update(dict(
+            farm=self.__farm,
             mbook=self.__mbook,
             dbook=self.__dbook,
             idata_mem=self.__idata_mem,
-        )
-        del self.__mbook, self.__dbook, self.__idata_mem
+            chunk_store=self.reset_chunk_store(),
+        ))
+        del self.__farm, self.__mbook, self.__dbook, self.__idata_mem
 
     def unset_running(self, large_data, verbosity=0):
         """
@@ -486,6 +496,7 @@ class Algorithm(Model):
         super().unset_running(large_data, verbosity)
         
         data = large_data.get(self.name)
+        self.__farm = data["farm"]
         self.__mbook = data["mbook"]
         self.__dbook = data["dbook"]
         self.__idata_mem = data["idata_mem"]
@@ -554,10 +565,9 @@ class Algorithm(Model):
         self.set_running(large_model_data, self.verbosity-2)
         
         # run parallel calculation:
-        chunk_store = self.reset_chunk_store()
         farm_results = self._launch_parallel_farm_calc(
             *args, 
-            chunk_store=chunk_store, 
+            chunk_store=large_model_data[self.name].pop("chunk_store"), 
             large_model_data=large_model_data,
             **kwargs,
         )

@@ -189,6 +189,7 @@ class Model(ABC):
                 
         if verbosity > 0:
             print(f"Model '{self.name}': running")
+        large_model_data[self.name] = {}
         self.__running = True
         
         return large_model_data

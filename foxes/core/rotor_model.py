@@ -40,7 +40,7 @@ class RotorModel(FarmDataModel):
         """
         super().__init__()
         self.calc_vars = calc_vars
-
+            
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

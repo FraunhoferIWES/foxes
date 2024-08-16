@@ -1,5 +1,6 @@
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
+from foxes.utils import Dict
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
@@ -110,17 +111,16 @@ class Downwind(Algorithm):
             
         super().__init__(mbook, farm, **kwargs)
 
-        self.states = states
+        self.__states = states
         self.n_states = None
-        self.states_data = None
 
-        self.rotor_model = self.mbook.rotor_models[rotor_model]
+        self.__rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
 
-        self.wake_frame = self.mbook.wake_frames[wake_frame]
+        self.__wake_frame = self.mbook.wake_frames[wake_frame]
         self.wake_frame.name = wake_frame
 
-        self.wake_models = {}
+        self.__wake_models = {}
         for w in wake_models:
             m = self.mbook.wake_models[w]
             m.name = w
@@ -159,7 +159,7 @@ class Downwind(Algorithm):
                     target[w] = mbooks[pw]
                     target[w].name = pw
 
-        self.partial_wakes = {}
+        self.__partial_wakes = {}
         _set_wspecific(
             descr="partial wakes",
             target=self.partial_wakes,
@@ -169,7 +169,7 @@ class Downwind(Algorithm):
             checkw=True,
         )
 
-        self.ground_models = {}
+        self.__ground_models = {}
         _set_wspecific(
             descr="ground models",
             target=self.ground_models,
@@ -179,9 +179,103 @@ class Downwind(Algorithm):
             checkw=False,
         )
 
-        self.farm_controller = self.mbook.farm_controllers[farm_controller]
+        self.__farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
+    @property
+    def states(self):
+        """
+        The states
+        
+        Returns
+        -------
+        m: foxes.core.States
+            The states
+        
+        """
+        return self.__states
+
+    @property
+    def rotor_model(self):
+        """
+        The rotor model
+        
+        Returns
+        -------
+        m: foxes.core.RotorModel
+            The rotor model
+        
+        """
+        return self.__rotor_model
+
+    @property
+    def wake_models(self):
+        """
+        The wake models
+        
+        Returns
+        -------
+        m: dict
+            The wake models. Key: name,
+            value: foxes.core.WakeModel
+        
+        """
+        return self.__wake_models
+
+    @property
+    def wake_frame(self):
+        """
+        The wake frame
+        
+        Returns
+        -------
+        m: foxes.core.WakeFrame
+            The wake frame
+        
+        """
+        return self.__wake_frame
+
+    @property
+    def partial_wakes(self):
+        """
+        The partial wakes models
+        
+        Returns
+        -------
+        m: dict
+            The partial wakes models. Key: name,
+            value: foxes.core.PartialWakesModel
+        
+        """
+        return self.__partial_wakes
+
+    @property
+    def ground_models(self):
+        """
+        The ground models
+        
+        Returns
+        -------
+        m: dict
+            The ground models, key: name,
+            value: foxes.core.GroundModel
+        
+        """
+        return self.__ground_models
+    
+    @property
+    def farm_controller(self):
+        """
+        The farm controller
+        
+        Returns
+        -------
+        m: foxes.core.FarmController
+            The farm controller
+        
+        """
+        return self.__farm_controller
+    
     @classmethod
     def get_model(cls, name):
         """
@@ -279,16 +373,42 @@ class Downwind(Algorithm):
 
         """
         mdls = [
-            self.states,
-            self.rotor_model,
-            self.farm_controller,
+            self.states, 
+            self.rotor_model, 
             self.wake_frame,
+            self.farm_controller,
         ]
         mdls += list(self.wake_models.values())
         mdls += list(self.partial_wakes.values())
-
+        mdls += list(self.ground_models.values())
+                
         return mdls
     
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        import objsize
+        print("DWND SET_RUNNING A", self.name, objsize.get_deep_size(self))
+        for k, o in self.__dict__.items():
+            print("   ",k,objsize.get_deep_size(o))
+        
+        super().set_running(large_model_data, verbosity)
+        
+        print("DWND SET_RUNNING B", self.name, objsize.get_deep_size(self))
+        for k, o in self.__dict__.items():
+            print("   ",k,objsize.get_deep_size(o))
+        
     def initialize(self):
         """
         Initializes the algorithm.
@@ -385,11 +505,6 @@ class Downwind(Algorithm):
         out_vars = self.farm_vars if outputs is None else outputs
         farm_results = get_engine().run_calculation(
             self, mlist, *data, out_vars=out_vars, **kwargs)
-        
-        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
-            if v in farm_results:
-                farm_results[v] = farm_results[v].astype(FC.ITYPE)
 
         return farm_results
 
@@ -466,6 +581,10 @@ class Downwind(Algorithm):
             outputs=outputs,
             **kwargs,
         )
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+            if v in farm_results:
+                farm_results[v] = farm_results[v].astype(FC.ITYPE)
         del model_data
 
         # finalize models:

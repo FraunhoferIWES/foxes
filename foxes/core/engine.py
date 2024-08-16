@@ -98,6 +98,10 @@ class Engine(ABC):
         if self.initialized:
             self.finalize()
     
+    def __del__(self):
+        if self.initialized:
+            self.finalize()
+            
     def print(self, *args, level=1, **kwargs):
         """ Prints based on verbosity """
         if self.verbosity >= level:
@@ -264,8 +268,9 @@ class Engine(ABC):
         
         # create mdata:
         mdata = MData.from_dataset(
-            model_data, s_states=s_states, loop_dims=[FC.STATE], copy=True)
-        
+            model_data, s_states=s_states, loop_dims=[FC.STATE], 
+            states_i0=i0_states, copy=True)
+
         # create fdata:
         if point_data is None:
             def cb(data, dims):
@@ -277,7 +282,7 @@ class Engine(ABC):
             cb = None
         fdata = FData.from_dataset(
             farm_data, mdata=mdata, s_states=s_states, callback=cb,
-            loop_dims=[FC.STATE], copy=True)
+            loop_dims=[FC.STATE], states_i0=i0_states, copy=True)
     
         # create tdata:
         tdata = None
@@ -290,7 +295,8 @@ class Engine(ABC):
                     dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
             tdata = TData.from_dataset(
                 point_data, mdata=mdata, s_states=s_states, s_targets=s_targets,
-                callback=cb, loop_dims=[FC.STATE, FC.TARGET], copy=True)
+                callback=cb, loop_dims=[FC.STATE, FC.TARGET], 
+                states_i0=i0_states, copy=True)
             
         return [d for d in [mdata, fdata, tdata] if d is not None]
                

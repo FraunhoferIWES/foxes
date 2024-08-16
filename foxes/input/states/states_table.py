@@ -81,7 +81,6 @@ class StatesTable(States):
         """
         super().__init__()
 
-        self.data_source = data_source
         self.ovars = output_vars
         self.rpars = pd_read_pars
         self.var2col = var2col
@@ -95,11 +94,28 @@ class StatesTable(States):
                 f"States '{self.name}': Cannot handle both 'states_sel' and 'states_loc', please pick one"
             )
 
-        self._weights = None
         self._N = None
         self._tvars = None
         self._profiles = None
+        
+        self.__data_source = data_source
+        self.__weights = None
 
+    @property
+    def data_source(self):
+        """
+        The data source
+        
+        Returns
+        -------
+        s: object
+            The data source
+            
+        """
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
+        return self.__data_source
+        
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
         Reset the states, optionally select states
@@ -164,7 +180,6 @@ class StatesTable(States):
             Names of all sub models
 
         """
-
         return list(self._profiles.values())
 
     def load_data(self, algo, verbosity=0):
@@ -218,21 +233,21 @@ class StatesTable(States):
         elif self.states_loc is not None:
             data = data.loc[self.states_loc]
         self._N = len(data.index)
-        self._inds = data.index.to_numpy()
+        self.__inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        self.__weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
         if col_w in data:
-            self._weights[:] = data[col_w].to_numpy()[:, None]
+            self.__weights[:] = data[col_w].to_numpy()[:, None]
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
         else:
-            self._weights[:] = 1.0 / self._N
+            self.__weights[:] = 1.0 / self._N
             if isorg:
                 data = data.copy()
-            data[col_w] = self._weights[:, 0]
+            data[col_w] = self.__weights[:, 0]
 
         tcols = []
         for v in self._tvars:
@@ -273,7 +288,9 @@ class StatesTable(States):
             The index labels of states, or None for default integers
 
         """
-        return self._inds
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces index while running")
+        return self.__inds
 
     def output_point_vars(self, algo):
         """
@@ -307,8 +324,53 @@ class StatesTable(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return self._weights
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces weights while running")
+        return self.__weights
 
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        super().set_running(large_model_data, verbosity)
+        
+        large_model_data[self.name] = dict(
+            data_source=self.__data_source,
+            weights=self.__weights,
+            inds=self.__inds,
+        )
+        del self.__weights, self.__data_source, self.__inds
+
+    def unset_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(large_model_data, verbosity)
+        
+        data = large_model_data[self.name]
+        self.__weights = data.pop("weights")
+        self.__data_source = data.pop("data_source")
+        self.__inds = data.pop("inds")
+        
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
@@ -368,7 +430,7 @@ class StatesTable(States):
             The verbosity level
 
         """
-        self._weights = None
+        self.__weights = None
         self._N = None
         self._tvars = None
 

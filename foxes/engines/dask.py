@@ -158,6 +158,7 @@ class DaskBaseEngine(Engine):
         super().finalize()
         
 def _run_as_ufunc(
+    state_inds,
     *ldata,
     algo,
     dvars,
@@ -192,11 +193,11 @@ def _run_as_ufunc(
         hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
 
         if i == 0:
-            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
         elif i == 1:
-            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
         elif i == 2:
-            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims))
+            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
         else:
             raise NotImplementedError(
                 f"Not more than 3 data sets implemented, found {len(dvars)}"
@@ -227,14 +228,14 @@ def _run_as_ufunc(
     }
 
     if len(data) == 1:
-        data.append(FData(odata, odims, loop_dims))
+        data.append(FData(odata, odims, loop_dims, states_i0=state_inds[0]))
     else:
         odata.update(data[-1])
         odims.update(data[-1].dims)
         if len(data) == 2:
-            data[-1] = FData(odata, odims, loop_dims)
+            data[-1] = FData(odata, odims, loop_dims, states_i0=state_inds[0])
         else:
-            data[-1] = TData(odata, odims, loop_dims)
+            data[-1] = TData(odata, odims, loop_dims, states_i0=state_inds[0])
     del odims, odata
 
     # link chunk state indices from mdata to fdata and tdata:
@@ -410,6 +411,15 @@ class XArrayEngine(DaskBaseEngine):
         if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
             dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
             
+        # find states_i0:
+        state_inds = self.chunk_data(
+            xr.DataArray(
+                np.arange(ldata[0].sizes[FC.STATE]), 
+                dims=FC.STATE, 
+                coords={FC.STATE: ldata[0][FC.STATE].to_numpy()}
+                )
+        )
+            
         # setup arguments for wrapper function:
         out_coords = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
@@ -434,8 +444,9 @@ class XArrayEngine(DaskBaseEngine):
         icdims = [[c for c in d if c not in loopd] for d in ldims]
         results = xr.apply_ufunc(
             _run_as_ufunc,
+            state_inds,
             *ldata,
-            input_core_dims=iidims + icdims,
+            input_core_dims=[[]] + iidims + icdims,
             output_core_dims=[out_core_vars],
             output_dtypes=[FC.DTYPE],
             dask="parallelized",
@@ -650,7 +661,8 @@ def _run_on_cluster(
     loop_dims,
     iterative,
     chunk_store,
-    **cpars
+    i0_states,
+    cpars,
     ):
     """ Helper function for running on a cluster """
     
@@ -660,6 +672,7 @@ def _run_on_cluster(
         data={names[i]: data[i] for i in range(mdata_size)},
         dims={names[i]: dims[i] for i in range(mdata_size)},
         loop_dims=loop_dims[0],
+        states_i0=i0_states,
     )
     
     fdata_end = mdata_size + fdata_size
@@ -667,6 +680,7 @@ def _run_on_cluster(
         data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
         dims={names[i]: dims[i] for i in range(mdata_size, fdata_end)},
         loop_dims=loop_dims[1],
+        states_i0=i0_states,
     )
 
     tdata = None
@@ -675,6 +689,7 @@ def _run_on_cluster(
             data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
             dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
             loop_dims=loop_dims[2],
+            states_i0=i0_states,
         )
 
     data = [d for d in [mdata, fdata, tdata] if d is not None]
@@ -846,14 +861,15 @@ class LocalClusterEngine(DaskBaseEngine):
                     falgo, 
                     fmodel,
                     *fut_data,
-                    names=names,
-                    dims=dims,
+                    names=self._client.scatter(names),
+                    dims=self._client.scatter(dims),
                     mdata_size=len(data[0]),
                     fdata_size=len(data[1]),
-                    loop_dims=ldims,
+                    loop_dims=self._client.scatter(ldims),
                     iterative=iterative,
                     chunk_store=cstore,
-                    **cpars,
+                    i0_states=i0_states,
+                    cpars=self._client.scatter(cpars),
                 )
                 del falgo, fmodel, fut_data, cstore
                     
