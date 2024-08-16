@@ -362,9 +362,6 @@ class XArrayEngine(DaskBaseEngine):
         out_coords = model.output_coords()
         loop_dims = [d for d in self.loop_dims if d in out_coords]
         loopd = set(loop_dims)
-
-        # set model to running:
-        model.set_running(large_model_data, self.verbosity-2)
         
         # extract loop-var dependent and independent data:
         ldata = []
@@ -460,7 +457,6 @@ class XArrayEngine(DaskBaseEngine):
         # reset:
         self.chunk_size_states = chunk_size_states0
         self.chunk_size_points = chunk_size_points0
-        model.unset_running(large_model_data, self.verbosity-2)
         
         # update data by calculation results:
         return results.compute(num_workers=self.n_procs)
@@ -571,9 +567,6 @@ class DaskEngine(DaskBaseEngine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
-
-        # set model to running:
-        model.set_running(large_model_data, self.verbosity-2)
         
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -634,9 +627,6 @@ class DaskEngine(DaskBaseEngine):
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         results = compute(results)[0]
-
-        # reset model to not running:
-        model.unset_running(large_model_data, self.verbosity-2)
         
         return self.combine_results(
             algo=algo,
@@ -790,9 +780,6 @@ class LocalClusterEngine(DaskBaseEngine):
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
         
-        # set model to running:
-        model.set_running(large_model_data, self.verbosity-2)
-        
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
@@ -896,9 +883,6 @@ class LocalClusterEngine(DaskBaseEngine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-
-        # reset model to not running:
-        model.unset_running(large_model_data, self.verbosity-2)
         
         return self.combine_results(
             algo=algo,

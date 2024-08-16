@@ -128,11 +128,11 @@ class FarmController(FarmDataModel):
                         break
 
         if pre_rotor:
-            self.pre_rotor_models = FarmDataModelList(tmodels)
+            self.pre_rotor_models = FarmDataModelList(models=tmodels)
             self.pre_rotor_models.name = f"{self.name}_prer"
             mtype = "pre-rotor"
         else:
-            self.post_rotor_models = FarmDataModelList(tmodels)
+            self.post_rotor_models = FarmDataModelList(models=tmodels)
             self.post_rotor_models.name = f"{self.name}_postr"
             mtype = "post-rotor"
 
@@ -143,7 +143,7 @@ class FarmController(FarmDataModel):
                 )
 
         return [m.name for m in tmodels], tmsels
-
+        
     def collect_models(self, algo):
         """
         Analyze and gather turbine models, based on the

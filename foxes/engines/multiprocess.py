@@ -123,8 +123,10 @@ class MultiprocessEngine(Engine):
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
         
-        # set model to running:
-        model.set_running(large_model_data, self.verbosity-2)
+        from foxes.utils import print_mem
+        for m in [algo] + model.models:
+            s = None #if type(m).__name__ in ["InitFarmData"] else 13000
+            print_mem(m, pre_str="MULTIP CHECK", max_csize=s)
             
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -192,9 +194,6 @@ class MultiprocessEngine(Engine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-
-        # reset model to not running:
-        model.unset_running(large_model_data, self.verbosity-2)
         
         return self.combine_results(
             algo=algo,

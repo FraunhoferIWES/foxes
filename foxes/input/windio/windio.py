@@ -59,7 +59,6 @@ def _read_site(wio, algo_dict, verbosity):
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
-
 def _read_farm(wio, algo_dict, verbosity):
     """Reads the wind farm information"""
     wio_farm = Dict(wio["wind_farm"], name="wind_farm")
@@ -88,7 +87,6 @@ def _read_farm(wio, algo_dict, verbosity):
         print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttype, verbosity)
-
 
 def read_windio(windio_yaml, verbosity=1):
     """
@@ -156,7 +154,6 @@ def read_windio(windio_yaml, verbosity=1):
             )
 
     return runner
-
 
 if __name__ == "__main__":
     import argparse

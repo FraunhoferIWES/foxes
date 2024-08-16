@@ -476,7 +476,6 @@ class Algorithm(Model):
             mbook=self.__mbook,
             dbook=self.__dbook,
             idata_mem=self.__idata_mem,
-            chunk_store=self.reset_chunk_store(),
         ))
         del self.__farm, self.__mbook, self.__dbook, self.__idata_mem
 
@@ -562,18 +561,23 @@ class Algorithm(Model):
         
         # set to running:
         large_model_data = {}
-        self.set_running(large_model_data, self.verbosity-2)
+        chunk_store = self.reset_chunk_store()
+        mdls = [m for m in [self] + list(args) + list(kwargs.values()) 
+                if isinstance(m, Model)]
+        for m in mdls:
+            m.set_running(large_model_data, self.verbosity-2)
         
         # run parallel calculation:
         farm_results = self._launch_parallel_farm_calc(
             *args, 
-            chunk_store=large_model_data[self.name].pop("chunk_store"), 
+            chunk_store=chunk_store, 
             large_model_data=large_model_data,
             **kwargs,
         )
         
         # reset to not running:
-        self.unset_running(large_model_data, self.verbosity-2)
+        for m in mdls:
+            m.unset_running(large_model_data, self.verbosity-2)
                
         return farm_results
 

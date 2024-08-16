@@ -383,31 +383,6 @@ class Downwind(Algorithm):
         mdls += list(self.ground_models.values())
                 
         return mdls
-    
-    def set_running(self, large_model_data, verbosity=0):
-        """
-        Sets this model status to running, and moves
-        all large data to given storage
-
-        Parameters
-        ----------
-        large_model_data: dict
-            Large data storage, this function adds data here.
-            Key: model name. Value: dict, large model data
-        verbosity: int
-            The verbosity level, 0 = silent
-            
-        """
-        import objsize
-        print("DWND SET_RUNNING A", self.name, objsize.get_deep_size(self))
-        for k, o in self.__dict__.items():
-            print("   ",k,objsize.get_deep_size(o))
-        
-        super().set_running(large_model_data, verbosity)
-        
-        print("DWND SET_RUNNING B", self.name, objsize.get_deep_size(self))
-        for k, o in self.__dict__.items():
-            print("   ",k,objsize.get_deep_size(o))
         
     def initialize(self):
         """
