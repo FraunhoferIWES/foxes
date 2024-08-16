@@ -1,6 +1,6 @@
 from .load import import_module
 
-def print_mem(obj, max_csize=None, pre_str="OBJECT SIZE"):
+def print_mem(obj, min_csize=0, max_csize=None, pre_str="OBJECT SIZE"):
     """
     Prints the memory consumption of a model and its components
     
@@ -8,6 +8,8 @@ def print_mem(obj, max_csize=None, pre_str="OBJECT SIZE"):
     ---------
     obj: object
         The object to be analyzed
+    min_csize: int
+        The minimal size of a component for being shown
     max_csize: int, optional
         The maximal allowed size of a component
     pre_str: str
@@ -29,7 +31,8 @@ def print_mem(obj, max_csize=None, pre_str="OBJECT SIZE"):
         
         if o is not None:
             s = objsize.get_deep_size(getattr(obj, k))
-            print("   ",k,s)
-            if max_csize is not None and s > max_csize:
-                raise ValueError(f"Component {k} exceeds maximal size {max_csize}")
+            if s >= min_csize:
+                print("   ",k,s)
+                if max_csize is not None and s > max_csize:
+                    raise ValueError(f"Component {k} exceeds maximal size {max_csize}")
             

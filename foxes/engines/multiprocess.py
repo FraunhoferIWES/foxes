@@ -126,8 +126,7 @@ class MultiprocessEngine(Engine):
         # DEBUG objec mem sizes:
         from foxes.utils import print_mem
         for m in [algo] + model.models:
-            s = None if type(m).__name__ in ["InitFarmData", "Iterative"] else 13000
-            print_mem(m, pre_str="MULTIP CHECK", max_csize=s)
+            print_mem(m, pre_str="MULTIP CHECKING LARGE DATA", min_csize=9999)
             
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0

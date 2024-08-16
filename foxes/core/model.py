@@ -192,9 +192,6 @@ class Model(ABC):
         large_model_data[self.name] = {}
         self.__running = True
         
-        from foxes.utils import print_mem
-        print_mem(self, pre_str="MODEL BEFORE")
-        
         return large_model_data
 
     def unset_running(self, large_model_data, verbosity=0):
