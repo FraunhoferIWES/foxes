@@ -98,7 +98,7 @@ class StatesTable(States):
         self._tvars = None
         self._profiles = None
         
-        self.__data_source = data_source
+        self._data_source = data_source
         self.__weights = None
 
     @property
@@ -114,7 +114,7 @@ class StatesTable(States):
         """
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
-        return self.__data_source
+        return self._data_source
         
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
@@ -217,7 +217,7 @@ class StatesTable(States):
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
-                self.__data_source = algo.dbook.get_file_path(
+                self._data_source = algo.dbook.get_file_path(
                     STATES, self.data_source, check_raw=False
                 )
                 if verbosity:
@@ -345,11 +345,11 @@ class StatesTable(States):
         super().set_running(large_model_data, verbosity)
         
         large_model_data[self.name] = dict(
-            data_source=self.__data_source,
+            data_source=self._data_source,
             weights=self.__weights,
             inds=self.__inds,
         )
-        del self.__weights, self.__data_source, self.__inds
+        del self._data_source, self.__weights, self.__inds
 
     def unset_running(self, large_model_data, verbosity=0):
         """
@@ -367,8 +367,8 @@ class StatesTable(States):
         super().unset_running(large_model_data, verbosity)
         
         data = large_model_data[self.name]
+        self._data_source = data.pop("data_source")
         self.__weights = data.pop("weights")
-        self.__data_source = data.pop("data_source")
         self.__inds = data.pop("inds")
         
     def calculate(self, algo, mdata, fdata, tdata):
@@ -474,11 +474,11 @@ class TabStates(StatesTable):
         """
         self._normalize = normalize
         if isinstance(data_source, Dataset):
-            self._tab_source = None
-            self._tab_data = data_source
+            self.__tab_source = None
+            self.__tab_data = data_source
         elif isinstance(data_source, (str, Path)):
-            self._tab_source = data_source
-            self._tab_data = None
+            self.__tab_source = data_source
+            self.__tab_data = None
         else:
             raise TypeError(
                 f"Expecting str, Path or xarray.Dataset as data_source, got {type(data_source)}"
@@ -510,47 +510,47 @@ class TabStates(StatesTable):
 
         """
         if self.data_source is None:
-            if self._tab_data is None:
-                if not Path(self._tab_source).is_file():
+            if self.__tab_data is None:
+                if not Path(self.__tab_source).is_file():
                     if verbosity:
                         print(
-                            f"States '{self.name}': Reading static data '{self._tab_source}' from context '{STATES}'"
+                            f"States '{self.name}': Reading static data '{self.__tab_source}' from context '{STATES}'"
                         )
-                    self._tab_source = algo.dbook.get_file_path(
-                        STATES, self._tab_source, check_raw=False
+                    self.__tab_source = algo.dbook.get_file_path(
+                        STATES, self.__tab_source, check_raw=False
                     )
                     if verbosity:
-                        print(f"Path: {self._tab_source}")
+                        print(f"Path: {self.__tab_source}")
                 elif verbosity:
-                    print(f"States '{self.name}': Reading file {self._tab_source}")
-                self._tab_data = read_tab_file(self._tab_source, self._normalize)
+                    print(f"States '{self.name}': Reading file {self.__tab_source}")
+                self.__tab_data = read_tab_file(self.__tab_source, self._normalize)
 
-            a = self._tab_data.attrs["factor_ws"]
-            b = self._tab_data.attrs["shift_wd"]
+            a = self.__tab_data.attrs["factor_ws"]
+            b = self.__tab_data.attrs["shift_wd"]
             if b != 0.0:
                 raise ValueError(
                     f"{self.name}: shift_wd = {b} is not supported, expecting zero"
                 )
 
-            wd0 = self._tab_data["wd"].to_numpy()
+            wd0 = self.__tab_data["wd"].to_numpy()
             ws0 = a * np.append(
-                np.array([0], dtype=FC.DTYPE), self._tab_data["ws"].to_numpy()
+                np.array([0], dtype=FC.DTYPE), self.__tab_data["ws"].to_numpy()
             )
             ws0 = 0.5 * (ws0[:-1] + ws0[1:])
 
-            n_ws = self._tab_data.sizes["ws"]
-            n_wd = self._tab_data.sizes["wd"]
+            n_ws = self.__tab_data.sizes["ws"]
+            n_wd = self.__tab_data.sizes["wd"]
             ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
             wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
             ws[:] = ws0[:, None]
             wd[:] = wd0[None, :]
 
-            wd_freq = self._tab_data["wd_freq"].to_numpy() / 100
-            weights = self._tab_data["ws_freq"].to_numpy() * wd_freq[None, :] / 1000
+            wd_freq = self.__tab_data["wd_freq"].to_numpy() / 100
+            weights = self.__tab_data["ws_freq"].to_numpy() * wd_freq[None, :] / 1000
 
             sel = weights > 0
 
-            self.data_source = pd.DataFrame(
+            self._data_source = pd.DataFrame(
                 index=np.arange(np.sum(sel)),
                 data={
                     FV.WS: ws[sel],
@@ -558,6 +558,48 @@ class TabStates(StatesTable):
                     FV.WEIGHT: weights[sel],
                 },
             )
-            self.data_source.index.name = FC.STATE
+            self._data_source.index.name = FC.STATE
 
         return super().load_data(algo, verbosity)
+
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        super().set_running(large_model_data, verbosity)
+        
+        large_model_data[self.name].update(dict(
+            tab_source=self.__tab_source,
+            tab_data=self.__tab_data,
+        ))
+        del self.__tab_source, self.__tab_data
+
+    def unset_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(large_model_data, verbosity)
+        
+        data = large_model_data[self.name]
+        self.__tab_source = data.pop("tab_source")
+        self.__tab_data = data.pop("tab_data")
+        
