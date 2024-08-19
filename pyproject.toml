@@ -1,6 +1,83 @@
 # pyproject.toml file specified at the root of the directory
 
 [build-system]
-requires = ["setuptools>=42", "wheel"]   # PEP 508 specifications.
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "foxes"
+version = "0.9"
+authors = [
+  {name = "Jonas Schulte", email = "jonas.schulte@iwes.fraunhofer.de"},
+  {name = "Lukas Vollmer", email = "lukas.vollmer@iwes.fraunhofer.de"},
+]
+maintainers = [
+  {name = "Jonas Schulte", email = "jonas.schulte@iwes.fraunhofer.de"}
+]
+description = "Farm Optimization and eXtended yield Evaluation Software"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["Wind farm", "Wake modelling", "Wind farm optimization"]
+classifiers = [
+    "Topic :: Scientific/Engineering",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "xarray",
+    "dask",
+    "distributed",
+    "multiprocess",
+    "scipy",
+    "netcdf4",
+    "windrose",
+    "cycler",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+io = ["windio>=1"]
+opt = ["foxes-opt"]
+slurm = [
+    "setuptools",
+    "dask-jobqueue",
+]
+test = ["flake8", "pytest"]
+doc = [
+    "sphinx",
+    "sphinx-immaterial",
+    "nbsphinx",
+    "ipykernel",
+    "ipywidgets",
+    "m2r2",
+    "lxml_html_clean",
+]
+dev = [
+    "flake8",
+    "pytest",
+    "jupyter",
+    "objsize",
+]
+
+[project.urls]
+Homepage = "https://github.com/FraunhoferIWES/foxes"
+Documentation = "https://fraunhoferiwes.github.io/foxes.docs/index.html"
+Repository = "https://github.com/FraunhoferIWES/foxes.git"
+"Bug Tracker" = "https://github.com/FraunhoferIWES/foxes/issues"
+Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/history.md"
+
+[tool.setuptools.packages.find]
+include = ["foxes"]

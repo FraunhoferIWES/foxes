@@ -3,13 +3,13 @@ import numpy as np
 import xarray as xr
 from distributed import Client, LocalCluster
 from dask.diagnostics import ProgressBar
-from dask_jobqueue import SLURMCluster
 from dask import delayed, compute
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
+from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -97,10 +97,12 @@ class DaskBaseEngine(Engine):
             
         elif self.cluster == "slurm":
             self.print("Launching dask cluster on HPC using SLURM..")
+            
+            dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[slurm]")
 
             cargs = deepcopy(self.cluster_pars)
             nodes = cargs.pop("nodes", 1)
-            self._cluster = SLURMCluster(**cargs)
+            self._cluster = dask_jobqueue.SLURMCluster(**cargs)
             self._cluster.scale(jobs=nodes)
             self._client = Client(self._cluster, **self.client_pars)
             self.dask_config["scheduler"] = "distributed"

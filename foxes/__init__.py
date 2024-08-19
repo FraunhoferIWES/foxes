@@ -21,11 +21,5 @@ from . import input  # noqa: F401
 from . import output  # noqa: F401
 from . import utils  # noqa: F401
 
-try:
-    from importlib.resources import files
-
-    __version__ = files(__package__).joinpath("VERSION").read_text()
-except ImportError:
-    from importlib.resources import read_text
-
-    __version__ = read_text(__package__, "VERSION")
+from importlib.metadata import version
+__version__ = version(__package__ or __name__)

@@ -1,5 +1,4 @@
 include Logo_FOXES.svg
-include foxes/VERSION
 include foxes/data/power_ct_curves/*.csv
 include foxes/data/states/*.csv
 include foxes/data/states/*.csv.gz
