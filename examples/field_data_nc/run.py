@@ -5,8 +5,6 @@ import numpy as np
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
-from foxes.utils.runners import DaskRunner
 
 
 if __name__ == "__main__":

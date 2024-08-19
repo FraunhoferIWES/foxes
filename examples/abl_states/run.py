@@ -3,7 +3,6 @@ import argparse
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

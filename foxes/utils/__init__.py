@@ -21,5 +21,4 @@ from .dev_utils import print_mem
 
 from . import two_circles
 from . import abl
-from . import runners
 from . import geom2d

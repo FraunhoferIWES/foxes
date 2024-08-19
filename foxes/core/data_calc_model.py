@@ -1,14 +1,6 @@
-import numpy as np
-import xarray as xr
 from abc import abstractmethod
-from dask.distributed import progress
-from dask.diagnostics import ProgressBar
 
 from .model import Model
-from .data import MData, FData, TData
-from foxes.utils.runners import DaskRunner
-import foxes.constants as FC
-import foxes.variables as FV
 
 
 class DataCalcModel(Model):

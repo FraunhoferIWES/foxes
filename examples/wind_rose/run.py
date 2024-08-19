@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
-from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -132,6 +130,6 @@ if __name__ == "__main__":
     print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
 
     if not args.nofig and args.calc_mean:
-        o = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
+        o = foxes.output.FlowPlots2D(algo, farm_results)
         fig = o.get_mean_fig_xy(FV.WS, resolution=30)
         plt.show()
