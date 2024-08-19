@@ -305,7 +305,9 @@ def read_attributes(wio, algo_dict, verbosity):
     -------
     out_dicts: list of dict
         The output dictionaries
-
+    odir: pathlib.Path
+        Path to the output folder
+        
     :group: input.windio
 
     """
@@ -333,6 +335,6 @@ def read_attributes(wio, algo_dict, verbosity):
     out_dicts = []
     if "outputs" in wio_attrs:
         outputs = Dict(wio_attrs["outputs"], name="outputs")
-        out_dicts = read_outputs(outputs, algo_dict, verbosity)
+        out_dicts, odir = read_outputs(outputs, algo_dict, verbosity)
 
-    return out_dicts
+    return out_dicts, odir
