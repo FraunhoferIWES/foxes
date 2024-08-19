@@ -91,7 +91,6 @@ class MultiHeightStates(States):
         """
         super().__init__()
 
-        self.data_source = data_source
         self.ovars = output_vars
         self.heights = np.array(heights, dtype=FC.DTYPE)
         self.rpars = pd_read_pars
@@ -101,10 +100,27 @@ class MultiHeightStates(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
+        self._data_source = data_source
         self._solo = None
         self._weights = None
+        self._inds = None
         self._N = None
 
+    @property
+    def data_source(self):
+        """
+        The data source
+        
+        Returns
+        -------
+        s: object
+            The data source
+            
+        """
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
+        return self._data_source
+    
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
         Reset the states, optionally select states
@@ -251,6 +267,49 @@ class MultiHeightStates(States):
 
         return idata
 
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        super().set_running(large_model_data, verbosity)
+        
+        large_model_data[self.name] = dict(
+            data_source=self._data_source,
+            weights=self._weights,
+            inds=self._inds,
+        )
+        del self._data_source, self._weights, self._inds
+
+    def unset_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(large_model_data, verbosity)
+        
+        data = large_model_data[self.name]
+        self._data_source = data.pop("data_source")
+        self._weights = data.pop("weights")
+        self._inds = data.pop("inds")
+        
     def size(self):
         """
         The total number of states.
@@ -273,6 +332,8 @@ class MultiHeightStates(States):
             The index labels of states, or None for default integers
 
         """
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces index while running")
         return self._inds
 
     def output_point_vars(self, algo):
@@ -307,6 +368,8 @@ class MultiHeightStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces weights while running")
         return self._weights
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -516,7 +579,7 @@ class MultiHeightNCStates(MultiHeightStates):
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
-                self.data_source = algo.dbook.get_file_path(
+                self._data_source = algo.dbook.get_file_path(
                     STATES, self.data_source, check_raw=False
                 )
                 if verbosity:
@@ -602,7 +665,6 @@ class MultiHeightNCStates(MultiHeightStates):
 
         return idata
 
-
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -610,7 +672,6 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
-
     RDICT = {"index_col": 0, "parse_dates": [0]}
 
 
@@ -621,7 +682,6 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     :group: input.states
 
     """
-
     def __init__(
         self,
         *args,

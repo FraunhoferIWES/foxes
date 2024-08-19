@@ -40,7 +40,7 @@ class ScanWS(States):
         """
         super().__init__()
 
-        self._wsl = np.array(ws_list)
+        self.__wsl = np.array(ws_list)
         self.N = len(ws_list)
         self.wd = wd
         self.ti = ti
@@ -72,10 +72,49 @@ class ScanWS(States):
         self.WS = self.var(FV.WS)
 
         idata = super().load_data(algo, verbosity)
-        idata["data_vars"][self.WS] = ((FC.STATE,), self._wsl)
+        idata["data_vars"][self.WS] = ((FC.STATE,), self.__wsl)
 
         return idata
 
+    def set_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        super().set_running(large_model_data, verbosity)
+        
+        large_model_data[self.name].update(dict(
+            wsl=self.__wsl,
+        ))
+        del self.__wsl
+
+    def unset_running(self, large_model_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_model_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(large_model_data, verbosity)
+        
+        data = large_model_data[self.name]
+        self.__wsl = data.pop("wsl")
+        
     def size(self):
         """
         The total number of states.
