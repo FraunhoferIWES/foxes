@@ -5,6 +5,7 @@ Abstract classes and core functionality.
 from .data import Data, MData, FData, TData
 from .model import Model
 from .data_calc_model import DataCalcModel
+from .engine import Engine, get_engine, reset_engine
 from .states import States, ExtendedStates
 from .wind_farm import WindFarm
 from .algorithm import Algorithm

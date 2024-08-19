@@ -33,16 +33,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
-    parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=300
-    )
-    parser.add_argument(
-        "-cp",
-        "--chunksize_points",
-        help="The maximal chunk size for points",
-        type=int,
-        default=5000,
-    )
     parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
         "-w",
@@ -56,38 +46,27 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument(
-        "-n",
-        "--n_workers",
-        help="The number of workers for distributed run",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "-tw",
-        "--threads_per_worker",
-        help="The number of threads per worker for distributed run",
-        type=int,
-        default=None,
-    )
-    parser.add_argument(
         "-sl",
         "--show_layout",
         help="Flag for showing layout figure",
         action="store_true",
     )
     parser.add_argument(
-        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+        "-e", "--engine", help="The engine", default="multiprocess"
+    )
+    parser.add_argument(
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+    )
+    parser.add_argument(
+        "-c", "--chunksize_states", help="The chunk size for states", default=None, type=int
+    )
+    parser.add_argument(
+        "-C", "--chunksize_points", help="The chunk size for points", default=5000, type=int
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
-
-    cks = (
-        None
-        if args.nodask
-        else {FC.STATE: args.chunksize, FC.POINT: args.chunksize_points}
-    )
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
@@ -124,107 +103,105 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        chunks=cks,
+        engine=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
-    with DaskRunner(
-        scheduler=args.scheduler,
-        n_workers=args.n_workers,
-        threads_per_worker=args.threads_per_worker,
-    ) as runner:
-        time0 = time.time()
-        farm_results = runner.run(algo.calc_farm)
-        time1 = time.time()
+    time0 = time.time()
+    farm_results = algo.calc_farm()
+    time1 = time.time()
 
-        print("\nCalc time =", time1 - time0, "\n")
+    print("\nCalc time =", time1 - time0, "\n")
 
-        o = foxes.output.FarmResultsEval(farm_results)
-        o.add_capacity(algo)
-        o.add_capacity(algo, ambient=True)
-        o.add_efficiency()
+    o = foxes.output.FarmResultsEval(farm_results)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
+    o.add_efficiency()
 
-        print("\nFarm results:\n")
-        print(farm_results)
+    print("\nFarm results:\n")
+    print(farm_results)
 
-        # state-turbine results
-        farm_df = farm_results.to_dataframe()
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.Y,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.EFF,
-                ]
+    # state-turbine results
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:\n")
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.Y,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+                FV.EFF,
             ]
+        ]
+    )
+    print()
+    print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
+
+    # power results
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power        : {P/1000:.1f} MW")
+    print(f"Farm ambient power: {P0/1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+
+    if not args.nofig and args.animation:
+        print("\nCalculating animation")
+
+        fig, axs = plt.subplots(
+            2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
         )
-        print()
-        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
 
-        # power results
-        P0 = o.calc_mean_farm_power(ambient=True)
-        P = o.calc_mean_farm_power()
-        print(f"\nFarm power        : {P/1000:.1f} MW")
-        print(f"Farm ambient power: {P0/1000:.1f} MW")
-        print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-
-        if not args.nofig and args.animation:
-            print("\nCalculating animation")
-
-            fig, axs = plt.subplots(
-                2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
-            )
-
-            anim = foxes.output.Animator(fig)
-            of = foxes.output.FlowPlots2D(algo, farm_results, runner=runner)
-            anim.add_generator(
-                of.gen_states_fig_xy(
-                    FV.WS,
-                    resolution=30,
-                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                    quiver_n=35,
-                    xmax=5000,
-                    ymax=5000,
-                    fig=fig,
-                    ax=axs[0],
-                    ret_im=True,
-                    title=None,
-                    animated=True,
-                )
-            )
-            anim.add_generator(
-                o.gen_stdata(
-                    turbines=[4, 7],
-                    variable=FV.REWS,
-                    fig=fig,
-                    ax=axs[1],
-                    ret_im=True,
-                    legloc="upper left",
-                    animated=True,
-                )
-            )
-
-            ani = anim.animate()
-
-            lo = foxes.output.FarmLayoutOutput(farm)
-            lo.get_figure(
+        anim = foxes.output.Animator(fig)
+        of = foxes.output.FlowPlots2D(algo, farm_results)
+        anim.add_generator(
+            of.gen_states_fig_xy(
+                FV.WS,
+                resolution=30,
+                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                quiver_n=35,
+                xmax=5000,
+                ymax=5000,
                 fig=fig,
                 ax=axs[0],
-                title="",
-                annotate=1,
-                anno_delx=-120,
-                anno_dely=-60,
-                alpha=0,
+                ret_im=True,
+                title=None,
+                animated=True,
             )
+        )
+        anim.add_generator(
+            o.gen_stdata(
+                turbines=[4, 7],
+                variable=FV.REWS,
+                fig=fig,
+                ax=axs[1],
+                ret_im=True,
+                legloc="upper left",
+                animated=True,
+            )
+        )
 
-            fpath = "ani.gif"
-            print("Writing file", fpath)
-            ani.save(filename=fpath, writer="pillow")
+        ani = anim.animate()
+
+        lo = foxes.output.FarmLayoutOutput(farm)
+        lo.get_figure(
+            fig=fig,
+            ax=axs[0],
+            title="",
+            annotate=1,
+            anno_delx=-120,
+            anno_dely=-60,
+            alpha=0,
+        )
+
+        fpath = "ani.gif"
+        print("Writing file", fpath)
+        ani.save(filename=fpath, writer="pillow")

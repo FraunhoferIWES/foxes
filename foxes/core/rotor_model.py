@@ -40,11 +40,7 @@ class RotorModel(FarmDataModel):
         """
         super().__init__()
         self.calc_vars = calc_vars
-
-        self.RPOINTS = self.var("rpoints")
-        self.RWEIGHTS = self.var("rweights")
-        self.AMBRES = self.var("amb_res")
-
+            
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -348,11 +344,9 @@ class RotorModel(FarmDataModel):
         """
 
         if rpoints is None:
-            rpoints = mdata.get(self.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
+            rpoints = mdata.get(FC.ROTOR_POINTS, self.get_rotor_points(algo, mdata, fdata))
         if store_rpoints:
-            mdata[self.RPOINTS] = rpoints
-            mdata.dims[self.RPOINTS] = (FC.STATE, FC.TURBINE, FC.TPOINT, FC.XYH)
-            self.data_to_store(self.RPOINTS, algo, mdata)
+            algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)
 
         if downwind_index is not None:
             rpoints = rpoints[:, downwind_index, None]
@@ -360,9 +354,7 @@ class RotorModel(FarmDataModel):
         if weights is None:
             weights = mdata.get(FC.TWEIGHTS, self.rotor_point_weights())
         if store_rweights:
-            mdata[self.RWEIGHTS] = weights
-            mdata.dims[self.RWEIGHTS] = (FC.TPOINT,)
-            self.data_to_store(self.RWEIGHTS, algo, mdata)
+            algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, weights, mdata=mdata)
 
         tdata = TData.from_tpoints(rpoints, weights)
         svars = algo.states.output_point_vars(algo)
@@ -377,8 +369,7 @@ class RotorModel(FarmDataModel):
         tdata.update(sres)
 
         if store_amb_res:
-            mdata[self.AMBRES] = sres.copy()
-            self.data_to_store(self.AMBRES, algo, mdata)
+            algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres.copy(), mdata=mdata)
 
         self.eval_rpoint_results(
             algo,

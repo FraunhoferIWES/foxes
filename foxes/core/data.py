@@ -24,8 +24,14 @@ class Data(Dict):
     :group: core
 
     """
-
-    def __init__(self, data, dims, loop_dims, name="data"):
+    def __init__(
+        self, 
+        data, 
+        dims, 
+        loop_dims, 
+        states_i0=None, 
+        name="data",
+    ):
         """
         Constructor.
 
@@ -39,6 +45,8 @@ class Data(Dict):
         loop_dims: array_like of str
             List of the loop dimensions during xarray's
             `apply_ufunc` calculations
+        states_i0: int, optional
+            The index of the first state
         name: str
             The data container name
 
@@ -48,6 +56,8 @@ class Data(Dict):
         self.update(data)
         self.dims = dims
         self.loop_dims = loop_dims
+        
+        self.__states_i0 = states_i0
 
         self.sizes = {}
         for v, d in data.items():
@@ -81,7 +91,7 @@ class Data(Dict):
         """
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
 
-    def states_i0(self, counter=False, algo=None):
+    def states_i0(self, counter=False):
         """
         Get the state counter for first state in chunk
 
@@ -89,8 +99,6 @@ class Data(Dict):
         ----------
         counter: bool
             Return the state counter instead of the index
-        algo: foxes.core.Algorithm, optional
-            The algorithm, required for state counter
 
         Returns
         -------
@@ -102,9 +110,9 @@ class Data(Dict):
         if FC.STATE not in self:
             return None
         elif counter:
-            if algo is None:
-                raise KeyError(f"{self.name}: Missing algo for deducing state counter")
-            return np.argwhere(algo.states.index() == self[FC.STATE][0])[0][0]
+            if self.__states_i0 is None:
+                raise KeyError(f"Data '{self.name}': states_i0 requested but not set")
+            return self.__states_i0
         else:
             return self[FC.STATE][0]
 
@@ -128,6 +136,14 @@ class Data(Dict):
             self[FV.H] = self[FV.TXYH][..., 2]
 
             self.dims[FV.TXYH] = tuple(list(dims[FV.X]) + [FC.XYH])
+        
+        allc = set()
+        for dms in self.dims.values():
+            allc.update(dms)
+        allc = allc.difference(set(data.keys()))
+        for c in allc.intersection(self.sizes.keys()):
+            data[c] = np.arange(self.sizes[c])
+            dims[c] = (c,)
 
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
@@ -190,19 +206,85 @@ class Data(Dict):
         """
         data = {}
         dims = {}
+        match = None
         for v in self.keys():
             try:
                 d = self.dims[v]
                 data[v] = self[v][s]
-                dims[v] = dim_map.get(d, d)
+                dims[v] = tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
+                if match is None:
+                    match = dims[v]
+                elif match != dims[v]:
+                    raise ValueError(f"Dimension mismatch for variable '{v}' and slice {s}. Expecting {match}, got {dims[v]}")
             except IndexError:
                 if keep:
                     data[v] = self[v]
                     dims[v] = self.dims[v]
+        if match is not None:
+            for d, su in zip(match[:len(s)], s):
+                data[d] = data[d][su]
         if name is None:
             name = self.name
         return type(self)(data, dims, loop_dims=self.loop_dims, name=name)
 
+    @classmethod
+    def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
+        """
+        Create Data object from a dataset
+        
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset
+        args: tuple, optional
+            Additional parameters for the constructor
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        s_states: slice, optional
+            Slice object for states
+        copy: bool
+            Flag for copying data
+        kwargs: dict, optional
+            Additional parameters for the constructor
+            
+        Returns
+        -------
+        data: Data
+            The data object
+        
+        """
+        data = {}
+        dims = {}
+            
+        for c, d in ds.coords.items():
+            if c == FC.STATE:
+                s = np.s_[:] if s_states is None else s_states
+                data[c] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+            else:
+                data[c] = d.to_numpy().copy() if copy else d.to_numpy()
+            dims[c] = d.dims
+            
+        n_states = None
+        for v, d in ds.data_vars.items():
+            if FC.STATE in d.dims:
+                if d.dims[0] != FC.STATE:
+                    raise ValueError(f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}")
+                n_states = len(d.to_numpy())
+                s = np.s_[:] if s_states is None else s_states
+                data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+            else:
+                data[v] = d.to_numpy().copy() if copy else d.to_numpy()
+            dims[v] = d.dims
+
+        if callback is not None:
+            callback(data, dims)
+            
+        if FC.STATE not in data and s_states is not None and n_states is not None:
+            data[FC.STATE] = np.arange(n_states)[s_states]
+            dims[FC.STATE] = (FC.STATE,)
+        
+        return cls(*args, data=data, dims=dims, **kwargs)
 
 class MData(Data):
     """
@@ -227,7 +309,6 @@ class MData(Data):
 
         """
         super().__init__(*args, name=name, **kwargs)
-
 
 class FData(Data):
     """
@@ -284,7 +365,44 @@ class FData(Data):
                         f"FData '{self.name}': Missing '{x}' in sizes, got {sorted(list(self.sizes.keys()))}"
                     )
 
-
+    @classmethod
+    def from_dataset(cls, ds, *args, mdata=None, callback=None, **kwargs):
+        """
+        Create Data object from a dataset
+        
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset
+        args: tuple, optional
+            Additional parameters for the constructor
+        mdata: MData, optional
+            The mdata object
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+            
+        Returns
+        -------
+        data: Data
+            The data object
+        
+        """
+        if mdata is None:
+            return super().from_dataset(ds, *args, callback=callback, **kwargs)
+        else:
+            def cb(data, dims):
+                if FC.STATE not in data:
+                    data[FC.STATE] = mdata[FC.STATE]
+                    dims[FC.STATE] = mdata.dims[FC.STATE]
+                    data[FV.WEIGHT] = mdata[FV.WEIGHT]
+                    dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
+                if callback is not None:
+                    callback(data, dims)
+            return super().from_dataset(ds, *args, callback=cb, **kwargs)
+            
 class TData(Data):
     """
     Container for foxes target data.
@@ -427,6 +545,21 @@ class TData(Data):
         """
         return np.einsum("stp...,p->st...", self[variable], self[FC.TWEIGHTS])
 
+    def targets_i0(self):
+        """
+        Get the target counter for first target in chunk
+
+        Returns
+        -------
+        int:
+            The target index for first target in chunk
+
+        """
+        if FC.TARGET not in self:
+            return None
+        else:
+            return self[FC.TARGET][0]
+        
     @classmethod
     def from_points(
         cls,
@@ -515,3 +648,72 @@ class TData(Data):
         data[FC.TWEIGHTS] = tweights
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
         return cls(data, dims, [FC.STATE], name=name, **kwargs)
+
+    @classmethod
+    def from_dataset(
+        cls,
+        ds, 
+        *args, 
+        s_targets=None, 
+        mdata=None, 
+        callback=None, 
+        **kwargs,
+    ):
+        """
+        Create Data object from a dataset
+        
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The dataset
+        args: tuple, optional
+            Additional parameters for the constructor
+        s_targets: slice, optional
+            Slice object for targets
+        mdata: MData, optional
+            The mdata object
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+            
+        Returns
+        -------
+        data: Data
+            The data object
+        
+        """
+        if mdata is None:
+            cb0 = callback
+        else:
+            def cb_mdata(data, dims):
+                if FC.STATE not in data:
+                    data[FC.STATE] = mdata[FC.STATE]
+                    dims[FC.STATE] = mdata.dims[FC.STATE]
+                if callback is not None:
+                    callback(data, dims)
+            cb0 = cb_mdata
+            
+        if s_targets is None:
+            cb1 = cb0
+        else:
+            def cb_targets(data, dims):               
+                if FC.TARGET not in data:
+                    data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
+                    dims[FC.TARGET] = (FC.TARGET,)
+                for v, d in data.items():
+                    if FC.TARGET in dims[v]:
+                        if dims[v] == (FC.TARGET,):
+                            data[v] = d[s_targets].copy()
+                        elif len(dims[v]) < 3 or dims[v][:3] != (FC.STATE, FC.TARGET, FC.TPOINT):
+                            raise ValueError(f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}")
+                        else:
+                            data[v] = d[:, s_targets]
+                if cb0 is not None:
+                    cb0(data, dims)
+                    
+            cb1 = cb_targets 
+            
+        return super().from_dataset(ds, *args, callback=cb1, **kwargs)
+        

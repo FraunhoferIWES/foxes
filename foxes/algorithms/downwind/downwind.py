@@ -1,10 +1,10 @@
-from foxes.core import Algorithm, FarmDataModelList
+from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
+from foxes.utils import Dict
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
-
 
 class Downwind(Algorithm):
     """
@@ -70,10 +70,8 @@ class Downwind(Algorithm):
         partial_wakes=None,
         ground_models=None,
         farm_controller="basic_ctrl",
-        chunks={FC.STATE: 1000, FC.POINT: 4000},
         mbook=None,
-        dbook=None,
-        verbosity=1,
+        **kwargs,
     ):
         """
         Constructor.
@@ -102,33 +100,27 @@ class Downwind(Algorithm):
         farm_controller: str
             The farm controller. Will be
             looked up in the model book
-        chunks: dict
-            The chunks choice for running in parallel with dask,
-            e.g. `{"state": 1000}` for chunks of 1000 states
         mbook: foxes.ModelBook, optional
             The model book
-        dbook: foxes.DataBook, optional
-            The data book, or None for default
-        verbosity: int
-            The verbosity level, 0 means silent
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
         if mbook is None:
             mbook = fm.ModelBook()
+            
+        super().__init__(mbook, farm, **kwargs)
 
-        super().__init__(mbook, farm, chunks, verbosity, dbook)
-
-        self.states = states
+        self.__states = states
         self.n_states = None
-        self.states_data = None
 
-        self.rotor_model = self.mbook.rotor_models[rotor_model]
+        self.__rotor_model = self.mbook.rotor_models[rotor_model]
         self.rotor_model.name = rotor_model
 
-        self.wake_frame = self.mbook.wake_frames[wake_frame]
+        self.__wake_frame = self.mbook.wake_frames[wake_frame]
         self.wake_frame.name = wake_frame
 
-        self.wake_models = {}
+        self.__wake_models = {}
         for w in wake_models:
             m = self.mbook.wake_models[w]
             m.name = w
@@ -167,7 +159,7 @@ class Downwind(Algorithm):
                     target[w] = mbooks[pw]
                     target[w].name = pw
 
-        self.partial_wakes = {}
+        self.__partial_wakes = {}
         _set_wspecific(
             descr="partial wakes",
             target=self.partial_wakes,
@@ -177,7 +169,7 @@ class Downwind(Algorithm):
             checkw=True,
         )
 
-        self.ground_models = {}
+        self.__ground_models = {}
         _set_wspecific(
             descr="ground models",
             target=self.ground_models,
@@ -187,9 +179,113 @@ class Downwind(Algorithm):
             checkw=False,
         )
 
-        self.farm_controller = self.mbook.farm_controllers[farm_controller]
+        self.__farm_controller = self.mbook.farm_controllers[farm_controller]
         self.farm_controller.name = farm_controller
 
+    @property
+    def states(self):
+        """
+        The states
+        
+        Returns
+        -------
+        m: foxes.core.States
+            The states
+        
+        """
+        return self.__states
+
+    @states.setter
+    def states(self, value):
+        """ Resets the states """
+        if self.running:
+            raise ValueError(f"{self.name}: Cannot set states while running")
+        if self.states.initialized:
+            self.states.finalize(self, verbosity=self.verbosity)
+        self.__states = value
+        self.init_states()
+        
+    @property
+    def rotor_model(self):
+        """
+        The rotor model
+        
+        Returns
+        -------
+        m: foxes.core.RotorModel
+            The rotor model
+        
+        """
+        return self.__rotor_model
+
+    @property
+    def wake_models(self):
+        """
+        The wake models
+        
+        Returns
+        -------
+        m: dict
+            The wake models. Key: name,
+            value: foxes.core.WakeModel
+        
+        """
+        return self.__wake_models
+
+    @property
+    def wake_frame(self):
+        """
+        The wake frame
+        
+        Returns
+        -------
+        m: foxes.core.WakeFrame
+            The wake frame
+        
+        """
+        return self.__wake_frame
+
+    @property
+    def partial_wakes(self):
+        """
+        The partial wakes models
+        
+        Returns
+        -------
+        m: dict
+            The partial wakes models. Key: name,
+            value: foxes.core.PartialWakesModel
+        
+        """
+        return self.__partial_wakes
+
+    @property
+    def ground_models(self):
+        """
+        The ground models
+        
+        Returns
+        -------
+        m: dict
+            The ground models, key: name,
+            value: foxes.core.GroundModel
+        
+        """
+        return self.__ground_models
+    
+    @property
+    def farm_controller(self):
+        """
+        The farm controller
+        
+        Returns
+        -------
+        m: foxes.core.FarmController
+            The farm controller
+        
+        """
+        return self.__farm_controller
+    
     @classmethod
     def get_model(cls, name):
         """
@@ -276,43 +372,36 @@ class Downwind(Algorithm):
             self.states.initialize(self, self.verbosity)
             self.n_states = self.states.size()
 
-    def all_models(self, with_states=True):
+    def sub_models(self):
         """
-        Return all models
-
-        Parameters
-        ----------
-        with_states: bool
-            Flag for including states
+        List of all sub-models
 
         Returns
         -------
-        mdls: list of foxes.core.Model
-            The list of models
+        smdls: list of foxes.core.Model
+            All sub models
 
         """
-        mdls = [self.states] if with_states else []
-        mdls += [
-            self.rotor_model,
-            self.farm_controller,
+        mdls = [
+            self.states, 
+            self.rotor_model, 
             self.wake_frame,
+            self.farm_controller,
         ]
         mdls += list(self.wake_models.values())
         mdls += list(self.partial_wakes.values())
-
+        mdls += list(self.ground_models.values())
+                
         return mdls
-
+        
     def initialize(self):
         """
         Initializes the algorithm.
         """
-        self.print(f"\nInitializing algorithm '{self.name}'")
-        super().initialize()
-
         self.init_states()
 
-        for m in self.all_models(with_states=False):
-            m.initialize(self, self.verbosity)
+        self.print(f"\nInitializing algorithm '{self.name}'")
+        super().initialize()
 
     def _collect_farm_models(
         self,
@@ -370,17 +459,37 @@ class Downwind(Algorithm):
         """Helper function that gathers the farm variables"""
         self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
-    def _run_farm_calc(self, mlist, *data, outputs=None, **kwargs):
-        """Helper function for running the main farm calculation"""
-        self.print(
-            f"\nCalculating {self.n_states} states for {self.n_turbines} turbines"
-        )
+    def _launch_parallel_farm_calc(
+        self, 
+        mlist, 
+        *data, 
+        outputs=None,
+        **kwargs,
+    ):
+        """
+        Runs the main calculation, launching parallelization
+
+        Parameters
+        ----------
+        mlist: foxes.models.FarmDataModelList
+            The model list
+        data: tuple of xarray.Dataset
+            The (mdata, fdata) inputs
+        outputs: list of str, optional
+            The output variables, or None for defaults
+        kwargs: dict, optional
+            Additional parameters for running
+
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+            
+        """
         out_vars = self.farm_vars if outputs is None else outputs
-        farm_results = mlist.run_calculation(self, *data, out_vars=out_vars, **kwargs)
-        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
-            if v in farm_results:
-                farm_results[v] = farm_results[v].astype(FC.ITYPE)
+        farm_results = get_engine().run_calculation(
+            self, mlist, *data, out_vars=out_vars, **kwargs)
 
         return farm_results
 
@@ -388,7 +497,6 @@ class Downwind(Algorithm):
         self,
         outputs=None,
         calc_parameters={},
-        persist=True,
         finalize=True,
         ambient=False,
         chunked_results=False,
@@ -404,9 +512,6 @@ class Downwind(Algorithm):
             Key: model name str, value: parameter dict
         outputs: list of str, optional
             The output variables, or None for defaults
-        persist: bool
-            Switch for forcing dask to load all model data
-            into memory
         finalize: bool
             Flag for finalization after calculation
         ambient: bool
@@ -422,7 +527,7 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
-        """
+        """      
         # initialize algorithm:
         if not self.initialized:
             self.initialize()
@@ -448,23 +553,24 @@ class Downwind(Algorithm):
             outputs = sorted(list(set(outputs).intersection(self.farm_vars)))
 
         # get input model data:
-        models_data = self.get_models_data()
-        if persist:
-            models_data = models_data.persist()
-        self.print("\nInput data:\n\n", models_data, "\n")
+        model_data = self.get_models_data()
+        self.print("\nInput data:\n\n", model_data, "\n")
         self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
         self.print(f"\nOutput variables:", ", ".join(outputs))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # run main calculation:
-        farm_results = self._run_farm_calc(
+        farm_results = super().calc_farm(
             mlist,
-            models_data,
+            model_data,
             parameters=calc_pars,
             outputs=outputs,
             **kwargs,
         )
-        del models_data
+        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+            if v in farm_results:
+                farm_results[v] = farm_results[v].astype(FC.ITYPE)
+        del model_data
 
         # finalize models:
         if finalize:
@@ -534,6 +640,42 @@ class Downwind(Algorithm):
 
         return mlist, calc_pars
 
+    def _launch_parallel_points_calc(
+        self, 
+        mlist,
+        *data, 
+        outputs=None,
+        **kwargs
+    ):
+        """
+        Runs the main points calculation, launching parallelization
+
+        Parameters
+        ----------
+        mlist: foxes.models.FarmDataModelList
+            The model list
+        data: tuple of xarray.Dataset
+            The (mdata, fdata) inputs
+        outputs: list of str, optional
+            The output variables, or None for defaults
+        kwargs: dict, optional
+            Additional parameters for running
+
+        Returns
+        -------
+        point_results: xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+            
+        """
+        return get_engine().run_calculation(
+            self,
+            mlist,
+            *data,
+            out_vars=outputs,
+            **kwargs,
+        ).sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
+        
     def calc_points(
         self,
         farm_results,
@@ -590,7 +732,6 @@ class Downwind(Algorithm):
             dimensions (state, point)
 
         """
-
         if not self.initialized:
             self.initialize()
         if not ambient and farm_results is None:
@@ -620,23 +761,20 @@ class Downwind(Algorithm):
         n_states = farm_results.sizes[FC.STATE]
             
         # get input model data:
-        models_data = self.get_models_data(sel=sel, isel=isel)
+        model_data = self.get_models_data(sel=sel, isel=isel)
         if persist_mdata:
-            models_data = models_data.persist()
-        self.print("\nInput data:\n\n", models_data, "\n")
+            model_data = model_data.persist()
+        self.print("\nInput data:\n\n", model_data, "\n")
         self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # chunk farm results:
-        if self.chunks is not None:
-            farm_results = self.chunked(farm_results)
         self.print("\nInput farm data:\n\n", farm_results, "\n")
 
         # get point data:
         if FC.STATE in farm_results.coords:
             sinds = farm_results.coords[FC.STATE]
-        elif models_data is not None and FC.STATE in models_data.coords:
-            sinds = models_data.coords[FC.STATE]
+        elif model_data is not None and FC.STATE in model_data.coords:
+            sinds = model_data.coords[FC.STATE]
         else:
             sinds = None
         point_data = self.new_point_data(points, sinds, n_states=n_states)
@@ -647,24 +785,18 @@ class Downwind(Algorithm):
         # check vars:
         ovars = mlist.output_point_vars(self)
         self.print(f"\nOutput point variables:", ", ".join(ovars))
-        self.print(f"\nChunks: {self.chunks}\n")
 
         # calculate:
-        self.print(
-            f"Calculating {len(ovars)} variables at {points.shape[1]} points in {n_states} states"
-        )
-
-        point_results = mlist.run_calculation(
-            self,
-            models_data,
+        point_results = super().calc_points(
+            mlist,
+            model_data,
             farm_results,
             point_data,
-            out_vars=ovars,
+            outputs=ovars,
             parameters=calc_pars,
             **kwargs,
         )
-
-        del models_data, farm_results, point_data
+        del model_data, farm_results, point_data
 
         # finalize models:
         if finalize:
@@ -680,18 +812,3 @@ class Downwind(Algorithm):
             point_results = self.chunked(point_results)
 
         return point_results
-
-    def finalize(self, clear_mem=False):
-        """
-        Finalizes the algorithm.
-
-        Parameters
-        ----------
-        clear_mem: bool
-            Clear idata memory
-
-        """
-        for m in self.all_models():
-            m.finalize(self, self.verbosity)
-
-        super().finalize(clear_mem)

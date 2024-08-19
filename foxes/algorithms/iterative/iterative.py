@@ -215,11 +215,6 @@ class Iterative(Downwind):
 
             # rotate back from downwind order:
             else:
-
-                # add model that calculates wake effects:
-                # mlist.models.append(self.get_model("FarmWakesCalculation")(urelax=None))
-                # calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-
                 mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
                 calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -230,14 +225,23 @@ class Iterative(Downwind):
         if self._it == 0:
             super()._calc_farm_vars(mlist)
 
-    def _run_farm_calc(self, mlist, *data, **kwargs):
+    def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
-        ir = (
-            None
-            if self.prev_farm_results is None
-            else self.chunked(self.prev_farm_results)
-        )
-        return super()._run_farm_calc(mlist, *data, initial_results=ir, **kwargs)
+        return super()._launch_parallel_farm_calc(
+            mlist, *data, farm_data=self.prev_farm_results, iterative=True, **kwargs)
+
+    @property
+    def final_iteration(self):
+        """
+        Flag for the final iteration
+        
+        Returns
+        -------
+        flag: bool
+            Flag for the final iteration
+        
+        """
+        return self._final_run
 
     def calc_farm(self, finalize=True, **kwargs):
         """
@@ -293,7 +297,7 @@ class Iterative(Downwind):
             self.print("\n")
             self.finalize()
             for m in self._mlist0.models:
-                if m not in self.all_models():
+                if m not in self.sub_models():
                     m.finalize(self, self.verbosity)
             del self._mlist0, self._calc_pars0
 

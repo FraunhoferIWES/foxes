@@ -60,7 +60,7 @@ class Bastankhah2014(GaussianWakeModel):
         s += f"({self.superpositions[FV.WS]}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
-
+            
     def sub_models(self):
         """
         List of all sub-models

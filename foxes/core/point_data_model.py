@@ -27,6 +27,18 @@ class PointDataModel(DataCalcModel):
         """
         return []
 
+    def output_coords(self):
+        """
+        Gets the coordinates of all output arrays
+        
+        Returns
+        -------
+        dims: tuple of str
+            The coordinates of all output arrays
+        
+        """
+        return (FC.STATE, FC.TARGET, FC.TPOINT)
+    
     def ensure_variables(self, algo, mdata, fdata, tdata):
         """
         Add variables to tdata, initialized with NaN
@@ -51,7 +63,7 @@ class PointDataModel(DataCalcModel):
                     dtype=FC.DTYPE,
                 )
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-
+    
     @abstractmethod
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
@@ -126,7 +138,6 @@ class PointDataModel(DataCalcModel):
             return PointDataModelList([self] + m.models)
         else:
             return PointDataModelList([self, m])
-
 
 class PointDataModelList(PointDataModel):
     """

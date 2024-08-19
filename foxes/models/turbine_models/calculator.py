@@ -1,7 +1,4 @@
-import numpy as np
-
 from foxes.core import TurbineModel
-
 
 class Calculator(TurbineModel):
     """

@@ -18,8 +18,6 @@ class SliceData(Output):
         The algorithm for point calculation
     farm_results: xarray.Dataset
         The farm results
-    runner: foxes.utils.runners.Runner, optional
-        The runner
     verbosity_delta: int
         Verbosity threshold for printing calculation info
             
@@ -31,10 +29,9 @@ class SliceData(Output):
         self, 
         algo, 
         farm_results, 
-        runner=None, 
         verbosity_delta=1,
         **kwargs,
-        ):
+    ):
         """
         Constructor.
 
@@ -44,8 +41,6 @@ class SliceData(Output):
             The algorithm for point calculation
         farm_results: xarray.Dataset
             The farm results
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         verbosity_delta: int
             Verbosity threshold for printing calculation info
         kwargs: dict, optional
@@ -55,7 +50,6 @@ class SliceData(Output):
         super().__init__(**kwargs)
         self.algo = algo
         self.fres = farm_results
-        self.runner = runner
         self.verbosity_delta = verbosity_delta
 
     def _data_mod(

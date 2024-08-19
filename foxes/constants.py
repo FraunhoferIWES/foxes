@@ -65,8 +65,18 @@ POINTS = "points"
 :group: foxes.constants
 """
 
-AMB_TARGET_RESULTS = "amb_target_res"
-""" Identifier for ambient target results
+
+ROTOR_POINTS = "rotor_points"
+""" Identifier for rotor points
+:group: foxes.constants
+"""
+
+ROTOR_WEIGHTS = "rotor_weights"
+""" Identifier for rotor point weights
+:group: foxes.constants
+"""
+AMB_ROTOR_RES = "amb_rotor_res"
+""" Identifier for ambient rotor point results
 :group: foxes.constants
 """
 

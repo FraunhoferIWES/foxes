@@ -32,6 +32,6 @@ class Dict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
-            k = ", ".join(sorted(list(self.keys())))
+            k = ", ".join(sorted([f'{s}' for s in self.keys()]))
             e = f"{self.name}: Cannot find key '{key}'. Known keys: {k}"
             raise KeyError(e)

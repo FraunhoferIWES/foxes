@@ -52,6 +52,18 @@ class FarmDataModel(DataCalcModel):
         """
         return []
 
+    def output_coords(self):
+        """
+        Gets the coordinates of all output arrays
+        
+        Returns
+        -------
+        dims: tuple of str
+            The coordinates of all output arrays
+        
+        """
+        return (FC.STATE, FC.TURBINE)
+    
     def ensure_variables(self, algo, mdata, fdata):
         """
         Add variables to fdata, initialized with NaN
@@ -72,7 +84,7 @@ class FarmDataModel(DataCalcModel):
             if v not in fdata:
                 fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
                 fdata.dims[v] = (FC.STATE, FC.TURBINE)
-
+    
     @abstractmethod
     def calculate(self, algo, mdata, fdata):
         """ "
@@ -246,6 +258,7 @@ class FarmDataModelList(FarmDataModel):
             The farm data
         parameters: list of dict, optional
             A list of parameter dicts, one for each model
+        
 
         Returns
         -------

@@ -17,6 +17,7 @@ from .regularize import sqrt_reg
 from .windrose_plot import TabWindroseAxes
 from .tab_files import read_tab_file
 from .random_xy import random_xy_square
+from .dev_utils import print_mem
 
 from . import two_circles
 from . import abl

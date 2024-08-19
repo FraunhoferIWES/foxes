@@ -17,7 +17,7 @@ class GridRotor(RotorModel):
     reduce: bool
         Flag for reduction to points actually representing
         an area with overlap with the circe, recalculating
-        the self.weights accordingly
+        the self.__weights accordingly
     nint: int
         Integration steps per element
 
@@ -40,7 +40,7 @@ class GridRotor(RotorModel):
         reduce: bool
             Flag for reduction to points actually representing
             an area with overlap with the circe, recalculating
-            the self.weights accordingly
+            the self.__weights accordingly
         nint: int
             Integration steps per element
         name: str, optional
@@ -56,7 +56,7 @@ class GridRotor(RotorModel):
     def __repr__(self):
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
-
+        
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -76,12 +76,12 @@ class GridRotor(RotorModel):
         x = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
         x, y = np.meshgrid(x, x, indexing="ij")
 
-        self.dpoints = np.zeros([N, 3], dtype=FC.DTYPE)
-        self.dpoints[:, 1] = x.reshape(N)
-        self.dpoints[:, 2] = y.reshape(N)
+        self.__dpoints = np.zeros([N, 3], dtype=FC.DTYPE)
+        self.__dpoints[:, 1] = x.reshape(N)
+        self.__dpoints[:, 2] = y.reshape(N)
 
         if self.reduce:
-            self.weights = np.zeros((self.n, self.n), dtype=FC.DTYPE)
+            self.__weights = np.zeros((self.n, self.n), dtype=FC.DTYPE)
             for i in range(0, self.n):
                 for j in range(0, self.n):
                     d = delta / self.nint
@@ -95,19 +95,19 @@ class GridRotor(RotorModel):
                     pts[:, :, 0], pts[:, :, 1] = np.meshgrid(hx, hy, indexing="ij")
 
                     d = np.linalg.norm(pts, axis=2)
-                    self.weights[i, j] = np.sum(d <= 1.0) / self.nint**2
+                    self.__weights[i, j] = np.sum(d <= 1.0) / self.nint**2
 
-            self.weights = self.weights.reshape(N)
-            sel = self.weights > 0.0
-            self.dpoints = self.dpoints[sel]
-            self.weights = self.weights[sel]
-            self.weights /= np.sum(self.weights)
+            self.__weights = self.__weights.reshape(N)
+            sel = self.__weights > 0.0
+            self.__dpoints = self.__dpoints[sel]
+            self.__weights = self.__weights[sel]
+            self.__weights /= np.sum(self.__weights)
 
         else:
-            self.dpoints[:, 1] = x.reshape(N)
-            self.dpoints[:, 2] = y.reshape(N)
-            self.weights = np.ones(N, dtype=FC.DTYPE) / N
-
+            self.__dpoints[:, 1] = x.reshape(N)
+            self.__dpoints[:, 2] = y.reshape(N)
+            self.__weights = np.ones(N, dtype=FC.DTYPE) / N
+        
     def n_rotor_points(self):
         """
         The number of rotor points
@@ -118,7 +118,7 @@ class GridRotor(RotorModel):
             The number of rotor points
 
         """
-        return len(self.weights)
+        return len(self.__weights)
 
     def design_points(self):
         """
@@ -137,7 +137,7 @@ class GridRotor(RotorModel):
             The design points, shape: (n_points, 3)
 
         """
-        return self.dpoints
+        return self.__dpoints
 
     def rotor_point_weights(self):
         """
@@ -150,4 +150,4 @@ class GridRotor(RotorModel):
             add to one, shape: (n_rpoints,)
 
         """
-        return self.weights
+        return self.__weights

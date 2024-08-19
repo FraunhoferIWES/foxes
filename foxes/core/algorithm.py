@@ -1,11 +1,13 @@
 import numpy as np
 import xarray as xr
+from abc import abstractmethod
 
 from .model import Model
 from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
 import foxes.constants as FC
 
+from .engine import Engine
 
 class Algorithm(Model):
     """
@@ -17,23 +19,22 @@ class Algorithm(Model):
 
     Attributes
     ----------
-    mbook: foxes.models.ModelBook
-        The model book
-    farm: foxes.WindFarm
-        The wind farm
-    chunks: dict
-        The chunks choice for running in parallel with dask,
-        e.g. `{"state": 1000}` for chunks of 1000 states
     verbosity: int
         The verbosity level, 0 means silent
-    dbook: foxes.DataBook
-        The data book, or None for default
 
     :group: core
 
     """
 
-    def __init__(self, mbook, farm, chunks, verbosity, dbook=None):
+    def __init__(
+        self, 
+        mbook, 
+        farm, 
+        verbosity=1, 
+        dbook=None, 
+        engine=None,
+        **engine_pars,
+    ):
         """
         Constructor.
 
@@ -43,31 +44,107 @@ class Algorithm(Model):
             The model book
         farm: foxes.WindFarm
             The wind farm
-        chunks: dict
-            The chunks choice for running in parallel with dask,
-            e.g. `{"state": 1000}` for chunks of 1000 states
         verbosity: int
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
+        engine: str
+            The engine class name
+        engine_pars: dict, optional
+            Parameters for the engine constructor
 
         """
         super().__init__()
 
         self.name = type(self).__name__
-        self.mbook = mbook
-        self.farm = farm
-        self.chunks = chunks
         self.verbosity = verbosity
         self.n_states = None
         self.n_turbines = farm.n_turbines
-        self.dbook = StaticData() if dbook is None else dbook
+        
+        self.__farm = farm
+        self.__mbook = mbook
+        self.__dbook = StaticData() if dbook is None else dbook
+        self.__idata_mem = Dict(name="idata_mem")
+        self.__chunk_store = Dict(name="chunk_store")
+        
+        if engine is not None:
+            e = Engine.new(engine_type=engine, **engine_pars)
+            self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
+            e.initialize()
+        elif len(engine_pars):
+            self.print(f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}")
+    
+    @property
+    def farm(self):
+        """
+        The wind farm
+        
+        Returns
+        -------
+        mb: foxes.core.WindFarm
+            The wind farm
+        
+        """
+        return self.__farm    
+    
+    @property
+    def mbook(self):
+        """
+        The model book
+        
+        Returns
+        -------
+        mb: foxes.models.ModelBook()
+            The model book
+        
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot access mbook while running")
+        return self.__mbook            
 
-        if chunks is not None and FC.TARGET not in chunks:
-            self.chunks[FC.TARGET] = chunks.get(FC.POINT, None)
+    @property
+    def dbook(self):
+        """
+        The data book
+        
+        Returns
+        -------
+        mb: foxes.data.StaticData()
+            The data book
+        
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot access dbook while running")
+        return self.__dbook 
 
-        self._idata_mem = Dict()
+    @property
+    def idata_mem(self):
+        """
+        The current idata memory
 
+        Returns
+        -------
+        dict :
+            Keys: model name, value: idata dict
+
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot access idata_mem while running")
+        return self.__idata_mem
+    
+    @property
+    def chunk_store(self):
+        """
+        The current chunk store
+
+        Returns
+        -------
+        dict :
+            Keys: model name, value: idata dict
+
+        """
+        return self.__chunk_store
+    
     def print(self, *args, vlim=1, **kwargs):
         """
         Print function, based on verbosity.
@@ -85,120 +162,13 @@ class Algorithm(Model):
         if self.verbosity >= vlim:
             print(*args, **kwargs)
 
-    def __get_sizes(self, idata, mtype):
-        """
-        Private helper function
-        """
-
-        sizes = {}
-        for v, t in idata["data_vars"].items():
-            if not isinstance(t, tuple) or len(t) != 2:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Not a tuple of size 2, got '{t}'"
-                )
-            if not isinstance(t[0], tuple):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': First tuple entry not a dimensions tuple, got '{t[0]}'"
-                )
-            for c in t[0]:
-                if not isinstance(c, str):
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': First tuple entry not a dimensions tuple, got '{t[0]}'"
-                    )
-            if not isinstance(t[1], np.ndarray):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Second entry is not a numpy array, got: {type(t[1]).__name__}"
-                )
-            if len(t[1].shape) != len(t[0]):
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Wrong data shape, expecting {len(t[0])} dimensions, got {t[1].shape}"
-                )
-            if FC.STATE in t[0]:
-                if t[0][0] != FC.STATE:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{FC.STATE}' not at first position, got {t[0]}"
-                    )
-                if FC.TURBINE in t[0]:
-                    if t[0][1] != FC.TURBINE:
-                        raise ValueError(
-                            f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' not at second position, got {t[0]}"
-                        )
-                if FC.TARGET in t[0]:
-                    if t[0][1] != FC.TARGET:
-                        raise ValueError(
-                            f"Input {mtype} data entry '{v}': Dimension '{FC.TARGET}' not at second position, got {t[0]}"
-                        )
-                    if len(t[0]) < 3 or t[0][2] != FC.TPOINT:
-                        raise KeyError(
-                            f"Input {mtype} data entry '{v}': Expecting dimension '{FC.TPOINT}' as third entry. Got {t[0]}"
-                        )
-            elif FC.TURBINE in t[0]:
-                raise ValueError(
-                    f"Input {mtype} data entry '{v}': Dimension '{FC.TURBINE}' requires combination with dimension '{FC.STATE}'"
-                )
-            for d, s in zip(t[0], t[1].shape):
-                if d not in sizes:
-                    sizes[d] = s
-                elif sizes[d] != s:
-                    raise ValueError(
-                        f"Input {mtype} data entry '{v}': Dimension '{d}' has wrong size, expecting {sizes[d]}, got {s}"
-                    )
-        for v, c in idata["coords"].items():
-            if v not in sizes:
-                raise KeyError(
-                    f"Input coords entry '{v}': Not used in farm data, found {sorted(list(sizes.keys()))}"
-                )
-            elif len(c) != sizes[v]:
-                raise ValueError(
-                    f"Input coords entry '{v}': Wrong coordinate size for '{v}': Expecting {sizes[v]}, got {len(c)}"
-                )
-
-        return sizes
-
-    def __get_xrdata(self, idata, sizes):
-        """
-        Private helper function
-        """
-        xrdata = xr.Dataset(**idata)
-        if self.chunks is not None:
-            if FC.TURBINE in self.chunks.keys():
-                raise ValueError(
-                    f"Dimension '{FC.TURBINE}' cannot be chunked, got chunks {self.chunks}"
-                )
-            if FC.TPOINT in self.chunks.keys():
-                raise ValueError(
-                    f"Dimension '{FC.TPOINT}' cannot be chunked, got chunks {self.chunks}"
-                )
-            xrdata = xrdata.chunk(
-                chunks={c: v for c, v in self.chunks.items() if c in sizes}
-            )
-        return xrdata
-
-    def chunked(self, ds):
-        return (
-            ds.chunk(chunks={c: v for c, v in self.chunks.items() if c in ds.coords})
-            if self.chunks is not None
-            else ds
-        )
-
     def initialize(self):
         """
         Initializes the algorithm.
         """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot initialize while running")
         super().initialize(self, self.verbosity)
-
-    @property
-    def idata_mem(self):
-        """
-        The current idata memory
-
-        Returns
-        -------
-        dict :
-            Keys: model name, value: idata dict
-
-        """
-        return self._idata_mem
 
     def store_model_data(self, model, idata, force=False):
         """
@@ -217,9 +187,9 @@ class Algorithm(Model):
 
         """
         mname = f"{type(model).__name__}_{model.name}"
-        if not force and mname in self._idata_mem:
+        if not force and mname in self.idata_mem:
             raise KeyError(f"Attempt to overwrite stored data for model '{mname}'")
-        self._idata_mem[mname] = idata
+        self.idata_mem[mname] = idata
 
     def get_model_data(self, model):
         """
@@ -233,10 +203,10 @@ class Algorithm(Model):
         """
         mname = f"{type(model).__name__}_{model.name}"
         try:
-            return self._idata_mem[mname]
+            return self.idata_mem[mname]
         except KeyError:
             raise KeyError(
-                f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self._idata_mem.keys()))}"
+                f"Key '{mname}' not found in idata_mem, available keys: {sorted(list(self.idata_mem.keys()))}"
             )
 
     def del_model_data(self, model):
@@ -251,7 +221,7 @@ class Algorithm(Model):
         """
         mname = f"{type(model).__name__}_{model.name}"
         try:
-            del self._idata_mem[mname]
+            del self.idata_mem[mname]
         except KeyError:
             raise KeyError(f"Attempt to delete data of model '{mname}', but not stored")
 
@@ -308,7 +278,7 @@ class Algorithm(Model):
                                 np.append(d[1], a, axis=i),
                             )
 
-            self._idata_mem.update(newk)
+            self.idata_mem.update(newk)
 
     def get_models_idata(self):
         """
@@ -328,7 +298,7 @@ class Algorithm(Model):
                 f"Algorithm '{self.name}': get_models_idata called before initialization"
             )
         idata = {"coords": {}, "data_vars": {}}
-        for k, hidata in self._idata_mem.items():
+        for k, hidata in self.idata_mem.items():
             if len(k) < 3 or k[:2] != "__":
                 idata["coords"].update(hidata["coords"])
                 idata["data_vars"].update(hidata["data_vars"])
@@ -358,8 +328,7 @@ class Algorithm(Model):
         """
         if idata is None:
             idata = self.get_models_idata()   
-        sizes = self.__get_sizes(idata, "models")
-        ds = self.__get_xrdata(idata, sizes)
+        ds = xr.Dataset(**idata)
         if isel is not None:
             ds = ds.isel(isel)
         if sel is not None:
@@ -409,9 +378,276 @@ class Algorithm(Model):
             np.array([1.0], dtype=FC.DTYPE),
         )
 
-        sizes = self.__get_sizes(idata, "point")
-        return self.__get_xrdata(idata, sizes)
+        return xr.Dataset(**idata)
+    
+    def add_to_chunk_store(self, name, data, mdata, tdata=None, copy=True):
+        """
+        Add data to the chunk store
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        data: numpy.ndarray
+            The data
+        mdata: foxes.core.MData
+            The mdata object
+        tdata: foxes.core.TData, optional
+            The tdata object
+        copy: bool
+            Flag for copying incoming data
+            
+        """
+        i0 = int(mdata.states_i0(counter=True))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        key = (i0, t0)
+        if key not in self.chunk_store:
+            self.chunk_store[key] = Dict(name=f"chunk_store_{i0}_{t0}")
+        self.chunk_store[key][name] = data.copy() if copy else data
+        
+    def get_from_chunk_store(self, name, mdata, tdata=None):
+        """
+        Get data to the chunk store
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        mdata: foxes.core.MData
+            The mdata object
+        tdata: foxes.core.TData, optional
+            The tdata object
+        
+        Returns
+        -------
+        data: numpy.ndarray
+            The data
+        
+        """
+        i0 = int(mdata.states_i0(counter=True))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        return self.chunk_store[(i0, t0)][name]
+    
+    def reset_chunk_store(self, new_chunk_store=None):
+        """
+        Resets the chunk store
+        
+        Parameters
+        ----------
+        new_chunk_store: foxes.utils.Dict, optional
+            The new chunk store
+        
+        Returns
+        -------
+        chunk_store: foxes.utils.Dict
+            The chunk store before resetting
+        
+        """
+        chunk_store = self.chunk_store
+        if new_chunk_store is None:
+            self.__chunk_store = Dict(name="chunk_store")
+        elif isinstance(new_chunk_store, Dict):
+            self.__chunk_store = new_chunk_store
+        else:
+            self.__chunk_store = Dict(name="chunk_store")
+            self.__chunk_store.update(new_chunk_store)
+        return chunk_store
 
+    def set_running(self, large_data, verbosity=0):
+        """
+        Sets this model status to running, and moves
+        all large data to given storage
+
+        Parameters
+        ----------
+        large_data: dict
+            Large data storage, this function adds data here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """        
+        super().set_running(large_data, verbosity)
+
+        large_data[self.name].update(dict(
+            mbook=self.__mbook,
+            dbook=self.__dbook,
+            idata_mem=self.__idata_mem,
+        ))
+        del self.__mbook, self.__dbook, self.__idata_mem
+
+    def unset_running(self, large_data, verbosity=0):
+        """
+        Sets this model status to not running, recovering large data
+        
+        Parameters
+        ----------
+        large_data: dict
+            Large data storage, this function pops data from here.
+            Key: model name. Value: dict, large model data
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(large_data, verbosity)
+        
+        data = large_data.get(self.name)
+        self.__mbook = data["mbook"]
+        self.__dbook = data["dbook"]
+        self.__idata_mem = data["idata_mem"]
+        
+    @abstractmethod
+    def _launch_parallel_farm_calc(
+        self, 
+        *args, 
+        mbook, 
+        dbook, 
+        chunk_store,
+        large_model_data, 
+        **kwargs,
+    ):
+        """
+        Runs the main farm calculation, launching parallelization
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for running
+        mbook: foxes.models.ModelBook
+            The model book
+        dbook: foxes.DataBook
+            The data book, or None for default
+        chunk_store: foxes.utils.Dict
+            The chunk store
+        large_model_data: dict
+            Large data storage. Key: model name. 
+            Value: dict, large model data
+        kwargs: dict, optional
+            Additional parameters for running
+
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+            
+        """
+        pass
+        
+    def calc_farm(self, *args, **kwargs):
+        """
+        Calculate farm data.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Parameters
+        kwargs: dict, optional
+            Keyword parameters
+
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+        
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot call calc_farm while running")
+        
+        # set to running:
+        large_model_data = {}
+        chunk_store = self.reset_chunk_store()
+        mdls = [m for m in [self] + list(args) + list(kwargs.values()) 
+                if isinstance(m, Model)]
+        for m in mdls:
+            m.set_running(large_model_data, self.verbosity-2)
+        
+        # run parallel calculation:
+        farm_results = self._launch_parallel_farm_calc(
+            *args, 
+            chunk_store=chunk_store, 
+            large_model_data=large_model_data,
+            **kwargs,
+        )
+        
+        # reset to not running:
+        for m in mdls:
+            m.unset_running(large_model_data, self.verbosity-2)
+               
+        return farm_results
+
+    @abstractmethod
+    def _launch_parallel_points_calc(
+        self, 
+        *args,  
+        chunk_store, 
+        large_model_data,
+        **kwargs,
+    ):
+        """
+        Runs the main points calculation, launching parallelization
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for running
+        chunk_store: foxes.utils.Dict
+            The chunk store
+        large_model_data: dict
+            Large data storage. Key: model name. 
+            Value: dict, large model data
+        kwargs: dict, optional
+            Additional parameters for running
+
+        Returns
+        -------
+        point_results: xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+            
+        """
+        pass
+        
+    def calc_points(self, *args, **kwargs):
+        """
+        Calculate points data.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Parameters
+        kwargs: dict, optional
+            Keyword parameters
+
+        Returns
+        -------
+        point_results: xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+        
+        """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot call calc_points while running")
+        
+        # set to running:
+        large_model_data = {}
+        self.set_running(large_model_data, self.verbosity-2)
+        
+        # run parallel calculation:
+        chunk_store = self.reset_chunk_store()
+        point_results = self._launch_parallel_points_calc(
+            *args, 
+            chunk_store=chunk_store, 
+            large_model_data=large_model_data,
+            **kwargs,
+        )
+        
+        # reset to not running:
+        self.unset_running(large_model_data, self.verbosity-2)
+        
+        return point_results
+    
     def finalize(self, clear_mem=False):
         """
         Finalizes the algorithm.
@@ -422,9 +658,12 @@ class Algorithm(Model):
             Clear idata memory
 
         """
+        if self.running:
+            raise ValueError(f"Algorithm '{self.name}': Cannot finalize while running")
         super().finalize(self, self.verbosity)
         if clear_mem:
-            self._idata_mem = Dict()
+            self.__idata_mem = Dict()
+            self.reset_chunk_store()
 
     @classmethod
     def new(cls, algo_type, *args, **kwargs):

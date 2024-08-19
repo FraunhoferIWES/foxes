@@ -164,7 +164,6 @@ class States(PointDataModel):
             )
             raise KeyError(estr)
 
-
 class ExtendedStates(States):
     """
     States extended by point data models.
