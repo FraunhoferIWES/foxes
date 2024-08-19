@@ -139,7 +139,6 @@ class PointDataModel(DataCalcModel):
         else:
             return PointDataModelList([self, m])
 
-
 class PointDataModelList(PointDataModel):
     """
     A list of point data models.

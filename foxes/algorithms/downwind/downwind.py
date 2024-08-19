@@ -195,6 +195,16 @@ class Downwind(Algorithm):
         """
         return self.__states
 
+    @states.setter
+    def states(self, value):
+        """ Resets the states """
+        if self.running:
+            raise ValueError(f"{self.name}: Cannot set states while running")
+        if self.states.initialized:
+            self.states.finalize(self, verbosity=self.verbosity)
+        self.__states = value
+        self.init_states()
+        
     @property
     def rotor_model(self):
         """
