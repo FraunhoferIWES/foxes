@@ -8,11 +8,11 @@ build-backend = "setuptools.build_meta"
 name = "foxes"
 version = "0.9"
 authors = [
-  {name = "Jonas Schulte", email = "jonas.schulte@iwes.fraunhofer.de"},
-  {name = "Lukas Vollmer", email = "lukas.vollmer@iwes.fraunhofer.de"},
+  {name = "Jonas Schulte"},
+  {name = "Lukas Vollmer"},
 ]
 maintainers = [
-  {name = "Jonas Schulte", email = "jonas.schulte@iwes.fraunhofer.de"}
+  {name = "Jonas Schulte"}
 ]
 description = "Farm Optimization and eXtended yield Evaluation Software"
 readme = "README.md"
