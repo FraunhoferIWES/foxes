@@ -124,9 +124,9 @@ class MultiprocessEngine(Engine):
         goal_data = farm_data if point_data is None else point_data
         
         # DEBUG objec mem sizes:
-        from foxes.utils import print_mem
-        for m in [algo] + model.models:
-            print_mem(m, pre_str="MULTIP CHECKING LARGE DATA", min_csize=9999)
+        #from foxes.utils import print_mem
+        #for m in [algo] + model.models:
+        #    print_mem(m, pre_str="MULTIP CHECKING LARGE DATA", min_csize=9999)
             
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
