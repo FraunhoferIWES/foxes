@@ -138,7 +138,6 @@ scratch/
 *.swp
 *.gif
 submodules/
-conda/
 
 # exceptions:
 

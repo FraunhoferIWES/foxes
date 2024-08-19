@@ -80,4 +80,4 @@ Repository = "https://github.com/FraunhoferIWES/foxes.git"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/history.md"
 
 [tool.setuptools.packages.find]
-exclude = ["notebooks"]
+exclude = ["notebooks", "conda"]
