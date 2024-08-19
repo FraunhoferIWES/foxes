@@ -49,13 +49,20 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-io = ["windio>=1"]
-opt = ["foxes-opt"]
+io = [
+    "windio>=1"
+]
+opt = [
+    "foxes-opt"
+]
 slurm = [
     "setuptools",
     "dask-jobqueue",
 ]
-test = ["flake8", "pytest"]
+test = [
+    "flake8", 
+    "pytest"
+]
 doc = [
     "sphinx",
     "sphinx-immaterial",
