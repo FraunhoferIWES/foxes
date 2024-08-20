@@ -848,6 +848,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     chunk_store=cstore,
                     i0_states=i0_states,
                     cpars=cpars,
+                    retries=10,
                 )
                 del fut_data, cstore
                     
