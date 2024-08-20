@@ -688,7 +688,7 @@ class LocalClusterEngine(DaskBaseEngine):
         self.print(f"Shutting down {type(self._cluster).__name__}")
         self._client.retire_workers()
         sleep(1)
-        self._client.close()
+        #self._client.shutdown()
         self._client.__exit__(*args)
         self._cluster.__exit__(*args)
         super().__exit__(*args)
