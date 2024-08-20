@@ -7,6 +7,7 @@ from dask import delayed, compute
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
+from time import sleep
 
 from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
@@ -669,6 +670,9 @@ class LocalClusterEngine(DaskBaseEngine):
         if self.n_procs is None and not len(cluster_pars):
             self.n_procs = cpu_count()
 
+        self.dask_config["scheduler"] = "distributed"
+        self.dask_config['distributed.scheduler.worker-ttl'] = None
+        
         self._cluster = None
         self._client = None
 
@@ -682,6 +686,9 @@ class LocalClusterEngine(DaskBaseEngine):
     
     def __exit__(self, *args):
         self.print(f"Shutting down {type(self._cluster).__name__}")
+        self._client.retire_workers()
+        sleep(1)
+        self._client.close()
         self._client.__exit__(*args)
         self._cluster.__exit__(*args)
         super().__exit__(*args)
@@ -692,15 +699,6 @@ class LocalClusterEngine(DaskBaseEngine):
         if self._cluster is not None:
             self._cluster.__del__()
         super().__del__()
-            
-    def initialize(self):
-        """
-        Initializes the engine.
-        """                      
-        self.dask_config["scheduler"] = "distributed"
-        self.dask_config['distributed.scheduler.worker-ttl'] = None
-            
-        super().initialize()
             
     def run_calculation(
         self, 
