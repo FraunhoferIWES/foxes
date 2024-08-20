@@ -904,10 +904,15 @@ class SlurmClusterEngine(LocalClusterEngine):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
-        self._cluster = SLURMCluster(**cargs).__enter__()
+        
+        dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[slurm]")
+        self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
+        self._cluster = self._cluster.__enter__()
         self._client = Client(self._cluster, **self.client_pars).__enter__()
+        
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
+        
         return super().__enter__()
         

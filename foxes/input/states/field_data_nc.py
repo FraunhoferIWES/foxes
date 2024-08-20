@@ -144,7 +144,7 @@ class FieldDataNC(States):
         self.__weights = None
         self.__inds = None
 
-        # pre-load file reading, usually prior to DaskRunner:
+        # pre-load file reading:
         if not isinstance(self.data_source, xr.Dataset):
             if "*" in str(self.data_source):
                 pass
