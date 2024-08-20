@@ -21,12 +21,6 @@ class DaskBaseEngine(Engine):
     ----------
     dask_config: dict
         The dask configuration parameters
-    cluster: str
-        The dask cluster choice: 'local' or 'slurm'
-    cluster_pars: dict
-        Parameters for the cluster
-    client_pars: dict
-        Parameters for the client of the cluster
     progress_bar: bool
         Flag for showing progress bar
     n_procs: int
@@ -38,9 +32,6 @@ class DaskBaseEngine(Engine):
     def __init__(
         self, 
         dask_config={},
-        cluster=None, 
-        cluster_pars={}, 
-        client_pars={}, 
         n_procs=None,
         progress_bar=True,
         **kwargs,
@@ -52,12 +43,6 @@ class DaskBaseEngine(Engine):
         ----------
         dask_config: dict, optional
             The dask configuration parameters
-        cluster: str, optional
-            The dask cluster choice: 'local' or 'slurm'
-        cluster_pars: dict
-            Parameters for the cluster
-        client_pars: dict
-            Parameters for the client of the cluster
         n_procs: int, optional
             The number of processes to be used,
             or None for automatic
@@ -69,51 +54,18 @@ class DaskBaseEngine(Engine):
         """
         super().__init__(**kwargs)
         self.dask_config = dask_config
-        self.cluster = cluster
-        self.cluster_pars = cluster_pars
-        self.client_pars = client_pars
         self.progress_bar = progress_bar
-        
         self.n_procs = n_procs
-        if n_procs is None and not len(cluster_pars):
-            self.n_procs = cpu_count()
-        
-        self._cluster = None
-        self._client = None
 
     def initialize(self):
         """
         Initializes the engine.
-        """       
-        if self.cluster == "local":         
-            self.print("Launching local dask cluster..")
-
-            self._cluster = LocalCluster(n_workers=self.n_procs, **self.cluster_pars)
-            self._client = Client(self._cluster, **self.client_pars)
-            self.dask_config["scheduler"] = "distributed"
-
-            self.print(self._cluster)
-            self.print(f"Dashboard: {self._client.dashboard_link}\n")
-            
-        elif self.cluster == "slurm":
-            self.print("Launching dask cluster on HPC using SLURM..")
-
-            cargs = deepcopy(self.cluster_pars)
-            nodes = cargs.pop("nodes", 1)
-            self._cluster = SLURMCluster(**cargs)
-            self._cluster.scale(jobs=nodes)
-            self._client = Client(self._cluster, **self.client_pars)
-            self.dask_config["scheduler"] = "distributed"
-
-            self.print(self._cluster)
-            self.print(f"Dashboard: {self._client.dashboard_link}\n")
-        
+        """               
         if self.progress_bar:
             self._pbar = ProgressBar(minimum=2)
             self._pbar.register()
 
         dask.config.set(**self.dask_config)
-        
         super().initialize()
 
     def chunk_data(self, data):
@@ -141,21 +93,21 @@ class DaskBaseEngine(Engine):
         else:
             return data
     
-    def finalize(self):
+    def finalize(self, *exit_args):
         """
         Finalizes the engine.
-        """
-        if self.cluster is not None:
-            self.print("\n\nShutting down dask cluster")
-            self._client.close()
-            self._cluster.close()
         
+        Parameters
+        ----------
+        exit_args: tuple, optional
+            Arguments from the exit function
+            
+        """
         if self.progress_bar:
             self._pbar.unregister()
             
         dask.config.refresh()
-        
-        super().finalize()
+        super().finalize(*exit_args)
         
 def _run_as_ufunc(
     state_inds,
@@ -482,22 +434,7 @@ class DaskEngine(DaskBaseEngine):
     
     :group: engines
     
-    """
-    def __init__(self, *args, **kwargs):
-        """
-        Constructor.
-        
-        Parameters
-        ----------
-        args: tuple, optional
-            Additional parameters for the DaskBaseEngine class
-        kwargs: dict, optional
-            Additional parameters for the base class
-            
-        """
-        super().__init__(*args, cluster=None, cluster_pars={}, 
-                         client_pars={}, **kwargs)
-        
+    """        
     def run_calculation(
         self, 
         algo,
@@ -693,10 +630,23 @@ class LocalClusterEngine(DaskBaseEngine):
     """
     The dask engine for foxes calculations on a local cluster.
     
+    Attributes
+    ----------
+    cluster_pars: dict
+        Parameters for the cluster
+    client_pars: dict
+        Parameters for the client of the cluster
+    
     :group: engines
     
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, 
+        *args, 
+        cluster_pars={}, 
+        client_pars={}, 
+        **kwargs,
+    ):
         """
         Constructor.
         
@@ -704,12 +654,54 @@ class LocalClusterEngine(DaskBaseEngine):
         ----------
         args: tuple, optional
             Additional parameters for the DaskBaseEngine class
+        cluster_pars: dict
+            Parameters for the cluster
+        client_pars: dict
+            Parameters for the client of the cluster
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        super().__init__(*args, cluster="local", **kwargs)
+        super().__init__(*args, **kwargs)
+        self.cluster_pars = cluster_pars
+        self.client_pars = client_pars
         
+        if self.n_procs is None and not len(cluster_pars):
+            self.n_procs = cpu_count()
+
+        self._cluster = None
+        self._client = None
+
+    def __enter__(self):
+        self.print("Launching local dask cluster..")
+        self._cluster = LocalCluster(n_workers=self.n_procs, **self.cluster_pars).__enter__()
+        self._client = Client(self._cluster, **self.client_pars).__enter__()
+        self.print(self._cluster)
+        self.print(f"Dashboard: {self._client.dashboard_link}\n")
+        return super().__enter__()
+    
+    def __exit__(self, *args):
+        self.print(f"Shutting down {type(self._cluster).__name__}")
+        self._client.__exit__(*args)
+        self._cluster.__exit__(*args)
+        super().__exit__(*args)
+    
+    def __del__(self):
+        if self._client is not None:
+            self._client.__del__()
+        if self._cluster is not None:
+            self._cluster.__del__()
+        super().__del__()
+            
+    def initialize(self):
+        """
+        Initializes the engine.
+        """                      
+        self.dask_config["scheduler"] = "distributed"
+        self.dask_config['distributed.scheduler.worker-ttl'] = None
+            
+        super().initialize()
+            
     def run_calculation(
         self, 
         algo,
@@ -790,9 +782,13 @@ class LocalClusterEngine(DaskBaseEngine):
         # prepare chunks:
         n_chunks_all = n_chunks_states*n_chunks_targets
         n_procs = min(n_procs, n_chunks_all)
-        cpars = calc_pars#{v: self._client.scatter(d, broadcast=True) for v, d in calc_pars.items()}
-        all_data = []
-        
+
+        # scatter algo and model:
+        falgo = self._client.scatter(algo, broadcast=True)
+        fmodel = self._client.scatter(model, broadcast=True)
+        cpars = self._client.scatter(calc_pars, broadcast=True)
+        all_data = [falgo, fmodel, cpars]
+                
         # submit chunks:
         self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
@@ -814,12 +810,6 @@ class LocalClusterEngine(DaskBaseEngine):
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
                 )
-                
-                # scatter algo and model:
-                falgo = self._client.scatter(algo, hash=False)
-                fmodel = self._client.scatter(model, hash=False)
-                all_data.append(falgo)
-                all_data.append(fmodel)
         
                 # scatter data:
                 fut_data = []
@@ -831,7 +821,10 @@ class LocalClusterEngine(DaskBaseEngine):
                         fut_data.append(self._client.scatter(d, hash=False))
                         names.append(k)
                         dims.append(dt.dims[k])
-                all_data.append(fut_data)
+                names = self._client.scatter(names)
+                dims = self._client.scatter(dims)
+                ldims = self._client.scatter(ldims)
+                all_data += [fut_data, names, dims, ldims]
                 
                 # scatter chunk store data:
                 cstore = {k: {a: b for a,b in d.items()} 
@@ -848,17 +841,17 @@ class LocalClusterEngine(DaskBaseEngine):
                     falgo, 
                     fmodel,
                     *fut_data,
-                    names=self._client.scatter(names),
-                    dims=self._client.scatter(dims),
+                    names=names,
+                    dims=dims,
                     mdata_size=len(data[0]),
                     fdata_size=len(data[1]),
-                    loop_dims=self._client.scatter(ldims),
+                    loop_dims=ldims,
                     iterative=iterative,
                     chunk_store=cstore,
                     i0_states=i0_states,
-                    cpars=self._client.scatter(cpars),
+                    cpars=cpars,
                 )
-                del falgo, fmodel, fut_data, cstore
+                del fut_data, cstore
                     
                 i0_targets = i1_targets
         
@@ -867,7 +860,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     
             i0_states = i1_states
             
-        del farm_data, point_data, calc_pars
+        del falgo, fmodel, farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
             
@@ -884,7 +877,7 @@ class LocalClusterEngine(DaskBaseEngine):
         if pbar is not None:
             pbar.close()
         
-        return self.combine_results(
+        results = self.combine_results(
             algo=algo,
             results=results,
             model_data=model_data,
@@ -894,8 +887,12 @@ class LocalClusterEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
-        )
-
+        ).compute()
+        
+        self._client.cancel(all_data)
+        
+        return results
+        
 class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
@@ -903,17 +900,14 @@ class SlurmClusterEngine(LocalClusterEngine):
     :group: engines
     
     """
-    def __init__(self, *args, **kwargs):
-        """
-        Constructor.
+    def __enter__(self):
+        self.print("Launching dask cluster on HPC using SLURM..")
+        cargs = deepcopy(self.cluster_pars)
+        nodes = cargs.pop("nodes", 1)
+        self._cluster = SLURMCluster(**cargs).__enter__()
+        self._cluster.scale(jobs=nodes)
+        self._client = Client(self._cluster, **self.client_pars).__enter__()
+        self.print(self._cluster)
+        self.print(f"Dashboard: {self._client.dashboard_link}\n")
+        return super().__enter__()
         
-        Parameters
-        ----------
-        args: tuple, optional
-            Additional parameters for the LocalClusterEngine class
-        kwargs: dict, optional
-            Additional parameters for the LocalClusterEngine class
-            
-        """
-        super().__init__(*args, **kwargs)
-        self.cluster = "slurm"
