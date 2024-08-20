@@ -51,11 +51,44 @@ class Engine(ABC):
         self.chunk_size_points = chunk_size_points
         self.verbosity = verbosity
         self.__initialized = False
+        self.__entered = False
     
     def __repr__(self):
         s = f"chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
         return f"{type(self).__name__}({s})"
+
+    def __enter__(self):
+        if self.__entered:
+            raise ValueError(f"Enter called for already entered engine")
+        self.__entered = True
+        if not self.initialized:
+            self.initialize()
+        return self
     
+    def __exit__(self, *exit_args):
+        if not self.__entered:
+            raise ValueError(f"Exit called for not entered engine")
+        self.__entered = False
+        if self.initialized:
+            self.finalize(*exit_args)
+    
+    def __del__(self):
+        if self.initialized:
+            self.finalize()
+
+    @property
+    def entered(self):
+        """
+        Flag that this model has been entered.
+
+        Returns
+        -------
+        flag: bool
+            True if the model has been entered.
+
+        """
+        return self.__entered
+     
     @property
     def initialized(self):
         """
@@ -63,7 +96,7 @@ class Engine(ABC):
 
         Returns
         -------
-        ini: bool
+        flag: bool
             True if the model has been initialized.
 
         """
@@ -73,34 +106,31 @@ class Engine(ABC):
         """
         Initializes the engine.
         """
-        if not self.initialized:
+        if not self.entered:
+            self.__enter__()
+        elif not self.initialized:
             if get_engine(error=False, default=False) is not None:
                 raise ValueError(f"Cannot initialize engine '{type(self).__name__}', since engine already set to '{type(get_engine()).__name__}'")
             global __global_engine_data__
             __global_engine_data__["engine"] = self
             self.__initialized = True
         
-    def finalize(self):
+    def finalize(self, *exit_args):
         """
         Finalizes the engine.
+        
+        Parameters
+        ----------
+        exit_args: tuple, optional
+            Arguments from the exit function
+            
         """
-        if self.initialized:
+        if self.entered:
+            self.__exit__(*exit_args)
+        elif self.initialized:
             global __global_engine_data__
             __global_engine_data__["engine"] = None
             self.__initialized = False
-        
-    def __enter__(self):
-        if not self.initialized:
-            self.initialize()
-        return self
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self.initialized:
-            self.finalize()
-    
-    def __del__(self):
-        if self.initialized:
-            self.finalize()
             
     def print(self, *args, level=1, **kwargs):
         """ Prints based on verbosity """

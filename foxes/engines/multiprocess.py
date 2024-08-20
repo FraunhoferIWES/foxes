@@ -207,14 +207,20 @@ class MultiprocessEngine(Engine):
             iterative=iterative,
         )
         
-    def finalize(self):
+    def finalize(self, *exit_args):
         """
         Finalizes the engine.
+        
+        Parameters
+        ----------
+        exit_args: tuple, optional
+            Arguments from the exit function
+            
         """
         if self._pool is not None:
             self._pool.close()
             self._pool.terminate()
             self._pool = None
  
-        super().finalize()
+        super().finalize(*exit_args)
         
