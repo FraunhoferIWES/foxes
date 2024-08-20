@@ -886,7 +886,7 @@ class LocalClusterEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
-        ).compute()
+        ).persist()
         
         self._client.cancel(all_data)
         
