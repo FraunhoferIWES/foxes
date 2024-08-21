@@ -102,15 +102,18 @@ if __name__ == "__main__":
     )
 
     cluster_pars = {
-        "cores": 24,  # number of cores per node
-        "memory": "64GB",  # memory per node
-        "nodes": 2,
+        "nodes": 1,         # number of nodes
+        "cores": 24,        # number of cores per node
+        "processes": 4,     # number of workers per node
+        "memory": "64GB",   # memory per node
         "walltime": "00:00:10",
-        "queue": "eddy.p",
+        "queue": "cfds.p",
+        #"silence_logs": "info", # print all info log
     }
 
     with foxes.Engine.new(
         engine_type="slurm_cluster",
+        n_procs=4,
         cluster_pars=cluster_pars,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,

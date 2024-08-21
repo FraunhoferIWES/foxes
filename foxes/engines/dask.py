@@ -888,7 +888,7 @@ class LocalClusterEngine(DaskBaseEngine):
             iterative=iterative,
         ).persist()
         
-        self._client.cancel(all_data)
+        #self._client.cancel(all_data)
         
         return results
         
@@ -899,12 +899,28 @@ class SlurmClusterEngine(LocalClusterEngine):
     :group: engines
     
     """
+    def __init__(self, n_procs, *args, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        n_procs: int
+            The number of processes to be used
+        args: tuple, optional
+            Additional parameters for LocalClusterEngine
+        kwargs: dict, optional
+            Additional parameters for LocalClusterEngine
+            
+        """
+        super().__init__(*args, n_procs=n_procs, **kwargs)
+        
     def __enter__(self):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
         
-        dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[slurm]")
+        dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[hpc]")
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
         self._cluster = self._cluster.__enter__()
@@ -912,6 +928,7 @@ class SlurmClusterEngine(LocalClusterEngine):
         
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
+        print(self._cluster.job_script())
         
-        return super().__enter__()
+        return DaskBaseEngine.__enter__(self)
         

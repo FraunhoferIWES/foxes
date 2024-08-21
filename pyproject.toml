@@ -55,7 +55,7 @@ io = [
 opt = [
     "foxes-opt"
 ]
-slurm = [
+hpc = [
     "setuptools",
     "dask-jobqueue",
 ]
