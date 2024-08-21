@@ -599,8 +599,8 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.3](https://github.com/FraunhoferIWES/foxes/commits/v0.8.3)
 
-## v0.9
+## v1
 
 
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.9](https://github.com/FraunhoferIWES/foxes/commits/v0.9)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)
