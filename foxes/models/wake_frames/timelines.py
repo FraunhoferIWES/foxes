@@ -249,9 +249,13 @@ class Timelines(WakeFrame):
         
             # step backwards in time, until wake source turbine is hit:
             dxy = self._dxy[hi][:i1]
-            hcond = (theights == h)
+            precond = (theights[:, None] == h) & (wcoosx > 0.99e20)
             while True:
-                sel = hcond[:, None] & (h_trace_si > 0) & (trace_l < self.max_wake_length)
+                sel = (
+                    precond & 
+                    (h_trace_si > 0) & 
+                    (trace_l < self.max_wake_length)
+                )
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 
@@ -267,7 +271,7 @@ class Timelines(WakeFrame):
                     trace_d[sel] = d
 
                     # check for turbine hit, then set coordinates:
-                    seln = d <= np.minimum(d0, 2 * dmag)
+                    seln = d <= np.minimum(d0, 1.5 * dmag)
                     if np.any(seln):
                         htrp = trp[seln]
                         raxis = delta[seln]
@@ -294,7 +298,7 @@ class Timelines(WakeFrame):
                 else:
                     break
             
-            del trace_p, trace_l, trace_d, h_trace_si, dxy, hcond
+            del trace_p, trace_l, trace_d, h_trace_si, dxy, precond
 
         # store turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
