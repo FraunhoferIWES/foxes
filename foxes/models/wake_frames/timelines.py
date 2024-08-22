@@ -230,31 +230,32 @@ class Timelines(WakeFrame):
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
 
-        i0 = mdata.states_i0(counter=True)
-        i1 = i0 + mdata.n_states
-        trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
-        trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
-        trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-        trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
-        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1
-
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoosx = wcoos[:, :, 0]
         wcoosy = wcoos[:, :, 1]
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
-        del rxyz
-                
+        
+        i0 = mdata.states_i0(counter=True)
+        i1 = i0 + mdata.n_states
+        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1     
         for hi, h in enumerate(self._heights):
             
+            trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+            trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
+            trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+            trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
+            h_trace_si = trace_si.copy()
+        
+            # step backwards in time, until wake source turbine is hit:
             dxy = self._dxy[hi][:i1]
             hcond = (theights == h)
             while True:
-                sel = hcond[:, None] & (trace_si > 0) & (trace_l < self.max_wake_length)
+                sel = hcond[:, None] & (h_trace_si > 0) & (trace_l < self.max_wake_length)
                 if np.any(sel):
-                    trace_si[sel] -= 1
+                    h_trace_si[sel] -= 1
 
-                    delta = dxy[trace_si[sel]]
+                    delta = dxy[h_trace_si[sel]]
                     dmag = np.linalg.norm(delta, axis=-1)
 
                     trace_p[sel] -= delta
@@ -265,6 +266,7 @@ class Timelines(WakeFrame):
                     d = np.linalg.norm(trp, axis=-1)
                     trace_d[sel] = d
 
+                    # check for turbine hit, then set coordinates:
                     seln = d <= np.minimum(d0, 2 * dmag)
                     if np.any(seln):
                         htrp = trp[seln]
@@ -283,14 +285,22 @@ class Timelines(WakeFrame):
                         wcy[seln] = np.einsum("sd,sd->s", htrp, saxis)
                         wcoosy[sel] = wcy
                         del wcy, saxis, htrp
+                        
+                        trs = trace_si[sel]
+                        trs[seln] = h_trace_si[sel][seln]
+                        trace_si[sel] = trs
+                        del trs
 
                 else:
                     break
+            
+            del trace_p, trace_l, trace_d, h_trace_si, dxy, hcond
 
-        # turbines that cause wake:
+        # store turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
 
-        # states that cause wake for each target point:
+        # store states that cause wake for each target point,
+        # will be used by model.get_data() during wake calculation:
         tdata.add(
             FC.STATES_SEL,
             trace_si.reshape(n_states, n_targets, n_tpoints),
