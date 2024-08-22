@@ -36,7 +36,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2014_linear_k004"],
+        default=["Bastankhah2014_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="timelines")
@@ -168,6 +168,7 @@ if __name__ == "__main__":
                 quiver_n=35,
                 xmax=5000,
                 ymax=5000,
+                vmin=0,
                 fig=fig,
                 ax=axs[0],
                 ret_im=True,

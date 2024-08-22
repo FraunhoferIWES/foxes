@@ -601,6 +601,15 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 ## v1
 
+This major version introduces the concept of `Engines` which handle the chunking and parallelization of all *foxes* calculations. The default choice is now based on the [multiprocess](https://github.com/uqfoundation/multiprocess) package and provides a significant speedup compared to previous versions. See the documentation for more details and all engine choices. The `Engines` replace the `Runners` of previous versions.
+
+- Engines
+  - New engine `MultiprocessEngine` (short `multiprocess`): Sends chunks to a multiprocessing pool
+  - New engine `XArrayEngine` (short `xarray`): Runs parallelization via [xarray.apply_ufunc](https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html)
+  - New engine `DaskEngine` (short `dask`): Submits chunk calculation functions to `dask`
+  - New engine `LocalClusterEngine` (short `local_cluster`): Creates a virtual cluster on the local machine
+  - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
+  - New engine `NumpyEngine` (short `numpy`): Runs single-chunk calculations
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
 
