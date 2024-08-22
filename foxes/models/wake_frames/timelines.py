@@ -81,16 +81,25 @@ class Timelines(WakeFrame):
         else:
             n = max(len(times) - 1, 1)
             dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
+            
+        # find turbine hub heights:
+        t2h = np.zeros(algo.n_turbines, dtype=FC.ITYPE)
+        for ti, t in enumerate(algo.farm.turbines):
+            t2h[ti] = t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
+        self._heights = np.unique(t2h)
 
         # calculate horizontal wind vector in all states:
         self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
 
         # prepare mdata:
-        mdata = algo.get_model_data(algo.states)["data_vars"]
-        mdict = {v: d[1] for v, d in mdata.items()}
-        mdims = {v: d[0] for v, d in mdata.items()}
+        data = algo.get_model_data(algo.states)["coords"]
+        mdict = {v: np.array(d) for v, d in data.items()}
+        mdims = {v: (v,) for v in data.keys()}
+        data = algo.get_model_data(algo.states)["data_vars"]
+        mdict.update({v: d[1] for v, d in data.items()})
+        mdims.update({v: d[0] for v, d in data.items()})
         mdata = MData(mdict, mdims, loop_dims=[FC.STATE])
-        del mdict, mdims
+        del mdict, mdims, data
 
         # prepare fdata:
         fdata = FData({}, {}, loop_dims=[FC.STATE])
@@ -101,28 +110,39 @@ class Timelines(WakeFrame):
             for v in algo.states.output_point_vars(algo)
         }
         pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
-        tdata = TData.from_points(
-            points=np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE),
-            data=tdata,
-            dims=pdims,
-        )
+        points = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
+        
+        # calculate all heights:
+        self._dxy = []
+        for h in self._heights:
 
-        # calculate:
-        res = algo.states.calculate(algo, mdata, fdata, tdata)
-        if len(dt) == 1:
-            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2] * dt[:, None]
-        else:
-            self._dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, 0, :2] * dt[:, None]
-            self._dxy = np.insert(self._dxy, 0, self._dxy[0], axis=0)
+            if verbosity > 0:
+                print(f"  Height: {h} m")
+                
+            points[..., 2] = h
+            tdata = TData.from_points(
+                points=points,
+                data=tdata,
+                dims=pdims,
+            )
 
-        """ DEBUG
-        import matplotlib.pyplot as plt
-        xy = np.array([np.sum(self._dxy[:n], axis=0) for n in range(len(self._dxy))])
-        print(xy)
-        plt.plot(xy[:, 0], xy[:, 1])
-        plt.show()
-        quit()
-        """
+            res = algo.states.calculate(algo, mdata, fdata, tdata)
+            if len(dt) == 1:
+                dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2] * dt[:, None]
+            else:
+                dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, 0, :2] * dt[:, None]
+                dxy = np.insert(dxy, 0, dxy[0], axis=0)
+            self._dxy.append(dxy)
+            """ DEBUG
+            import matplotlib.pyplot as plt
+            xy = np.array([np.sum(self._dxy[h][:n], axis=0) for n in range(len(self._dxy[h]))])
+            print(xy)
+            plt.plot(xy[:, 0], xy[:, 1])
+            plt.title(f"Height {h} m")
+            plt.show()
+            quit()
+            """
+        self._dxy = np.stack(self._dxy, axis=0)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -205,14 +225,13 @@ class Timelines(WakeFrame):
         n_points = n_targets * n_tpoints
         points = targets.reshape(n_states, n_points, 3)
         rxyz = fdata[FV.TXYH][:, downwind_index]
+        theights = fdata[FV.H][:, downwind_index]
 
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
 
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + mdata.n_states
-        dxy = self._dxy[:i1]
-
         trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
         trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
         trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
@@ -225,44 +244,48 @@ class Timelines(WakeFrame):
         wcoosy = wcoos[:, :, 1]
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
         del rxyz
+                
+        for hi, h in enumerate(self._heights):
+            
+            dxy = self._dxy[hi][:i1]
+            hcond = (theights == h)
+            while True:
+                sel = hcond[:, None] & (trace_si > 0) & (trace_l < self.max_wake_length)
+                if np.any(sel):
+                    trace_si[sel] -= 1
 
-        while True:
-            sel = (trace_si > 0) & (trace_l < self.max_wake_length)
-            if np.any(sel):
-                trace_si[sel] -= 1
+                    delta = dxy[trace_si[sel]]
+                    dmag = np.linalg.norm(delta, axis=-1)
 
-                delta = dxy[trace_si[sel]]
-                dmag = np.linalg.norm(delta, axis=-1)
+                    trace_p[sel] -= delta
+                    trace_l[sel] += dmag
 
-                trace_p[sel] -= delta
-                trace_l[sel] += dmag
+                    trp = trace_p[sel]
+                    d0 = trace_d[sel]
+                    d = np.linalg.norm(trp, axis=-1)
+                    trace_d[sel] = d
 
-                trp = trace_p[sel]
-                d0 = trace_d[sel]
-                d = np.linalg.norm(trp, axis=-1)
-                trace_d[sel] = d
+                    seln = d <= np.minimum(d0, 2 * dmag)
+                    if np.any(seln):
+                        htrp = trp[seln]
+                        raxis = delta[seln]
+                        raxis = raxis / np.linalg.norm(raxis, axis=-1)[:, None]
+                        saxis = np.concatenate(
+                            [-raxis[:, 1, None], raxis[:, 0, None]], axis=1
+                        )
 
-                seln = d <= np.minimum(d0, 2 * dmag)
-                if np.any(seln):
-                    htrp = trp[seln]
-                    raxis = delta[seln]
-                    raxis = raxis / np.linalg.norm(raxis, axis=-1)[:, None]
-                    saxis = np.concatenate(
-                        [-raxis[:, 1, None], raxis[:, 0, None]], axis=1
-                    )
+                        wcx = wcoosx[sel]
+                        wcx[seln] = np.einsum("sd,sd->s", htrp, raxis) + trace_l[sel][seln]
+                        wcoosx[sel] = wcx
+                        del wcx, raxis
 
-                    wcx = wcoosx[sel]
-                    wcx[seln] = np.einsum("sd,sd->s", htrp, raxis) + trace_l[sel][seln]
-                    wcoosx[sel] = wcx
-                    del wcx, raxis
+                        wcy = wcoosy[sel]
+                        wcy[seln] = np.einsum("sd,sd->s", htrp, saxis)
+                        wcoosy[sel] = wcy
+                        del wcy, saxis, htrp
 
-                    wcy = wcoosy[sel]
-                    wcy[seln] = np.einsum("sd,sd->s", htrp, saxis)
-                    wcoosy[sel] = wcy
-                    del wcy, saxis, htrp
-
-            else:
-                break
+                else:
+                    break
 
         # turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index

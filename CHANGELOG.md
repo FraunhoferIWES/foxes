@@ -601,6 +601,7 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 ## v1
 
-
+- Models:
+  - Wake frame `Timelines` now also accept spatially uniform multi-height states 
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)

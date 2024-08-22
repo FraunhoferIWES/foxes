@@ -61,7 +61,7 @@ class MultiHeightStates(States):
         pd_read_pars={},
         states_sel=None,
         states_loc=None,
-        ipars={},
+        **ipars,
     ):
         """
         Constructor.
@@ -406,7 +406,7 @@ class MultiHeightStates(States):
         n_h = len(h)
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
-
+        
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
         np.fill_diagonal(coeffs, 1.0)
         ipars = dict(assume_sorted=True, bounds_error=True)

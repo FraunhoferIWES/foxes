@@ -384,9 +384,9 @@ class Downwind(Algorithm):
         """
         mdls = [
             self.states, 
+            self.farm_controller,
             self.rotor_model, 
             self.wake_frame,
-            self.farm_controller,
         ]
         mdls += list(self.wake_models.values())
         mdls += list(self.partial_wakes.values())
