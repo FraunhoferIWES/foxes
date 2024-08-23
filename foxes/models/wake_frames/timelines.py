@@ -83,7 +83,7 @@ class Timelines(WakeFrame):
             dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
             
         # find turbine hub heights:
-        t2h = np.zeros(algo.n_turbines, dtype=FC.ITYPE)
+        t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
             t2h[ti] = t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
         self._heights = np.unique(t2h)
