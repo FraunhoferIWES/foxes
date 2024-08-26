@@ -288,8 +288,6 @@ class FarmLayoutOutput(Output):
         """
         Writes the layout plot to file.
 
-        The kwargs are forwarded to self.get_figure
-
         Parameters
         ----------
         file_path: str
@@ -297,6 +295,8 @@ class FarmLayoutOutput(Output):
             for default
         fontsize: int
             Size of the turbine numbers
+        kwargs: dict, optional
+            Additional arguments for get_figure()
 
         """
 

@@ -106,6 +106,11 @@ class MultiHeightStates(States):
         self._inds = None
         self._N = None
 
+    def __repr__(self):
+        berr = self.ipars.get("bounds_error", False)
+        ssel = "" if self.states_sel is None else f"n_states={len(self.states_sel)}, "
+        return f"{type(self).__name__}({ssel}bounds_error={berr})"
+    
     @property
     def data_source(self):
         """
