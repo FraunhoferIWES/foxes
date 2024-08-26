@@ -409,10 +409,19 @@ class MultiHeightStates(States):
         
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
         np.fill_diagonal(coeffs, 1.0)
-        ipars = dict(assume_sorted=True, bounds_error=True)
+        ipars = dict(
+            assume_sorted=True, 
+            bounds_error=True, 
+            fill_value=(coeffs[0], coeffs[-1]),
+        )
         ipars.update(self.ipars)
         intp = interp1d(h, coeffs, axis=0, **ipars)
-        ires = intp(z)
+        try:
+            ires = intp(z)
+        except ValueError as e:
+            if ipars["bounds_error"]:
+                print(f"{self.name}: Interpolation height out of bounds. Select 'bounds_error=False' for replacement by lowest or largest height")
+            raise e
         del coeffs, intp
 
         has_wd = FV.WD in vrs
