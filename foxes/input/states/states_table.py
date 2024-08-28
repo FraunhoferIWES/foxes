@@ -328,21 +328,27 @@ class StatesTable(States):
             raise ValueError(f"States '{self.name}': Cannot acces weights while running")
         return self.__weights
 
-    def set_running(self, large_model_data, verbosity=0):
+    def set_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to running, and moves
         all large data to given storage
 
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
         """
-        super().set_running(large_model_data, verbosity)
+        super().set_running(algo, large_model_data, sel, isel, verbosity)
         
         large_model_data[self.name] = dict(
             data_source=self._data_source,
@@ -351,20 +357,26 @@ class StatesTable(States):
         )
         del self._data_source, self.__weights, self.__inds
 
-    def unset_running(self, large_model_data, verbosity=0):
+    def unset_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to not running, recovering large data
         
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function pops data from here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(large_model_data, verbosity)
+        super().unset_running(algo, large_model_data, sel, isel, verbosity)
         
         data = large_model_data[self.name]
         self._data_source = data.pop("data_source")
@@ -562,21 +574,27 @@ class TabStates(StatesTable):
 
         return super().load_data(algo, verbosity)
 
-    def set_running(self, large_model_data, verbosity=0):
+    def set_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to running, and moves
         all large data to given storage
 
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
         """
-        super().set_running(large_model_data, verbosity)
+        super().set_running(algo, large_model_data, sel, isel, verbosity)
         
         large_model_data[self.name].update(dict(
             tab_source=self.__tab_source,
@@ -584,20 +602,26 @@ class TabStates(StatesTable):
         ))
         del self.__tab_source, self.__tab_data
 
-    def unset_running(self, large_model_data, verbosity=0):
+    def unset_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to not running, recovering large data
         
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function pops data from here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(large_model_data, verbosity)
+        super().unset_running(algo, large_model_data, sel, isel, verbosity)
         
         data = large_model_data[self.name]
         self.__tab_source = data.pop("tab_source")

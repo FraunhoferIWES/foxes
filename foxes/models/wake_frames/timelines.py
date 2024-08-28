@@ -7,7 +7,6 @@ from foxes.core.data import MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Timelines(WakeFrame):
     """
     Dynamic wakes for spatially uniform timeseries states.
@@ -88,9 +87,6 @@ class Timelines(WakeFrame):
         for ti, t in enumerate(algo.farm.turbines):
             t2h[ti] = t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
         heights = np.unique(t2h)
-
-        # calculate horizontal wind vector in all states:
-        self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
 
         # prepare mdata:
         data = algo.get_model_data(algo.states)["coords"]
@@ -405,3 +401,19 @@ class Timelines(WakeFrame):
 
         """
         raise NotImplementedError
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().finalize(algo, verbosity=verbosity)
+        self._dxy = None
+        
