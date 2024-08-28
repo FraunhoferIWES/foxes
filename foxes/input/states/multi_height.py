@@ -201,7 +201,7 @@ class MultiHeightStates(States):
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
-                self.data_source = algo.dbook.get_file_path(
+                self._data_source = algo.dbook.get_file_path(
                     STATES, self.data_source, check_raw=False
                 )
                 if verbosity:
