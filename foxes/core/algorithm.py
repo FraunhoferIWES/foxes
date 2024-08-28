@@ -453,21 +453,29 @@ class Algorithm(Model):
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
 
-    def set_running(self, large_data, verbosity=0):
+    def set_running(self, algo, large_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to running, and moves
         all large data to given storage
 
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_data: dict
             Large data storage, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
         """        
-        super().set_running(large_data, verbosity)
+        assert algo is self
+        
+        super().set_running(algo, large_data, sel, isel, verbosity)
 
         large_data[self.name].update(dict(
             mbook=self.__mbook,
@@ -476,20 +484,28 @@ class Algorithm(Model):
         ))
         del self.__mbook, self.__dbook, self.__idata_mem
 
-    def unset_running(self, large_data, verbosity=0):
+    def unset_running(self, algo, large_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to not running, recovering large data
         
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_data: dict
             Large data storage, this function pops data from here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(large_data, verbosity)
+        assert algo is self
+        
+        super().unset_running(algo, large_data, sel, isel, verbosity)
         
         data = large_data.get(self.name)
         self.__mbook = data["mbook"]
@@ -561,19 +577,25 @@ class Algorithm(Model):
         mdls = [m for m in [self] + list(args) + list(kwargs.values()) 
                 if isinstance(m, Model)]
         for m in mdls:
-            m.set_running(large_model_data, self.verbosity-2)
+            m.set_running(
+                self, large_model_data, sel=None, isel=None, 
+                verbosity=self.verbosity-2)
         
         # run parallel calculation:
         farm_results = self._launch_parallel_farm_calc(
             *args, 
             chunk_store=chunk_store, 
             large_model_data=large_model_data,
+            sel=None,
+            isel=None,
             **kwargs,
         )
         
         # reset to not running:
         for m in mdls:
-            m.unset_running(large_model_data, self.verbosity-2)
+            m.unset_running(
+                self, large_model_data, sel=None, isel=None, 
+                verbosity=self.verbosity-2)
                
         return farm_results
 
@@ -609,7 +631,7 @@ class Algorithm(Model):
         """
         pass
         
-    def calc_points(self, *args, **kwargs):
+    def calc_points(self, *args, sel=None, isel=None, **kwargs):
         """
         Calculate points data.
 
@@ -617,6 +639,10 @@ class Algorithm(Model):
         ----------
         args: tuple, optional
             Parameters
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         kwargs: dict, optional
             Keyword parameters
 
@@ -632,7 +658,9 @@ class Algorithm(Model):
         
         # set to running:
         large_model_data = {}
-        self.set_running(large_model_data, self.verbosity-2)
+        self.set_running(
+            self, large_model_data, sel=sel, isel=isel, 
+            verbosity=self.verbosity-2)
         
         # run parallel calculation:
         chunk_store = self.reset_chunk_store()
@@ -640,11 +668,15 @@ class Algorithm(Model):
             *args, 
             chunk_store=chunk_store, 
             large_model_data=large_model_data,
+            sel=sel,
+            isel=isel,
             **kwargs,
         )
         
         # reset to not running:
-        self.unset_running(large_model_data, self.verbosity-2)
+        self.unset_running(
+            self, large_model_data, sel=sel, isel=isel, 
+            verbosity=self.verbosity-2)
         
         return point_results
     

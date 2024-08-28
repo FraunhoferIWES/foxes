@@ -176,7 +176,6 @@ class Engine(ABC):
             The subsets of the input data
         
         """
-
         if sel is not None:
             new_datasets = []
             for data in datasets:

@@ -77,7 +77,7 @@ class Iterative(Downwind):
         self._mod_cutin = dict(modify_ct=True, modify_P=False)
         self._mod_cutin.update(mod_cutin)
         
-        self.verbosity = max(self.verbosity-1, 0)
+        self.verbosity = self.verbosity-1
 
     def set_urelax(self, entry_point, **urel):
         """
@@ -272,7 +272,7 @@ class Iterative(Downwind):
         while self._it < self.max_it:
             self._it += 1
 
-            self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n")
+            self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=-1)
 
             self.prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
@@ -284,9 +284,10 @@ class Iterative(Downwind):
 
                 if conv:
                     self.print(
-                        f"\nAlgorithm {self.name}: Convergence reached.\n"
+                        f"\nAlgorithm {self.name}: Convergence reached.\n",
+                        vlim=-1
                     )
-                    self.print("Starting final run")
+                    self.print("Starting final run", vlim=-1)
                     self._final_run = True
                     fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
                     break

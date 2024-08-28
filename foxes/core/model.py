@@ -167,16 +167,22 @@ class Model(ABC):
         """
         return self.__running
     
-    def set_running(self, large_model_data, verbosity=0):
+    def set_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to running, and moves
         all large data to given storage
 
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
@@ -185,7 +191,7 @@ class Model(ABC):
             raise ValueError(f"Model '{self.name}': Cannot call set_running while running")
         for m in self.sub_models():
             if not m.running:
-                m.set_running(large_model_data, verbosity=verbosity)
+                m.set_running(algo, large_model_data, sel, isel, verbosity=verbosity)
                 
         if verbosity > 0:
             print(f"Model '{self.name}': running")
@@ -194,15 +200,21 @@ class Model(ABC):
         
         return large_model_data
 
-    def unset_running(self, large_model_data, verbosity=0):
+    def unset_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
         """
         Sets this model status to not running, recovering large data
         
         Parameters
         ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
         large_model_data: dict
             Large data storage, this function pops data from here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -211,7 +223,7 @@ class Model(ABC):
             raise ValueError(f"Model '{self.name}': Cannot call unset_running when not running")
         for m in self.sub_models():
             if m.running:
-                m.unset_running(large_model_data, verbosity=verbosity)
+                m.unset_running(algo, large_model_data, sel, isel, verbosity=verbosity)
                 
         if verbosity > 0:
             print(f"Model '{self.name}': not running")

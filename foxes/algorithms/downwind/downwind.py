@@ -759,7 +759,7 @@ class Downwind(Algorithm):
         if states_sel is not None:
             farm_results = farm_results.sel(sel)
         n_states = farm_results.sizes[FC.STATE]
-            
+ 
         # get input model data:
         model_data = self.get_models_data(sel=sel, isel=isel)
         if persist_mdata:
@@ -794,6 +794,8 @@ class Downwind(Algorithm):
             point_data,
             outputs=ovars,
             parameters=calc_pars,
+            sel=sel,
+            isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data
