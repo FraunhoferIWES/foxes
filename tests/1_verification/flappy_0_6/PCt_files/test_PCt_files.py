@@ -11,57 +11,56 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 def test():
     print(thisdir)
-    with foxes.Engine.new("multiprocess"):
 
-        c = 2000
-        cfile = thisdir / "flappy" / "results.csv.gz"
-        tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
-        tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
-        sfile = thisdir / "states.csv.gz"
-        lfile = thisdir / "test_farm.csv"
+    c = 2000
+    cfile = thisdir / "flappy" / "results.csv.gz"
+    tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
+    tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
+    sfile = thisdir / "states.csv.gz"
+    lfile = thisdir / "test_farm.csv"
 
-        ck = {FC.STATE: c}
+    ck = {FC.STATE: c}
 
-        mbook = foxes.models.ModelBook()
-        ttype = foxes.models.turbine_types.PCtFromTwo(
-            data_source_P=tPfile,
-            data_source_ct=tCtfile,
-            col_ws_P_file="ws",
-            col_ws_ct_file="ws",
-            col_P="P",
-            col_ct="ct",
-            P_nominal=5000,
-            H=90.0,
-            D=126,
-            name="power_and_ct_curve",
-        )
-        mbook.turbine_types[ttype.name] = ttype
+    mbook = foxes.models.ModelBook()
+    ttype = foxes.models.turbine_types.PCtFromTwo(
+        data_source_P=tPfile,
+        data_source_ct=tCtfile,
+        col_ws_P_file="ws",
+        col_ws_ct_file="ws",
+        col_P="P",
+        col_ct="ct",
+        P_nominal=5000,
+        H=90.0,
+        D=126,
+        name="power_and_ct_curve",
+    )
+    mbook.turbine_types[ttype.name] = ttype
 
-        states = foxes.input.states.StatesTable(
-            data_source=sfile,
-            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-            fixed_vars={FV.RHO: 1.225},
-        )
+    states = foxes.input.states.StatesTable(
+        data_source=sfile,
+        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+        var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
+        fixed_vars={FV.RHO: 1.225},
+    )
 
-        farm = foxes.WindFarm()
-        foxes.input.farm_layout.add_from_file(
-            farm, lfile, turbine_models=[ttype.name], verbosity=0
-        )
+    farm = foxes.WindFarm()
+    foxes.input.farm_layout.add_from_file(
+        farm, lfile, turbine_models=[ttype.name], verbosity=0
+    )
 
-        algo = foxes.algorithms.Downwind(
-            farm,
-            states,
-            mbook=mbook,
-            rotor_model="centre",
-            wake_models=["Jensen_linear_k007"],
-            wake_frame="rotor_wd",
-            partial_wakes={"Jensen_linear_k007": "top_hat"},
-            chunks=ck,
-            verbosity=0,
-        )
+    algo = foxes.algorithms.Downwind(
+        farm,
+        states,
+        mbook=mbook,
+        rotor_model="centre",
+        wake_models=["Jensen_linear_k007"],
+        wake_frame="rotor_wd",
+        partial_wakes={"Jensen_linear_k007": "top_hat"},
+        chunks=ck,
+        verbosity=0,
+    )
 
-        data = algo.calc_farm()
+    data = algo.calc_farm()
 
     df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
     df = df.reset_index()
