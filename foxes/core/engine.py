@@ -72,7 +72,7 @@ class Engine(ABC):
         if self.initialized:
             self.finalize(*exit_args)
     
-    def __del__(self):
+    def __del__(self): 
         if self.initialized:
             self.finalize()
 

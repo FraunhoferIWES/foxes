@@ -11,7 +11,6 @@ class FarmWakesCalculation(FarmDataModel):
     :group: algorithms.downwind.models
 
     """
-
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

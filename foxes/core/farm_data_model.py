@@ -169,7 +169,6 @@ class FarmDataModelList(FarmDataModel):
     :group: core
 
     """
-
     def __init__(self, models=[]):
         """
         Constructor.
@@ -182,6 +181,9 @@ class FarmDataModelList(FarmDataModel):
         """
         super().__init__()
         self.models = models
+        
+    def __repr__(self):
+        return f"{type(self).__name__}({[m.name for m in self.models]})"
 
     def append(self, model):
         """
@@ -258,7 +260,6 @@ class FarmDataModelList(FarmDataModel):
             The farm data
         parameters: list of dict, optional
             A list of parameter dicts, one for each model
-        
 
         Returns
         -------

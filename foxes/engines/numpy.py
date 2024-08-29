@@ -42,7 +42,6 @@ class NumpyEngine(Engine):
         point_data=None, 
         out_vars=[],
         chunk_store={},
-        large_model_data={},
         sel=None,
         isel=None,
         iterative=False,
@@ -68,9 +67,6 @@ class NumpyEngine(Engine):
             Names of the output variables
         chunk_store: foxes.utils.Dict
             The chunk store
-        large_model_data: dict
-            Large data storage. Key: model name. 
-            Value: dict, large model data
         sel: dict, optional
             Selection of coordinate subsets
         isel: dict, optional

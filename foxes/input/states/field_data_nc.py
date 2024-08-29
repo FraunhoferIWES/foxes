@@ -379,17 +379,27 @@ class FieldDataNC(States):
 
         return idata
 
-    def set_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to running, and moves
-        all large data to given storage
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_model_data: dict
-            Large data storage, this function adds data here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -399,28 +409,36 @@ class FieldDataNC(States):
             The verbosity level, 0 = silent
             
         """
-        super().set_running(algo, large_model_data, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, isel, verbosity)
         
-        large_model_data[self.name] = dict(
+        data_stash[self.name] = dict(
             weights=self.__weights,
             inds=self.__inds,
         )
         del self.__weights, self.__inds
         
         if self.pre_load:
-            large_model_data[self.name]["data_source"] = self.__data_source
+            data_stash[self.name]["data_source"] = self.__data_source
             del self.__data_source
 
-    def unset_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to not running, recovering large data
+        from stash
         
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_model_data: dict
-            Large data storage, this function pops data from here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -430,9 +448,9 @@ class FieldDataNC(States):
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, large_model_data, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
         
-        data = large_model_data[self.name]
+        data = data_stash[self.name]
         self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
         

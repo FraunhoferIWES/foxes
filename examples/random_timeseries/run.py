@@ -123,7 +123,7 @@ if __name__ == "__main__":
             wake_frame=args.frame,
             partial_wakes=args.pwakes,
             mbook=mbook,
-            verbosity=1,
+            verbosity=0,
         )
 
         time0 = time.time()

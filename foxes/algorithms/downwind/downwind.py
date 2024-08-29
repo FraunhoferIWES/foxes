@@ -499,7 +499,6 @@ class Downwind(Algorithm):
         calc_parameters={},
         finalize=True,
         ambient=False,
-        chunked_results=False,
         **kwargs,
     ):
         """
@@ -516,8 +515,6 @@ class Downwind(Algorithm):
             Flag for finalization after calculation
         ambient: bool
             Flag for ambient instead of waked calculation
-        chunked_results: bool
-            Flag for chunked results
         kwargs: dict, optional
             Additional parameters for run_calculation
 
@@ -581,9 +578,6 @@ class Downwind(Algorithm):
         if ambient:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
             farm_results = farm_results.drop_vars(dvars)
-
-        if chunked_results:
-            farm_results = self.chunked(farm_results)
 
         return farm_results
 

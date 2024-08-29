@@ -150,17 +150,27 @@ class Timelines(WakeFrame):
             }
         )
 
-    def set_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to running, and moves
-        all large data to given storage
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_model_data: dict
-            Large data storage, this function adds data here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -170,26 +180,34 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
             
         """
-        super().set_running(algo, large_model_data, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, isel, verbosity)
         
         if sel is not None or isel is not None:
-            large_model_data[self.name]["dxy"] = self._dxy
+            data_stash[self.name]["dxy"] = self._dxy
 
             if isel is not None:
                 self._dxy = self._dxy.isel(isel)
             if sel is not None:
                 self._dxy = self._dxy.sel(sel)
 
-    def unset_running(self, algo, large_model_data, sel=None, isel=None, verbosity=0):
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to not running, recovering large data
+        from stash
         
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_model_data: dict
-            Large data storage, this function pops data from here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -199,9 +217,9 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, large_model_data, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
         
-        data = large_model_data[self.name]
+        data = data_stash[self.name]
         if "dxy" in data:
             self._dxy = data.pop("dxy")
         

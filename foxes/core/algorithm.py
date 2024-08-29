@@ -453,17 +453,27 @@ class Algorithm(Model):
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
 
-    def set_running(self, algo, large_data, sel=None, isel=None, verbosity=0):
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to running, and moves
-        all large data to given storage
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_data: dict
-            Large data storage, this function adds data here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -472,28 +482,36 @@ class Algorithm(Model):
         verbosity: int
             The verbosity level, 0 = silent
             
-        """        
+        """      
         assert algo is self
         
-        super().set_running(algo, large_data, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        large_data[self.name].update(dict(
+        data_stash[self.name].update(dict(
             mbook=self.__mbook,
             dbook=self.__dbook,
             idata_mem=self.__idata_mem,
         ))
         del self.__mbook, self.__dbook, self.__idata_mem
 
-    def unset_running(self, algo, large_data, sel=None, isel=None, verbosity=0):
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to not running, recovering large data
+        from stash
         
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        large_data: dict
-            Large data storage, this function pops data from here.
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -505,12 +523,12 @@ class Algorithm(Model):
         """
         assert algo is self
         
-        super().unset_running(algo, large_data, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
         
-        data = large_data.get(self.name)
-        self.__mbook = data["mbook"]
-        self.__dbook = data["dbook"]
-        self.__idata_mem = data["idata_mem"]
+        data = data_stash[self.name]
+        self.__mbook = data.pop("mbook")
+        self.__dbook = data.pop("dbook")
+        self.__idata_mem = data.pop("idata_mem")
         
     @abstractmethod
     def _launch_parallel_farm_calc(
@@ -519,7 +537,6 @@ class Algorithm(Model):
         mbook, 
         dbook, 
         chunk_store,
-        large_model_data, 
         **kwargs,
     ):
         """
@@ -535,9 +552,6 @@ class Algorithm(Model):
             The data book, or None for default
         chunk_store: foxes.utils.Dict
             The chunk store
-        large_model_data: dict
-            Large data storage. Key: model name. 
-            Value: dict, large model data
         kwargs: dict, optional
             Additional parameters for running
 
@@ -572,20 +586,19 @@ class Algorithm(Model):
             raise ValueError(f"Algorithm '{self.name}': Cannot call calc_farm while running")
         
         # set to running:
-        large_model_data = {}
+        data_stash = {}
         chunk_store = self.reset_chunk_store()
         mdls = [m for m in [self] + list(args) + list(kwargs.values()) 
                 if isinstance(m, Model)]
         for m in mdls:
             m.set_running(
-                self, large_model_data, sel=None, isel=None, 
+                self, data_stash, sel=None, isel=None, 
                 verbosity=self.verbosity-2)
         
         # run parallel calculation:
         farm_results = self._launch_parallel_farm_calc(
             *args, 
             chunk_store=chunk_store, 
-            large_model_data=large_model_data,
             sel=None,
             isel=None,
             **kwargs,
@@ -594,7 +607,7 @@ class Algorithm(Model):
         # reset to not running:
         for m in mdls:
             m.unset_running(
-                self, large_model_data, sel=None, isel=None, 
+                self, data_stash, sel=None, isel=None, 
                 verbosity=self.verbosity-2)
                
         return farm_results
@@ -604,7 +617,6 @@ class Algorithm(Model):
         self, 
         *args,  
         chunk_store, 
-        large_model_data,
         **kwargs,
     ):
         """
@@ -616,9 +628,6 @@ class Algorithm(Model):
             Additional parameters for running
         chunk_store: foxes.utils.Dict
             The chunk store
-        large_model_data: dict
-            Large data storage. Key: model name. 
-            Value: dict, large model data
         kwargs: dict, optional
             Additional parameters for running
 
@@ -657,9 +666,9 @@ class Algorithm(Model):
             raise ValueError(f"Algorithm '{self.name}': Cannot call calc_points while running")
         
         # set to running:
-        large_model_data = {}
+        data_stash = {}
         self.set_running(
-            self, large_model_data, sel=sel, isel=isel, 
+            self, data_stash, sel=sel, isel=isel, 
             verbosity=self.verbosity-2)
         
         # run parallel calculation:
@@ -667,7 +676,6 @@ class Algorithm(Model):
         point_results = self._launch_parallel_points_calc(
             *args, 
             chunk_store=chunk_store, 
-            large_model_data=large_model_data,
             sel=sel,
             isel=isel,
             **kwargs,
@@ -675,7 +683,7 @@ class Algorithm(Model):
         
         # reset to not running:
         self.unset_running(
-            self, large_model_data, sel=sel, isel=isel, 
+            self, data_stash, sel=sel, isel=isel, 
             verbosity=self.verbosity-2)
         
         return point_results
