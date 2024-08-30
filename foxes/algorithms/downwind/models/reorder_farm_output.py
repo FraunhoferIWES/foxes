@@ -78,5 +78,4 @@ class ReorderFarmOutput(FarmDataModel):
                 out[v] = fdata[v][ssel, order_inv]
             else:
                 out[v] = fdata[v]
-
         return out

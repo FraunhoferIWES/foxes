@@ -33,6 +33,9 @@ class NumpyEngine(Engine):
             **kwargs,
         )
         
+    def __repr__(self):
+        return f"{type(self).__name__}()"
+        
     def run_calculation(
         self, 
         algo,

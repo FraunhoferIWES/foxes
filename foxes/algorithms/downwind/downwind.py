@@ -49,6 +49,7 @@ class Downwind(Algorithm):
         FV.AMB_REWS,
         FV.AMB_TI,
         FV.AMB_RHO,
+        FV.AMB_CT,
         FV.AMB_P,
         FV.WD,
         FV.REWS,
@@ -574,6 +575,8 @@ class Downwind(Algorithm):
             self.print("\n")
             mlist.finalize(self, self.verbosity)
             self.finalize()
+        else:
+            self.del_model_data(mlist)
 
         if ambient:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
