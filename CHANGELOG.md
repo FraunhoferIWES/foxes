@@ -612,5 +612,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `NumpyEngine` (short `numpy`): Runs single-chunk calculations
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
+  - New turbine type `FromLookupTable`, computes power and thrust coefficient from a lookup table
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)
