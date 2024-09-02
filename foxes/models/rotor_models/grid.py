@@ -24,8 +24,7 @@ class GridRotor(RotorModel):
     :group: models.rotor_models
 
     """
-
-    def __init__(self, n, calc_vars, reduce=True, nint=200):
+    def __init__(self, n, reduce=True, nint=200, **kwargs):
         """
         Constructor.
 
@@ -34,9 +33,6 @@ class GridRotor(RotorModel):
         n: int
             The number of points along one direction,
             maximal number of points is N = n * n
-        calc_vars: list of str
-            The variables that are calculated by the model
-            (Their ambients are added automatically)
         reduce: bool
             Flag for reduction to points actually representing
             an area with overlap with the circe, recalculating
@@ -45,9 +41,11 @@ class GridRotor(RotorModel):
             Integration steps per element
         name: str, optional
             The model name
+        kwargs: dict, optional
+            Addition parameters for the base model
 
         """
-        super().__init__(calc_vars)
+        super().__init__(**kwargs)
 
         self.n = n
         self.reduce = reduce

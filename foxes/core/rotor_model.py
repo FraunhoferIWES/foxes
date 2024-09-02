@@ -26,14 +26,13 @@ class RotorModel(FarmDataModel):
     :group: core
 
     """
-
-    def __init__(self, calc_vars):
+    def __init__(self, calc_vars=None):
         """
         Constructor.
 
         Parameters
         ----------
-        calc_vars: list of str
+        calc_vars: list of str, optional
             The variables that are calculated by the model
             (Their ambients are added automatically)
 
@@ -56,12 +55,21 @@ class RotorModel(FarmDataModel):
             The output variable names
 
         """
-        return list(
-            set(
-                self.calc_vars
-                + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
-            )
-        )
+        if self.calc_vars is None:
+            vrs = algo.states.output_point_vars(algo)
+            if FV.WS in vrs:
+                self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
+            else:
+                self.calc_vars = vrs
+                
+            if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
+                self.calc_vars.append(FV.REWS2)
+            if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
+                self.calc_vars.append(FV.REWS3)
+                
+            self.calc_vars = sorted(self.calc_vars)
+            
+        return self.calc_vars
 
     @abstractmethod
     def n_rotor_points(self):
@@ -203,6 +211,10 @@ class RotorModel(FarmDataModel):
             variables after calculation
 
         """
+        for v in [FV.REWS2, FV.REWS3]:
+            if v in fdata and v not in self.calc_vars:
+                self.calc_vars.append(v)
+                
         uvp = None
         uv = None
         if (

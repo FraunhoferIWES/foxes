@@ -4,6 +4,7 @@ from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
 import foxes.constants as FC
+import foxes.variables as FV
 
 
 class FarmController(FarmDataModel):
@@ -45,7 +46,6 @@ class FarmController(FarmDataModel):
         self.turbine_model_names = None
         self.pre_rotor_models = None
         self.post_rotor_models = None
-
         self.pars = pars
 
     def sub_models(self):
@@ -85,6 +85,36 @@ class FarmController(FarmDataModel):
             "final": final_pars,
         }
 
+    def needs_rews2(self):
+        """
+        Returns flag for requirering REWS2 variable
+        
+        Returns
+        -------
+        flag: bool
+            True if REWS2 is required
+            
+        """
+        for tt in self.turbine_types:
+            if tt.needs_rews2():
+                return True
+        return False
+
+    def needs_rews3(self):
+        """
+        Returns flag for requirering REWS3 variable
+        
+        Returns
+        -------
+        flag: bool
+            True if REWS3 is required
+            
+        """
+        for tt in self.turbine_types:
+            if tt.needs_rews3():
+                return True
+        return False
+    
     def _analyze_models(self, algo, pre_rotor, models):
         """
         Helper function for model analysis
@@ -312,12 +342,10 @@ class FarmController(FarmDataModel):
             The output variable names
 
         """
-        return list(
-            dict.fromkeys(
-                self.pre_rotor_models.output_farm_vars(algo)
-                + self.post_rotor_models.output_farm_vars(algo)
-            )
-        )
+        ovars = set(self.pre_rotor_models.output_farm_vars(algo))
+        ovars.update(self.post_rotor_models.output_farm_vars(algo))
+            
+        return list(ovars)
 
     def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
         """ "

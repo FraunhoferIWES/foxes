@@ -27,7 +27,6 @@ class LookupTable(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def __init__(
         self,
         data_source,
@@ -36,6 +35,7 @@ class LookupTable(TurbineModel):
         varmap={},
         pd_file_read_pars={},
         xr_interp_args={},
+        interpn_args={},
         **kwargs,
     ):
         """
@@ -56,6 +56,8 @@ class LookupTable(TurbineModel):
             Parameters for pandas file reading
         xr_interp_args: dict
             Parameters for xarray interpolation method
+        interpn_args: dict
+            Parameters for scipy intern or interp1d
         kwargs: dict, optional
             Additional parameters, added as default
             values if not in data
@@ -70,6 +72,7 @@ class LookupTable(TurbineModel):
 
         self._rpars = pd_file_read_pars
         self._xargs = xr_interp_args
+        self._iargs = interpn_args
         self._data = None
 
         for v, d in kwargs.items():
@@ -184,7 +187,7 @@ class LookupTable(TurbineModel):
         """
         data = {
             v: self.get_data(
-                self.input_vars[0],
+                v,
                 FC.STATE_TURBINE,
                 lookup="fs",
                 fdata=fdata,
@@ -192,6 +195,7 @@ class LookupTable(TurbineModel):
             )[st_sel]
             for v in self.input_vars
         }
+        
         dims = {
             v: ("_z") if len(data[v].shape) == 1 else ("_z", "_u")
             for v in self.input_vars
@@ -205,7 +209,23 @@ class LookupTable(TurbineModel):
         }
         del data, dims
 
-        odata = self._data.interp(**indata, **self._xargs)
+        iargs = dict(bounds_error=True)
+        iargs.update(self._iargs)
+        try:
+            odata = self._data.interp(**indata, kwargs=iargs,**self._xargs)
+        except ValueError as e:
+            print("\nBOUNDS ERROR", self.name)
+            print("Variables:", list(indata.keys()))
+            print("DATA min/max:", 
+                  [float(np.min(self._data[v].to_numpy())) for v in indata.keys()],
+                  [float(np.max(self._data[v].to_numpy())) for v in indata.keys()]
+                )
+            print("EVAL min/max:", 
+                  [float(np.min(d.to_numpy())) for d in indata.values()],
+                  [float(np.max(d.to_numpy())) for d in indata.values()]
+                )
+            print()
+            raise e
 
         out = {}
         for v in self.output_vars:

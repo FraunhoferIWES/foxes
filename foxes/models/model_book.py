@@ -85,8 +85,7 @@ class ModelBook:
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = FDict(name="rotor_models")
-        rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
-        self.rotor_models["centre"] = fm.rotor_models.CentreRotor(calc_vars=rvars)
+        self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
 
         def _n2n(n2):
             n2 = float(n2)
@@ -100,7 +99,7 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>",
-            kwargs=dict(calc_vars=rvars, reduce=True),
+            kwargs=dict(reduce=True),
             var2arg={"n2": "n"},
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
@@ -108,7 +107,7 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>_raw",
-            kwargs=dict(calc_vars=rvars, reduce=False),
+            kwargs=dict(reduce=False),
             var2arg={"n2": "n"},
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
@@ -116,14 +115,14 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.LevelRotor,
             "level<n>",
-            kwargs=dict(calc_vars=rvars, reduce=True),
+            kwargs=dict(reduce=True),
             n=lambda x: int(x),
             hints={"n": "(Number of vertical levels)"},
         )
         self.rotor_models.add_factory(
             fm.rotor_models.LevelRotor,
             "level<n>_raw",
-            kwargs=dict(calc_vars=rvars, reduce=False),
+            kwargs=dict(reduce=False),
             n=lambda x: int(x),
             hints={"n": "(Number of vertical levels)"},
         )

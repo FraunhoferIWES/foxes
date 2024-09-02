@@ -189,23 +189,23 @@ class SeqDynamicWakes(FarmOrder):
                 self._traces_l[:counter, downwind_index] += np.linalg.norm(dxyz, axis=-1)
                 del dxyz
                 
-            # compute wind vectors at wake traces:
-            # TODO: dz from U_z is missing here
-            hpdata = {
-                v: np.zeros((1, N, 1), dtype=FC.DTYPE)
-                for v in algo.states.output_point_vars(algo)
-            }
-            hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
-            hpdata = TData.from_points(
-                points=self._traces_p[None, :N, downwind_index],
-                data=hpdata,
-                dims=hpdims,
-            )
-            res = algo.states.calculate(algo, mdata, fdata, hpdata)
-            self._traces_v[:N, downwind_index, :2] = wd2uv(
-                res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
-            )
-            del hpdata, hpdims, res
+        # compute wind vectors at wake traces:
+        # TODO: dz from U_z is missing here
+        hpdata = {
+            v: np.zeros((1, N, 1), dtype=FC.DTYPE)
+            for v in algo.states.output_point_vars(algo)
+        }
+        hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
+        hpdata = TData.from_points(
+            points=self._traces_p[None, :N, downwind_index],
+            data=hpdata,
+            dims=hpdims,
+        )
+        res = algo.states.calculate(algo, mdata, fdata, hpdata)
+        self._traces_v[:N, downwind_index, :2] = wd2uv(
+            res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+        )
+        del hpdata, hpdims, res
 
         # project:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
