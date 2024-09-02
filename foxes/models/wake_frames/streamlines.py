@@ -144,9 +144,8 @@ class Streamlines2D(WakeFrame):
         data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]
         dists = np.linalg.norm(points[:, :, None, :2] - data[:, None, :, :2], axis=-1)
         selp = np.argmin(dists, axis=2)
-        data = np.take_along_axis(data[:, None], selp[:, :, None, None], axis=2)[
-            :, :, 0
-        ]
+        data = np.take_along_axis(
+            data[:, None], selp[:, :, None, None], axis=2)[:, :, 0]
         slen = self.step * selp
         del dists, selp
 

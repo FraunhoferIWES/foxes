@@ -68,7 +68,7 @@ class Iterative(Downwind):
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit == "default" else conv_crit
         )
-        self.prev_farm_results = None
+        self.__prev_farm_results = None
         self._it = None
         self._mlist = None
         self._reamb = False
@@ -77,7 +77,21 @@ class Iterative(Downwind):
         self._mod_cutin = dict(modify_ct=True, modify_P=False)
         self._mod_cutin.update(mod_cutin)
         
-        self.verbosity = max(self.verbosity-1, 0)
+        self.verbosity = self.verbosity-1
+        
+    @property
+    def farm_results_downwind(self):
+        """
+        Gets the all-chunks farm results in downwind order
+        from the previous iteration
+
+        Returns
+        -------
+        fres: xarray.Datatset
+            The all-chunks farm results during calculations
+        
+        """
+        return self.__prev_farm_results
 
     def set_urelax(self, entry_point, **urel):
         """
@@ -230,7 +244,7 @@ class Iterative(Downwind):
     def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
         return super()._launch_parallel_farm_calc(
-            mlist, *data, farm_data=self.prev_farm_results, iterative=True, **kwargs)
+            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, **kwargs)
 
     @property
     def final_iteration(self):
@@ -245,7 +259,7 @@ class Iterative(Downwind):
         """
         return self._final_run
 
-    def calc_farm(self, finalize=True, **kwargs):
+    def calc_farm(self, finalize=True, ret_dwnd_order=False, **kwargs):
         """
         Calculate farm data.
 
@@ -253,6 +267,8 @@ class Iterative(Downwind):
         ----------
         finalize: bool
             Flag for finalization after calculation
+        ret_dwnd_order: bool
+            Also return the results in downwind order
         kwargs: dict, optional
             Arguments for calc_farm in the base class.
 
@@ -272,35 +288,43 @@ class Iterative(Downwind):
         while self._it < self.max_it:
             self._it += 1
 
-            self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n")
+            if self._it == 1:
+                self.verbosity -= 1
+            
+            self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
 
-            self.prev_farm_results = fres
+            self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
 
             if self.conv_crit is not None:
                 conv = self.conv_crit.check_converged(
-                    self, self.prev_farm_results, fres, verbosity=self.verbosity + 1
+                    self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
                 )
 
                 if conv:
                     self.print(
-                        f"\nAlgorithm {self.name}: Convergence reached.\n"
+                        f"\nAlgorithm {self.name}: Convergence reached.\n",
+                        vlim=0
                     )
-                    self.print("Starting final run")
+                    
+                    if ret_dwnd_order:
+                        fres_dwnd = fres
+                        
+                    self.print("Starting final run", vlim=0)
                     self._final_run = True
                     fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
                     break
 
-            if self._it == 0:
-                self.verbosity -= 1
-
         # finalize models:
         if finalize:
-            self.print("\n")
+            self.print("\n", vlim=0)
             self.finalize()
             for m in self._mlist0.models:
                 if m not in self.sub_models():
                     m.finalize(self, self.verbosity)
             del self._mlist0, self._calc_pars0
 
-        return fres
+        if ret_dwnd_order:
+            return fres, fres_dwnd
+        else:
+            return fres

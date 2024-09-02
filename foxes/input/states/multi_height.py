@@ -272,45 +272,75 @@ class MultiHeightStates(States):
 
         return idata
 
-    def set_running(self, large_model_data, verbosity=0):
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to running, and moves
-        all large data to given storage
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
 
         Parameters
         ----------
-        large_model_data: dict
-            Large data storage, this function adds data here.
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
-        """
-        super().set_running(large_model_data, verbosity)
+        """  
+        super().set_running(algo, data_stash, sel, isel, verbosity)
         
-        large_model_data[self.name] = dict(
+        data_stash[self.name] = dict(
             data_source=self._data_source,
             weights=self._weights,
             inds=self._inds,
         )
         del self._data_source, self._weights, self._inds
 
-    def unset_running(self, large_model_data, verbosity=0):
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to not running, recovering large data
+        from stash
         
         Parameters
         ----------
-        large_model_data: dict
-            Large data storage, this function pops data from here.
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(large_model_data, verbosity)
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
         
-        data = large_model_data[self.name]
+        data = data_stash[self.name]
         self._data_source = data.pop("data_source")
         self._weights = data.pop("weights")
         self._inds = data.pop("inds")

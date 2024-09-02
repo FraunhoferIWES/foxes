@@ -254,6 +254,7 @@ class ModelBook:
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
 
         def _todt(x):
             if x[-1] == "s":

@@ -49,6 +49,7 @@ class Downwind(Algorithm):
         FV.AMB_REWS,
         FV.AMB_TI,
         FV.AMB_RHO,
+        FV.AMB_CT,
         FV.AMB_P,
         FV.WD,
         FV.REWS,
@@ -499,7 +500,6 @@ class Downwind(Algorithm):
         calc_parameters={},
         finalize=True,
         ambient=False,
-        chunked_results=False,
         **kwargs,
     ):
         """
@@ -516,8 +516,6 @@ class Downwind(Algorithm):
             Flag for finalization after calculation
         ambient: bool
             Flag for ambient instead of waked calculation
-        chunked_results: bool
-            Flag for chunked results
         kwargs: dict, optional
             Additional parameters for run_calculation
 
@@ -577,13 +575,12 @@ class Downwind(Algorithm):
             self.print("\n")
             mlist.finalize(self, self.verbosity)
             self.finalize()
+        else:
+            self.del_model_data(mlist)
 
         if ambient:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
             farm_results = farm_results.drop_vars(dvars)
-
-        if chunked_results:
-            farm_results = self.chunked(farm_results)
 
         return farm_results
 
@@ -759,7 +756,7 @@ class Downwind(Algorithm):
         if states_sel is not None:
             farm_results = farm_results.sel(sel)
         n_states = farm_results.sizes[FC.STATE]
-            
+ 
         # get input model data:
         model_data = self.get_models_data(sel=sel, isel=isel)
         if persist_mdata:
@@ -794,6 +791,8 @@ class Downwind(Algorithm):
             point_data,
             outputs=ovars,
             parameters=calc_pars,
+            sel=sel,
+            isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data

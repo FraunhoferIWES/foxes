@@ -72,7 +72,7 @@ class Engine(ABC):
         if self.initialized:
             self.finalize(*exit_args)
     
-    def __del__(self):
+    def __del__(self): 
         if self.initialized:
             self.finalize()
 
@@ -176,7 +176,6 @@ class Engine(ABC):
             The subsets of the input data
         
         """
-
         if sel is not None:
             new_datasets = []
             for data in datasets:

@@ -62,7 +62,6 @@ class MultiprocessEngine(Engine):
         point_data=None, 
         out_vars=[],
         chunk_store={},
-        large_model_data={},
         sel=None,
         isel=None,
         iterative=False,
@@ -88,9 +87,6 @@ class MultiprocessEngine(Engine):
             Names of the output variables
         chunk_store: foxes.utils.Dict
             The chunk store
-        large_model_data: dict
-            Large data storage. Key: model name. 
-            Value: dict, large model data
         sel: dict, optional
             Selection of coordinate subsets
         isel: dict, optional
@@ -220,7 +216,7 @@ class MultiprocessEngine(Engine):
         if self._pool is not None:
             self._pool.close()
             self._pool.terminate()
-            self._pool = None
+            self._pool.join()
  
         super().finalize(*exit_args)
         

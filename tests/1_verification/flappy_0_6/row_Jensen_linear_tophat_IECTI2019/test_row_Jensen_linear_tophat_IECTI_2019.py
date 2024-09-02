@@ -48,7 +48,7 @@ def test():
         farm,
         states,
         mbook=mbook,
-        rotor_model="centre",
+        rotor_model=rotor,
         wake_models=["Jensen_linear_k007", "IECTI2019_max"],
         wake_frame="rotor_wd",
         partial_wakes=["top_hat", "top_hat"],

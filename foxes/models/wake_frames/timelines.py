@@ -1,11 +1,11 @@
 import numpy as np
+from xarray import Dataset
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
 from foxes.core.data import MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
-
 
 class Timelines(WakeFrame):
     """
@@ -86,10 +86,7 @@ class Timelines(WakeFrame):
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
             t2h[ti] = t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
-        self._heights = np.unique(t2h)
-
-        # calculate horizontal wind vector in all states:
-        self._uv = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
+        heights = np.unique(t2h)
 
         # prepare mdata:
         data = algo.get_model_data(algo.states)["coords"]
@@ -114,7 +111,7 @@ class Timelines(WakeFrame):
         
         # calculate all heights:
         self._dxy = []
-        for h in self._heights:
+        for h in heights:
 
             if verbosity > 0:
                 print(f"  Height: {h} m")
@@ -142,8 +139,90 @@ class Timelines(WakeFrame):
             plt.show()
             quit()
             """
-        self._dxy = np.stack(self._dxy, axis=0)
+        
+        self._dxy = Dataset(
+            coords={
+                FC.STATE: algo.states.index(),
+                "height": heights,
+            },
+            data_vars={
+                "dxy": (("height", FC.STATE, "dir"), np.stack(self._dxy, axis=0))
+            }
+        )
 
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
+        """
+        Sets this model status to running, and moves
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+            
+        """
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+        
+        if sel is not None or isel is not None:
+            data_stash[self.name]["dxy"] = self._dxy
+
+            if isel is not None:
+                self._dxy = self._dxy.isel(isel)
+            if sel is not None:
+                self._dxy = self._dxy.sel(sel)
+
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
+        """
+        Sets this model status to not running, recovering large data
+        from stash
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        
+        data = data_stash[self.name]
+        if "dxy" in data:
+            self._dxy = data.pop("dxy")
+        
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.
@@ -226,6 +305,8 @@ class Timelines(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
+        heights = self._dxy["height"].to_numpy()
+        data_dxy = self._dxy["dxy"].to_numpy()
 
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
@@ -239,7 +320,7 @@ class Timelines(WakeFrame):
         i1 = i0 + mdata.n_states
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
         trace_si[:] = i0 + np.arange(n_states)[:, None] + 1     
-        for hi, h in enumerate(self._heights):
+        for hi, h in enumerate(heights):
             
             trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
             trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
@@ -248,7 +329,7 @@ class Timelines(WakeFrame):
             h_trace_si = trace_si.copy()
         
             # step backwards in time, until wake source turbine is hit:
-            dxy = self._dxy[hi][:i1]
+            dxy = data_dxy[hi][:i1]
             precond = (theights[:, None] == h) & (wcoosx > 0.99e20)
             while True:
                 sel = (
@@ -338,3 +419,19 @@ class Timelines(WakeFrame):
 
         """
         raise NotImplementedError
+
+    def finalize(self, algo, verbosity=0):
+        """
+        Finalizes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().finalize(algo, verbosity=verbosity)
+        self._dxy = None
+        

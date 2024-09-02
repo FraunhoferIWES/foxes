@@ -16,7 +16,6 @@ class ReorderFarmOutput(FarmDataModel):
     :group: algorithms.downwind.models
 
     """
-
     def __init__(self, outputs):
         """
         Constructor
@@ -79,5 +78,4 @@ class ReorderFarmOutput(FarmDataModel):
                 out[v] = fdata[v][ssel, order_inv]
             else:
                 out[v] = fdata[v]
-
         return out

@@ -167,16 +167,32 @@ class Model(ABC):
         """
         return self.__running
     
-    def set_running(self, large_model_data, verbosity=0):
+    def set_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to running, and moves
-        all large data to given storage
+        all large data to stash.
+        
+        The stashed data will be returned by the 
+        unset_running() function after running calculations.
 
         Parameters
         ----------
-        large_model_data: dict
-            Large data storage, this function adds data here.
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
             
@@ -185,24 +201,38 @@ class Model(ABC):
             raise ValueError(f"Model '{self.name}': Cannot call set_running while running")
         for m in self.sub_models():
             if not m.running:
-                m.set_running(large_model_data, verbosity=verbosity)
+                m.set_running(algo, data_stash, sel, isel, verbosity=verbosity)
                 
         if verbosity > 0:
             print(f"Model '{self.name}': running")
-        large_model_data[self.name] = {}
+        if self.name not in data_stash:
+            data_stash[self.name] = {}
+            
         self.__running = True
-        
-        return large_model_data
 
-    def unset_running(self, large_model_data, verbosity=0):
+    def unset_running(
+        self, 
+        algo, 
+        data_stash, 
+        sel=None, 
+        isel=None, 
+        verbosity=0,
+    ):
         """
         Sets this model status to not running, recovering large data
+        from stash
         
         Parameters
         ----------
-        large_model_data: dict
-            Large data storage, this function pops data from here.
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
             Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -211,7 +241,7 @@ class Model(ABC):
             raise ValueError(f"Model '{self.name}': Cannot call unset_running when not running")
         for m in self.sub_models():
             if m.running:
-                m.unset_running(large_model_data, verbosity=verbosity)
+                m.unset_running(algo, data_stash, sel, isel, verbosity=verbosity)
                 
         if verbosity > 0:
             print(f"Model '{self.name}': not running")
@@ -512,11 +542,11 @@ class Model(ABC):
                 sts = (sts + 0.5).astype(FC.ITYPE)
             sel = sts < i0
             if np.any(sel):
-                if not hasattr(algo, "prev_farm_results"):
+                if not hasattr(algo, "farm_results_downwind"):
                     raise KeyError(
                         f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
                     )
-                prev_fres = getattr(algo, "prev_farm_results")
+                prev_fres = getattr(algo, "farm_results_downwind")
                 if prev_fres is not None:
                     prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
                     if target == FC.STATE_TARGET:
