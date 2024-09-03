@@ -23,16 +23,14 @@ class DaskBaseEngine(Engine):
         The dask configuration parameters
     progress_bar: bool
         Flag for showing progress bar
-    n_procs: int
-        The number of cpus
             
     :group: engines
     
     """
     def __init__(
         self, 
+        *args,
         dask_config={},
-        n_procs=None,
         progress_bar=True,
         **kwargs,
     ):
@@ -41,21 +39,19 @@ class DaskBaseEngine(Engine):
         
         Parameters
         ----------
+        args: tuple, optional
+            Additional parameters for the base class
         dask_config: dict, optional
             The dask configuration parameters
-        n_procs: int, optional
-            The number of processes to be used,
-            or None for automatic
         progress_bar: bool
             Flag for showing progress bar
         kwargs: dict, optional
             Additional parameters for the base class
             
         """
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
         self.dask_config = dask_config
         self.progress_bar = progress_bar
-        self.n_procs = n_procs
 
     def initialize(self):
         """
@@ -886,23 +882,7 @@ class SlurmClusterEngine(LocalClusterEngine):
     
     :group: engines
     
-    """
-    def __init__(self, n_procs, *args, **kwargs):
-        """
-        Constructor.
-        
-        Parameters
-        ----------
-        n_procs: int
-            The number of processes to be used
-        args: tuple, optional
-            Additional parameters for LocalClusterEngine
-        kwargs: dict, optional
-            Additional parameters for LocalClusterEngine
-            
-        """
-        super().__init__(*args, n_procs=n_procs, **kwargs)
-        
+    """        
     def __enter__(self):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)

@@ -1,18 +1,15 @@
-from tqdm import tqdm
 from xarray import Dataset
 
-from foxes.core import Engine
 import foxes.constants as FC 
+from foxes.core import Engine
 
-from .multiprocess import _run_as_proc
-
-class NumpyEngine(Engine):
+class SingleChunkEngine(Engine):
     """
-    The numpy engine for foxes calculations.
+    Runs computations in a single chunk.
             
     :group: engines
     
-    """      
+    """
     def __init__(self, *args, **kwargs):
         """
         Constructor.
@@ -25,16 +22,21 @@ class NumpyEngine(Engine):
             Additional parameters for the base class
             
         """
-        ignr = ["n_procs"]
+        ignr = ["chunk_size_states", "chunk_size_points", "n_procs"]
         for k in ignr:
             if kwargs.pop(k, None) is not None:
                 print(f"{type(self).__name__}: Ignoring {k}")
         super().__init__(
-            *args, 
+            *args,
+            chunk_size_states=None, 
+            chunk_size_points=None, 
             n_procs=1,
             **kwargs,
         )
         
+    def __repr__(self):
+        return f"{type(self).__name__}()"
+
     def run_calculation(
         self, 
         algo,
@@ -90,9 +92,10 @@ class NumpyEngine(Engine):
         
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
-
+        
         # prepare:
         n_states = model_data.sizes[FC.STATE] 
+        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_coords = model.output_coords()
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
@@ -100,64 +103,28 @@ class NumpyEngine(Engine):
         if farm_data is None:
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
+        algo.reset_chunk_store(chunk_store)
+            
+        # calculate:
         
-        # DEBUG objec mem sizes:
-        #from foxes.utils import print_mem
-        #for m in [algo] + model.models:
-        #    print_mem(m, pre_str="MULTIP CHECKING LARGE DATA", min_csize=9999)
-            
-        # calculate chunk sizes:
-        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
-        n_chunks_states = len(chunk_sizes_states)
-        n_chunks_targets = len(chunk_sizes_targets)
-        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
-                
-        # prepare and submit chunks:
-        n_chunks_all = n_chunks_states*n_chunks_targets
-        n_procs = min(n_procs, n_chunks_all)
-        self.print(f"Looping over {n_chunks_all} chunks")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
+        if n_states > 1:
+            self.print(f"Running single chunk calculation for {n_states} states")
+        
+        data = self.get_chunk_input_data(
+            algo=algo,
+            model_data=model_data, 
+            farm_data=farm_data, 
+            point_data=point_data, 
+            states_i0_i1=(0, n_states),
+            targets_i0_i1=(0, n_targets),
+            out_vars=out_vars,
+        )
+        
         results = {}
-        i0_states = 0
-        for chunki_states in range(n_chunks_states):
-            i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0          
-            for chunki_points in range(n_chunks_targets):
-                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-                
-                i = chunki_states*n_chunks_targets + chunki_points
-                self.print(f"Computing chunk {i}/{n_chunks_all}")
-                
-                # get this chunk's data:
-                data = self.get_chunk_input_data(
-                    algo=algo,
-                    model_data=model_data, 
-                    farm_data=farm_data, 
-                    point_data=point_data, 
-                    states_i0_i1=(i0_states, i1_states),
-                    targets_i0_i1=(i0_targets, i1_targets),
-                    out_vars=out_vars,
-                )
-                
-                # extract chunk store:
-                cstore = {k: d for k, d in chunk_store.items() if k[1] == chunki_points}
-
-                # submit model calculation:
-                results[(chunki_states, chunki_points)] = _run_as_proc(
-                    algo, model, data, iterative, cstore, **calc_pars)
-                del data, cstore
-                    
-                i0_targets = i1_targets
-                
-                if pbar is not None:
-                    pbar.update()
-                 
-            i0_states = i1_states
-            
-        del calc_pars, farm_data, point_data
-        if pbar is not None:
-            pbar.close()
+        results[(0, 0)] = (
+            model.calculate(algo, *data, **calc_pars),
+            algo.chunk_store
+        )
 
         return self.combine_results(
             algo=algo,
@@ -165,8 +132,8 @@ class NumpyEngine(Engine):
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
+            n_chunks_states=1,
+            n_chunks_targets=1,
             goal_data=goal_data,
             iterative=iterative,
         )

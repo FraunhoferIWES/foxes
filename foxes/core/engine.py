@@ -22,6 +22,9 @@ class Engine(ABC):
         The size of a states chunk
     chunk_size_points: int
         The size of a points chunk
+    n_procs: int, optional
+        The number of processes to be used,
+        or None for automatic
     verbosity: int
         The verbosity level, 0 = silent
             
@@ -32,6 +35,7 @@ class Engine(ABC):
         self, 
         chunk_size_states=None, 
         chunk_size_points=None, 
+        n_procs=None,
         verbosity=1,
     ):
         """
@@ -43,12 +47,16 @@ class Engine(ABC):
             The size of a states chunk
         chunk_size_points: int, optional
             The size of a points chunk
+        n_procs: int, optional
+            The number of processes to be used,
+            or None for automatic
         verbosity: int
             The verbosity level, 0 = silent
         
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
+        self.n_procs = n_procs
         self.verbosity = verbosity
         self.__initialized = False
         self.__entered = False
@@ -482,6 +490,7 @@ class Engine(ABC):
                 local_cluster="LocalClusterEngine",
                 slurm_cluster="SlurmClusterEngine",
                 numpy="NumpyEngine",
+                single="SingleChunkEngine",
             ).get(engine_type, engine_type)
 
         allc = all_subclasses(cls)

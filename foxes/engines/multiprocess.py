@@ -16,36 +16,9 @@ class MultiprocessEngine(Engine):
     """
     The multiprocessing engine for foxes calculations.
     
-    Parameters
-    ----------
-    n_procs: int
-        The number of processes to be used,
-        or None for automatic
-            
     :group: engines
     
     """
-    def __init__(
-        self, 
-        n_procs=None,
-        **kwargs,
-    ):
-        """
-        Constructor.
-        
-        Parameters
-        ----------
-        n_procs: int, optional
-            The number of processes to be used,
-            or None for automatic
-        kwargs: dict, optional
-            Additional parameters for the base class
-            
-        """
-        super().__init__(**kwargs)
-        self.n_procs = n_procs
-        self._Pool = None
-
     def initialize(self):
         """
         Initializes the engine.

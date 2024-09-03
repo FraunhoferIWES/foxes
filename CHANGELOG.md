@@ -609,7 +609,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `DaskEngine` (short `dask`): Submits chunk calculation functions to `dask`
   - New engine `LocalClusterEngine` (short `local_cluster`): Creates a virtual cluster on the local machine
   - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
-  - New engine `NumpyEngine` (short `numpy`): Runs single-chunk calculations
+  - New engine `NumpyEngine` (short `numpy`): Runs a loop over chunks
+  - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
   - New turbine type `FromLookupTable`, computes power and thrust coefficient from a lookup table
