@@ -618,18 +618,21 @@ class FieldDataNC(States):
 
         # interpolate:
         try:
-            data = interpn(gvars, data, pts, **self.interpn_pars).reshape(
+            ipars = dict(bounds_error=True, fill_value=None)
+            ipars.update(self.interpn_pars)
+            data = interpn(gvars, data, pts, **ipars).reshape(
                 n_states, n_pts, self._n_dvars
             )
         except ValueError as e:
-            print(f"\n\nStates '{self.name}': Interpolation error")
+            print(f"\nStates '{self.name}': Interpolation error")
             print("INPUT VARS: (state, heights, y, x)")
             print(
-                "DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars]
+                "DATA BOUNDS:", [float(np.min(d)) for d in gvars], [float(np.max(d)) for d in gvars]
             )
             print(
-                "EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T]
+                "EVAL BOUNDS:", [float(np.min(p)) for p in pts.T], [float(np.max(p)) for p in pts.T]
             )
+            print("\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n")
             raise e
         del pts, x, y, h, gvars
 

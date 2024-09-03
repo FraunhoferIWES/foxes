@@ -169,6 +169,9 @@ class PointDataModelList(PointDataModel):
         super().__init__()
         self.models = models
 
+    def __repr__(self):
+        return f"{type(self).__name__}({[m.name for m in self.models]})"
+        
     def append(self, model):
         """
         Add a model to the list

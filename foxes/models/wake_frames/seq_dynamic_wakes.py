@@ -114,26 +114,6 @@ class SeqDynamicWakes(FarmOrder):
 
         """
         return super().calc_order(algo, mdata, fdata)
-        # prepare:
-        n_states = fdata.n_states
-        n_turbines = algo.n_turbines
-        tdata = TData.from_points(points=fdata[FV.TXYH])
-
-        # calculate streamline x coordinates for turbines rotor centre points:
-        # n_states, n_turbines_source, n_turbines_target
-        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
-        for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
-                :, :, 0, 0
-            ]
-
-        # derive turbine order:
-        # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
-        for si in range(n_states):
-            order[si] = np.lexsort(keys=coosx[si])
-
-        return order
 
     def get_wake_coos(
         self,
@@ -189,23 +169,25 @@ class SeqDynamicWakes(FarmOrder):
                 self._traces_l[:counter, downwind_index] += np.linalg.norm(dxyz, axis=-1)
                 del dxyz
                 
-        # compute wind vectors at wake traces:
-        # TODO: dz from U_z is missing here
-        hpdata = {
-            v: np.zeros((1, N, 1), dtype=FC.DTYPE)
-            for v in algo.states.output_point_vars(algo)
-        }
-        hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
-        hpdata = TData.from_points(
-            points=self._traces_p[None, :N, downwind_index],
-            data=hpdata,
-            dims=hpdims,
-        )
-        res = algo.states.calculate(algo, mdata, fdata, hpdata)
-        self._traces_v[:N, downwind_index, :2] = wd2uv(
-            res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
-        )
-        del hpdata, hpdims, res
+            # compute wind vectors at wake traces:
+            # TODO: dz from U_z is missing here
+            hpdata = {
+                v: np.zeros((1, N, 1), dtype=FC.DTYPE)
+                for v in algo.states.output_point_vars(algo)
+            }
+            hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
+            hpdata = TData.from_points(
+                points=self._traces_p[None, :N, downwind_index],
+                data=hpdata,
+                dims=hpdims,
+            )
+            res = algo.states.calculate(algo, mdata, fdata, hpdata)
+            self._traces_v[:N, downwind_index, :2] = wd2uv(
+                res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+            )
+            if np.any(np.isnan(self._traces_v[:N, downwind_index, :2])):
+                raise ValueError(f"traces_v ISNAN {np.sum(np.isnan(self._traces_v[:N, downwind_index, :2]))}")
+            del hpdata, hpdims, res
 
         # project:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
@@ -295,7 +277,7 @@ class SeqDynamicWakes(FarmOrder):
             data = algo.farm_results_downwind[variable].to_numpy()
             data[algo.counter] = fdata[variable][0]
             data = data[s, downwind_index].reshape(n_states, n_targets, n_tpoints)
-            
+
             if target == FC.STATE_TARGET:
                 if n_tpoints == 1:
                     data = data[:, :, 0]

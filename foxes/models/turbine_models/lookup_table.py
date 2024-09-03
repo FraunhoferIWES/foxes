@@ -224,7 +224,7 @@ class LookupTable(TurbineModel):
                   [float(np.min(d.to_numpy())) for d in indata.values()],
                   [float(np.max(d.to_numpy())) for d in indata.values()]
                 )
-            print()
+            print("\nMaybe you want to try the options 'bounds_error=False, fill_value=None'? This will extrapolate the data.\n")
             raise e
 
         out = {}
