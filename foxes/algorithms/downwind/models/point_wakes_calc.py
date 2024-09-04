@@ -1,8 +1,5 @@
-import numpy as np
-from foxes.core import PointDataModel, TData
+from foxes.core import PointDataModel
 import foxes.variables as FV
-import foxes.constants as FC
-
 
 class PointWakesCalculation(PointDataModel):
     """
@@ -22,7 +19,6 @@ class PointWakesCalculation(PointDataModel):
     :group: algorithms.downwind.models
 
     """
-
     def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
         """
         Constructor.
@@ -120,7 +116,6 @@ class PointWakesCalculation(PointDataModel):
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
         for wmodel in wmodels:
-            pwake = algo.partial_wakes[wmodel.name]
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)

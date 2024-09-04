@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import TurbineInductionModel
-from foxes.utils import uv2wd, wd2uv
+from foxes.utils import uv2wd, wd2uv, delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -29,7 +29,6 @@ class RankineHalfBody(TurbineInductionModel):
     :group: models.wake_models.induction
 
     """
-
     def __init__(self, induction="Madsen"):
         """
         Constructor.
@@ -188,7 +187,7 @@ class RankineHalfBody(TurbineInductionModel):
         r = np.linalg.norm(wake_coos[..., 1:], axis=-1)
         r_sph = np.sqrt(r**2 + x**2)
         theta = np.arctan2(r, x)
-
+        
         # define rankine half body shape (page 3)
         RHB_shape = (
             np.cos(theta) - (2 / (m + 1e-15)) * ws * (r_sph * np.sin(theta)) ** 2
@@ -265,9 +264,9 @@ class RankineHalfBody(TurbineInductionModel):
         # add ambient result to wake deltas:
         wind_vec += delta_uv
         del delta_uv
-
+        
         # deduce WS and WD deltas:
         new_wd = uv2wd(wind_vec)
         new_ws = np.linalg.norm(wind_vec, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
-        wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
+        wake_deltas[FV.WD] += delta_wd(amb_results[FV.WD], new_wd)

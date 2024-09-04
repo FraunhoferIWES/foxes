@@ -2,7 +2,6 @@ from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class WakeMirror(GroundModel):
     """
     Wake reflection from ground and/or other horizontal planes.
@@ -15,7 +14,6 @@ class WakeMirror(GroundModel):
     :group: models.ground_models
 
     """
-
     def __init__(self, heights):
         """
         Constructor.
@@ -69,6 +67,10 @@ class WakeMirror(GroundModel):
         """
         # prepare:
         hh = fdata[FV.H][:, downwind_index].copy()
+        
+        # DEBUG CHECK:
+        #import numpy as np
+        #assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
@@ -78,14 +80,14 @@ class WakeMirror(GroundModel):
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
         for h in self.heights:
 
-            fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
+            fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
             pwake.contribute(
                 algo, mdata, fdata, tdata, downwind_index, wake_deltas, wmodel
             )
 
         # reset heights:
-        fdata[FV.H][:, downwind_index] = hh
+        fdata[FV.TXYH][:, downwind_index, 2] = hh
 
     def contribute_to_point_wakes(
         self,
@@ -133,7 +135,7 @@ class WakeMirror(GroundModel):
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
         for h in self.heights:
 
-            fdata[FV.H][:, downwind_index] = hh + 2 * (h - hh)
+            fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
             wcoos = algo.wake_frame.get_wake_coos(
                 algo, mdata, fdata, tdata, downwind_index
@@ -143,8 +145,7 @@ class WakeMirror(GroundModel):
             )
 
         # reset heights:
-        fdata[FV.H][:, downwind_index] = hh
-
+        fdata[FV.TXYH][:, downwind_index, 2] = hh
 
 class GroundMirror(WakeMirror):
     """
@@ -153,7 +154,6 @@ class GroundMirror(WakeMirror):
     :group: models.ground_models
 
     """
-
     def __init__(self):
         """
         Constructor.
