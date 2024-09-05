@@ -123,18 +123,22 @@ class Engine(ABC):
             __global_engine_data__["engine"] = self
             self.__initialized = True
         
-    def finalize(self, *exit_args):
+    def finalize(self, type=None, value=None, traceback=None):
         """
         Finalizes the engine.
         
         Parameters
         ----------
-        exit_args: tuple, optional
-            Arguments from the exit function
-            
+        type: object, optional
+            Dummy argument for the exit function
+        value: object, optional
+            Dummy argument for the exit function
+        traceback: object, optional
+            Dummy argument for the exit function
+             
         """
         if self.entered:
-            self.__exit__(*exit_args)
+            self.__exit__(type, value, traceback)
         elif self.initialized:
             global __global_engine_data__
             __global_engine_data__["engine"] = None
@@ -556,5 +560,5 @@ def reset_engine():
     """
     engine = get_engine(error=False, default=False)
     if engine is not None:
-        engine.finalize()
+        engine.finalize(type=None, value=None, traceback=None)
         

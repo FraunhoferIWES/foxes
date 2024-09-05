@@ -68,7 +68,7 @@ class Algorithm(Model):
         self.__chunk_store = Dict(name="chunk_store")
         
         if engine is not None:
-            e = Engine.new(engine_type=engine, **engine_pars)
+            e = Engine.new(engine_type=engine, verbosity=verbosity, **engine_pars)
             self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
             e.initialize()
         elif len(engine_pars):

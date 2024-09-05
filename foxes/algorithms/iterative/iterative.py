@@ -285,6 +285,7 @@ class Iterative(Downwind):
         fres = None
         self._it = -1
         self._final_run = False
+        fres_dwnd = None
         while self._it < self.max_it:
             self._it += 1
 
@@ -296,6 +297,7 @@ class Iterative(Downwind):
             self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
 
+            fres_dwnd = fres
             if self.conv_crit is not None:
                 conv = self.conv_crit.check_converged(
                     self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
@@ -306,9 +308,6 @@ class Iterative(Downwind):
                         f"\nAlgorithm {self.name}: Convergence reached.\n",
                         vlim=0
                     )
-                    
-                    if ret_dwnd_order:
-                        fres_dwnd = fres
                         
                     self.print("Starting final run", vlim=0)
                     self._final_run = True

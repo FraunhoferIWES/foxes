@@ -53,14 +53,21 @@ class DaskBaseEngine(Engine):
         self.dask_config = dask_config
         self.progress_bar = progress_bar
 
+    def __enter__(self):
+        if self.progress_bar:
+            self._pbar = ProgressBar(minimum=2)
+            self._pbar.__enter__()
+        return super().__enter__()
+    
+    def __exit__(self, *args):
+        if self.progress_bar:
+            self._pbar.__exit__(*args)
+        super().__exit__(*args)
+        
     def initialize(self):
         """
         Initializes the engine.
         """               
-        if self.progress_bar:
-            self._pbar = ProgressBar(minimum=2)
-            self._pbar.register()
-
         dask.config.set(**self.dask_config)
         super().initialize()
 
@@ -89,7 +96,7 @@ class DaskBaseEngine(Engine):
         else:
             return data
     
-    def finalize(self, *exit_args):
+    def finalize(self, *exit_args, **exit_kwargs):
         """
         Finalizes the engine.
         
@@ -97,13 +104,12 @@ class DaskBaseEngine(Engine):
         ----------
         exit_args: tuple, optional
             Arguments from the exit function
-            
+        exit_kwargs: dict, optional
+            Arguments from the exit function
+             
         """
-        if self.progress_bar:
-            self._pbar.unregister()
-            
         dask.config.refresh()
-        super().finalize(*exit_args)
+        super().finalize(*exit_args, **exit_kwargs)
         
 def _run_as_ufunc(
     state_inds,

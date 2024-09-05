@@ -26,7 +26,6 @@ class SeqDynamicWakes(FarmOrder):
     :group: models.wake_frames.sequential
 
     """
-
     def __init__(self, cl_ipars={}, dt_min=None):
         """
         Constructor.
@@ -155,11 +154,13 @@ class SeqDynamicWakes(FarmOrder):
         points = tdata[FC.TARGETS].reshape(n_states, n_points, 3)
         counter = algo.states.counter
         N = counter + 1
-
+        
         if np.isnan(self._traces_l[counter, downwind_index]):
+            
+            print("SEQDM COMPUTING",algo._it, counter, downwind_index)
 
             # new wake starts at turbine:
-            self._traces_p[counter, downwind_index] = fdata[FV.TXYH][0, downwind_index]
+            self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][0, downwind_index]
             self._traces_l[counter, downwind_index] = 0
 
             # transport wakes that originate from previous time steps:
@@ -171,32 +172,21 @@ class SeqDynamicWakes(FarmOrder):
                 
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
-            hpdata = {
-                v: np.zeros((1, N, 1), dtype=FC.DTYPE)
-                for v in algo.states.output_point_vars(algo)
-            }
-            hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
-            hpdata = TData.from_points(
-                points=self._traces_p[None, :N, downwind_index],
-                data=hpdata,
-                dims=hpdims,
-            )
+            hpdata = TData.from_points(points=self._traces_p[None, :N, downwind_index])
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             self._traces_v[:N, downwind_index, :2] = wd2uv(
                 res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
             )
-            if np.any(np.isnan(self._traces_v[:N, downwind_index, :2])):
-                raise ValueError(f"traces_v ISNAN {np.sum(np.isnan(self._traces_v[:N, downwind_index, :2]))}")
-            del hpdata, hpdims, res
+            del hpdata, res
 
         # project:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
         tri = np.argmin(dists, axis=1)
         del dists
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
-        wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][:, downwind_index][0, None, 2]
-        delp = points[0, :, :2] - self._traces_p[tri, downwind_index, :2]
-        nx = self._traces_v[tri, downwind_index, :2]
+        wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][0, downwind_index, None, 2]
+        delp = points[0, :, :2] - self._traces_p[tri, downwind_index][..., :2]
+        nx = self._traces_v[tri, downwind_index][..., :2]
         nx /= np.linalg.norm(nx, axis=1)[:, None]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
         wcoos[0, :, 0] = (
