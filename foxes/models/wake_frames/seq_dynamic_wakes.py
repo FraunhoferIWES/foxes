@@ -5,7 +5,7 @@ from foxes.utils import wd2uv
 from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.algorithms import Sequential
+from foxes.algorithms.sequential import Sequential
 
 from .farm_order import FarmOrder
 
@@ -163,7 +163,7 @@ class SeqDynamicWakes(FarmOrder):
 
             # transport wakes that originate from previous time steps:
             if counter > 0:
-                dxyz = self._traces_v[:counter, downwind_index] * self._dt[:counter, None]
+                dxyz = self._traces_v[:counter, downwind_index] * self._dt[counter-1]
                 self._traces_p[:counter, downwind_index] += dxyz
                 self._traces_l[:counter, downwind_index] += np.linalg.norm(dxyz, axis=-1)
                 del dxyz

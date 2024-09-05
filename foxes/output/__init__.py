@@ -16,5 +16,8 @@ from .slice_data import SliceData
 from .rotor_point_plots import RotorPointPlot
 from .state_turbine_table import StateTurbineTable
 
-from .flow_plots_2d import FlowPlots2D, SeqFlowAnimationPlugin
+from .flow_plots_2d import FlowPlots2D
+from .seq_plugins import SeqFlowAnimationPlugin, SeqWakeDebugPlugin
+
 from . import grids
+from . import seq_plugins

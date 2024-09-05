@@ -1,6 +1,6 @@
 from foxes.algorithms.sequential import SequentialPlugin
 
-from .flow_plots import FlowPlots2D
+from ..flow_plots_2d.flow_plots import FlowPlots2D
 
 
 class SeqFlowAnimationPlugin(SequentialPlugin):
@@ -15,10 +15,9 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     pars: dict
         Additional parameters for plotting
 
-    :group: output.flow_plots_2d
+    :group: output.seq_plugins
 
     """
-
     def __init__(self, orientation, **pars):
         """
         Constructor.

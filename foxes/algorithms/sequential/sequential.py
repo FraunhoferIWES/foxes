@@ -4,10 +4,9 @@ from xarray import Dataset
 from foxes.algorithms import Iterative
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core import MData, FData, TData, get_engine
+from foxes.core import get_engine
 
 from . import models as mdls
-
 
 class Sequential(Iterative):
     """
