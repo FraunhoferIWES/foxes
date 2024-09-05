@@ -156,8 +156,6 @@ class SeqDynamicWakes(FarmOrder):
         N = counter + 1
         
         if np.isnan(self._traces_l[counter, downwind_index]):
-            
-            print("SEQDM COMPUTING",algo._it, counter, downwind_index)
 
             # new wake starts at turbine:
             self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][0, downwind_index]
