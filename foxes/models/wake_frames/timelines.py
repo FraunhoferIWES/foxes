@@ -330,7 +330,7 @@ class Timelines(WakeFrame):
         
             # step backwards in time, until wake source turbine is hit:
             dxy = data_dxy[hi][:i1]
-            precond = (theights[:, None] == h) & (wcoosx > 0.99e20)
+            precond = (theights[:, None] == h)
             while True:
                 sel = (
                     precond & 
@@ -342,40 +342,38 @@ class Timelines(WakeFrame):
 
                     delta = dxy[h_trace_si[sel]]
                     dmag = np.linalg.norm(delta, axis=-1)
-
                     trace_p[sel] -= delta
                     trace_l[sel] += dmag
+                    del delta, dmag
 
-                    trp = trace_p[sel]
-                    d0 = trace_d[sel]
-                    d = np.linalg.norm(trp, axis=-1)
-                    trace_d[sel] = d
-
-                    # check for turbine hit, then set coordinates:
-                    seln = d <= np.minimum(d0, 1.5 * dmag)
-                    if np.any(seln):
-                        htrp = trp[seln]
-                        raxis = delta[seln]
-                        raxis = raxis / np.linalg.norm(raxis, axis=-1)[:, None]
-                        saxis = np.concatenate(
-                            [-raxis[:, 1, None], raxis[:, 0, None]], axis=1
-                        )
-
-                        wcx = wcoosx[sel]
-                        wcx[seln] = np.einsum("sd,sd->s", htrp, raxis) + trace_l[sel][seln]
-                        wcoosx[sel] = wcx
-                        del wcx, raxis
-
-                        wcy = wcoosy[sel]
-                        wcy[seln] = np.einsum("sd,sd->s", htrp, saxis)
-                        wcoosy[sel] = wcy
-                        del wcy, saxis, htrp
+                    # check if this is closer to turbine:
+                    d = np.linalg.norm(trace_p, axis=-1)
+                    sel = sel & (d <= trace_d)
+                    if np.any(sel):
+                        trace_d[sel] = d[sel]
                         
-                        trs = trace_si[sel]
-                        trs[seln] = h_trace_si[sel][seln]
-                        trace_si[sel] = trs
-                        del trs
-
+                        nx = dxy[h_trace_si[sel]]
+                        dx = np.linalg.norm(nx, axis=-1)
+                        nx /= dx[:, None]
+                        trp = trace_p[sel]
+                        projx = np.einsum("sd,sd->s", trp, nx)
+                        
+                        seln = (projx > -dx) & (projx < dx)
+                        if np.any(seln):
+                            wcoosx[sel] = np.where(seln, projx + trace_l[sel], wcoosx[sel])
+                            
+                            ny = np.concatenate(
+                                [-nx[:, 1, None], nx[:, 0, None]], axis=1
+                            )
+                            projy = np.einsum("sd,sd->s", trp, ny)
+                            wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
+                            del ny, projy
+                            
+                            trace_si[sel] = np.where(seln, h_trace_si[sel], trace_si[sel])
+                        
+                        del nx, dx, projx, seln
+                    del d, sel
+                    
                 else:
                     break
             

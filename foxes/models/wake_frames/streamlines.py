@@ -153,10 +153,10 @@ class Streamlines2D(WakeFrame):
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
         delta = points[:, :, :2] - data[:, :, :2]
         nx = wd2uv(data[:, :, 3])
-        ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
         projx = np.einsum("spd,spd->sp", delta, nx)
         sel = (projx > -self.step) & (projx < self.step)
         if np.any(sel):
+            ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
             coos[sel, 0] = slen[sel] + projx[sel]
             coos[sel, 1] = np.einsum("spd,spd->sp", delta, ny)[sel]
 

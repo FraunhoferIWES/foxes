@@ -11,6 +11,9 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
+        "-d", "--debug", help="Switch on wake debugging", action="store_true"
+    )
+    parser.add_argument(
         "-l",
         "--layout",
         help="The wind farm layout file (path or static)",
@@ -70,7 +73,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(230, 280),
+        states_sel=range(240, 290),
     )
 
     farm = foxes.WindFarm()
@@ -126,6 +129,10 @@ if __name__ == "__main__":
         )
         algo.plugins.append(anigen)
 
+        if args.debug:
+            anigen_debug = foxes.output.SeqWakeDebugPlugin(ax=ax)
+            algo.plugins.append(anigen_debug)
+        
     # run all states sequentially:
     for r in algo:
         print(algo.index)
@@ -138,6 +145,8 @@ if __name__ == "__main__":
 
         anim = foxes.output.Animator(fig)
         anim.add_generator(anigen.gen_images())
+        if args.debug:
+            anim.add_generator(anigen_debug.gen_images())
         ani = anim.animate(interval=600)
 
         lo = foxes.output.FarmLayoutOutput(farm)
