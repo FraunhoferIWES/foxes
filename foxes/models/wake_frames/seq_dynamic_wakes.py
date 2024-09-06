@@ -177,20 +177,30 @@ class SeqDynamicWakes(FarmOrder):
             )
             del hpdata, res
 
-        # project:
+        # find nearest wake point:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
         tri = np.argmin(dists, axis=1)
         del dists
+        
+        # project:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][0, downwind_index, None, 2]
-        delp = points[0, :, :2] - self._traces_p[tri, downwind_index][..., :2]
-        nx = self._traces_v[tri, downwind_index][..., :2]
-        nx /= np.linalg.norm(nx, axis=1)[:, None]
+        nx = self._traces_v[tri, downwind_index, :2]
+        mv = np.linalg.norm(nx, axis=-1)
+        nx /= mv[:, None]
         ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-        wcoos[0, :, 0] = (
-            np.einsum("pd,pd->p", delp, nx) + self._traces_l[tri, downwind_index]
-        )
-        wcoos[0, :, 1] = np.einsum("pd,pd->p", delp, ny)
+        delp = points[0, :, :2] - self._traces_p[tri, downwind_index, :2]
+        projx = np.einsum("pd,pd->p", delp, nx)
+        dt = self._dt[counter] if counter < len(self._dt) else self._dt[-1]
+        dx = mv * dt
+        sel = (projx > -dx) & (projx < dx)
+        if np.any(sel):
+            wcoos[0, sel, 0] = (
+                projx[sel]
+                + self._traces_l[tri[sel], downwind_index]
+            )
+            wcoos[0, sel, 1] = np.einsum("pd,pd->p", delp, ny)[sel]
+        del delp, projx, mv, dx, sel
 
         # turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
