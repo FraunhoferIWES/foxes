@@ -134,7 +134,6 @@ class Streamlines2D(WakeFrame):
         Helper function, calculates streamline coordinates
         for given points and given turbine
         """
-
         # prepare:
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
@@ -150,13 +149,16 @@ class Streamlines2D(WakeFrame):
         del dists, selp
 
         # calculate coordinates:
-        coos = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
+        coos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
+        coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
+        delta = points[:, :, :2] - data[:, :, :2]
         nx = wd2uv(data[:, :, 3])
         ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
-        delta = points[:, :, :2] - data[:, :, :2]
-        coos[:, :, 0] = slen + np.einsum("spd,spd->sp", delta, nx)
-        coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
-        coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
+        projx = np.einsum("spd,spd->sp", delta, nx)
+        sel = (projx > -self.step) & (projx < self.step)
+        if np.any(sel):
+            coos[sel, 0] = slen[sel] + projx[sel]
+            coos[sel, 1] = np.einsum("spd,spd->sp", delta, ny)[sel]
 
         return coos.reshape(n_states, n_targets, n_tpoints, 3)
 
