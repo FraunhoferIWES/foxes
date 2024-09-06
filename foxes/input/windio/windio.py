@@ -79,7 +79,11 @@ def _read_farm(wio, algo_dict, verbosity):
     ttype = read_turbine_type(turbines, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
 
     # read layouts:
-    layouts = Dict(wio_farm["layouts"], name="layouts")
+    wfarm = wio_farm["layouts"]
+    if isinstance(wfarm, dict):
+        layouts = Dict(wfarm, name="layouts")
+    else: 
+        layouts = Dict({i: l for i, l in enumerate(wfarm)}, name="layouts")
     if verbosity > 2:
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])
