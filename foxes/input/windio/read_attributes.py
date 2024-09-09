@@ -99,7 +99,7 @@ def _read_turbulence(
         print("    Reading turbulence_model")
         print("      Name:", wname)
         print("      Contents:", [k for k in turbulence_model.keys()])
-    if wname != "None":
+    if wname not in ["None", "none"]:
         tiwake_dict = dict(wmodel_type=twake_def_map[wname], induction=induction)
         if wname == "IEC-TI-2019":
             tiwake_dict["opening_angle"] = None
@@ -146,7 +146,7 @@ def _read_blockage(blockage_model, induction, algo_dict, verbosity):
         print("    Reading blockage_model")
         print("      Name:", wname)
         print("      Contents:", [k for k in blockage_model.keys()])
-    if wname != "None":
+    if wname not in ["None", "none"]:
         indc_dict = Dict(wmodel_type=indc_def_map[wname], induction=induction)
         algo_dict["mbook"].wake_models[wname] = WakeModel.new(**indc_dict)
         if verbosity > 2:

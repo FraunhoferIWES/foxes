@@ -54,10 +54,15 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
         z_planes = Dict(flow_field.pop("z_planes"), name="z_planes")
         z_sampling = z_planes["z_sampling"]
         xy_sampling = z_planes["xy_sampling"]
+        cases_run = Dict(flow_field.pop("cases_run", {}), name="cases_run")
+        states_isel = cases_run.get("subset", None)
+        if "all_occurences" in cases_run and cases_run.pop("all_occurences"):
+            states_isel = None
         if verbosity > 2:
             print("      Reading flow_field")
             print("        File name       :", flow_nc_filename)
             print("        output_variables:", output_variables)
+            print("        states subset   :", states_isel)
             print("        z_sampling      :", z_sampling)
             print("        xy_sampling     :", xy_sampling)
 
@@ -81,7 +86,7 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                         "verbosity_delta": 3,
                         "run_func": "get_states_data_xy",
                         "run_kwargs": dict(
-                            #states_isel=[0,1],
+                            states_isel=states_isel,
                             n_img_points=(100, 100),
                             variables=[vmap[v] for v in output_variables],
                             z=z,
@@ -96,7 +101,6 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
         else:
             raise NotImplementedError(f"xy_sampling '{xy_sampling}' is not supported (yet)")
             
-        
 def read_outputs(wio_outs, algo_dict, verbosity):
     """
     Reads the windio outputs

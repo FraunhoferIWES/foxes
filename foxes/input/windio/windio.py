@@ -90,7 +90,12 @@ def _read_farm(wio, algo_dict, verbosity):
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttype, verbosity)
 
-def read_windio(windio_yaml, verbosity=1):
+def read_windio(
+    windio_yaml, 
+    verbosity=1, 
+    algo_pars=None, 
+    **runner_pars,
+):
     """
     Reads a complete WindIO case.
 
@@ -103,6 +108,10 @@ def read_windio(windio_yaml, verbosity=1):
         Path to the windio yaml file
     verbosity: int
         The verbosity level, 0 = silent
+    algo_pars: dict, optional
+        Additional algorithm parameters
+    runner_pars: dict, optional
+        Additional parameters for the WindioRunner
 
     Returns
     -------
@@ -113,7 +122,6 @@ def read_windio(windio_yaml, verbosity=1):
     :group: input.windio
 
     """
-
     wio_file = Path(windio_yaml)
     if not wio_file.is_file():
         wio_file = StaticData().get_file_path(WINDIO, wio_file, check_raw=False)
@@ -128,13 +136,15 @@ def read_windio(windio_yaml, verbosity=1):
         print("  Name:", wio.pop("name", None))
         print("  Contents:", [k for k in wio.keys()])
 
-    algo_dict = Dict(
-        algo_type="Downwind",
+    algo_dict = Dict(algo_type="Downwind", name="algo_dict")
+    if algo_pars is not None:
+        algo_dict.update(algo_pars)
+    algo_dict.update(dict(
         mbook=ModelBook(),
         farm=WindFarm(),
         wake_models=[],
         verbosity=verbosity-3,
-    )
+    ))
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
@@ -152,7 +162,8 @@ def read_windio(windio_yaml, verbosity=1):
                 output_dir=odir,
                 output_dicts=out_dicts, 
                 wio_input_data=wio, 
-                verbosity=verbosity
+                verbosity=verbosity,
+                **runner_pars,
             )
 
     return runner
