@@ -24,7 +24,6 @@ class SliceData(Output):
     :group: output
 
     """
-
     def __init__(
         self, 
         algo, 

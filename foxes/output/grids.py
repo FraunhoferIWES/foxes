@@ -675,7 +675,10 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
     return Dataset(
         coords={s: states, b: b_pos, a: a_pos},
         data_vars={
-            v: ((s, b, a), np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2))
+            label_map.get(v, v): (
+                (s, b, a), 
+                np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2)
+            )
             for v, d in data.items()
         },
         attrs={c: float(c_pos)},

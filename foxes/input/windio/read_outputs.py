@@ -5,6 +5,8 @@ from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .read_fields import foxes2wio
+
 def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
     """ Reads the turbine outputs request """
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get("report", True):
@@ -79,11 +81,12 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                         "verbosity_delta": 3,
                         "run_func": "get_states_data_xy",
                         "run_kwargs": dict(
-                            states_isel=[0,1],
-                            n_img_points=(300, 300),
+                            #states_isel=[0,1],
+                            n_img_points=(100, 100),
                             variables=[vmap[v] for v in output_variables],
                             z=z,
                             to_file=odir/flow_nc_filename,
+                            label_map=foxes2wio,
                             verbosity=verbosity,
                         ),
                         "output_yaml_update": {
