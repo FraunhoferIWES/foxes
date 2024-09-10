@@ -1,6 +1,7 @@
 from foxes.core import PointDataModel
 import foxes.variables as FV
 
+
 class PointWakesCalculation(PointDataModel):
     """
     This model calculates wake effects at points of interest.
@@ -19,6 +20,7 @@ class PointWakesCalculation(PointDataModel):
     :group: algorithms.downwind.models
 
     """
+
     def __init__(self, emodels=None, emodels_cpars=None, wake_models=None):
         """
         Constructor.

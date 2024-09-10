@@ -19,20 +19,20 @@ class DataCalcModel(Model):
     :group: core
 
     """
-    
+
     @abstractmethod
     def output_coords(self):
         """
         Gets the coordinates of all output arrays
-        
+
         Returns
         -------
         dims: tuple of str
             The coordinates of all output arrays
-        
+
         """
         pass
-    
+
     @abstractmethod
     def calculate(self, algo, *data, **parameters):
         """ "

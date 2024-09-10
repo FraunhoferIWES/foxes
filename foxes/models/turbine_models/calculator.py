@@ -1,5 +1,6 @@
 from foxes.core import TurbineModel
 
+
 class Calculator(TurbineModel):
     """
     Calculates variables based on given functions.

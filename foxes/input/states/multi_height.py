@@ -110,22 +110,24 @@ class MultiHeightStates(States):
         berr = self.ipars.get("bounds_error", False)
         ssel = "" if self.states_sel is None else f"n_states={len(self.states_sel)}, "
         return f"{type(self).__name__}({ssel}bounds_error={berr})"
-    
+
     @property
     def data_source(self):
         """
         The data source
-        
+
         Returns
         -------
         s: object
             The data source
-            
+
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces data_source while running"
+            )
         return self._data_source
-    
+
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
         Reset the states, optionally select states
@@ -273,18 +275,18 @@ class MultiHeightStates(States):
         return idata
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -300,10 +302,10 @@ class MultiHeightStates(States):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
-        """  
+
+        """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data_stash[self.name] = dict(
             data_source=self._data_source,
             weights=self._weights,
@@ -312,17 +314,17 @@ class MultiHeightStates(States):
         del self._data_source, self._weights, self._inds
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -339,12 +341,12 @@ class MultiHeightStates(States):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self._data_source = data.pop("data_source")
         self._weights = data.pop("weights")
         self._inds = data.pop("inds")
-        
+
     def size(self):
         """
         The total number of states.
@@ -404,7 +406,9 @@ class MultiHeightStates(States):
 
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces weights while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces weights while running"
+            )
         return self._weights
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -441,12 +445,12 @@ class MultiHeightStates(States):
         n_h = len(h)
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
-        
+
         coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
         np.fill_diagonal(coeffs, 1.0)
         ipars = dict(
-            assume_sorted=True, 
-            bounds_error=True, 
+            assume_sorted=True,
+            bounds_error=True,
             fill_value=(coeffs[0], coeffs[-1]),
         )
         ipars.update(self.ipars)
@@ -455,7 +459,9 @@ class MultiHeightStates(States):
             ires = intp(z)
         except ValueError as e:
             if ipars["bounds_error"]:
-                print(f"{self.name}: Interpolation height out of bounds. Select 'bounds_error=False' for replacement by lowest or largest height")
+                print(
+                    f"{self.name}: Interpolation height out of bounds. Select 'bounds_error=False' for replacement by lowest or largest height"
+                )
             raise e
         del coeffs, intp
 
@@ -709,6 +715,7 @@ class MultiHeightNCStates(MultiHeightStates):
 
         return idata
 
+
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -716,6 +723,7 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}
 
 
@@ -726,6 +734,7 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     :group: input.states
 
     """
+
     def __init__(
         self,
         *args,

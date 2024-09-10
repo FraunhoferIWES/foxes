@@ -88,7 +88,9 @@ class StateTurbineMap(Output):
         ax.set_yticklabels(turbines[:-1])
         xt = ax.get_xticks()
         xtl = ax.get_xticklabels()
-        ax.set_xticks(xt[:-1] + 0.5 * (xt[-1] - xt[-2]), xtl[:-1], rotation=rotate_xlabels)
+        ax.set_xticks(
+            xt[:-1] + 0.5 * (xt[-1] - xt[-2]), xtl[:-1], rotation=rotate_xlabels
+        )
         if len(turbines) > 10:
             yt = ax.get_yticks()
             ytl = [None for t in yt]

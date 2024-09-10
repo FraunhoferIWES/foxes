@@ -6,6 +6,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
 
+
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -109,7 +110,7 @@ class Downwind(Algorithm):
         """
         if mbook is None:
             mbook = fm.ModelBook()
-            
+
         super().__init__(mbook, farm, **kwargs)
 
         self.__states = states
@@ -187,35 +188,35 @@ class Downwind(Algorithm):
     def states(self):
         """
         The states
-        
+
         Returns
         -------
         m: foxes.core.States
             The states
-        
+
         """
         return self.__states
 
     @states.setter
     def states(self, value):
-        """ Resets the states """
+        """Resets the states"""
         if self.running:
             raise ValueError(f"{self.name}: Cannot set states while running")
         if self.states.initialized:
             self.states.finalize(self, verbosity=self.verbosity)
         self.__states = value
         self.init_states()
-        
+
     @property
     def rotor_model(self):
         """
         The rotor model
-        
+
         Returns
         -------
         m: foxes.core.RotorModel
             The rotor model
-        
+
         """
         return self.__rotor_model
 
@@ -223,13 +224,13 @@ class Downwind(Algorithm):
     def wake_models(self):
         """
         The wake models
-        
+
         Returns
         -------
         m: dict
             The wake models. Key: name,
             value: foxes.core.WakeModel
-        
+
         """
         return self.__wake_models
 
@@ -237,12 +238,12 @@ class Downwind(Algorithm):
     def wake_frame(self):
         """
         The wake frame
-        
+
         Returns
         -------
         m: foxes.core.WakeFrame
             The wake frame
-        
+
         """
         return self.__wake_frame
 
@@ -250,13 +251,13 @@ class Downwind(Algorithm):
     def partial_wakes(self):
         """
         The partial wakes models
-        
+
         Returns
         -------
         m: dict
             The partial wakes models. Key: name,
             value: foxes.core.PartialWakesModel
-        
+
         """
         return self.__partial_wakes
 
@@ -264,29 +265,29 @@ class Downwind(Algorithm):
     def ground_models(self):
         """
         The ground models
-        
+
         Returns
         -------
         m: dict
             The ground models, key: name,
             value: foxes.core.GroundModel
-        
+
         """
         return self.__ground_models
-    
+
     @property
     def farm_controller(self):
         """
         The farm controller
-        
+
         Returns
         -------
         m: foxes.core.FarmController
             The farm controller
-        
+
         """
         return self.__farm_controller
-    
+
     @classmethod
     def get_model(cls, name):
         """
@@ -384,17 +385,17 @@ class Downwind(Algorithm):
 
         """
         mdls = [
-            self.states, 
+            self.states,
             self.farm_controller,
-            self.rotor_model, 
+            self.rotor_model,
             self.wake_frame,
         ]
         mdls += list(self.wake_models.values())
         mdls += list(self.partial_wakes.values())
         mdls += list(self.ground_models.values())
-                
+
         return mdls
-        
+
     def initialize(self):
         """
         Initializes the algorithm.
@@ -461,9 +462,9 @@ class Downwind(Algorithm):
         self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
 
     def _launch_parallel_farm_calc(
-        self, 
-        mlist, 
-        *data, 
+        self,
+        mlist,
+        *data,
         outputs=None,
         **kwargs,
     ):
@@ -486,11 +487,12 @@ class Downwind(Algorithm):
         farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
-            
+
         """
         out_vars = self.farm_vars if outputs is None else outputs
         farm_results = get_engine().run_calculation(
-            self, mlist, *data, out_vars=out_vars, **kwargs)
+            self, mlist, *data, out_vars=out_vars, **kwargs
+        )
 
         return farm_results
 
@@ -525,7 +527,7 @@ class Downwind(Algorithm):
             The farm results. The calculated variables have
             dimensions (state, turbine)
 
-        """      
+        """
         # initialize algorithm:
         if not self.initialized:
             self.initialize()
@@ -637,13 +639,7 @@ class Downwind(Algorithm):
 
         return mlist, calc_pars
 
-    def _launch_parallel_points_calc(
-        self, 
-        mlist,
-        *data, 
-        outputs=None,
-        **kwargs
-    ):
+    def _launch_parallel_points_calc(self, mlist, *data, outputs=None, **kwargs):
         """
         Runs the main points calculation, launching parallelization
 
@@ -663,16 +659,21 @@ class Downwind(Algorithm):
         point_results: xarray.Dataset
             The point results. The calculated variables have
             dimensions (state, point)
-            
+
         """
-        return get_engine().run_calculation(
-            self,
-            mlist,
-            *data,
-            out_vars=outputs,
-            **kwargs,
-        ).sel({FC.TPOINT: 0}).rename({FC.TARGET: FC.POINT})
-        
+        return (
+            get_engine()
+            .run_calculation(
+                self,
+                mlist,
+                *data,
+                out_vars=outputs,
+                **kwargs,
+            )
+            .sel({FC.TPOINT: 0})
+            .rename({FC.TARGET: FC.POINT})
+        )
+
     def calc_points(
         self,
         farm_results,
@@ -747,7 +748,7 @@ class Downwind(Algorithm):
         # initialize models:
         if not mlist.initialized:
             mlist.initialize(self, self.verbosity)
-            
+
         # subset selections:
         sel = {} if states_sel is None else {FC.STATE: states_sel}
         isel = {} if states_isel is None else {FC.STATE: states_isel}
@@ -756,7 +757,7 @@ class Downwind(Algorithm):
         if states_sel is not None:
             farm_results = farm_results.sel(sel)
         n_states = farm_results.sizes[FC.STATE]
- 
+
         # get input model data:
         model_data = self.get_models_data(sel=sel, isel=isel)
         if persist_mdata:
@@ -791,8 +792,8 @@ class Downwind(Algorithm):
             point_data,
             outputs=ovars,
             parameters=calc_pars,
-            #sel=sel,
-            #isel=isel,
+            # sel=sel,
+            # isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data

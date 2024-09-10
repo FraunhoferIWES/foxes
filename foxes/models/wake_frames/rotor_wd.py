@@ -32,7 +32,7 @@ class RotorWD(WakeFrame):
         """
         super().__init__()
         self.var_wd = var_wd
-            
+
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.

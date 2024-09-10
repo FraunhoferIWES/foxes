@@ -23,6 +23,7 @@ class LevelRotor(RotorModel):
     :group: models.rotor_models
 
     """
+
     def __init__(self, n, reduce=True, nint=200, **kwargs):
         """
         Constructor.
@@ -40,7 +41,7 @@ class LevelRotor(RotorModel):
             The model name
         kwargs: dict, optional
             Addition parameters for the base model
-            
+
         """
         super().__init__(**kwargs)
 

@@ -4,6 +4,7 @@ from copy import deepcopy
 from foxes.core import FarmDataModel, TData
 import foxes.constants as FC
 
+
 class FarmWakesCalculation(FarmDataModel):
     """
     This model calculates wakes effects on farm data.
@@ -11,6 +12,7 @@ class FarmWakesCalculation(FarmDataModel):
     :group: algorithms.downwind.models
 
     """
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

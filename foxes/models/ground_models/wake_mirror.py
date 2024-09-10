@@ -2,6 +2,7 @@ from foxes.core import GroundModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class WakeMirror(GroundModel):
     """
     Wake reflection from ground and/or other horizontal planes.
@@ -14,6 +15,7 @@ class WakeMirror(GroundModel):
     :group: models.ground_models
 
     """
+
     def __init__(self, heights):
         """
         Constructor.
@@ -67,10 +69,10 @@ class WakeMirror(GroundModel):
         """
         # prepare:
         hh = fdata[FV.H][:, downwind_index].copy()
-        
+
         # DEBUG CHECK:
-        #import numpy as np
-        #assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
+        # import numpy as np
+        # assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
@@ -147,6 +149,7 @@ class WakeMirror(GroundModel):
         # reset heights:
         fdata[FV.TXYH][:, downwind_index, 2] = hh
 
+
 class GroundMirror(WakeMirror):
     """
     Wake reflection from the ground.
@@ -154,6 +157,7 @@ class GroundMirror(WakeMirror):
     :group: models.ground_models
 
     """
+
     def __init__(self):
         """
         Constructor.

@@ -76,9 +76,9 @@ class Iterative(Downwind):
 
         self._mod_cutin = dict(modify_ct=True, modify_P=False)
         self._mod_cutin.update(mod_cutin)
-        
-        self.verbosity = self.verbosity-1
-        
+
+        self.verbosity = self.verbosity - 1
+
     @property
     def farm_results_downwind(self):
         """
@@ -89,7 +89,7 @@ class Iterative(Downwind):
         -------
         fres: xarray.Datatset
             The all-chunks farm results during calculations
-        
+
         """
         return self.__prev_farm_results
 
@@ -244,18 +244,19 @@ class Iterative(Downwind):
     def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
         return super()._launch_parallel_farm_calc(
-            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, **kwargs)
+            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, **kwargs
+        )
 
     @property
     def final_iteration(self):
         """
         Flag for the final iteration
-        
+
         Returns
         -------
         flag: bool
             Flag for the final iteration
-        
+
         """
         return self._final_run
 
@@ -291,7 +292,7 @@ class Iterative(Downwind):
 
             if self._it == 1:
                 self.verbosity -= 1
-            
+
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
 
             self.__prev_farm_results = fres
@@ -305,10 +306,9 @@ class Iterative(Downwind):
 
                 if conv:
                     self.print(
-                        f"\nAlgorithm {self.name}: Convergence reached.\n",
-                        vlim=0
+                        f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
                     )
-                        
+
                     self.print("Starting final run", vlim=0)
                     self._final_run = True
                     fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)

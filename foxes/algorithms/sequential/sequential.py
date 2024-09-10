@@ -8,6 +8,7 @@ from foxes.core import get_engine
 
 from . import models as mdls
 
+
 class Sequential(Iterative):
     """
     A sequential calculation of states without chunking.
@@ -101,7 +102,7 @@ class Sequential(Iterative):
         self.points = points
         self.plugins = plugins
         self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
-        
+
         get_engine().verbosity -= 1
 
         self._i = None
@@ -118,7 +119,7 @@ class Sequential(Iterative):
 
         """
         return self._i is not None
-    
+
     def get_models_data(self, sel=None, isel=None):
         if sel is not None and len(sel):
             raise ValueError(f"calc_points does not support sel, got sel={sel}")
@@ -140,30 +141,37 @@ class Sequential(Iterative):
             self._counter = 0
 
             self._it = 0
-            mlist, __ = self._collect_farm_models(None, self.calc_pars, ambient=self.ambient)
+            mlist, __ = self._collect_farm_models(
+                None, self.calc_pars, ambient=self.ambient
+            )
             self._calc_farm_vars(mlist)
             self._it = None
-            
+
             self._model_data = Dataset(**super().get_models_idata())
-            
+
             if self.verbosity > 0:
                 print("\nInput data:\n")
                 print(self._model_data)
                 print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
-            
+
             self._farm_results = Dataset(
                 coords={FC.STATE: self._model_data[FC.STATE].to_numpy()},
                 data_vars={
-                    v: ((FC.STATE, FC.TURBINE), np.zeros_like(self._model_data[FV.WEIGHT].to_numpy()))
+                    v: (
+                        (FC.STATE, FC.TURBINE),
+                        np.zeros_like(self._model_data[FV.WEIGHT].to_numpy()),
+                    )
                     for v in self.farm_vars
-                }
+                },
             )
             self._farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
             if FV.ORDER in self._farm_results:
-                self._farm_results[FV.ORDER] = self._farm_results[FV.ORDER].astype(FC.ITYPE)
+                self._farm_results[FV.ORDER] = self._farm_results[FV.ORDER].astype(
+                    FC.ITYPE
+                )
             self._farm_results_dwnd = self._farm_results.copy(deep=True)
-            
+
             self._point_results = None
 
             for p in self.plugins:
@@ -175,31 +183,37 @@ class Sequential(Iterative):
         """Run calculation for current step, then iterate to next"""
 
         if self._i < len(self._inds):
-        
+
             self._counter = self._i
             self.states._counter = self._i
             self.states._size = 1
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
-            
+
             fres, fres_dnwnd = super().calc_farm(
-                outputs=self.farm_vars, finalize=False, ret_dwnd_order=True, **self.calc_pars)
+                outputs=self.farm_vars,
+                finalize=False,
+                ret_dwnd_order=True,
+                **self.calc_pars,
+            )
 
             for v in self._farm_results.data_vars.keys():
                 if FC.STATE in self._farm_results[v].dims:
                     self._farm_results[v].loc[{FC.STATE: [self.index]}] = fres[v]
-                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.index]}] = fres_dnwnd[v]
-            
+                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.index]}] = (
+                        fres_dnwnd[v]
+                    )
+
             if self.points is None:
                 for p in self.plugins:
                     p.update(self, fres)
 
                 self._i += 1
                 return fres
-            
+
             else:
                 pres = super().calc_points(fres, points=self.points, finalize=False)
-                
+
                 if self._point_results is None:
                     n_states = self._model_data.sizes[FC.STATE]
                     self._point_results = Dataset(
@@ -208,15 +222,18 @@ class Sequential(Iterative):
                             **{c: d for c, d in pres.coords.items() if c != FC.STATE},
                         },
                         data_vars={
-                            v: (d.dims, np.zeros([n_states] + list(d.shape[1:]), dtype=d.dtype))
+                            v: (
+                                d.dims,
+                                np.zeros([n_states] + list(d.shape[1:]), dtype=d.dtype),
+                            )
                             for v, d in pres.data_vars.items()
-                            if d.dims[0]==FC.STATE
-                        }
+                            if d.dims[0] == FC.STATE
+                        },
                     )
                     for v, d in pres.data_vars.items():
                         if FC.STATE not in d.dims:
                             self._point_results[v] = d
-                            
+
                 for v in self._point_results.data_vars.keys():
                     if FC.STATE in self._point_results[v].dims:
                         self._point_results[v].loc[{FC.STATE: [self.index]}] = pres[v]
@@ -395,8 +412,8 @@ class Sequential(Iterative):
         return self.cur_farm_results
 
     def calc_points(
-        self, 
-        farm_results, 
+        self,
+        farm_results,
         points,
         **kwargs,
     ):
@@ -424,5 +441,5 @@ class Sequential(Iterative):
         """
         if not self.iterating:
             raise ValueError(f"calc_points call is only allowed during iterations")
-        
+
         return super().calc_points(farm_results, points, finalize=False, **kwargs)

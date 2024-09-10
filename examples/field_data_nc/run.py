@@ -48,10 +48,18 @@ if __name__ == "__main__":
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
     parser.add_argument(
-        "-c", "--chunksize_states", help="The chunk size for states", default=None, type=int
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
     )
     parser.add_argument(
-        "-C", "--chunksize_points", help="The chunk size for points", default=None, type=int
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=None,
+        type=int,
     )
     parser.add_argument(
         "-npl", "--no_pre_load", help="Do not pre-load data", action="store_true"

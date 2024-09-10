@@ -93,7 +93,7 @@ class Model(ABC):
 
         """
         return []
-    
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
@@ -118,7 +118,9 @@ class Model(ABC):
 
         """
         if self.initialized:
-            raise ValueError(f"Model '{self.name}': Cannot call load_data after initialization")
+            raise ValueError(
+                f"Model '{self.name}': Cannot call load_data after initialization"
+            )
         return {"coords": {}, "data_vars": {}}
 
     def initialize(self, algo, verbosity=0, force=False):
@@ -158,28 +160,28 @@ class Model(ABC):
     def running(self):
         """
         Flag for currently running models
-        
+
         Returns
         -------
         flag: bool
             True if currently running
-        
+
         """
         return self.__running
-    
+
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -195,33 +197,35 @@ class Model(ABC):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         if self.running:
-            raise ValueError(f"Model '{self.name}': Cannot call set_running while running")
+            raise ValueError(
+                f"Model '{self.name}': Cannot call set_running while running"
+            )
         for m in self.sub_models():
             if not m.running:
                 m.set_running(algo, data_stash, sel, isel, verbosity=verbosity)
-                
+
         if verbosity > 0:
             print(f"Model '{self.name}': running")
         if self.name not in data_stash:
             data_stash[self.name] = {}
-            
+
         self.__running = True
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -238,15 +242,17 @@ class Model(ABC):
 
         """
         if not self.running:
-            raise ValueError(f"Model '{self.name}': Cannot call unset_running when not running")
+            raise ValueError(
+                f"Model '{self.name}': Cannot call unset_running when not running"
+            )
         for m in self.sub_models():
             if m.running:
                 m.unset_running(algo, data_stash, sel, isel, verbosity=verbosity)
-                
+
         if verbosity > 0:
             print(f"Model '{self.name}': not running")
         self.__running = False
-        
+
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

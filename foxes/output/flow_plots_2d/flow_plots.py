@@ -13,6 +13,7 @@ class FlowPlots2D(SliceData):
     :group: output.flow_plots_2d
 
     """
+
     def get_mean_fig_xy(
         self,
         var,
@@ -577,7 +578,7 @@ class FlowPlots2D(SliceData):
                 vmax = vmax if vmax is not None else np.max(data[..., vi])
             elif animated and si > 0:
                 add_bar = False
-                
+
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"

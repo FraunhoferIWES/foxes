@@ -139,7 +139,7 @@ class FieldDataNC(States):
         }
 
         self._N = None
-        
+
         self.__data_source = data_source
         self.__weights = None
         self.__inds = None
@@ -186,17 +186,19 @@ class FieldDataNC(States):
     def data_source(self):
         """
         The data source
-        
+
         Returns
         -------
         s: object
             The data source
-            
+
         """
         if self.pre_load and self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces data_source while running"
+            )
         return self.__data_source
-    
+
     def _get_inds(self, ds):
         """
         Helper function for index and weights
@@ -210,7 +212,9 @@ class FieldDataNC(States):
 
         self.__inds = ds[self.states_coord].to_numpy()
         if self.time_format is not None:
-            self.__inds = pd.to_datetime(self.__inds, format=self.time_format).to_numpy()
+            self.__inds = pd.to_datetime(
+                self.__inds, format=self.time_format
+            ).to_numpy()
         self._N = len(self.__inds)
 
         if self.weight_ncvar is not None:
@@ -380,18 +384,18 @@ class FieldDataNC(States):
         return idata
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -407,32 +411,32 @@ class FieldDataNC(States):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data_stash[self.name] = dict(
             weights=self.__weights,
             inds=self.__inds,
         )
         del self.__weights, self.__inds
-        
+
         if self.pre_load:
             data_stash[self.name]["data_source"] = self.__data_source
             del self.__data_source
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -449,14 +453,14 @@ class FieldDataNC(States):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
-        
+
         if self.pre_load:
             self.__data_source = data.pop("data_source")
-            
+
     def size(self):
         """
         The total number of states.
@@ -516,7 +520,9 @@ class FieldDataNC(States):
 
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces weights while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces weights while running"
+            )
         return self.__weights
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -627,12 +633,18 @@ class FieldDataNC(States):
             print(f"\nStates '{self.name}': Interpolation error")
             print("INPUT VARS: (state, heights, y, x)")
             print(
-                "DATA BOUNDS:", [float(np.min(d)) for d in gvars], [float(np.max(d)) for d in gvars]
+                "DATA BOUNDS:",
+                [float(np.min(d)) for d in gvars],
+                [float(np.max(d)) for d in gvars],
             )
             print(
-                "EVAL BOUNDS:", [float(np.min(p)) for p in pts.T], [float(np.max(p)) for p in pts.T]
+                "EVAL BOUNDS:",
+                [float(np.min(p)) for p in pts.T],
+                [float(np.max(p)) for p in pts.T],
             )
-            print("\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n")
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
+            )
             raise e
         del pts, x, y, h, gvars
 

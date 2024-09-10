@@ -77,6 +77,7 @@ dev = [
     "pytest",
     "jupyter",
     "objsize",
+    "black",
 ]
 
 [project.urls]

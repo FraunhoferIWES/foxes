@@ -7,6 +7,7 @@ from foxes.core.data import MData, FData, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Timelines(WakeFrame):
     """
     Dynamic wakes for spatially uniform timeseries states.
@@ -25,6 +26,7 @@ class Timelines(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(self, max_wake_length=2e4, cl_ipars={}, dt_min=None):
         """
         Constructor.
@@ -81,11 +83,13 @@ class Timelines(WakeFrame):
         else:
             n = max(len(times) - 1, 1)
             dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
-            
+
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
-            t2h[ti] = t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
+            t2h[ti] = (
+                t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
+            )
         heights = np.unique(t2h)
 
         # prepare mdata:
@@ -108,14 +112,14 @@ class Timelines(WakeFrame):
         }
         pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
         points = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-        
+
         # calculate all heights:
         self._dxy = []
         for h in heights:
 
             if verbosity > 0:
                 print(f"  Height: {h} m")
-                
+
             points[..., 2] = h
             tdata = TData.from_points(
                 points=points,
@@ -139,7 +143,7 @@ class Timelines(WakeFrame):
             plt.show()
             quit()
             """
-        
+
         self._dxy = Dataset(
             coords={
                 FC.STATE: algo.states.index(),
@@ -147,22 +151,22 @@ class Timelines(WakeFrame):
             },
             data_vars={
                 "dxy": (("height", FC.STATE, "dir"), np.stack(self._dxy, axis=0))
-            }
+            },
         )
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -178,10 +182,10 @@ class Timelines(WakeFrame):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
+
         if sel is not None or isel is not None:
             data_stash[self.name]["dxy"] = self._dxy
 
@@ -191,17 +195,17 @@ class Timelines(WakeFrame):
                 self._dxy = self._dxy.sel(sel)
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -218,11 +222,11 @@ class Timelines(WakeFrame):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         if "dxy" in data:
             self._dxy = data.pop("dxy")
-        
+
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.
@@ -315,28 +319,24 @@ class Timelines(WakeFrame):
         wcoosx = wcoos[:, :, 0]
         wcoosy = wcoos[:, :, 1]
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
-        
+
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + mdata.n_states
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1     
+        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1
         for hi, h in enumerate(heights):
-            
+
             trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
             trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
             trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
             trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
             h_trace_si = trace_si.copy()
-        
+
             # step backwards in time, until wake source turbine is hit:
             dxy = data_dxy[hi][:i1]
-            precond = (theights[:, None] == h)
+            precond = theights[:, None] == h
             while True:
-                sel = (
-                    precond & 
-                    (h_trace_si > 0) & 
-                    (trace_l < self.max_wake_length)
-                )
+                sel = precond & (h_trace_si > 0) & (trace_l < self.max_wake_length)
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 
@@ -351,32 +351,36 @@ class Timelines(WakeFrame):
                     sel = sel & (d <= trace_d)
                     if np.any(sel):
                         trace_d[sel] = d[sel]
-                        
+
                         nx = dxy[h_trace_si[sel]]
                         dx = np.linalg.norm(nx, axis=-1)
                         nx /= dx[:, None]
                         trp = trace_p[sel]
                         projx = np.einsum("sd,sd->s", trp, nx)
-                        
+
                         seln = (projx > -dx) & (projx < dx)
                         if np.any(seln):
-                            wcoosx[sel] = np.where(seln, projx + trace_l[sel], wcoosx[sel])
-                            
+                            wcoosx[sel] = np.where(
+                                seln, projx + trace_l[sel], wcoosx[sel]
+                            )
+
                             ny = np.concatenate(
                                 [-nx[:, 1, None], nx[:, 0, None]], axis=1
                             )
                             projy = np.einsum("sd,sd->s", trp, ny)
                             wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
                             del ny, projy
-                            
-                            trace_si[sel] = np.where(seln, h_trace_si[sel], trace_si[sel])
-                        
+
+                            trace_si[sel] = np.where(
+                                seln, h_trace_si[sel], trace_si[sel]
+                            )
+
                         del nx, dx, projx, seln
                     del d, sel
-                    
+
                 else:
                     break
-            
+
             del trace_p, trace_l, trace_d, h_trace_si, dxy, precond
 
         # store turbines that cause wake:
@@ -432,4 +436,3 @@ class Timelines(WakeFrame):
         """
         super().finalize(algo, verbosity=verbosity)
         self._dxy = None
-        

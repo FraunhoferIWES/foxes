@@ -14,6 +14,7 @@ class WindFarm:
     :group: core
 
     """
+
     def __init__(self, name="wind_farm", boundary=None):
         """
         Constructor.

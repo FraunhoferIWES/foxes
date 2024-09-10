@@ -59,16 +59,24 @@ if __name__ == "__main__":
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
     parser.add_argument(
-        "-c", "--chunksize_states", help="The chunk size for states", default=None, type=int
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
     )
     parser.add_argument(
-        "-C", "--chunksize_points", help="The chunk size for points", default=5000, type=int
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=5000,
+        type=int,
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     args = parser.parse_args()
-    
+
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
@@ -102,13 +110,13 @@ if __name__ == "__main__":
     )
 
     cluster_pars = {
-        "nodes": 1,         # number of nodes
-        "cores": 24,        # number of cores per node
-        "processes": 4,     # number of workers per node
-        "memory": "64GB",   # memory per node
+        "nodes": 1,  # number of nodes
+        "cores": 24,  # number of cores per node
+        "processes": 4,  # number of workers per node
+        "memory": "64GB",  # memory per node
         "walltime": "00:00:10",
         "queue": "cfds.p",
-        #"silence_logs": "info", # print all info log
+        # "silence_logs": "info", # print all info log
     }
 
     with foxes.Engine.new(

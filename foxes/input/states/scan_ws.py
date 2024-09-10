@@ -77,18 +77,18 @@ class ScanWS(States):
         return idata
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -104,27 +104,29 @@ class ScanWS(States):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
-        """ 
+
+        """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
-        data_stash[self.name].update(dict(
-            wsl=self.__wsl,
-        ))
+
+        data_stash[self.name].update(
+            dict(
+                wsl=self.__wsl,
+            )
+        )
         del self.__wsl
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -141,10 +143,10 @@ class ScanWS(States):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self.__wsl = data.pop("wsl")
-        
+
     def size(self):
         """
         The total number of states.

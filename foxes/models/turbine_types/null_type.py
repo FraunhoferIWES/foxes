@@ -8,30 +8,31 @@ class NullType(TurbineType):
     :group: models.turbine_types
 
     """
+
     def needs_rews2(self):
         """
         Returns flag for requirering REWS2 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS2 is required
-            
+
         """
         return False
 
     def needs_rews3(self):
         """
         Returns flag for requirering REWS3 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS3 is required
-            
+
         """
         return False
-    
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

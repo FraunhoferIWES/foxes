@@ -20,14 +20,15 @@ class SliceData(Output):
         The farm results
     verbosity_delta: int
         Verbosity threshold for printing calculation info
-            
+
     :group: output
 
     """
+
     def __init__(
-        self, 
-        algo, 
-        farm_results, 
+        self,
+        algo,
+        farm_results,
         verbosity_delta=1,
         **kwargs,
     ):
@@ -135,7 +136,7 @@ class SliceData(Output):
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()
@@ -298,7 +299,7 @@ class SliceData(Output):
             yspace=yspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
 
         data = self._calc_mean_data(
@@ -446,7 +447,7 @@ class SliceData(Output):
             zspace=zspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -595,7 +596,7 @@ class SliceData(Output):
             zspace=zspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 
@@ -654,7 +655,7 @@ class SliceData(Output):
             algo=self.algo,
             farm_results=self.fres,
             g_pts=g_pts,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
             **kwargs,
         )
         states = point_results[FC.STATE].to_numpy()
@@ -810,7 +811,7 @@ class SliceData(Output):
             yspace=yspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
 
         data = self._calc_states_data(
@@ -954,7 +955,7 @@ class SliceData(Output):
             zspace=zspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
         gdatb = (gdata[0], gdata[2], gdata[1], gdata[3])
 
@@ -1099,7 +1100,7 @@ class SliceData(Output):
             zspace=zspace,
             states_sel=states_sel,
             states_isel=states_isel,
-            verbosity=verbosity-self.verbosity_delta,
+            verbosity=verbosity - self.verbosity_delta,
         )
         gdatb = (gdata[1], gdata[2], gdata[0], gdata[3])
 

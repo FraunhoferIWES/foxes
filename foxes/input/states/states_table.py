@@ -97,7 +97,7 @@ class StatesTable(States):
         self._N = None
         self._tvars = None
         self._profiles = None
-        
+
         self._data_source = data_source
         self.__weights = None
 
@@ -105,17 +105,19 @@ class StatesTable(States):
     def data_source(self):
         """
         The data source
-        
+
         Returns
         -------
         s: object
             The data source
-            
+
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces data_source while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces data_source while running"
+            )
         return self._data_source
-        
+
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
         Reset the states, optionally select states
@@ -325,22 +327,24 @@ class StatesTable(States):
 
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces weights while running")
+            raise ValueError(
+                f"States '{self.name}': Cannot acces weights while running"
+            )
         return self.__weights
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -356,10 +360,10 @@ class StatesTable(States):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
-        """    
+
+        """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data_stash[self.name] = dict(
             data_source=self._data_source,
             weights=self.__weights,
@@ -368,17 +372,17 @@ class StatesTable(States):
         del self._data_source, self.__weights, self.__inds
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -395,12 +399,12 @@ class StatesTable(States):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self._data_source = data.pop("data_source")
         self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
-        
+
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
         The main model calculation.
@@ -593,18 +597,18 @@ class TabStates(StatesTable):
         return super().load_data(algo, verbosity)
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -620,28 +624,30 @@ class TabStates(StatesTable):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
-        """  
+
+        """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
-        data_stash[self.name].update(dict(
-            tab_source=self.__tab_source,
-            tab_data=self.__tab_data,
-        ))
+
+        data_stash[self.name].update(
+            dict(
+                tab_source=self.__tab_source,
+                tab_data=self.__tab_data,
+            )
+        )
         del self.__tab_source, self.__tab_data
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -658,8 +664,7 @@ class TabStates(StatesTable):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self.__tab_source = data.pop("tab_source")
         self.__tab_data = data.pop("tab_data")
-        

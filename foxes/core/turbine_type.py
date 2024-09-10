@@ -70,12 +70,12 @@ class TurbineType(TurbineModel):
     def needs_rews2(self):
         """
         Returns flag for requirering REWS2 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS2 is required
-            
+
         """
         pass
 
@@ -83,15 +83,15 @@ class TurbineType(TurbineModel):
     def needs_rews3(self):
         """
         Returns flag for requirering REWS3 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS3 is required
-            
+
         """
         pass
-    
+
     def modify_cutin(self, modify_ct, modify_P):
         """
         Modify the data such that a discontinuity

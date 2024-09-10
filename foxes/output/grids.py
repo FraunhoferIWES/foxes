@@ -119,7 +119,7 @@ def get_grid_xy(
     x_max = xmax if xmax is not None else farm_results[FV.X].max().to_numpy() + xspace
     y_max = ymax if ymax is not None else farm_results[FV.Y].max().to_numpy() + yspace
     z_max = z if z is not None else farm_results[FV.H].max().to_numpy()
-    
+
     # compute number of points:
     if resolution is not None and n_img_points is None:
         nx = int((x_max - x_min) / resolution + 0.5) + 1
@@ -127,7 +127,9 @@ def get_grid_xy(
     elif resolution is None and n_img_points is not None:
         nx, ny = n_img_points
     else:
-        raise ValueError(f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}")
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
 
     # compute points:
     x_pos, x_res = np.linspace(
@@ -271,7 +273,9 @@ def get_grid_xz(
     elif resolution is None and n_img_points is not None:
         nx, nz = n_img_points
     else:
-        raise ValueError(f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}")
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
 
     # compute points:
     x_pos, x_res = np.linspace(
@@ -415,7 +419,9 @@ def get_grid_yz(
     elif resolution is None and n_img_points is not None:
         ny, nz = n_img_points
     else:
-        raise ValueError(f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}")
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
 
     # compute points:
     y_pos, y_res = np.linspace(
@@ -676,8 +682,8 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
         coords={s: states, b: b_pos, a: a_pos},
         data_vars={
             label_map.get(v, v): (
-                (s, b, a), 
-                np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2)
+                (s, b, a),
+                np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2),
             )
             for v, d in data.items()
         },

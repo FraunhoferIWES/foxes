@@ -98,9 +98,7 @@ def add_from_csv(
         hmodels = (
             [] if cols_models_pre is None else data.loc[i, cols_models_pre].tolist()
         )
-        hmodels += (
-            [] if col_turbine_type is None else [data.loc[i, col_turbine_type]]
-        )
+        hmodels += [] if col_turbine_type is None else [data.loc[i, col_turbine_type]]
         hmodels += tmodels
         hmodels += (
             [] if cols_models_post is None else data.loc[i, cols_models_post].tolist()

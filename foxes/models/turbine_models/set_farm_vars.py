@@ -45,7 +45,9 @@ class SetFarmVars(TurbineModel):
 
         """
         if self.initialized:
-            raise ValueError(f"Model '{self.name}': Cannot add_var after initialization")
+            raise ValueError(
+                f"Model '{self.name}': Cannot add_var after initialization"
+            )
         if self.running:
             raise ValueError(f"Model '{self.name}': Cannot add_var while running")
         self.vars.append(var)
@@ -131,7 +133,9 @@ class SetFarmVars(TurbineModel):
                         xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
                         xy[:] = t.xy[None, :]
                         t.xy = xy
-                    t.xy[:, i] = np.where(np.isnan(data[:, ti]), t.xy[:, i], data[:, ti])
+                    t.xy[:, i] = np.where(
+                        np.isnan(data[:, ti]), t.xy[:, i], data[:, ti]
+                    )
 
             # special case of rotor diameter and hub height:
             if v in [FV.D, FV.H]:
@@ -145,22 +149,22 @@ class SetFarmVars(TurbineModel):
                         x[:] = t.H
                         t.H = x
                     x[:] = np.where(np.isnan(data[:, ti]), x, data[:, ti])
-                        
+
         return idata
-        
+
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -176,25 +180,25 @@ class SetFarmVars(TurbineModel):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
+
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data_stash[self.name]["vdata"] = self.__vdata
         del self.__vdata
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -212,7 +216,7 @@ class SetFarmVars(TurbineModel):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
         self.__vdata = data_stash[self.name].pop("vdata")
-        
+
     def calculate(self, algo, mdata, fdata, st_sel):
         """
         The main model calculation.

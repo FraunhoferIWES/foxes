@@ -27,6 +27,7 @@ class LookupTable(TurbineModel):
     :group: models.turbine_models
 
     """
+
     def __init__(
         self,
         data_source,
@@ -195,7 +196,7 @@ class LookupTable(TurbineModel):
             )[st_sel]
             for v in self.input_vars
         }
-        
+
         dims = {
             v: ("_z") if len(data[v].shape) == 1 else ("_z", "_u")
             for v in self.input_vars
@@ -212,19 +213,23 @@ class LookupTable(TurbineModel):
         iargs = dict(bounds_error=True)
         iargs.update(self._iargs)
         try:
-            odata = self._data.interp(**indata, kwargs=iargs,**self._xargs)
+            odata = self._data.interp(**indata, kwargs=iargs, **self._xargs)
         except ValueError as e:
             print("\nBOUNDS ERROR", self.name)
             print("Variables:", list(indata.keys()))
-            print("DATA min/max:", 
-                  [float(np.min(self._data[v].to_numpy())) for v in indata.keys()],
-                  [float(np.max(self._data[v].to_numpy())) for v in indata.keys()]
-                )
-            print("EVAL min/max:", 
-                  [float(np.min(d.to_numpy())) for d in indata.values()],
-                  [float(np.max(d.to_numpy())) for d in indata.values()]
-                )
-            print("\nMaybe you want to try the options 'bounds_error=False, fill_value=None'? This will extrapolate the data.\n")
+            print(
+                "DATA min/max:",
+                [float(np.min(self._data[v].to_numpy())) for v in indata.keys()],
+                [float(np.max(self._data[v].to_numpy())) for v in indata.keys()],
+            )
+            print(
+                "EVAL min/max:",
+                [float(np.min(d.to_numpy())) for d in indata.values()],
+                [float(np.max(d.to_numpy())) for d in indata.values()],
+            )
+            print(
+                "\nMaybe you want to try the options 'bounds_error=False, fill_value=None'? This will extrapolate the data.\n"
+            )
             raise e
 
         out = {}

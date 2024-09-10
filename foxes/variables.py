@@ -293,20 +293,21 @@ DEFAULT_DIGITS = {
 :group: foxes.variables
 """
 
+
 def get_default_digits(variable):
     """
     Gets the default numbber of output digits
-    
+
     Parameters
     ----------
     variable: str
         The variable name
-    
+
     Returns
     -------
     digits: int
         The default number of output digits
-        
+
     """
     v = amb2var.get(variable, variable)
     if v in [REWS, REWS2, REWS3]:

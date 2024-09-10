@@ -46,9 +46,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument(
-        "-e", "--engine", help="The engine", default=None
-    )
+    parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-nit",
         "--not_iterative",

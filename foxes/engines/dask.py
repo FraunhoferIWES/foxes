@@ -13,22 +13,24 @@ from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class DaskBaseEngine(Engine):
     """
     Abstract base class for foxes calculations with dask.
-    
+
     Parameters
     ----------
     dask_config: dict
         The dask configuration parameters
     progress_bar: bool
         Flag for showing progress bar
-            
+
     :group: engines
-    
+
     """
+
     def __init__(
-        self, 
+        self,
         *args,
         dask_config={},
         progress_bar=True,
@@ -36,7 +38,7 @@ class DaskBaseEngine(Engine):
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -47,7 +49,7 @@ class DaskBaseEngine(Engine):
             Flag for showing progress bar
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(*args, **kwargs)
         self.dask_config = dask_config
@@ -58,59 +60,60 @@ class DaskBaseEngine(Engine):
             self._pbar = ProgressBar(minimum=2)
             self._pbar.__enter__()
         return super().__enter__()
-    
+
     def __exit__(self, *args):
         if self.progress_bar:
             self._pbar.__exit__(*args)
         super().__exit__(*args)
-        
+
     def initialize(self):
         """
         Initializes the engine.
-        """               
+        """
         dask.config.set(**self.dask_config)
         super().initialize()
 
     def chunk_data(self, data):
         """
         Applies the selected chunking
-        
+
         Parameters
         ----------
         data: xarray.Dataset
             The data to be chunked
-        
+
         Returns
         -------
         data: xarray.Dataset
             The chunked data
-        
+
         """
         cks = {}
         cks[FC.STATE] = min(data.sizes[FC.STATE], self.chunk_size_states)
         if FC.TARGET in data.sizes:
             cks[FC.TARGET] = min(data.sizes[FC.TARGET], self.chunk_size_points)
-        
+
         if len(set(cks.keys()).intersection(data.coords.keys())):
             return data.chunk({v: d for v, d in cks.items() if v in data.coords})
         else:
             return data
-    
+
     def finalize(self, *exit_args, **exit_kwargs):
         """
         Finalizes the engine.
-        
+
         Parameters
         ----------
         exit_args: tuple, optional
             Arguments from the exit function
         exit_kwargs: dict, optional
             Arguments from the exit function
-             
+
         """
         dask.config.refresh()
         super().finalize(*exit_args, **exit_kwargs)
-        
+
+
 def _run_as_ufunc(
     state_inds,
     *ldata,
@@ -147,11 +150,23 @@ def _run_as_ufunc(
         hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
 
         if i == 0:
-            data.append(MData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
+            data.append(
+                MData(
+                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                )
+            )
         elif i == 1:
-            data.append(FData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
+            data.append(
+                FData(
+                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                )
+            )
         elif i == 2:
-            data.append(TData(data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]))
+            data.append(
+                TData(
+                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                )
+            )
         else:
             raise NotImplementedError(
                 f"Not more than 3 data sets implemented, found {len(dvars)}"
@@ -230,21 +245,23 @@ def _run_as_ufunc(
         data[..., out_vars.index(v)] = results[v]
 
     return data
-    
+
+
 class XArrayEngine(DaskBaseEngine):
     """
     The engine for foxes calculations via xarray.apply_ufunc.
-    
+
     :group: engines
-    
+
     """
+
     def run_calculation(
-        self, 
+        self,
         algo,
-        model, 
-        model_data=None, 
-        farm_data=None, 
-        point_data=None, 
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -255,13 +272,13 @@ class XArrayEngine(DaskBaseEngine):
     ):
         """
         Runs the model calculation
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
         model: foxes.core.DataCalcModel
-            The model that whose calculate function 
+            The model that whose calculate function
             should be run
         model_data: xarray.Dataset
             The initial model data
@@ -283,36 +300,41 @@ class XArrayEngine(DaskBaseEngine):
             Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
-        
+
         Returns
         -------
         results: xarray.Dataset
             The model results
-            
+
         """
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel)
-        
+            model_data, farm_data, point_data, sel=sel, isel=isel
+        )
+
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
-        
+
         # find chunk sizes, if not given:
         chunk_size_states0 = self.chunk_size_states
         chunk_size_points0 = self.chunk_size_points
         n_states = model_data.sizes[FC.STATE]
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        __, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        __, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+            n_states, n_targets
+        )
         self.chunk_size_states = np.min(chunk_sizes_states)
         self.chunk_size_points = np.min(chunk_sizes_targets)
-        self.print(f"Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}")#, level=2)
+        self.print(
+            f"Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}"
+        )  # , level=2)
 
         # prepare:
         algo.reset_chunk_store(chunk_store)
         out_coords = model.output_coords()
         loop_dims = [d for d in self.loop_dims if d in out_coords]
         loopd = set(loop_dims)
-        
+
         # extract loop-var dependent and independent data:
         ldata = []
         lvars = []
@@ -323,9 +345,13 @@ class XArrayEngine(DaskBaseEngine):
         dvars = []
         ivars = []
         idims = []
-        data = [self.chunk_data(d) for d in [model_data, farm_data, point_data] if d is not None]
+        data = [
+            self.chunk_data(d)
+            for d in [model_data, farm_data, point_data]
+            if d is not None
+        ]
         for ds in data:
-            
+
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
             ldims += [ds[v].dims for v in hvarsl]
@@ -338,7 +364,11 @@ class XArrayEngine(DaskBaseEngine):
 
             for c, d in ds.coords.items():
                 if c in loopd:
-                    ldata.append(self.chunk_data(xr.DataArray(data=d.values, coords={c: d}, dims=[c])))
+                    ldata.append(
+                        self.chunk_data(
+                            xr.DataArray(data=d.values, coords={c: d}, dims=[c])
+                        )
+                    )
                     ldims.append((c,))
                     lvars.append(c)
                 else:
@@ -347,26 +377,26 @@ class XArrayEngine(DaskBaseEngine):
                     evars.append(c)
 
             dvars.append(list(ds.keys()) + list(ds.coords.keys()))
-        
+
         # apply persist:
         if persist:
-            ldata = [d.persist() for d in ldata]          
+            ldata = [d.persist() for d in ldata]
 
         # setup dask options:
         dargs = dict(output_sizes={FC.VARS: len(out_vars)})
         out_core_vars = [d for d in out_coords if d not in loop_dims] + [FC.VARS]
         if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
             dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
-            
+
         # find states_i0:
         state_inds = self.chunk_data(
             xr.DataArray(
-                np.arange(ldata[0].sizes[FC.STATE]), 
-                dims=FC.STATE, 
-                coords={FC.STATE: ldata[0][FC.STATE].to_numpy()}
-                )
+                np.arange(ldata[0].sizes[FC.STATE]),
+                dims=FC.STATE,
+                coords={FC.STATE: ldata[0][FC.STATE].to_numpy()},
+            )
         )
-            
+
         # setup arguments for wrapper function:
         out_coords = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
         wargs = dict(
@@ -400,46 +430,41 @@ class XArrayEngine(DaskBaseEngine):
             dask_gufunc_kwargs=dargs,
             kwargs=wargs,
         )
-        
-        results = results.assign_coords(
-            {FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
+
+        results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
 
         # reset:
         self.chunk_size_states = chunk_size_states0
         self.chunk_size_points = chunk_size_points0
-        
+
         # update data by calculation results:
         return results.compute(num_workers=self.n_procs)
 
+
 @delayed
-def _run_lazy(
-    algo, 
-    model, 
-    iterative,
-    chunk_store,
-    *data, 
-    **cpars
-    ):
-    """ Helper function for lazy running """
+def _run_lazy(algo, model, iterative, chunk_store, *data, **cpars):
+    """Helper function for lazy running"""
     algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
     return results, chunk_store
 
+
 class DaskEngine(DaskBaseEngine):
     """
     The dask engine for delayed foxes calculations.
-    
+
     :group: engines
-    
-    """        
+
+    """
+
     def run_calculation(
-        self, 
+        self,
         algo,
-        model, 
-        model_data=None, 
-        farm_data=None, 
-        point_data=None, 
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -449,13 +474,13 @@ class DaskEngine(DaskBaseEngine):
     ):
         """
         Runs the model calculation
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
         model: foxes.core.DataCalcModel
-            The model that whose calculate function 
+            The model that whose calculate function
             should be run
         model_data: xarray.Dataset
             The initial model data
@@ -475,22 +500,23 @@ class DaskEngine(DaskBaseEngine):
             Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
-        
+
         Returns
         -------
         results: xarray.Dataset
             The model results
-            
+
         """
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel)
-        
+            model_data, farm_data, point_data, sel=sel, isel=isel
+        )
+
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
-        n_states = model_data.sizes[FC.STATE] 
+        n_states = model_data.sizes[FC.STATE]
         out_coords = model.output_coords()
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
@@ -498,16 +524,21 @@ class DaskEngine(DaskBaseEngine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
-        
+
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+            n_states, n_targets
+        )
         n_chunks_states = len(chunk_sizes_states)
         n_chunks_targets = len(chunk_sizes_targets)
-        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
-                    
+        self.print(
+            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
+            level=2,
+        )
+
         # prepare chunks:
-        n_chunks_all = n_chunks_states*n_chunks_targets
+        n_chunks_all = n_chunks_states * n_chunks_targets
         n_procs = min(n_procs, n_chunks_all)
 
         # submit chunks:
@@ -517,48 +548,55 @@ class DaskEngine(DaskBaseEngine):
         i0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0          
+            i0_targets = 0
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-                
+
                 # get this chunk's data:
                 data = self.get_chunk_input_data(
                     algo=algo,
-                    model_data=model_data, 
-                    farm_data=farm_data, 
-                    point_data=point_data, 
+                    model_data=model_data,
+                    farm_data=farm_data,
+                    point_data=point_data,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
                 )
 
                 # extract chunk store:
-                cstore = {k: deepcopy(d) for k, d in chunk_store.items() 
-                          if k[1] == chunki_points}
-                
+                cstore = {
+                    k: deepcopy(d)
+                    for k, d in chunk_store.items()
+                    if k[1] == chunki_points
+                }
+
                 # submit model calculation:
                 results[(chunki_states, chunki_points)] = _run_lazy(
-                    deepcopy(algo), deepcopy(model), iterative, 
-                    cstore, *data, **calc_pars
+                    deepcopy(algo),
+                    deepcopy(model),
+                    iterative,
+                    cstore,
+                    *data,
+                    **calc_pars,
                 )
                 del data, cstore
-                    
+
                 i0_targets = i1_targets
-        
+
                 if pbar is not None:
                     pbar.update()
-                    
+
             i0_states = i1_states
-            
+
         del farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
-            
+
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
         results = compute(results)[0]
-        
+
         return self.combine_results(
             algo=algo,
             results=results,
@@ -570,11 +608,12 @@ class DaskEngine(DaskBaseEngine):
             goal_data=goal_data,
             iterative=iterative,
         )
-        
+
+
 def _run_on_cluster(
-    algo, 
-    model, 
-    *data, 
+    algo,
+    model,
+    *data,
     names,
     dims,
     mdata_size,
@@ -584,18 +623,18 @@ def _run_on_cluster(
     chunk_store,
     i0_states,
     cpars,
-    ):
-    """ Helper function for running on a cluster """
-    
+):
+    """Helper function for running on a cluster"""
+
     algo.reset_chunk_store(chunk_store)
-    
+
     mdata = MData(
         data={names[i]: data[i] for i in range(mdata_size)},
         dims={names[i]: dims[i] for i in range(mdata_size)},
         loop_dims=loop_dims[0],
         states_i0=i0_states,
     )
-    
+
     fdata_end = mdata_size + fdata_size
     fdata = FData(
         data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
@@ -605,7 +644,7 @@ def _run_on_cluster(
     )
 
     tdata = None
-    if len(data) >  fdata_end:
+    if len(data) > fdata_end:
         tdata = TData(
             data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
             dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
@@ -617,33 +656,35 @@ def _run_on_cluster(
 
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-    
+
     return results, chunk_store
+
 
 class LocalClusterEngine(DaskBaseEngine):
     """
     The dask engine for foxes calculations on a local cluster.
-    
+
     Attributes
     ----------
     cluster_pars: dict
         Parameters for the cluster
     client_pars: dict
         Parameters for the client of the cluster
-    
+
     :group: engines
-    
+
     """
+
     def __init__(
-        self, 
-        *args, 
-        cluster_pars={}, 
-        client_pars={}, 
+        self,
+        *args,
+        cluster_pars={},
+        client_pars={},
         **kwargs,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -654,53 +695,55 @@ class LocalClusterEngine(DaskBaseEngine):
             Parameters for the client of the cluster
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(*args, **kwargs)
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
-        
+
         if self.n_procs is None and not len(cluster_pars):
             self.n_procs = cpu_count()
 
         self.dask_config["scheduler"] = "distributed"
-        self.dask_config['distributed.scheduler.worker-ttl'] = None
-        
+        self.dask_config["distributed.scheduler.worker-ttl"] = None
+
         self._cluster = None
         self._client = None
 
     def __enter__(self):
         self.print("Launching local dask cluster..")
-        self._cluster = LocalCluster(n_workers=self.n_procs, **self.cluster_pars).__enter__()
+        self._cluster = LocalCluster(
+            n_workers=self.n_procs, **self.cluster_pars
+        ).__enter__()
         self._client = Client(self._cluster, **self.client_pars).__enter__()
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
         return super().__enter__()
-    
+
     def __exit__(self, *args):
         self.print(f"Shutting down {type(self._cluster).__name__}")
-        #self._client.retire_workers()
-        #from time import sleep
-        #sleep(1)
-        #self._client.shutdown()
+        # self._client.retire_workers()
+        # from time import sleep
+        # sleep(1)
+        # self._client.shutdown()
         self._client.__exit__(*args)
         self._cluster.__exit__(*args)
         super().__exit__(*args)
-    
+
     def __del__(self):
         if self._client is not None:
             self._client.__del__()
         if self._cluster is not None:
             self._cluster.__del__()
         super().__del__()
-            
+
     def run_calculation(
-        self, 
+        self,
         algo,
-        model, 
-        model_data=None, 
-        farm_data=None, 
-        point_data=None, 
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -710,13 +753,13 @@ class LocalClusterEngine(DaskBaseEngine):
     ):
         """
         Runs the model calculation
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
         model: foxes.core.DataCalcModel
-            The model that whose calculate function 
+            The model that whose calculate function
             should be run
         model_data: xarray.Dataset
             The initial model data
@@ -736,22 +779,23 @@ class LocalClusterEngine(DaskBaseEngine):
             Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
-        
+
         Returns
         -------
         results: xarray.Dataset
             The model results
-            
+
         """
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel)
-        
+            model_data, farm_data, point_data, sel=sel, isel=isel
+        )
+
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
-        n_states = model_data.sizes[FC.STATE] 
+        n_states = model_data.sizes[FC.STATE]
         out_coords = model.output_coords()
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
@@ -759,16 +803,21 @@ class LocalClusterEngine(DaskBaseEngine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
-        
+
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(n_states, n_targets)
+        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+            n_states, n_targets
+        )
         n_chunks_states = len(chunk_sizes_states)
         n_chunks_targets = len(chunk_sizes_targets)
-        self.print(f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}", level=2)
-                    
+        self.print(
+            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
+            level=2,
+        )
+
         # prepare chunks:
-        n_chunks_all = n_chunks_states*n_chunks_targets
+        n_chunks_all = n_chunks_states * n_chunks_targets
         n_procs = min(n_procs, n_chunks_all)
 
         # scatter algo and model:
@@ -776,7 +825,7 @@ class LocalClusterEngine(DaskBaseEngine):
         fmodel = self._client.scatter(model, broadcast=True)
         cpars = self._client.scatter(calc_pars, broadcast=True)
         all_data = [falgo, fmodel, cpars]
-                
+
         # submit chunks:
         self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
@@ -784,21 +833,21 @@ class LocalClusterEngine(DaskBaseEngine):
         i0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0          
+            i0_targets = 0
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-                
+
                 # get this chunk's data:
                 data = self.get_chunk_input_data(
                     algo=algo,
-                    model_data=model_data, 
-                    farm_data=farm_data, 
-                    point_data=point_data, 
+                    model_data=model_data,
+                    farm_data=farm_data,
+                    point_data=point_data,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
                 )
-        
+
                 # scatter data:
                 fut_data = []
                 names = []
@@ -813,20 +862,22 @@ class LocalClusterEngine(DaskBaseEngine):
                 dims = self._client.scatter(dims)
                 ldims = self._client.scatter(ldims)
                 all_data += [fut_data, names, dims, ldims]
-                
+
                 # scatter chunk store data:
-                cstore = {k: {a: b for a,b in d.items()} 
-                          for k, d in chunk_store.items() 
-                          if k[1] == chunki_points}
-                
+                cstore = {
+                    k: {a: b for a, b in d.items()}
+                    for k, d in chunk_store.items()
+                    if k[1] == chunki_points
+                }
+
                 if len(cstore):
                     cstore = self._client.scatter(cstore, hash=False)
                     all_data.append(cstore)
-                          
+
                 # submit model calculation:
                 jobs[(chunki_states, chunki_points)] = self._client.submit(
                     _run_on_cluster,
-                    falgo, 
+                    falgo,
                     fmodel,
                     *fut_data,
                     names=names,
@@ -841,21 +892,25 @@ class LocalClusterEngine(DaskBaseEngine):
                     retries=10,
                 )
                 del fut_data, cstore
-                    
+
                 i0_targets = i1_targets
-        
+
                 if pbar is not None:
                     pbar.update()
-                    
+
             i0_states = i1_states
-            
+
         del falgo, fmodel, farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
-            
+
         # wait for results:
         self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if n_chunks_all > 1 and self.verbosity > 0 else None
+        pbar = (
+            tqdm(total=n_chunks_all)
+            if n_chunks_all > 1 and self.verbosity > 0
+            else None
+        )
         results = {}
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
@@ -865,7 +920,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-        
+
         results = self.combine_results(
             algo=algo,
             results=results,
@@ -877,32 +932,33 @@ class LocalClusterEngine(DaskBaseEngine):
             goal_data=goal_data,
             iterative=iterative,
         ).persist()
-        
-        #self._client.cancel(all_data)
-        
+
+        # self._client.cancel(all_data)
+
         return results
-        
+
+
 class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
-    
+
     :group: engines
-    
-    """        
+
+    """
+
     def __enter__(self):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
-        
+
         dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[hpc]")
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
         self._cluster = self._cluster.__enter__()
         self._client = Client(self._cluster, **self.client_pars).__enter__()
-        
+
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
         print(self._cluster.job_script())
-        
+
         return DaskBaseEngine.__enter__(self)
-        

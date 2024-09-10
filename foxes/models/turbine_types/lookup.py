@@ -10,7 +10,7 @@ import foxes.variables as FV
 class FromLookupTable(TurbineType):
     """
     Calculate power and ct by interpolating
-    by using a lookup-table 
+    by using a lookup-table
 
     Attributes
     ----------
@@ -29,6 +29,7 @@ class FromLookupTable(TurbineType):
     :group: models.turbine_types
 
     """
+
     def __init__(
         self,
         data_source,
@@ -92,12 +93,13 @@ class FromLookupTable(TurbineType):
         self.WSCT = var_ws_ct
         self.WSP = var_ws_P
         self.rpars = pd_file_read_pars
-        
-        if (
-            FV.REWS not in input_vars 
-            or len(set(input_vars).intersection([FV.WS, FV.REWS2, FV.REWS3]))
+
+        if FV.REWS not in input_vars or len(
+            set(input_vars).intersection([FV.WS, FV.REWS2, FV.REWS3])
         ):
-            raise KeyError(f"Turbine type '{self.name}': Expecting '{FV.REWS}' as wind speed variable in inputv_vars, got {input_vars}")
+            raise KeyError(
+                f"Turbine type '{self.name}': Expecting '{FV.REWS}' as wind speed variable in inputv_vars, got {input_vars}"
+            )
 
         iargs = dict(bounds_error=False, fill_value=0)
         iargs.update(interpn_args)
@@ -118,24 +120,24 @@ class FromLookupTable(TurbineType):
     def needs_rews2(self):
         """
         Returns flag for requirering REWS2 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS2 is required
-            
+
         """
         return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
 
     def needs_rews3(self):
         """
         Returns flag for requirering REWS3 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS3 is required
-            
+
         """
         return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
 
@@ -150,7 +152,7 @@ class FromLookupTable(TurbineType):
 
         """
         return [self._lookup]
-    
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -260,7 +262,7 @@ class FromLookupTable(TurbineType):
         )
         for v in self.output_farm_vars(algo):
             fdata_lookup.add(v, fdata[v], fdata.dims[v])
-        
+
         rews2 = None
         rews3 = None
         if self.WSP != FV.REWS or self.WSCT != FV.REWS:
@@ -272,7 +274,7 @@ class FromLookupTable(TurbineType):
             if rews2 is None:
                 rews2 = fdata[self.WSCT].copy()
                 rews3 = fdata[self.WSP].copy()
-                
+
             # correct wind speed by air density, such
             # that in the partial load region the
             # correct value is reconstructed:
@@ -285,7 +287,7 @@ class FromLookupTable(TurbineType):
             if rews2 is None:
                 rews2 = fdata[self.WSCT].copy()
                 rews3 = fdata[self.WSP].copy()
-                
+
             # calculate corrected wind speed wsc,
             # gives ws**3 * cos**p_P in partial load region
             # and smoothly deals with full load region:

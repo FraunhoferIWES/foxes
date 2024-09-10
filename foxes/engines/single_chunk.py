@@ -1,26 +1,28 @@
 from xarray import Dataset
 
-import foxes.constants as FC 
+import foxes.constants as FC
 from foxes.core import Engine
+
 
 class SingleChunkEngine(Engine):
     """
     Runs computations in a single chunk.
-            
+
     :group: engines
-    
+
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
             Additional parameters for the base class
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         ignr = ["chunk_size_states", "chunk_size_points", "n_procs"]
         for k in ignr:
@@ -28,22 +30,22 @@ class SingleChunkEngine(Engine):
                 print(f"{type(self).__name__}: Ignoring {k}")
         super().__init__(
             *args,
-            chunk_size_states=None, 
-            chunk_size_points=None, 
+            chunk_size_states=None,
+            chunk_size_points=None,
             n_procs=1,
             **kwargs,
         )
-        
+
     def __repr__(self):
         return f"{type(self).__name__}()"
 
     def run_calculation(
-        self, 
+        self,
         algo,
-        model, 
-        model_data=None, 
-        farm_data=None, 
-        point_data=None, 
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
         out_vars=[],
         chunk_store={},
         sel=None,
@@ -53,13 +55,13 @@ class SingleChunkEngine(Engine):
     ):
         """
         Runs the model calculation
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
         model: foxes.core.DataCalcModel
-            The model that whose calculate function 
+            The model that whose calculate function
             should be run
         model_data: xarray.Dataset
             The initial model data
@@ -79,22 +81,23 @@ class SingleChunkEngine(Engine):
             Flag for use within the iterative algorithm
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
-        
+
         Returns
         -------
         results: xarray.Dataset
             The model results
-            
+
         """
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel)
-        
+            model_data, farm_data, point_data, sel=sel, isel=isel
+        )
+
         # basic checks:
         super().run_calculation(algo, model, model_data, farm_data, point_data)
-        
+
         # prepare:
-        n_states = model_data.sizes[FC.STATE] 
+        n_states = model_data.sizes[FC.STATE]
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
         out_coords = model.output_coords()
         coords = {}
@@ -104,27 +107,24 @@ class SingleChunkEngine(Engine):
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
         algo.reset_chunk_store(chunk_store)
-            
+
         # calculate:
-        
+
         if n_states > 1:
             self.print(f"Running single chunk calculation for {n_states} states")
-        
+
         data = self.get_chunk_input_data(
             algo=algo,
-            model_data=model_data, 
-            farm_data=farm_data, 
-            point_data=point_data, 
+            model_data=model_data,
+            farm_data=farm_data,
+            point_data=point_data,
             states_i0_i1=(0, n_states),
             targets_i0_i1=(0, n_targets),
             out_vars=out_vars,
         )
-        
+
         results = {}
-        results[(0, 0)] = (
-            model.calculate(algo, *data, **calc_pars),
-            algo.chunk_store
-        )
+        results[(0, 0)] = (model.calculate(algo, *data, **calc_pars), algo.chunk_store)
 
         return self.combine_results(
             algo=algo,
@@ -137,4 +137,3 @@ class SingleChunkEngine(Engine):
             goal_data=goal_data,
             iterative=iterative,
         )
-    

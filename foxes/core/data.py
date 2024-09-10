@@ -24,12 +24,13 @@ class Data(Dict):
     :group: core
 
     """
+
     def __init__(
-        self, 
-        data, 
-        dims, 
-        loop_dims, 
-        states_i0=None, 
+        self,
+        data,
+        dims,
+        loop_dims,
+        states_i0=None,
         name="data",
     ):
         """
@@ -56,7 +57,7 @@ class Data(Dict):
         self.update(data)
         self.dims = dims
         self.loop_dims = loop_dims
-        
+
         self.__states_i0 = states_i0
 
         self.sizes = {}
@@ -136,7 +137,7 @@ class Data(Dict):
             self[FV.H] = self[FV.TXYH][..., 2]
 
             self.dims[FV.TXYH] = tuple(list(dims[FV.X]) + [FC.XYH])
-        
+
         allc = set()
         for dms in self.dims.values():
             allc.update(dms)
@@ -211,17 +212,21 @@ class Data(Dict):
             try:
                 d = self.dims[v]
                 data[v] = self[v][s]
-                dims[v] = tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
+                dims[v] = (
+                    tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
+                )
                 if match is None:
                     match = dims[v]
                 elif match != dims[v]:
-                    raise ValueError(f"Dimension mismatch for variable '{v}' and slice {s}. Expecting {match}, got {dims[v]}")
+                    raise ValueError(
+                        f"Dimension mismatch for variable '{v}' and slice {s}. Expecting {match}, got {dims[v]}"
+                    )
             except IndexError:
                 if keep:
                     data[v] = self[v]
                     dims[v] = self.dims[v]
         if match is not None:
-            for d, su in zip(match[:len(s)], s):
+            for d, su in zip(match[: len(s)], s):
                 data[d] = data[d][su]
         if name is None:
             name = self.name
@@ -231,7 +236,7 @@ class Data(Dict):
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
         """
         Create Data object from a dataset
-        
+
         Parameters
         ----------
         ds: xarray.Dataset
@@ -247,16 +252,16 @@ class Data(Dict):
             Flag for copying data
         kwargs: dict, optional
             Additional parameters for the constructor
-            
+
         Returns
         -------
         data: Data
             The data object
-        
+
         """
         data = {}
         dims = {}
-            
+
         for c, d in ds.coords.items():
             if c == FC.STATE:
                 s = np.s_[:] if s_states is None else s_states
@@ -264,12 +269,14 @@ class Data(Dict):
             else:
                 data[c] = d.to_numpy().copy() if copy else d.to_numpy()
             dims[c] = d.dims
-            
+
         n_states = None
         for v, d in ds.data_vars.items():
             if FC.STATE in d.dims:
                 if d.dims[0] != FC.STATE:
-                    raise ValueError(f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}")
+                    raise ValueError(
+                        f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
+                    )
                 n_states = len(d.to_numpy())
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
@@ -279,12 +286,13 @@ class Data(Dict):
 
         if callback is not None:
             callback(data, dims)
-            
+
         if FC.STATE not in data and s_states is not None and n_states is not None:
             data[FC.STATE] = np.arange(n_states)[s_states]
             dims[FC.STATE] = (FC.STATE,)
-        
+
         return cls(*args, data=data, dims=dims, **kwargs)
+
 
 class MData(Data):
     """
@@ -309,6 +317,7 @@ class MData(Data):
 
         """
         super().__init__(*args, name=name, **kwargs)
+
 
 class FData(Data):
     """
@@ -369,7 +378,7 @@ class FData(Data):
     def from_dataset(cls, ds, *args, mdata=None, callback=None, **kwargs):
         """
         Create Data object from a dataset
-        
+
         Parameters
         ----------
         ds: xarray.Dataset
@@ -383,16 +392,17 @@ class FData(Data):
             the data and dims dicts before construction
         kwargs: dict, optional
             Additional parameters for the constructor
-            
+
         Returns
         -------
         data: Data
             The data object
-        
+
         """
         if mdata is None:
             return super().from_dataset(ds, *args, callback=callback, **kwargs)
         else:
+
             def cb(data, dims):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
@@ -401,8 +411,10 @@ class FData(Data):
                     dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
                 if callback is not None:
                     callback(data, dims)
+
             return super().from_dataset(ds, *args, callback=cb, **kwargs)
-            
+
+
 class TData(Data):
     """
     Container for foxes target data.
@@ -559,7 +571,7 @@ class TData(Data):
             return None
         else:
             return self[FC.TARGET][0]
-        
+
     @classmethod
     def from_points(
         cls,
@@ -652,16 +664,16 @@ class TData(Data):
     @classmethod
     def from_dataset(
         cls,
-        ds, 
-        *args, 
-        s_targets=None, 
-        mdata=None, 
-        callback=None, 
+        ds,
+        *args,
+        s_targets=None,
+        mdata=None,
+        callback=None,
         **kwargs,
     ):
         """
         Create Data object from a dataset
-        
+
         Parameters
         ----------
         ds: xarray.Dataset
@@ -677,28 +689,31 @@ class TData(Data):
             the data and dims dicts before construction
         kwargs: dict, optional
             Additional parameters for the constructor
-            
+
         Returns
         -------
         data: Data
             The data object
-        
+
         """
         if mdata is None:
             cb0 = callback
         else:
+
             def cb_mdata(data, dims):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
                 if callback is not None:
                     callback(data, dims)
+
             cb0 = cb_mdata
-            
+
         if s_targets is None:
             cb1 = cb0
         else:
-            def cb_targets(data, dims):               
+
+            def cb_targets(data, dims):
                 if FC.TARGET not in data:
                     data[FC.TARGET] = np.arange(ds.sizes[FC.TARGET])
                     dims[FC.TARGET] = (FC.TARGET,)
@@ -706,14 +721,19 @@ class TData(Data):
                     if FC.TARGET in dims[v]:
                         if dims[v] == (FC.TARGET,):
                             data[v] = d[s_targets].copy()
-                        elif len(dims[v]) < 3 or dims[v][:3] != (FC.STATE, FC.TARGET, FC.TPOINT):
-                            raise ValueError(f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}")
+                        elif len(dims[v]) < 3 or dims[v][:3] != (
+                            FC.STATE,
+                            FC.TARGET,
+                            FC.TPOINT,
+                        ):
+                            raise ValueError(
+                                f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
+                            )
                         else:
                             data[v] = d[:, s_targets]
                 if cb0 is not None:
                     cb0(data, dims)
-                    
-            cb1 = cb_targets 
-            
+
+            cb1 = cb_targets
+
         return super().from_dataset(ds, *args, callback=cb1, **kwargs)
-        

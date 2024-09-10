@@ -45,14 +45,16 @@ if __name__ == "__main__":
         help="Flag for showing layout figure",
         action="store_true",
     )
-    parser.add_argument(
-        "-e", "--engine", help="The engine", default=None
-    )
+    parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
     parser.add_argument(
-        "-c", "--chunksize_states", help="The chunk size for states", default=None, type=int
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"

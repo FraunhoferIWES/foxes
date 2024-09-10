@@ -1,6 +1,7 @@
 from foxes.core import PartialWakesModel
 import foxes.constants as FC
 
+
 class RotorPoints(PartialWakesModel):
     """
     Partial wakes calculation directly by the
@@ -9,6 +10,7 @@ class RotorPoints(PartialWakesModel):
     :group: models.partial_wakes
 
     """
+
     def get_wake_points(self, algo, mdata, fdata):
         """
         Get the wake calculation points, and their

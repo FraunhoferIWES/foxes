@@ -24,6 +24,7 @@ class GridRotor(RotorModel):
     :group: models.rotor_models
 
     """
+
     def __init__(self, n, reduce=True, nint=200, **kwargs):
         """
         Constructor.
@@ -54,7 +55,7 @@ class GridRotor(RotorModel):
     def __repr__(self):
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -105,7 +106,7 @@ class GridRotor(RotorModel):
             self.__dpoints[:, 1] = x.reshape(N)
             self.__dpoints[:, 2] = y.reshape(N)
             self.__weights = np.ones(N, dtype=FC.DTYPE) / N
-        
+
     def n_rotor_points(self):
         """
         The number of rotor points

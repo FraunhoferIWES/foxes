@@ -16,6 +16,7 @@ class ReorderFarmOutput(FarmDataModel):
     :group: algorithms.downwind.models
 
     """
+
     def __init__(self, outputs):
         """
         Constructor

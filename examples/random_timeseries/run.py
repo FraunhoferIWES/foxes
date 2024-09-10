@@ -45,17 +45,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
-    parser.add_argument(
-        "-e", "--engine", help="The engine", default="multiprocess"
-    )
+    parser.add_argument("-e", "--engine", help="The engine", default="multiprocess")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
     parser.add_argument(
-        "-c", "--chunksize_states", help="The chunk size for states", default=None, type=int
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
     )
     parser.add_argument(
-        "-C", "--chunksize_points", help="The chunk size for points", default=None, type=int
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=None,
+        type=int,
     )
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
@@ -86,7 +92,7 @@ if __name__ == "__main__":
         turbine_models=args.tmodels + [ttype.name],
         seed=args.seed,
     )
-    
+
     with foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
@@ -114,7 +120,9 @@ if __name__ == "__main__":
             plt.show()
             plt.close(fig)
 
-        Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+        Algo = (
+            foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+        )
         algo = Algo(
             farm,
             states,
@@ -132,9 +140,21 @@ if __name__ == "__main__":
 
         print("\nFarm results:\n")
         print(farm_results)
-        print(farm_results.to_dataframe()[[
-            FV.AMB_WD, FV.AMB_TI, FV.AMB_REWS, FV.AMB_CT, FV.AMB_P,
-            FV.TI, FV.REWS, FV.CT, FV.P]])
+        print(
+            farm_results.to_dataframe()[
+                [
+                    FV.AMB_WD,
+                    FV.AMB_TI,
+                    FV.AMB_REWS,
+                    FV.AMB_CT,
+                    FV.AMB_P,
+                    FV.TI,
+                    FV.REWS,
+                    FV.CT,
+                    FV.P,
+                ]
+            ]
+        )
         print("\nCalc time =", time1 - time0, "\n")
 
         o = foxes.output.FarmResultsEval(farm_results)

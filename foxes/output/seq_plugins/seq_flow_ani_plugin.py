@@ -18,6 +18,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     :group: output.seq_plugins
 
     """
+
     def __init__(self, orientation, **pars):
         """
         Constructor.

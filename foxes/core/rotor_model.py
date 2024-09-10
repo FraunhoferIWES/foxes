@@ -26,6 +26,7 @@ class RotorModel(FarmDataModel):
     :group: core
 
     """
+
     def __init__(self, calc_vars=None):
         """
         Constructor.
@@ -39,7 +40,7 @@ class RotorModel(FarmDataModel):
         """
         super().__init__()
         self.calc_vars = calc_vars
-            
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -61,14 +62,14 @@ class RotorModel(FarmDataModel):
                 self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
             else:
                 self.calc_vars = vrs
-                
+
             if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS2)
             if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS3)
-                
+
             self.calc_vars = sorted(self.calc_vars)
-            
+
         return self.calc_vars
 
     @abstractmethod
@@ -214,7 +215,7 @@ class RotorModel(FarmDataModel):
         for v in [FV.REWS2, FV.REWS3]:
             if v in fdata and v not in self.calc_vars:
                 self.calc_vars.append(v)
-                
+
         uvp = None
         uv = None
         if (
@@ -356,7 +357,9 @@ class RotorModel(FarmDataModel):
         """
 
         if rpoints is None:
-            rpoints = mdata.get(FC.ROTOR_POINTS, self.get_rotor_points(algo, mdata, fdata))
+            rpoints = mdata.get(
+                FC.ROTOR_POINTS, self.get_rotor_points(algo, mdata, fdata)
+            )
         if store_rpoints:
             algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)
 

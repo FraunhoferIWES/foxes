@@ -11,6 +11,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     :group: models.wake_models
 
     """
+
     @abstractmethod
     def calc_amplitude_sigma(
         self,

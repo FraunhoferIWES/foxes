@@ -5,6 +5,7 @@ class GroundModel(Model):
     """
     Base class for ground models.
     """
+
     def new_farm_wake_deltas(
         self,
         algo,

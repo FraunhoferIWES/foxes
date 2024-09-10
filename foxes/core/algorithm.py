@@ -9,6 +9,7 @@ import foxes.constants as FC
 
 from .engine import Engine
 
+
 class Algorithm(Model):
     """
     Abstract base class for algorithms.
@@ -27,11 +28,11 @@ class Algorithm(Model):
     """
 
     def __init__(
-        self, 
-        mbook, 
-        farm, 
-        verbosity=1, 
-        dbook=None, 
+        self,
+        mbook,
+        farm,
+        verbosity=1,
+        dbook=None,
         engine=None,
         **engine_pars,
     ):
@@ -60,62 +61,68 @@ class Algorithm(Model):
         self.verbosity = verbosity
         self.n_states = None
         self.n_turbines = farm.n_turbines
-        
+
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
         self.__idata_mem = Dict(name="idata_mem")
         self.__chunk_store = Dict(name="chunk_store")
-        
+
         if engine is not None:
             e = Engine.new(engine_type=engine, verbosity=verbosity, **engine_pars)
             self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
             e.initialize()
         elif len(engine_pars):
-            self.print(f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}")
-    
+            self.print(
+                f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}"
+            )
+
     @property
     def farm(self):
         """
         The wind farm
-        
+
         Returns
         -------
         mb: foxes.core.WindFarm
             The wind farm
-        
+
         """
-        return self.__farm    
-    
+        return self.__farm
+
     @property
     def mbook(self):
         """
         The model book
-        
+
         Returns
         -------
         mb: foxes.models.ModelBook()
             The model book
-        
+
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot access mbook while running")
-        return self.__mbook            
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot access mbook while running"
+            )
+        return self.__mbook
 
     @property
     def dbook(self):
         """
         The data book
-        
+
         Returns
         -------
         mb: foxes.data.StaticData()
             The data book
-        
+
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot access dbook while running")
-        return self.__dbook 
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot access dbook while running"
+            )
+        return self.__dbook
 
     @property
     def idata_mem(self):
@@ -129,9 +136,11 @@ class Algorithm(Model):
 
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot access idata_mem while running")
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot access idata_mem while running"
+            )
         return self.__idata_mem
-    
+
     @property
     def chunk_store(self):
         """
@@ -144,7 +153,7 @@ class Algorithm(Model):
 
         """
         return self.__chunk_store
-    
+
     def print(self, *args, vlim=1, **kwargs):
         """
         Print function, based on verbosity.
@@ -167,7 +176,9 @@ class Algorithm(Model):
         Initializes the algorithm.
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot initialize while running")
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot initialize while running"
+            )
         super().initialize(self, self.verbosity)
 
     def store_model_data(self, model, idata, force=False):
@@ -322,7 +333,7 @@ class Algorithm(Model):
             Selection of coordinates in dataset
         isel: dict, optional
             Selection of coordinates in dataset
-            
+
         Returns
         -------
         ds: xarray.Dataset
@@ -330,7 +341,7 @@ class Algorithm(Model):
 
         """
         if idata is None:
-            idata = self.get_models_idata()   
+            idata = self.get_models_idata()
         ds = xr.Dataset(**idata)
         if isel is not None:
             ds = ds.isel(isel)
@@ -382,11 +393,11 @@ class Algorithm(Model):
         )
 
         return xr.Dataset(**idata)
-    
+
     def add_to_chunk_store(self, name, data, mdata, tdata=None, copy=True):
         """
         Add data to the chunk store
-        
+
         Parameters
         ----------
         name: str
@@ -399,7 +410,7 @@ class Algorithm(Model):
             The tdata object
         copy: bool
             Flag for copying incoming data
-            
+
         """
         i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
@@ -407,11 +418,11 @@ class Algorithm(Model):
         if key not in self.chunk_store:
             self.chunk_store[key] = Dict(name=f"chunk_store_{i0}_{t0}")
         self.chunk_store[key][name] = data.copy() if copy else data
-        
+
     def get_from_chunk_store(self, name, mdata, tdata=None):
         """
         Get data to the chunk store
-        
+
         Parameters
         ----------
         name: str
@@ -420,31 +431,31 @@ class Algorithm(Model):
             The mdata object
         tdata: foxes.core.TData, optional
             The tdata object
-        
+
         Returns
         -------
         data: numpy.ndarray
             The data
-        
+
         """
         i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
         return self.chunk_store[(i0, t0)][name]
-    
+
     def reset_chunk_store(self, new_chunk_store=None):
         """
         Resets the chunk store
-        
+
         Parameters
         ----------
         new_chunk_store: foxes.utils.Dict, optional
             The new chunk store
-        
+
         Returns
         -------
         chunk_store: foxes.utils.Dict
             The chunk store before resetting
-        
+
         """
         chunk_store = self.chunk_store
         if new_chunk_store is None:
@@ -457,18 +468,18 @@ class Algorithm(Model):
         return chunk_store
 
     def set_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to running, and moves
         all large data to stash.
-        
-        The stashed data will be returned by the 
+
+        The stashed data will be returned by the
         unset_running() function after running calculations.
 
         Parameters
@@ -484,32 +495,34 @@ class Algorithm(Model):
             The index subset selection dictionary
         verbosity: int
             The verbosity level, 0 = silent
-            
-        """      
+
+        """
         assert algo is self
-        
+
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name].update(dict(
-            mbook=self.__mbook,
-            dbook=self.__dbook,
-            idata_mem=self.__idata_mem,
-        ))
+        data_stash[self.name].update(
+            dict(
+                mbook=self.__mbook,
+                dbook=self.__dbook,
+                idata_mem=self.__idata_mem,
+            )
+        )
         del self.__mbook, self.__dbook
         self.__idata_mem = {}
 
     def unset_running(
-        self, 
-        algo, 
-        data_stash, 
-        sel=None, 
-        isel=None, 
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
         verbosity=0,
     ):
         """
         Sets this model status to not running, recovering large data
         from stash
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -526,20 +539,20 @@ class Algorithm(Model):
 
         """
         assert algo is self
-        
+
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        
+
         data = data_stash[self.name]
         self.__mbook = data.pop("mbook")
         self.__dbook = data.pop("dbook")
         self.__idata_mem = data.pop("idata_mem")
-        
+
     @abstractmethod
     def _launch_parallel_farm_calc(
-        self, 
-        *args, 
-        mbook, 
-        dbook, 
+        self,
+        *args,
+        mbook,
+        dbook,
         chunk_store,
         **kwargs,
     ):
@@ -564,10 +577,10 @@ class Algorithm(Model):
         farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
-            
+
         """
         pass
-        
+
     def calc_farm(self, *args, **kwargs):
         """
         Calculate farm data.
@@ -584,43 +597,48 @@ class Algorithm(Model):
         farm_results: xarray.Dataset
             The farm results. The calculated variables have
             dimensions (state, turbine)
-        
+
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot call calc_farm while running")
-        
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot call calc_farm while running"
+            )
+
         # set to running:
         data_stash = {}
         chunk_store = self.reset_chunk_store()
-        mdls = [m for m in [self] + list(args) + list(kwargs.values()) 
-                if isinstance(m, Model)]
+        mdls = [
+            m
+            for m in [self] + list(args) + list(kwargs.values())
+            if isinstance(m, Model)
+        ]
         for m in mdls:
             m.set_running(
-                self, data_stash, sel=None, isel=None, 
-                verbosity=self.verbosity-2)
-        
+                self, data_stash, sel=None, isel=None, verbosity=self.verbosity - 2
+            )
+
         # run parallel calculation:
         farm_results = self._launch_parallel_farm_calc(
-            *args, 
-            chunk_store=chunk_store, 
+            *args,
+            chunk_store=chunk_store,
             sel=None,
             isel=None,
             **kwargs,
         )
-        
+
         # reset to not running:
         for m in mdls:
             m.unset_running(
-                self, data_stash, sel=None, isel=None, 
-                verbosity=self.verbosity-2)
-               
+                self, data_stash, sel=None, isel=None, verbosity=self.verbosity - 2
+            )
+
         return farm_results
 
     @abstractmethod
     def _launch_parallel_points_calc(
-        self, 
-        *args,  
-        chunk_store, 
+        self,
+        *args,
+        chunk_store,
         **kwargs,
     ):
         """
@@ -640,10 +658,10 @@ class Algorithm(Model):
         point_results: xarray.Dataset
             The point results. The calculated variables have
             dimensions (state, point)
-            
+
         """
         pass
-        
+
     def calc_points(self, *args, sel=None, isel=None, **kwargs):
         """
         Calculate points data.
@@ -664,34 +682,36 @@ class Algorithm(Model):
         point_results: xarray.Dataset
             The point results. The calculated variables have
             dimensions (state, point)
-        
+
         """
         if self.running:
-            raise ValueError(f"Algorithm '{self.name}': Cannot call calc_points while running")
-        
+            raise ValueError(
+                f"Algorithm '{self.name}': Cannot call calc_points while running"
+            )
+
         # set to running:
         data_stash = {}
         self.set_running(
-            self, data_stash, sel=sel, isel=isel, 
-            verbosity=self.verbosity-2)
-        
+            self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
+        )
+
         # run parallel calculation:
         chunk_store = self.reset_chunk_store()
         point_results = self._launch_parallel_points_calc(
-            *args, 
-            chunk_store=chunk_store, 
+            *args,
+            chunk_store=chunk_store,
             sel=sel,
             isel=isel,
             **kwargs,
         )
-        
+
         # reset to not running:
         self.unset_running(
-            self, data_stash, sel=sel, isel=isel, 
-            verbosity=self.verbosity-2)
-        
+            self, data_stash, sel=sel, isel=isel, verbosity=self.verbosity - 2
+        )
+
         return point_results
-    
+
     def finalize(self, clear_mem=False):
         """
         Finalizes the algorithm.

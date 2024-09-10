@@ -88,12 +88,12 @@ class FarmController(FarmDataModel):
     def needs_rews2(self):
         """
         Returns flag for requirering REWS2 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS2 is required
-            
+
         """
         for tt in self.turbine_types:
             if tt.needs_rews2():
@@ -103,18 +103,18 @@ class FarmController(FarmDataModel):
     def needs_rews3(self):
         """
         Returns flag for requirering REWS3 variable
-        
+
         Returns
         -------
         flag: bool
             True if REWS3 is required
-            
+
         """
         for tt in self.turbine_types:
             if tt.needs_rews3():
                 return True
         return False
-    
+
     def _analyze_models(self, algo, pre_rotor, models):
         """
         Helper function for model analysis
@@ -173,7 +173,7 @@ class FarmController(FarmDataModel):
                 )
 
         return [m.name for m in tmodels], tmsels
-        
+
     def collect_models(self, algo):
         """
         Analyze and gather turbine models, based on the
@@ -344,7 +344,7 @@ class FarmController(FarmDataModel):
         """
         ovars = set(self.pre_rotor_models.output_farm_vars(algo))
         ovars.update(self.post_rotor_models.output_farm_vars(algo))
-            
+
         return list(ovars)
 
     def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):

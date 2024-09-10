@@ -30,6 +30,7 @@ class Rathmann(TurbineInductionModel):
     :group: models.wake_models.induction
 
     """
+
     def __init__(self, pre_rotor_only=False, induction="Madsen"):
         """
         Constructor.

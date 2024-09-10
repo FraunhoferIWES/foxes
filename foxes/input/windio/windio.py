@@ -57,6 +57,7 @@ def _read_site(wio, algo_dict, verbosity):
 
     algo_dict["states"] = get_states(coords, fields, dims, verbosity)
 
+
 def _read_farm(wio, algo_dict, verbosity):
     """Reads the wind farm information"""
     wio_farm = Dict(wio["wind_farm"], name="wind_farm")
@@ -82,7 +83,7 @@ def _read_farm(wio, algo_dict, verbosity):
     wfarm = wio_farm["layouts"]
     if isinstance(wfarm, dict):
         layouts = Dict(wfarm, name="layouts")
-    else: 
+    else:
         layouts = Dict({i: l for i, l in enumerate(wfarm)}, name="layouts")
     if verbosity > 2:
         print("    Reading layouts")
@@ -90,10 +91,11 @@ def _read_farm(wio, algo_dict, verbosity):
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttype, verbosity)
 
+
 def read_windio(
-    windio_yaml, 
-    verbosity=1, 
-    algo_pars=None, 
+    windio_yaml,
+    verbosity=1,
+    algo_pars=None,
     **runner_pars,
 ):
     """
@@ -139,16 +141,18 @@ def read_windio(
     algo_dict = Dict(algo_type="Downwind", name="algo_dict")
     if algo_pars is not None:
         algo_dict.update(algo_pars)
-    algo_dict.update(dict(
-        mbook=ModelBook(),
-        farm=WindFarm(),
-        wake_models=[],
-        verbosity=verbosity-3,
-    ))
+    algo_dict.update(
+        dict(
+            mbook=ModelBook(),
+            farm=WindFarm(),
+            wake_models=[],
+            verbosity=verbosity - 3,
+        )
+    )
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
-    
+
     out_dicts, odir = read_attributes(
         wio,
         algo_dict,
@@ -158,15 +162,16 @@ def read_windio(
     if verbosity > 1:
         print("Creating windio runner")
     runner = WindioRunner(
-                algo_dict, 
-                output_dir=odir,
-                output_dicts=out_dicts, 
-                wio_input_data=wio, 
-                verbosity=verbosity,
-                **runner_pars,
-            )
+        algo_dict,
+        output_dir=odir,
+        output_dicts=out_dicts,
+        wio_input_data=wio,
+        verbosity=verbosity,
+        **runner_pars,
+    )
 
     return runner
+
 
 if __name__ == "__main__":
     import argparse

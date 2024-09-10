@@ -7,28 +7,37 @@ import foxes.constants as FC
 
 from .read_fields import foxes2wio
 
+
 def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
-    """ Reads the turbine outputs request """
-    if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get("report", True):
+    """Reads the turbine outputs request"""
+    if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get(
+        "report", True
+    ):
         turbine_outputs = Dict(wio_outs["turbine_outputs"], name="turbine_outputs")
-        turbine_nc_filename = turbine_outputs.pop("turbine_nc_filename", "turbine_outputs.nc")
+        turbine_nc_filename = turbine_outputs.pop(
+            "turbine_nc_filename", "turbine_outputs.nc"
+        )
         output_variables = turbine_outputs["output_variables"]
         if verbosity > 2:
             print("      Reading turbine_outputs")
             print("        File name:", turbine_nc_filename)
             print("        output_variables:", output_variables)
-        
+
         vmap = Dict(
             power=FV.P,
             rotor_effective_velocity=FV.REWS,
         )
         ivmap = {d: k for k, d in vmap.items()}
-        ivmap.update({
-            FC.STATE: "time", 
-            FC.TURBINE: "turbine",
-        })
-        
-        out_dicts.append(Dict({
+        ivmap.update(
+            {
+                FC.STATE: "time",
+                FC.TURBINE: "turbine",
+            }
+        )
+
+        out_dicts.append(
+            Dict(
+                {
                     "output_type": "StateTurbineTable",
                     "farm_results": True,
                     "algo": False,
@@ -36,17 +45,23 @@ def _read_turbine_outputs(wio_outs, odir, out_dicts, verbosity):
                     "run_kwargs": dict(
                         variables=[vmap[v] for v in output_variables],
                         name_map=ivmap,
-                        to_file=odir/turbine_nc_filename,
-                        round={vw: FV.get_default_digits(vf) for vw, vf in vmap.items()},
+                        to_file=odir / turbine_nc_filename,
+                        round={
+                            vw: FV.get_default_digits(vf) for vw, vf in vmap.items()
+                        },
                         verbosity=verbosity,
                     ),
                     "output_yaml_update": {
                         "power_table": f"include {turbine_nc_filename}",
                     },
-                }, name = "turbine_outputs"))
+                },
+                name="turbine_outputs",
+            )
+        )
+
 
 def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
-    """ Reads the flow field request """
+    """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get("report", True):
         flow_field = Dict(wio_outs["flow_field"], name="flow_field")
         flow_nc_filename = flow_field.pop("flow_nc_filename", "flow_field.nc")
@@ -70,16 +85,20 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
             wind_speed=FV.WS,
             wind_direction=FV.WD,
         )
-        
+
         if z_sampling in ["hub_height", "default"]:
             z = None
         elif isinstance(z_sampling, (int, float)):
             z = z_sampling
         else:
-            raise NotImplementedError(f"z_sampling '{z_sampling}' of type '{type(z_sampling).__name__}' is not supported (yet). Please give 'hub_height', 'default' or a float.")
-        
+            raise NotImplementedError(
+                f"z_sampling '{z_sampling}' of type '{type(z_sampling).__name__}' is not supported (yet). Please give 'hub_height', 'default' or a float."
+            )
+
         if xy_sampling == "default":
-            out_dicts.append(Dict({
+            out_dicts.append(
+                Dict(
+                    {
                         "output_type": "SliceData",
                         "farm_results": True,
                         "algo": True,
@@ -90,17 +109,23 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
                             n_img_points=(100, 100),
                             variables=[vmap[v] for v in output_variables],
                             z=z,
-                            to_file=odir/flow_nc_filename,
+                            to_file=odir / flow_nc_filename,
                             label_map=foxes2wio,
                             verbosity=verbosity,
                         ),
                         "output_yaml_update": {
                             "flow_field": f"include {flow_nc_filename}",
                         },
-                    }, name = "flow_field"))
+                    },
+                    name="flow_field",
+                )
+            )
         else:
-            raise NotImplementedError(f"xy_sampling '{xy_sampling}' is not supported (yet)")
-            
+            raise NotImplementedError(
+                f"xy_sampling '{xy_sampling}' is not supported (yet)"
+            )
+
+
 def read_outputs(wio_outs, algo_dict, verbosity):
     """
     Reads the windio outputs

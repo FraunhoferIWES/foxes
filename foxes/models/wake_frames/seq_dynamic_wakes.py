@@ -26,6 +26,7 @@ class SeqDynamicWakes(FarmOrder):
     :group: models.wake_frames.sequential
 
     """
+
     def __init__(self, cl_ipars={}, dt_min=None):
         """
         Constructor.
@@ -86,9 +87,11 @@ class SeqDynamicWakes(FarmOrder):
             )
 
         # init wake traces data:
-        self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3),  dtype=FC.DTYPE)
+        self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
-        self._traces_l = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+        self._traces_l = np.full(
+            (algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE
+        )
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -154,20 +157,24 @@ class SeqDynamicWakes(FarmOrder):
         points = tdata[FC.TARGETS].reshape(n_states, n_points, 3)
         counter = algo.states.counter
         N = counter + 1
-        
+
         if np.isnan(self._traces_l[counter, downwind_index]):
 
             # new wake starts at turbine:
-            self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][0, downwind_index]
+            self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][
+                0, downwind_index
+            ]
             self._traces_l[counter, downwind_index] = 0
 
             # transport wakes that originate from previous time steps:
             if counter > 0:
-                dxyz = self._traces_v[:counter, downwind_index] * self._dt[counter-1]
+                dxyz = self._traces_v[:counter, downwind_index] * self._dt[counter - 1]
                 self._traces_p[:counter, downwind_index] += dxyz
-                self._traces_l[:counter, downwind_index] += np.linalg.norm(dxyz, axis=-1)
+                self._traces_l[:counter, downwind_index] += np.linalg.norm(
+                    dxyz, axis=-1
+                )
                 del dxyz
-                
+
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
             hpdata = TData.from_points(points=self._traces_p[None, :N, downwind_index])
@@ -181,7 +188,7 @@ class SeqDynamicWakes(FarmOrder):
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
         tri = np.argmin(dists, axis=1)
         del dists
-        
+
         # project:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][0, downwind_index, None, 2]
@@ -209,7 +216,7 @@ class SeqDynamicWakes(FarmOrder):
             tri[None, :].reshape(n_states, n_targets, n_tpoints),
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
-        
+
         return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
 
     def get_wake_modelling_data(

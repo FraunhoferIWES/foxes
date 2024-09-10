@@ -28,6 +28,7 @@ wio2foxes = {
 """
 foxes2wio = {d: k for k, d in wio2foxes.items()}
 
+
 def _read_nondimensional_coordinate(name, wio_data, coords):
     """read nondimensional coordinate
     :group: input.windio
@@ -36,6 +37,7 @@ def _read_nondimensional_coordinate(name, wio_data, coords):
         coords[wio2foxes[name]] = wio_data
         return True
     return False
+
 
 def _read_dimensional_coordinate(name, wio_data, coords):
     """read dimensional coordinate
@@ -48,6 +50,7 @@ def _read_dimensional_coordinate(name, wio_data, coords):
         return True
     return False
 
+
 def _read_multi_dimensional_coordinate(name, wio_data, coords):
     """Read multi dimensional coordinate
     :group: input.windio
@@ -55,6 +58,7 @@ def _read_multi_dimensional_coordinate(name, wio_data, coords):
     return _read_nondimensional_coordinate(
         name, wio_data, coords
     ) or _read_dimensional_coordinate(name, wio_data, coords)
+
 
 def _read_nondimensional_data(name, wio_data, fields, dims):
     """read nondimensional data
@@ -66,6 +70,7 @@ def _read_nondimensional_data(name, wio_data, fields, dims):
         dims[v] = []
         return True
     return False
+
 
 def _read_dimensional_data(name, wio_data, fields, dims):
     """read dimensional data
@@ -83,6 +88,7 @@ def _read_dimensional_data(name, wio_data, fields, dims):
         return True
     return False
 
+
 def _read_multi_dimensional_data(name, wio_data, fields, dims):
     """Read multi dimensional data
     :group: input.windio
@@ -91,14 +97,15 @@ def _read_multi_dimensional_data(name, wio_data, fields, dims):
         name, wio_data, fields, dims
     ) or _read_dimensional_data(name, wio_data, fields, dims)
 
+
 def read_wind_resource_field(
-    name, 
-    wio_data, 
-    coords, 
-    fields, 
-    dims, 
+    name,
+    wio_data,
+    coords,
+    fields,
+    dims,
     verbosity,
-    ):
+):
     """
     Reads wind resource data into fields and dims
 

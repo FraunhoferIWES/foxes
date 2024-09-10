@@ -22,4 +22,5 @@ from . import output  # noqa: F401
 from . import utils  # noqa: F401
 
 from importlib.metadata import version
+
 __version__ = version(__package__ or __name__)

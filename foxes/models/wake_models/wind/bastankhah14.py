@@ -60,7 +60,7 @@ class Bastankhah2014(GaussianWakeModel):
         s += f"({self.superpositions[FV.WS]}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
-            
+
     def sub_models(self):
         """
         List of all sub-models
@@ -140,7 +140,7 @@ class Bastankhah2014(GaussianWakeModel):
             downwind_index=downwind_index,
             upcast=True,
         )
-        
+
         # select targets:
         st_sel = (x > 0) & (ct > 0)
         if np.any(st_sel):
