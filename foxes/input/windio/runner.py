@@ -120,11 +120,7 @@ class WindioRunner:
             self.print(f"Creating algorithm '{self.algo['algo_type']}'", level=2)
             self.algo = Algorithm.new(**self.algo)
         if has_engine():
-            self.__starts_engine = False
-        else:
-            e = get_engine(error=False, default=True)
-            e.verbosity = self.verbosity 
-            self.__starts_engine = True           
+            self.__starts_engine = False         
         if not self.algo.initialized:
             self.algo.initialize()
         self.__initialized = True
@@ -178,9 +174,6 @@ class WindioRunner:
         self.algo = None
         self.farm_results = None
         self.output_results = None
-        if self.__starts_engine:
-            reset_engine()
-            self.__starts_engine = None
         self.__initialized = False
 
     def __enter__(self):
