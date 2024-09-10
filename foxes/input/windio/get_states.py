@@ -13,8 +13,9 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
     """
     profiles = {}
     if FV.Z0 in fields:
-        if FV.H not in fields and verbosity > 0:
-            print(f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated.")
+        if FV.H not in fields:
+            if verbosity > 0:
+                print(f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated.")
         elif FV.MOL in fields:
             ovars.append(FV.MOL)
             fixval[FV.H] = fields[FV.H]
@@ -117,7 +118,7 @@ def _get_MultiHeightNCTimeseries(coords, fields, dims, states_dict,
         for v, d in fields.items():
             if dims[v] == (FC.TIME, FV.H):
                 data[v] = ((FC.TIME, FV.H), d)
-            if dims[v] == (FV.H, FC.TIME):
+            elif dims[v] == (FV.H, FC.TIME):
                 data[v] = ((FC.TIME, FV.H), np.swapaxes(d, 0, 1))
             elif len(dims[v]) == 0:
                 fix[v] = d

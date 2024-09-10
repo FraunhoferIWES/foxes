@@ -22,7 +22,6 @@ class PartialWakesModel(Model):
     :group: core
 
     """
-
     def check_wmodel(self, wmodel, error=True):
         """
         Checks the wake model type

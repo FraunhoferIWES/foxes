@@ -15,7 +15,6 @@ class WakeSuperposition(Model):
     :group: core
 
     """
-
     @abstractmethod
     def add_wake(
         self,

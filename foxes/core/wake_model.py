@@ -15,7 +15,6 @@ class WakeModel(Model):
     :group: core
 
     """
-
     @property
     def affects_downwind(self):
         """

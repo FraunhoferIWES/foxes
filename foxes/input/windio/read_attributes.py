@@ -177,16 +177,20 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        wake_averaging      :", wake_averaging)
         print("        ws exponent power   :", wse_P)
         print("        ws exponent ct      :", wse_ct)
+        
     if background_averaging in ["center", "centre"]:
         algo_dict["rotor_model"] = "centre"
+    elif background_averaging in ["none", "None", None]:
+        algo_dict["rotor_model"] = None
     elif background_averaging == "grid":
         algo_dict["rotor_model"] = f"grid{nx*ny}"
     else:
-        raise KeyError(
-            f"Expecting background_averaging 'center' or 'grid', got '{background_averaging}'"
-        )
+        algo_dict["rotor_model"] = background_averaging
+        
     if wake_averaging in ["centre", "center"]:
         algo_dict["partial_wakes"] = "centre"
+    elif wake_averaging in ["none", "None", "auto", None]:
+        algo_dict["partial_wakes"] = None
     elif wake_averaging == "grid":
         if background_averaging == "grid":
             algo_dict["partial_wakes"] = "rotor_points"
@@ -195,10 +199,9 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
                 algo_dict["partial_wakes"] = f"grid{nx*ny}"
             else:
                 algo_dict["partial_wakes"] = grid
-    elif wake_averaging in ["none", "None", "auto", None]:
-        algo_dict["partial_wakes"] = None
     else:
         algo_dict["partial_wakes"] = wake_averaging
+        
     if verbosity > 2:
         print("        --> rotor_model     :", algo_dict["rotor_model"])
         print("        --> partial_wakes   :", algo_dict["partial_wakes"])

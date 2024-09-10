@@ -26,7 +26,6 @@ class DistSlicedWakeModel(WakeModel):
     :group: models.wake_models
 
     """
-
     def __init__(self, superpositions):
         """
         Constructor.

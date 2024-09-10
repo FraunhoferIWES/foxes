@@ -551,6 +551,20 @@ def get_engine(error=True, default=True):
             raise ValueError("Engine not found.")
     return engine
 
+def has_engine():
+    """
+    Flag that checks if engine has been set
+    
+    Returns
+    -------
+    flag: bool
+        True if engine has been set
+    
+    :group: core
+    
+    """
+    return __global_engine_data__["engine"] is not None
+
 def reset_engine():
     """
     Resets the global calculation engine
