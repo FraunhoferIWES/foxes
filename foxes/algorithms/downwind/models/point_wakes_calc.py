@@ -51,7 +51,7 @@ class PointWakesCalculation(PointDataModel):
         """
         return [self.emodels] if self.emodels is not None else []
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -61,9 +61,11 @@ class PointWakesCalculation(PointDataModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force)
         self.pvars = algo.states.output_point_vars(algo)
 
     def output_point_vars(self, algo):

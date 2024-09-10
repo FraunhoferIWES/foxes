@@ -25,7 +25,7 @@ class SetAmbPointResults(PointDataModel):
         self.pvars = None
         self.vars = None
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -35,11 +35,13 @@ class SetAmbPointResults(PointDataModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         self.pvars = algo.states.output_point_vars(algo)
         self.vars = [v for v in self.pvars if v in FV.var2amb]
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force)
 
     def output_point_vars(self, algo):
         """

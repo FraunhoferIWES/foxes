@@ -187,9 +187,12 @@ class Algorithm(Model):
 
         """
         mname = f"{type(model).__name__}_{model.name}"
-        if not force and mname in self.idata_mem:
+        if force:
+            self.__idata_mem[mname] = idata
+        elif mname in self.idata_mem:
             raise KeyError(f"Attempt to overwrite stored data for model '{mname}'")
-        self.idata_mem[mname] = idata
+        else:
+            self.idata_mem[mname] = idata
 
     def get_model_data(self, model):
         """
@@ -492,7 +495,8 @@ class Algorithm(Model):
             dbook=self.__dbook,
             idata_mem=self.__idata_mem,
         ))
-        del self.__mbook, self.__dbook, self.__idata_mem
+        del self.__mbook, self.__dbook
+        self.__idata_mem = {}
 
     def unset_running(
         self, 

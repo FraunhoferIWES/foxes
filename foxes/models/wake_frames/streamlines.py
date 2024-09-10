@@ -263,10 +263,6 @@ class Streamlines2D(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        # calculate long enough streamlines:
-        xmax = np.max(x)
-        self._ensure_min_length(algo, mdata, fdata, xmax)
-
         # get streamline points:
         n_states, n_points = x.shape
         data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]
