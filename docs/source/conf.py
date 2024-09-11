@@ -90,8 +90,8 @@ exclude_patterns = [
     "build/*",
     # "_templates/*",
     # DEBUG
-    # "examples.rst",
-    # "notebooks/*",
+    #"examples.rst",
+    #"notebooks/*",
     # "notebooks/layout_opt.ipynb",
     # "notebooks/timelines.ipynb",
     # "notebooks/heterogeneous.ipynb",
@@ -316,6 +316,7 @@ python_apigen_modules = {
     "foxes.algorithms.sequential.models": "_foxes/algorithms/sequential/models/",
     "foxes.core": "_foxes/core/",
     "foxes.data": "_foxes/data/",
+    "foxes.engines": "_foxes/engines/",
     "foxes.input.farm_layout": "_foxes/input/farm_layout/",
     "foxes.input.states": "_foxes/input/states/",
     "foxes.input.states.create": "_foxes/input/states/create/",
