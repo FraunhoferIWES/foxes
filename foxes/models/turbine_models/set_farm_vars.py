@@ -17,7 +17,6 @@ class SetFarmVars(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def __init__(self, pre_rotor=False):
         """
         Constructor.

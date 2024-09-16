@@ -59,7 +59,7 @@ Contents
     .. toctree::
         :maxdepth: 2
 
-        notebooks/engines
+        notebooks/parallelization
 
     .. toctree::
         :maxdepth: 2

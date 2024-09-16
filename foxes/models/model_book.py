@@ -157,14 +157,14 @@ class ModelBook:
             fm.turbine_models.kTI,
             "kTI_<kTI>",
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+            hints={"kTI": "(Value, e.g. 02 for 0.2)"},
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
             "kTI_amb_<kTI>",
             kwargs=dict(ti_var=FV.AMB_TI),
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+            hints={"kTI": "(Value, e.g. 04 for 0.4)"},
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
@@ -172,7 +172,7 @@ class ModelBook:
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={
-                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kTI": "(Value, e.g. 04 for 0.4)",
                 "kb": "(Value, e.g. 004 for 0.04)",
             },
         )
@@ -183,7 +183,7 @@ class ModelBook:
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={
-                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kTI": "(Value, e.g. 04 for 0.4)",
                 "kb": "(Value, e.g. 004 for 0.04)",
             },
         )
@@ -466,6 +466,7 @@ class ModelBook:
             var2arg={"height": "heights"},
             height=lambda h: [0.0, float(h)],
             hints={"height": "(Boundary layer wake reflection height)"},
+            example_vars={"height": 500}
         )
 
         self.sources = FDict(

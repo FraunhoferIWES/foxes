@@ -21,7 +21,6 @@ class MultiprocessEngine(Engine):
     :group: engines
 
     """
-
     def initialize(self):
         """
         Initializes the engine.

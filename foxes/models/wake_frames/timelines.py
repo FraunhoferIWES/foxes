@@ -393,6 +393,8 @@ class Timelines(WakeFrame):
             trace_si.reshape(n_states, n_targets, n_tpoints),
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
+        
+        wcoos[wcoos>9e19] = np.nan
 
         return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
 
@@ -420,8 +422,56 @@ class Timelines(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        raise NotImplementedError
-
+        # prepare:
+        n_states, n_points = x.shape
+        rxyz = fdata[FV.TXYH][:, downwind_index]
+        theights = fdata[FV.H][:, downwind_index]
+        heights = self._dxy["height"].to_numpy()
+        data_dxy = self._dxy["dxy"].to_numpy()
+        
+        points = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
+        points[:] = rxyz[:, None, :]
+        
+        trace_dp = np.zeros_like(points[..., :2])
+        trace_l = x.copy()
+        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si[:] = np.arange(n_states)[:, None]
+          
+        for hi, h in enumerate(heights):
+            precond = (theights==h)
+            if np.any(precond):
+                sel = precond[:, None] & (trace_l>0)
+                while np.any(sel):
+                    dxy = data_dxy[hi][trace_si[sel]]
+            
+                    trl = trace_l[sel]
+                    trp = trace_dp[sel]
+                    dl = np.linalg.norm(dxy, axis=-1)
+                    cl = np.abs(trl-dl) < np.abs(trl)
+                    if np.any(cl):
+                        trace_l[sel] = np.where(cl, trl-dl, trl)
+                        trace_dp[sel] = np.where(cl[:, None], trp+dxy, trp)
+                    del trl, trp, dl, cl, dxy
+                    
+                    trace_si[sel] -= 1
+                    sel = precond[:, None] & (trace_l>0) & (trace_si>=0)
+                
+                si = trace_si[precond] + 1
+                dxy = data_dxy[hi][si]
+                dl = np.linalg.norm(dxy, axis=-1)[:, :, None]
+                trl = trace_l[precond][:, :, None]
+                trp = trace_dp[precond]
+                sel = np.abs(trl) < 2*dl
+                trace_dp[precond] = np.where(sel, trp-trl/dl*dxy, np.nan)
+                
+                del si, dxy, dl, trl, trp, sel
+            del precond
+        del trace_si, trace_l
+        
+        points[..., :2] += trace_dp
+        
+        return points
+                    
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

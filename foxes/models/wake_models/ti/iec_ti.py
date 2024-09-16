@@ -152,7 +152,7 @@ class IECTIWake(TopHatWakeModel):
             algo=algo,
             fdata=fdata,
             tdata=tdata,
-            upcast=False,
+            upcast=True,
             downwind_index=downwind_index,
         )
         return k * x

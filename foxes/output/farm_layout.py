@@ -29,7 +29,6 @@ class FarmLayoutOutput(Output):
     :group: output
 
     """
-
     def __init__(
         self, farm, farm_results=None, from_results=False, results_state=None, D=None
     ):

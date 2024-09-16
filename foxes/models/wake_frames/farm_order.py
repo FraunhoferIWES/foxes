@@ -22,8 +22,7 @@ class FarmOrder(WakeFrame):
     :group: models.wake_frames
 
     """
-
-    def __init__(self, base_frame=RotorWD()):
+    def __init__(self, base_frame=None):
         """
         Constructor.
 
@@ -36,6 +35,24 @@ class FarmOrder(WakeFrame):
         super().__init__()
         self.base_frame = base_frame
 
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if self.base_frame is None:
+            self.base_frame = RotorWD()
+        super().initialize(algo, verbosity, force)
+        
     def sub_models(self):
         """
         List of all sub-models
@@ -43,7 +60,7 @@ class FarmOrder(WakeFrame):
         Returns
         -------
         smdls: list of foxes.core.Model
-            Names of all sub models
+            All sub models
 
         """
         return [self.base_frame]

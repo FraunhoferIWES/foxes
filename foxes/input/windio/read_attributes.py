@@ -5,7 +5,8 @@ import foxes.variables as FV
 from .read_outputs import read_outputs
 
 
-def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbosity):
+def _read_wind_deficit(
+    wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity):
     """Reads the wind deficit wake model"""
 
     wind_def_map = Dict(
@@ -36,7 +37,7 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
     wname = wind_deficit.pop("name")
     eff_ws = wind_deficit.pop("use_effective_ws", True)
     if verbosity > 2:
-        print("    Reading wind_deficit_model")
+        print("    Reading", wake_model_key)
         print("      Name    :", wname)
         print("      Eff ws  :", eff_ws)
         print("      Contents:", [k for k in wind_deficit.keys()])
@@ -263,9 +264,10 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
         print("    axial induction model:", induction)
 
     # wind deficit model:
-    wind_deficit = Dict(wio_ana["wind_deficit_model"], name="wind_deficit_model")
+    wake_model_key = "wind_deficit_model" if "wind_deficit_model"in wio_ana else "wake_model"
+    wind_deficit = Dict(wio_ana[wake_model_key], name=wake_model_key)
     ka, kb, amb_ti = _read_wind_deficit(
-        wind_deficit, superposition, induction, algo_dict, verbosity
+        wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity
     )
 
     # turbulence model:

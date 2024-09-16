@@ -7,7 +7,7 @@ from foxes.data import StaticData, WINDIO
 
 from .read_fields import read_wind_resource_field
 from .get_states import get_states
-from .read_farm import read_layout, read_turbine_type
+from .read_farm import read_layout, read_turbine_types
 from .read_attributes import read_attributes
 from .runner import WindioRunner
 
@@ -76,8 +76,7 @@ def _read_farm(wio, algo_dict, verbosity):
         ws_exp_ct = 1
 
     # read turbine type:
-    turbines = Dict(wio_farm["turbines"], name="turbines")
-    ttype = read_turbine_type(turbines, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
+    ttypes = read_turbine_types(wio_farm, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
 
     # read layouts:
     wfarm = wio_farm["layouts"]
@@ -89,7 +88,7 @@ def _read_farm(wio, algo_dict, verbosity):
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
-        read_layout(lname, ldict, algo_dict, ttype, verbosity)
+        read_layout(lname, ldict, algo_dict, ttypes, verbosity)
 
 
 def read_windio(
