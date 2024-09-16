@@ -19,7 +19,6 @@ from foxes.core import (
     GroundModel,
 )
 
-
 class ModelBook:
     """
     Container for all kinds of models.

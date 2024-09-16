@@ -17,7 +17,6 @@ class States(PointDataModel):
     :group: core
 
     """
-
     @abstractmethod
     def size(self):
         """
@@ -61,6 +60,22 @@ class States(PointDataModel):
         """
         pass
 
+    def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
+        """
+        Reset the states, optionally select states
+
+        Parameters
+        ----------
+        states_sel: slice or range or list of int, optional
+            States subset selection
+        states_loc: list, optional
+            State index selection via pandas loc function
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        raise NotImplementedError(f"States '{self.name}': Reset is not implemented")
+    
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.

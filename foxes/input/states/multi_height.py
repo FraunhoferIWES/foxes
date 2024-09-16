@@ -526,7 +526,6 @@ class MultiHeightStates(States):
         self._weights = None
         self._N = None
 
-
 class MultiHeightNCStates(MultiHeightStates):
     """
     Multi-height states from xarray Dataset.
@@ -545,7 +544,6 @@ class MultiHeightNCStates(MultiHeightStates):
     :group: input.states
 
     """
-
     def __init__(
         self,
         data_source,

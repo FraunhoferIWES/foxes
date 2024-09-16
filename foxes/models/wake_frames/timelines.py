@@ -1,9 +1,9 @@
 import numpy as np
 from xarray import Dataset
 
-from foxes.core import WakeFrame
+from foxes.core import WakeFrame,MData, FData, TData
 from foxes.utils import wd2uv
-from foxes.core.data import MData, FData, TData
+from foxes.input.states import TimelinesStates
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -26,7 +26,6 @@ class Timelines(WakeFrame):
     :group: models.wake_frames
 
     """
-
     def __init__(self, max_wake_length=2e4, cl_ipars={}, dt_min=None):
         """
         Constructor.
@@ -65,25 +64,6 @@ class Timelines(WakeFrame):
         """
         super().initialize(algo, verbosity)
 
-        if verbosity > 0:
-            print(f"{self.name}: Pre-calculating ambient wind vectors")
-
-        # get and check times:
-        times = np.asarray(algo.states.index())
-        if self.dt_min is None:
-            if not np.issubdtype(times.dtype, np.datetime64):
-                raise TypeError(
-                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
-                )
-            elif len(times) == 1:
-                raise KeyError(
-                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
-                )
-            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
-        else:
-            n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
-
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
@@ -92,67 +72,8 @@ class Timelines(WakeFrame):
             )
         heights = np.unique(t2h)
 
-        # prepare mdata:
-        data = algo.get_model_data(algo.states)["coords"]
-        mdict = {v: np.array(d) for v, d in data.items()}
-        mdims = {v: (v,) for v in data.keys()}
-        data = algo.get_model_data(algo.states)["data_vars"]
-        mdict.update({v: d[1] for v, d in data.items()})
-        mdims.update({v: d[0] for v, d in data.items()})
-        mdata = MData(mdict, mdims, loop_dims=[FC.STATE])
-        del mdict, mdims, data
-
-        # prepare fdata:
-        fdata = FData({}, {}, loop_dims=[FC.STATE])
-
-        # prepare tdata:
-        tdata = {
-            v: np.zeros((algo.n_states, 1, 1), dtype=FC.DTYPE)
-            for v in algo.states.output_point_vars(algo)
-        }
-        pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
-        points = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-
-        # calculate all heights:
-        self._dxy = []
-        for h in heights:
-
-            if verbosity > 0:
-                print(f"  Height: {h} m")
-
-            points[..., 2] = h
-            tdata = TData.from_points(
-                points=points,
-                data=tdata,
-                dims=pdims,
-            )
-
-            res = algo.states.calculate(algo, mdata, fdata, tdata)
-            if len(dt) == 1:
-                dxy = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2] * dt[:, None]
-            else:
-                dxy = wd2uv(res[FV.WD], res[FV.WS])[:-1, 0, 0, :2] * dt[:, None]
-                dxy = np.insert(dxy, 0, dxy[0], axis=0)
-            self._dxy.append(dxy)
-            """ DEBUG
-            import matplotlib.pyplot as plt
-            xy = np.array([np.sum(self._dxy[h][:n], axis=0) for n in range(len(self._dxy[h]))])
-            print(xy)
-            plt.plot(xy[:, 0], xy[:, 1])
-            plt.title(f"Height {h} m")
-            plt.show()
-            quit()
-            """
-
-        self._dxy = Dataset(
-            coords={
-                FC.STATE: algo.states.index(),
-                "height": heights,
-            },
-            data_vars={
-                "dxy": (("height", FC.STATE, "dir"), np.stack(self._dxy, axis=0))
-            },
-        )
+        # pre-calc data:
+        TimelinesStates._precalc_data(self, algo, algo.states, heights, verbosity)
 
     def set_running(
         self,
@@ -184,15 +105,7 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
-
-        if sel is not None or isel is not None:
-            data_stash[self.name]["dxy"] = self._dxy
-
-            if isel is not None:
-                self._dxy = self._dxy.isel(isel)
-            if sel is not None:
-                self._dxy = self._dxy.sel(sel)
+        TimelinesStates.set_running(self, algo, data_stash, sel, isel, verbosity)
 
     def unset_running(
         self,
@@ -221,11 +134,7 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
-
-        data = data_stash[self.name]
-        if "dxy" in data:
-            self._dxy = data.pop("dxy")
+        TimelinesStates.unset_running(self, algo, data_stash, sel, isel, verbosity)
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -309,8 +218,8 @@ class Timelines(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self._dxy["height"].to_numpy()
-        data_dxy = self._dxy["dxy"].to_numpy()
+        heights = self._data["height"].to_numpy()
+        data_dxy = self._data["dxy"].to_numpy()
 
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
@@ -426,8 +335,8 @@ class Timelines(WakeFrame):
         n_states, n_points = x.shape
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self._dxy["height"].to_numpy()
-        data_dxy = self._dxy["dxy"].to_numpy()
+        heights = self._data["height"].to_numpy()
+        data_dxy = self._data["dxy"].to_numpy()
         
         points = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
         points[:] = rxyz[:, None, :]
@@ -485,4 +394,4 @@ class Timelines(WakeFrame):
 
         """
         super().finalize(algo, verbosity=verbosity)
-        self._dxy = None
+        self._data = None

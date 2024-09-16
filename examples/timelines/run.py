@@ -13,6 +13,9 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
+        "-b0", "--background0", help="Switch off dynamic background interpretation", action="store_true"
+    )
+    parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
     parser.add_argument(
@@ -76,7 +79,12 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    states = foxes.input.states.Timeseries(
+    if args.background0:
+        States = foxes.input.states.Timeseries
+    else:
+        States = foxes.input.states.TimeseriesTimelines
+        
+    states = States(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
