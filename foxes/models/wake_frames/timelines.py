@@ -1,9 +1,8 @@
 import numpy as np
 from xarray import Dataset
 
-from foxes.core import WakeFrame,MData, FData, TData
+from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
-from foxes.input.states import TimelinesStates
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -49,7 +48,111 @@ class Timelines(WakeFrame):
 
     def __repr__(self):
         return f"{type(self).__name__}(dt_min={self.dt_min})"
+    
+    def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
+        """Helper function for pre-calculation of ambient wind vectors"""
+        
+        if verbosity > 0:
+            print(f"{self.name}: Pre-calculating ambient wind vectors")
 
+        # get and check times:
+        times = np.asarray(states.index())
+        if self.dt_min is None:
+            if not np.issubdtype(times.dtype, np.datetime64):
+                raise TypeError(
+                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
+                )
+            elif len(times) == 1:
+                raise KeyError(
+                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
+                )
+            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+        else:
+            n = max(len(times) - 1, 1)
+            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
+
+        # prepare mdata:
+        data = algo.get_model_data(states)["coords"]
+        mdict = {v: np.array(d) for v, d in data.items()}
+        mdims = {v: (v,) for v in data.keys()}
+        data = algo.get_model_data(states)["data_vars"]
+        mdict.update({v: d[1] for v, d in data.items()})
+        mdims.update({v: d[0] for v, d in data.items()})
+        mdata = MData(mdict, mdims, loop_dims=[FC.STATE], states_i0=0)
+        del mdict, mdims, data
+
+        # prepare fdata:
+        fdata = FData({}, {}, loop_dims=[FC.STATE])
+
+        # prepare tdata:
+        n_states = states.size()
+        data = {
+            v: np.zeros((n_states, 1, 1), dtype=FC.DTYPE)
+            for v in states.output_point_vars(algo)
+        }
+        pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in data.keys()}
+        points = np.zeros((n_states, 1, 3), dtype=FC.DTYPE)
+
+        # calculate all heights:
+        self._data = {"dxy": (("height", FC.STATE, "dir"), [])}
+        for h in heights:
+
+            if verbosity > 0:
+                print(f"  Height: {h} m")
+
+            points[..., 2] = h
+            tdata = TData.from_points(
+                points=points,
+                data=data,
+                dims=pdims,
+            )
+
+            res = states.calculate(algo, mdata, fdata, tdata)
+            del tdata
+            
+            uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2]
+            if len(dt) == 1:
+                dxy = uv * dt[0]
+            else:
+                dxy = uv[:-1] * dt[:, None]
+                dxy = np.insert(dxy, 0, dxy[0], axis=0)
+            self._data["dxy"][1].append(dxy)
+            """ DEBUG
+            import matplotlib.pyplot as plt
+            xy = np.array([np.sum(self._data[h][:n], axis=0) for n in range(len(self._data[h]))])
+            print(xy)
+            plt.plot(xy[:, 0], xy[:, 1])
+            plt.title(f"Height {h} m")
+            plt.show()
+            quit()
+            """
+            
+            if needs_res:
+                if "U" not in self._data:
+                    self._data["U"] = (("height", FC.STATE), [])
+                    self._data["V"] = (("height", FC.STATE), [])
+                self._data["U"][1].append(uv[:, 0])
+                self._data["V"][1].append(uv[:, 1])
+                
+                for v in states.output_point_vars(algo):
+                    if v not in [FV.WS, FV.WD]:
+                        if v not in self._data:
+                            self._data[v] = (("height", FC.STATE), [])
+                        self._data[v][1].append(res[v][:, 0, 0])
+                        
+            del res, uv, dxy
+                        
+        self._data = Dataset(
+            coords={
+                FC.STATE: states.index(),
+                "height": heights,
+            },
+            data_vars={
+                v: (d[0], np.stack(d[1], axis=0))
+                for v, d in self._data.items()
+            },
+        )
+        
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -73,7 +176,7 @@ class Timelines(WakeFrame):
         heights = np.unique(t2h)
 
         # pre-calc data:
-        TimelinesStates._precalc_data(self, algo, algo.states, heights, verbosity)
+        self._precalc_data(algo, algo.states, heights, verbosity)
 
     def set_running(
         self,
@@ -105,7 +208,15 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        TimelinesStates.set_running(self, algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+
+        if sel is not None or isel is not None:
+            data_stash[self.name]["data"] = self._data
+
+            if isel is not None:
+                self._data = self._data.isel(isel)
+            if sel is not None:
+                self._data = self._data.sel(sel)
 
     def unset_running(
         self,
@@ -134,7 +245,11 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        TimelinesStates.unset_running(self, algo, data_stash, sel, isel, verbosity)
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+
+        data = data_stash[self.name]
+        if "data" in data:
+            self._data = data.pop("data")
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -395,3 +510,242 @@ class Timelines(WakeFrame):
         """
         super().finalize(algo, verbosity=verbosity)
         self._data = None
+
+class TimelinesFollow(WakeFrame):
+    """
+    Dynamic wakes for spatially uniform timeseries states,
+    following TimelinesStates results
+    
+    Attributes
+    ----------
+    dt_min: float
+        The delta t value in minutes,
+        if not from timeseries data
+
+    :group: models.wake_frames
+
+    """
+    def __init__(self, dt_min=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        dt_min: float, optional
+            The delta t value in minutes,
+            if not from timeseries data
+
+        """
+        super().__init__()
+        self.dt_min = dt_min
+        
+    def initialize(self, algo, verbosity=0):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().initialize(algo, verbosity)
+
+        # find turbine hub heights:
+        t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
+        for ti, t in enumerate(algo.farm.turbines):
+            t2h[ti] = (
+                t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
+            )
+        self.heights = np.unique(t2h)
+        
+        # find dt array:
+        self._dt = Timelines._get_dt(self, algo.states)
+
+    def calc_order(self, algo, mdata, fdata):
+        """ "
+        Calculates the order of turbine evaluation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+
+        Returns
+        -------
+        order: numpy.ndarray
+            The turbine order, shape: (n_states, n_turbines)
+
+        """
+        # prepare:
+        n_states = fdata.n_states
+        n_turbines = algo.n_turbines
+        tdata = TData.from_points(points=fdata[FV.TXYH])
+
+        # calculate streamline x coordinates for turbines rotor centre points:
+        # n_states, n_turbines_source, n_turbines_target
+        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
+        for ti in range(n_turbines):
+            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+                :, :, 0, 0
+            ]
+
+        # derive turbine order:
+        # TODO: Remove loop over states
+        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
+        for si in range(n_states):
+            order[si] = np.lexsort(keys=coosx[si])
+
+        return order
+
+    def get_wake_coos(
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        downwind_index,
+    ):
+        """
+        Calculate wake coordinates of rotor points.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwnd order
+
+        Returns
+        -------
+        wake_coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+
+        """
+        # prepare:
+        targets = tdata[FC.TARGETS]
+        n_states, n_targets, n_tpoints = targets.shape[:3]
+        rxyz = fdata[FV.TXYH][:, downwind_index]
+        theights = fdata[FV.H][:, downwind_index]
+        heights = self.heights
+
+        #D = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+        #D[:] = fdata[FV.D][:, downwind_index, None, None]
+
+        #wcoos = np.full((n_states, n_targets, n_tpoints, 3), 1e20, dtype=FC.DTYPE)
+        #wcoosx = wcoos[..., 0]
+        #wcoosy = wcoos[..., 1]
+        #wcoos[..., 2] = points[..., 2] - rxyz[:, None, None, 2]
+        
+        trace_p = targets.copy()
+        trace_si = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.ITYPE)
+        trace_si[:] = i0 + np.arange(n_states)[:, None, None] 
+        sel = np.ones((n_states, n_targets, n_tpoints), dtype=bool)
+        while np.any(sel):            
+            tdata = TData.from_tpoints(trace_p)
+            res = algo.states.calculate(algo, mdata, fdata, tdata)
+            del tdata
+            
+            uv = wd2uv(res[FV.WD], res[FV.WS])
+            del res
+            if len(self._dt) == 1:
+                dxy = uv * self._dt[0]
+            else:
+                dxy = uv[:-1] * self._dt[:, None, None, None]
+                dxy = np.insert(dxy, 0, dxy[0], axis=0)
+            
+            trace_p[:-1] = trace_p[1:] - dxy[:-1]
+            TODO
+            
+        
+
+        i0 = mdata.states_i0(counter=True)
+        trace_si = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.ITYPE)
+        trace_si[:] = i0 + np.arange(n_states)[:, None, None] + 1
+        for hi, h in enumerate(heights):
+
+            trace_p = np.zeros((n_states, n_targets, n_tpoints, 2), dtype=FC.DTYPE)
+            trace_p[:] = points[..., :2] - rxyz[:, None, None, :2]
+            trace_l = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+            trace_d = np.full((n_states, n_targets, n_tpoints), np.inf, dtype=FC.DTYPE)
+            h_trace_si = trace_si.copy()
+
+            # step backwards in time, until wake source turbine is hit:
+            precond = (theights[:, None, None]==h)
+            while True:
+                sel = precond & (h_trace_si > 0) & (trace_l < self.max_wake_length)
+                if np.any(sel):
+                    h_trace_si[sel] -= 1
+                    
+                    
+
+                    delta = dxy[h_trace_si[sel]]
+                    dmag = np.linalg.norm(delta, axis=-1)
+                    trace_p[sel] -= delta
+                    trace_l[sel] += dmag
+                    del delta, dmag
+
+                    # check if this is closer to turbine:
+                    d = np.linalg.norm(trace_p, axis=-1)
+                    sel = sel & (d <= trace_d)
+                    if np.any(sel):
+                        trace_d[sel] = d[sel]
+
+                        nx = dxy[h_trace_si[sel]]
+                        dx = np.linalg.norm(nx, axis=-1)
+                        nx /= dx[:, None]
+                        trp = trace_p[sel]
+                        projx = np.einsum("sd,sd->s", trp, nx)
+
+                        seln = (projx > -dx) & (projx < dx)
+                        if np.any(seln):
+                            wcoosx[sel] = np.where(
+                                seln, projx + trace_l[sel], wcoosx[sel]
+                            )
+
+                            ny = np.concatenate(
+                                [-nx[:, 1, None], nx[:, 0, None]], axis=1
+                            )
+                            projy = np.einsum("sd,sd->s", trp, ny)
+                            wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
+                            del ny, projy
+
+                            trace_si[sel] = np.where(
+                                seln, h_trace_si[sel], trace_si[sel]
+                            )
+
+                        del nx, dx, projx, seln
+                    del d, sel
+
+                else:
+                    break
+
+            del trace_p, trace_l, trace_d, h_trace_si, dxy, precond
+
+        # store turbines that cause wake:
+        tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
+
+        # store states that cause wake for each target point,
+        # will be used by model.get_data() during wake calculation:
+        tdata.add(
+            FC.STATES_SEL,
+            trace_si.reshape(n_states, n_targets, n_tpoints),
+            (FC.STATE, FC.TARGET, FC.TPOINT),
+        )

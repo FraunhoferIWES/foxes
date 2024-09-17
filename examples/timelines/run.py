@@ -81,15 +81,18 @@ if __name__ == "__main__":
 
     if args.background0:
         States = foxes.input.states.Timeseries
+        kwargs = {}
     else:
         States = foxes.input.states.TimeseriesTimelines
+        kwargs = {"ref_xy": [-500, -500]}
         
     states = States(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
-        # states_sel=range(20,30)
+        # states_sel=range(20,30),
+        **kwargs,
     )
 
     farm = foxes.WindFarm()

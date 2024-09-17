@@ -415,11 +415,21 @@ class Algorithm(Model):
         i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
         key = (i0, t0)
+        
         if key not in self.chunk_store:
-            self.chunk_store[key] = Dict(name=f"chunk_store_{i0}_{t0}")
+            self.chunk_store[key] = Dict(
+                {
+                    "i0": i0,
+                    "t0": t0, 
+                    "n_states": mdata.n_states,
+                    "n_targets": 0 if tdata is None else tdata.n_targets,
+                },
+                name=f"chunk_store_{i0}_{t0}"
+            )
+            
         self.chunk_store[key][name] = data.copy() if copy else data
 
-    def get_from_chunk_store(self, name, mdata, tdata=None):
+    def get_from_chunk_store(self, name, mdata, tdata=None, prev_s=0, prev_t=0):
         """
         Get data to the chunk store
 
@@ -431,6 +441,10 @@ class Algorithm(Model):
             The mdata object
         tdata: foxes.core.TData, optional
             The tdata object
+        prev_s: int
+            How many states chunks backward
+        prev_t: int
+            How many points chunks backward 
 
         Returns
         -------
@@ -440,6 +454,29 @@ class Algorithm(Model):
         """
         i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        
+        if prev_s > 0 or prev_t > 0:
+            inds = np.array([
+                [d["i0"], d["i0"]+d["n_states"], d["n_states"],
+                 d["t0"], d["t0"]+d["n_targets"], d["n_targets"]]
+                for d in self.chunk_store.values()
+            ], dtype=int)
+            if prev_t > 0:
+                while prev_t > 0:
+                    sel = np.where((inds[:, 0]==i0) & (inds[:, 4]==t0))[0]
+                    if len(sel) == 0:
+                        raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                    else:
+                        t0 -= inds[sel[0], 5]
+                        prev_t -= 1
+                while prev_s > 0:
+                    sel = np.where((inds[:, 1]==i0) & (inds[:, 3]==t0))[0]
+                    if len(sel) == 0:
+                        raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                    else:
+                        i0 -= inds[sel[0], 2]
+                        prev_s -= 1
+            
         return self.chunk_store[(i0, t0)][name]
 
     def reset_chunk_store(self, new_chunk_store=None):

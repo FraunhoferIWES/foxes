@@ -1,15 +1,11 @@
 import numpy as np
-import pandas as pd
-from xarray import Dataset
-from pathlib import Path
 from scipy.interpolate import interpn
 
-from foxes.core import States, MData, FData, TData
-from foxes.utils import wd2uv, uv2wd
-from foxes.data import STATES
+from foxes.core import States
+from foxes.utils import uv2wd
+from foxes.models.wake_frames.timelines import Timelines
 import foxes.variables as FV
 import foxes.constants as FC
-
 
 class TimelinesStates(States):
     """
@@ -26,7 +22,10 @@ class TimelinesStates(States):
     dt_min: float
         The delta t value in minutes,
         if not from timeseries data
-        
+    intp_pars: dict
+        Parameters for height interpolation with 
+        scipy.interpolate.interpn
+            
     :group: input.states
             
     """
@@ -69,6 +68,10 @@ class TimelinesStates(States):
         self.base_states = base_states
         self.dt_min = dt_min
         
+        self.intp_pars = {}
+        if "bounds_error" in base_states_kwargs:
+            self.intp_pars["bounds_error"] = base_states_kwargs["bounds_error"]
+        
         if base_states is not None and len(base_states_kwargs):
             raise KeyError(f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_state_pars {list(base_states_kwargs.keys())}")
         elif base_states is not None and len(base_states_args):
@@ -76,14 +79,6 @@ class TimelinesStates(States):
         elif base_states is None:
             self.base_states = States.new(*base_states_args, **base_states_kwargs)
             
-        if tl_heights is None:
-            if hasattr(self.base_states, "heights"):
-                self.heights = self.base_states.heights
-            elif len(self.ref_xy) > 2:
-                self.heights = [self.ref_xy[2]]
-            else:
-                raise KeyError(f"Cannot find 'heights' in base states of type '{type(self.base_states).__name__}', missing either `ref_xy` of type [x, y, z], or explicit value list via parameter 'tl_heights'")
-
     def __repr__(self):
         return f"{type(self).__name__}(base={type(self.base_states).__name__}, heights={self.heights}, dt_min={self.dt_min})"
     
@@ -98,109 +93,6 @@ class TimelinesStates(States):
 
         """
         return [self.base_states]
-    
-    def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
-        """Helper function for pre-calculation of ambient wind vectors"""
-        
-        if verbosity > 0:
-            print(f"{self.name}: Pre-calculating ambient wind vectors")
-
-        # get and check times:
-        times = np.asarray(states.index())
-        if self.dt_min is None:
-            if not np.issubdtype(times.dtype, np.datetime64):
-                raise TypeError(
-                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
-                )
-            elif len(times) == 1:
-                raise KeyError(
-                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
-                )
-            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
-        else:
-            n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
-
-        # prepare mdata:
-        data = algo.get_model_data(states)["coords"]
-        mdict = {v: np.array(d) for v, d in data.items()}
-        mdims = {v: (v,) for v in data.keys()}
-        data = algo.get_model_data(states)["data_vars"]
-        mdict.update({v: d[1] for v, d in data.items()})
-        mdims.update({v: d[0] for v, d in data.items()})
-        mdata = MData(mdict, mdims, loop_dims=[FC.STATE])
-        del mdict, mdims, data
-
-        # prepare fdata:
-        fdata = FData({}, {}, loop_dims=[FC.STATE])
-
-        # prepare tdata:
-        tdata = {
-            v: np.zeros((algo.n_states, 1, 1), dtype=FC.DTYPE)
-            for v in states.output_point_vars(algo)
-        }
-        pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in tdata.keys()}
-        points = np.zeros((algo.n_states, 1, 3), dtype=FC.DTYPE)
-
-        # calculate all heights:
-        self._data = {"dxy": (("height", FC.STATE, "dir"), [])}
-        for h in heights:
-
-            if verbosity > 0:
-                print(f"  Height: {h} m")
-
-            points[..., 2] = h
-            tdata = TData.from_points(
-                points=points,
-                data=tdata,
-                dims=pdims,
-            )
-
-            res = states.calculate(algo, mdata, fdata, tdata)
-            del tdata
-            
-            uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2]
-            if len(dt) == 1:
-                dxy = uv * dt[:, None]
-            else:
-                dxy = uv[:-1] * dt[:, None]
-                dxy = np.insert(dxy, 0, dxy[0], axis=0)
-            self._data["dxy"][1].append(dxy)
-            """ DEBUG
-            import matplotlib.pyplot as plt
-            xy = np.array([np.sum(self._data[h][:n], axis=0) for n in range(len(self._data[h]))])
-            print(xy)
-            plt.plot(xy[:, 0], xy[:, 1])
-            plt.title(f"Height {h} m")
-            plt.show()
-            quit()
-            """
-            
-            if needs_res:
-                if "U" not in self._data:
-                    self._data[v] = {"U": (("height", FC.STATE), [])}
-                    self._data[v] = {"V": (("height", FC.STATE), [])}
-                self._data["U"][1].append(uv[:, 0])
-                self._data["V"][1].append(uv[:, 1])
-                
-                for v in states.output_point_vars(algo):
-                    if v not in [FV.WS, FV.WD]:
-                        if v not in self._data:
-                            self._data[v] = {v: (("height", FC.STATE), [])}
-                        self._data[v][1].append(res[v][:, 0, 0])
-                        
-            del res, uv, dxy
-                        
-        self._data = Dataset(
-            coords={
-                FC.STATE: states.index(),
-                "height": heights,
-            },
-            data_vars={
-                v: (d[0], np.stack(d[1], axis=0))
-                for v, d in self._data.items()
-            },
-        )
 
     def initialize(self, algo, verbosity=0):
         """
@@ -216,8 +108,18 @@ class TimelinesStates(States):
         """
         super().initialize(algo, verbosity)
 
+        # find heights:
+        if self.heights is None:
+            if hasattr(self.base_states, "heights"):
+                self.heights = self.base_states.heights
+            elif len(self.ref_xy) > 2:
+                self.heights = [self.ref_xy[2]]
+            else:
+                raise KeyError(f"Cannot find 'heights' in base states of type '{type(self.base_states).__name__}', missing either `ref_xy` of type [x, y, z], or explicit value list via parameter 'tl_heights'")
+        
         # pre-calc data:
-        self._precalc_data(algo, self.base_states, self.heights, verbosity, needs_res=True)
+        Timelines._precalc_data(
+            self, algo, self.base_states, self.heights, verbosity, needs_res=True)
             
     def size(self):
         """
@@ -258,7 +160,7 @@ class TimelinesStates(States):
             The output variable names
 
         """
-        return self.base_states.output_point_vars()
+        return self.base_states.output_point_vars(algo)
 
     def weights(self, algo):
         """
@@ -275,7 +177,7 @@ class TimelinesStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return self.base_states.weights()
+        return self.base_states.weights(algo)
 
     def set_running(
         self,
@@ -350,6 +252,38 @@ class TimelinesStates(States):
         if "data" in data:
             self._data = data.pop("data")
             
+    def calc_states_indices(self, mdata, points, hi, ref_xy):
+        
+        n_states, n_points = points.shape[:2]
+        dxy = self._data["dxy"].to_numpy()[hi]
+        
+        i0 = mdata.states_i0(counter=True)
+        trace_p = points[:, :, :2] - ref_xy[:, :, :2]
+        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1
+        trace_done = np.zeros((n_states, n_points), dtype=bool)
+
+        # step backwards in time, until projection onto axis is negative:
+        while np.any(~trace_done):
+            sel = ~trace_done
+            trace_si[sel] -= 1
+            
+            nx = dxy[trace_si[sel]]
+            trace_p[sel] -= nx
+            nx /= np.linalg.norm(nx, axis=-1)[:, None]
+            projx = np.einsum("sd,sd->s", trace_p[sel], nx)
+            
+            seld = (projx < 0) | (trace_si[sel] < 0)
+            if np.any(seld):
+                trd = trace_done[sel]
+                trd[seld] = True
+                trace_done[sel] = trd
+                
+                del trd
+            del seld, projx, nx, sel
+        
+        return np.maximum(trace_si, 0)
+            
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -382,40 +316,14 @@ class TimelinesStates(States):
         n_points = n_targets * n_tpoints
         points = targets.reshape(n_states, n_points, 3)
         heights = self._data["height"].to_numpy()
-        data_dxy = self._data["dxy"].to_numpy()
         n_heights = len(heights)
 
         # compute states indices for all requested points:
-        i0 = mdata.states_i0(counter=True)
-        i1 = i0 + n_states
-        trace_si = np.zeros((n_heights, n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = i0 + np.arange(n_states)[None, :, None] + 1
-        trace_done = np.zeros((n_heights, n_states, n_points), dtype=bool)
+        trace_si = []
         for hi in range(n_heights):
-            
-            trace_p = points[:, :, :2] - self.ref_xy[None, None, :2]
-            h_trace_si = trace_si[hi]
-
-            # step backwards in time, until projection onto axis is negative:
-            while np.any(~trace_done[hi]):
-                sel = ~trace_done[hi]
-                h_trace_si[sel] -= 1
-                
-                nx = data_dxy[hi][trace_si[sel]]
-                trace_p[sel] -= nx
-                nx /= np.linalg.norm(nx, axis=-1)
-                projx = np.einsum("sd,sd->s", trace_p[sel], nx)
-                
-                seld = (projx < 0) | (h_trace_si[sel] < 0)
-                if np.any(seld):
-                    trd = trace_done[hi][sel]
-                    trd[seld] = True
-                    trace_done[hi][sel] = trd
-                    
-                    del trd
-                del seld, projx, nx, sel
-            del h_trace_si, trace_p
-        del trace_done
+            trace_si.append(self.calc_states_indices(
+                mdata, points, hi, self.ref_xy[None, None, :]
+            ))
                 
         # interpolate to heights:
         if n_heights > 1:
@@ -423,24 +331,47 @@ class TimelinesStates(States):
             ar_states = np.arange(n_states)
             ar_points = np.arange(n_points)
             
-            data = {v: d.to_numpy()[trace_si]
+            crds = (heights, ar_states, ar_points)
+            
+            data = {v: np.stack(
+                        [d.to_numpy()[hi, trace_si[hi]] for hi in range(n_heights)]
+                        , axis=0)
                     for v, d in self._data.data_vars.items()
                     if v != "dxy"}
             vres = list(data.keys())
-            data = np.stack(data.values(), axis=-1)
+            data = np.stack(list(data.values()), axis=-1)
             
             eval = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
             eval[:, :, 0] = points[:, :, 2]
             eval[:, :, 1] = ar_states[:, None]
             eval[:, :, 2] = ar_points[None, :]
             
-            ires = interpn(
-                (heights, ar_states, ar_points), data, eval)
-            del eval, data, ar_points, ar_states
+            try:
+                ires = interpn(crds, data, eval, **self.intp_pars)
+            except ValueError as e:
+                print(f"\nStates '{self.name}': Interpolation error")
+                print("INPUT VARS: (heights, states, points)")
+                print(
+                    "DATA BOUNDS:",
+                    [float(np.min(d)) for d in crds],
+                    [float(np.max(d)) for d in crds],
+                )
+                print(
+                    "EVAL BOUNDS:",
+                    [float(np.min(p)) for p in eval.T],
+                    [float(np.max(p)) for p in eval.T],
+                )
+                print(
+                    "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
+                )
+                raise e
+            del crds, eval, data, ar_points, ar_states
             
             results = {}
             for v in self.output_point_vars(algo):
-                if v in [FV.WS, FV.WD] and v not in results:
+                if v not in [FV.WS, FV.WD]:
+                    results[v] = ires[:, :, vres.index(v)]
+                elif v not in results:
                     uv = np.stack(
                         [ires[:, :, vres.index("U")], 
                         ires[:, :, vres.index("V")]],
@@ -451,16 +382,15 @@ class TimelinesStates(States):
                         FV.WS: np.linalg.norm(uv, axis=-1)
                     }
                     del uv
-                    
-                else:
-                    results[v] = ires[:, :, vres.index(v)]
         
         # no dependence on height:
         else:
             results = {}
             sel = trace_si[0]
             for v in self.output_point_vars(algo):
-                if v in [FV.WS, FV.WD] and v not in results:
+                if v not in [FV.WS, FV.WD]:
+                    results[v] = self._data[v].to_numpy()[0, sel]
+                elif v not in results:
                     uv = np.stack(
                         [self._data["U"].to_numpy()[0, sel], 
                         self._data["V"].to_numpy()[0, sel]],
@@ -471,9 +401,6 @@ class TimelinesStates(States):
                         FV.WS: np.linalg.norm(uv, axis=-1)
                     }
                     del uv
-                    
-                else:
-                    results[v] = self._data[v].to_numpy()[0, sel]
         
         return {v: d.reshape(n_states, n_targets, n_tpoints)
                 for v, d in results.items()}
@@ -531,7 +458,7 @@ class MultiHeightTimelines(TimelinesStates):
             Parameters for the base class
              
         """
-        super().__init__(*args, states_type="MultiHeightStates", **kwargs)
+        super().__init__(*args, states_type="MultiHeightTimeseries", **kwargs)
         
 class MultiHeightNCTimelines(TimelinesStates):
     """
@@ -552,5 +479,5 @@ class MultiHeightNCTimelines(TimelinesStates):
             Parameters for the base class
              
         """
-        super().__init__(*args, states_type="MultiHeightNCStates", **kwargs)
+        super().__init__(*args, states_type="MultiHeightNCTimeseries", **kwargs)
         

@@ -24,7 +24,6 @@ class Data(Dict):
     :group: core
 
     """
-
     def __init__(
         self,
         data,
@@ -293,7 +292,6 @@ class Data(Dict):
 
         return cls(*args, data=data, dims=dims, **kwargs)
 
-
 class MData(Data):
     """
     Container for foxes model data.
@@ -301,7 +299,6 @@ class MData(Data):
     :group: core
 
     """
-
     def __init__(self, *args, name="mdata", **kwargs):
         """
         Constructor
@@ -318,7 +315,6 @@ class MData(Data):
         """
         super().__init__(*args, name=name, **kwargs)
 
-
 class FData(Data):
     """
     Container for foxes farm data.
@@ -329,7 +325,6 @@ class FData(Data):
     :group: core
 
     """
-
     def __init__(self, *args, name="fdata", **kwargs):
         """
         Constructor

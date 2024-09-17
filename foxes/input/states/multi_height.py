@@ -713,7 +713,6 @@ class MultiHeightNCStates(MultiHeightStates):
 
         return idata
 
-
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -721,9 +720,7 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
-
     RDICT = {"index_col": 0, "parse_dates": [0]}
-
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):
     """
@@ -732,7 +729,6 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     :group: input.states
 
     """
-
     def __init__(
         self,
         *args,

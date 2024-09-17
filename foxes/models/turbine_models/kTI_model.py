@@ -4,7 +4,6 @@ from foxes.core import TurbineModel
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class kTI(TurbineModel):
     """
     Calculates the wake model parameter `k`
@@ -20,7 +19,6 @@ class kTI(TurbineModel):
     :group: models.turbine_models
 
     """
-
     def __init__(self, kTI=None, kb=None, ti_var=FV.TI, ti_val=None, k_var=FV.K):
         """
         Constructor.
