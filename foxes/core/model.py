@@ -337,7 +337,6 @@ class Model(ABC):
             otherwise dimension 1 is entered
 
         """
-
         def _geta(a):
             sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
@@ -546,7 +545,7 @@ class Model(ABC):
                 # find the mean index and round it to nearest integer:
                 sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
                 sts = (sts + 0.5).astype(FC.ITYPE)
-            sel = sts < i0
+            sel = sts < i0   
             if np.any(sel):
                 if not hasattr(algo, "farm_results_downwind"):
                     raise KeyError(
@@ -559,7 +558,17 @@ class Model(ABC):
                         out[sel[:, :, 0]] = prev_data
                     else:
                         out[sel] = prev_data
-                    del prev_fres, prev_data
+                    del prev_data
+                del prev_fres
+            if np.any(~sel):
+                sts = sts[~sel] - i0
+                sel_data = fdata[variable][sts, downwind_index]
+                if target == FC.STATE_TARGET:
+                    out[~sel[:, :, 0]] = sel_data
+                else:
+                    out[~sel] = sel_data
+                del sel_data
+            del sel, sts
 
         # check for None:
         if not accept_none and out is None:

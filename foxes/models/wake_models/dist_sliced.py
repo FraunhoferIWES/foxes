@@ -1,8 +1,6 @@
 from abc import abstractmethod
-import numpy as np
 
 from foxes.core import WakeModel
-
 
 class DistSlicedWakeModel(WakeModel):
     """
@@ -26,7 +24,6 @@ class DistSlicedWakeModel(WakeModel):
     :group: models.wake_models
 
     """
-
     def __init__(self, superpositions):
         """
         Constructor.
@@ -153,8 +150,7 @@ class DistSlicedWakeModel(WakeModel):
             (n_states, n_targets, n_tpoints, ...)
 
         """
-        # rounding for safe x > 0 conditions
-        x = np.round(wake_coos[:, :, 0, 0], 12)
+        x = wake_coos[:, :, 0, 0]
         yz = wake_coos[..., 1:3]
 
         wdeltas, st_sel = self.calc_wakes_x_yz(

@@ -198,7 +198,7 @@ class RankineHalfBody(TurbineInductionModel):
         xs = -np.sqrt(m / (4 * ws + 1e-15))
 
         # set values out of body shape
-        st_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
+        st_sel = (ct > 1e-8) & ((RHB_shape < -1) | (x < xs))
         if np.any(st_sel):
             # apply selection
             xyz = wake_coos[st_sel]
@@ -209,7 +209,7 @@ class RankineHalfBody(TurbineInductionModel):
             wake_deltas["V"][st_sel] += vel_factor * xyz[:, 1]
 
         # set values inside body shape
-        st_sel = (ct > 0) & (RHB_shape >= -1) & (x >= xs) & (x <= 0)
+        st_sel = (ct > 1e-8) & (RHB_shape >= -1) & (x >= xs) & (x <= 0)
         if np.any(st_sel):
             # apply selection
             xyz = np.zeros_like(wake_coos[st_sel])

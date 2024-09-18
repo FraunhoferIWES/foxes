@@ -273,6 +273,10 @@ class Timelines(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
+        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.ITYPE)
+        order[:] = np.arange(fdata.n_turbines)[None, :]
+
+        return order
         # prepare:
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
@@ -408,6 +412,7 @@ class Timelines(WakeFrame):
             del trace_p, trace_l, trace_d, h_trace_si, dxy, precond
 
         # store turbines that cause wake:
+        trace_si = np.minimum(trace_si, i0 + np.arange(n_states)[:, None])
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
 
         # store states that cause wake for each target point,

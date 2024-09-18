@@ -22,7 +22,6 @@ class Iterative(Downwind):
     :group: algorithms.iterative
 
     """
-
     @classmethod
     def get_model(cls, name):
         """
@@ -168,7 +167,7 @@ class Iterative(Downwind):
                 calc_parameters=calc_parameters,
                 ambient=ambient,
             )
-
+                
             n = 0
             if self._urelax is not None:
                 if len(self._urelax["first"]):
@@ -297,7 +296,7 @@ class Iterative(Downwind):
 
             self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
-
+    
             fres_dwnd = fres
             if self.conv_crit is not None:
                 conv = self.conv_crit.check_converged(

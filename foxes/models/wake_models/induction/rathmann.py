@@ -199,7 +199,7 @@ class Rathmann(TurbineInductionModel):
             return sin_alpha * sin_beta * (1 + x_R**2)
 
         # ws delta in front of rotor
-        sp_sel = (ct > 0) & (x_R <= 0)
+        sp_sel = (ct > 1e-8) & (x_R <= 0)
         if np.any(sp_sel):
             xr = x_R[sp_sel]
             a = self.induction.ct2a(ct[sp_sel])
@@ -209,7 +209,7 @@ class Rathmann(TurbineInductionModel):
         # ws delta behind rotor
         if not self.pre_rotor_only:
             # mirror -blockage in rotor plane
-            sp_sel = (ct > 0) & (x_R > 0) & (r_R > 1)
+            sp_sel = (ct > 1e-8) & (x_R > 0) & (r_R > 1)
             if np.any(sp_sel):
                 xr = x_R[sp_sel]
                 a = self.induction.ct2a(ct[sp_sel])

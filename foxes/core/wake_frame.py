@@ -157,7 +157,7 @@ class WakeFrame(Model):
             raise ValueError(
                 f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}"
             )
-
+            
         return out, dims
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):

@@ -30,7 +30,6 @@ class Bastankhah2016Model(Model):
     :group: models.wake_models.wind
 
     """
-
     MDATA_KEY = "Bastankhah2016Model"
     PARS = "pars"
     CHECK = "check"
@@ -180,7 +179,7 @@ class Bastankhah2016Model(Model):
         )
 
         # select targets:
-        st_sel = (x > 0) & (ct > 0.0)
+        st_sel = (x > 1e-8) & (ct > 1e-8)
         if np.any(st_sel):
             # get ws:
             ws = super().get_data(

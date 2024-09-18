@@ -29,7 +29,6 @@ class Bastankhah2014(GaussianWakeModel):
     :group: models.wake_models.wind
 
     """
-
     def __init__(self, superposition, sbeta_factor=0.2, induction="Madsen", **wake_k):
         """
         Constructor.
@@ -142,7 +141,7 @@ class Bastankhah2014(GaussianWakeModel):
         )
 
         # select targets:
-        st_sel = (x > 0) & (ct > 0)
+        st_sel = (x > 1e-8) & (ct > 1e-8)
         if np.any(st_sel):
             # apply selection:
             x = x[st_sel]
