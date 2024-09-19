@@ -3,6 +3,7 @@ from xarray import Dataset
 
 from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
+from foxes.algorithms.iterative import Iterative
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -166,7 +167,11 @@ class Timelines(WakeFrame):
 
         """
         super().initialize(algo, verbosity)
-
+        if not isinstance(algo, Iterative):
+            raise TypeError(
+                f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
+            )
+            
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
@@ -275,27 +280,6 @@ class Timelines(WakeFrame):
         """
         order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.ITYPE)
         order[:] = np.arange(fdata.n_turbines)[None, :]
-
-        return order
-        # prepare:
-        n_states = fdata.n_states
-        n_turbines = algo.n_turbines
-        tdata = TData.from_points(points=fdata[FV.TXYH])
-
-        # calculate streamline x coordinates for turbines rotor centre points:
-        # n_states, n_turbines_source, n_turbines_target
-        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
-        for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
-                :, :, 0, 0
-            ]
-
-        # derive turbine order:
-        # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
-        for si in range(n_states):
-            order[si] = np.lexsort(keys=coosx[si])
-
         return order
 
     def get_wake_coos(
