@@ -4,7 +4,6 @@ from itertools import count
 
 import foxes.constants as FC
 
-
 class Model(ABC):
     """
     Base class for all models.
@@ -539,7 +538,10 @@ class Model(ABC):
                     f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
                 )
 
-            i0 = _geta("states_i0")
+            if type(algo).__name__ == "Sequential":
+                i0 = algo.states.counter
+            else:
+                i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
             if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
                 # find the mean index and round it to nearest integer:

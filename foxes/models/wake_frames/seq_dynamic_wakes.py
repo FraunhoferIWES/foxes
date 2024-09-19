@@ -26,7 +26,6 @@ class SeqDynamicWakes(FarmOrder):
     :group: models.wake_frames.sequential
 
     """
-
     def __init__(self, cl_ipars={}, dt_min=None):
         """
         Constructor.
