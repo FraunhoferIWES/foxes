@@ -68,7 +68,7 @@ class TimelinesStates(States):
         self.base_states = base_states
         self.dt_min = dt_min
         
-        self.intp_pars = {}
+        self.intp_pars = {"fill_value": None}
         if "bounds_error" in base_states_kwargs:
             self.intp_pars["bounds_error"] = base_states_kwargs["bounds_error"]
         
