@@ -346,7 +346,7 @@ class Timelines(WakeFrame):
             trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
             h_trace_si = trace_si.copy()
 
-            def _update_wcoos(sel):
+            def _update_wcoos(sel): # noqa: F821
                 """Local function that updates coordinates and source times"""
                 nonlocal wcoosx, wcoosy, trace_si
                 d = np.linalg.norm(trace_p, axis=-1)
