@@ -282,7 +282,7 @@ class Timelines(WakeFrame):
         order[:] = np.arange(fdata.n_turbines)[None, :]
         return order
 
-    def get_wake_coos( # flake8: noqa: F821
+    def get_wake_coos(
         self,
         algo,
         mdata,
@@ -346,6 +346,7 @@ class Timelines(WakeFrame):
             trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
             h_trace_si = trace_si.copy()
 
+            # flake8: noqa: F821
             def _update_wcoos(sel):
                 """Local function that updates coordinates and source times"""
                 nonlocal wcoosx, wcoosy, trace_si
