@@ -359,7 +359,7 @@ class Timelines(WakeFrame):
             trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
             trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
             trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            trace_d = np.linalg.norm(trace_p, axis=-1)
+            trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
             h_trace_si = trace_si.copy()
 
             def _update_wcoos(sel):
