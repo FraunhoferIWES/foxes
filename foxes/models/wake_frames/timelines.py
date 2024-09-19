@@ -115,7 +115,7 @@ class Timelines(WakeFrame):
                 dxy = uv * dt[0]
             else:
                 dxy = uv[:-1] * dt[:, None]
-                dxy = np.insert(dxy, 0, dxy[0], axis=0)
+                dxy = np.append(dxy, uv[-1, None, :]*dt[-1], axis=0)
             self._data["dxy"][1].append(dxy)
             """ DEBUG
             import matplotlib.pyplot as plt
@@ -351,18 +351,50 @@ class Timelines(WakeFrame):
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + mdata.n_states
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1
+        trace_si[:] = i0 + np.arange(n_states)[:, None]
         for hi, h in enumerate(heights):
+            dxy = data_dxy[hi][:i1]
+            precond = theights[:, None] == h
 
             trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
             trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
             trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
+            trace_d = np.linalg.norm(trace_p, axis=-1)
             h_trace_si = trace_si.copy()
 
+            def _update_wcoos(sel):
+                """Local function that updates coordinates and source times"""
+                nonlocal wcoosx, wcoosy, trace_si
+                d = np.linalg.norm(trace_p, axis=-1)
+                sel = sel & (d <= trace_d)
+                if np.any(sel):
+                    trace_d[sel] = d[sel]
+
+                    nx = dxy[h_trace_si[sel]]
+                    dx = np.linalg.norm(nx, axis=-1)
+                    nx /= dx[:, None]
+                    trp = trace_p[sel]
+                    projx = np.einsum("sd,sd->s", trp, nx)
+
+                    seln = (projx > -dx) & (projx < dx)
+                    if np.any(seln):
+                        wcoosx[sel] = np.where(
+                            seln, projx + trace_l[sel], wcoosx[sel]
+                        )
+
+                        ny = np.concatenate(
+                            [-nx[:, 1, None], nx[:, 0, None]], axis=1
+                        )
+                        projy = np.einsum("sd,sd->s", trp, ny)
+                        wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
+                        del ny, projy
+
+                        trace_si[sel] = np.where(
+                            seln, h_trace_si[sel], trace_si[sel]
+                        )
+                            
             # step backwards in time, until wake source turbine is hit:
-            dxy = data_dxy[hi][:i1]
-            precond = theights[:, None] == h
+            _update_wcoos(precond)
             while True:
                 sel = precond & (h_trace_si > 0) & (trace_l < self.max_wake_length)
                 if np.any(sel):
@@ -375,40 +407,12 @@ class Timelines(WakeFrame):
                     del delta, dmag
 
                     # check if this is closer to turbine:
-                    d = np.linalg.norm(trace_p, axis=-1)
-                    sel = sel & (d <= trace_d)
-                    if np.any(sel):
-                        trace_d[sel] = d[sel]
-
-                        nx = dxy[h_trace_si[sel]]
-                        dx = np.linalg.norm(nx, axis=-1)
-                        nx /= dx[:, None]
-                        trp = trace_p[sel]
-                        projx = np.einsum("sd,sd->s", trp, nx)
-
-                        seln = (projx > -dx) & (projx < dx)
-                        if np.any(seln):
-                            wcoosx[sel] = np.where(
-                                seln, projx + trace_l[sel], wcoosx[sel]
-                            )
-
-                            ny = np.concatenate(
-                                [-nx[:, 1, None], nx[:, 0, None]], axis=1
-                            )
-                            projy = np.einsum("sd,sd->s", trp, ny)
-                            wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
-                            del ny, projy
-
-                            trace_si[sel] = np.where(
-                                seln, h_trace_si[sel], trace_si[sel]
-                            )
-
-                        del nx, dx, projx, seln
-                    del d, sel
+                    _update_wcoos(sel)
+                    del sel
 
                 else:
+                    del sel
                     break
-
             del trace_p, trace_l, trace_d, h_trace_si, dxy, precond
 
         # store turbines that cause wake:
