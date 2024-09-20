@@ -16,8 +16,8 @@ class Streamlines2D(WakeFrame):
     ----------
     step: float
         The streamline step size in m
-    max_length: float
-        The maximal streamline length
+    max_length_km: float
+        The maximal streamline length in km
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -25,8 +25,7 @@ class Streamlines2D(WakeFrame):
     :group: models.wake_frames
 
     """
-
-    def __init__(self, step, max_length=1e4, cl_ipars={}):
+    def __init__(self, step, max_length_km=20, cl_ipars={}):
         """
         Constructor.
 
@@ -34,8 +33,8 @@ class Streamlines2D(WakeFrame):
         ----------
         step: float
             The streamline step size in m
-        max_length: float
-            The maximal streamline length
+        max_length_km: float
+            The maximal streamline length in km
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
@@ -43,7 +42,7 @@ class Streamlines2D(WakeFrame):
         """
         super().__init__()
         self.step = step
-        self.max_length = max_length
+        self.max_length_km = max_length_km
         self.cl_ipars = cl_ipars
 
         self.DATA = self.var("DATA")
@@ -51,7 +50,7 @@ class Streamlines2D(WakeFrame):
         self.SDAT = self.var("SDAT")
 
     def __repr__(self):
-        return f"{type(self).__name__}(step={self.step})"
+        return f"{type(self).__name__}(step={self.step}, max_length={self.max_length_km})"
 
     def _calc_streamlines(self, algo, mdata, fdata):
         """
@@ -60,7 +59,7 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        N = int(self.max_length / self.step)
+        N = int(self.max_length_km*1e3 / self.step)
 
         # calc data: x, y, z, wd
         data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)

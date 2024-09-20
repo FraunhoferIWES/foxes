@@ -14,26 +14,26 @@ class Timelines(WakeFrame):
 
     Attributes
     ----------
-    max_wake_length: float
-        The maximal wake length
+    max_length_km: float
+        The maximal wake length in km
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
-    dt_min: float, optional
+    dt_min: float
         The delta t value in minutes,
         if not from timeseries data
 
     :group: models.wake_frames
 
     """
-    def __init__(self, max_wake_length=2e4, cl_ipars={}, dt_min=None):
+    def __init__(self, max_length_km=2e4, cl_ipars={}, dt_min=None):
         """
         Constructor.
 
         Parameters
         ----------
-        max_wake_length: float
-            The maximal wake length
+        max_length_km: float
+            The maximal wake length in km
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
@@ -43,12 +43,12 @@ class Timelines(WakeFrame):
 
         """
         super().__init__()
-        self.max_wake_length = max_wake_length
+        self.max_length_km = max_length_km
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 
     def __repr__(self):
-        return f"{type(self).__name__}(dt_min={self.dt_min})"
+        return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km})"
     
     def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
         """Helper function for pre-calculation of ambient wind vectors"""
@@ -166,11 +166,11 @@ class Timelines(WakeFrame):
             The verbosity level, 0 = silent
 
         """
-        super().initialize(algo, verbosity)
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
+        super().initialize(algo, verbosity)
             
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
@@ -381,7 +381,7 @@ class Timelines(WakeFrame):
             # step backwards in time, until wake source turbine is hit:
             _update_wcoos(precond)
             while True:
-                sel = precond & (h_trace_si > 0) & (trace_l < self.max_wake_length)
+                sel = precond & (h_trace_si > 0) & (trace_l < self.max_length_km*1e3)
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 

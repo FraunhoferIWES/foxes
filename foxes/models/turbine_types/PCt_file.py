@@ -37,7 +37,6 @@ class PCtFile(TurbineType):
     :group: models.turbine_types
 
     """
-
     def __init__(
         self,
         data_source,
