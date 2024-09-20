@@ -307,7 +307,7 @@ class TimelinesStates(States):
         sel = (trace_si < 0)
         if np.any(sel):
             trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
-            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None], trace_si)
+            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] - 1, trace_si)
             trace_done[sel] = False
             
             while np.any(sel):
