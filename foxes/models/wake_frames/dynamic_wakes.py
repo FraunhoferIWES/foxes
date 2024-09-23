@@ -54,69 +54,6 @@ class DynamicWakes(WakeFrame):
 
     def __repr__(self):
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km}, max_age={self.max_age})"
-
-    def load_data(self, algo, verbosity=0):
-        """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-        # get and check times:
-        times = np.asarray(algo.states.index())
-        if self.dt_min is None:
-            if not np.issubdtype(times.dtype, np.datetime64):
-                raise TypeError(
-                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
-                )
-            elif len(times) == 1:
-                raise KeyError(
-                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
-                )
-            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
-        else:
-            n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
-        dt = np.append(dt, dt[-1], axis=0)
-        
-        # find max age if not given:
-        if self.max_age is None:
-            dist = np.sum(20*self._dt)
-            self.max_age = max(int(dist/self.max_length_km/1e3), 1)
-            if verbosity > 0:
-                print(f"{self.name}: Setting max_age = {self.max_age}")
-        
-        # init data:
-        TODO - is this a good idea?
-        idata = super().load_data(algo, verbosity=verbosity)
-        self.DATA = self.var("data")
-        self.AGE = self.var("age")
-        self.DT = self.var("dt")
-        data = np.full(
-            (algo.n_states, algo.n_turbines, self.max_age, 3), # x, y, length
-            np.nan, 
-            dtype=FC.DTYPE,
-        )
-        idata.data_vars[self.DATA] = ((FC.STATE, FC.TURBINE, self.AGE), data)
-        idata.data_vars[self.DT] = ((FC.STATE,), dt)
-        
-        return idata
             
     def initialize(self, algo, verbosity=0):
         """
@@ -135,6 +72,30 @@ class DynamicWakes(WakeFrame):
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
         super().initialize(algo, verbosity)
+
+        # get and check times:
+        times = np.asarray(algo.states.index())
+        if self.dt_min is None:
+            if not np.issubdtype(times.dtype, np.datetime64):
+                raise TypeError(
+                    f"{self.name}: Expecting state index of type np.datetime64, found {times.dtype}"
+                )
+            elif len(times) == 1:
+                raise KeyError(
+                    f"{self.name}: Expecting 'dt_min' for single step timeseries"
+                )
+            self._dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+        else:
+            n = max(len(times) - 1, 1)
+            self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
+        self._dt = np.append(self._dt, self._dt[-1], axis=0)
+        
+        # find max age if not given:
+        if self.max_age is None:
+            dist = np.sum(20*self._dt)
+            self.max_age = max(int(dist/self.max_length_km/1e3), 1)
+            if verbosity > 0:
+                print(f"{self.name}: Setting max_age = {self.max_age}")
         
     def calc_order(self, algo, mdata, fdata):
         """ "
