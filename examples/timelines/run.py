@@ -84,7 +84,7 @@ if __name__ == "__main__":
         kwargs = {}
     else:
         States = foxes.input.states.TimeseriesTimelines
-        kwargs = {"ref_xy": [-500, -500]}
+        kwargs = {"ref_xy": [2000,2000]}#[-500, -500]}
         
     states = States(
         data_source=args.states,

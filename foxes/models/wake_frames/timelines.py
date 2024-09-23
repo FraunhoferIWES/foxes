@@ -7,7 +7,6 @@ from foxes.algorithms.iterative import Iterative
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Timelines(WakeFrame):
     """
     Dynamic wakes for spatially uniform timeseries states.
@@ -95,7 +94,7 @@ class Timelines(WakeFrame):
         points = np.zeros((n_states, 1, 3), dtype=FC.DTYPE)
 
         # calculate all heights:
-        self._data = {"dxy": (("height", FC.STATE, "dir"), [])}
+        self.timelines_data = {"dxy": (("height", FC.STATE, "dir"), [])}
         for h in heights:
 
             if verbosity > 0:
@@ -117,10 +116,10 @@ class Timelines(WakeFrame):
             else:
                 dxy = uv[:-1] * dt[:, None]
                 dxy = np.append(dxy, uv[-1, None, :]*dt[-1], axis=0)
-            self._data["dxy"][1].append(dxy)
+            self.timelines_data["dxy"][1].append(dxy)
             """ DEBUG
             import matplotlib.pyplot as plt
-            xy = np.array([np.sum(self._data[h][:n], axis=0) for n in range(len(self._data[h]))])
+            xy = np.array([np.sum(self.timelines_data[h][:n], axis=0) for n in range(len(self.timelines_data[h]))])
             print(xy)
             plt.plot(xy[:, 0], xy[:, 1])
             plt.title(f"Height {h} m")
@@ -129,28 +128,28 @@ class Timelines(WakeFrame):
             """
             
             if needs_res:
-                if "U" not in self._data:
-                    self._data["U"] = (("height", FC.STATE), [])
-                    self._data["V"] = (("height", FC.STATE), [])
-                self._data["U"][1].append(uv[:, 0])
-                self._data["V"][1].append(uv[:, 1])
+                if "U" not in self.timelines_data:
+                    self.timelines_data["U"] = (("height", FC.STATE), [])
+                    self.timelines_data["V"] = (("height", FC.STATE), [])
+                self.timelines_data["U"][1].append(uv[:, 0])
+                self.timelines_data["V"][1].append(uv[:, 1])
                 
                 for v in states.output_point_vars(algo):
                     if v not in [FV.WS, FV.WD]:
-                        if v not in self._data:
-                            self._data[v] = (("height", FC.STATE), [])
-                        self._data[v][1].append(res[v][:, 0, 0])
+                        if v not in self.timelines_data:
+                            self.timelines_data[v] = (("height", FC.STATE), [])
+                        self.timelines_data[v][1].append(res[v][:, 0, 0])
                         
             del res, uv, dxy
                         
-        self._data = Dataset(
+        self.timelines_data = Dataset(
             coords={
                 FC.STATE: states.index(),
                 "height": heights,
             },
             data_vars={
                 v: (d[0], np.stack(d[1], axis=0))
-                for v, d in self._data.items()
+                for v, d in self.timelines_data.items()
             },
         )
         
@@ -181,7 +180,11 @@ class Timelines(WakeFrame):
         heights = np.unique(t2h)
 
         # pre-calc data:
-        self._precalc_data(algo, algo.states, heights, verbosity)
+        from foxes.input.states import TimelinesStates
+        if isinstance(algo.states, TimelinesStates):
+            self._precalc_data(algo, algo.states.base_states, heights, verbosity)
+        else:
+            self._precalc_data(algo, algo.states, heights, verbosity)
 
     def set_running(
         self,
@@ -216,12 +219,12 @@ class Timelines(WakeFrame):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         if sel is not None or isel is not None:
-            data_stash[self.name]["data"] = self._data
+            data_stash[self.name]["data"] = self.timelines_data
 
             if isel is not None:
-                self._data = self._data.isel(isel)
+                self.timelines_data = self.timelines_data.isel(isel)
             if sel is not None:
-                self._data = self._data.sel(sel)
+                self.timelines_data = self.timelines_data.sel(sel)
 
     def unset_running(
         self,
@@ -254,7 +257,7 @@ class Timelines(WakeFrame):
 
         data = data_stash[self.name]
         if "data" in data:
-            self._data = data.pop("data")
+            self.timelines_data = data.pop("data")
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -321,8 +324,8 @@ class Timelines(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self._data["height"].to_numpy()
-        data_dxy = self._data["dxy"].to_numpy()
+        heights = self.timelines_data["height"].to_numpy()
+        data_dxy = self.timelines_data["dxy"].to_numpy()
 
         D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
         D[:] = fdata[FV.D][:, downwind_index, None]
@@ -442,8 +445,8 @@ class Timelines(WakeFrame):
         n_states, n_points = x.shape
         rxyz = fdata[FV.TXYH][:, downwind_index]
         theights = fdata[FV.H][:, downwind_index]
-        heights = self._data["height"].to_numpy()
-        data_dxy = self._data["dxy"].to_numpy()
+        heights = self.timelines_data["height"].to_numpy()
+        data_dxy = self.timelines_data["dxy"].to_numpy()
         
         points = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
         points[:] = rxyz[:, None, :]
@@ -501,4 +504,4 @@ class Timelines(WakeFrame):
 
         """
         super().finalize(algo, verbosity=verbosity)
-        self._data = None
+        self.timelines_data = None
