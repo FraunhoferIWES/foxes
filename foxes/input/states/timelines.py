@@ -212,12 +212,12 @@ class TimelinesStates(States):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         if sel is not None or isel is not None:
-            data_stash[self.name]["data"] = self._data
+            data_stash[self.name]["data"] = self.timelines_data
 
             if isel is not None:
-                self._data = self._data.isel(isel)
+                self.timelines_data = self.timelines_data.isel(isel)
             if sel is not None:
-                self._data = self._data.sel(sel)
+                self.timelines_data = self.timelines_data.sel(sel)
 
     def unset_running(
         self,
@@ -250,12 +250,12 @@ class TimelinesStates(States):
 
         data = data_stash[self.name]
         if "data" in data:
-            self._data = data.pop("data")
+            self.timelines_data = data.pop("data")
             
     def calc_states_indices(self, mdata, points, hi, ref_xy):
         
         n_states, n_points = points.shape[:2]
-        dxy = self._data["dxy"].to_numpy()[hi]
+        dxy = self.timelines_data["dxy"].to_numpy()[hi]
         
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + n_states
@@ -280,11 +280,11 @@ class TimelinesStates(States):
                 trace_si[sel] = np.where(seld & (projx < -1e6), -1, trs)
                 trs = trace_si[sel]
             elif sgn < 0:
-                seld = (projx < 1e-6) # & (projx >= -lx)
+                seld = (projx < 1e-6) 
                 seld = seld | (trs < 0)
             elif sgn > 0:
-                seld = (projx > -1e-6) #& (projx <= lx)
-                seld = seld | (trs >= i1 - 1)
+                seld = (projx > -1e-6) 
+                seld = seld | (trs >= i1)
             
             trace_done[sel] = np.where(seld, True, trace_done[sel])
 
@@ -307,18 +307,19 @@ class TimelinesStates(States):
         sel = (trace_si < 0)
         if np.any(sel):
             trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
-            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] - 1, trace_si)
+            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None], trace_si)
             trace_done[sel] = False
             
             while np.any(sel):
-                trace_si[sel] += 1
                 
                 trs = trace_si[sel]
                 hdxy = dxy[trs]
                 trace_p[sel] += hdxy
                 
                 _eval_trace(sel, hdxy, trs, sgn=+1)
+                
                 sel = ~trace_done
+                trace_si[sel] += 1
                 
                 del trs, hdxy
                 
@@ -355,7 +356,7 @@ class TimelinesStates(States):
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
         points = targets.reshape(n_states, n_points, 3)
-        heights = self._data["height"].to_numpy()
+        heights = self.timelines_data["height"].to_numpy()
         n_heights = len(heights)
 
         # compute states indices for all requested points:
@@ -376,7 +377,7 @@ class TimelinesStates(States):
             data = {v: np.stack(
                         [d.to_numpy()[hi, trace_si[hi]] for hi in range(n_heights)]
                         , axis=0)
-                    for v, d in self._data.data_vars.items()
+                    for v, d in self.timelines_data.data_vars.items()
                     if v != "dxy"}
             vres = list(data.keys())
             data = np.stack(list(data.values()), axis=-1)
@@ -429,11 +430,11 @@ class TimelinesStates(States):
             sel = trace_si[0]
             for v in self.output_point_vars(algo):
                 if v not in [FV.WS, FV.WD]:
-                    results[v] = self._data[v].to_numpy()[0, sel]
+                    results[v] = self.timelines_data[v].to_numpy()[0, sel]
                 elif v not in results:
                     uv = np.stack(
-                        [self._data["U"].to_numpy()[0, sel], 
-                        self._data["V"].to_numpy()[0, sel]],
+                        [self.timelines_data["U"].to_numpy()[0, sel], 
+                        self.timelines_data["V"].to_numpy()[0, sel]],
                         axis=-1
                     )
                     results = {
