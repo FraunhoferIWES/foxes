@@ -6,7 +6,6 @@ import foxes.constants as FC
 
 from .multiprocess import _run_as_proc
 
-
 class NumpyEngine(Engine):
     """
     The numpy engine for foxes calculations.
@@ -14,7 +13,6 @@ class NumpyEngine(Engine):
     :group: engines
 
     """
-
     def __init__(self, *args, **kwargs):
         """
         Constructor.
@@ -148,14 +146,13 @@ class NumpyEngine(Engine):
                     out_vars=out_vars,
                 )
 
-                # extract chunk store:
-                cstore = {k: d for k, d in chunk_store.items() if k[1] == chunki_points}
-
                 # submit model calculation:
-                results[(chunki_states, chunki_points)] = _run_as_proc(
-                    algo, model, data, iterative, cstore, **calc_pars
+                key = (chunki_states, chunki_points)
+                results[key] = _run_as_proc(
+                    algo, model, data, iterative, chunk_store, **calc_pars
                 )
-                del data, cstore
+                chunk_store.update(results[key][1])
+                del data
 
                 i0_targets = i1_targets
 

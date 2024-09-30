@@ -9,7 +9,6 @@ from foxes.algorithms.sequential import Sequential
 
 from .farm_order import FarmOrder
 
-
 class SeqDynamicWakes(FarmOrder):
     """
     Dynamic wakes for the sequential algorithm.

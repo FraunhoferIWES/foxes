@@ -302,16 +302,16 @@ class Iterative(Downwind):
                 conv = self.conv_crit.check_converged(
                     self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
                 )
-
                 if conv:
                     self.print(
                         f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
                     )
-
-                    self.print("Starting final run", vlim=0)
-                    self._final_run = True
-                    fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
                     break
+
+        # final run, recovers farm order of results:
+        self.print("Starting final run", vlim=0)
+        self._final_run = True
+        fres = super().calc_farm(outputs=outputs, finalize=False, **kwargs)
 
         # finalize models:
         if finalize:

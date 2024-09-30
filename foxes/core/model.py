@@ -538,7 +538,8 @@ class Model(ABC):
                     f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
                 )
 
-            if type(algo).__name__ == "Sequential":
+            from foxes.algorithms.sequential import Sequential
+            if isinstance(algo, Sequential):
                 i0 = algo.states.counter
             else:
                 i0 = _geta("states_i0")

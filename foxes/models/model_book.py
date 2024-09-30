@@ -252,6 +252,7 @@ class ModelBook:
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+        self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
         self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
 
         def _todt(x):
@@ -268,13 +269,20 @@ class ModelBook:
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
         self.wake_frames.add_factory(
+            fm.wake_frames.DynamicWakes,
+            "dyn_wakes_<dt>",
+            dt=_todt,
+            var2arg={"dt": "dt_min"},
+            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
+        )
+        self.wake_frames.add_factory(
             fm.wake_frames.SeqDynamicWakes,
             "seq_dyn_wakes_<dt>",
             dt=_todt,
             var2arg={"dt": "dt_min"},
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
-
+        
         self.wake_superpositions = FDict(
             name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),

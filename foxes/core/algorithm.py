@@ -394,7 +394,59 @@ class Algorithm(Model):
 
         return xr.Dataset(**idata)
 
-    def add_to_chunk_store(self, name, data, mdata, tdata=None, copy=True):
+    def __find_chunk_in_store(
+        self, mdata, tdata, prev_s, prev_t, error):
+        """Helper function for finding chunks in chunk store"""
+        i0 = int(mdata.states_i0(counter=True))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        n_states = int(mdata.n_states)
+        n_targets = int(tdata.n_targets if tdata is not None else 0)
+        
+        if prev_s > 0 or prev_t > 0:
+            inds = np.array([
+                [d["i0"], d["i0"]+d["n_states"], d["n_states"],
+                 d["t0"], d["t0"]+d["n_targets"], d["n_targets"]]
+                for d in self.chunk_store.values()
+            ], dtype=int)
+            
+            if prev_t > 0:
+                while prev_t > 0:
+                    sel = np.where((inds[:, 0]==i0) & (inds[:, 4]==t0))[0]
+                    if len(sel) == 0:
+                        if error:
+                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                        else:
+                            return None
+                    else:
+                        n_targets = inds[sel[0], 5]
+                        t0 -= n_targets
+                        prev_t -= 1
+                        
+            if prev_s > 0: 
+                while prev_s > 0:
+                    sel = np.where((inds[:, 1]==i0) & (inds[:, 3]==t0))[0]
+                    if len(sel) == 0:
+                        if error:
+                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                        else:
+                            return None
+                    else:
+                        n_states = inds[sel[0], 2]
+                        i0 -= n_states
+                        prev_s -= 1
+                        
+        return i0, n_states, t0, n_targets
+        
+    def add_to_chunk_store(
+        self, 
+        name, 
+        data, 
+        mdata, 
+        tdata=None, 
+        copy=True,
+        prev_s=0,
+        prev_t=0,
+    ):
         """
         Add data to the chunk store
 
@@ -410,19 +462,23 @@ class Algorithm(Model):
             The tdata object
         copy: bool
             Flag for copying incoming data
+        prev_s: int
+            How many states chunks backward
+        prev_t: int
+            How many points chunks backward 
 
         """
-        i0 = int(mdata.states_i0(counter=True))
-        t0 = int(tdata.targets_i0() if tdata is not None else 0)
-        key = (i0, t0)
+        i0, n_states, t0, n_targets = self.__find_chunk_in_store(
+            mdata, tdata, prev_s, prev_t, error=True)
         
+        key = (i0, t0)
         if key not in self.chunk_store:
             self.chunk_store[key] = Dict(
                 {
                     "i0": i0,
                     "t0": t0, 
-                    "n_states": mdata.n_states,
-                    "n_targets": 0 if tdata is None else tdata.n_targets,
+                    "n_states": n_states,
+                    "n_targets": n_targets,
                 },
                 name=f"chunk_store_{i0}_{t0}"
             )
@@ -469,51 +525,23 @@ class Algorithm(Model):
             returning chunk
 
         """
-        i0 = int(mdata.states_i0(counter=True))
-        t0 = int(tdata.targets_i0() if tdata is not None else 0)
-        n_states = int(mdata.n_states)
-        n_targets = int(tdata.n_targets if tdata is not None else 0)
+        inds = self.__find_chunk_in_store(mdata, tdata, prev_s, prev_t, error)
         
-        if prev_s > 0 or prev_t > 0:
-            inds = np.array([
-                [d["i0"], d["i0"]+d["n_states"], d["n_states"],
-                 d["t0"], d["t0"]+d["n_targets"], d["n_targets"]]
-                for d in self.chunk_store.values()
-            ], dtype=int)
-            
-            if prev_t > 0:
-                while prev_t > 0:
-                    sel = np.where((inds[:, 0]==i0) & (inds[:, 4]==t0))[0]
-                    if len(sel) == 0:
-                        if error:
-                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
-                        elif ret_inds:
-                            return None, (i0, n_states, t0, n_targets)
-                        else:
-                            return None
-                    else:
-                        n_targets = inds[sel[0], 5]
-                        t0 -= n_targets
-                        prev_t -= 1
-                        
-                while prev_s > 0:
-                    sel = np.where((inds[:, 1]==i0) & (inds[:, 3]==t0))[0]
-                    if len(sel) == 0:
-                        if error:
-                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
-                        elif ret_inds:
-                            return None, (i0, n_states, t0, n_targets)
-                        else:
-                            return None
-                    else:
-                        n_states = inds[sel[0], 2]
-                        i0 -= n_states
-                        prev_s -= 1
-            
-        if ret_inds:
-            return self.chunk_store[(i0, t0)][name], (i0, n_states, t0, n_targets)
+        if inds is None:
+            return None, (None, None, None, None) if ret_inds else None
         else:
-            return self.chunk_store[(i0, t0)][name]
+            i0, __, t0, __ = inds   
+            try:
+                data =  self.chunk_store[(i0, t0)][name]
+            except KeyError as e:
+                if error:
+                    raise e
+                else:
+                    data = None
+            if ret_inds:
+                return data, inds
+            else:
+                return data
 
     def reset_chunk_store(self, new_chunk_store=None):
         """
@@ -800,7 +828,7 @@ class Algorithm(Model):
         super().finalize(self, self.verbosity)
         if clear_mem:
             self.__idata_mem = Dict()
-            self.reset_chunk_store()
+            #self.reset_chunk_store()
 
     @classmethod
     def new(cls, algo_type, *args, **kwargs):

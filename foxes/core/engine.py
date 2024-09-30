@@ -449,8 +449,8 @@ class Engine(ABC):
         if pbar is not None:
             pbar.close()
 
-        if not iterative or algo.final_iteration:
-            algo.reset_chunk_store()
+        #if not iterative or algo.final_iteration:
+        #    algo.reset_chunk_store()
 
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:

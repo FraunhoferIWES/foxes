@@ -13,7 +13,6 @@ from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class DaskBaseEngine(Engine):
     """
     Abstract base class for foxes calculations with dask.
@@ -28,7 +27,6 @@ class DaskBaseEngine(Engine):
     :group: engines
 
     """
-
     def __init__(
         self,
         *args,
@@ -246,7 +244,6 @@ def _run_as_ufunc(
 
     return data
 
-
 class XArrayEngine(DaskBaseEngine):
     """
     The engine for foxes calculations via xarray.apply_ufunc.
@@ -440,7 +437,6 @@ class XArrayEngine(DaskBaseEngine):
         # update data by calculation results:
         return results.compute(num_workers=self.n_procs)
 
-
 @delayed
 def _run_lazy(algo, model, iterative, chunk_store, *data, **cpars):
     """Helper function for lazy running"""
@@ -448,7 +444,6 @@ def _run_lazy(algo, model, iterative, chunk_store, *data, **cpars):
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
     return results, chunk_store
-
 
 class DaskEngine(DaskBaseEngine):
     """
@@ -563,23 +558,16 @@ class DaskEngine(DaskBaseEngine):
                     out_vars=out_vars,
                 )
 
-                # extract chunk store:
-                cstore = {
-                    k: deepcopy(d)
-                    for k, d in chunk_store.items()
-                    if k[1] == chunki_points
-                }
-
                 # submit model calculation:
                 results[(chunki_states, chunki_points)] = _run_lazy(
                     deepcopy(algo),
                     deepcopy(model),
                     iterative,
-                    cstore,
+                    chunk_store,
                     *data,
                     **calc_pars,
                 )
-                del data, cstore
+                del data
 
                 i0_targets = i1_targets
 
@@ -608,7 +596,6 @@ class DaskEngine(DaskBaseEngine):
             goal_data=goal_data,
             iterative=iterative,
         )
-
 
 def _run_on_cluster(
     algo,
@@ -658,7 +645,6 @@ def _run_on_cluster(
     chunk_store = algo.reset_chunk_store() if iterative else {}
 
     return results, chunk_store
-
 
 class LocalClusterEngine(DaskBaseEngine):
     """
@@ -864,12 +850,7 @@ class LocalClusterEngine(DaskBaseEngine):
                 all_data += [fut_data, names, dims, ldims]
 
                 # scatter chunk store data:
-                cstore = {
-                    k: {a: b for a, b in d.items()}
-                    for k, d in chunk_store.items()
-                    if k[1] == chunki_points
-                }
-
+                cstore = chunk_store
                 if len(cstore):
                     cstore = self._client.scatter(cstore, hash=False)
                     all_data.append(cstore)

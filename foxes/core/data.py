@@ -181,12 +181,14 @@ class Data(Dict):
         self._run_entry_checks(name, data, dims)
         self._auto_update()
 
-    def get_slice(self, s, dim_map={}, name=None, keep=True):
+    def get_slice(self, variables, s, dim_map={}, name=None):
         """
         Get a slice of data.
 
         Parameters
         ----------
+        variables: list of str
+            The variable list that corresponds to s
         s: slice
             The slice
         dim_map: dict
@@ -194,9 +196,6 @@ class Data(Dict):
             If not found, same dimensions are assumed.
         name: str, optional
             The name of the data object
-        keep: bool
-            Keep non-matching fields as they are, else
-            throw them out
 
         Returns
         -------
@@ -204,32 +203,36 @@ class Data(Dict):
             The new data object, containing slices
 
         """
+        if not isinstance(variables, (list, tuple, np.ndarray)):
+            variables = [variables]
+        if not isinstance(s, (list, tuple, np.ndarray)):
+            s = [s]
+            
         data = {}
         dims = {}
-        match = None
         for v in self.keys():
-            try:
-                d = self.dims[v]
-                data[v] = self[v][s]
-                dims[v] = (
-                    tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
-                )
-                if match is None:
-                    match = dims[v]
-                elif match != dims[v]:
-                    raise ValueError(
-                        f"Dimension mismatch for variable '{v}' and slice {s}. Expecting {match}, got {dims[v]}"
-                    )
-            except IndexError:
-                if keep:
-                    data[v] = self[v]
-                    dims[v] = self.dims[v]
-        if match is not None:
-            for d, su in zip(match[: len(s)], s):
-                data[d] = data[d][su]
+            d = self.dims[v]
+            hs = tuple([s[variables.index(w)] if w in variables else np.s_[:] 
+                        for w in d])
+            data[v] = self[v][hs]
+            dims[v] = (
+                tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
+            )
         if name is None:
             name = self.name
-        return type(self)(data, dims, loop_dims=self.loop_dims, name=name)
+        if FC.STATE in variables and self.__states_i0 is not None:
+            i0 = self.states_i0(counter=True)
+            a = s[variables.index(FC.STATE)]
+            sts = np.arange(i0, i0+self.n_states)[a]
+            if len(sts) == 1:
+                states_i0 = sts[0]
+            elif np.all(sts==np.arange(sts[0], sts[0]+len(sts))):
+                states_i0 = sts[0]
+            else:
+                raise ValueError(f"Cannot determine states_i0 for states slices {a}, leading to selection {list(sts)}")
+        else:
+            states_i0 = None
+        return type(self)(data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0)
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
@@ -408,7 +411,6 @@ class FData(Data):
                     callback(data, dims)
 
             return super().from_dataset(ds, *args, callback=cb, **kwargs)
-
 
 class TData(Data):
     """

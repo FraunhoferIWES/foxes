@@ -186,5 +186,5 @@ class Bastankhah2014(GaussianWakeModel):
             n_sp = np.sum(st_sel)
             ampld = np.zeros(n_sp, dtype=FC.DTYPE)
             sigma = np.zeros(n_sp, dtype=FC.DTYPE)
-
+        
         return {FV.WS: (ampld, sigma)}, st_sel

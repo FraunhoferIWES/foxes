@@ -3,7 +3,6 @@ from abc import abstractmethod
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 
-
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for Gaussian wake models.

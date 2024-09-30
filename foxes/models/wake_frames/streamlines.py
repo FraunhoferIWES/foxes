@@ -7,7 +7,6 @@ from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
 
-
 class Streamlines2D(WakeFrame):
     """
     Streamline following wakes
