@@ -138,16 +138,16 @@ class DynamicWakes(WakeFrame):
         fkey = f"from_{i0}"
         
         # compute wakes that start within this chunk: x, y, z, length
-        data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
-        if data is None:
-            data = np.full((n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
+        data_all = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
+        if data_all is None:
+            data_all = np.full((algo.n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
+            data = data_all[i0:i1]
             data[:, 0, :3] = rxyh
-            data[:, :, 3] = 0
+            data[:, 0, 3] = 0
             tdt = {v: np.zeros((n_states, 1, 1), dtype=FC.DTYPE)
                 for v in tdi.keys()}
             pts = data[:, 0, :3].copy()
             for age in range(self.max_age-1):
-                print("COMPUTING WAKE",downwind_index,i0,age+1)
                 
                 if age == n_states:
                     break
@@ -180,16 +180,21 @@ class DynamicWakes(WakeFrame):
             del pts, tdt
             
             # store this chunk's results:
-            algo.add_to_chunk_store(key, data, mdata, copy=False)
+            algo.add_to_chunk_store(key, data_all, mdata, copy=False)
             algo.add_to_chunk_store(ukey, {}, mdata, copy=False)
+        
+        else:
+            data = data_all[i0:i1]
         
         # apply updates from future chunks:
         updates = algo.get_from_chunk_store(name=ukey, mdata=mdata, error=False)
         if updates is not None and len(updates):
             for uname in sorted(list(updates.keys())):
                 u = updates.pop(uname)
-                data[:] = np.where(np.isnan(data), u, data)
-                del u
+                sel = ~np.isnan(u)
+                if np.any(sel):
+                    data[:] = np.where(sel, u, data)
+                del u, sel
         del updates
         
         # compute wakes from previous chunks:
@@ -208,64 +213,72 @@ class DynamicWakes(WakeFrame):
                     break
                 else:
                     wi0 = h_i0
+                    h_i1 = h_i0 + h_n_states
+                    hdata = hdata[h_i0:h_i1].copy()
                     
                     # select points with index+age=i0:
                     sts = np.arange(h_n_states)
-                    ags = np.flip(sts) + 1 + i0 - (h_i0 + h_n_states)
-                    sel = (ags < self.max_age - 1)
-                    sts = sts[sel]
-                    ags = ags[sel]
-                    pts = hdata[sts, ags, :3]
-                    sel = np.all(~np.isnan(pts), axis=-1)
-                    sts = sts[sel]
-                    ags = ags[sel]
-                    pts = pts[sel]
+                    ags = i0 - (h_i0 + sts)
+                    sel = (ags < self.max_age-1) 
+                    if np.any(sel):
+                        sts = sts[sel]
+                        ags = ags[sel]
+                        pts = hdata[sts, ags, :3]
+                        n_pts = len(pts)
+                        if n_pts > 0 and np.all(~np.isnan(pts)):
+                            tdt = {v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
+                                for v in algo.states.output_point_vars(algo)}
+                            
+                            # compute single state wake propagation:
+                            for si in range(n_states):
+                                
+                                s = slice(si, si+1, None)
+                                hmdata = mdata.get_slice(FC.STATE, s)
+                                hfdata = fdata.get_slice(FC.STATE, s)
+                                htdt = {v: d[s] for v, d in tdt.items()}
+                                htdata = TData.from_points(points=pts[None, :], data=htdt, dims=tdi)
+                                hdt = dt[s, None]
+                                del htdt, s
+                                
+                                res = algo.states.calculate(algo, hmdata, hfdata, htdata)
+                                del hmdata, hfdata, htdata
                     
-                    n_pts = len(pts)
-                    if n_pts > 0:
-                        tdt = {v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
-                            for v in algo.states.output_point_vars(algo)}
+                                uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
+                                dxy = uv * hdt
+                                pts[:, :2] += dxy
+                                del res, uv, hdt
+                                
+                                ags += 1
+                                hdata[sts, ags, :3] = pts
+                                hdata[sts, ags, 3] = hdata[sts, ags-1, 3] + np.linalg.norm(dxy, axis=-1)
+                                del dxy
+                                
+                                hsel = (h_i0+sts+ags<i1) & (ags<self.max_age-1)
+                                if np.any(hsel):
+                                    sts = sts[hsel]
+                                    ags = ags[hsel]
+                                    pts = pts[hsel]
+                                    tdt = {v: d[:, hsel] for v, d in tdt.items()}
+                                    del hsel
+                                else:
+                                    del hsel
+                                    break
+                            
+                            # send update:
+                            udata = np.full_like(hdata, np.nan)
+                            udata[sel] = hdata[sel]
+                            updates[fkey] = udata
                         
-                        # compute single state wake propagation:
-                        for si in range(n_states):
-                            
-                            s = slice(si, si+1, None)
-                            hmdata = mdata.get_slice(FC.STATE, s)
-                            hfdata = fdata.get_slice(FC.STATE, s)
-                            htdt = {v: d[s] for v, d in tdt.items()}
-                            htdata = TData.from_points(points=pts[None, :], data=htdt, dims=tdi)
-                            hdt = dt[s, None]
-                            del htdt, s
-                            
-                            res = algo.states.calculate(algo, hmdata, hfdata, htdata)
-                            del hmdata, hfdata, htdata
-                
-                            uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
-                            dxy = uv * hdt
-                            pts[:, :2] += dxy
-                            del res, uv, hdt
-                            
-                            ags += 1
-                            hdata[sts, ags, :3] = pts
-                            hdata[sts, ags, 3] = hdata[sts, ags-1, 3] + np.linalg.norm(dxy, axis=-1)
-                            del dxy
-                            
-                            sel = (ags < self.max_age - 1)
-                            if np.any(sel):
-                                sts = sts[sel]
-                                ags = ags[sel]
-                                pts = pts[sel]
-                                tdt = {v: d[:, sel] for v, d in tdt.items()}
-                            else:
-                                break
-                        del tdt
-                    del sts, ags, sel
-                    
+                            del udata, tdt
+                        del pts
+                        
                     # store prev chunk's results:
-                    updates[fkey] = hdata
                     data.insert(0, hdata)
-                    
+                            
+                    del sts, ags, sel
                 del hdata
+            else:
+                break
             del updates
         
         return np.concatenate(data, axis=0), wi0
@@ -327,33 +340,36 @@ class DynamicWakes(WakeFrame):
             if np.any(sel):
                 sts = sts[sel]
                 ags = ags[sel]
-                del sel
-                
-                dists = cdist(points[si, :, :2], wdata[sts, ags, :2])
-                j = np.argmin(dists, axis=1)
-                sts = sts[j]
-                ags = ags[j]
-                wake_si[si] = sts + wi0
-                
-                nx = wdata[sts, ags, :2]
-                dp = points[si, :, :2] - nx
-                sel = (ags < self.max_age - 1)
+                sel = np.all(~np.isnan(wdata[sts, ags]), axis=-1)
                 if np.any(sel):
-                    nx[sel] = wdata[sts[sel], ags[sel]+1, :2] - nx[sel]
-                if np.any(~sel):
-                    nx[sel] -= wdata[sts[sel], ags[sel]-1, :2]
-                dx = np.linalg.norm(nx, axis=-1)
-                nx /= dx[:, None]
-                
-                projx = np.einsum("sd,sd->s", dp, nx)
-                sel = (projx > -dx) & (projx < dx)
-                if np.any(sel):
-                    ny = np.concatenate(
-                        [-nx[:, 1, None], nx[:, 0, None]], axis=1
-                    )
+                    sts = sts[sel]
+                    ags = ags[sel]
                     
-                    wcoos[si, sel, 0] = projx[sel] + wdata[sts[sel], ags[sel], 3]
-                    wcoos[si, sel, 1] = np.einsum("sd,sd->s", dp[sel], ny[sel])
+                    dists = cdist(points[si, :, :2], wdata[sts, ags, :2])
+                    j = np.argmin(dists, axis=1)
+                    sts = sts[j]
+                    ags = ags[j]
+                    wake_si[si] = sts + wi0
+                    
+                    nx = wdata[sts, ags, :2]
+                    dp = points[si, :, :2] - nx
+                    sel = (ags < self.max_age - 1)
+                    if np.any(sel):
+                        nx[sel] = wdata[sts[sel], ags[sel]+1, :2] - nx[sel]
+                    if np.any(~sel):
+                        nx[sel] -= wdata[sts[sel], ags[sel]-1, :2]
+                    dx = np.linalg.norm(nx, axis=-1)
+                    nx /= dx[:, None]
+                    
+                    projx = np.einsum("sd,sd->s", dp, nx)
+                    sel = (projx > -dx) & (projx < dx)
+                    if np.any(sel):
+                        ny = np.concatenate(
+                            [-nx[:, 1, None], nx[:, 0, None]], axis=1
+                        )
+                        
+                        wcoos[si, sel, 0] = projx[sel] + wdata[sts[sel], ags[sel], 3]
+                        wcoos[si, sel, 1] = np.einsum("sd,sd->s", dp[sel], ny[sel])
         
         # store turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index

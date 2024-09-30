@@ -48,7 +48,7 @@ if __name__ == "__main__":
         default=["Bastankhah2014_linear_lim_k004"],
         nargs="+",
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="timelines")
+    parser.add_argument("-f", "--frame", help="The wake frame", default="dyn_wakes")
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         help="Flag for showing layout figure",
         action="store_true",
     )
-    parser.add_argument("-e", "--engine", help="The engine", default="multiprocess")
+    parser.add_argument("-e", "--engine", help="The engine", default="numpy")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )

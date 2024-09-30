@@ -613,9 +613,10 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
+  - New wake frame `DynamicWakes`: Dynamic wakes for any kind of timeseries states, compatible with chunking
   - New turbine type `FromLookupTable`, computes power and thrust coefficient from a lookup table
 - Outputs:
-  - New sub package `seq_plugins`
+  - New sub package `seq_plugins`, in case more of these will be added in the future
   - New sequential plugin `SeqWakeDebugPlugin`, adding wake centres and velocity vectors to flow animations, for debugging
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)

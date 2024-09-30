@@ -7,7 +7,6 @@ import foxes.constants as FC
 
 def _run_as_proc(algo, model, data, iterative, chunk_store, **cpars):
     """Helper function for running in multiprocessing process"""
-    print("STARTING CHUNK",list(chunk_store.keys()))
     algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
