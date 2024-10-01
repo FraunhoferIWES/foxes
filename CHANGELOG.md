@@ -618,5 +618,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Outputs:
   - New sub package `seq_plugins`, in case more of these will be added in the future
   - New sequential plugin `SeqWakeDebugPlugin`, adding wake centres and velocity vectors to flow animations, for debugging
+- Examples:
+  - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)

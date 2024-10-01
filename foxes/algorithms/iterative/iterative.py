@@ -43,7 +43,14 @@ class Iterative(Downwind):
         except AttributeError:
             return super().get_model(name)
 
-    def __init__(self, *args, max_it=None, conv_crit="default", mod_cutin={}, **kwargs):
+    def __init__(
+        self, 
+        *args, 
+        max_it=None, 
+        conv_crit="default", 
+        mod_cutin={}, 
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -288,9 +295,6 @@ class Iterative(Downwind):
         fres_dwnd = None
         while self._it < self.max_it:
             self._it += 1
-
-            if self._it == 1:
-                self.verbosity -= 1
 
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
 

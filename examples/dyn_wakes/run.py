@@ -25,6 +25,9 @@ if __name__ == "__main__":
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
     parser.add_argument(
+        "-mit", "--max_it", help="Run until maximal iteration", default=None, type=int
+    )
+    parser.add_argument(
         "-s",
         "--states",
         help="The timeseries input file (path or static)",
@@ -128,6 +131,8 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        max_it=args.max_it,
+        conv_crit="default" if args.max_it is None else None,
         verbosity=1,
     )
 

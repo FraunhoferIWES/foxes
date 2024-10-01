@@ -97,6 +97,9 @@ class DynamicWakes(WakeFrame):
             if verbosity > 0:
                 print(f"{self.name}: Assumed mean step = {step} m, setting max_age = {self.max_age}")
         
+        self.DATA = self.var("data")
+        self.UPDATES = self.var("updates")
+        
     def calc_order(self, algo, mdata, fdata):
         """ "
         Calculates the order of turbine evaluation.
@@ -133,15 +136,14 @@ class DynamicWakes(WakeFrame):
         dt = self._dt[i0:i1]
         tdi = {v: (FC.STATE, FC.TARGET, FC.TPOINT) 
             for v in algo.states.output_point_vars(algo)}
-        key = f"data_{downwind_index}"
-        ukey = f"updates_{downwind_index}"
-        fkey = f"from_{i0}"
+        key_fun = lambda i: f"{self.DATA}_{downwind_index}_{i}"
+        ukey_fun = lambda i: f"{self.UPDATES}_{downwind_index}_{i}"
+        fkey = f"from_{downwind_index}_{i0}"
         
         # compute wakes that start within this chunk: x, y, z, length
-        data_all = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
-        if data_all is None:
-            data_all = np.full((algo.n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
-            data = data_all[i0:i1]
+        data = algo.get_from_chunk_store(name=key_fun(i0), mdata=mdata, error=False)
+        if data is None:
+            data = np.full((n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
             data[:, 0, :3] = rxyh
             data[:, 0, 3] = 0
             tdt = {v: np.zeros((n_states, 1, 1), dtype=FC.DTYPE)
@@ -180,14 +182,11 @@ class DynamicWakes(WakeFrame):
             del pts, tdt
             
             # store this chunk's results:
-            algo.add_to_chunk_store(key, data_all, mdata, copy=False)
-            algo.add_to_chunk_store(ukey, {}, mdata, copy=False)
-        
-        else:
-            data = data_all[i0:i1]
+            algo.add_to_chunk_store(key_fun(i0), data, mdata, copy=False)
+            algo.add_to_chunk_store(ukey_fun(i0), {}, mdata, copy=False)
         
         # apply updates from future chunks:
-        updates = algo.get_from_chunk_store(name=ukey, mdata=mdata, error=False)
+        updates = algo.get_from_chunk_store(name=ukey_fun(i0), mdata=mdata, error=False)
         if updates is not None and len(updates):
             for uname in sorted(list(updates.keys())):
                 u = updates.pop(uname)
@@ -203,18 +202,25 @@ class DynamicWakes(WakeFrame):
         data = [data]
         while True:
             prev += 1
-            updates = algo.get_from_chunk_store(
-                name=ukey, mdata=mdata, prev_s=prev, error=False)
-            if updates is not None:
-                hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
-                    name=key, mdata=mdata, prev_s=prev, ret_inds=True, error=False
-                )
-                if hdata is None:
+            
+            inds = algo.find_chunk_in_store(
+                mdata=mdata, prev_s=prev, error=False,
+            )
+            if inds is None:
+                break
+            else:
+                h_i0, h_n_states = inds[:2]
+                updates = algo.get_from_chunk_store(
+                    name=ukey_fun(h_i0), mdata=mdata, prev_s=prev, error=False)
+                if updates is None:
                     break
                 else:
+                    hdata = algo.get_from_chunk_store(
+                        name=key_fun(h_i0), mdata=mdata, prev_s=prev, error=True
+                    ).copy()
+
                     wi0 = h_i0
                     h_i1 = h_i0 + h_n_states
-                    hdata = hdata[h_i0:h_i1].copy()
                     
                     # select points with index+age=i0:
                     sts = np.arange(h_n_states)
@@ -275,11 +281,8 @@ class DynamicWakes(WakeFrame):
                     # store prev chunk's results:
                     data.insert(0, hdata)
                             
-                    del sts, ags, sel
-                del hdata
-            else:
-                break
-            del updates
+                    del sts, ags, sel, hdata
+                del updates
         
         return np.concatenate(data, axis=0), wi0
                
@@ -344,7 +347,7 @@ class DynamicWakes(WakeFrame):
                 if np.any(sel):
                     sts = sts[sel]
                     ags = ags[sel]
-                    
+
                     dists = cdist(points[si, :, :2], wdata[sts, ags, :2])
                     j = np.argmin(dists, axis=1)
                     sts = sts[j]
@@ -357,7 +360,7 @@ class DynamicWakes(WakeFrame):
                     if np.any(sel):
                         nx[sel] = wdata[sts[sel], ags[sel]+1, :2] - nx[sel]
                     if np.any(~sel):
-                        nx[sel] -= wdata[sts[sel], ags[sel]-1, :2]
+                        nx[~sel] -= wdata[sts[~sel], ags[~sel]-1, :2]
                     dx = np.linalg.norm(nx, axis=-1)
                     nx /= dx[:, None]
                     

@@ -394,9 +394,39 @@ class Algorithm(Model):
 
         return xr.Dataset(**idata)
 
-    def __find_chunk_in_store(
-        self, mdata, tdata, prev_s, prev_t, error):
-        """Helper function for finding chunks in chunk store"""
+    def find_chunk_in_store(
+        self, 
+        mdata,
+        tdata=None, 
+        prev_s=0, 
+        prev_t=0, 
+        error=True,
+    ):
+        """
+        Finds indices in chunk store
+        
+        Parameters
+        ----------
+        name: str
+            The data name
+        mdata: foxes.core.MData
+            The mdata object
+        tdata: foxes.core.TData, optional
+            The tdata object
+        prev_s: int
+            How many states chunks backward
+        prev_t: int
+            How many points chunks backward 
+        error: bool
+            Flag for raising KeyError if data not found
+
+        Returns
+        -------
+        inds: tuple
+            The (i0, n_states, t0, n_targets) data of the
+            returning chunk
+            
+        """
         i0 = int(mdata.states_i0(counter=True))
         t0 = int(tdata.targets_i0() if tdata is not None else 0)
         n_states = int(mdata.n_states)
@@ -468,7 +498,7 @@ class Algorithm(Model):
             How many points chunks backward 
 
         """
-        i0, n_states, t0, n_targets = self.__find_chunk_in_store(
+        i0, n_states, t0, n_targets = self.find_chunk_in_store(
             mdata, tdata, prev_s, prev_t, error=True)
         
         key = (i0, t0)
@@ -525,7 +555,7 @@ class Algorithm(Model):
             returning chunk
 
         """
-        inds = self.__find_chunk_in_store(mdata, tdata, prev_s, prev_t, error)
+        inds = self.find_chunk_in_store(mdata, tdata, prev_s, prev_t, error)
         
         if inds is None:
             return None, (None, None, None, None) if ret_inds else None
