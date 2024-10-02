@@ -13,7 +13,7 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
-        "-b0", "--background0", help="Switch off dynamic background interpretation", action="store_true"
+        "-b", "--background", help="Switch on dynamic background interpretation", action="store_true"
     )
     parser.add_argument(
         "-S", "--max_state", help="States subset to the first n states", type=int, default=None,
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    if args.background0:
+    if not args.background:
         States = foxes.input.states.Timeseries
         kwargs = {}
     else:
