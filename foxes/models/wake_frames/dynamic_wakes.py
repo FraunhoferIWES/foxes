@@ -98,7 +98,7 @@ class DynamicWakes(WakeFrame):
                 print(f"{self.name}: Assumed mean step = {step} m, setting max_age = {self.max_age}")
         
         self.DATA = self.var("data")
-        self.UPDATES = self.var("updates")
+        self.UPDATE = self.var("update")
         
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -137,8 +137,7 @@ class DynamicWakes(WakeFrame):
         tdi = {v: (FC.STATE, FC.TARGET, FC.TPOINT) 
             for v in algo.states.output_point_vars(algo)}
         key = f"{self.DATA}_{downwind_index}"
-        ukey = f"{self.UPDATES}_{downwind_index}"
-        fkey = f"from_{downwind_index}_{i0}"
+        ukey_fun = lambda fr, to: f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
         
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
@@ -183,18 +182,21 @@ class DynamicWakes(WakeFrame):
             
             # store this chunk's results:
             algo.add_to_chunk_store(key, data, mdata, copy=False)
-            algo.add_to_chunk_store(ukey, {}, mdata, copy=False)
+            algo.block_convergence(mdata=mdata)
         
         # apply updates from future chunks:
-        updates = algo.get_from_chunk_store(name=ukey, mdata=mdata, error=False)
-        if updates is not None and len(updates):
-            for uname in sorted(list(updates.keys())):
-                u = updates.pop(uname)
-                sel = ~np.isnan(u)
-                if np.any(sel):
-                    data[:] = np.where(sel, u, data)
-                del u, sel
-        del updates
+        for (j, t), cdict in algo.chunk_store.items():
+            uname = ukey_fun(j, i0)
+            if j > i0 and t == 0 and uname in cdict:
+                u = cdict[uname]
+                if u is not None:
+                    sel = np.isnan(data) & ~np.isnan(u)
+                    if np.any(sel):
+                        data[:] = np.where(sel, u, data)
+                        algo.block_convergence(mdata=mdata)
+                    cdict[uname] = None
+                    del sel
+                del u
         
         # compute wakes from previous chunks:
         prev = 0
@@ -203,33 +205,36 @@ class DynamicWakes(WakeFrame):
         while True:
             prev += 1
             
-            # read update stack of previous chunk:
-            updates = algo.get_from_chunk_store(
-                name=ukey, mdata=mdata, prev_s=prev, error=False)
-            if updates is None:
+            # read data from previous chunk:
+            hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
+                name=key, mdata=mdata, prev_s=prev, ret_inds=True, error=False
+            )
+            if hdata is None:
                 break
             else:
-                # read data from previous chunk:
-                hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
-                    name=key, mdata=mdata, prev_s=prev, ret_inds=True, error=True
-                )
-                wi0 = h_i0
                 hdata = hdata.copy()
-                
+                wi0 = h_i0
+
                 # select points with index+age=i0:
                 sts = np.arange(h_n_states)
                 ags = i0 - (h_i0 + sts)
-                sel = (ags < self.max_age-1) 
+                sel = (ags < self.max_age-1)
                 if np.any(sel):
                     sts = sts[sel]
                     ags = ags[sel]
                     pts = hdata[sts, ags, :3]
-                    n_pts = len(pts)
-                    if n_pts > 0 and np.all(~np.isnan(pts)):
+                    sel = np.all(~np.isnan(pts[:, :2]), axis=-1) & np.any(np.isnan(hdata[sts, ags+1, :2]), axis=-1)
+                    if np.any(sel):
+                        sts = sts[sel]
+                        ags = ags[sel]
+                        pts = pts[sel]
+                        n_pts = len(pts)
+
                         tdt = {v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
                             for v in algo.states.output_point_vars(algo)}
                         
                         # compute single state wake propagation:
+                        isnan0 = np.isnan(hdata)
                         for si in range(n_states):
                             
                             s = slice(si, si+1, None)
@@ -264,10 +269,13 @@ class DynamicWakes(WakeFrame):
                                 del hsel
                                 break
                         
-                        # send update:
-                        udata = np.full_like(hdata, np.nan)
-                        udata[sel] = hdata[sel]
-                        updates[fkey] = udata
+                        # store update:
+                        sel = isnan0 & (~np.isnan(hdata))
+                        if np.any(sel):
+                            udata = np.full_like(hdata, np.nan)
+                            udata[sel] = hdata[sel]
+                            algo.add_to_chunk_store(ukey_fun(i0, h_i0), udata, mdata=mdata, copy=False)
+                            algo.block_convergence(mdata=mdata)
                     
                         del udata, tdt
                     del pts
@@ -275,8 +283,8 @@ class DynamicWakes(WakeFrame):
                 # store prev chunk's results:
                 data.insert(0, hdata)
                         
-                del sts, ags, sel, hdata
-            del updates
+                del sts, ags, sel
+            del hdata
         
         return np.concatenate(data, axis=0), wi0
                

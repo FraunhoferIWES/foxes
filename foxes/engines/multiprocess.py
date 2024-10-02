@@ -5,12 +5,13 @@ from tqdm import tqdm
 from foxes.core import Engine
 import foxes.constants as FC
 
-def _run_as_proc(algo, model, data, iterative, chunk_store, **cpars):
+def _run_as_proc(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
     """Helper function for running in multiprocessing process"""
     algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-    return results, chunk_store
+    cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
+    return results, cstore
 
 class MultiprocessEngine(Engine):
     """
@@ -137,7 +138,7 @@ class MultiprocessEngine(Engine):
                 # submit model calculation:
                 jobs[(chunki_states, chunki_points)] = self._pool.apply_async(
                     _run_as_proc,
-                    args=(algo, model, data, iterative, chunk_store),
+                    args=(algo, model, data, iterative, chunk_store, (i0_states, i0_targets)),
                     kwds=calc_pars,
                 )
                 del data
@@ -170,7 +171,7 @@ class MultiprocessEngine(Engine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-
+    
         return self.combine_results(
             algo=algo,
             results=results,

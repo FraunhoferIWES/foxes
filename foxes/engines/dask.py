@@ -111,7 +111,6 @@ class DaskBaseEngine(Engine):
         dask.config.refresh()
         super().finalize(*exit_args, **exit_kwargs)
 
-
 def _run_as_ufunc(
     state_inds,
     *ldata,
@@ -251,7 +250,6 @@ class XArrayEngine(DaskBaseEngine):
     :group: engines
 
     """
-
     def run_calculation(
         self,
         algo,
@@ -438,12 +436,13 @@ class XArrayEngine(DaskBaseEngine):
         return results.compute(num_workers=self.n_procs)
 
 @delayed
-def _run_lazy(algo, model, iterative, chunk_store, *data, **cpars):
+def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     """Helper function for lazy running"""
     algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-    return results, chunk_store
+    cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
+    return results, cstore
 
 class DaskEngine(DaskBaseEngine):
     """
@@ -452,7 +451,6 @@ class DaskEngine(DaskBaseEngine):
     :group: engines
 
     """
-
     def run_calculation(
         self,
         algo,
@@ -564,6 +562,7 @@ class DaskEngine(DaskBaseEngine):
                     deepcopy(model),
                     iterative,
                     chunk_store,
+                    (i0_states, i0_targets),
                     *data,
                     **calc_pars,
                 )
@@ -609,6 +608,7 @@ def _run_on_cluster(
     iterative,
     chunk_store,
     i0_states,
+    i0_targets,
     cpars,
 ):
     """Helper function for running on a cluster"""
@@ -643,8 +643,10 @@ def _run_on_cluster(
 
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-
-    return results, chunk_store
+    
+    k = (i0_states, i0_targets)
+    cstore = {k: chunk_store[k]} if k in chunk_store else {}
+    return results, cstore
 
 class LocalClusterEngine(DaskBaseEngine):
     """
@@ -869,6 +871,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     iterative=iterative,
                     chunk_store=cstore,
                     i0_states=i0_states,
+                    i0_targets=i0_targets,
                     cpars=cpars,
                     retries=10,
                 )

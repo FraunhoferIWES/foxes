@@ -3,6 +3,7 @@ from foxes.algorithms.downwind.downwind import Downwind
 from foxes.core import FarmDataModelList
 from foxes.utils import Dict
 import foxes.variables as FV
+import foxes.constants as FC
 from . import models as mdls
 
 
@@ -303,14 +304,17 @@ class Iterative(Downwind):
     
             fres_dwnd = fres
             if self.conv_crit is not None:
-                conv = self.conv_crit.check_converged(
-                    self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
-                )
-                if conv:
-                    self.print(
-                        f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
+                if self.eval_conv_block():
+                    self.print(f"{self.name}: Convergence blocked", vlim=0)
+                else:
+                    conv = self.conv_crit.check_converged(
+                        self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
                     )
-                    break
+                    if conv:
+                        self.print(
+                            f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
+                        )
+                        break
 
         # final run, recovers farm order of results:
         self.print("Starting final run", vlim=0)

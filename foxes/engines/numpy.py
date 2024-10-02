@@ -149,7 +149,7 @@ class NumpyEngine(Engine):
                 # submit model calculation:
                 key = (chunki_states, chunki_points)
                 results[key] = _run_as_proc(
-                    algo, model, data, iterative, chunk_store, **calc_pars
+                    algo, model, data, iterative, chunk_store, (i0_states, i0_targets), **calc_pars
                 )
                 chunk_store.update(results[key][1])
                 del data

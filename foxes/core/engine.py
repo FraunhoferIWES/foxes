@@ -412,7 +412,7 @@ class Engine(ABC):
         ds: xarray.Dataset
             The final results dataset
 
-        """
+        """           
         self.print("Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
@@ -427,7 +427,11 @@ class Engine(ABC):
                         data_vars[v][1].append(r[v])
                         alls += data_vars[v][1][-1].shape[0]
                         if iterative:
-                            algo.chunk_store.update(cstore)
+                            for k, c in cstore.items():
+                                if k in algo.chunk_store:
+                                    algo.chunk_store[k].update(c)
+                                else:
+                                    algo.chunk_store[k] = c
                 else:
                     for chunki_states in range(n_chunks_states):
                         tres = []
@@ -435,7 +439,11 @@ class Engine(ABC):
                             r, cstore = results[(chunki_states, chunki_points)]
                             tres.append(r[v])
                             if iterative:
-                                algo.chunk_store.update(cstore)
+                                for k, c in cstore.items():
+                                    if k in algo.chunk_store:
+                                        algo.chunk_store[k].update(c)
+                                    else:
+                                        algo.chunk_store[k] = c
                         data_vars[v][1].append(np.concatenate(tres, axis=1))
                     del tres
                 del r, cstore

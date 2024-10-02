@@ -136,6 +136,11 @@ ITYPE = np.int64
 :group: foxes.constants
 """
 
+BLOCK_CONVERGENCE = "block_convergence"
+"""Identifier for convergence blocking signal
+:group: foxes.constants
+"""
+
 
 KAPPA = 0.41
 """ The Van-Karman constant

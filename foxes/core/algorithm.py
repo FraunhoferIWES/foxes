@@ -433,6 +433,7 @@ class Algorithm(Model):
         n_targets = int(tdata.n_targets if tdata is not None else 0)
         
         if prev_s > 0 or prev_t > 0:
+
             inds = np.array([
                 [d["i0"], d["i0"]+d["n_states"], d["n_states"],
                  d["t0"], d["t0"]+d["n_targets"], d["n_targets"]]
@@ -474,8 +475,6 @@ class Algorithm(Model):
         mdata, 
         tdata=None, 
         copy=True,
-        prev_s=0,
-        prev_t=0,
     ):
         """
         Add data to the chunk store
@@ -492,17 +491,15 @@ class Algorithm(Model):
             The tdata object
         copy: bool
             Flag for copying incoming data
-        prev_s: int
-            How many states chunks backward
-        prev_t: int
-            How many points chunks backward 
 
         """
-        i0, n_states, t0, n_targets = self.find_chunk_in_store(
-            mdata, tdata, prev_s, prev_t, error=True)
+        i0 = int(mdata.states_i0(counter=True))
+        t0 = int(tdata.targets_i0() if tdata is not None else 0)
         
         key = (i0, t0)
         if key not in self.chunk_store:
+            n_states = int(mdata.n_states)
+            n_targets = int(tdata.n_targets if tdata is not None else 0)
             self.chunk_store[key] = Dict(
                 {
                     "i0": i0,
@@ -512,7 +509,7 @@ class Algorithm(Model):
                 },
                 name=f"chunk_store_{i0}_{t0}"
             )
-        
+            
         self.chunk_store[key][name] = data.copy() if copy else data
 
     def get_from_chunk_store(
@@ -597,6 +594,33 @@ class Algorithm(Model):
             self.__chunk_store = Dict(name="chunk_store")
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
+    
+    def block_convergence(self, **kwargs):
+        """
+        Switch on convergence block during iterative run
+
+        Parameters
+        ----------
+        kwargs: dict, optional
+            Parameters for add_to_chunk_store()
+            
+        """
+        self.add_to_chunk_store(name=FC.BLOCK_CONVERGENCE, data=True, copy=False, **kwargs)
+         
+    def eval_conv_block(self):
+        """
+        Evaluate convergence block, removing blocks on the fly
+        
+        Returns
+        -------
+        blocked: bool
+            True if convergence is currently blocked
+            
+        """
+        blocked = False
+        for c in self.__chunk_store.values():
+            blocked = c.pop(FC.BLOCK_CONVERGENCE, False) or blocked
+        return blocked
 
     def set_running(
         self,
