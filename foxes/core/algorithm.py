@@ -444,7 +444,7 @@ class Algorithm(Model):
                     sel = np.where((inds[:, 0]==i0) & (inds[:, 4]==t0))[0]
                     if len(sel) == 0:
                         if error:
-                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                            raise KeyError(f"{self.name}: Previous key {(i0, t0)}, prev={(prev_s, prev_t)}, not found in chunk store, got inds {inds}")
                         else:
                             return None
                     else:
@@ -457,7 +457,7 @@ class Algorithm(Model):
                     sel = np.where((inds[:, 1]==i0) & (inds[:, 3]==t0))[0]
                     if len(sel) == 0:
                         if error:
-                            raise KeyError(f"{self.name}: Previous key {(i0, t0)} not found in chunk store, got {list(inds)}")
+                            raise KeyError(f"{self.name}: Previous key {(i0, t0)}, prev={(prev_s, prev_t)}, not found in chunk store, got inds {inds}")
                         else:
                             return None
                     else:
@@ -512,7 +512,7 @@ class Algorithm(Model):
                 },
                 name=f"chunk_store_{i0}_{t0}"
             )
-            
+        
         self.chunk_store[key][name] = data.copy() if copy else data
 
     def get_from_chunk_store(
@@ -558,7 +558,7 @@ class Algorithm(Model):
         inds = self.find_chunk_in_store(mdata, tdata, prev_s, prev_t, error)
         
         if inds is None:
-            return None, (None, None, None, None) if ret_inds else None
+            return (None, (None, None, None, None)) if ret_inds else None
         else:
             i0, __, t0, __ = inds   
             try:

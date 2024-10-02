@@ -136,12 +136,12 @@ class DynamicWakes(WakeFrame):
         dt = self._dt[i0:i1]
         tdi = {v: (FC.STATE, FC.TARGET, FC.TPOINT) 
             for v in algo.states.output_point_vars(algo)}
-        key_fun = lambda i: f"{self.DATA}_{downwind_index}_{i}"
-        ukey_fun = lambda i: f"{self.UPDATES}_{downwind_index}_{i}"
+        key = f"{self.DATA}_{downwind_index}"
+        ukey = f"{self.UPDATES}_{downwind_index}"
         fkey = f"from_{downwind_index}_{i0}"
         
         # compute wakes that start within this chunk: x, y, z, length
-        data = algo.get_from_chunk_store(name=key_fun(i0), mdata=mdata, error=False)
+        data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
         if data is None:
             data = np.full((n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
             data[:, 0, :3] = rxyh
@@ -182,11 +182,11 @@ class DynamicWakes(WakeFrame):
             del pts, tdt
             
             # store this chunk's results:
-            algo.add_to_chunk_store(key_fun(i0), data, mdata, copy=False)
-            algo.add_to_chunk_store(ukey_fun(i0), {}, mdata, copy=False)
+            algo.add_to_chunk_store(key, data, mdata, copy=False)
+            algo.add_to_chunk_store(ukey, {}, mdata, copy=False)
         
         # apply updates from future chunks:
-        updates = algo.get_from_chunk_store(name=ukey_fun(i0), mdata=mdata, error=False)
+        updates = algo.get_from_chunk_store(name=ukey, mdata=mdata, error=False)
         if updates is not None and len(updates):
             for uname in sorted(list(updates.keys())):
                 u = updates.pop(uname)
@@ -203,86 +203,80 @@ class DynamicWakes(WakeFrame):
         while True:
             prev += 1
             
-            inds = algo.find_chunk_in_store(
-                mdata=mdata, prev_s=prev, error=False,
-            )
-            if inds is None:
+            # read update stack of previous chunk:
+            updates = algo.get_from_chunk_store(
+                name=ukey, mdata=mdata, prev_s=prev, error=False)
+            if updates is None:
                 break
             else:
-                h_i0, h_n_states = inds[:2]
-                updates = algo.get_from_chunk_store(
-                    name=ukey_fun(h_i0), mdata=mdata, prev_s=prev, error=False)
-                if updates is None:
-                    break
-                else:
-                    hdata = algo.get_from_chunk_store(
-                        name=key_fun(h_i0), mdata=mdata, prev_s=prev, error=True
-                    ).copy()
-
-                    wi0 = h_i0
-                    h_i1 = h_i0 + h_n_states
-                    
-                    # select points with index+age=i0:
-                    sts = np.arange(h_n_states)
-                    ags = i0 - (h_i0 + sts)
-                    sel = (ags < self.max_age-1) 
-                    if np.any(sel):
-                        sts = sts[sel]
-                        ags = ags[sel]
-                        pts = hdata[sts, ags, :3]
-                        n_pts = len(pts)
-                        if n_pts > 0 and np.all(~np.isnan(pts)):
-                            tdt = {v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
-                                for v in algo.states.output_point_vars(algo)}
-                            
-                            # compute single state wake propagation:
-                            for si in range(n_states):
-                                
-                                s = slice(si, si+1, None)
-                                hmdata = mdata.get_slice(FC.STATE, s)
-                                hfdata = fdata.get_slice(FC.STATE, s)
-                                htdt = {v: d[s] for v, d in tdt.items()}
-                                htdata = TData.from_points(points=pts[None, :], data=htdt, dims=tdi)
-                                hdt = dt[s, None]
-                                del htdt, s
-                                
-                                res = algo.states.calculate(algo, hmdata, hfdata, htdata)
-                                del hmdata, hfdata, htdata
-                    
-                                uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
-                                dxy = uv * hdt
-                                pts[:, :2] += dxy
-                                del res, uv, hdt
-                                
-                                ags += 1
-                                hdata[sts, ags, :3] = pts
-                                hdata[sts, ags, 3] = hdata[sts, ags-1, 3] + np.linalg.norm(dxy, axis=-1)
-                                del dxy
-                                
-                                hsel = (h_i0+sts+ags<i1) & (ags<self.max_age-1)
-                                if np.any(hsel):
-                                    sts = sts[hsel]
-                                    ags = ags[hsel]
-                                    pts = pts[hsel]
-                                    tdt = {v: d[:, hsel] for v, d in tdt.items()}
-                                    del hsel
-                                else:
-                                    del hsel
-                                    break
-                            
-                            # send update:
-                            udata = np.full_like(hdata, np.nan)
-                            udata[sel] = hdata[sel]
-                            updates[fkey] = udata
+                # read data from previous chunk:
+                hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
+                    name=key, mdata=mdata, prev_s=prev, ret_inds=True, error=True
+                )
+                wi0 = h_i0
+                hdata = hdata.copy()
+                
+                # select points with index+age=i0:
+                sts = np.arange(h_n_states)
+                ags = i0 - (h_i0 + sts)
+                sel = (ags < self.max_age-1) 
+                if np.any(sel):
+                    sts = sts[sel]
+                    ags = ags[sel]
+                    pts = hdata[sts, ags, :3]
+                    n_pts = len(pts)
+                    if n_pts > 0 and np.all(~np.isnan(pts)):
+                        tdt = {v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
+                            for v in algo.states.output_point_vars(algo)}
                         
-                            del udata, tdt
-                        del pts
-                        
-                    # store prev chunk's results:
-                    data.insert(0, hdata)
+                        # compute single state wake propagation:
+                        for si in range(n_states):
                             
-                    del sts, ags, sel, hdata
-                del updates
+                            s = slice(si, si+1, None)
+                            hmdata = mdata.get_slice(FC.STATE, s)
+                            hfdata = fdata.get_slice(FC.STATE, s)
+                            htdt = {v: d[s] for v, d in tdt.items()}
+                            htdata = TData.from_points(points=pts[None, :], data=htdt, dims=tdi)
+                            hdt = dt[s, None]
+                            del htdt, s
+                            
+                            res = algo.states.calculate(algo, hmdata, hfdata, htdata)
+                            del hmdata, hfdata, htdata
+                
+                            uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
+                            dxy = uv * hdt
+                            pts[:, :2] += dxy
+                            del res, uv, hdt
+                            
+                            ags += 1
+                            hdata[sts, ags, :3] = pts
+                            hdata[sts, ags, 3] = hdata[sts, ags-1, 3] + np.linalg.norm(dxy, axis=-1)
+                            del dxy
+                            
+                            hsel = (h_i0+sts+ags<i1) & (ags<self.max_age-1)
+                            if np.any(hsel):
+                                sts = sts[hsel]
+                                ags = ags[hsel]
+                                pts = pts[hsel]
+                                tdt = {v: d[:, hsel] for v, d in tdt.items()}
+                                del hsel
+                            else:
+                                del hsel
+                                break
+                        
+                        # send update:
+                        udata = np.full_like(hdata, np.nan)
+                        udata[sel] = hdata[sel]
+                        updates[fkey] = udata
+                    
+                        del udata, tdt
+                    del pts
+                    
+                # store prev chunk's results:
+                data.insert(0, hdata)
+                        
+                del sts, ags, sel, hdata
+            del updates
         
         return np.concatenate(data, axis=0), wi0
                
