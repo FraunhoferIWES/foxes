@@ -265,65 +265,77 @@ class TimelinesStates(States):
         trace_done = np.zeros((n_states, n_points), dtype=bool)
         
         # flake8: noqa: F821
-        def _eval_trace(sel, hdxy=None, trs=None, sgn=0):
+        def _eval_trace(sel, projx0=None, hdxy=None, trs=None):
             """Helper function that updates trace_done"""
             nonlocal trace_si, trace_done
             
             trs = trace_si[sel] if trs is None else trs
             nx = dxy[trs] if hdxy is None else hdxy
             lx = np.linalg.norm(nx, axis=-1)
-            nx /= lx[:, None]
-            projx = np.einsum("sd,sd->s", trace_p[sel], nx)
+            nx /= lx[..., None]
+            projx = np.einsum("...d,...d->...", trace_p[sel], nx)
+ 
+            # find crossings of planes orthogonal to hdxy:
+            if projx0 is not None:
+                print("EVAL",np.sum(projx0 > -1e-8),np.sum(projx < 1e-8),np.sum(projx0 < 1e-8),np.sum(projx > -1e-8),":",np.sum((projx0 > -1e-8) & (projx < 1e-8)),np.sum((projx0 < 1e-8) & (projx > -1e-8)))
+                seld = (
+                    (projx0 > -1e-8) & (projx < 1e-8)
+                ) | (
+                    (projx0 < 1e-8) & (projx > -1e-8)
+                )
+                if np.any(seld):
+                    trace_done[sel] = np.where(seld, True, trace_done[sel])
             
-            if sgn == 0:
-                seld = (projx < 1e-6)
-                trace_si[sel] = np.where(seld & (projx < -1e6), -1, trs)
-                trs = trace_si[sel]
-            elif sgn < 0:
-                seld = (projx < 1e-6) 
-                seld = seld | (trs < 0)
-            elif sgn > 0:
-                seld = (projx > -1e-6) 
-                seld = seld | (trs >= i1)
-            
-            trace_done[sel] = np.where(seld, True, trace_done[sel])
+            return projx
 
         # step backwards in time, until projection onto axis is negative:
-        sel = ~trace_done
-        _eval_trace(sel)
+        projx0 = _eval_trace(sel=np.s_[:])
+        """
+        sel = (~trace_done)
         while np.any(sel):
-            trace_si[sel] -= 1
             
             trs = trace_si[sel]
             hdxy = dxy[trs]
             trace_p[sel] -= hdxy
             
-            _eval_trace(sel, hdxy, trs, sgn=-1)
-            sel = ~trace_done
+            projx0[sel] = _eval_trace(
+                sel, projx0=projx0[sel], hdxy=hdxy, trs=trs)
+            
+            trace_si[~trace_done & sel] -= 1
+            sel = (~trace_done) & (trace_si>=0)
             
             del trs, hdxy
-
+        """
+        
         # step forwards in time, until projection onto axis is positive:
-        sel = (trace_si < 0)
+        sel = (~trace_done)
+        print("SEL",np.sum(sel))
         if np.any(sel):
             trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
-            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None], trace_si)
-            trace_done[sel] = False
-            
+            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] + 1, trace_si)
+                
+            sel &= (trace_si<i1)
+            projx0[sel] = _eval_trace(sel)
             while np.any(sel):
                 
                 trs = trace_si[sel]
                 hdxy = dxy[trs]
                 trace_p[sel] += hdxy
                 
-                _eval_trace(sel, hdxy, trs, sgn=+1)
+                projx0[sel] = _eval_trace(
+                    sel, projx0=projx0[sel], hdxy=hdxy, trs=trs)
                 
-                sel = ~trace_done
-                trace_si[sel] += 1
+                trace_si[~trace_done & sel] += 1
+                sel = (~trace_done) & (trace_si<i1)
                 
-                del trs, hdxy
-                
-        return np.maximum(trace_si,0) #np.minimum(trace_si, i1-1)
+                del trs, hdxy     
+        
+        print("DONE",np.sum(trace_done), np.sum(~trace_done),np.sum(trace_si<0),np.sum(trace_si>=i1))   
+            
+        trace_si = np.maximum(trace_si, 0)
+        trace_si = np.minimum(trace_si, i1 - 1)
+    
+        return trace_si
             
     def calculate(self, algo, mdata, fdata, tdata):
         """
