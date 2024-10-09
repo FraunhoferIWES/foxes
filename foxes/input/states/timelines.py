@@ -261,65 +261,78 @@ class TimelinesStates(States):
         trace_p = points[:, :, :2] - ref_xy[:, :, :2]
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
         trace_si[:] = i0 + np.arange(n_states)[:, None] 
+        trace_done = np.zeros((n_states, n_points), dtype=bool)
         
         # flake8: noqa: F821
-        def _eval_trace(sel, best, hdxy=None, trs=None):
+        def _eval_trace(sel, projx0=None, hdxy=None, trs=None):
             """Helper function that updates trace_done"""
-            nonlocal trace_si
+            nonlocal trace_si, trace_done
             
             trs = trace_si[sel] if trs is None else trs
             nx = dxy[trs] if hdxy is None else hdxy
             lx = np.linalg.norm(nx, axis=-1)
             nx /= lx[..., None]
-            projx = np.abs(np.einsum("...d,...d->...", trace_p[sel], nx))
+            projx = np.einsum("...d,...d->...", trace_p[sel], nx)
  
-            better = projx<best[sel]
-            if np.any(better):
-                best[sel] = np.where(better, projx, best[sel])
+            # find crossings of planes orthogonal to hdxy:
+            if projx0 is not None:
+                seld = (
+                    (projx0 > -1e-8) & (projx < 1e-8)
+                ) | (
+                    (projx0 < 1e-8) & (projx > -1e-8)
+                )
+                if np.any(seld):
+                    trace_done[sel] = np.where(seld, True, trace_done[sel])
             
-            return better
-            
+            return projx
+
         # step backwards in time, until projection onto axis is negative:
-        best_b = np.full((n_states, n_points), 1e20, dtype=FC.DTYPE)
-        best_b_si = np.zeros_like(trace_si)
-        sel = np.ones((n_states, n_points), dtype=bool)
+        projx0 = _eval_trace(sel=np.s_[:])
+        sel = (~trace_done)
+        tshift = 0
         while np.any(sel):
             
             trs = trace_si[sel]
-            hdxy = dxy[trs]
-            trace_p[sel] -= hdxy
+            trace_p[sel] -= dxy[trs]
             
-            better = _eval_trace(sel, best_b, hdxy=hdxy, trs=trs)
-            best_b_si[sel] = np.where(better, trs, best_b_si[sel])
+            projx0[sel] = _eval_trace(
+                sel, projx0=projx0[sel], hdxy=dxy[trs-tshift], trs=trs)
             
-            trace_si[sel] -= 1
-            sel = (trace_si>=0)
-            
-            del trs, hdxy
-        
-        # step forwards in time, until projection onto axis is positive:
-        trace_p = points[:, :, :2] - ref_xy[:, :, :2]
-        trace_si[:] = i0 + np.arange(n_states)[:, None] + 1
-        best_f = np.full((n_states, n_points), 1e20, dtype=FC.DTYPE)
-        best_f_si = np.full_like(trace_si, algo.n_states - 1)
-        sel = (trace_si < algo.n_states)
-        tshift = 1
-        while np.any(sel):
-            
-            trs = trace_si[sel]
-            trace_p[sel] += dxy[trs]
-            
-            better = _eval_trace(sel, best_f, hdxy=dxy[trs-tshift], trs=trs)
-            best_f_si[sel] = np.where(better, trs, best_f_si[sel])
-            
-            tshift += 1
-            trace_si[sel] += 1
-            sel = (trace_si < algo.n_states)
+            tshift -= 1
+            trace_si[~trace_done & sel] -= 1
+            sel = (~trace_done) & (trace_si>=0)
             
             del trs
-        del trace_p, trace_si
         
-        return np.where(best_b<best_f, best_b_si, best_f_si)
+        # step forwards in time, until projection onto axis is positive:
+        sel = (~trace_done)
+        if np.any(sel):
+            trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
+            trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] + 1, trace_si)
+                
+            sel &= (trace_si < algo.n_states)
+            projx0[sel] = _eval_trace(sel)
+            tshift = 1
+            while np.any(sel):
+                
+                trs = trace_si[sel]
+                trace_p[sel] += dxy[trs]
+                
+                projx0[sel] = _eval_trace(
+                    sel, projx0=projx0[sel], hdxy=dxy[trs-tshift], trs=trs)
+                
+                tshift += 1
+                trace_si[~trace_done & sel] += 1
+                sel = (~trace_done) & (trace_si < algo.n_states)
+                
+                del trs    
+                
+            trace_si = np.minimum(trace_si, algo.n_states - 1)
+        
+        trace_si = np.maximum(trace_si, 0)
+        trace_si = np.minimum(trace_si, algo.n_states - 1)
+    
+        return trace_si
             
     def calculate(self, algo, mdata, fdata, tdata):
         """
