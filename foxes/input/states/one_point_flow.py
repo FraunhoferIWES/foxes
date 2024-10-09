@@ -7,7 +7,7 @@ from foxes.models.wake_frames.timelines import Timelines
 import foxes.variables as FV
 import foxes.constants as FC
 
-class TimelinesStates(States):
+class OnePointFlowStates(States):
     """
     Time-evolving states based on horizontally
     homogeneous timeseries data
@@ -455,9 +455,10 @@ class TimelinesStates(States):
         return {v: d.reshape(n_states, n_targets, n_tpoints)
                 for v, d in results.items()}
 
-class TimeseriesTimelines(TimelinesStates):
+class OnePointFlowTimeseries(OnePointFlowStates):
     """
-    Timelines from uniform timeseries data
+    Inhomogeneous inflow from homogeneous timeseries data
+    at one point
     
     :group: input.states
     
@@ -489,9 +490,10 @@ class TimeseriesTimelines(TimelinesStates):
             **kwargs,
         )
 
-class MultiHeightTimelines(TimelinesStates):
+class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
     """
-    Timelines from height dependent timeseries data
+    Inhomogeneous inflow from height dependent homogeneous 
+    timeseries data at one point
     
     :group: input.states
     
@@ -510,9 +512,10 @@ class MultiHeightTimelines(TimelinesStates):
         """
         super().__init__(*args, states_type="MultiHeightTimeseries", **kwargs)
         
-class MultiHeightNCTimelines(TimelinesStates):
+class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
     """
-    Timelines from height dependent timeseries data
+    Inhomogeneous inflow from height dependent homogeneous 
+    timeseries data at one point based on NetCDF input
     
     :group: input.states
     

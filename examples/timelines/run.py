@@ -89,7 +89,7 @@ if __name__ == "__main__":
         States = foxes.input.states.Timeseries
         kwargs = {}
     else:
-        States = foxes.input.states.TimeseriesTimelines
+        States = foxes.input.states.OnePointFlowTimeseries
         kwargs = {"ref_xy": args.ref_xy}
         
     states = States(

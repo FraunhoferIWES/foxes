@@ -19,7 +19,7 @@ if __name__ == "__main__":
         "-S", "--max_state", help="States subset to the first n states", type=int, default=None,
     )
     parser.add_argument(
-        "-R", "--ref_xy", help="The reference point x y", type=float, default=[2000, 2000], nargs="+",
+        "-R", "--ref_xy", help="The reference point x y", type=float, default=[2500, 2500], nargs="+",
     )
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         States = foxes.input.states.Timeseries
         kwargs = {}
     else:
-        States = foxes.input.states.TimeseriesTimelines
+        States = foxes.input.states.OnePointFlowTimeseries
         kwargs = {"ref_xy": args.ref_xy}
         
     states = States(

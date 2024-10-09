@@ -611,6 +611,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
   - New engine `NumpyEngine` (short `numpy`): Runs a loop over chunks
   - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
+- Inputs:
+  - New states `OnePointFlowStates`, `OnePointFlowTimeseries`, `OnePointFlowMultiHeightTimeseries`, `OnePointFlowMultiHeightNCTimeseries`: Generating horizontally inhomogeneous inflow from horizontally homogeneous input data
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
   - New wake frame `DynamicWakes`: Dynamic wakes for any kind of timeseries states, compatible with chunking
@@ -619,6 +621,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New sub package `seq_plugins`, in case more of these will be added in the future
   - New sequential plugin `SeqWakeDebugPlugin`, adding wake centres and velocity vectors to flow animations, for debugging
 - Examples:
-  - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes
+  - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes and `OnePointFlowTimeseries` inflow
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)
