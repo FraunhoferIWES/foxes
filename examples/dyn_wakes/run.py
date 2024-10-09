@@ -1,6 +1,7 @@
 import time
 import argparse
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import foxes
@@ -11,6 +12,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--animation", help="Write flow animation file", action="store_true"
+    )
+    parser.add_argument(
+        "-F", "--fps", help="The frames per second value for the animation", type=int, default=4
     )
     parser.add_argument(
         "-b0", "--background0", help="Switch off dynamic background interpretation", action="store_true"
@@ -94,9 +98,21 @@ if __name__ == "__main__":
     else:
         States = foxes.input.states.OnePointFlowTimeseries
         kwargs = {"ref_xy": args.ref_xy}
+    
+    sdata = pd.read_csv(
+        foxes.StaticData().get_file_path(foxes.STATES, args.states),
+        index_col=0,
+        parse_dates=[0],
+    )
+    times = sdata.index.to_numpy()
+    sdata.loc[times[:10], "ws"] = 5.7
+    sdata.loc[times[20:30], "ws"] = 5.7
+    sdata.loc[times[40:50], "ws"] = 5.7
+    sdata.loc[times[60:70], "ws"] = 5.7
+    sdata.loc[times[80:90], "ws"] = 5.7
         
     states = States(
-        data_source=args.states,
+        data_source=sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.07},
@@ -214,12 +230,12 @@ if __name__ == "__main__":
         )
         anim.add_generator(
             o.gen_stdata(
-                turbines=[4, 7],
+                turbines=[0, 4, 7],
                 variable=FV.REWS,
                 fig=fig,
                 ax=axs[1],
                 ret_im=True,
-                legloc="upper left",
+                legloc="upper right",
                 animated=True,
             )
         )
@@ -236,7 +252,12 @@ if __name__ == "__main__":
             anno_dely=-60,
             alpha=0,
         )
+        
+        axs[0].scatter(
+            [args.ref_xy[0]], [args.ref_xy[1]], 
+            marker="x", color="red", s=80, animated=True
+        )
 
         fpath = "ani.gif"
         print("Writing file", fpath)
-        ani.save(filename=fpath, writer="pillow")
+        ani.save(filename=fpath, writer="pillow", fps=args.fps)

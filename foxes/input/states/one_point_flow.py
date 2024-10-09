@@ -277,9 +277,9 @@ class OnePointFlowStates(States):
             # find crossings of planes orthogonal to hdxy:
             if projx0 is not None:
                 seld = (
-                    (projx0 > -1e-8) & (projx < 1e-8)
+                    (projx0 >= -lx/2) & (projx <= lx/2)
                 ) | (
-                    (projx0 < 1e-8) & (projx > -1e-8)
+                    (projx0 <= lx/2) & (projx >= -lx/2)
                 )
                 if np.any(seld):
                     trace_done[sel] = np.where(seld, True, trace_done[sel])
