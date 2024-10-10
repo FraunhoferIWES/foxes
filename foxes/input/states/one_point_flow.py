@@ -264,7 +264,7 @@ class OnePointFlowStates(States):
         trace_done = np.zeros((n_states, n_points), dtype=bool)
         
         # flake8: noqa: F821
-        def _eval_trace(sel, projx0=None, hdxy=None, trs=None, trdone=None):
+        def _eval_trace(sel, projx0=None, hdxy=None, trs=None):
             """Helper function that updates trace_done"""
             nonlocal trace_si, trace_done
             
