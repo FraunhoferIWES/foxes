@@ -20,6 +20,9 @@ if __name__ == "__main__":
         "-b0", "--background0", help="Switch off dynamic background interpretation", action="store_true"
     )
     parser.add_argument(
+        "-ws0", "--fix_ws", help="Switch off dynamic wind speed", action="store_true"
+    )
+    parser.add_argument(
         "-S", "--max_state", help="States subset to the first n states", type=int, default=None,
     )
     parser.add_argument(
@@ -104,9 +107,10 @@ if __name__ == "__main__":
         index_col=0,
         parse_dates=[0],
     )
-    n_times = len(sdata.index)
-    sdata["ws"] = 5 + 0.3*np.sin(np.arange(n_times)*2*np.pi/20)
-        
+    if not args.fix_ws:
+        n_times = len(sdata.index)
+        sdata["ws"] = 5 + 0.3*np.sin(np.arange(n_times)*2*np.pi/20)
+            
     states = States(
         data_source=sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],

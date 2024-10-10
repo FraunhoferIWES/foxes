@@ -261,79 +261,78 @@ class OnePointFlowStates(States):
         trace_p = points[:, :, :2] - ref_xy[:, :, :2]
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
         trace_si[:] = i0 + np.arange(n_states)[:, None] 
-        trace_done = np.zeros((n_states, n_points), dtype=bool)
+        coeffs = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
         
         # flake8: noqa: F821
-        def _eval_trace(sel, projx0=None, hdxy=None, trs=None):
+        def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None):
             """Helper function that updates trace_done"""
-            nonlocal trace_si, trace_done
-            
-            trs = trace_si[sel] if trs is None else trs
-            nx = dxy[trs] if hdxy is None else hdxy
-            lx = np.linalg.norm(nx, axis=-1)
-            nx /= lx[..., None]
+            nonlocal coeffs
+
+            # project onto local x direction:
+            hdxy0 = dxy[trace_si[sel]] if hdxy0 is None else hdxy0
+            nx = hdxy0/np.linalg.norm(hdxy0, axis=-1)[..., None]
             projx = np.einsum("...d,...d->...", trace_p[sel], nx)
+            
+            # check for local points:
+            if hdxy is None:
+                seld = (projx >= 1e-10) & ( projx <= 1e-10)
+                if np.any(seld):
+                    coeffs[sel] = np.where(seld, -1, coeffs[sel])
  
-            # find crossings of planes orthogonal to hdxy:
-            seld = (projx >= -lx/2) & (projx <= lx/2)
-            if projx0 is not None:
-                seld |= (
-                    (projx0 > -1e-6) & (projx < 1e-6)
-                ) | (
-                    (projx0 < 1e-6) & (projx > -1e-6)
+            # check for vicinity to reference plane:
+            else:
+                lx = np.einsum("...d,...d->...", hdxy, nx)
+                seld = (
+                    ( (lx < 0) & (projx >= lx) & ( projx <= 0) ) |
+                    ( (lx > 0) & (projx >= 0) & ( projx <= lx) )
                 )
-            if np.any(seld):
-                trace_done[sel] = np.where(seld, True, trace_done[sel])
-        
-            return projx
+                if np.any(seld):
+                    w = projx/np.abs(lx)
+                    coeffs[sel] = np.where(seld, w, coeffs[sel])
 
         # step backwards in time, until projection onto axis is negative:
-        projx0 = _eval_trace(sel=np.s_[:])
-        sel = (~trace_done)
+        _eval_trace(sel=np.s_[:])
+        sel = np.isnan(coeffs)
         tshift = 0
         while np.any(sel):
             
             trs = trace_si[sel]
-            trace_p[sel] -= dxy[trs]
+            hdxy = -dxy[trs]
+            trace_p[sel] += hdxy
             
-            projx0[sel] = _eval_trace(
-                sel, projx0=projx0[sel], hdxy=dxy[trs-tshift], trs=trs)
+            _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs-tshift])
             
             tshift -= 1
-            trace_si[~trace_done & sel] -= 1
-            sel = (~trace_done) & (trace_si>=0)
+            sel0 = np.isnan(coeffs)
+            trace_si[sel0 & sel] -= 1
+            sel = sel0 & (trace_si>=0)
             
-            del trs
+            del trs, sel0, hdxy
         
         # step forwards in time, until projection onto axis is positive:
-        sel = (~trace_done)
+        sel = np.isnan(coeffs)
         if np.any(sel):
             trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
             trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] + 1, trace_si)
                 
             sel &= (trace_si < algo.n_states)
-            projx0[sel] = _eval_trace(sel)
             tshift = 1
             while np.any(sel):
                 
                 trs = trace_si[sel]
-                trace_p[sel] += dxy[trs]
+                hdxy = dxy[trs]
+                trace_p[sel] += hdxy
                 
-                projx0[sel] = _eval_trace(
-                    sel, projx0=projx0[sel], hdxy=dxy[trs-tshift], trs=trs)
+                _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs-tshift])
                 
                 tshift += 1
-                trace_si[~trace_done & sel] += 1
-                sel = (~trace_done) & (trace_si < algo.n_states)
+                sel0 = np.isnan(coeffs)
+                trace_si[sel0 & sel] += 1
+                sel = sel0 & (trace_si < algo.n_states)
                 
-                del trs    
-                
-            trace_si = np.minimum(trace_si, algo.n_states - 1)
-        
-        trace_si = np.maximum(trace_si, 0)
-        trace_si = np.minimum(trace_si, algo.n_states - 1)
-    
-        return trace_si
+                del trs, sel0, hdxy  
+
+        return trace_si, coeffs
             
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -371,11 +370,46 @@ class OnePointFlowStates(States):
 
         # compute states indices for all requested points:
         trace_si = []
+        coeffs = []
         for hi in range(n_heights):
-            trace_si.append(self.calc_states_indices(
+            s, c = self.calc_states_indices(
                 algo, mdata, points, hi, self.ref_xy[None, None, :]
-            ))
-                
+            )
+            trace_si.append(s)
+            coeffs.append(c)
+            del s, c
+
+        # flake8: noqa: F821
+        def _interp_time(hi, v):
+            """Helper function for interpolation bewteen states"""
+
+            sts = trace_si[hi]
+            cfs = coeffs[hi]
+            data = self.timelines_data[v].to_numpy()[hi]
+            out = np.zeros(sts.shape, dtype=FC.DTYPE)
+        
+            sel_low = (sts < 0)
+            if np.any(sel_low):
+                out[sel_low] = data[0]
+            
+            sel_hi = (sts >= algo.n_states) 
+            if np.any(sel_hi):
+                out[sel_hi] = data[algo.n_states-1]
+            
+            sel = (~sel_low) & (~sel_hi) & (cfs <= 0)
+            if np.any(sel):
+                s = sts[sel]
+                c = -cfs[sel]
+                out[sel] = c * data[s] + (1 - c) * data[s-1]
+
+            sel = (~sel_low) & (~sel_hi) & (cfs > 0)
+            if np.any(sel):
+                s = sts[sel]
+                c = cfs[sel]
+                out[sel] = c * data[s-1] + (1 - c) * data[s]
+            
+            return out
+            
         # interpolate to heights:
         if n_heights > 1:
             
@@ -385,9 +419,9 @@ class OnePointFlowStates(States):
             crds = (heights, ar_states, ar_points)
             
             data = {v: np.stack(
-                        [d.to_numpy()[hi, trace_si[hi]] for hi in range(n_heights)]
+                        [_interp_time(hi, v) for hi in range(n_heights)]
                         , axis=0)
-                    for v, d in self.timelines_data.data_vars.items()
+                    for v in self.timelines_data.data_vars.keys()
                     if v != "dxy"}
             vres = list(data.keys())
             data = np.stack(list(data.values()), axis=-1)
@@ -436,15 +470,13 @@ class OnePointFlowStates(States):
         
         # no dependence on height:
         else:
-            results = {}
-            sel = trace_si[0]
+            results = {}            
             for v in self.output_point_vars(algo):
                 if v not in [FV.WS, FV.WD]:
-                    results[v] = self.timelines_data[v].to_numpy()[0, sel]
+                    results[v] = _interp_time(hi, v)
                 elif v not in results:
                     uv = np.stack(
-                        [self.timelines_data["U"].to_numpy()[0, sel], 
-                        self.timelines_data["V"].to_numpy()[0, sel]],
+                        [_interp_time(hi, "U"), _interp_time(hi, "V")],
                         axis=-1
                     )
                     results = {
