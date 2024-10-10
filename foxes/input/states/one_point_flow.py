@@ -264,7 +264,7 @@ class OnePointFlowStates(States):
         trace_done = np.zeros((n_states, n_points), dtype=bool)
         
         # flake8: noqa: F821
-        def _eval_trace(sel, projx0=None, hdxy=None, trs=None):
+        def _eval_trace(sel, projx0=None, hdxy=None, trs=None, trdone=None):
             """Helper function that updates trace_done"""
             nonlocal trace_si, trace_done
             
@@ -275,15 +275,16 @@ class OnePointFlowStates(States):
             projx = np.einsum("...d,...d->...", trace_p[sel], nx)
  
             # find crossings of planes orthogonal to hdxy:
+            seld = (projx >= -lx/2) & (projx <= lx/2)
             if projx0 is not None:
-                seld = (
-                    (projx0 >= -lx/2) & (projx <= lx/2)
+                seld |= (
+                    (projx0 > -1e-6) & (projx < 1e-6)
                 ) | (
-                    (projx0 <= lx/2) & (projx >= -lx/2)
+                    (projx0 < 1e-6) & (projx > -1e-6)
                 )
-                if np.any(seld):
-                    trace_done[sel] = np.where(seld, True, trace_done[sel])
-            
+            if np.any(seld):
+                trace_done[sel] = np.where(seld, True, trace_done[sel])
+        
             return projx
 
         # step backwards in time, until projection onto axis is negative:

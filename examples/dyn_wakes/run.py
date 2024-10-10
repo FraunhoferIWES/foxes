@@ -52,7 +52,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2014_linear_lim_k004"],
+        default=["Bastankhah2014_linear_loc_k004"],
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="dyn_wakes")
@@ -104,12 +104,8 @@ if __name__ == "__main__":
         index_col=0,
         parse_dates=[0],
     )
-    times = sdata.index.to_numpy()
-    sdata.loc[times[:10], "ws"] = 5.7
-    sdata.loc[times[20:30], "ws"] = 5.7
-    sdata.loc[times[40:50], "ws"] = 5.7
-    sdata.loc[times[60:70], "ws"] = 5.7
-    sdata.loc[times[80:90], "ws"] = 5.7
+    n_times = len(sdata.index)
+    sdata["ws"] = 5 + 0.3*np.sin(np.arange(n_times)*2*np.pi/20)
         
     states = States(
         data_source=sdata,
@@ -134,7 +130,15 @@ if __name__ == "__main__":
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
-
+        
+    engine = foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    )
+    engine.initialize()
+    
     algo = foxes.algorithms.Iterative(
         farm,
         states=states,
@@ -143,10 +147,6 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
         max_it=args.max_it,
         conv_crit="default" if args.max_it is None else None,
         verbosity=1,
@@ -194,43 +194,54 @@ if __name__ == "__main__":
     print(f"\nFarm power        : {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    
+    engine.finalize()
 
-    sts = np.arange(farm_results.sizes["state"])
-    plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
-    plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
-    plt.legend()
-    plt.xlabel("State")
-    plt.ylabel("REWS [m/s]")
-    plt.show()
+    if not args.nofig:
+        sts = np.arange(farm_results.sizes["state"])
+        plt.plot(sts, farm_results.REWS[:, 1], label="Turbine 1")
+        plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
+        plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
+        plt.legend()
+        plt.xlabel("State")
+        plt.ylabel("REWS [m/s]")
+        plt.show()
+        plt.close()
         
     if not args.nofig and args.animation:
         print("\nCalculating animation")
-
+       
         fig, axs = plt.subplots(
             2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
         )
-
-        anim = foxes.output.Animator(fig)
-        of = foxes.output.FlowPlots2D(algo, farm_results)
-        anim.add_generator(
-            of.gen_states_fig_xy(
-                FV.WS,
-                resolution=30,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                quiver_n=35,
-                xmax=5000,
-                ymax=5000,
-                vmin=0,
-                fig=fig,
-                ax=axs[0],
-                ret_im=True,
-                title=None,
-                animated=True,
-            )
+        
+        engine.initialize()
+        
+        of = foxes.output.FlowPlots2D(algo, farm_results) 
+        ofg = of.gen_states_fig_xy(
+            FV.WS,
+            resolution=30,
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+            quiver_n=35,
+            xmax=5000,
+            ymax=5000,
+            vmin=0,
+            fig=fig,
+            ax=axs[0],
+            ret_im=True,
+            title=None,
+            animated=True,
+            precalc=True,
         )
+        next(ofg)
+        
+        engine.finalize()
+            
+        anim = foxes.output.Animator(fig)
+        anim.add_generator(ofg)
         anim.add_generator(
             o.gen_stdata(
-                turbines=[0, 4, 7],
+                turbines=[1, 4, 7],
                 variable=FV.REWS,
                 fig=fig,
                 ax=axs[1],
