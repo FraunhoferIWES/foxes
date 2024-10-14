@@ -453,6 +453,12 @@ class Model(ABC):
             if out is not None:
                 break
 
+        # check for None:
+        if not accept_none and out is None:
+            raise ValueError(
+                f"Model '{self.name}': Variable '{variable}' is requested but not found."
+            )
+            
         # cast dimensions:
         if out_dims != dims:
             if out_dims is None:
@@ -512,7 +518,7 @@ class Model(ABC):
                 raise NotImplementedError(
                     f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}"
                 )
-
+            
         # data from other chunks, only with iterations:
         if (
             target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
@@ -573,14 +579,8 @@ class Model(ABC):
                 del sel_data
             del sel, sts
 
-        # check for None:
-        if not accept_none and out is None:
-            raise ValueError(
-                f"Model '{self.name}': Variable '{variable}' is requested but not found."
-            )
-
         # check for nan:
-        elif not accept_nan:
+        if not accept_nan:
             try:
                 if np.all(np.isnan(np.atleast_1d(out))):
                     raise ValueError(

@@ -285,8 +285,9 @@ class Iterative(Downwind):
             dimensions (state, turbine)
 
         """
-        outputs = kwargs.pop("outputs", self.DEFAULT_FARM_OUTPUTS)
-        outputs = list(set(outputs + [FV.ORDER_SSEL, FV.ORDER_INV, FV.WEIGHT]))
+        outputs = kwargs.pop("outputs", None)
+        if outputs == "default":
+            outputs = self.DEFAULT_FARM_OUTPUTS
 
         fres = None
         self._it = -1
