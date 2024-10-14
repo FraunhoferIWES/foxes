@@ -139,7 +139,8 @@ class Data(Dict):
 
         allc = set()
         for dms in self.dims.values():
-            allc.update(dms)
+            if dms is not None:
+                allc.update(dms)
         allc = allc.difference(set(data.keys()))
         for c in allc.intersection(self.sizes.keys()):
             data[c] = np.arange(self.sizes[c])
@@ -212,12 +213,13 @@ class Data(Dict):
         dims = {}
         for v in self.keys():
             d = self.dims[v]
-            hs = tuple([s[variables.index(w)] if w in variables else np.s_[:] 
-                        for w in d])
-            data[v] = self[v][hs]
-            dims[v] = (
-                tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
-            )
+            if d is not None:
+                hs = tuple([s[variables.index(w)] if w in variables else np.s_[:] 
+                            for w in d])
+                data[v] = self[v][hs]
+                dims[v] = (
+                    tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
+                )
         if name is None:
             name = self.name
         if FC.STATE in variables and self.__states_i0 is not None:

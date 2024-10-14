@@ -145,11 +145,11 @@ class Bastankhah2016Model(Model):
             The k parameter values, shape: (n_states, n_targets)
 
         """
-
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FC.STATE][0],
+            mdata.states_i0(counter=True),
+            mdata.n_states,
             downwind_index,
             hash(x.tobytes()),
         )
@@ -328,7 +328,7 @@ class Bastankhah2016Model(Model):
 
         # update mdata:
         out[self.ST_SEL] = st_sel
-        mdata[self.MDATA_KEY] = out
+        mdata.add(self.MDATA_KEY, out, None)
 
     def has_data(self, mdata, downwind_index, x):
         """
@@ -351,7 +351,8 @@ class Bastankhah2016Model(Model):
 
         """
         check = (
-            mdata[FC.STATE][0],
+            mdata.states_i0(counter=True),
+            mdata.n_states,
             downwind_index,
             hash(x.tobytes()),
         )
@@ -381,7 +382,6 @@ class Bastankhah2016Model(Model):
         Clean all data
         """
         del mdata[self.MDATA_KEY]
-
 
 class Bastankhah2016(DistSlicedWakeModel):
     """
@@ -415,7 +415,6 @@ class Bastankhah2016(DistSlicedWakeModel):
     :group: models.wake_models.wind
 
     """
-
     def __init__(
         self,
         superposition,
