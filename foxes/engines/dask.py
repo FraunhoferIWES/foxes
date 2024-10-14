@@ -662,7 +662,6 @@ class LocalClusterEngine(DaskBaseEngine):
     :group: engines
 
     """
-
     def __init__(
         self,
         *args,
@@ -929,7 +928,6 @@ class SlurmClusterEngine(LocalClusterEngine):
     :group: engines
 
     """
-
     def __enter__(self):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)

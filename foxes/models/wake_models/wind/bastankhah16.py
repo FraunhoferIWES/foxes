@@ -151,7 +151,7 @@ class Bastankhah2016Model(Model):
         out[self.CHECK] = (
             mdata[FC.STATE][0],
             downwind_index,
-            x.shape,
+            hash(x.tobytes()),
         )
 
         # get D:
@@ -353,7 +353,7 @@ class Bastankhah2016Model(Model):
         check = (
             mdata[FC.STATE][0],
             downwind_index,
-            x.shape,
+            hash(x.tobytes()),
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
 

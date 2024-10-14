@@ -180,8 +180,8 @@ class Timelines(WakeFrame):
         heights = np.unique(t2h)
 
         # pre-calc data:
-        from foxes.input.states import TimelinesStates
-        if isinstance(algo.states, TimelinesStates):
+        from foxes.input.states import OnePointFlowTimeseries
+        if isinstance(algo.states, OnePointFlowTimeseries):
             self._precalc_data(algo, algo.states.base_states, heights, verbosity)
         else:
             self._precalc_data(algo, algo.states, heights, verbosity)
