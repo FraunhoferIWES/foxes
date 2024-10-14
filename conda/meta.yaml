@@ -22,7 +22,6 @@ requirements:
     - numpy
     - pandas
     - xarray
-    - dask
     - scipy
     - windrose
     - pyyaml
@@ -32,8 +31,6 @@ requirements:
     - numpy
     - pandas
     - xarray
-    - dask
-    - distributed
     - scipy
     - windrose
     - pyyaml

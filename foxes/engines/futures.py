@@ -54,7 +54,7 @@ class ThreadsEngine(PoolEngine):
     
     def _shutdown_pool(self):
         """Shuts down the pool"""
-        self._pool.shutdown()
+        self._pool.shutdown(wait=True, cancel_futures=False)
 
 class ProcessEngine(ThreadsEngine):
     """

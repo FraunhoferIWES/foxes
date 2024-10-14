@@ -43,6 +43,7 @@ dependencies = [
     "windrose",
     "cycler",
     "tqdm",
+    "pyyaml"
 ]
 
 [project.optional-dependencies]
@@ -64,11 +65,11 @@ engines = [
     "distributed",
     "dask-jobqueue",
     "setuptools",
+    "mpi4py",
 ]
 test = [
     "flake8", 
     "pytest",
-    "multiprocess",
 ]
 doc = [
     "sphinx",
