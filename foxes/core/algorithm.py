@@ -9,7 +9,6 @@ import foxes.constants as FC
 
 from .engine import Engine
 
-
 class Algorithm(Model):
     """
     Abstract base class for algorithms.
@@ -26,7 +25,6 @@ class Algorithm(Model):
     :group: core
 
     """
-
     def __init__(
         self,
         mbook,

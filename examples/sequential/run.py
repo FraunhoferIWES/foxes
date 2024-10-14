@@ -48,6 +48,12 @@ if __name__ == "__main__":
         help="Flag for showing layout figure",
         action="store_true",
     )
+    parser.add_argument(
+        "-V", "--variable", help="Plot variable", default=FV.WS,
+    )
+    parser.add_argument(
+        "-VMAX", "--max_variable", help="Maximal plot variable", default=10, type=float,
+    )
     parser.add_argument("-e", "--engine", help="The engine", default="numpy")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
@@ -109,6 +115,7 @@ if __name__ == "__main__":
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
+        verbosity=0,
     )
 
     # in case of animation, add a plugin that creates the images:
@@ -116,7 +123,7 @@ if __name__ == "__main__":
         fig, ax = plt.subplots()
         anigen = foxes.output.SeqFlowAnimationPlugin(
             orientation="xy",
-            var=FV.WS,
+            var=args.variable,
             resolution=10,
             levels=None,
             quiver_pars=dict(scale=0.01),
@@ -128,7 +135,7 @@ if __name__ == "__main__":
             fig=fig,
             ax=ax,
             vmin=0,
-            vmax=10,
+            vmax=args.max_variable,
             ret_im=True,
             title=None,
             animated=True,

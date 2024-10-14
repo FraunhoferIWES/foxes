@@ -1,11 +1,9 @@
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
-from foxes.utils import Dict
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
-
 
 class Downwind(Algorithm):
     """
@@ -40,7 +38,6 @@ class Downwind(Algorithm):
     :group: algorithms.downwind
 
     """
-
     DEFAULT_FARM_OUTPUTS = [
         FV.X,
         FV.Y,

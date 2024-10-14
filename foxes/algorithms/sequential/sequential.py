@@ -35,7 +35,6 @@ class Sequential(Iterative):
     :group: algorithms.sequential
 
     """
-
     @classmethod
     def get_model(cls, name):
         """
@@ -103,7 +102,9 @@ class Sequential(Iterative):
         self.plugins = plugins
         self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
 
-        get_engine().verbosity -= 1
+        self._verbo0 = self.verbosity + 1
+        self.verbosity -= 1
+        get_engine().verbosity -= 2
 
         self._i = None
 
@@ -149,7 +150,7 @@ class Sequential(Iterative):
 
             self._model_data = Dataset(**super().get_models_idata())
 
-            if self.verbosity > 0:
+            if self._verbo0 > 0:
                 print("\nInput data:\n")
                 print(self._model_data)
                 print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
@@ -189,6 +190,9 @@ class Sequential(Iterative):
             self.states._size = 1
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
+            
+            if self._verbo0 > 0:
+                print(f"{self.name}: Running state {self.states.index()[0]}")
 
             fres, fres_dnwnd = super().calc_farm(
                 outputs=self.farm_vars,
