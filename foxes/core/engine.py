@@ -32,7 +32,6 @@ class Engine(ABC):
     :group: core
 
     """
-
     def __init__(
         self,
         chunk_size_states=None,
