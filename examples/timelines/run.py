@@ -174,13 +174,14 @@ if __name__ == "__main__":
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
 
-    sts = np.arange(farm_results.sizes["state"])
-    plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
-    plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
-    plt.legend()
-    plt.xlabel("State")
-    plt.ylabel("REWS [m/s]")
-    plt.show()
+    if not args.nofig:
+        sts = np.arange(farm_results.sizes["state"])
+        plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
+        plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
+        plt.legend()
+        plt.xlabel("State")
+        plt.ylabel("REWS [m/s]")
+        plt.show()
         
     if not args.nofig and args.animation:
         print("\nCalculating animation")
