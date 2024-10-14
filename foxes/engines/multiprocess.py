@@ -1,7 +1,12 @@
-from multiprocess import Pool
+from foxes.utils import import_module
 
 from .pool import PoolEngine
 
+def load_multiprocess():
+    """On-demand loading of the multiprocess package"""
+    global Pool
+    Pool = import_module("multiprocess", hint="pip install multiprocess").Pool
+    
 class MultiprocessEngine(PoolEngine):
     """
     The multiprocessing engine for foxes calculations.
@@ -9,6 +14,13 @@ class MultiprocessEngine(PoolEngine):
     :group: engines
 
     """
+    def initialize(self):
+        """
+        Initializes the engine.
+        """
+        load_multiprocess()
+        super().initialize()
+    
     def _create_pool(self):
         """Creates the pool"""
         self._pool = Pool(processes=self.n_procs)

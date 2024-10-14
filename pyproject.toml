@@ -30,7 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
 ]
 requires-python = ">=3.8"
 dependencies = [
@@ -38,9 +38,6 @@ dependencies = [
     "numpy",
     "pandas",
     "xarray",
-    "dask",
-    "distributed",
-    "multiprocess",
     "scipy",
     "netcdf4",
     "windrose",
@@ -55,13 +52,23 @@ io = [
 opt = [
     "foxes-opt"
 ]
-hpc = [
-    "setuptools",
+dask = [
+    "dask",
+    "distributed",
     "dask-jobqueue",
+    "setuptools",
+]
+engines = [
+    "multiprocess",
+    "dask",
+    "distributed",
+    "dask-jobqueue",
+    "setuptools",
 ]
 test = [
     "flake8", 
-    "pytest"
+    "pytest",
+    "multiprocess",
 ]
 doc = [
     "sphinx",

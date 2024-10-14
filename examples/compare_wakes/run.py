@@ -100,7 +100,7 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
-        "-e", "--engine", help="The engine", default="MultiprocessEngine"
+        "-e", "--engine", help="The engine", default="ProcessEngine"
     )
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int

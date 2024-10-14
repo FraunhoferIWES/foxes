@@ -1,6 +1,5 @@
 from pathlib import Path
 import inspect
-from dask.diagnostics import ProgressBar
 
 import foxes
 import foxes.variables as FV
@@ -61,11 +60,7 @@ def test():
             verbosity=1,
         )
 
-        if 1:
-            with ProgressBar():
-                data = algo.calc_farm()
-        else:
-            data = algo.calc_farm()
+        data = algo.calc_farm()
 
         df = data.to_dataframe()[
             [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]

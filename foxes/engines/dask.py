@@ -1,9 +1,5 @@
-import dask
 import numpy as np
 import xarray as xr
-from distributed import Client, LocalCluster
-from dask.diagnostics import ProgressBar
-from dask import delayed, compute
 from copy import deepcopy
 from os import cpu_count
 from tqdm import tqdm
@@ -12,6 +8,22 @@ from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
+
+def delayed(func):
+    """A dummy decorator """
+    return func
+
+def load_dask():
+    """On-demand loading of the dask package"""
+    global dask, ProgressBar, delayed
+    dask = import_module("dask", hint="pip install dask")
+    ProgressBar = import_module("dask.diagnostics", hint="pip install dask").ProgressBar
+    delayed = dask.delayed
+    
+def load_distributed():
+    """On-demand loading of the distributed package"""
+    global distributed
+    distributed = import_module("distributed", hint="pip install distributed")
 
 class DaskBaseEngine(Engine):
     """
@@ -48,8 +60,11 @@ class DaskBaseEngine(Engine):
         kwargs: dict, optional
             Additional parameters for the base class
 
-        """
+        """      
         super().__init__(*args, **kwargs)
+        
+        load_dask()
+        
         self.dask_config = dask_config
         self.progress_bar = progress_bar
 
@@ -582,7 +597,7 @@ class DaskEngine(DaskBaseEngine):
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
-        results = compute(results)[0]
+        results = dask.compute(results)[0]
 
         return self.combine_results(
             algo=algo,
@@ -685,6 +700,9 @@ class LocalClusterEngine(DaskBaseEngine):
 
         """
         super().__init__(*args, **kwargs)
+        
+        load_distributed()
+        
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
 
@@ -699,10 +717,10 @@ class LocalClusterEngine(DaskBaseEngine):
 
     def __enter__(self):
         self.print("Launching local dask cluster..")
-        self._cluster = LocalCluster(
+        self._cluster = distributed.LocalCluster(
             n_workers=self.n_procs, **self.cluster_pars
         ).__enter__()
-        self._client = Client(self._cluster, **self.client_pars).__enter__()
+        self._client = distributed.Client(self._cluster, **self.client_pars).__enter__()
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")
         return super().__enter__()
@@ -718,9 +736,9 @@ class LocalClusterEngine(DaskBaseEngine):
         super().__exit__(*args)
 
     def __del__(self):
-        if self._client is not None:
+        if hasattr(self, "_client") and self._client is not None:
             self._client.__del__()
-        if self._cluster is not None:
+        if hasattr(self, "_cluster") and self._cluster is not None:
             self._cluster.__del__()
         super().__del__()
 
@@ -920,7 +938,6 @@ class LocalClusterEngine(DaskBaseEngine):
 
         return results
 
-
 class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
@@ -933,11 +950,11 @@ class SlurmClusterEngine(LocalClusterEngine):
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
 
-        dask_jobqueue = import_module("dask_jobqueue", hint="pip install foxes[hpc]")
+        dask_jobqueue = import_module("dask_jobqueue", hint="pip install setuptools dask-jobqueue")
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
         self._cluster = self._cluster.__enter__()
-        self._client = Client(self._cluster, **self.client_pars).__enter__()
+        self._client = distributed.Client(self._cluster, **self.client_pars).__enter__()
 
         self.print(self._cluster)
         self.print(f"Dashboard: {self._client.dashboard_link}\n")

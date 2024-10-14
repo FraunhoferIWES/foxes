@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interpn
+from pathlib import Path
 
 from foxes.core import States
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
 import foxes.variables as FV
 import foxes.constants as FC
@@ -55,7 +56,6 @@ class FieldDataNC(States):
     :group: input.states
 
     """
-
     def __init__(
         self,
         data_source,
@@ -161,16 +161,27 @@ class FieldDataNC(States):
                     print(
                         f"States '{self.name}': Reading index from '{self.data_source}'"
                     )
+            
+            def _read_ds():
+                if Path(self.data_source).is_file():
+                    return xr.open_dataset(self.data_source)
+                else:
+                    # try to read multiple files, needs dask:
+                    try:
+                        return xr.open_mfdataset(
+                            str(self.data_source),
+                            parallel=False,
+                            concat_dim=self.states_coord,
+                            combine="nested",
+                            data_vars="minimal",
+                            coords="minimal",
+                            compat="override",
+                        )
+                    except ValueError as e:
+                        import_module("dask", hint="pip install dask")
+                        raise e
 
-            with xr.open_mfdataset(
-                str(self.data_source),
-                parallel=False,
-                concat_dim=self.states_coord,
-                combine="nested",
-                data_vars="minimal",
-                coords="minimal",
-                compat="override",
-            ) as ds:
+            with _read_ds() as ds:
                 self.__data_source = ds
 
         if sel is not None:

@@ -1,6 +1,6 @@
 import yaml
 
-from foxes.core import Algorithm, get_engine, has_engine, reset_engine
+from foxes.core import Algorithm
 from foxes.output import Output
 
 
@@ -51,7 +51,6 @@ class WindioRunner:
     :group: input.windio
 
     """
-
     def __init__(
         self,
         algo_dict,
@@ -120,8 +119,6 @@ class WindioRunner:
         if isinstance(self.algo, dict):
             self.print(f"Creating algorithm '{self.algo['algo_type']}'", level=2)
             self.algo = Algorithm.new(**self.algo)
-        if has_engine():
-            self.__starts_engine = False
         if not self.algo.initialized:
             self.algo.initialize()
         self.__initialized = True

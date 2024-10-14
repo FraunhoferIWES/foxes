@@ -12,8 +12,8 @@ python3 run.py -h
 
 ## Run command
 
-For all netCDF file inside the `data` folder to be considered, run
+For all netCDF file inside the `data` folder to be considered, run without arguments. This runs on a single file:
 
 ```console
-python3 run.py
+python3 run.py -f data/data_0.nc
 ```
