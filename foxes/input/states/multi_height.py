@@ -592,11 +592,7 @@ class MultiHeightNCStates(MultiHeightStates):
         self.heights = heights
         self.h_coord = h_coord
         self.xr_read_pars = xr_read_pars
-
-        if format_times_func == "default":
-            self.format_times_func = lambda t: t.astype("datetime64[ns]")
-        else:
-            self.format_times_func = format_times_func
+        self._format_times_func = format_times_func
 
     def load_data(self, algo, verbosity=0):
         """
@@ -645,8 +641,13 @@ class MultiHeightNCStates(MultiHeightStates):
 
         self._N = data.sizes[self.state_coord]
         self._inds = data.coords[self.state_coord].to_numpy()
-        if self.format_times_func is not None:
-            self._inds = self.format_times_func(self._inds)
+        
+        if self._format_times_func == "default":
+            format_times_func = lambda t: t.astype("datetime64[ns]")
+        else:
+            format_times_func = self._format_times_func
+        if format_times_func is not None:
+            self._inds = format_times_func(self._inds)
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
         self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)

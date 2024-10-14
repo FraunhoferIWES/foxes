@@ -8,3 +8,4 @@ from .dask import (
 from .multiprocess import MultiprocessEngine
 from .numpy import NumpyEngine
 from .single_chunk import SingleChunkEngine
+from .futures import ThreadsEngine, ProcessEngine

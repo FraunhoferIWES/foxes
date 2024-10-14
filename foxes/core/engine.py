@@ -526,6 +526,8 @@ class Engine(ABC):
             return None
         else:
             engine_type = dict(
+                threads="ThreadsEngine",
+                process="ProcessEngine",
                 xarray="XArrayEngine",
                 dask="DaskEngine",
                 multiprocess="MultiprocessEngine",
@@ -582,7 +584,7 @@ def get_engine(error=True, default=True):
             default.initialize()
             return default
         elif isinstance(default, bool) and default:
-            engine = Engine.new(engine_type="MultiprocessEngine")
+            engine = Engine.new(engine_type="ProcessEngine")
             print(f"Selecting default engine '{engine}'")
             engine.initialize()
             return engine
