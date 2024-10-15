@@ -56,4 +56,4 @@ class SequentialPlugin:
             The final sequetial algorithm
 
         """
-        self.algo = None
+        self.algo = algo

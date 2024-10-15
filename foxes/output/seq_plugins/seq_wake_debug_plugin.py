@@ -8,8 +8,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
     Attributes
     ----------
-    ax: matplotlib.Axis
-        The plotting axis
     show_p: bool
         Flag for showing wake points
     show_v: bool
@@ -22,15 +20,12 @@ class SeqWakeDebugPlugin(SequentialPlugin):
     :group: output.seq_plugins
 
     """
-
-    def __init__(self, ax, show_p=True, show_v=True, vpars={}, **ppars):
+    def __init__(self, show_p=True, show_v=True, vpars={}, **ppars):
         """
         Constructor.
 
         Parameters
         ----------
-        ax: matplotlib.Axis
-            The plotting axis
         show_p: bool
             Flag for showing wake points
         show_v: bool
@@ -42,7 +37,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         """
         super().__init__()
-        self.ax = ax
         self.show_p = show_p
         self.show_v = show_v
 
@@ -51,19 +45,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         self.ppars = dict(color="blue")
         self.ppars.update(ppars)
-
-    @property
-    def fig(self):
-        """
-        The figure object
-
-        Returns
-        -------
-        f: matplotlib.Figure
-            The figure object
-
-        """
-        return self.ax.get_figure()
 
     def initialize(self, algo):
         """
@@ -102,40 +83,59 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         counter = algo.counter
         N = counter + 1
-        pts = wframe._traces_p[:N]
+        dt = wframe._dt[counter] if counter < len(wframe._dt) else wframe._dt[-1]
+        
+        self._data.append((
+            dt,
+            wframe._traces_p[:N].copy(), 
+            wframe._traces_v[:N].copy(),
+        ))
 
-        artists = []
-        if self.show_p:
-            artists += [
-                self.ax.scatter(
-                    pts[:, downwind_index, 0],
-                    pts[:, downwind_index, 1],
-                    animated=True,
-                    **self.ppars,
-                )
-                for downwind_index in range(algo.n_turbines)
-            ]
-
-        if self.show_v:
-            dt = wframe._dt[counter] if counter < len(wframe._dt) else wframe._dt[-1]
-            for downwind_index in range(algo.n_turbines):
-                for i in range(N):
-                    p = pts[i, downwind_index]
-                    dxy = wframe._traces_v[i, downwind_index] * dt
-                    artists.append(
-                        self.ax.arrow(
-                            p[0],
-                            p[1],
-                            dxy[0],
-                            dxy[1],
-                            length_includes_head=True,
-                            animated=True,
-                            **self.vpars,
-                        )
+    def gen_images(self, ax):
+        """
+        
+        Parameters
+        ----------
+        ax: matplotlib.Axis
+            The plotting axis
+        
+        Yields
+        ------
+        imgs: tuple
+            The (figure, artists) tuple
+        
+        """
+        for dt, pts, v in self._data:
+            
+            N = len(pts)
+            artists = []
+            if self.show_p:
+                artists += [
+                    ax.scatter(
+                        pts[:, downwind_index, 0],
+                        pts[:, downwind_index, 1],
+                        animated=True,
+                        **self.ppars,
                     )
+                    for downwind_index in range(self.algo.n_turbines)
+                ]
 
-        self._data.append((self.fig, artists))
-
-    def gen_images(self):
-        for d in self._data:
-            yield d
+            if self.show_v:
+                for downwind_index in range(self.algo.n_turbines):
+                    for i in range(N):
+                        p = pts[i, downwind_index]
+                        dxy = v[i, downwind_index] * dt
+                        artists.append(
+                            ax.arrow(
+                                p[0],
+                                p[1],
+                                dxy[0],
+                                dxy[1],
+                                length_includes_head=True,
+                                animated=True,
+                                **self.vpars,
+                            )
+                        )
+                        
+            yield ax.get_figure(), artists
+        

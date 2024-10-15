@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from foxes.algorithms.sequential import SequentialPlugin
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D
@@ -75,22 +77,40 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             self.pars["title"] = self._tfun(algo.states.counter, algo.states.index()[0])
 
         if self.orientation == "xy":
-            self._data.append(next(o.gen_states_fig_xy(**self.pars)))
+            d = next(o.gen_states_fig_xy(**self.pars, precalc=True))
         elif self.orientation == "xz":
-            self._data.append(next(o.gen_states_fig_xz(**self.pars)))
+            d = next(o.gen_states_fig_xz(**self.pars, precalc=True))
         elif self.orientation == "yz":
-            self._data.append(next(o.gen_states_fig_yz(**self.pars)))
+            d = next(o.gen_states_fig_yz(**self.pars, precalc=True))
         else:
             raise KeyError(
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
+            
+        self._data.append((fres, d))
 
-        if (
-            self.pars.get("vmin", None) is not None
-            and self.pars.get("vmax", None) is not None
-        ):
-            self.pars["add_bar"] = False
-
-    def gen_images(self):
-        for d in self._data:
-            yield d
+    def gen_images(self, ax):
+        """
+        
+        Parameters
+        ----------
+        ax: matplotlib.Axis
+            The plotting axis
+        
+        Yields
+        ------
+        imgs: tuple
+            The (figure, artists) tuple
+        
+        """
+        fig = ax.get_figure()
+        for fres, d in self._data:
+            
+            o = FlowPlots2D(self.algo, fres)
+            yield next(o.gen_states_fig_xy(**self.pars, ax=ax, fig=fig, ret_im=True, precalc=d))
+            
+            if (
+                self.pars.get("vmin", None) is not None
+                and self.pars.get("vmax", None) is not None
+            ):
+                self.pars["add_bar"] = False

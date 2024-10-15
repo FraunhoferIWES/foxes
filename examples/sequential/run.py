@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-VMAX", "--max_variable", help="Maximal plot variable", default=10, type=float,
     )
-    parser.add_argument("-e", "--engine", help="The engine", default=None)
+    parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
@@ -103,56 +103,50 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure(figsize=(8, 8)))
 
-    engine = foxes.Engine.new(
-        engine_type=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
-    )
-    engine.initialize()
-    
-    algo = foxes.algorithms.Sequential(
-        farm,
-        states,
-        rotor_model=args.rotor,
-        wake_models=args.wakes,
-        wake_frame=args.frame,
-        partial_wakes=args.pwakes,
-        mbook=mbook,
-        verbosity=0,
-    )
+    with foxes.Engine.new(
+            engine_type=args.engine,
+            n_procs=args.n_cpus,
+            chunk_size_states=args.chunksize_states,
+            chunk_size_points=args.chunksize_points,
+        ):
+            algo = foxes.algorithms.Sequential(
+                farm,
+                states,
+                rotor_model=args.rotor,
+                wake_models=args.wakes,
+                wake_frame=args.frame,
+                partial_wakes=args.pwakes,
+                mbook=mbook,
+                verbosity=0,
+            )
 
-    # in case of animation, add a plugin that creates the images:
-    if args.animation:
-        fig, ax = plt.subplots()
-        anigen = foxes.output.SeqFlowAnimationPlugin(
-            orientation="xy",
-            var=args.variable,
-            resolution=10,
-            levels=None,
-            quiver_pars=dict(scale=0.01),
-            quiver_n=307,
-            xmin=-5000,
-            ymin=-5000,
-            xmax=7000,
-            ymax=7000,
-            fig=fig,
-            ax=ax,
-            vmin=0,
-            vmax=args.max_variable,
-            ret_im=True,
-            title=None,
-            animated=True,
-        )
-        algo.plugins.append(anigen)
+            # in case of animation, add a plugin that creates the images:
+            if args.animation:
+                anigen = foxes.output.SeqFlowAnimationPlugin(
+                    orientation="xy",
+                    var=args.variable,
+                    resolution=10,
+                    levels=None,
+                    quiver_pars=dict(scale=0.01),
+                    quiver_n=307,
+                    xmin=-5000,
+                    ymin=-5000,
+                    xmax=7000,
+                    ymax=7000,
+                    vmin=0,
+                    vmax=args.max_variable,
+                    title=None,
+                    animated=True,
+                )
+                algo.plugins.append(anigen)
 
-        if args.debug:
-            anigen_debug = foxes.output.SeqWakeDebugPlugin(ax=ax)
-            algo.plugins.append(anigen_debug)
+                if args.debug:
+                    anigen_debug = foxes.output.SeqWakeDebugPlugin()
+                    algo.plugins.append(anigen_debug)
 
-    # run all states sequentially:
-    for r in algo:
-        print(algo.index)
+            # run all states sequentially:
+            for r in algo:
+                print(algo.index)
 
     print("\nFarm results:\n")
     print(algo.farm_results)
@@ -160,10 +154,11 @@ if __name__ == "__main__":
     if args.animation:
         print("\nCalculating animation")
 
+        fig, ax = plt.subplots()
         anim = foxes.output.Animator(fig)
-        anim.add_generator(anigen.gen_images())
+        anim.add_generator(anigen.gen_images(ax))
         if args.debug:
-            anim.add_generator(anigen_debug.gen_images())
+            anim.add_generator(anigen_debug.gen_images(ax))
         ani = anim.animate(interval=600)
 
         lo = foxes.output.FarmLayoutOutput(farm)
