@@ -27,7 +27,14 @@ class DynamicWakes(WakeFrame):
     :group: models.wake_frames
 
     """
-    def __init__(self, max_length_km=20, max_age=None, cl_ipars={}, dt_min=None):
+    def __init__(
+        self, 
+        max_length_km=20, 
+        max_age=None, 
+        max_age_mean_ws=5,
+        cl_ipars={}, 
+        dt_min=None,
+        ):
         """
         Constructor.
 
@@ -37,6 +44,9 @@ class DynamicWakes(WakeFrame):
             The maximal wake length in km
         max_age: int, optional
             The maximal number of wake steps
+        max_age_mean_ws: float
+            The mean wind speed for the max_age calculation,
+            if the latter is not given
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
@@ -51,6 +61,7 @@ class DynamicWakes(WakeFrame):
         self.max_age = max_age
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
+        self._mage_ws = max_age_mean_ws
 
     def __repr__(self):
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km}, max_age={self.max_age})"
@@ -92,7 +103,7 @@ class DynamicWakes(WakeFrame):
         
         # find max age if not given:
         if self.max_age is None:
-            step = np.mean(15*self._dt)
+            step = np.mean(self._mage_ws*self._dt)
             self.max_age = max(int(self.max_length_km*1e3/step), 1)
             if verbosity > 0:
                 print(f"{self.name}: Assumed mean step = {step} m, setting max_age = {self.max_age}")
@@ -149,7 +160,6 @@ class DynamicWakes(WakeFrame):
                 for v in tdi.keys()}
             pts = data[:, 0, :3].copy()
             for age in range(self.max_age-1):
-                
                 if age == n_states:
                     break
                 elif age == 0:
@@ -176,6 +186,11 @@ class DynamicWakes(WakeFrame):
                 s = np.s_[:-age] if age > 0 else np.s_[:]
                 data[s, age+1, :3] = pts 
                 data[s, age+1, 3] = data[s, age, 3] + np.linalg.norm(dxy, axis=-1)
+                
+                if age < self.max_age-2:
+                    s = ~np.isnan(data[:, age+1, 3])
+                    if np.min(data[s, age+1, 3]) >= self.max_length_km*1e3:
+                        break
                 
                 del res, uv, s, hdt, dxy
             del pts, tdt
@@ -223,7 +238,11 @@ class DynamicWakes(WakeFrame):
                     sts = sts[sel]
                     ags = ags[sel]
                     pts = hdata[sts, ags, :3]
-                    sel = np.all(~np.isnan(pts[:, :2]), axis=-1) & np.any(np.isnan(hdata[sts, ags+1, :2]), axis=-1)
+                    sel = (
+                        np.all(~np.isnan(pts[:, :2]), axis=-1) & 
+                        np.any(np.isnan(hdata[sts, ags+1, :2]), axis=-1) & 
+                        (hdata[sts, ags, 3] <= self.max_length_km*1e3)
+                    )
                     if np.any(sel):
                         sts = sts[sel]
                         ags = ags[sel]

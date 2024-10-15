@@ -94,6 +94,7 @@ if __name__ == "__main__":
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
+    mbook.wake_frames["dyn_wakes"] = foxes.models.wake_frames.DynamicWakes(max_length_km=8)
 
     if args.background0:
         States = foxes.input.states.Timeseries
