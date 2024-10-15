@@ -109,7 +109,7 @@ class NumpyEngine(Engine):
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
         n_chunks_states = len(chunk_sizes_states)
@@ -121,7 +121,6 @@ class NumpyEngine(Engine):
 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
-        n_procs = min(n_procs, n_chunks_all)
         self.print(f"Looping over {n_chunks_all} chunks")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         results = {}

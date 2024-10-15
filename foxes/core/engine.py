@@ -57,7 +57,7 @@ class Engine(ABC):
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
-        self.n_procs = n_procs
+        self.n_procs = n_procs if n_procs is not None else cpu_count()
         self.verbosity = verbosity
         self.__initialized = False
         self.__entered = False
@@ -226,8 +226,6 @@ class Engine(ABC):
 
         Returns
         -------
-        n_procs: int
-            The number of processes to be used
         chunk_sizes_states: numpy.ndarray
             The sizes of all states chunks, shape: (n_chunks_states,)
         chunk_sizes_targets: numpy.ndarray
@@ -236,14 +234,12 @@ class Engine(ABC):
         """
         # determine states chunks:
         n_chunks_states = 1
-        chunk_sizes_states = [n_states]
-        n_procs = cpu_count() if self.n_procs is None else self.n_procs
         if self.chunk_size_states is None:
-            chunk_size_states = max(int(n_states / n_procs), 1)
+            chunk_size_states = max(int(n_states/self.n_procs), 1)
         else:
             chunk_size_states = min(n_states, self.chunk_size_states)
-        n_chunks_states = int(n_states / chunk_size_states)
-        chunk_size_states = int(n_states / n_chunks_states)
+        n_chunks_states = int(n_states/chunk_size_states)
+        chunk_size_states = int(n_states/n_chunks_states)
         chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
         extra = n_states - n_chunks_states * chunk_size_states
         if extra > 0:
@@ -268,7 +264,7 @@ class Engine(ABC):
                 chunk_sizes_targets[-extra:] += 1
             assert np.sum(chunk_sizes_targets) == n_targets
 
-        return n_procs, chunk_sizes_states, chunk_sizes_targets
+        return chunk_sizes_states, chunk_sizes_targets
 
     def get_chunk_input_data(
         self,

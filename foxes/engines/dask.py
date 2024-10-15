@@ -535,7 +535,7 @@ class DaskEngine(DaskBaseEngine):
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
         n_chunks_states = len(chunk_sizes_states)
@@ -545,12 +545,9 @@ class DaskEngine(DaskBaseEngine):
             level=2,
         )
 
-        # prepare chunks:
-        n_chunks_all = n_chunks_states * n_chunks_targets
-        n_procs = min(n_procs, n_chunks_all)
-
         # submit chunks:
-        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
+        n_chunks_all = n_chunks_states * n_chunks_targets
+        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2)
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         results = {}
         i0_states = 0
@@ -596,7 +593,7 @@ class DaskEngine(DaskBaseEngine):
 
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
-            self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+            self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
         results = dask.compute(results)[0]
 
         return self.combine_results(
@@ -706,9 +703,6 @@ class LocalClusterEngine(DaskBaseEngine):
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
 
-        if self.n_procs is None and not len(cluster_pars):
-            self.n_procs = cpu_count()
-
         self.dask_config["scheduler"] = "distributed"
         self.dask_config["distributed.scheduler.worker-ttl"] = None
 
@@ -811,7 +805,7 @@ class LocalClusterEngine(DaskBaseEngine):
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
         n_chunks_states = len(chunk_sizes_states)
@@ -821,18 +815,15 @@ class LocalClusterEngine(DaskBaseEngine):
             level=2,
         )
 
-        # prepare chunks:
-        n_chunks_all = n_chunks_states * n_chunks_targets
-        n_procs = min(n_procs, n_chunks_all)
-
         # scatter algo and model:
+        n_chunks_all = n_chunks_states * n_chunks_targets
         falgo = self._client.scatter(algo, broadcast=True)
         fmodel = self._client.scatter(model, broadcast=True)
         cpars = self._client.scatter(calc_pars, broadcast=True)
         all_data = [falgo, fmodel, cpars]
 
         # submit chunks:
-        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes")
+        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
         jobs = {}
         i0_states = 0
@@ -906,7 +897,7 @@ class LocalClusterEngine(DaskBaseEngine):
             pbar.close()
 
         # wait for results:
-        self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+        self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
         pbar = (
             tqdm(total=n_chunks_all)
             if n_chunks_all > 1 and self.verbosity > 0

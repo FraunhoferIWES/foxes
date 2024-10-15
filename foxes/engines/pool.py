@@ -6,7 +6,7 @@ from foxes.core import Engine
 import foxes.constants as FC
 
 def _run(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
-    """Helper function for running in multiprocessing process"""
+    """Helper function for running in a single process"""
     algo.reset_chunk_store(chunk_store)
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
@@ -152,7 +152,7 @@ class PoolEngine(Engine):
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        n_procs, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
         n_chunks_states = len(chunk_sizes_states)
@@ -164,8 +164,7 @@ class PoolEngine(Engine):
 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
-        n_procs = min(n_procs, n_chunks_all)
-        self.print(f"Submitting {n_chunks_all} chunks to {n_procs} processes", level=2)
+        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2)
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         jobs = {}
         i0_states = 0
@@ -212,7 +211,7 @@ class PoolEngine(Engine):
 
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
-            self.print(f"Computing {n_chunks_all} chunks using {n_procs} processes")
+            self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
         pbar = (
             tqdm(total=n_chunks_all)
             if n_chunks_all > 1 and self.verbosity > 0
