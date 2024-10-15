@@ -22,7 +22,7 @@ class FarmOrder(WakeFrame):
     :group: models.wake_frames
 
     """
-    def __init__(self, base_frame=None):
+    def __init__(self, base_frame=None, **kwargs):
         """
         Constructor.
 
@@ -30,9 +30,11 @@ class FarmOrder(WakeFrame):
         ----------
         base_frame: foxes.core.WakeFrame
             The wake frame from which to start
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.base_frame = base_frame
 
     def initialize(self, algo, verbosity=0, force=False):

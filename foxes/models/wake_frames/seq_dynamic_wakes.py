@@ -25,7 +25,7 @@ class SeqDynamicWakes(FarmOrder):
     :group: models.wake_frames.sequential
 
     """
-    def __init__(self, cl_ipars={}, dt_min=None):
+    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
 
@@ -37,9 +37,11 @@ class SeqDynamicWakes(FarmOrder):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 

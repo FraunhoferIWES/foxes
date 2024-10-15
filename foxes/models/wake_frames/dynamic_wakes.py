@@ -13,8 +13,6 @@ class DynamicWakes(WakeFrame):
 
     Attributes
     ----------
-    max_length_km: float
-        The maximal wake length in km
     max_age: int
         The maximal number of wake steps
     cl_ipars: dict
@@ -34,6 +32,7 @@ class DynamicWakes(WakeFrame):
         max_age_mean_ws=5,
         cl_ipars={}, 
         dt_min=None,
+        **kwargs,
         ):
         """
         Constructor.
@@ -53,11 +52,12 @@ class DynamicWakes(WakeFrame):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
-        super().__init__()
+        super().__init__(max_length_km=max_length_km, **kwargs)
 
-        self.max_length_km = max_length_km
         self.max_age = max_age
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min

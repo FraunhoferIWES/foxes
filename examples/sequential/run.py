@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-VMAX", "--max_variable", help="Maximal plot variable", default=10, type=float,
     )
-    parser.add_argument("-e", "--engine", help="The engine", default="numpy")
+    parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
@@ -103,6 +103,14 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure(figsize=(8, 8)))
 
+    engine = foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    )
+    engine.initialize()
+    
     algo = foxes.algorithms.Sequential(
         farm,
         states,
@@ -111,10 +119,6 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
         verbosity=0,
     )
 

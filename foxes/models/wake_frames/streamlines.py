@@ -15,8 +15,6 @@ class Streamlines2D(WakeFrame):
     ----------
     step: float
         The streamline step size in m
-    max_length_km: float
-        The maximal streamline length in km
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -24,7 +22,7 @@ class Streamlines2D(WakeFrame):
     :group: models.wake_frames
 
     """
-    def __init__(self, step, max_length_km=20, cl_ipars={}):
+    def __init__(self, step, max_length_km=20, cl_ipars={}, **kwargs):
         """
         Constructor.
 
@@ -37,11 +35,12 @@ class Streamlines2D(WakeFrame):
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
-        super().__init__()
+        super().__init__(max_length_km=max_length_km, **kwargs)
         self.step = step
-        self.max_length_km = max_length_km
         self.cl_ipars = cl_ipars
 
         self.DATA = self.var("DATA")

@@ -25,7 +25,7 @@ class Timelines(WakeFrame):
     :group: models.wake_frames
 
     """
-    def __init__(self, max_length_km=2e4, cl_ipars={}, dt_min=None):
+    def __init__(self, max_length_km=2e4, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
 
@@ -39,10 +39,11 @@ class Timelines(WakeFrame):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
-        super().__init__()
-        self.max_length_km = max_length_km
+        super().__init__(max_length_km=max_length_km, **kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 
