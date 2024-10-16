@@ -70,8 +70,10 @@ class IECTIWake(TopHatWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}, "
-        s += self.wake_k.repr() + ")"
+        s += f"({self.superpositions[FV.TI]}, induction={iname}"
+        if self.wake_k is not None:
+            s += ", " + self.wake_k.repr()
+        s += ")"
         return s
 
     def sub_models(self):
