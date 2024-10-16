@@ -87,7 +87,16 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
             
-        self._data.append((fres, d))
+        # minimize stored data:
+        od = [d[0], d[1], None]
+        if len(self._data) == 0:
+            od[2] = d[2]
+        of = fres if (
+            "rotor_color" in self.pars and 
+            self.pars["rotor_color"] is not None
+        ) else None
+            
+        self._data.append((of, od))
 
     def gen_images(self, ax):
         """
@@ -104,10 +113,22 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         
         """
         fig = ax.get_figure()
-        for fres, d in self._data:
+        gdata = None
+        while len(self._data):
             
+            fres, d = self._data.pop(0)
+            
+            if d[2] is not None:
+                gdata = d[2]
+                
             o = FlowPlots2D(self.algo, fres)
-            yield next(o.gen_states_fig_xy(**self.pars, ax=ax, fig=fig, ret_im=True, precalc=d))
+            
+            yield next(
+                o.gen_states_fig_xy(
+                    **self.pars, ax=ax, fig=fig, ret_im=True, precalc=(d[0], d[1], gdata))
+            )
+            
+            del o, fres, d
             
             if (
                 self.pars.get("vmin", None) is not None

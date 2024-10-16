@@ -105,7 +105,9 @@ class SeqWakeDebugPlugin(SequentialPlugin):
             The (figure, artists) tuple
         
         """
-        for dt, pts, v in self._data:
+        while len(self._data):
+            
+            dt, pts, v = self._data.pop(0)
             
             N = len(pts)
             artists = []
