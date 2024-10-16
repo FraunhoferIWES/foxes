@@ -12,3 +12,5 @@ from .dask import (
     LocalClusterEngine,
     SlurmClusterEngine,
 )
+
+from .default import DefaultEngine

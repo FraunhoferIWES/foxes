@@ -63,7 +63,7 @@ class Engine(ABC):
         self.__entered = False
 
     def __repr__(self):
-        s = f"chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
+        s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
         return f"{type(self).__name__}({s})"
 
     def __enter__(self):
@@ -521,6 +521,7 @@ class Engine(ABC):
             return None
         else:
             engine_type = dict(
+                default="DefaultEngine",
                 threads="ThreadsEngine",
                 process="ProcessEngine",
                 xarray="XArrayEngine",
@@ -580,8 +581,8 @@ def get_engine(error=True, default=True):
             default.initialize()
             return default
         elif isinstance(default, bool) and default:
-            engine = Engine.new(engine_type="ProcessEngine")
-            print(f"Selecting default engine '{engine}'")
+            engine = Engine.new(engine_type="DefaultEngine")
+            print(f"Selecting '{engine}'")
             engine.initialize()
             return engine
         elif error:

@@ -601,7 +601,7 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 ## v1
 
-This major version introduces the concept of `Engines` which handle the chunking and parallelization of all *foxes* calculations. The default choice is now based on the [concurrent.futures](https://docs.python.org/3/library/concurrent.futures.html) package and provides a significant speedup compared to previous versions. See the documentation for more details and all engine choices. The `Engines` replace the `Runners` of previous versions.
+This major version introduces the concept of `Engines` which handle the chunking and parallelization of all *foxes* calculations. The default choice now prefers the [concurrent.futures](https://docs.python.org/3/library/concurrent.futures.html) package and provides a significant speedup compared to previous versions. See the documentation for more details and all engine choices. The `Engines` replace the `Runners` of previous versions.
 
 - Engines
   - New engine `ThreadsEngine` (short `threads`): Sends chunks to threads, based on `concurrent.futures`
@@ -613,6 +613,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
   - New engine `NumpyEngine` (short `numpy`): Runs a loop over chunks
   - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
+  - New engine `DefaultEngine` (short `default`): Switches between `single` and `process`, depending on the case size
 - Inputs:
   - New states `OnePointFlowStates`, `OnePointFlowTimeseries`, `OnePointFlowMultiHeightTimeseries`, `OnePointFlowMultiHeightNCTimeseries`: Generating horizontally inhomogeneous inflow from horizontally homogeneous input data
 - Models:
