@@ -59,7 +59,7 @@ dask = [
     "dask-jobqueue",
     "setuptools",
 ]
-engines = [
+eng = [
     "multiprocess",
     "dask",
     "distributed",
