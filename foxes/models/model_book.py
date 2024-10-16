@@ -417,15 +417,7 @@ class ModelBook:
             superposition=lambda s: f"ti_{s}",
             hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
         )
-
-        self.wake_models.add_factory(
-            fm.wake_models.ti.IECTIWake,
-            "IECTI2005_<superposition>",
-            kwargs=dict(iec_type="2005"),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-
+        
         self.wake_models.add_factory(
             fm.wake_models.ti.IECTIWake,
             "IECTI2019_<superposition>",

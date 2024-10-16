@@ -14,6 +14,9 @@ if __name__ == "__main__":
         "-d", "--debug", help="Switch on wake debugging", action="store_true"
     )
     parser.add_argument(
+        "-S", "--n_states", help="The number of states", type=int, default=50,
+    )
+    parser.add_argument(
         "-l",
         "--layout",
         help="The wind farm layout file (path or static)",
@@ -85,7 +88,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(240, 290),
+        states_sel=range(240, 240+args.n_states),
     )
 
     farm = foxes.WindFarm()
