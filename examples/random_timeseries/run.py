@@ -116,7 +116,6 @@ if __name__ == "__main__":
             ax = plt.Axes(fig, rect=[0.3, 0.1, 0.8, 0.8])
             fig.add_axes(ax)
             foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax)
-
             plt.show()
             plt.close(fig)
 

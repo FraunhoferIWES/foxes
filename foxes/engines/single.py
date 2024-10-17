@@ -24,7 +24,7 @@ class SingleChunkEngine(Engine):
         """
         ignr = ["chunk_size_states", "chunk_size_points", "n_procs"]
         for k in ignr:
-            if kwargs.pop(k, None) is not None:
+            if kwargs.pop(k, None) is not None and kwargs.get("verbosity", 1) > 0:
                 print(f"{type(self).__name__}: Ignoring {k}")
         super().__init__(
             *args,

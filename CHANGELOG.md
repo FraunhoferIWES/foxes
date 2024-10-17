@@ -616,6 +616,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `DefaultEngine` (short `default`): Switches between `single` and `process`, depending on the case size
 - Inputs:
   - New states `OnePointFlowStates`, `OnePointFlowTimeseries`, `OnePointFlowMultiHeightTimeseries`, `OnePointFlowMultiHeightNCTimeseries`: Generating horizontally inhomogeneous inflow from horizontally homogeneous input data
+  - New farm layout option: `add_ring`, adding a ring of turbines
 - Models:
   - Wake frame `Timelines` now also accept spatially uniform multi-height states 
   - New wake frame `DynamicWakes`: Dynamic wakes for any kind of timeseries states, compatible with chunking
