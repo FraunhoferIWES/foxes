@@ -69,7 +69,6 @@ class ModelBook:
     :group: models
 
     """
-
     def __init__(self, Pct_file=None):
         """
         Constructor.
@@ -260,7 +259,17 @@ class ModelBook:
                 return float(x[:-1]) / 60
             elif x[-3:] == "min":
                 return float(x[:-3])
-
+            else:
+                raise NotImplementedError(f"Cannot translate '{x}' into minutes")
+            
+        def _tokm(x):
+            if x[-2:] == "km":
+                return float(x[:-2])
+            elif x[-1] == "m":
+                return float(x[:-1]) / 1e3
+            else:
+                raise NotImplementedError(f"Cannot translate '{x}' into km")
+            
         self.wake_frames.add_factory(
             fm.wake_frames.Timelines,
             "timelines_<dt>",
@@ -270,10 +279,10 @@ class ModelBook:
         )
         self.wake_frames.add_factory(
             fm.wake_frames.DynamicWakes,
-            "dyn_wakes_<dt>",
-            dt=_todt,
-            var2arg={"dt": "dt_min"},
-            hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
+            "dyn_wakes_<length>",
+            length=_tokm,
+            var2arg={"length": "max_length_km"},
+            hints={"length": "(Maximal wake length, e.g. '5km' or '5000m')"},
         )
         self.wake_frames.add_factory(
             fm.wake_frames.SeqDynamicWakes,
