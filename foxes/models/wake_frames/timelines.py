@@ -7,6 +7,7 @@ from foxes.algorithms.iterative import Iterative
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Timelines(WakeFrame):
     """
     Dynamic wakes for spatially uniform timeseries states.
@@ -25,6 +26,7 @@ class Timelines(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(self, max_length_km=2e4, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
@@ -41,7 +43,7 @@ class Timelines(WakeFrame):
             if not from timeseries data
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(max_length_km=max_length_km, **kwargs)
         self.cl_ipars = cl_ipars
@@ -49,10 +51,10 @@ class Timelines(WakeFrame):
 
     def __repr__(self):
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km})"
-    
+
     def _precalc_data(self, algo, states, heights, verbosity, needs_res=False):
         """Helper function for pre-calculation of ambient wind vectors"""
-        
+
         if verbosity > 0:
             print(f"{self.name}: Pre-calculating ambient wind vectors")
 
@@ -110,13 +112,13 @@ class Timelines(WakeFrame):
 
             res = states.calculate(algo, mdata, fdata, tdata)
             del tdata
-            
+
             uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2]
             if len(dt) == 1:
                 dxy = uv * dt[0]
             else:
                 dxy = uv[:-1] * dt[:, None]
-                dxy = np.append(dxy, uv[-1, None, :]*dt[-1], axis=0)
+                dxy = np.append(dxy, uv[-1, None, :] * dt[-1], axis=0)
             self.timelines_data["dxy"][1].append(dxy)
             """ DEBUG
             import matplotlib.pyplot as plt
@@ -127,22 +129,22 @@ class Timelines(WakeFrame):
             plt.show()
             quit()
             """
-            
+
             if needs_res:
                 if "U" not in self.timelines_data:
                     self.timelines_data["U"] = (("height", FC.STATE), [])
                     self.timelines_data["V"] = (("height", FC.STATE), [])
                 self.timelines_data["U"][1].append(uv[:, 0])
                 self.timelines_data["V"][1].append(uv[:, 1])
-                
+
                 for v in states.output_point_vars(algo):
                     if v not in [FV.WS, FV.WD]:
                         if v not in self.timelines_data:
                             self.timelines_data[v] = (("height", FC.STATE), [])
                         self.timelines_data[v][1].append(res[v][:, 0, 0])
-                        
+
             del res, uv, dxy
-                        
+
         self.timelines_data = Dataset(
             coords={
                 FC.STATE: states.index(),
@@ -153,7 +155,7 @@ class Timelines(WakeFrame):
                 for v, d in self.timelines_data.items()
             },
         )
-        
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -171,7 +173,7 @@ class Timelines(WakeFrame):
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
         super().initialize(algo, verbosity)
-            
+
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
         for ti, t in enumerate(algo.farm.turbines):
@@ -182,6 +184,7 @@ class Timelines(WakeFrame):
 
         # pre-calc data:
         from foxes.input.states import OnePointFlowTimeseries
+
         if isinstance(algo.states, OnePointFlowTimeseries):
             self._precalc_data(algo, algo.states.base_states, heights, verbosity)
         else:
@@ -367,25 +370,19 @@ class Timelines(WakeFrame):
 
                     seln = (projx > -dx) & (projx < dx)
                     if np.any(seln):
-                        wcoosx[sel] = np.where(
-                            seln, projx + trace_l[sel], wcoosx[sel]
-                        )
+                        wcoosx[sel] = np.where(seln, projx + trace_l[sel], wcoosx[sel])
 
-                        ny = np.concatenate(
-                            [-nx[:, 1, None], nx[:, 0, None]], axis=1
-                        )
+                        ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
                         projy = np.einsum("sd,sd->s", trp, ny)
                         wcoosy[sel] = np.where(seln, projy, wcoosy[sel])
                         del ny, projy
 
-                        trace_si[sel] = np.where(
-                            seln, h_trace_si[sel], trace_si[sel]
-                        )
-                            
+                        trace_si[sel] = np.where(seln, h_trace_si[sel], trace_si[sel])
+
             # step backwards in time, until wake source turbine is hit:
             _update_wcoos(precond)
             while True:
-                sel = precond & (h_trace_si > 0) & (trace_l < self.max_length_km*1e3)
+                sel = precond & (h_trace_si > 0) & (trace_l < self.max_length_km * 1e3)
                 if np.any(sel):
                     h_trace_si[sel] -= 1
 
@@ -448,50 +445,50 @@ class Timelines(WakeFrame):
         theights = fdata[FV.H][:, downwind_index]
         heights = self.timelines_data["height"].to_numpy()
         data_dxy = self.timelines_data["dxy"].to_numpy()
-        
+
         points = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
         points[:] = rxyz[:, None, :]
-        
+
         trace_dp = np.zeros_like(points[..., :2])
         trace_l = x.copy()
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
         trace_si[:] = np.arange(n_states)[:, None]
-          
+
         for hi, h in enumerate(heights):
-            precond = (theights==h)
+            precond = theights == h
             if np.any(precond):
-                sel = precond[:, None] & (trace_l>0)
+                sel = precond[:, None] & (trace_l > 0)
                 while np.any(sel):
                     dxy = data_dxy[hi][trace_si[sel]]
-            
+
                     trl = trace_l[sel]
                     trp = trace_dp[sel]
                     dl = np.linalg.norm(dxy, axis=-1)
-                    cl = np.abs(trl-dl) < np.abs(trl)
+                    cl = np.abs(trl - dl) < np.abs(trl)
                     if np.any(cl):
-                        trace_l[sel] = np.where(cl, trl-dl, trl)
-                        trace_dp[sel] = np.where(cl[:, None], trp+dxy, trp)
+                        trace_l[sel] = np.where(cl, trl - dl, trl)
+                        trace_dp[sel] = np.where(cl[:, None], trp + dxy, trp)
                     del trl, trp, dl, cl, dxy
-                    
+
                     trace_si[sel] -= 1
-                    sel = precond[:, None] & (trace_l>0) & (trace_si>=0)
-                
+                    sel = precond[:, None] & (trace_l > 0) & (trace_si >= 0)
+
                 si = trace_si[precond] + 1
                 dxy = data_dxy[hi][si]
                 dl = np.linalg.norm(dxy, axis=-1)[:, :, None]
                 trl = trace_l[precond][:, :, None]
                 trp = trace_dp[precond]
-                sel = np.abs(trl) < 2*dl
-                trace_dp[precond] = np.where(sel, trp-trl/dl*dxy, np.nan)
-                
+                sel = np.abs(trl) < 2 * dl
+                trace_dp[precond] = np.where(sel, trp - trl / dl * dxy, np.nan)
+
                 del si, dxy, dl, trl, trp, sel
             del precond
         del trace_si, trace_l
-        
+
         points[..., :2] += trace_dp
-        
+
         return points
-                    
+
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.

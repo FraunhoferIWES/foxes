@@ -34,9 +34,9 @@ def read_turbine_types(wio_farm, algo_dict, ws_exp_P, ws_exp_ct, verbosity):
     """
     if "turbine_types" not in wio_farm:
         wio_farm["turbine_types"] = {0: wio_farm["turbines"]}
-        
+
     ttypes = {}
-    for k, wio_trbns in  wio_farm["turbine_types"].items():
+    for k, wio_trbns in wio_farm["turbine_types"].items():
         tname = wio_trbns.pop("name")
         ttypes[k] = tname
         if verbosity > 2:
@@ -70,7 +70,9 @@ def read_turbine_types(wio_farm, algo_dict, ws_exp_P, ws_exp_ct, verbosity):
 
             def _get_wse_var(wse):
                 if wse not in [1, 2, 3]:
-                    raise ValueError(f"Expecting wind speed exponent 1, 2 or 3, got {wse}")
+                    raise ValueError(
+                        f"Expecting wind speed exponent 1, 2 or 3, got {wse}"
+                    )
                 return FV.REWS if wse == 1 else (FV.REWS2 if wse == 2 else FV.REWS3)
 
             if verbosity > 2:
@@ -128,8 +130,9 @@ def read_turbine_types(wio_farm, algo_dict, ws_exp_P, ws_exp_ct, verbosity):
 
         else:
             raise KeyError(f"Expecting either 'power_curve' or 'Cp_curve'")
-        
+
     return ttypes
+
 
 def read_layout(lname, ldict, algo_dict, ttypes, verbosity=1):
     """

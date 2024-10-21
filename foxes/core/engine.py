@@ -32,6 +32,7 @@ class Engine(ABC):
     :group: core
 
     """
+
     def __init__(
         self,
         chunk_size_states=None,
@@ -235,11 +236,11 @@ class Engine(ABC):
         # determine states chunks:
         n_chunks_states = 1
         if self.chunk_size_states is None:
-            chunk_size_states = max(int(n_states/self.n_procs), 1)
+            chunk_size_states = max(int(n_states / self.n_procs), 1)
         else:
             chunk_size_states = min(n_states, self.chunk_size_states)
-        n_chunks_states = int(n_states/chunk_size_states)
-        chunk_size_states = int(n_states/n_chunks_states)
+        n_chunks_states = int(n_states / chunk_size_states)
+        chunk_size_states = int(n_states / n_chunks_states)
         chunk_sizes_states = np.full(n_chunks_states, chunk_size_states, dtype=np.int32)
         extra = n_states - n_chunks_states * chunk_size_states
         if extra > 0:
@@ -407,7 +408,7 @@ class Engine(ABC):
         ds: xarray.Dataset
             The final results dataset
 
-        """           
+        """
         self.print("Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
@@ -452,7 +453,7 @@ class Engine(ABC):
         if pbar is not None:
             pbar.close()
 
-        #if not iterative or algo.final_iteration:
+        # if not iterative or algo.final_iteration:
         #    algo.reset_chunk_store()
 
         coords = {}

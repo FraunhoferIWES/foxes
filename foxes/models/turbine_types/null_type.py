@@ -8,6 +8,7 @@ class NullType(TurbineType):
     :group: models.turbine_types
 
     """
+
     def __init__(
         self,
         *args,
@@ -33,7 +34,7 @@ class NullType(TurbineType):
         super().__init__(*args, **kwargs)
         self._rews2 = needs_rews2
         self._rews3 = needs_rews3
-        
+
     def needs_rews2(self):
         """
         Returns flag for requirering REWS2 variable

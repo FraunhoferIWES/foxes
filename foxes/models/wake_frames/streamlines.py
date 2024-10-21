@@ -7,6 +7,7 @@ from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Streamlines2D(WakeFrame):
     """
     Streamline following wakes
@@ -22,6 +23,7 @@ class Streamlines2D(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(self, step, max_length_km=20, cl_ipars={}, **kwargs):
         """
         Constructor.
@@ -37,7 +39,7 @@ class Streamlines2D(WakeFrame):
             point interpolation
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(max_length_km=max_length_km, **kwargs)
         self.step = step
@@ -48,7 +50,9 @@ class Streamlines2D(WakeFrame):
         self.SDAT = self.var("SDAT")
 
     def __repr__(self):
-        return f"{type(self).__name__}(step={self.step}, max_length={self.max_length_km})"
+        return (
+            f"{type(self).__name__}(step={self.step}, max_length={self.max_length_km})"
+        )
 
     def _calc_streamlines(self, algo, mdata, fdata):
         """
@@ -57,7 +61,7 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        N = int(self.max_length_km*1e3 / self.step)
+        N = int(self.max_length_km * 1e3 / self.step)
 
         # calc data: x, y, z, wd
         data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)

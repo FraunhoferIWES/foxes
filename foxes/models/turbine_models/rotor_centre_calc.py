@@ -18,6 +18,7 @@ class RotorCentreCalc(TurbineModel):
     :group: models.turbine_models
 
     """
+
     def __init__(self, calc_vars):
         """
         Constructor.

@@ -37,6 +37,7 @@ class YawedWakes(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(
         self,
         base_frame=RotorWD(),
@@ -65,7 +66,7 @@ class YawedWakes(WakeFrame):
             Parameters for the WakeK class, if not found in wake model
         max_length_km: float
             The maximal wake length in km
-            
+
         """
         super().__init__(max_length_km=max_length_km)
 

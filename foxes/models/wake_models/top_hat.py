@@ -18,6 +18,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
     :group: models.wake_models
 
     """
+
     def __init__(self, superpositions, induction="Betz"):
         """
         Constructor.

@@ -129,7 +129,8 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi < n_turbines - 1:
                         tdata, wdelta = _get_wdata(
-                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :])
+                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :]
+                        )
                         gmodel.contribute_to_farm_wakes(
                             algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                         )
@@ -153,7 +154,8 @@ class FarmWakesCalculation(FarmDataModel):
 
                     if oi > 0:
                         tdata, wdelta = _get_wdata(
-                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi])
+                            tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi]
+                        )
                         gmodel.contribute_to_farm_wakes(
                             algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                         )

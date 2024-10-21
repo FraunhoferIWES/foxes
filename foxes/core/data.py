@@ -24,6 +24,7 @@ class Data(Dict):
     :group: core
 
     """
+
     def __init__(
         self,
         data,
@@ -208,14 +209,15 @@ class Data(Dict):
             variables = [variables]
         if not isinstance(s, (list, tuple, np.ndarray)):
             s = [s]
-            
+
         data = {}
         dims = {}
         for v in self.keys():
             d = self.dims[v]
             if d is not None:
-                hs = tuple([s[variables.index(w)] if w in variables else np.s_[:] 
-                            for w in d])
+                hs = tuple(
+                    [s[variables.index(w)] if w in variables else np.s_[:] for w in d]
+                )
                 data[v] = self[v][hs]
                 dims[v] = (
                     tuple([dim_map.get(dd, dd) for dd in d]) if len(dim_map) else d
@@ -225,16 +227,20 @@ class Data(Dict):
         if FC.STATE in variables and self.__states_i0 is not None:
             i0 = self.states_i0(counter=True)
             a = s[variables.index(FC.STATE)]
-            sts = np.arange(i0, i0+self.n_states)[a]
+            sts = np.arange(i0, i0 + self.n_states)[a]
             if len(sts) == 1:
                 states_i0 = sts[0]
-            elif np.all(sts==np.arange(sts[0], sts[0]+len(sts))):
+            elif np.all(sts == np.arange(sts[0], sts[0] + len(sts))):
                 states_i0 = sts[0]
             else:
-                raise ValueError(f"Cannot determine states_i0 for states slices {a}, leading to selection {list(sts)}")
+                raise ValueError(
+                    f"Cannot determine states_i0 for states slices {a}, leading to selection {list(sts)}"
+                )
         else:
             states_i0 = None
-        return type(self)(data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0)
+        return type(self)(
+            data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
+        )
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
@@ -297,6 +303,7 @@ class Data(Dict):
 
         return cls(*args, data=data, dims=dims, **kwargs)
 
+
 class MData(Data):
     """
     Container for foxes model data.
@@ -304,6 +311,7 @@ class MData(Data):
     :group: core
 
     """
+
     def __init__(self, *args, name="mdata", **kwargs):
         """
         Constructor
@@ -320,6 +328,7 @@ class MData(Data):
         """
         super().__init__(*args, name=name, **kwargs)
 
+
 class FData(Data):
     """
     Container for foxes farm data.
@@ -330,6 +339,7 @@ class FData(Data):
     :group: core
 
     """
+
     def __init__(self, *args, name="fdata", **kwargs):
         """
         Constructor
@@ -413,6 +423,7 @@ class FData(Data):
                     callback(data, dims)
 
             return super().from_dataset(ds, *args, callback=cb, **kwargs)
+
 
 class TData(Data):
     """

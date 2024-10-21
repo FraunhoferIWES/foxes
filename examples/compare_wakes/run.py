@@ -99,9 +99,7 @@ if __name__ == "__main__":
         help="Plot the wind deficit instead of wind speed",
         action="store_true",
     )
-    parser.add_argument(
-        "-e", "--engine", help="The engine", default="ProcessEngine"
-    )
+    parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )

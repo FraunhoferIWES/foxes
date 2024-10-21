@@ -28,6 +28,7 @@ class IECTIWake(TopHatWakeModel):
     :group: models.wake_models.ti
 
     """
+
     def __init__(
         self,
         superposition,
@@ -162,7 +163,7 @@ class IECTIWake(TopHatWakeModel):
                 downwind_index=downwind_index,
                 upcast=True,
             )
-        
+
             k = self.wake_k(
                 FC.STATE_TARGET,
                 algo=algo,

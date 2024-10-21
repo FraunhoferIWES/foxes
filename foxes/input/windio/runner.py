@@ -51,6 +51,7 @@ class WindioRunner:
     :group: input.windio
 
     """
+
     def __init__(
         self,
         algo_dict,

@@ -20,6 +20,7 @@ class SeqWakeDebugPlugin(SequentialPlugin):
     :group: output.seq_plugins
 
     """
+
     def __init__(self, show_p=True, show_v=True, vpars={}, **ppars):
         """
         Constructor.
@@ -84,31 +85,33 @@ class SeqWakeDebugPlugin(SequentialPlugin):
         counter = algo.counter
         N = counter + 1
         dt = wframe._dt[counter] if counter < len(wframe._dt) else wframe._dt[-1]
-        
-        self._data.append((
-            dt,
-            wframe._traces_p[:N].copy(), 
-            wframe._traces_v[:N].copy(),
-        ))
+
+        self._data.append(
+            (
+                dt,
+                wframe._traces_p[:N].copy(),
+                wframe._traces_v[:N].copy(),
+            )
+        )
 
     def gen_images(self, ax):
         """
-        
+
         Parameters
         ----------
         ax: matplotlib.Axis
             The plotting axis
-        
+
         Yields
         ------
         imgs: tuple
             The (figure, artists) tuple
-        
+
         """
         while len(self._data):
-            
+
             dt, pts, v = self._data.pop(0)
-            
+
             N = len(pts)
             artists = []
             if self.show_p:
@@ -138,6 +141,5 @@ class SeqWakeDebugPlugin(SequentialPlugin):
                                 **self.vpars,
                             )
                         )
-                        
+
             yield ax.get_figure(), artists
-        

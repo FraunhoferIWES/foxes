@@ -35,6 +35,7 @@ class Sequential(Iterative):
     :group: algorithms.sequential
 
     """
+
     @classmethod
     def get_model(cls, name):
         """
@@ -190,7 +191,7 @@ class Sequential(Iterative):
             self.states._size = 1
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
-            
+
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
 

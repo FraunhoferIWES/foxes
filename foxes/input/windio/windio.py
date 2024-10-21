@@ -11,6 +11,7 @@ from .read_farm import read_layout, read_turbine_types
 from .read_attributes import read_attributes
 from .runner import WindioRunner
 
+
 def _read_site(wio, algo_dict, verbosity):
     """Reads the site information"""
     wio_site = Dict(wio["site"], name="site")
@@ -88,6 +89,7 @@ def _read_farm(wio, algo_dict, verbosity):
         print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
         read_layout(lname, ldict, algo_dict, ttypes, verbosity)
+
 
 def read_windio(
     windio_yaml,

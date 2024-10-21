@@ -17,6 +17,7 @@ class States(PointDataModel):
     :group: core
 
     """
+
     @abstractmethod
     def size(self):
         """
@@ -75,7 +76,7 @@ class States(PointDataModel):
 
         """
         raise NotImplementedError(f"States '{self.name}': Reset is not implemented")
-    
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.

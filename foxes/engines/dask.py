@@ -9,9 +9,11 @@ from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 def delayed(func):
-    """A dummy decorator """
+    """A dummy decorator"""
     return func
+
 
 def load_dask():
     """On-demand loading of the dask package"""
@@ -19,11 +21,13 @@ def load_dask():
     dask = import_module("dask", hint="pip install dask")
     ProgressBar = import_module("dask.diagnostics", hint="pip install dask").ProgressBar
     delayed = dask.delayed
-    
+
+
 def load_distributed():
     """On-demand loading of the distributed package"""
     global distributed
     distributed = import_module("distributed", hint="pip install distributed")
+
 
 class DaskBaseEngine(Engine):
     """
@@ -39,6 +43,7 @@ class DaskBaseEngine(Engine):
     :group: engines
 
     """
+
     def __init__(
         self,
         *args,
@@ -60,11 +65,11 @@ class DaskBaseEngine(Engine):
         kwargs: dict, optional
             Additional parameters for the base class
 
-        """      
+        """
         super().__init__(*args, **kwargs)
-        
+
         load_dask()
-        
+
         self.dask_config = dask_config
         self.progress_bar = progress_bar
 
@@ -125,6 +130,7 @@ class DaskBaseEngine(Engine):
         """
         dask.config.refresh()
         super().finalize(*exit_args, **exit_kwargs)
+
 
 def _run_as_ufunc(
     state_inds,
@@ -258,6 +264,7 @@ def _run_as_ufunc(
 
     return data
 
+
 class XArrayEngine(DaskBaseEngine):
     """
     The engine for foxes calculations via xarray.apply_ufunc.
@@ -265,6 +272,7 @@ class XArrayEngine(DaskBaseEngine):
     :group: engines
 
     """
+
     def run_calculation(
         self,
         algo,
@@ -450,6 +458,7 @@ class XArrayEngine(DaskBaseEngine):
         # update data by calculation results:
         return results.compute(num_workers=self.n_procs)
 
+
 @delayed
 def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     """Helper function for lazy running"""
@@ -459,6 +468,7 @@ def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
 
+
 class DaskEngine(DaskBaseEngine):
     """
     The dask engine for delayed foxes calculations.
@@ -466,6 +476,7 @@ class DaskEngine(DaskBaseEngine):
     :group: engines
 
     """
+
     def run_calculation(
         self,
         algo,
@@ -547,7 +558,9 @@ class DaskEngine(DaskBaseEngine):
 
         # submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
-        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2)
+        self.print(
+            f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
+        )
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         results = {}
         i0_states = 0
@@ -593,7 +606,9 @@ class DaskEngine(DaskBaseEngine):
 
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
-            self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
+            self.print(
+                f"Computing {n_chunks_all} chunks using {self.n_procs} processes"
+            )
         results = dask.compute(results)[0]
 
         return self.combine_results(
@@ -607,6 +622,7 @@ class DaskEngine(DaskBaseEngine):
             goal_data=goal_data,
             iterative=iterative,
         )
+
 
 def _run_on_cluster(
     algo,
@@ -655,10 +671,11 @@ def _run_on_cluster(
 
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-    
+
     k = (i0_states, i0_targets)
     cstore = {k: chunk_store[k]} if k in chunk_store else {}
     return results, cstore
+
 
 class LocalClusterEngine(DaskBaseEngine):
     """
@@ -674,6 +691,7 @@ class LocalClusterEngine(DaskBaseEngine):
     :group: engines
 
     """
+
     def __init__(
         self,
         *args,
@@ -697,9 +715,9 @@ class LocalClusterEngine(DaskBaseEngine):
 
         """
         super().__init__(*args, **kwargs)
-        
+
         load_distributed()
-        
+
         self.cluster_pars = cluster_pars
         self.client_pars = client_pars
 
@@ -929,6 +947,7 @@ class LocalClusterEngine(DaskBaseEngine):
 
         return results
 
+
 class SlurmClusterEngine(LocalClusterEngine):
     """
     The dask engine for foxes calculations on a SLURM cluster.
@@ -936,12 +955,15 @@ class SlurmClusterEngine(LocalClusterEngine):
     :group: engines
 
     """
+
     def __enter__(self):
         self.print("Launching dask cluster on HPC using SLURM..")
         cargs = deepcopy(self.cluster_pars)
         nodes = cargs.pop("nodes", 1)
 
-        dask_jobqueue = import_module("dask_jobqueue", hint="pip install setuptools dask-jobqueue")
+        dask_jobqueue = import_module(
+            "dask_jobqueue", hint="pip install setuptools dask-jobqueue"
+        )
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
         self._cluster = self._cluster.__enter__()

@@ -29,6 +29,7 @@ class TurbineType(TurbineModel):
     :group: core
 
     """
+
     def __init__(self, name=None, D=None, H=None, P_nominal=None, P_unit="kW"):
         """
         Constructor.

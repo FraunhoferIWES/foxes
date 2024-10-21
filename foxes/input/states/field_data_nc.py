@@ -56,6 +56,7 @@ class FieldDataNC(States):
     :group: input.states
 
     """
+
     def __init__(
         self,
         data_source,
@@ -161,7 +162,7 @@ class FieldDataNC(States):
                     print(
                         f"States '{self.name}': Reading index from '{self.data_source}'"
                     )
-            
+
             def _read_ds():
                 if Path(self.data_source).is_file():
                     return xr.open_dataset(self.data_source)

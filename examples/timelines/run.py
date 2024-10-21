@@ -13,13 +13,25 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
-        "-b", "--background", help="Switch on dynamic background interpretation", action="store_true"
+        "-b",
+        "--background",
+        help="Switch on dynamic background interpretation",
+        action="store_true",
     )
     parser.add_argument(
-        "-S", "--max_state", help="States subset to the first n states", type=int, default=None,
+        "-S",
+        "--max_state",
+        help="States subset to the first n states",
+        type=int,
+        default=None,
     )
     parser.add_argument(
-        "-R", "--ref_xy", help="The reference point x y", type=float, default=[2500, 2500], nargs="+",
+        "-R",
+        "--ref_xy",
+        help="The reference point x y",
+        type=float,
+        default=[2500, 2500],
+        nargs="+",
     )
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
@@ -91,7 +103,7 @@ if __name__ == "__main__":
     else:
         States = foxes.input.states.OnePointFlowTimeseries
         kwargs = {"ref_xy": args.ref_xy}
-        
+
     states = States(
         data_source=args.states,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
@@ -182,7 +194,7 @@ if __name__ == "__main__":
         plt.xlabel("State")
         plt.ylabel("REWS [m/s]")
         plt.show()
-        
+
     if not args.nofig and args.animation:
         print("\nCalculating animation")
 

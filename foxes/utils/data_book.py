@@ -2,6 +2,7 @@ import importlib.resources as resources
 
 from pathlib import Path
 
+
 class DataBook:
     """
     Container class for file paths, either directly
@@ -21,6 +22,7 @@ class DataBook:
     :group: utils
 
     """
+
     def __init__(self, data_book=None):
         """
         Constructor.

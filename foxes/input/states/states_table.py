@@ -470,6 +470,7 @@ class StatesTable(States):
 
         super().finalize(algo, verbosity)
 
+
 class Timeseries(StatesTable):
     """
     Timeseries states data.
@@ -477,7 +478,9 @@ class Timeseries(StatesTable):
     :group: input.states
 
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
 
 class TabStates(StatesTable):
     """
@@ -486,6 +489,7 @@ class TabStates(StatesTable):
     :group: input.states
 
     """
+
     def __init__(self, data_source, *args, normalize=True, **kwargs):
         """
         Constructor.

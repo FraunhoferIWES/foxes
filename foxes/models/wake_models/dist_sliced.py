@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from foxes.core import WakeModel
 
+
 class DistSlicedWakeModel(WakeModel):
     """
     Abstract base class for wake models for which
@@ -24,6 +25,7 @@ class DistSlicedWakeModel(WakeModel):
     :group: models.wake_models
 
     """
+
     def __init__(self, superpositions):
         """
         Constructor.

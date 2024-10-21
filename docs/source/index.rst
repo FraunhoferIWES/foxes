@@ -54,6 +54,11 @@ Contents
     .. toctree::
         :maxdepth: 2
 
+        inputs
+
+    .. toctree::
+        :maxdepth: 2
+
         models
 
     .. toctree::

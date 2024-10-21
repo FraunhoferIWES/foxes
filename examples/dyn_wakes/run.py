@@ -14,19 +14,35 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
-        "-F", "--fps", help="The frames per second value for the animation", type=int, default=4
+        "-F",
+        "--fps",
+        help="The frames per second value for the animation",
+        type=int,
+        default=4,
     )
     parser.add_argument(
-        "-b0", "--background0", help="Switch off dynamic background interpretation", action="store_true"
+        "-b0",
+        "--background0",
+        help="Switch off dynamic background interpretation",
+        action="store_true",
     )
     parser.add_argument(
         "-ws0", "--fix_ws", help="Switch off dynamic wind speed", action="store_true"
     )
     parser.add_argument(
-        "-S", "--max_state", help="States subset to the first n states", type=int, default=None,
+        "-S",
+        "--max_state",
+        help="States subset to the first n states",
+        type=int,
+        default=None,
     )
     parser.add_argument(
-        "-R", "--ref_xy", help="The reference point x y", type=float, default=[2500, 2500], nargs="+",
+        "-R",
+        "--ref_xy",
+        help="The reference point x y",
+        type=float,
+        default=[2500, 2500],
+        nargs="+",
     )
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
@@ -94,7 +110,9 @@ if __name__ == "__main__":
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
-    mbook.wake_frames["dyn_wakes"] = foxes.models.wake_frames.DynamicWakes(max_length_km=8)
+    mbook.wake_frames["dyn_wakes"] = foxes.models.wake_frames.DynamicWakes(
+        max_length_km=8
+    )
 
     if args.background0:
         States = foxes.input.states.Timeseries
@@ -102,7 +120,7 @@ if __name__ == "__main__":
     else:
         States = foxes.input.states.OnePointFlowTimeseries
         kwargs = {"ref_xy": args.ref_xy}
-    
+
     sdata = pd.read_csv(
         foxes.StaticData().get_file_path(foxes.STATES, args.states),
         index_col=0,
@@ -110,8 +128,8 @@ if __name__ == "__main__":
     )
     if not args.fix_ws:
         n_times = len(sdata.index)
-        sdata["ws"] = 5 + 0.3*np.sin(np.arange(n_times)*2*np.pi/20)
-            
+        sdata["ws"] = 5 + 0.3 * np.sin(np.arange(n_times) * 2 * np.pi / 20)
+
     states = States(
         data_source=sdata,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
@@ -135,7 +153,7 @@ if __name__ == "__main__":
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
-        
+
     engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
@@ -143,7 +161,7 @@ if __name__ == "__main__":
         chunk_size_points=args.chunksize_points,
     )
     engine.initialize()
-    
+
     algo = foxes.algorithms.Iterative(
         farm,
         states=states,
@@ -199,7 +217,7 @@ if __name__ == "__main__":
     print(f"\nFarm power        : {P/1000:.1f} MW")
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
-    
+
     engine.finalize()
 
     if not args.nofig:
@@ -212,17 +230,17 @@ if __name__ == "__main__":
         plt.ylabel("REWS [m/s]")
         plt.show()
         plt.close()
-        
+
     if not args.nofig and args.animation:
         print("\nCalculating animation")
-       
+
         fig, axs = plt.subplots(
             2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
         )
-        
+
         engine.initialize()
-        
-        of = foxes.output.FlowPlots2D(algo, farm_results) 
+
+        of = foxes.output.FlowPlots2D(algo, farm_results)
         ofg = of.gen_states_fig_xy(
             FV.WS,
             resolution=30,
@@ -239,9 +257,9 @@ if __name__ == "__main__":
             precalc=True,
         )
         next(ofg)
-        
+
         engine.finalize()
-            
+
         anim = foxes.output.Animator(fig)
         anim.add_generator(ofg)
         anim.add_generator(
@@ -268,10 +286,14 @@ if __name__ == "__main__":
             anno_dely=-60,
             alpha=0,
         )
-        
+
         axs[0].scatter(
-            [args.ref_xy[0]], [args.ref_xy[1]], 
-            marker="x", color="red", s=80, animated=True
+            [args.ref_xy[0]],
+            [args.ref_xy[1]],
+            marker="x",
+            color="red",
+            s=80,
+            animated=True,
         )
 
         fpath = "ani.gif"

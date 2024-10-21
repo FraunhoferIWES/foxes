@@ -7,11 +7,12 @@ from foxes.models.wake_frames.timelines import Timelines
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class OnePointFlowStates(States):
     """
     Time-evolving states based on horizontally
     homogeneous timeseries data
-    
+
     Attributes
     ----------
     ref_xy: list of float
@@ -23,24 +24,25 @@ class OnePointFlowStates(States):
         The delta t value in minutes,
         if not from timeseries data
     intp_pars: dict
-        Parameters for height interpolation with 
+        Parameters for height interpolation with
         scipy.interpolate.interpn
-            
+
     :group: input.states
-            
+
     """
+
     def __init__(
-        self, 
-        ref_xy, 
-        *base_states_args, 
-        base_states=None, 
-        tl_heights=None, 
-        dt_min=None, 
+        self,
+        ref_xy,
+        *base_states_args,
+        base_states=None,
+        tl_heights=None,
+        dt_min=None,
         **base_states_kwargs,
     ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ref_xy: list of float
@@ -48,7 +50,7 @@ class OnePointFlowStates(States):
             If [x, y, z] then z will serve as height
         base_states_args: tuple, optional
             Arguments for creating the base states from
-            States.new(), if not given as base_states 
+            States.new(), if not given as base_states
         base_states: foxes.core.States, optional
             The base states, representing horizontally
             homogeneous inflow
@@ -59,29 +61,33 @@ class OnePointFlowStates(States):
             if not from timeseries data
         base_states_kwargs: dict, optional
             Arguments for creating the base states from
-            States.new(), if not given as base_states 
-        
+            States.new(), if not given as base_states
+
         """
         super().__init__()
         self.ref_xy = np.array(ref_xy, dtype=FC.DTYPE)
         self.heights = tl_heights
         self.base_states = base_states
         self.dt_min = dt_min
-        
+
         self.intp_pars = {"fill_value": None}
         if "bounds_error" in base_states_kwargs:
             self.intp_pars["bounds_error"] = base_states_kwargs["bounds_error"]
-        
+
         if base_states is not None and len(base_states_kwargs):
-            raise KeyError(f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_state_pars {list(base_states_kwargs.keys())}")
+            raise KeyError(
+                f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_state_pars {list(base_states_kwargs.keys())}"
+            )
         elif base_states is not None and len(base_states_args):
-            raise KeyError(f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_states_args of types {[type(a).__name__ for a in base_states_args]}")
+            raise KeyError(
+                f"Base states of type '{type(base_states).__name__}' were given, cannot handle base_states_args of types {[type(a).__name__ for a in base_states_args]}"
+            )
         elif base_states is None:
             self.base_states = States.new(*base_states_args, **base_states_kwargs)
-            
+
     def __repr__(self):
         return f"{type(self).__name__}(base={type(self.base_states).__name__}, heights={self.heights}, dt_min={self.dt_min})"
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -115,12 +121,15 @@ class OnePointFlowStates(States):
             elif len(self.ref_xy) > 2:
                 self.heights = [self.ref_xy[2]]
             else:
-                raise KeyError(f"Cannot find 'heights' in base states of type '{type(self.base_states).__name__}', missing either `ref_xy` of type [x, y, z], or explicit value list via parameter 'tl_heights'")
-        
+                raise KeyError(
+                    f"Cannot find 'heights' in base states of type '{type(self.base_states).__name__}', missing either `ref_xy` of type [x, y, z], or explicit value list via parameter 'tl_heights'"
+                )
+
         # pre-calc data:
         Timelines._precalc_data(
-            self, algo, self.base_states, self.heights, verbosity, needs_res=True)
-            
+            self, algo, self.base_states, self.heights, verbosity, needs_res=True
+        )
+
     def size(self):
         """
         The total number of states.
@@ -251,18 +260,18 @@ class OnePointFlowStates(States):
         data = data_stash[self.name]
         if "data" in data:
             self.timelines_data = data.pop("data")
-            
+
     def calc_states_indices(self, algo, mdata, points, hi, ref_xy):
-        
+
         n_states, n_points = points.shape[:2]
         dxy = self.timelines_data["dxy"].to_numpy()[hi]
-        
+
         i0 = mdata.states_i0(counter=True)
         trace_p = points[:, :, :2] - ref_xy[:, :, :2]
         trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
-        trace_si[:] = i0 + np.arange(n_states)[:, None] 
+        trace_si[:] = i0 + np.arange(n_states)[:, None]
         coeffs = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
-        
+
         # flake8: noqa: F821
         def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None):
             """Helper function that updates trace_done"""
@@ -270,24 +279,23 @@ class OnePointFlowStates(States):
 
             # project onto local x direction:
             hdxy0 = dxy[trace_si[sel]] if hdxy0 is None else hdxy0
-            nx = hdxy0/np.linalg.norm(hdxy0, axis=-1)[..., None]
+            nx = hdxy0 / np.linalg.norm(hdxy0, axis=-1)[..., None]
             projx = np.einsum("...d,...d->...", trace_p[sel], nx)
-            
+
             # check for local points:
             if hdxy is None:
-                seld = (projx >= 1e-10) & ( projx <= 1e-10)
+                seld = (projx >= 1e-10) & (projx <= 1e-10)
                 if np.any(seld):
                     coeffs[sel] = np.where(seld, -1, coeffs[sel])
- 
+
             # check for vicinity to reference plane:
             else:
                 lx = np.einsum("...d,...d->...", hdxy, nx)
-                seld = (
-                    ( (lx < 0) & (projx >= lx) & ( projx <= 0) ) |
-                    ( (lx > 0) & (projx >= 0) & ( projx <= lx) )
+                seld = ((lx < 0) & (projx >= lx) & (projx <= 0)) | (
+                    (lx > 0) & (projx >= 0) & (projx <= lx)
                 )
                 if np.any(seld):
-                    w = projx/np.abs(lx)
+                    w = projx / np.abs(lx)
                     coeffs[sel] = np.where(seld, w, coeffs[sel])
 
         # step backwards in time, until projection onto axis is negative:
@@ -295,45 +303,47 @@ class OnePointFlowStates(States):
         sel = np.isnan(coeffs)
         tshift = 0
         while np.any(sel):
-            
+
             trs = trace_si[sel]
             hdxy = -dxy[trs]
             trace_p[sel] += hdxy
-            
-            _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs-tshift])
-            
+
+            _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs - tshift])
+
             tshift -= 1
             sel0 = np.isnan(coeffs)
             trace_si[sel0 & sel] -= 1
-            sel = sel0 & (trace_si>=0)
-            
+            sel = sel0 & (trace_si >= 0)
+
             del trs, sel0, hdxy
-        
+
         # step forwards in time, until projection onto axis is positive:
         sel = np.isnan(coeffs)
         if np.any(sel):
-            trace_p = np.where(sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p)
+            trace_p = np.where(
+                sel[:, :, None], points[:, :, :2] - ref_xy[:, :, :2], trace_p
+            )
             trace_si = np.where(sel, i0 + np.arange(n_states)[:, None] + 1, trace_si)
-                
-            sel &= (trace_si < algo.n_states)
+
+            sel &= trace_si < algo.n_states
             tshift = 1
             while np.any(sel):
-                
+
                 trs = trace_si[sel]
                 hdxy = dxy[trs]
                 trace_p[sel] += hdxy
-                
-                _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs-tshift])
-                
+
+                _eval_trace(sel, hdxy=hdxy, hdxy0=dxy[trs - tshift])
+
                 tshift += 1
                 sel0 = np.isnan(coeffs)
                 trace_si[sel0 & sel] += 1
                 sel = sel0 & (trace_si < algo.n_states)
-                
-                del trs, sel0, hdxy  
+
+                del trs, sel0, hdxy
 
         return trace_si, coeffs
-            
+
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -387,50 +397,50 @@ class OnePointFlowStates(States):
             cfs = coeffs[hi]
             data = self.timelines_data[v].to_numpy()[hi]
             out = np.zeros(sts.shape, dtype=FC.DTYPE)
-        
-            sel_low = (sts < 0)
+
+            sel_low = sts < 0
             if np.any(sel_low):
                 out[sel_low] = data[0]
-            
-            sel_hi = (sts >= algo.n_states) 
+
+            sel_hi = sts >= algo.n_states
             if np.any(sel_hi):
-                out[sel_hi] = data[algo.n_states-1]
-            
+                out[sel_hi] = data[algo.n_states - 1]
+
             sel = (~sel_low) & (~sel_hi) & (cfs <= 0)
             if np.any(sel):
                 s = sts[sel]
                 c = -cfs[sel]
-                out[sel] = c * data[s] + (1 - c) * data[s-1]
+                out[sel] = c * data[s] + (1 - c) * data[s - 1]
 
             sel = (~sel_low) & (~sel_hi) & (cfs > 0)
             if np.any(sel):
                 s = sts[sel]
                 c = cfs[sel]
-                out[sel] = c * data[s-1] + (1 - c) * data[s]
-            
+                out[sel] = c * data[s - 1] + (1 - c) * data[s]
+
             return out
-            
+
         # interpolate to heights:
         if n_heights > 1:
-            
+
             ar_states = np.arange(n_states)
             ar_points = np.arange(n_points)
-            
+
             crds = (heights, ar_states, ar_points)
-            
-            data = {v: np.stack(
-                        [_interp_time(hi, v) for hi in range(n_heights)]
-                        , axis=0)
-                    for v in self.timelines_data.data_vars.keys()
-                    if v != "dxy"}
+
+            data = {
+                v: np.stack([_interp_time(hi, v) for hi in range(n_heights)], axis=0)
+                for v in self.timelines_data.data_vars.keys()
+                if v != "dxy"
+            }
             vres = list(data.keys())
             data = np.stack(list(data.values()), axis=-1)
-            
+
             eval = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
             eval[:, :, 0] = points[:, :, 2]
             eval[:, :, 1] = ar_states[:, None]
             eval[:, :, 2] = ar_points[None, :]
-            
+
             try:
                 ires = interpn(crds, data, eval, **self.intp_pars)
             except ValueError as e:
@@ -451,55 +461,50 @@ class OnePointFlowStates(States):
                 )
                 raise e
             del crds, eval, data, ar_points, ar_states
-            
+
             results = {}
             for v in self.output_point_vars(algo):
                 if v not in [FV.WS, FV.WD]:
                     results[v] = ires[:, :, vres.index(v)]
                 elif v not in results:
                     uv = np.stack(
-                        [ires[:, :, vres.index("U")], 
-                        ires[:, :, vres.index("V")]],
-                        axis=-1
+                        [ires[:, :, vres.index("U")], ires[:, :, vres.index("V")]],
+                        axis=-1,
                     )
-                    results = {
-                        FV.WD: uv2wd(uv),
-                        FV.WS: np.linalg.norm(uv, axis=-1)
-                    }
+                    results = {FV.WD: uv2wd(uv), FV.WS: np.linalg.norm(uv, axis=-1)}
                     del uv
-        
+
         # no dependence on height:
         else:
-            results = {}            
+            results = {}
             for v in self.output_point_vars(algo):
                 if v not in [FV.WS, FV.WD]:
                     results[v] = _interp_time(hi, v)
                 elif v not in results:
                     uv = np.stack(
-                        [_interp_time(hi, "U"), _interp_time(hi, "V")],
-                        axis=-1
+                        [_interp_time(hi, "U"), _interp_time(hi, "V")], axis=-1
                     )
-                    results = {
-                        FV.WD: uv2wd(uv),
-                        FV.WS: np.linalg.norm(uv, axis=-1)
-                    }
+                    results = {FV.WD: uv2wd(uv), FV.WS: np.linalg.norm(uv, axis=-1)}
                     del uv
-        
-        return {v: d.reshape(n_states, n_targets, n_tpoints)
-                for v, d in results.items()}
+
+        return {
+            v: d.reshape(n_states, n_targets, n_tpoints) for v, d in results.items()
+        }
+
 
 class OnePointFlowTimeseries(OnePointFlowStates):
     """
     Inhomogeneous inflow from homogeneous timeseries data
     at one point
-    
+
     :group: input.states
-    
+
     """
+
     def __init__(self, ref_xy, *args, tl_heights=None, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         ref_xy: list of float
@@ -511,59 +516,62 @@ class OnePointFlowTimeseries(OnePointFlowStates):
             The heights at which timelines will be calculated
         kwargs: dict, optional
             Parameters for the base class
-             
+
         """
         if tl_heights is None and len(ref_xy) < 3:
-            tl_heights = [100.]
+            tl_heights = [100.0]
         super().__init__(
-            ref_xy, 
-            *args, 
-            tl_heights=tl_heights, 
-            states_type="Timeseries", 
+            ref_xy,
+            *args,
+            tl_heights=tl_heights,
+            states_type="Timeseries",
             **kwargs,
         )
 
+
 class OnePointFlowMultiHeightTimeseries(OnePointFlowStates):
     """
-    Inhomogeneous inflow from height dependent homogeneous 
+    Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point
-    
+
     :group: input.states
-    
+
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
             Parameters for the base class
         kwargs: dict, optional
             Parameters for the base class
-             
+
         """
         super().__init__(*args, states_type="MultiHeightTimeseries", **kwargs)
-        
+
+
 class OnePointFlowMultiHeightNCTimeseries(OnePointFlowStates):
     """
-    Inhomogeneous inflow from height dependent homogeneous 
+    Inhomogeneous inflow from height dependent homogeneous
     timeseries data at one point based on NetCDF input
-    
+
     :group: input.states
-    
+
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
             Parameters for the base class
         kwargs: dict, optional
             Parameters for the base class
-             
+
         """
         super().__init__(*args, states_type="MultiHeightNCTimeseries", **kwargs)
-        

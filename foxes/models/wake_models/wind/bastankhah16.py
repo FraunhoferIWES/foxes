@@ -30,6 +30,7 @@ class Bastankhah2016Model(Model):
     :group: models.wake_models.wind
 
     """
+
     MDATA_KEY = "Bastankhah2016Model"
     PARS = "pars"
     CHECK = "check"
@@ -383,6 +384,7 @@ class Bastankhah2016Model(Model):
         """
         del mdata[self.MDATA_KEY]
 
+
 class Bastankhah2016(DistSlicedWakeModel):
     """
     The Bastankhah 2016 wake model
@@ -415,6 +417,7 @@ class Bastankhah2016(DistSlicedWakeModel):
     :group: models.wake_models.wind
 
     """
+
     def __init__(
         self,
         superposition,

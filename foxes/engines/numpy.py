@@ -6,6 +6,7 @@ import foxes.constants as FC
 
 from .pool import _run
 
+
 class NumpyEngine(Engine):
     """
     The numpy engine for foxes calculations.
@@ -13,6 +14,7 @@ class NumpyEngine(Engine):
     :group: engines
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
@@ -148,7 +150,13 @@ class NumpyEngine(Engine):
                 # submit model calculation:
                 key = (chunki_states, chunki_points)
                 results[key] = _run(
-                    algo, model, data, iterative, chunk_store, (i0_states, i0_targets), **calc_pars
+                    algo,
+                    model,
+                    data,
+                    iterative,
+                    chunk_store,
+                    (i0_states, i0_targets),
+                    **calc_pars,
                 )
                 chunk_store.update(results[key][1])
                 del data

@@ -25,10 +25,11 @@ class WakeFrame(Model):
     ----------
     max_length_km: float
         The maximal wake length in km
-        
+
     :group: core
 
     """
+
     def __init__(self, max_length_km=3e4):
         """
         Constructor.
@@ -37,11 +38,11 @@ class WakeFrame(Model):
         ----------
         max_length_km: float
             The maximal wake length in km
-            
+
         """
         super().__init__()
         self.max_length_km = max_length_km
-        
+
     @abstractmethod
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -174,7 +175,7 @@ class WakeFrame(Model):
             raise ValueError(
                 f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}"
             )
-            
+
         return out, dims
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
@@ -258,7 +259,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = min(np.nanmax(x), self.max_length_km*1e3)
+        xmax = min(np.nanmax(x), self.max_length_km * 1e3)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1

@@ -3,6 +3,7 @@ import numpy as np
 from .dict import Dict
 import foxes.variables as FV
 
+
 class Factory:
     """
     Constructs objects from a choice of allowed
@@ -33,6 +34,7 @@ class Factory:
     :group: utils
 
     """
+
     def __init__(
         self,
         base,
@@ -126,7 +128,7 @@ class Factory:
                 raise ValueError(
                     f"Factory '{name_template}': Variable '{v}' has option of type '{type(v).__name__}'. Only list, tuple, dict or function are supported"
                 )
-        
+
         exvars = dict(
             n=5,
             n2=9,
@@ -145,10 +147,12 @@ class Factory:
                 self.example += f"{self._pre[i]}{exvars[v]}"
             self.example += self._pre[-1]
             if not self.check_match(self.example, error=False):
-                raise ValueError(f"Example '{self.example}' does not match template '{self.name_template}'")
+                raise ValueError(
+                    f"Example '{self.example}' does not match template '{self.name_template}'"
+                )
         except KeyError:
             self.example = None
-            
+
     @property
     def name_prefix(self):
         """
@@ -201,23 +205,24 @@ class Factory:
         if self.example is not None:
             s += f"\nExample: {self.example}"
         return s
-    
+
     def get_examples(self, **var_values):
         """
         Create example names from given values
-        
+
         Parameters
         ----------
         var_values: dict
             Variables values. Key: Variable,
             value: list or value
-            
+
         Returns
         -------
         examples: list of str
             The examples
-            
+
         """
+
         def gete(i, vals, vars, values, examples):
             if i >= len(vars):
                 e = ""
@@ -232,19 +237,19 @@ class Factory:
                     vls = np.atleast_1d(values[i])
                     for x in vls:
                         vals[v] = x
-                        gete(i+1,vals, vars, values, examples)
+                        gete(i + 1, vals, vars, values, examples)
                 else:
-                    gete(i+1,vals, vars, values, examples)
-                    
+                    gete(i + 1, vals, vars, values, examples)
+
         examples = []
         gete(
             0,
-            {}, 
-            list(var_values.keys()), 
-            list(var_values.values()), 
+            {},
+            list(var_values.keys()),
+            list(var_values.values()),
             examples,
         )
-                    
+
         return examples
 
     def check_match(self, name, error=False, ret_pars=False):
@@ -307,7 +312,7 @@ class Factory:
 
             kwargs.update(self.kwargs)
             return True, kwargs
-        
+
         return True
 
     def construct(self, name):
@@ -328,6 +333,7 @@ class Factory:
         __, kwargs = self.check_match(name, error=True, ret_pars=True)
         return self.base(*self.args, **kwargs)
 
+
 class WakeKFactory:
     """
     A factory that automatically handles
@@ -341,6 +347,7 @@ class WakeKFactory:
     :group: utils
 
     """
+
     def __init__(self, base, name_template, *args, hints={}, **kwargs):
         """
         Constructor.
@@ -360,7 +367,7 @@ class WakeKFactory:
         kwargs: dict
             Additional arguments for Factory
 
-        """        
+        """
         self._base = base
         self._kwargs = kwargs
         self._template0 = name_template
@@ -370,18 +377,13 @@ class WakeKFactory:
         i1 = i0 + len("_[wake_k]")
         kw = kwargs.pop("kwargs", {})
         v2a = kwargs.pop("var2arg", {})
-        
+
         if i0 < 0:
             raise ValueError(
                 f"String '_[wake_k]' not found in name template '{name_template}'"
             )
 
-        exvars = dict(
-            k=0.04,
-            ka=0.2,
-            ambka=0.4,
-            kb=0.001
-        )
+        exvars = dict(k=0.04, ka=0.2, ambka=0.4, kb=0.001)
         if "example_vars" in kwargs:
             exvars.update(kwargs.pop("example_vars"))
 
@@ -529,6 +531,7 @@ class WakeKFactory:
         )
         return s
 
+
 class FDict(Dict):
     """
     A dictionary with factory support
@@ -543,6 +546,7 @@ class FDict(Dict):
     :group: utils
 
     """
+
     def __init__(self, *args, store_created=True, **kwargs):
         """
         Constructor.

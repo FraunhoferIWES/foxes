@@ -3,6 +3,7 @@ from xarray import Dataset
 import foxes.constants as FC
 from foxes.core import Engine
 
+
 class SingleChunkEngine(Engine):
     """
     Runs computations in a single chunk.
@@ -10,6 +11,7 @@ class SingleChunkEngine(Engine):
     :group: engines
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.

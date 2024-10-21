@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 
+
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for Gaussian wake models.
@@ -10,6 +11,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
     :group: models.wake_models
 
     """
+
     @abstractmethod
     def calc_amplitude_sigma(
         self,

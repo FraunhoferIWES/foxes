@@ -25,6 +25,7 @@ WINDIO = "windio"
 :group: data
 """
 
+
 class StaticData(DataBook):
     """
     A DataBook filled with static data from
@@ -33,6 +34,7 @@ class StaticData(DataBook):
     :group: data
 
     """
+
     def __init__(self):
         super().__init__()
 

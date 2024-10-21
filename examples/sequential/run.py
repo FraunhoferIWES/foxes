@@ -14,7 +14,11 @@ if __name__ == "__main__":
         "-d", "--debug", help="Switch on wake debugging", action="store_true"
     )
     parser.add_argument(
-        "-S", "--n_states", help="The number of states", type=int, default=50,
+        "-S",
+        "--n_states",
+        help="The number of states",
+        type=int,
+        default=50,
     )
     parser.add_argument(
         "-l",
@@ -52,10 +56,17 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
-        "-V", "--variable", help="Plot variable", default=FV.WS,
+        "-V",
+        "--variable",
+        help="Plot variable",
+        default=FV.WS,
     )
     parser.add_argument(
-        "-VMAX", "--max_variable", help="Maximal plot variable", default=10, type=float,
+        "-VMAX",
+        "--max_variable",
+        help="Maximal plot variable",
+        default=10,
+        type=float,
     )
     parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
     parser.add_argument(
@@ -88,7 +99,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(240, 240+args.n_states),
+        states_sel=range(240, 240 + args.n_states),
     )
 
     farm = foxes.WindFarm()
@@ -107,49 +118,49 @@ if __name__ == "__main__":
         plt.close(ax.get_figure(figsize=(8, 8)))
 
     with foxes.Engine.new(
-            engine_type=args.engine,
-            n_procs=args.n_cpus,
-            chunk_size_states=args.chunksize_states,
-            chunk_size_points=args.chunksize_points,
-        ):
-            algo = foxes.algorithms.Sequential(
-                farm,
-                states,
-                rotor_model=args.rotor,
-                wake_models=args.wakes,
-                wake_frame=args.frame,
-                partial_wakes=args.pwakes,
-                mbook=mbook,
-                verbosity=0,
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
+        algo = foxes.algorithms.Sequential(
+            farm,
+            states,
+            rotor_model=args.rotor,
+            wake_models=args.wakes,
+            wake_frame=args.frame,
+            partial_wakes=args.pwakes,
+            mbook=mbook,
+            verbosity=0,
+        )
+
+        # in case of animation, add a plugin that creates the images:
+        if args.animation:
+            anigen = foxes.output.SeqFlowAnimationPlugin(
+                orientation="xy",
+                var=args.variable,
+                resolution=10,
+                levels=None,
+                quiver_pars=dict(scale=0.01),
+                quiver_n=307,
+                xmin=-5000,
+                ymin=-5000,
+                xmax=7000,
+                ymax=7000,
+                vmin=0,
+                vmax=args.max_variable,
+                title=None,
+                animated=True,
             )
+            algo.plugins.append(anigen)
 
-            # in case of animation, add a plugin that creates the images:
-            if args.animation:
-                anigen = foxes.output.SeqFlowAnimationPlugin(
-                    orientation="xy",
-                    var=args.variable,
-                    resolution=10,
-                    levels=None,
-                    quiver_pars=dict(scale=0.01),
-                    quiver_n=307,
-                    xmin=-5000,
-                    ymin=-5000,
-                    xmax=7000,
-                    ymax=7000,
-                    vmin=0,
-                    vmax=args.max_variable,
-                    title=None,
-                    animated=True,
-                )
-                algo.plugins.append(anigen)
+            if args.debug:
+                anigen_debug = foxes.output.SeqWakeDebugPlugin()
+                algo.plugins.append(anigen_debug)
 
-                if args.debug:
-                    anigen_debug = foxes.output.SeqWakeDebugPlugin()
-                    algo.plugins.append(anigen_debug)
-
-            # run all states sequentially:
-            for r in algo:
-                print(algo.index)
+        # run all states sequentially:
+        for r in algo:
+            print(algo.index)
 
     print("\nFarm results:\n")
     print(algo.farm_results)

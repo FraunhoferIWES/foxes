@@ -184,6 +184,7 @@ class TurbineInductionModel(WakeModel):
         """
         return False
 
+
 class WakeK(Model):
     """
     Handler for the wake growth parameter k
@@ -198,6 +199,7 @@ class WakeK(Model):
     :group: core
 
     """
+
     def __init__(
         self,
         k=None,

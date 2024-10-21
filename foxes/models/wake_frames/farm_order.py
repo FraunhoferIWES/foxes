@@ -22,6 +22,7 @@ class FarmOrder(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(self, base_frame=None, **kwargs):
         """
         Constructor.
@@ -54,7 +55,7 @@ class FarmOrder(WakeFrame):
         if self.base_frame is None:
             self.base_frame = RotorWD()
         super().initialize(algo, verbosity, force)
-        
+
     def sub_models(self):
         """
         List of all sub-models

@@ -105,7 +105,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("-tt", "--title", help="The figure title", default=None)
     parser.add_argument(
-        "-e", "--engine", help="The engine", default="ProcessEngine",
+        "-e",
+        "--engine",
+        help="The engine",
+        default="ProcessEngine",
     )
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int

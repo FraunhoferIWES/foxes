@@ -5,6 +5,7 @@ import foxes.variables as FV
 
 from .get_fig import get_fig
 
+
 class FlowPlots2D(SliceData):
     """
     Class for horizontal or vertical 2D flow plots
@@ -12,6 +13,7 @@ class FlowPlots2D(SliceData):
     :group: output.flow_plots_2d
 
     """
+
     def get_mean_fig_xy(
         self,
         var,
@@ -529,7 +531,7 @@ class FlowPlots2D(SliceData):
         precalc: bool or tuple
             Flag for pre-calculation run, adding an additional
             generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given 
+            yields data, states, gdata. The same tuple can be given
             for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xy
@@ -549,7 +551,7 @@ class FlowPlots2D(SliceData):
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
-        
+
         if isinstance(precalc, (tuple, list)):
             data, states, gdata = precalc
         else:
@@ -564,7 +566,7 @@ class FlowPlots2D(SliceData):
             )
             if precalc:
                 yield data, states, gdata
-            
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -717,7 +719,7 @@ class FlowPlots2D(SliceData):
         precalc: bool or tuple
             Flag for pre-calculation run, adding an additional
             generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given 
+            yields data, states, gdata. The same tuple can be given
             for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xz
@@ -753,7 +755,7 @@ class FlowPlots2D(SliceData):
             )
             if precalc:
                 yield data, states, gdata
-        
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -903,7 +905,7 @@ class FlowPlots2D(SliceData):
         precalc: bool or tuple
             Flag for pre-calculation run, adding an additional
             generator call before the actual plot generations,
-            yields data, states, gdata. The same tuple can be given 
+            yields data, states, gdata. The same tuple can be given
             for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_yz
@@ -939,7 +941,7 @@ class FlowPlots2D(SliceData):
             )
             if precalc:
                 yield data, states, gdata
-        
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:

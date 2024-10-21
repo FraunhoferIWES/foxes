@@ -4,6 +4,7 @@ from itertools import count
 
 import foxes.constants as FC
 
+
 class Model(ABC):
     """
     Base class for all models.
@@ -336,6 +337,7 @@ class Model(ABC):
             otherwise dimension 1 is entered
 
         """
+
         def _geta(a):
             sources = [s for s in [mdata, fdata, tdata, algo, self] if s is not None]
             for s in sources:
@@ -458,7 +460,7 @@ class Model(ABC):
             raise ValueError(
                 f"Model '{self.name}': Variable '{variable}' is requested but not found."
             )
-            
+
         # cast dimensions:
         if out_dims != dims:
             if out_dims is None:
@@ -518,7 +520,7 @@ class Model(ABC):
                 raise NotImplementedError(
                     f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}"
                 )
-            
+
         # data from other chunks, only with iterations:
         if (
             target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
@@ -545,6 +547,7 @@ class Model(ABC):
                 )
 
             from foxes.algorithms.sequential import Sequential
+
             if isinstance(algo, Sequential):
                 i0 = algo.states.counter
             else:
@@ -554,7 +557,7 @@ class Model(ABC):
                 # find the mean index and round it to nearest integer:
                 sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
                 sts = (sts + 0.5).astype(FC.ITYPE)
-            sel = sts < i0   
+            sel = sts < i0
             if np.any(sel):
                 if not hasattr(algo, "farm_results_downwind"):
                     raise KeyError(

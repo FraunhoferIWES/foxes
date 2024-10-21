@@ -22,6 +22,7 @@ class WSLinear(WakeSuperposition):
     :group: models.wake_superpositions
 
     """
+
     def __init__(self, scale_amb=False, lim_low=None, lim_high=None):
         """
         Constructor.

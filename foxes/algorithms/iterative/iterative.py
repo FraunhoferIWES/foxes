@@ -5,6 +5,7 @@ from foxes.utils import Dict
 import foxes.variables as FV
 from . import models as mdls
 
+
 class Iterative(Downwind):
     """
     Iterative calculation of farm data.
@@ -21,6 +22,7 @@ class Iterative(Downwind):
     :group: algorithms.iterative
 
     """
+
     @classmethod
     def get_model(cls, name):
         """
@@ -43,11 +45,11 @@ class Iterative(Downwind):
             return super().get_model(name)
 
     def __init__(
-        self, 
-        *args, 
-        max_it=None, 
-        conv_crit="default", 
-        mod_cutin={}, 
+        self,
+        *args,
+        max_it=None,
+        conv_crit="default",
+        mod_cutin={},
         **kwargs,
     ):
         """
@@ -173,7 +175,7 @@ class Iterative(Downwind):
                 calc_parameters=calc_parameters,
                 ambient=ambient,
             )
-                
+
             n = 0
             if self._urelax is not None:
                 if len(self._urelax["first"]):
@@ -300,14 +302,17 @@ class Iterative(Downwind):
 
             self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
-    
+
             fres_dwnd = fres
             if self.conv_crit is not None:
                 if self.eval_conv_block():
                     self.print(f"{self.name}: Convergence blocked", vlim=0)
                 else:
                     conv = self.conv_crit.check_converged(
-                        self, self.__prev_farm_results, fres, verbosity=self.verbosity + 1
+                        self,
+                        self.__prev_farm_results,
+                        fres,
+                        verbosity=self.verbosity + 1,
                     )
                     if conv:
                         self.print(

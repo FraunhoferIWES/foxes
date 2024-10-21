@@ -41,9 +41,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
-    parser.add_argument(
-        "-e", "--engine", help="The engine", default="ProcessEngine"
-    )
+    parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )

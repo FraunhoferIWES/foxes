@@ -15,6 +15,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
     :group: models.wake_models
 
     """
+
     @abstractmethod
     def calc_wakes_x_r(
         self,

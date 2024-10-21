@@ -16,6 +16,7 @@ class JensenWake(TopHatWakeModel):
     :group: models.wake_models.wind
 
     """
+
     def __init__(self, superposition, induction="Betz", **wake_k):
         """
         Constructor.

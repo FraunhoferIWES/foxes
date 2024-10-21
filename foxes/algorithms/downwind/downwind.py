@@ -5,6 +5,7 @@ import foxes.variables as FV
 import foxes.constants as FC
 from . import models as mdls
 
+
 class Downwind(Algorithm):
     """
     The downwind algorithm.
@@ -38,6 +39,7 @@ class Downwind(Algorithm):
     :group: algorithms.downwind
 
     """
+
     DEFAULT_FARM_OUTPUTS = [
         FV.X,
         FV.Y,

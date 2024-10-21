@@ -102,7 +102,7 @@ class FarmWakesCalculation(FarmDataModel):
 
         def _get_wdata(tdatap, wdeltas, variables, s):
             """Helper function for wake data extraction"""
-            tdata = tdatap.get_slice(variables, s) 
+            tdata = tdatap.get_slice(variables, s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
@@ -118,14 +118,16 @@ class FarmWakesCalculation(FarmDataModel):
 
                 if oi > 0:
                     tdata, wdelta = _get_wdata(
-                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi])
+                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi]
+                    )
                     gmodel.contribute_to_farm_wakes(
                         algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                     )
-                        
+
                 if oi < n_turbines - 1:
                     tdata, wdelta = _get_wdata(
-                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :])
+                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :]
+                    )
                     gmodel.contribute_to_farm_wakes(
                         algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                     )

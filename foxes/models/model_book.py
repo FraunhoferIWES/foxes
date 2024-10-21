@@ -19,6 +19,7 @@ from foxes.core import (
     GroundModel,
 )
 
+
 class ModelBook:
     """
     Container for all kinds of models.
@@ -69,6 +70,7 @@ class ModelBook:
     :group: models
 
     """
+
     def __init__(self, Pct_file=None):
         """
         Constructor.
@@ -261,7 +263,7 @@ class ModelBook:
                 return float(x[:-3])
             else:
                 raise NotImplementedError(f"Cannot translate '{x}' into minutes")
-            
+
         def _tokm(x):
             if x[-2:] == "km":
                 return float(x[:-2])
@@ -269,7 +271,7 @@ class ModelBook:
                 return float(x[:-1]) / 1e3
             else:
                 raise NotImplementedError(f"Cannot translate '{x}' into km")
-            
+
         self.wake_frames.add_factory(
             fm.wake_frames.Timelines,
             "timelines_<dt>",
@@ -291,7 +293,7 @@ class ModelBook:
             var2arg={"dt": "dt_min"},
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
         )
-        
+
         self.wake_superpositions = FDict(
             name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
@@ -426,7 +428,7 @@ class ModelBook:
             superposition=lambda s: f"ti_{s}",
             hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
         )
-        
+
         self.wake_models.add_factory(
             fm.wake_models.ti.IECTIWake,
             "IECTI2019_<superposition>",
@@ -474,7 +476,7 @@ class ModelBook:
             var2arg={"height": "heights"},
             height=lambda h: [0.0, float(h)],
             hints={"height": "(Boundary layer wake reflection height)"},
-            example_vars={"height": 500}
+            example_vars={"height": 500},
         )
 
         self.sources = FDict(

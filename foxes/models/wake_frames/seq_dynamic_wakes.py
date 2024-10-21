@@ -9,6 +9,7 @@ from foxes.algorithms.sequential import Sequential
 
 from .farm_order import FarmOrder
 
+
 class SeqDynamicWakes(FarmOrder):
     """
     Dynamic wakes for the sequential algorithm.
@@ -25,6 +26,7 @@ class SeqDynamicWakes(FarmOrder):
     :group: models.wake_frames.sequential
 
     """
+
     def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
@@ -39,7 +41,7 @@ class SeqDynamicWakes(FarmOrder):
             if not from timeseries data
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(**kwargs)
         self.cl_ipars = cl_ipars

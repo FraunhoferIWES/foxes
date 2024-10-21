@@ -5,6 +5,7 @@ from tqdm import tqdm
 from foxes.core import Engine
 import foxes.constants as FC
 
+
 def _run(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
     """Helper function for running in a single process"""
     algo.reset_chunk_store(chunk_store)
@@ -13,13 +14,15 @@ def _run(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
 
+
 class PoolEngine(Engine):
     """
     Abstract engine for pool type parallelizations.
 
     :group: engines
 
-    """       
+    """
+
     @abstractmethod
     def _create_pool(self):
         """Creates the pool"""
@@ -29,22 +32,22 @@ class PoolEngine(Engine):
     def _submit(self, f, *args, **kwargs):
         """
         Submits to the pool
-        
+
         Parameters
         ----------
         f: Callable
-            The function f(*args, **kwargs) to be 
+            The function f(*args, **kwargs) to be
             submitted
         args: tuple, optional
             Arguments for the function
         kwargs: dict, optional
-            Arguments for the function 
-            
+            Arguments for the function
+
         Returns
         -------
         future: object
             The future object
-        
+
         """
         pass
 
@@ -52,32 +55,32 @@ class PoolEngine(Engine):
     def _result(self, future):
         """
         Waits for result from a future
-        
+
         Parameters
         ----------
         future: object
             The future
-        
+
         Returns
         -------
         result: object
             The calculation result
-        
+
         """
         pass
-    
+
     @abstractmethod
     def _shutdown_pool(self):
         """Shuts down the pool"""
         pass
-    
+
     def initialize(self):
         """
         Initializes the engine.
         """
         super().initialize()
         self._create_pool()
-        
+
     def run_calculation(
         self,
         algo,
@@ -164,7 +167,9 @@ class PoolEngine(Engine):
 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
-        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2)
+        self.print(
+            f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
+        )
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         jobs = {}
         i0_states = 0
@@ -184,15 +189,15 @@ class PoolEngine(Engine):
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
                 )
-                
+
                 # submit model calculation:
                 jobs[(chunki_states, chunki_points)] = self._submit(
                     _run,
-                    algo, 
-                    model, 
-                    data, 
-                    iterative, 
-                    chunk_store, 
+                    algo,
+                    model,
+                    data,
+                    iterative,
+                    chunk_store,
                     (i0_states, i0_targets),
                     **calc_pars,
                 )
@@ -211,7 +216,9 @@ class PoolEngine(Engine):
 
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
-            self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
+            self.print(
+                f"Computing {n_chunks_all} chunks using {self.n_procs} processes"
+            )
         pbar = (
             tqdm(total=n_chunks_all)
             if n_chunks_all > 1 and self.verbosity > 0
@@ -226,7 +233,7 @@ class PoolEngine(Engine):
                     pbar.update()
         if pbar is not None:
             pbar.close()
-    
+
         return self.combine_results(
             algo=algo,
             results=results,

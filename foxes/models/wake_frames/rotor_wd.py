@@ -5,6 +5,7 @@ from foxes.utils import wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class RotorWD(WakeFrame):
     """
     Align the first axis for each rotor with the
@@ -18,6 +19,7 @@ class RotorWD(WakeFrame):
     :group: models.wake_frames
 
     """
+
     def __init__(self, var_wd=FV.WD, **kwargs):
         """
         Constructor.
@@ -28,7 +30,7 @@ class RotorWD(WakeFrame):
             The wind direction variable
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(**kwargs)
         self.var_wd = var_wd

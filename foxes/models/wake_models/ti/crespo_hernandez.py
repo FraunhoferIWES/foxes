@@ -46,6 +46,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
     :group: models.wake_models.ti
 
     """
+
     def __init__(
         self,
         superposition,

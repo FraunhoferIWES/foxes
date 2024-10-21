@@ -526,6 +526,7 @@ class MultiHeightStates(States):
         self._weights = None
         self._N = None
 
+
 class MultiHeightNCStates(MultiHeightStates):
     """
     Multi-height states from xarray Dataset.
@@ -544,6 +545,7 @@ class MultiHeightNCStates(MultiHeightStates):
     :group: input.states
 
     """
+
     def __init__(
         self,
         data_source,
@@ -641,7 +643,7 @@ class MultiHeightNCStates(MultiHeightStates):
 
         self._N = data.sizes[self.state_coord]
         self._inds = data.coords[self.state_coord].to_numpy()
-        
+
         if self._format_times_func == "default":
             format_times_func = lambda t: t.astype("datetime64[ns]")
         else:
@@ -714,6 +716,7 @@ class MultiHeightNCStates(MultiHeightStates):
 
         return idata
 
+
 class MultiHeightTimeseries(MultiHeightStates):
     """
     Multi-height timeseries states data.
@@ -721,7 +724,9 @@ class MultiHeightTimeseries(MultiHeightStates):
     :group: input.states
 
     """
+
     RDICT = {"index_col": 0, "parse_dates": [0]}
+
 
 class MultiHeightNCTimeseries(MultiHeightNCStates):
     """
@@ -730,6 +735,7 @@ class MultiHeightNCTimeseries(MultiHeightNCStates):
     :group: input.states
 
     """
+
     def __init__(
         self,
         *args,

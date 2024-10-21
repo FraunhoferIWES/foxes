@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import Turbine
 from foxes.utils import wd2wdvec
 
+
 def add_ring(
     farm,
     xy_base,
@@ -43,22 +44,22 @@ def add_ring(
 
     """
     p0 = np.array(xy_base)
-    R = n_turbines*dist/(2*np.pi)
+    R = n_turbines * dist / (2 * np.pi)
     a = np.atleast_1d(offset_deg)
-    da = 360/n_turbines
+    da = 360 / n_turbines
 
     for i in range(n_turbines):
-        
+
         n = wd2wdvec(a)[0]
-        
+
         farm.add_turbine(
             Turbine(
-                xy=p0 + R*n,
+                xy=p0 + R * n,
                 index=None if indices is None else indices[i],
                 name=None if names is None else names[i],
                 **turbine_parameters,
             ),
             verbosity=verbosity,
         )
-        
+
         a[0] += da
