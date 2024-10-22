@@ -2,6 +2,7 @@ import time
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 import foxes
 import foxes.variables as FV
@@ -11,6 +12,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--animation", help="Write flow animation file", action="store_true"
+    )
+    parser.add_argument(
+        "-A", "--ani_file", help="Path to the animation file to be written", default="ani.gif",
+    )
+    parser.add_argument(
+        "-F",
+        "--fps",
+        help="The frames per second value for the animation",
+        type=int,
+        default=4,
     )
     parser.add_argument(
         "-b",
@@ -245,6 +256,9 @@ if __name__ == "__main__":
             alpha=0,
         )
 
-        fpath = "ani.gif"
+        fpath = Path(args.ani_file)
         print("Writing file", fpath)
-        ani.save(filename=fpath, writer="pillow")
+        if fpath.suffix == ".gif":
+            ani.save(filename=fpath, writer="pillow", fps=args.fps)
+        else:
+            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

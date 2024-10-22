@@ -1,4 +1,7 @@
+import numpy as np
+
 from foxes.core import Engine
+import foxes.constants as FC
 
 
 class DefaultEngine(Engine):
@@ -9,7 +12,7 @@ class DefaultEngine(Engine):
 
     """
 
-    def run_calculation(self, algo, *args, **kwargs):
+    def run_calculation(self, algo, *args, point_data=None, **kwargs):
         """
         Runs the model calculation
 
@@ -19,6 +22,8 @@ class DefaultEngine(Engine):
             The algorithm object
         args: tuple, optional
             Additional arguments for the calculation
+        point_data: xarray.Dataset, optional
+            The initial point data
         kwargs: dict, optional
             Additional arguments for the calculation
 
@@ -28,14 +33,15 @@ class DefaultEngine(Engine):
             The model results
 
         """
-        ename = (
-            "single"
-            if (
-                (algo.n_states <= 4000 and algo.n_turbines <= 20)
-                or (algo.n_states <= 50)
-            )
-            else "process"
-        )
+
+        max_n = np.sqrt(self.n_procs) * (500 / algo.n_turbines) ** 1.5
+
+        if (algo.n_states >= max_n) or (
+            point_data is not None and point_data.sizes[FC.TARGET] >= 10000
+        ):
+            ename = "process"
+        else:
+            ename = "single"
 
         self.print(f"{type(self).__name__}: Selecting engine '{ename}'")
 
@@ -48,7 +54,7 @@ class DefaultEngine(Engine):
             chunk_size_points=self.chunk_size_points,
             verbosity=self.verbosity,
         ) as e:
-            results = e.run_calculation(algo, *args, **kwargs)
+            results = e.run_calculation(algo, *args, point_data=point_data, **kwargs)
 
         self.initialize()
 

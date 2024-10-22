@@ -481,7 +481,7 @@ class Engine(ABC):
             The initial model data
         farm_data: xarray.Dataset
             The initial farm data
-        point_data: xarray.Dataset
+        point_data: xarray.Dataset, optional
             The initial point data
 
         Returns
