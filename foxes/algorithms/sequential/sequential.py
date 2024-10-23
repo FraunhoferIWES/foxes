@@ -1,15 +1,15 @@
 import numpy as np
 from xarray import Dataset
 
-from foxes.algorithms.downwind.downwind import Downwind
+from foxes.algorithms import Iterative
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.core.data import MData, FData, TData
+from foxes.core import get_engine
 
 from . import models as mdls
 
 
-class Sequential(Downwind):
+class Sequential(Iterative):
     """
     A sequential calculation of states without chunking.
 
@@ -65,7 +65,6 @@ class Sequential(Downwind):
         points=None,
         ambient=False,
         calc_pars={},
-        chunks={FC.STATE: None, FC.POINT: 4000},
         plugins=[],
         outputs=None,
         **kwargs,
@@ -88,8 +87,6 @@ class Sequential(Downwind):
         calc_pars: dict
             Parameters for model calculation.
             Key: model name str, value: parameter dict
-        chunks: dict
-            The xarray.Dataset chunk parameters
         plugins: list of foxes.algorithm.sequential.SequentialIterPlugin
             The plugins, updated with every iteration
         outputs: list of str, optional
@@ -98,13 +95,17 @@ class Sequential(Downwind):
             Additional arguments for Downwind
 
         """
-        super().__init__(farm, mdls.SeqState(states), *args, chunks=chunks, **kwargs)
+        super().__init__(farm, mdls.SeqState(states), *args, **kwargs)
         self.ambient = ambient
         self.calc_pars = calc_pars
         self.states0 = self.states.states
         self.points = points
         self.plugins = plugins
         self.outputs = outputs if outputs is not None else self.DEFAULT_FARM_OUTPUTS
+
+        self._verbo0 = self.verbosity + 1
+        self.verbosity -= 1
+        get_engine().verbosity -= 2
 
         self._i = None
 
@@ -121,6 +122,13 @@ class Sequential(Downwind):
         """
         return self._i is not None
 
+    def get_models_data(self, sel=None, isel=None):
+        if sel is not None and len(sel):
+            raise ValueError(f"calc_points does not support sel, got sel={sel}")
+        if isel is not None and len(isel):
+            raise ValueError(f"calc_points does not support isel, got isel={isel}")
+        return self._model_data.isel({FC.STATE: [self.counter]})
+
     def __iter__(self):
         """Initialize the iterator"""
 
@@ -134,62 +142,39 @@ class Sequential(Downwind):
             self._i = 0
             self._counter = 0
 
-            self._mlist, self._calc_pars = self._collect_farm_models(
-                self.outputs, self.calc_pars, self.ambient
+            self._it = 0
+            mlist, __ = self._collect_farm_models(
+                None, self.calc_pars, ambient=self.ambient
             )
-            if not self._mlist.initialized:
-                self._mlist.initialize(self, self.verbosity)
-                self._calc_farm_vars(self._mlist)
-            self._print_model_oder(self._mlist, self._calc_pars)
+            self._calc_farm_vars(mlist)
+            self._it = None
 
-            self._mdata = self.get_models_idata()
-            if self.verbosity > 0:
-                s = "\n".join(
-                    [
-                        f"  {v}: {d[0]} {d[1].dtype}, shape {d[1].shape}"
-                        for v, d in self._mdata["data_vars"].items()
-                    ]
-                )
+            self._model_data = Dataset(**super().get_models_idata())
+
+            if self._verbo0 > 0:
                 print("\nInput data:\n")
-                print(s, "\n")
-                print(f"Output farm variables:", ", ".join(self.farm_vars))
+                print(self._model_data)
+                print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            self._mdata = MData(
-                data={v: d[1] for v, d in self._mdata["data_vars"].items()},
-                dims={v: d[0] for v, d in self._mdata["data_vars"].items()},
-                loop_dims=[FC.STATE],
-                name="mdata",
-            )
-
-            self._fdata = FData(
-                data={
-                    v: np.zeros((self.n_states, self.n_turbines), dtype=FC.DTYPE)
+            self._farm_results = Dataset(
+                coords={FC.STATE: self._model_data[FC.STATE].to_numpy()},
+                data_vars={
+                    v: (
+                        (FC.STATE, FC.TURBINE),
+                        np.zeros_like(self._model_data[FV.WEIGHT].to_numpy()),
+                    )
                     for v in self.farm_vars
                 },
-                dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
-                loop_dims=[FC.STATE],
-                name="fdata",
             )
-
-            if self.points is not None:
-                self._plist, self._calc_pars_p = self._collect_point_models(
-                    ambient=self.ambient
+            self._farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+            if FV.ORDER in self._farm_results:
+                self._farm_results[FV.ORDER] = self._farm_results[FV.ORDER].astype(
+                    FC.ITYPE
                 )
-                if not self._plist.initialized:
-                    self._plist.initialize(self, self.verbosity)
-                self._pvars = self._plist.output_point_vars(self)
-                self.print(f"\nOutput point variables:", ", ".join(self._pvars), "\n")
+            self._farm_results_dwnd = self._farm_results.copy(deep=True)
 
-                n_points = self.points.shape[1]
-                self._tdata = TData.from_points(
-                    self.points,
-                    data={
-                        v: np.zeros((self.n_states, n_points, 1), dtype=FC.DTYPE)
-                        for v in self._pvars
-                    },
-                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
-                )
+            self._point_results = None
 
             for p in self.plugins:
                 p.initialize(self)
@@ -200,45 +185,29 @@ class Sequential(Downwind):
         """Run calculation for current step, then iterate to next"""
 
         if self._i < len(self._inds):
+
             self._counter = self._i
             self.states._counter = self._i
             self.states._size = 1
             self.states._indx = self._inds[self._i]
             self.states._weight = self._weights[self._i]
 
-            mdata = MData(
-                data={
-                    v: d[self._i, None] if self._mdata.dims[v][0] == FC.STATE else d
-                    for v, d in self._mdata.items()
-                },
-                dims={v: d for v, d in self._mdata.dims.items()},
-                loop_dims=[FC.STATE],
-                name="mdata",
+            if self._verbo0 > 0:
+                print(f"{self.name}: Running state {self.states.index()[0]}")
+
+            fres, fres_dnwnd = super().calc_farm(
+                outputs=self.farm_vars,
+                finalize=False,
+                ret_dwnd_order=True,
+                **self.calc_pars,
             )
 
-            fdata = FData(
-                data={
-                    v: np.zeros((1, self.n_turbines), dtype=FC.DTYPE)
-                    for v in self.farm_vars
-                },
-                dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
-                loop_dims=[FC.STATE],
-                name="fdata",
-            )
-
-            fres = self._mlist.calculate(self, mdata, fdata, parameters=self._calc_pars)
-            fres[FV.WEIGHT] = self.weight[None, :]
-
-            for v, d in fres.items():
-                self._fdata[v][self._i] = d[0]
-
-            fres = Dataset(
-                coords={FC.STATE: [self.index]},
-                data_vars={v: ((FC.STATE, FC.TURBINE), d) for v, d in fres.items()},
-            )
-            fres[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-            if FV.ORDER in fres:
-                fres[FV.ORDER] = fres[FV.ORDER].astype(FC.ITYPE)
+            for v in self._farm_results.data_vars.keys():
+                if FC.STATE in self._farm_results[v].dims:
+                    self._farm_results[v].loc[{FC.STATE: [self.index]}] = fres[v]
+                    self._farm_results_dwnd[v].loc[{FC.STATE: [self.index]}] = (
+                        fres_dnwnd[v]
+                    )
 
             if self.points is None:
                 for p in self.plugins:
@@ -248,30 +217,31 @@ class Sequential(Downwind):
                 return fres
 
             else:
-                n_points = self.points.shape[1]
-                tdata = TData.from_points(
-                    self.points[self.counter, None],
-                    data={
-                        v: np.zeros((1, n_points, 1), dtype=FC.DTYPE)
-                        for v in self._pvars
-                    },
-                    dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in self._pvars},
-                )
+                pres = super().calc_points(fres, points=self.points, finalize=False)
 
-                pres = self._plist.calculate(
-                    self, mdata, fdata, tdata, parameters=self._calc_pars_p
-                )
+                if self._point_results is None:
+                    n_states = self._model_data.sizes[FC.STATE]
+                    self._point_results = Dataset(
+                        coords={
+                            FC.STATE: self._model_data[FC.STATE].to_numpy(),
+                            **{c: d for c, d in pres.coords.items() if c != FC.STATE},
+                        },
+                        data_vars={
+                            v: (
+                                d.dims,
+                                np.zeros([n_states] + list(d.shape[1:]), dtype=d.dtype),
+                            )
+                            for v, d in pres.data_vars.items()
+                            if d.dims[0] == FC.STATE
+                        },
+                    )
+                    for v, d in pres.data_vars.items():
+                        if FC.STATE not in d.dims:
+                            self._point_results[v] = d
 
-                for v, d in pres.items():
-                    self._tdata[v][self._i] = d[0]
-
-                pres = Dataset(
-                    coords={FC.STATE: [self.index]},
-                    data_vars={
-                        v: ((FC.STATE, FC.TARGET, FC.TPOINT), d)
-                        for v, d in pres.items()
-                    },
-                )
+                for v in self._point_results.data_vars.keys():
+                    if FC.STATE in self._point_results[v].dims:
+                        self._point_results[v].loc[{FC.STATE: [self.index]}] = pres[v]
 
                 for p in self.plugins:
                     p.update(self, fres, pres)
@@ -280,7 +250,7 @@ class Sequential(Downwind):
                 return fres, pres
 
         else:
-            del self._mdata
+            del self._model_data
 
             self._i = None
             self.states._counter = None
@@ -366,45 +336,6 @@ class Sequential(Downwind):
         return self.states._weight if self.iterating else None
 
     @property
-    def mdata(self):
-        """
-        Get the current model data
-
-        Returns
-        -------
-        d: foxes.core.MData
-            The current model data
-
-        """
-        return self._mdata if self.iterating else None
-
-    @property
-    def fdata(self):
-        """
-        Get the current farm data
-
-        Returns
-        -------
-        d: foxes.core.FData
-            The current farm data
-
-        """
-        return self._fdata
-
-    @property
-    def tdata(self):
-        """
-        Get the current point data
-
-        Returns
-        -------
-        d: foxes.core.TData
-            The current point data
-
-        """
-        return self._tdata if self.points is not None and self.iterating else None
-
-    @property
     def farm_results(self):
         """
         The overall farm results
@@ -415,21 +346,13 @@ class Sequential(Downwind):
             The overall farm results
 
         """
-        results = Dataset(
-            coords={FC.STATE: self._inds, FC.TURBINE: np.arange(self.n_turbines)},
-            data_vars={v: (self._fdata.dims[v], d) for v, d in self._fdata.items()},
-        )
-
-        results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in results:
-            results[FV.ORDER] = results[FV.ORDER].astype(FC.ITYPE)
-
-        return results
+        return self._farm_results
 
     @property
-    def prev_farm_results(self):
+    def farm_results_downwind(self):
         """
-        Alias for farm_results
+        The overall farm results, with turbine
+        dimension in downwind order
 
         Returns
         -------
@@ -437,7 +360,7 @@ class Sequential(Downwind):
             The overall farm results
 
         """
-        return self.farm_results
+        return self._farm_results_dwnd
 
     @property
     def cur_farm_results(self):
@@ -450,20 +373,7 @@ class Sequential(Downwind):
             The current farm results
 
         """
-
-        i = self.counter
-        results = Dataset(
-            coords={FC.STATE: [self.index], FC.TURBINE: np.arange(self.n_turbines)},
-            data_vars={
-                v: (self._fdata.dims[v], d[i, None]) for v, d in self._fdata.items()
-            },
-        )
-
-        results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        if FV.ORDER in results:
-            results[FV.ORDER] = results[FV.ORDER].astype(FC.ITYPE)
-
-        return results
+        return self._farm_results.isel({FC.STATE: [self.counter]})
 
     @property
     def point_results(self):
@@ -476,18 +386,7 @@ class Sequential(Downwind):
             The overall point results
 
         """
-        n_points = self.points.shape[1]
-        results = Dataset(
-            coords={
-                FC.STATE: self._inds,
-                FC.TURBINE: np.arange(self.n_turbines),
-                FC.POINT: np.arange(n_points),
-                FC.XYH: np.arange(3),
-            },
-            data_vars={v: (self._tdata.dims[v], d) for v, d in self._tdata.items()},
-        )
-
-        return results
+        return self._point_results
 
     @property
     def cur_point_results(self):
@@ -500,80 +399,52 @@ class Sequential(Downwind):
             The current point results
 
         """
+        return self._point_results.isel({FC.STATE: [self.counter]})
 
-        n_points = self.points.shape[1]
-        i = self.counter
+    def calc_farm(self):
+        """
+        Calculate farm data.
 
-        results = Dataset(
-            coords={
-                FC.STATE: [self.index],
-                FC.TURBINE: np.arange(self.n_turbines),
-                FC.POINT: np.arange(n_points),
-                FC.XYH: np.arange(3),
-            },
-            data_vars={
-                v: (self._tdata.dims[v], d[i, None]) for v, d in self._tdata.items()
-            },
-        )
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
 
-        return results
-
-    def calc_farm(self, *args, **kwargs):
+        """
         if not self.iterating:
             raise ValueError(f"calc_farm call is only allowed during iterations")
-
         return self.cur_farm_results
 
-    def calc_points(self, farm_results, points):
+    def calc_points(
+        self,
+        farm_results,
+        points,
+        **kwargs,
+    ):
+        """
+        Calculate data at a given set of points.
+
+        Parameters
+        ----------
+        farm_results: xarray.Dataset
+            The farm results. The calculated variables have
+            dimensions (state, turbine)
+        points: numpy.ndarray
+            The points of interest, shape: (n_states, n_points, 3)
+        states_sel: list, optional
+            Reduce to selected states
+        states_isel: list, optional
+            Reduce to the selected states indices
+
+        Returns
+        -------
+        point_results: xarray.Dataset
+            The point results. The calculated variables have
+            dimensions (state, point)
+
+        """
         if not self.iterating:
             raise ValueError(f"calc_points call is only allowed during iterations")
 
-        n_points = points.shape[1]
-
-        plist, calc_pars = self._collect_point_models(ambient=self.ambient)
-        if not plist.initialized:
-            plist.initialize(self, self.verbosity)
-        pvars = plist.output_point_vars(self)
-
-        mdata = self.get_models_idata()
-        mdata = MData(
-            data={v: d[1] for v, d in mdata["data_vars"].items()},
-            dims={v: d[0] for v, d in mdata["data_vars"].items()},
-            loop_dims=[FC.STATE],
-            name="mdata",
-        )
-        mdata = MData(
-            data={
-                v: d[self.states.counter, None] if mdata.dims[v][0] == FC.STATE else d
-                for v, d in mdata.items()
-            },
-            dims={v: d for v, d in mdata.dims.items()},
-            loop_dims=[FC.STATE],
-            name="mdata",
-        )
-
-        fdata = FData(
-            data={v: farm_results[v].to_numpy() for v in self.farm_vars},
-            dims={v: (FC.STATE, FC.TURBINE) for v in self.farm_vars},
-            loop_dims=[FC.STATE],
-            name="fdata",
-        )
-
-        tdata = TData.from_points(
-            points[0, None],
-            data={v: np.zeros((1, n_points, 1), dtype=FC.DTYPE) for v in pvars},
-            dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in pvars},
-            name="tdata",
-        )
-
-        pres = plist.calculate(self, mdata, fdata, tdata, parameters=calc_pars)
-        pres = Dataset(
-            coords={FC.STATE: self.states.index()},
-            data_vars={
-                v: ((FC.STATE, FC.TARGET, FC.TPOINT), d) for v, d in pres.items()
-            },
-        )
-
-        # plist.finalize(self, self.verbosity)
-
-        return pres
+        return super().calc_points(farm_results, points, finalize=False, **kwargs)

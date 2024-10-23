@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import foxes.constants as FC
 from foxes.utils import all_subclasses
 
@@ -63,6 +65,32 @@ class TurbineType(TurbineModel):
     def __repr__(self):
         a = f"D={self.D}, H={self.H}, P_nominal={self.P_nominal}, P_unit={self.P_unit}"
         return f"{type(self).__name__}({a})"
+
+    @abstractmethod
+    def needs_rews2(self):
+        """
+        Returns flag for requirering REWS2 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS2 is required
+
+        """
+        pass
+
+    @abstractmethod
+    def needs_rews3(self):
+        """
+        Returns flag for requirering REWS3 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS3 is required
+
+        """
+        pass
 
     def modify_cutin(self, modify_ct, modify_P):
         """

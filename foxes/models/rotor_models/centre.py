@@ -132,6 +132,10 @@ class CentreRotor(RotorModel):
         n_states = mdata.n_states
         n_turbines = algo.n_turbines
 
+        for v in [FV.REWS2, FV.REWS3]:
+            if v in fdata and v not in self.calc_vars:
+                self.calc_vars.append(v)
+
         uvp = None
         uv = None
         if (

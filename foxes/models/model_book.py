@@ -85,8 +85,7 @@ class ModelBook:
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
 
         self.rotor_models = FDict(name="rotor_models")
-        rvars = [FV.REWS, FV.REWS2, FV.REWS3, FV.TI, FV.RHO]
-        self.rotor_models["centre"] = fm.rotor_models.CentreRotor(calc_vars=rvars)
+        self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
 
         def _n2n(n2):
             n2 = float(n2)
@@ -100,7 +99,7 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>",
-            kwargs=dict(calc_vars=rvars, reduce=True),
+            kwargs=dict(reduce=True),
             var2arg={"n2": "n"},
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
@@ -108,7 +107,7 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.GridRotor,
             "grid<n2>_raw",
-            kwargs=dict(calc_vars=rvars, reduce=False),
+            kwargs=dict(reduce=False),
             var2arg={"n2": "n"},
             n2=_n2n,
             hints={"n2": "(Number of points in square grid)"},
@@ -116,14 +115,14 @@ class ModelBook:
         self.rotor_models.add_factory(
             fm.rotor_models.LevelRotor,
             "level<n>",
-            kwargs=dict(calc_vars=rvars, reduce=True),
+            kwargs=dict(reduce=True),
             n=lambda x: int(x),
             hints={"n": "(Number of vertical levels)"},
         )
         self.rotor_models.add_factory(
             fm.rotor_models.LevelRotor,
             "level<n>_raw",
-            kwargs=dict(calc_vars=rvars, reduce=False),
+            kwargs=dict(reduce=False),
             n=lambda x: int(x),
             hints={"n": "(Number of vertical levels)"},
         )
@@ -158,14 +157,14 @@ class ModelBook:
             fm.turbine_models.kTI,
             "kTI_<kTI>",
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+            hints={"kTI": "(Value, e.g. 02 for 0.2)"},
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
             "kTI_amb_<kTI>",
             kwargs=dict(ti_var=FV.AMB_TI),
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
-            hints={"kTI": "(Value, e.g. 004 for 0.04)"},
+            hints={"kTI": "(Value, e.g. 04 for 0.4)"},
         )
         self.turbine_models.add_factory(
             fm.turbine_models.kTI,
@@ -173,7 +172,7 @@ class ModelBook:
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={
-                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kTI": "(Value, e.g. 04 for 0.4)",
                 "kb": "(Value, e.g. 004 for 0.04)",
             },
         )
@@ -184,7 +183,7 @@ class ModelBook:
             kTI=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={
-                "kTI": "(Value, e.g. 004 for 0.04)",
+                "kTI": "(Value, e.g. 04 for 0.4)",
                 "kb": "(Value, e.g. 004 for 0.04)",
             },
         )
@@ -254,12 +253,24 @@ class ModelBook:
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
+        self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
+        self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
 
         def _todt(x):
             if x[-1] == "s":
                 return float(x[:-1]) / 60
             elif x[-3:] == "min":
                 return float(x[:-3])
+            else:
+                raise NotImplementedError(f"Cannot translate '{x}' into minutes")
+
+        def _tokm(x):
+            if x[-2:] == "km":
+                return float(x[:-2])
+            elif x[-1] == "m":
+                return float(x[:-1]) / 1e3
+            else:
+                raise NotImplementedError(f"Cannot translate '{x}' into km")
 
         self.wake_frames.add_factory(
             fm.wake_frames.Timelines,
@@ -267,6 +278,13 @@ class ModelBook:
             dt=_todt,
             var2arg={"dt": "dt_min"},
             hints={"dt": "(Time step, e.g '10s', '1min' etc.)"},
+        )
+        self.wake_frames.add_factory(
+            fm.wake_frames.DynamicWakes,
+            "dyn_wakes_<length>",
+            length=_tokm,
+            var2arg={"length": "max_length_km"},
+            hints={"length": "(Maximal wake length, e.g. '5km' or '5000m')"},
         )
         self.wake_frames.add_factory(
             fm.wake_frames.SeqDynamicWakes,
@@ -413,14 +431,6 @@ class ModelBook:
 
         self.wake_models.add_factory(
             fm.wake_models.ti.IECTIWake,
-            "IECTI2005_<superposition>",
-            kwargs=dict(iec_type="2005"),
-            superposition=lambda s: f"ti_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
-        )
-
-        self.wake_models.add_factory(
-            fm.wake_models.ti.IECTIWake,
             "IECTI2019_<superposition>",
             kwargs=dict(iec_type="2019"),
             superposition=lambda s: f"ti_{s}",
@@ -466,6 +476,7 @@ class ModelBook:
             var2arg={"height": "heights"},
             height=lambda h: [0.0, float(h)],
             hints={"height": "(Boundary layer wake reflection height)"},
+            example_vars={"height": 500},
         )
 
         self.sources = FDict(

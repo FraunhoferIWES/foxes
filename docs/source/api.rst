@@ -12,6 +12,7 @@ API
         :ref:`foxes.constants`         List of constants and identifiers.
         :ref:`foxes.core`              Core functionality and abstract base classes.
         :ref:`foxes.data`              Static *foxes* data and functions to read/find it.
+        :ref:`foxes.engines`           The vectorization and parallelization engines.
         :ref:`foxes.input`             Functions and classes for user input.
         :ref:`foxes.models`            All concrete model classes.
         :ref:`foxes.output`            Classes and functions for output creation.

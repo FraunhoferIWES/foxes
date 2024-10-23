@@ -5,7 +5,9 @@ import foxes.variables as FV
 from .read_outputs import read_outputs
 
 
-def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbosity):
+def _read_wind_deficit(
+    wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity
+):
     """Reads the wind deficit wake model"""
 
     wind_def_map = Dict(
@@ -32,11 +34,11 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
         },
         name="ws_sup_dict",
     )
-    
+
     wname = wind_deficit.pop("name")
     eff_ws = wind_deficit.pop("use_effective_ws", True)
     if verbosity > 2:
-        print("    Reading wind_deficit_model")
+        print("    Reading", wake_model_key)
         print("      Name    :", wname)
         print("      Eff ws  :", eff_ws)
         print("      Contents:", [k for k in wind_deficit.keys()])
@@ -73,6 +75,7 @@ def _read_wind_deficit(wind_deficit, superposition, induction, algo_dict, verbos
 
     return ka, kb, amb_ti
 
+
 def _read_turbulence(
     turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
 ):
@@ -99,7 +102,7 @@ def _read_turbulence(
         print("    Reading turbulence_model")
         print("      Name:", wname)
         print("      Contents:", [k for k in turbulence_model.keys()])
-    if wname != "None":
+    if wname not in ["None", "none"]:
         tiwake_dict = dict(wmodel_type=twake_def_map[wname], induction=induction)
         if wname == "IEC-TI-2019":
             tiwake_dict["opening_angle"] = None
@@ -129,6 +132,7 @@ def _read_turbulence(
             print("       ", algo_dict["mbook"].wake_models[wname])
         algo_dict["wake_models"].append(wname)
 
+
 def _read_blockage(blockage_model, induction, algo_dict, verbosity):
     """Reads the blockage model"""
     indc_def_map = Dict(
@@ -146,7 +150,7 @@ def _read_blockage(blockage_model, induction, algo_dict, verbosity):
         print("    Reading blockage_model")
         print("      Name:", wname)
         print("      Contents:", [k for k in blockage_model.keys()])
-    if wname != "None":
+    if wname not in ["None", "none"]:
         indc_dict = Dict(wmodel_type=indc_def_map[wname], induction=induction)
         algo_dict["mbook"].wake_models[wname] = WakeModel.new(**indc_dict)
         if verbosity > 2:
@@ -154,6 +158,7 @@ def _read_blockage(blockage_model, induction, algo_dict, verbosity):
             print("       ", algo_dict["mbook"].wake_models[wname])
         algo_dict["wake_models"].append(wname)
         algo_dict["algo_type"] = "Iterative"
+
 
 def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
     """Reads the rotor averaging"""
@@ -177,16 +182,20 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        wake_averaging      :", wake_averaging)
         print("        ws exponent power   :", wse_P)
         print("        ws exponent ct      :", wse_ct)
+
     if background_averaging in ["center", "centre"]:
         algo_dict["rotor_model"] = "centre"
+    elif background_averaging in ["none", "None", None]:
+        algo_dict["rotor_model"] = None
     elif background_averaging == "grid":
         algo_dict["rotor_model"] = f"grid{nx*ny}"
     else:
-        raise KeyError(
-            f"Expecting background_averaging 'center' or 'grid', got '{background_averaging}'"
-        )
+        algo_dict["rotor_model"] = background_averaging
+
     if wake_averaging in ["centre", "center"]:
         algo_dict["partial_wakes"] = "centre"
+    elif wake_averaging in ["none", "None", "auto", None]:
+        algo_dict["partial_wakes"] = None
     elif wake_averaging == "grid":
         if background_averaging == "grid":
             algo_dict["partial_wakes"] = "rotor_points"
@@ -197,9 +206,11 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
                 algo_dict["partial_wakes"] = grid
     else:
         algo_dict["partial_wakes"] = wake_averaging
+
     if verbosity > 2:
         print("        --> rotor_model     :", algo_dict["rotor_model"])
         print("        --> partial_wakes   :", algo_dict["partial_wakes"])
+
 
 def _read_deflection(deflection, induction, algo_dict, verbosity):
     """Reads deflection model"""
@@ -228,6 +239,7 @@ def _read_deflection(deflection, induction, algo_dict, verbosity):
         print("       ", algo_dict["mbook"].wake_frames[wname])
     algo_dict["wake_frame"] = wname
 
+
 def _read_analysis(wio_ana, algo_dict, verbosity):
     """Reads the windio analyses"""
     if verbosity > 2:
@@ -253,16 +265,26 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
         print("    axial induction model:", induction)
 
     # wind deficit model:
-    wind_deficit = Dict(wio_ana["wind_deficit_model"], name="wind_deficit_model")
+    wake_model_key = (
+        "wind_deficit_model" if "wind_deficit_model" in wio_ana else "wake_model"
+    )
+    wind_deficit = Dict(wio_ana[wake_model_key], name=wake_model_key)
     ka, kb, amb_ti = _read_wind_deficit(
-        wind_deficit, superposition, induction, algo_dict, verbosity
+        wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity
     )
 
     # turbulence model:
     if "turbulence_model" in wio_ana:
         turbulence_model = Dict(wio_ana["turbulence_model"], name="turbulence_model")
         _read_turbulence(
-            turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
+            turbulence_model,
+            superposition,
+            induction,
+            algo_dict,
+            ka,
+            kb,
+            amb_ti,
+            verbosity,
         )
     elif verbosity > 0:
         print("turbulence_model not found, not using a TI wake model")
@@ -273,21 +295,22 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
         _read_blockage(blockage_model, induction, algo_dict, verbosity)
     elif verbosity > 0:
         print("blockage_model not found, not using a turbine induction model")
-        
+
     # rotor_averaging:
     if "rotor_averaging" in wio_ana:
         rotor_averaging = Dict(wio_ana["rotor_averaging"], name="rotor_averaging")
         _read_rotor_averaging(rotor_averaging, algo_dict, verbosity)
     elif verbosity > 0:
         print("rotor_averaging not found, using default settings")
-        
+
     # deflection:
     if "deflection_model" in wio_ana:
         deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
         _read_deflection(deflection, induction, algo_dict, verbosity)
     elif verbosity > 0:
         print("deflection_model not found, using default settings")
-        
+
+
 def read_attributes(wio, algo_dict, verbosity):
     """
     Reads the attributes part of windio
@@ -305,6 +328,8 @@ def read_attributes(wio, algo_dict, verbosity):
     -------
     out_dicts: list of dict
         The output dictionaries
+    odir: pathlib.Path
+        Path to the output folder
 
     :group: input.windio
 
@@ -333,6 +358,6 @@ def read_attributes(wio, algo_dict, verbosity):
     out_dicts = []
     if "outputs" in wio_attrs:
         outputs = Dict(wio_attrs["outputs"], name="outputs")
-        out_dicts = read_outputs(outputs, algo_dict, verbosity)
+        out_dicts, odir = read_outputs(outputs, algo_dict, verbosity)
 
-    return out_dicts
+    return out_dicts, odir

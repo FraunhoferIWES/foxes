@@ -40,7 +40,7 @@ class ScanWS(States):
         """
         super().__init__()
 
-        self._wsl = np.array(ws_list)
+        self.__wsl = np.array(ws_list)
         self.N = len(ws_list)
         self.wd = wd
         self.ti = ti
@@ -72,9 +72,80 @@ class ScanWS(States):
         self.WS = self.var(FV.WS)
 
         idata = super().load_data(algo, verbosity)
-        idata["data_vars"][self.WS] = ((FC.STATE,), self._wsl)
+        idata["data_vars"][self.WS] = ((FC.STATE,), self.__wsl)
 
         return idata
+
+    def set_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to running, and moves
+        all large data to stash.
+
+        The stashed data will be returned by the
+        unset_running() function after running calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+
+        data_stash[self.name].update(
+            dict(
+                wsl=self.__wsl,
+            )
+        )
+        del self.__wsl
+
+    def unset_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to not running, recovering large data
+        from stash
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+
+        data = data_stash[self.name]
+        self.__wsl = data.pop("wsl")
 
     def size(self):
         """

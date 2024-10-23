@@ -44,15 +44,23 @@ class SetFarmVars(TurbineModel):
             The data, shape: (n_states, n_turbines)
 
         """
+        if self.initialized:
+            raise ValueError(
+                f"Model '{self.name}': Cannot add_var after initialization"
+            )
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot add_var while running")
         self.vars.append(var)
-        self._vdata.append(np.asarray(data, dtype=FC.DTYPE))
+        self.__vdata.append(np.asarray(data, dtype=FC.DTYPE))
 
     def reset(self):
         """
         Remove all variables.
         """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot reset while running")
         self.vars = []
-        self._vdata = []
+        self.__vdata = []
 
     def output_farm_vars(self, algo):
         """
@@ -98,7 +106,7 @@ class SetFarmVars(TurbineModel):
 
         for i, v in enumerate(self.vars):
             data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
-            vdata = self._vdata[i]
+            vdata = self.__vdata[i]
 
             # handle special case of call during vectorized optimization:
             if (
@@ -110,13 +118,104 @@ class SetFarmVars(TurbineModel):
                 n_ost = algo.states.states.size()
                 n_trb = algo.n_turbines
                 vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
-                vdata[:] = self._vdata[i][None, :]
+                vdata[:] = self.__vdata[i][None, :]
                 vdata = vdata.reshape(n_pop * n_ost, n_trb)
 
             data[:] = vdata
             idata["data_vars"][self.var(v)] = ((FC.STATE, FC.TURBINE), data)
 
+            # special case of turbine positions:
+            if v in [FV.X, FV.Y]:
+                i = [FV.X, FV.Y].index(v)
+                for ti in range(algo.n_turbines):
+                    t = algo.farm.turbines[ti]
+                    if len(t.xy.shape) == 1:
+                        xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
+                        xy[:] = t.xy[None, :]
+                        t.xy = xy
+                    t.xy[:, i] = np.where(
+                        np.isnan(data[:, ti]), t.xy[:, i], data[:, ti]
+                    )
+
+            # special case of rotor diameter and hub height:
+            if v in [FV.D, FV.H]:
+                for ti in range(algo.n_turbines):
+                    t = algo.farm.turbines[ti]
+                    x = np.zeros(algo.n_states, dtype=FC.DTYPE)
+                    if v == FV.D:
+                        x[:] = t.D
+                        t.D = x
+                    else:
+                        x[:] = t.H
+                        t.H = x
+                    x[:] = np.where(np.isnan(data[:, ti]), x, data[:, ti])
+
         return idata
+
+    def set_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to running, and moves
+        all large data to stash.
+
+        The stashed data will be returned by the
+        unset_running() function after running calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+
+        data_stash[self.name]["vdata"] = self.__vdata
+        del self.__vdata
+
+    def unset_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to not running, recovering large data
+        from stash
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+        self.__vdata = data_stash[self.name].pop("vdata")
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
@@ -158,36 +257,6 @@ class SetFarmVars(TurbineModel):
             data = mdata[self.var(v)][ssel, order]
             hsel = ~np.isnan(data)
             tsel = bsel & hsel
-
-            # special case of turbine positions:
-            if v in [FV.X, FV.Y]:
-                i = [FV.X, FV.Y].index(v)
-                for ti in np.where(tsel)[1]:
-                    t = algo.farm.turbines[ti]
-                    if len(t.xy.shape) == 1:
-                        xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
-                        xy[:] = t.xy[None, :]
-                        t.xy = xy
-                    i0 = fdata.states_i0()
-                    hsel = tsel[:, ti]
-                    ssel = i0 + np.where(hsel)[0]
-                    t.xy[ssel, i] = data[hsel, ti]
-
-            # special case of rotor diameter and hub height:
-            if v in [FV.D, FV.H]:
-                for ti in np.where(tsel)[1]:
-                    t = algo.farm.turbines[ti]
-                    x = np.zeros(algo.n_states, dtype=FC.DTYPE)
-                    if v == FV.D:
-                        x[:] = t.D
-                        t.D = x
-                    else:
-                        x[:] = t.H
-                        t.H = x
-                    i0 = fdata.states_i0()
-                    hsel = tsel[:, ti]
-                    ssel = i0 + np.where(hsel)[0]
-                    x[ssel] = data[hsel, ti]
 
             fdata[v][tsel] = data[tsel]
 

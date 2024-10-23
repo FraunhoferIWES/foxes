@@ -591,3 +591,40 @@ If you are not running any optimizations, just don't do any of the above and enj
 - Updating dependencies
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.2](https://github.com/FraunhoferIWES/foxes/commits/v0.8.2)
+
+## v0.8.3
+
+- Outputs:
+  - Improved `SliceData` output: Now either specify `resolution` or `n_img_points`, e.g. `n_img_points=(100, 100)` for an image with 100 x 100 points
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.3](https://github.com/FraunhoferIWES/foxes/commits/v0.8.3)
+
+## v1.0
+
+This major version introduces the concept of `Engines` which handle the chunking and parallelization of all *foxes* calculations. The default choice now prefers the [concurrent.futures](https://docs.python.org/3/library/concurrent.futures.html) package and provides a significant speedup compared to previous versions. See the documentation for more details and all engine choices. The `Engines` replace the `Runners` of previous versions.
+
+- Engines
+  - New engine `ThreadsEngine` (short `threads`): Sends chunks to threads, based on `concurrent.futures`
+  - New engine `ProcessEngine` (short `process`): Sends chunks to processes, based on `concurrent.futures`
+  - New engine `MultiprocessEngine` (short `multiprocess`): Sends chunks to a multiprocessing pool
+  - New engine `XArrayEngine` (short `xarray`): Runs parallelization via [xarray.apply_ufunc](https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html)
+  - New engine `DaskEngine` (short `dask`): Submits chunk calculation functions to `dask`
+  - New engine `LocalClusterEngine` (short `local_cluster`): Creates a virtual cluster on the local machine
+  - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
+  - New engine `NumpyEngine` (short `numpy`): Runs a loop over chunks
+  - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
+  - New engine `DefaultEngine` (short `default`): Switches between `single` and `process`, depending on the case size
+- Inputs:
+  - New states `OnePointFlowStates`, `OnePointFlowTimeseries`, `OnePointFlowMultiHeightTimeseries`, `OnePointFlowMultiHeightNCTimeseries`: Generating horizontally inhomogeneous inflow from horizontally homogeneous input data
+  - New farm layout option: `add_ring`, adding a ring of turbines
+- Models:
+  - Wake frame `Timelines` now also accept spatially uniform multi-height states 
+  - New wake frame `DynamicWakes`: Dynamic wakes for any kind of timeseries states, compatible with chunking
+  - New turbine type `FromLookupTable`, computes power and thrust coefficient from a lookup table
+- Outputs:
+  - New sub package `seq_plugins`, in case more of these will be added in the future
+  - New sequential plugin `SeqWakeDebugPlugin`, adding wake centres and velocity vectors to flow animations, for debugging
+- Examples:
+  - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes and `OnePointFlowTimeseries` inflow
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.0](https://github.com/FraunhoferIWES/foxes/commits/v1.0)

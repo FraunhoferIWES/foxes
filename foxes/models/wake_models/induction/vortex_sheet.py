@@ -183,7 +183,7 @@ class VortexSheet(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        sp_sel = (ct > 0) & (x <= 0)
+        sp_sel = (ct > 1e-8) & (x <= 0)
         ws_sel = ws[sp_sel]
         ct_sel = ct[sp_sel]
         r_sph_sel = r_sph[sp_sel]
@@ -203,7 +203,7 @@ class VortexSheet(TurbineInductionModel):
 
         if not self.pre_rotor_only:
             sp_sel = (
-                (ct > 0) & (x > 0) & (r > D / 2)
+                (ct > 1e-8) & (x > 0) & (r > D / 2)
             )  # mirror in rotor plane and inverse blockage, but not directly behind rotor
             ws_sel = ws[sp_sel]
             ct_sel = ct[sp_sel]

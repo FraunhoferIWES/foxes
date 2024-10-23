@@ -24,7 +24,7 @@ class LevelRotor(RotorModel):
 
     """
 
-    def __init__(self, n, calc_vars, reduce=True, nint=200):
+    def __init__(self, n, reduce=True, nint=200, **kwargs):
         """
         Constructor.
 
@@ -32,9 +32,6 @@ class LevelRotor(RotorModel):
         ----------
         n: int
             The number of points along the vertical direction
-        calc_vars: list of str
-            The variables that are calculated by the model
-            (Their ambients are added automatically)
         reduce: bool
             Flag for calculating the weight of every element according
             to the rotor diameter at the respective height level
@@ -42,9 +39,11 @@ class LevelRotor(RotorModel):
             Integration steps per element
         name: str, optional
             The model name
+        kwargs: dict, optional
+            Addition parameters for the base model
 
         """
-        super().__init__(calc_vars)
+        super().__init__(**kwargs)
 
         self.n = n
         self.reduce = reduce

@@ -60,7 +60,7 @@ def add_from_json(
                 xy=np.array([wdict["UTMX"], wdict["UTMY"]]),
                 index=wdict.get("id", None),
                 name=wt_name,
-                **pars
+                **pars,
             ),
             verbosity=verbosity,
         )

@@ -31,7 +31,7 @@ class DataProfile(VerticalProfile):
         col_z=None,
         col_var=None,
         pd_read_pars={},
-        **interp_pars
+        **interp_pars,
     ):
         """
         Constructor

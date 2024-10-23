@@ -7,14 +7,18 @@ from foxes.core import States
 import foxes.constants as FC
 import foxes.variables as FV
 
+
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
     """Read ABL profiles information
     :group: input.windio
     """
     profiles = {}
     if FV.Z0 in fields:
-        if FV.H not in fields and verbosity > 0:
-            print(f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated.")
+        if FV.H not in fields:
+            if verbosity > 0:
+                print(
+                    f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated."
+                )
         elif FV.MOL in fields:
             ovars.append(FV.MOL)
             fixval[FV.H] = fields[FV.H]
@@ -23,14 +27,20 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
             fixval[FV.H] = fields[FV.H]
             profiles = {FV.WS: "ABLLogNeutralWsProfile"}
     elif FV.H in fields and verbosity > 0:
-        print(f"Ignoring '{FV.H}', since no '{FV.Z0}' data found. No ABL profile activated.")
+        print(
+            f"Ignoring '{FV.H}', since no '{FV.Z0}' data found. No ABL profile activated."
+        )
     if len(profiles) and verbosity > 2:
-        print(f"        Selecting ABL profile '{profiles[FV.WS]}', {FV.H} = {fields[FV.H]} m")
-            
+        print(
+            f"        Selecting ABL profile '{profiles[FV.WS]}', {FV.H} = {fields[FV.H]} m"
+        )
+
     return profiles
-    
-def _get_SingleStateStates(coords, fields, dims, states_dict, 
-                           ovars, fixval, profiles, verbosity):
+
+
+def _get_SingleStateStates(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
     """Try to generate single state parameters
     :group: input.windio
     """
@@ -66,8 +76,10 @@ def _get_SingleStateStates(coords, fields, dims, states_dict,
     )
     return True
 
-def _get_Timeseries(coords, fields, dims, states_dict, 
-                    ovars, fixval, profiles, verbosity):
+
+def _get_Timeseries(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
     """Try to generate time series parameters
     :group: input.windio
     """
@@ -100,24 +112,28 @@ def _get_Timeseries(coords, fields, dims, states_dict,
         return True
     return False
 
-def _get_MultiHeightNCTimeseries(coords, fields, dims, states_dict, 
-                    ovars, fixval, profiles, verbosity):
+
+def _get_MultiHeightNCTimeseries(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
     """Try to generate time series parameters
     :group: input.windio
     """
     if len(coords) == 2 and FC.TIME in coords and FV.H in coords:
         if verbosity > 2:
             print("        selecting class 'MultiHeightNCTimeseries'")
-            
+
         if len(profiles) and verbosity > 0:
-            print(f"Ignoring profile '{profiles[FV.WS]}' for states class 'MultiHeightNCTimeseries'")
+            print(
+                f"Ignoring profile '{profiles[FV.WS]}' for states class 'MultiHeightNCTimeseries'"
+            )
 
         data = {}
         fix = {}
         for v, d in fields.items():
             if dims[v] == (FC.TIME, FV.H):
                 data[v] = ((FC.TIME, FV.H), d)
-            if dims[v] == (FV.H, FC.TIME):
+            elif dims[v] == (FV.H, FC.TIME):
                 data[v] = ((FC.TIME, FV.H), np.swapaxes(d, 0, 1))
             elif len(dims[v]) == 0:
                 fix[v] = d
@@ -138,6 +154,7 @@ def _get_MultiHeightNCTimeseries(coords, fields, dims, states_dict,
         )
         return True
     return False
+
 
 def get_states(coords, fields, dims, verbosity=1):
     """
@@ -164,18 +181,22 @@ def get_states(coords, fields, dims, verbosity=1):
     """
     if verbosity > 2:
         print("      Preparing states")
-        
+
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {FV.TI: 0.05, FV.RHO: 1.225}  
+    fixval = {FV.TI: 0.05, FV.RHO: 1.225}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
     states_dict = {}
-    if _get_SingleStateStates(
-        coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-    ) or _get_Timeseries(
-        coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
-    ) or _get_MultiHeightNCTimeseries(
-        coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+    if (
+        _get_SingleStateStates(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_Timeseries(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_MultiHeightNCTimeseries(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
     ):
         return States.new(**states_dict)
     else:

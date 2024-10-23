@@ -209,7 +209,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         wake_r = self.calc_wake_radius(algo, mdata, fdata, tdata, downwind_index, x, ct)
 
         wdeltas = {}
-        st_sel = (ct > 0) & (x > 0) & np.any(r < wake_r[:, :, None], axis=2)
+        st_sel = (x > 1e-8) & (ct > 1e-8) & np.any(r < wake_r[:, :, None], axis=2)
         if np.any(st_sel):
             x = x[st_sel]
             r = r[st_sel]

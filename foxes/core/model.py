@@ -1,10 +1,8 @@
 import numpy as np
 from abc import ABC
 from itertools import count
-from copy import deepcopy
 
 import foxes.constants as FC
-from .data import Data
 
 
 class Model(ABC):
@@ -35,8 +33,8 @@ class Model(ABC):
         if self._id > 0:
             self.name += f"_instance{self._id}"
 
-        self._store = {}
         self.__initialized = False
+        self.__running = False
 
     def __repr__(self):
         return f"{type(self).__name__}()"
@@ -119,6 +117,10 @@ class Model(ABC):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+        if self.initialized:
+            raise ValueError(
+                f"Model '{self.name}': Cannot call load_data after initialization"
+            )
         return {"coords": {}, "data_vars": {}}
 
     def initialize(self, algo, verbosity=0, force=False):
@@ -135,6 +137,8 @@ class Model(ABC):
             Overwrite existing data
 
         """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot initialize while running")
         if not self.initialized:
             pr = False
             for m in self.sub_models():
@@ -152,6 +156,103 @@ class Model(ABC):
 
             self.__initialized = True
 
+    @property
+    def running(self):
+        """
+        Flag for currently running models
+
+        Returns
+        -------
+        flag: bool
+            True if currently running
+
+        """
+        return self.__running
+
+    def set_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to running, and moves
+        all large data to stash.
+
+        The stashed data will be returned by the
+        unset_running() function after running calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if self.running:
+            raise ValueError(
+                f"Model '{self.name}': Cannot call set_running while running"
+            )
+        for m in self.sub_models():
+            if not m.running:
+                m.set_running(algo, data_stash, sel, isel, verbosity=verbosity)
+
+        if verbosity > 0:
+            print(f"Model '{self.name}': running")
+        if self.name not in data_stash:
+            data_stash[self.name] = {}
+
+        self.__running = True
+
+    def unset_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to not running, recovering large data
+        from stash
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        if not self.running:
+            raise ValueError(
+                f"Model '{self.name}': Cannot call unset_running when not running"
+            )
+        for m in self.sub_models():
+            if m.running:
+                m.unset_running(algo, data_stash, sel, isel, verbosity=verbosity)
+
+        if verbosity > 0:
+            print(f"Model '{self.name}': not running")
+        self.__running = False
+
     def finalize(self, algo, verbosity=0):
         """
         Finalizes the model.
@@ -164,6 +265,8 @@ class Model(ABC):
             The verbosity level, 0 = silent
 
         """
+        if self.running:
+            raise ValueError(f"Model '{self.name}': Cannot finalize while running")
         if self.initialized:
             pr = False
             for m in self.sub_models():
@@ -178,7 +281,6 @@ class Model(ABC):
                 print(f"Finalizing model '{self.name}'")
             algo.del_model_data(self)
 
-            self._store = {}
             self.__initialized = False
 
     def get_data(
@@ -241,7 +343,7 @@ class Model(ABC):
             for s in sources:
                 try:
                     if a == "states_i0":
-                        out = s.states_i0(counter=True, algo=algo)
+                        out = s.states_i0(counter=True)
                         if out is not None:
                             return out
                     else:
@@ -353,6 +455,12 @@ class Model(ABC):
             if out is not None:
                 break
 
+        # check for None:
+        if not accept_none and out is None:
+            raise ValueError(
+                f"Model '{self.name}': Variable '{variable}' is requested but not found."
+            )
+
         # cast dimensions:
         if out_dims != dims:
             if out_dims is None:
@@ -438,7 +546,12 @@ class Model(ABC):
                     f"Model '{self.name}': Iteration data found for variable '{variable}', requiring algo"
                 )
 
-            i0 = _geta("states_i0")
+            from foxes.algorithms.sequential import Sequential
+
+            if isinstance(algo, Sequential):
+                i0 = algo.states.counter
+            else:
+                i0 = _geta("states_i0")
             sts = tdata[FC.STATES_SEL]
             if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
                 # find the mean index and round it to nearest integer:
@@ -446,27 +559,31 @@ class Model(ABC):
                 sts = (sts + 0.5).astype(FC.ITYPE)
             sel = sts < i0
             if np.any(sel):
-                if not hasattr(algo, "prev_farm_results"):
+                if not hasattr(algo, "farm_results_downwind"):
                     raise KeyError(
                         f"Model '{self.name}': Iteration data found for variable '{variable}', requiring iterative algorithm"
                     )
-                prev_fres = getattr(algo, "prev_farm_results")
+                prev_fres = getattr(algo, "farm_results_downwind")
                 if prev_fres is not None:
                     prev_data = prev_fres[variable].to_numpy()[sts[sel], downwind_index]
                     if target == FC.STATE_TARGET:
                         out[sel[:, :, 0]] = prev_data
                     else:
                         out[sel] = prev_data
-                    del prev_fres, prev_data
-
-        # check for None:
-        if not accept_none and out is None:
-            raise ValueError(
-                f"Model '{self.name}': Variable '{variable}' is requested but not found."
-            )
+                    del prev_data
+                del prev_fres
+            if np.any(~sel):
+                sts = sts[~sel] - i0
+                sel_data = fdata[variable][sts, downwind_index]
+                if target == FC.STATE_TARGET:
+                    out[~sel[:, :, 0]] = sel_data
+                else:
+                    out[~sel] = sel_data
+                del sel_data
+            del sel, sts
 
         # check for nan:
-        elif not accept_nan:
+        if not accept_nan:
             try:
                 if np.all(np.isnan(np.atleast_1d(out))):
                     raise ValueError(
@@ -476,67 +593,3 @@ class Model(ABC):
                 pass
 
         return out
-
-    def data_to_store(self, name, algo, data):
-        """
-        Adds data from mdata to the local store, intended
-        for iterative runs.
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-
-        """
-        i0 = data.states_i0(counter=True, algo=algo)
-        if i0 not in self._store:
-            self._store[i0] = Data(
-                data={}, dims={}, loop_dims=data.loop_dims, name=f"{self.name}_{i0}"
-            )
-
-        self._store[i0][name] = deepcopy(data[name])
-        self._store[i0].dims[name] = (
-            deepcopy(data.dims[name]) if name in data.dims else None
-        )
-
-    def from_data_or_store(self, name, algo, data, ret_dims=False, safe=False):
-        """
-        Get data from mdata or local store
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        algo: foxes.core.Algorithm
-            The algorithm
-        data: foxes.utils.Data
-            The mdata, fdata or pdata object
-        ret_dims: bool
-            Return dimensions
-        safe: bool
-            Return None instead of error if
-            not found
-
-        Returns
-        -------
-        data: numpy.ndarray
-            The data
-        dims: tuple of dims, optional
-            The data dimensions
-
-        """
-        if name in data:
-            return (data[name], data.dims[name]) if ret_dims else data[name]
-
-        i0 = data.states_i0(counter=True, algo=algo)
-        if not safe or (i0 in self._store and name in self._store[i0]):
-            if ret_dims:
-                return self._store[i0][name], self._store[i0].dims[name]
-            else:
-                return self._store[i0][name]
-        else:
-            return (None, None) if ret_dims else None

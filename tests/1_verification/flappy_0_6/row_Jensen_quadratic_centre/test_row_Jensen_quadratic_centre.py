@@ -19,8 +19,6 @@ def test():
     cfile = thisdir / "flappy" / "results.csv.gz"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
 
-    ck = {FC.STATE: c}
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(
         data_source=tfile, var_ws_ct=FV.REWS, var_ws_P=FV.REWS
@@ -49,7 +47,6 @@ def test():
         wake_models=["Jensen_quadratic_k007"],
         wake_frame="rotor_wd",
         partial_wakes={"Jensen_linear_k007": "centre"},
-        chunks=ck,
         verbosity=0,
     )
 

@@ -24,7 +24,6 @@ def wd2wdvec(wd, ws=1.0, axis=-1):
     :group: utils
 
     """
-
     wdr = wd * np.pi / 180.0
     n = np.stack([np.sin(wdr), np.cos(wdr)], axis=axis)
 
@@ -79,7 +78,6 @@ def uv2wd(uv, axis=-1):
     :group: utils
 
     """
-
     if axis == -1:
         u = uv[..., 0]
         v = uv[..., 1]

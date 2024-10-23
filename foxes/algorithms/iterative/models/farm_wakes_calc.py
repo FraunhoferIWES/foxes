@@ -2,6 +2,7 @@ import numpy as np
 from copy import deepcopy
 
 from foxes.core import FarmDataModel, TData
+import foxes.constants as FC
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -87,8 +88,8 @@ class FarmWakesCalculation(FarmDataModel):
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        weights = rotor.from_data_or_store(rotor.RWEIGHTS, algo, mdata)
-        amb_res = rotor.from_data_or_store(rotor.AMBRES, algo, mdata)
+        weights = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
+        amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
@@ -99,9 +100,9 @@ class FarmWakesCalculation(FarmDataModel):
                 tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
                 pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
 
-        def _get_wdata(tdatap, wdeltas, s):
+        def _get_wdata(tdatap, wdeltas, variables, s):
             """Helper function for wake data extraction"""
-            tdata = tdatap.get_slice(s, keep=True)
+            tdata = tdatap.get_slice(variables, s)
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
@@ -116,13 +117,17 @@ class FarmWakesCalculation(FarmDataModel):
             for oi in range(n_turbines):
 
                 if oi > 0:
-                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, :oi])
+                    tdata, wdelta = _get_wdata(
+                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi]
+                    )
                     gmodel.contribute_to_farm_wakes(
                         algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                     )
 
                 if oi < n_turbines - 1:
-                    tdata, wdelta = _get_wdata(tdatap, wdeltas, np.s_[:, oi + 1 :])
+                    tdata, wdelta = _get_wdata(
+                        tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, oi + 1 :]
+                    )
                     gmodel.contribute_to_farm_wakes(
                         algo, mdata, fdata, tdata, oi, wdelta, wmodel, pwake
                     )

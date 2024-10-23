@@ -1,15 +1,16 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from foxes.core import WakeFrame
 from foxes.utils import wd2uv
 from foxes.core.data import TData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.algorithms import Sequential
+from foxes.algorithms.sequential import Sequential
+
+from .farm_order import FarmOrder
 
 
-class SeqDynamicWakes(WakeFrame):
+class SeqDynamicWakes(FarmOrder):
     """
     Dynamic wakes for the sequential algorithm.
 
@@ -26,7 +27,7 @@ class SeqDynamicWakes(WakeFrame):
 
     """
 
-    def __init__(self, cl_ipars={}, dt_min=None):
+    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
         """
         Constructor.
 
@@ -38,9 +39,11 @@ class SeqDynamicWakes(WakeFrame):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
 
@@ -88,7 +91,9 @@ class SeqDynamicWakes(WakeFrame):
         # init wake traces data:
         self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
         self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
-        self._traces_l = np.zeros((algo.n_states, algo.n_turbines), dtype=FC.DTYPE)
+        self._traces_l = np.full(
+            (algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE
+        )
 
     def calc_order(self, algo, mdata, fdata):
         """ "
@@ -112,26 +117,7 @@ class SeqDynamicWakes(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        # prepare:
-        n_states = fdata.n_states
-        n_turbines = algo.n_turbines
-        tdata = TData.from_points(points=fdata[FV.TXYH])
-
-        # calculate streamline x coordinates for turbines rotor centre points:
-        # n_states, n_turbines_source, n_turbines_target
-        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
-        for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
-                :, :, 0, 0
-            ]
-
-        # derive turbine order:
-        # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
-        for si in range(n_states):
-            order[si] = np.lexsort(keys=coosx[si])
-
-        return order
+        return super().calc_order(algo, mdata, fdata)
 
     def get_wake_coos(
         self,
@@ -174,48 +160,54 @@ class SeqDynamicWakes(WakeFrame):
         counter = algo.states.counter
         N = counter + 1
 
-        # new wake starts at turbine:
-        self._traces_p[counter, downwind_index] = fdata[FV.TXYH][0, downwind_index]
-        self._traces_l[counter, downwind_index] = 0
+        if np.isnan(self._traces_l[counter, downwind_index]):
 
-        # transport wakes that originate from previous time steps:
-        if counter > 0:
-            dxyz = self._traces_v[:counter, downwind_index] * self._dt[:counter, None]
-            self._traces_p[:counter, downwind_index] += dxyz
-            self._traces_l[:counter, downwind_index] += np.linalg.norm(dxyz, axis=-1)
+            # new wake starts at turbine:
+            self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][
+                0, downwind_index
+            ]
+            self._traces_l[counter, downwind_index] = 0
 
-        # compute wind vectors at wake traces:
-        # TODO: dz from U_z is missing here
-        hpdata = {
-            v: np.zeros((1, N, 1), dtype=FC.DTYPE)
-            for v in algo.states.output_point_vars(algo)
-        }
-        hpdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in hpdata.keys()}
-        hpdata = TData.from_points(
-            points=self._traces_p[None, :N, downwind_index],
-            data=hpdata,
-            dims=hpdims,
-        )
-        res = algo.states.calculate(algo, mdata, fdata, hpdata)
-        self._traces_v[:N, downwind_index, :2] = wd2uv(
-            res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
-        )
-        del hpdata, hpdims, res
+            # transport wakes that originate from previous time steps:
+            if counter > 0:
+                dxyz = self._traces_v[:counter, downwind_index] * self._dt[counter - 1]
+                self._traces_p[:counter, downwind_index] += dxyz
+                self._traces_l[:counter, downwind_index] += np.linalg.norm(
+                    dxyz, axis=-1
+                )
+                del dxyz
 
-        # project:
+            # compute wind vectors at wake traces:
+            # TODO: dz from U_z is missing here
+            hpdata = TData.from_points(points=self._traces_p[None, :N, downwind_index])
+            res = algo.states.calculate(algo, mdata, fdata, hpdata)
+            self._traces_v[:N, downwind_index, :2] = wd2uv(
+                res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+            )
+            del hpdata, res
+
+        # find nearest wake point:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])
         tri = np.argmin(dists, axis=1)
         del dists
+
+        # project:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
-        wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][:, downwind_index][0, None, 2]
-        delp = points[0, :, :2] - self._traces_p[tri, downwind_index, :2]
+        wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][0, downwind_index, None, 2]
         nx = self._traces_v[tri, downwind_index, :2]
-        nx /= np.linalg.norm(nx, axis=1)[:, None]
-        ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-        wcoos[0, :, 0] = (
-            np.einsum("pd,pd->p", delp, nx) + self._traces_l[tri, downwind_index]
-        )
-        wcoos[0, :, 1] = np.einsum("pd,pd->p", delp, ny)
+        mv = np.linalg.norm(nx, axis=-1)
+        nx /= mv[:, None]
+        delp = points[0, :, :2] - self._traces_p[tri, downwind_index, :2]
+        projx = np.einsum("pd,pd->p", delp, nx)
+        dt = self._dt[counter] if counter < len(self._dt) else self._dt[-1]
+        dx = mv * dt
+        sel = (projx > -dx) & (projx < dx)
+        if np.any(sel):
+            ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
+            wcoos[0, sel, 0] = projx[sel] + self._traces_l[tri[sel], downwind_index]
+            wcoos[0, sel, 1] = np.einsum("pd,pd->p", delp, ny)[sel]
+            del ny
+        del delp, projx, mv, dx, nx, sel
 
         # turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
@@ -287,7 +279,8 @@ class SeqDynamicWakes(WakeFrame):
             n_points = n_targets * n_tpoints
 
             s = tdata[FC.STATES_SEL][0].reshape(n_points)
-            data = algo.farm_results[variable].to_numpy()
+            data = algo.farm_results_downwind[variable].to_numpy()
+            data[algo.counter] = fdata[variable][0]
             data = data[s, downwind_index].reshape(n_states, n_targets, n_tpoints)
 
             if target == FC.STATE_TARGET:

@@ -137,7 +137,9 @@ docs/source/_*
 scratch/
 *.swp
 *.gif
+*.mp4
 submodules/
+results/
 
 # exceptions:
 

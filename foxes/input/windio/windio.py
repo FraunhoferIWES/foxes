@@ -1,5 +1,3 @@
-import numpy as np
-import pandas as pd
 from pathlib import Path
 
 from foxes.core import WindFarm
@@ -9,7 +7,7 @@ from foxes.data import StaticData, WINDIO
 
 from .read_fields import read_wind_resource_field
 from .get_states import get_states
-from .read_farm import read_layout, read_turbine_type
+from .read_farm import read_layout, read_turbine_types
 from .read_attributes import read_attributes
 from .runner import WindioRunner
 
@@ -78,19 +76,27 @@ def _read_farm(wio, algo_dict, verbosity):
         ws_exp_ct = 1
 
     # read turbine type:
-    turbines = Dict(wio_farm["turbines"], name="turbines")
-    ttype = read_turbine_type(turbines, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
+    ttypes = read_turbine_types(wio_farm, algo_dict, ws_exp_P, ws_exp_ct, verbosity)
 
     # read layouts:
-    layouts = Dict(wio_farm["layouts"], name="layouts")
+    wfarm = wio_farm["layouts"]
+    if isinstance(wfarm, dict):
+        layouts = Dict(wfarm, name="layouts")
+    else:
+        layouts = Dict({i: l for i, l in enumerate(wfarm)}, name="layouts")
     if verbosity > 2:
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])
     for lname, ldict in layouts.items():
-        read_layout(lname, ldict, algo_dict, ttype, verbosity)
+        read_layout(lname, ldict, algo_dict, ttypes, verbosity)
 
 
-def read_windio(windio_yaml, verbosity=1):
+def read_windio(
+    windio_yaml,
+    verbosity=1,
+    algo_pars=None,
+    **runner_pars,
+):
     """
     Reads a complete WindIO case.
 
@@ -103,6 +109,10 @@ def read_windio(windio_yaml, verbosity=1):
         Path to the windio yaml file
     verbosity: int
         The verbosity level, 0 = silent
+    algo_pars: dict, optional
+        Additional algorithm parameters
+    runner_pars: dict, optional
+        Additional parameters for the WindioRunner
 
     Returns
     -------
@@ -113,7 +123,6 @@ def read_windio(windio_yaml, verbosity=1):
     :group: input.windio
 
     """
-
     wio_file = Path(windio_yaml)
     if not wio_file.is_file():
         wio_file = StaticData().get_file_path(WINDIO, wio_file, check_raw=False)
@@ -128,17 +137,21 @@ def read_windio(windio_yaml, verbosity=1):
         print("  Name:", wio.pop("name", None))
         print("  Contents:", [k for k in wio.keys()])
 
-    algo_dict = Dict(
-        algo_type="Downwind",
-        mbook=ModelBook(),
-        farm=WindFarm(),
-        wake_models=[],
-        verbosity=verbosity-3,
+    algo_dict = Dict(algo_type="Downwind", name="algo_dict")
+    if algo_pars is not None:
+        algo_dict.update(algo_pars)
+    algo_dict.update(
+        dict(
+            mbook=ModelBook(),
+            farm=WindFarm(),
+            wake_models=[],
+            verbosity=verbosity - 3,
+        )
     )
 
     _read_site(wio, algo_dict, verbosity)
     _read_farm(wio, algo_dict, verbosity)
-    
+
     out_dicts, odir = read_attributes(
         wio,
         algo_dict,
@@ -148,12 +161,13 @@ def read_windio(windio_yaml, verbosity=1):
     if verbosity > 1:
         print("Creating windio runner")
     runner = WindioRunner(
-                algo_dict, 
-                output_dir=odir,
-                output_dicts=out_dicts, 
-                wio_input_data=wio, 
-                verbosity=verbosity
-            )
+        algo_dict,
+        output_dir=odir,
+        output_dicts=out_dicts,
+        wio_input_data=wio,
+        verbosity=verbosity,
+        **runner_pars,
+    )
 
     return runner
 

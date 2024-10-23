@@ -1,16 +1,38 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
-from foxes.utils.runners import DaskRunner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--animation", help="Write flow animation file", action="store_true"
+    )
+    parser.add_argument(
+        "-A",
+        "--ani_file",
+        help="Path to the animation file to be written",
+        default="ani.gif",
+    )
+    parser.add_argument(
+        "-F",
+        "--fps",
+        help="The frames per second value for the animation",
+        type=int,
+        default=4,
+    )
+    parser.add_argument(
+        "-d", "--debug", help="Switch on wake debugging", action="store_true"
+    )
+    parser.add_argument(
+        "-S",
+        "--n_states",
+        help="The number of states",
+        type=int,
+        default=50,
     )
     parser.add_argument(
         "-l",
@@ -48,29 +70,35 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
-        "-cp",
+        "-V",
+        "--variable",
+        help="Plot variable",
+        default=FV.WS,
+    )
+    parser.add_argument(
+        "-VMAX",
+        "--max_variable",
+        help="Maximal plot variable",
+        default=10,
+        type=float,
+    )
+    parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
+    parser.add_argument(
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+    )
+    parser.add_argument(
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
+    )
+    parser.add_argument(
+        "-C",
         "--chunksize_points",
-        help="The maximal chunk size for points",
-        type=int,
-        default=5000,
-    )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
-    parser.add_argument(
-        "-n",
-        "--n_workers",
-        help="The number of workers for distributed run",
-        type=int,
+        help="The chunk size for points",
         default=None,
-    )
-    parser.add_argument(
-        "-tw",
-        "--threads_per_worker",
-        help="The number of threads per worker for distributed run",
         type=int,
-        default=None,
-    )
-    parser.add_argument(
-        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
@@ -85,7 +113,7 @@ if __name__ == "__main__":
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
-        states_sel=range(230, 280),
+        states_sel=range(240, 240 + args.n_states),
     )
 
     farm = foxes.WindFarm()
@@ -103,29 +131,28 @@ if __name__ == "__main__":
         plt.show()
         plt.close(ax.get_figure(figsize=(8, 8)))
 
-    algo = foxes.algorithms.Sequential(
-        farm,
-        states,
-        rotor_model=args.rotor,
-        wake_models=args.wakes,
-        wake_frame=args.frame,
-        partial_wakes=args.pwakes,
-        mbook=mbook,
-        chunks={FC.STATE: None, FC.TARGET: args.chunksize_points},
-    )
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
+        algo = foxes.algorithms.Sequential(
+            farm,
+            states,
+            rotor_model=args.rotor,
+            wake_models=args.wakes,
+            wake_frame=args.frame,
+            partial_wakes=args.pwakes,
+            mbook=mbook,
+            verbosity=0,
+        )
 
-    with DaskRunner(
-        scheduler=args.scheduler,
-        n_workers=args.n_workers,
-        threads_per_worker=args.threads_per_worker,
-    ) as runner:
         # in case of animation, add a plugin that creates the images:
         if args.animation:
-            fig, ax = plt.subplots()
             anigen = foxes.output.SeqFlowAnimationPlugin(
-                runner=runner,
                 orientation="xy",
-                var=FV.WS,
+                var=args.variable,
                 resolution=10,
                 levels=None,
                 quiver_pars=dict(scale=0.01),
@@ -134,42 +161,49 @@ if __name__ == "__main__":
                 ymin=-5000,
                 xmax=7000,
                 ymax=7000,
-                fig=fig,
-                ax=ax,
                 vmin=0,
-                vmax=10,
-                ret_im=True,
+                vmax=args.max_variable,
                 title=None,
                 animated=True,
             )
             algo.plugins.append(anigen)
 
+            if args.debug:
+                anigen_debug = foxes.output.SeqWakeDebugPlugin()
+                algo.plugins.append(anigen_debug)
+
         # run all states sequentially:
         for r in algo:
             print(algo.index)
 
-        print("\nFarm results:\n")
-        print(algo.farm_results)
+    print("\nFarm results:\n")
+    print(algo.farm_results)
 
-        if args.animation:
-            print("\nCalculating animation")
+    if args.animation:
+        print("\nCalculating animation")
 
-            anim = foxes.output.Animator(fig)
-            anim.add_generator(anigen.gen_images())
-            ani = anim.animate(interval=600)
+        fig, ax = plt.subplots()
+        anim = foxes.output.Animator(fig)
+        anim.add_generator(anigen.gen_images(ax))
+        if args.debug:
+            anim.add_generator(anigen_debug.gen_images(ax))
+        ani = anim.animate(interval=600)
 
-            lo = foxes.output.FarmLayoutOutput(farm)
-            lo.get_figure(
-                fig=fig,
-                ax=ax,
-                title="",
-                annotate=1,
-                anno_delx=-120,
-                anno_dely=-60,
-                alpha=0,
-                s=10,
-            )
+        lo = foxes.output.FarmLayoutOutput(farm)
+        lo.get_figure(
+            fig=fig,
+            ax=ax,
+            title="",
+            annotate=1,
+            anno_delx=-120,
+            anno_dely=-60,
+            alpha=0,
+            s=10,
+        )
 
-            fpath = "ani.gif"
-            print("Writing file", fpath)
-            ani.save(filename=fpath, writer="pillow")
+        fpath = Path(args.ani_file)
+        print("Writing file", fpath)
+        if fpath.suffix == ".gif":
+            ani.save(filename=fpath, writer="pillow", fps=args.fps)
+        else:
+            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

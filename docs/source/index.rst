@@ -2,6 +2,24 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.0
+    User-selectable :ref:`Parallelization` via the new `Engines`, replacing `Runners`. 
+    The default is now based on `concurrent.futures <https://docs.python.org/3/library/concurrent.futures.html>`_ and comes with a speedup. 
+    Also `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ is now supported, for simplified
+    multi-node computations.
+
+.. versionadded:: 1.0
+    New wake frame :ref:`DynamicWakes<Dynamic Wakes 1>`: Chunk-based vectorized dynamic
+    wakes for any kind of inflow 
+
+.. versionadded:: 1.0
+    New inflow class :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
+    Heterogeneous inflow fields extrapolated from data at a single point
+
+.. versionadded:: 1.0
+    New turbine type :ref:`FromLookupTable<foxes.models.turbine_types.FromLookupTable>`: 
+    Interpolates power and thrust coefficient from lookup table input data
+
 Welcome to FOXES
 ================
 
@@ -15,8 +33,11 @@ by Fraunhofer IWES. It has many applications, for example
 * Wake model studies, comparison and validation,
 * Wind farm simulations invoking complex model chains.
 
-The calculation is fully vectorized and its fast performance is owed to `dask <https://www.dask.org/>`_.
-Also the parallelization on local or remote clusters is enabled via `dask`. The wind farm
+The fast performance of *foxes* is owed to vectorization and parallelization,
+and it is intended to be used for large wind farms and large timeseries inflow data.
+The parallelization on local or remote clusters is supported, based on 
+`dask.distributed <https://distributed.dask.org/en/stable/>`_.
+The wind farm
 optimization capabilities invoke the `iwopy <https://github.com/FraunhoferIWES/iwopy>`_
 package which as well supports vectorization.
 
@@ -51,7 +72,17 @@ Contents
     .. toctree::
         :maxdepth: 2
 
+        inputs
+
+    .. toctree::
+        :maxdepth: 2
+
         models
+
+    .. toctree::
+        :maxdepth: 2
+
+        notebooks/parallelization
 
     .. toctree::
         :maxdepth: 2
@@ -81,7 +112,7 @@ Contents
     .. toctree::
         :maxdepth: 1
 
-        history
+        CHANGELOG
 
 Contributing
 ------------

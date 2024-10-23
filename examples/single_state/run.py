@@ -56,6 +56,17 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("-e", "--engine", help="The engine", default=None)
+    parser.add_argument(
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+    )
+    parser.add_argument(
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=None,
+        type=int,
+    )
     parser.add_argument(
         "-it", "--iterative", help="Use iterative algorithm", action="store_true"
     )
@@ -104,11 +115,12 @@ if __name__ == "__main__":
         partial_wakes=args.pwakes,
         ground_models=args.grounds,
         mbook=mbook,
-        chunks=None,
+        engine=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
-    # calculate farm results
     farm_results = algo.calc_farm()
     print("\nResults data:\n", farm_results)
 

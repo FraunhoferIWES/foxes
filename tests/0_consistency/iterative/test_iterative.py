@@ -60,8 +60,7 @@ def test():
         # f Algo is foxes.algorithms.Iterative:
         #    algo.set_urelax("post_rotor", CT=0.9)
 
-        with foxes.utils.runners.DaskRunner() as runner:
-            data = runner.run(algo.calc_farm)
+        data = algo.calc_farm()
 
         df = data.to_dataframe()[
             [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]

@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import TurbineInductionModel
-from foxes.utils import uv2wd, wd2uv
+from foxes.utils import uv2wd, wd2uv, delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -198,7 +198,7 @@ class RankineHalfBody(TurbineInductionModel):
         xs = -np.sqrt(m / (4 * ws + 1e-15))
 
         # set values out of body shape
-        st_sel = (ct > 0) & ((RHB_shape < -1) | (x < xs))
+        st_sel = (ct > 1e-8) & ((RHB_shape < -1) | (x < xs))
         if np.any(st_sel):
             # apply selection
             xyz = wake_coos[st_sel]
@@ -209,7 +209,7 @@ class RankineHalfBody(TurbineInductionModel):
             wake_deltas["V"][st_sel] += vel_factor * xyz[:, 1]
 
         # set values inside body shape
-        st_sel = (ct > 0) & (RHB_shape >= -1) & (x >= xs) & (x <= 0)
+        st_sel = (ct > 1e-8) & (RHB_shape >= -1) & (x >= xs) & (x <= 0)
         if np.any(st_sel):
             # apply selection
             xyz = np.zeros_like(wake_coos[st_sel])
@@ -270,4 +270,4 @@ class RankineHalfBody(TurbineInductionModel):
         new_wd = uv2wd(wind_vec)
         new_ws = np.linalg.norm(wind_vec, axis=-1)
         wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
-        wake_deltas[FV.WD] += new_wd - amb_results[FV.WD]
+        wake_deltas[FV.WD] += delta_wd(amb_results[FV.WD], new_wd)

@@ -54,24 +54,27 @@ class IECTIWake(TopHatWakeModel):
 
         """
         super().__init__(superpositions={FV.TI: superposition}, induction=induction)
+        self.iec_type = iec_type
+        self.wake_k = None
 
-        if opening_angle is not None:
+        if opening_angle is None:
+            self.wake_k = WakeK(**wake_k)
+        else:
             if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
                 raise KeyError(
                     f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
                 )
-            wake_k["k"] = float(np.tan(np.deg2rad(opening_angle / 2.0)))
-
-        self.iec_type = iec_type
-        self.wake_k = WakeK(**wake_k)
+            self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
     def __repr__(self):
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}, "
-        s += self.wake_k.repr() + ")"
+        s += f"({self.superpositions[FV.TI]}, induction={iname}"
+        if self.wake_k is not None:
+            s += ", " + self.wake_k.repr()
+        s += ")"
         return s
 
     def sub_models(self):
@@ -84,7 +87,7 @@ class IECTIWake(TopHatWakeModel):
             All sub models
 
         """
-        return [self.wake_k]
+        return [self.wake_k] if self.wake_k is not None else []
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
@@ -147,15 +150,29 @@ class IECTIWake(TopHatWakeModel):
             The wake radii, shape: (n_states, n_targets)
 
         """
-        k = self.wake_k(
-            FC.STATE_TARGET,
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            upcast=False,
-            downwind_index=downwind_index,
-        )
-        return k * x
+        if self.wake_k is None:
+            return self._k * x
+        else:
+            D = self.get_data(
+                FV.D,
+                FC.STATE_TARGET,
+                lookup="w",
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                downwind_index=downwind_index,
+                upcast=True,
+            )
+
+            k = self.wake_k(
+                FC.STATE_TARGET,
+                algo=algo,
+                fdata=fdata,
+                tdata=tdata,
+                upcast=True,
+                downwind_index=downwind_index,
+            )
+            return D / 2 + k * x
 
     def calc_centreline(
         self,

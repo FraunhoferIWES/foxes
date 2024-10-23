@@ -304,9 +304,8 @@ class WakeK(Model):
             The k array as returned by get_data
 
         """
-        if self._k is not None:
-            setattr(self, self.k_var, self._k)
-        elif self._ka is not None or self._kb is not None:
+        setattr(self, self.k_var, self._k)
+        if self._ka is not None or self._kb is not None:
             if self.ti_var == FV.TI and ti is not None:
                 pass
             elif self.ti_var == FV.AMB_TI and amb_ti is not None:

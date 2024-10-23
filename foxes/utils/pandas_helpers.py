@@ -41,7 +41,7 @@ class PandasFileHelper:
         "csv.gz": {},
         "csv.bz2": {},
         "csv.zip": {},
-        "h5": {"key": "flappy", "mode": "w"},
+        "h5": {"key": "foxes", "mode": "w"},
         "nc": {},
     }
 
@@ -133,12 +133,13 @@ class PandasFileHelper:
         format_dict: dict
             Dictionary with format entries for
             columns, e.g. '{:.4f}'
-        **kwargs: dict, optional
+        kwargs: dict, optional
             Parameters forwarded to the pandas writing method.
 
         """
 
-        fdict = deepcopy(cls.DEFAULT_FORMAT_DICT)
+        digits = {c: FV.get_default_digits(c) for c in data.columns}
+        fdict = {c: "{:." + str(d) + "f}" for c, d in digits.items() if d is not None}
         fdict.update(format_dict)
 
         out = pd.DataFrame(index=data.index)

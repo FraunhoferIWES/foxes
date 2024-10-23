@@ -158,10 +158,11 @@ The available wake frame classes are listed
 contains many pre-defined wake frames, for example:
 
 * `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
-* `yawed_[wake_k]`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`this example<Yawed rotor wakes>`.  
-* `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`this example<Heterogeneous flow>`.
-* `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 1>`.
-* `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`this example<Dynamic wakes 2>`.
+* `yawed_[wake_k]`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`Yawed rotor wakes`.  
+* `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`Heterogeneous flow`.
+* `dyn_wakes`, `dyn_wakes_<length>`: Dynamic flow following wakes for inhomogeneous wind data, optionally with maximal wake length `length`, e.g. `length=8km` or `length=4321m`, or other values with one of those two units. See :ref:`Dynamic Wakes 1`.
+* `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`Dynamic Wakes 2`.
+* `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`Dynamic Wakes 3`.
 
 The `yawed` wake frame is based on the wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
 and when it is combined with the corresponding wake model `Bastankhah2016_<superposition>_[wake_k]` it picks up all
@@ -223,7 +224,6 @@ The list of available turbine model classes can be found
 * :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and :ref:`YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
-
 
 Ground models
 -------------

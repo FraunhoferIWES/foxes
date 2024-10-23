@@ -14,6 +14,7 @@ def add_from_csv(
     col_D=None,
     col_id=None,
     cols_models_pre=None,
+    col_turbine_type=None,
     cols_models_post=None,
     turbine_base_name="T",
     turbine_ids=None,
@@ -47,6 +48,8 @@ def add_from_csv(
     cols_models_pre: list of str, optional
         The turbine model columns, entered before
         turbine_models
+    col_turbine_type: str, optional
+        The turbine type name
     cols_models_post: list of str, optional
         The turbine model columns, entered after
         turbine_models
@@ -95,6 +98,7 @@ def add_from_csv(
         hmodels = (
             [] if cols_models_pre is None else data.loc[i, cols_models_pre].tolist()
         )
+        hmodels += [] if col_turbine_type is None else [data.loc[i, col_turbine_type]]
         hmodels += tmodels
         hmodels += (
             [] if cols_models_post is None else data.loc[i, cols_models_post].tolist()

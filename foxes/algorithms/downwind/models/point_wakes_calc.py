@@ -1,7 +1,5 @@
-import numpy as np
-from foxes.core import PointDataModel, TData
+from foxes.core import PointDataModel
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class PointWakesCalculation(PointDataModel):
@@ -55,7 +53,7 @@ class PointWakesCalculation(PointDataModel):
         """
         return [self.emodels] if self.emodels is not None else []
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -65,9 +63,11 @@ class PointWakesCalculation(PointDataModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force)
         self.pvars = algo.states.output_point_vars(algo)
 
     def output_point_vars(self, algo):
@@ -120,7 +120,6 @@ class PointWakesCalculation(PointDataModel):
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
         for wmodel in wmodels:
-            pwake = algo.partial_wakes[wmodel.name]
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)

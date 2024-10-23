@@ -16,8 +16,6 @@ class Streamlines2D(WakeFrame):
     ----------
     step: float
         The streamline step size in m
-    max_length: float
-        The maximal streamline length
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -26,7 +24,7 @@ class Streamlines2D(WakeFrame):
 
     """
 
-    def __init__(self, step, max_length=1e4, cl_ipars={}):
+    def __init__(self, step, max_length_km=20, cl_ipars={}, **kwargs):
         """
         Constructor.
 
@@ -34,16 +32,17 @@ class Streamlines2D(WakeFrame):
         ----------
         step: float
             The streamline step size in m
-        max_length: float
-            The maximal streamline length
+        max_length_km: float
+            The maximal streamline length in km
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(max_length_km=max_length_km, **kwargs)
         self.step = step
-        self.max_length = max_length
         self.cl_ipars = cl_ipars
 
         self.DATA = self.var("DATA")
@@ -51,7 +50,9 @@ class Streamlines2D(WakeFrame):
         self.SDAT = self.var("SDAT")
 
     def __repr__(self):
-        return f"{type(self).__name__}(step={self.step})"
+        return (
+            f"{type(self).__name__}(step={self.step}, max_length={self.max_length_km})"
+        )
 
     def _calc_streamlines(self, algo, mdata, fdata):
         """
@@ -60,7 +61,7 @@ class Streamlines2D(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         n_turbines = mdata.n_turbines
-        N = int(self.max_length / self.step)
+        N = int(self.max_length_km * 1e3 / self.step)
 
         # calc data: x, y, z, wd
         data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)
@@ -134,7 +135,6 @@ class Streamlines2D(WakeFrame):
         Helper function, calculates streamline coordinates
         for given points and given turbine
         """
-
         # prepare:
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints
@@ -151,13 +151,16 @@ class Streamlines2D(WakeFrame):
         del dists, selp
 
         # calculate coordinates:
-        coos = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
-        nx = wd2uv(data[:, :, 3])
-        ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
-        delta = points[:, :, :2] - data[:, :, :2]
-        coos[:, :, 0] = slen + np.einsum("spd,spd->sp", delta, nx)
-        coos[:, :, 1] = np.einsum("spd,spd->sp", delta, ny)
+        coos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
+        delta = points[:, :, :2] - data[:, :, :2]
+        nx = wd2uv(data[:, :, 3])
+        projx = np.einsum("spd,spd->sp", delta, nx)
+        sel = (projx > -self.step) & (projx < self.step)
+        if np.any(sel):
+            ny = np.stack([-nx[:, :, 1], nx[:, :, 0]], axis=2)
+            coos[sel, 0] = slen[sel] + projx[sel]
+            coos[sel, 1] = np.einsum("spd,spd->sp", delta, ny)[sel]
 
         return coos.reshape(n_states, n_targets, n_tpoints, 3)
 
@@ -262,10 +265,6 @@ class Streamlines2D(WakeFrame):
             The centreline points, shape: (n_states, n_points, 3)
 
         """
-        # calculate long enough streamlines:
-        xmax = np.max(x)
-        self._ensure_min_length(algo, mdata, fdata, xmax)
-
         # get streamline points:
         n_states, n_points = x.shape
         data = self.get_streamline_data(algo, mdata, fdata)[:, downwind_index]

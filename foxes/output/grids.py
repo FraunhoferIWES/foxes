@@ -12,7 +12,6 @@ def calc_point_results(
     g_pts,
     farm_results=None,
     seq_iter=None,
-    runner=None,
     verbosity=0,
     **kwargs,
 ):
@@ -29,8 +28,6 @@ def calc_point_results(
         The farm results
     seq_iter: foxes.algorithms.sequential.SequentialIter, optional
         The sequential itarator
-    runner: foxes.utils.runners.Runner, optional
-        The runner
     verbosity: int
         The verbosity level, 0 = silent
     kwargs: dict, optional
@@ -41,11 +38,7 @@ def calc_point_results(
     if averb is not None:
         algo.verbosity = verbosity
     fres = farm_results if seq_iter is None else seq_iter.farm_results
-    if runner is None:
-        point_results = algo.calc_points(fres, points=g_pts, **kwargs)
-    else:
-        kwargs["points"] = g_pts
-        point_results = runner.run(algo.calc_points, args=(fres,), kwargs=kwargs)
+    point_results = algo.calc_points(fres, points=g_pts, **kwargs)
     if averb is not None:
         algo.verbosity = averb
 
@@ -54,7 +47,8 @@ def calc_point_results(
 
 def get_grid_xy(
     farm_results,
-    resolution,
+    resolution=None,
+    n_img_points=None,
     xmin=None,
     ymin=None,
     xmax=None,
@@ -62,6 +56,8 @@ def get_grid_xy(
     z=None,
     xspace=500.0,
     yspace=500.0,
+    states_sel=None,
+    states_isel=None,
     verbosity=0,
 ):
     """
@@ -74,6 +70,8 @@ def get_grid_xy(
         dimensions (state, turbine)
     resolution: float
         The resolution in m
+    n_img_points: tuple of int, optional
+        The number of image points (n, m) in the two directions
     xmin: float
         The min x coordinate, or None for automatic
     ymin: float
@@ -88,6 +86,10 @@ def get_grid_xy(
         The extra space in x direction, before and after wind farm
     yspace: float
         The extra space in y direction, before and after wind farm
+    states_sel: list, optional
+        Reduce to selected states
+    states_isel: list, optional
+        Reduce to the selected states indices
     verbosity: int, optional
         The verbosity level
 
@@ -103,8 +105,11 @@ def get_grid_xy(
         The grid points, shape: (n_states, n_pts, 3)
 
     """
-
     # prepare:
+    if states_isel is not None:
+        farm_results = farm_results.isel({FC.STATE: states_isel})
+    if states_sel is not None:
+        farm_results = farm_results.sel({FC.STATE: states_sel})
     n_states = farm_results[FV.H].shape[0]
 
     # get base rectangle:
@@ -115,10 +120,22 @@ def get_grid_xy(
     y_max = ymax if ymax is not None else farm_results[FV.Y].max().to_numpy() + yspace
     z_max = z if z is not None else farm_results[FV.H].max().to_numpy()
 
+    # compute number of points:
+    if resolution is not None and n_img_points is None:
+        nx = int((x_max - x_min) / resolution + 0.5) + 1
+        ny = int((y_max - y_min) / resolution + 0.5) + 1
+    elif resolution is None and n_img_points is not None:
+        nx, ny = n_img_points
+    else:
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
+
+    # compute points:
     x_pos, x_res = np.linspace(
         x_min,
         x_max,
-        num=int((x_max - x_min) / resolution) + 1,
+        num=nx,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -126,7 +143,7 @@ def get_grid_xy(
     y_pos, y_res = np.linspace(
         y_min,
         y_max,
-        num=int((y_max - y_min) / resolution) + 1,
+        num=ny,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -158,7 +175,8 @@ def get_grid_xy(
 
 def get_grid_xz(
     farm_results,
-    resolution,
+    resolution=None,
+    n_img_points=None,
     x_direction=270,
     xmin=None,
     zmin=0.0,
@@ -167,6 +185,8 @@ def get_grid_xz(
     y=None,
     xspace=500.0,
     zspace=500.0,
+    states_sel=None,
+    states_isel=None,
     verbosity=0,
 ):
     """
@@ -177,8 +197,10 @@ def get_grid_xz(
     farm_results: xarray.Dataset
         The farm results. The calculated variables have
         dimensions (state, turbine)
-    resolution: float
+    resolution: float, optional
         The resolution in m
+    n_img_points: tuple of int, optional
+        The number of image points (n, m) in the two directions
     x_direction: float
         The direction of the x axis, 0 = north
     xmin: float
@@ -195,6 +217,10 @@ def get_grid_xz(
         The extra space in x direction, before and after wind farm
     zspace: float
         The extra space in z direction, below and above wind farm
+    states_sel: list, optional
+        Reduce to selected states
+    states_isel: list, optional
+        Reduce to the selected states indices
     verbosity: int, optional
         The verbosity level
 
@@ -212,6 +238,10 @@ def get_grid_xz(
     """
 
     # prepare:
+    if states_isel is not None:
+        farm_results = farm_results.isel({FC.STATE: states_isel})
+    if states_sel is not None:
+        farm_results = farm_results.sel({FC.STATE: states_sel})
     n_states, n_turbines = farm_results[FV.H].shape
     n_x = np.append(wd2uv(x_direction), [0.0], axis=0)
     n_z = np.array([0.0, 0.0, 1.0])
@@ -236,10 +266,22 @@ def get_grid_xz(
     y_max = y if y is not None else np.max(yy)
     del xx, yy, zz
 
+    # compute number of points:
+    if resolution is not None and n_img_points is None:
+        nx = int((x_max - x_min) / resolution + 0.5) + 1
+        nz = int((z_max - z_min) / resolution + 0.5) + 1
+    elif resolution is None and n_img_points is not None:
+        nx, nz = n_img_points
+    else:
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
+
+    # compute points:
     x_pos, x_res = np.linspace(
         x_min,
         x_max,
-        num=int((x_max - x_min) / resolution) + 1,
+        num=nx,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -247,7 +289,7 @@ def get_grid_xz(
     z_pos, z_res = np.linspace(
         z_min,
         z_max,
-        num=int((z_max - z_min) / resolution) + 1,
+        num=nz,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -279,7 +321,8 @@ def get_grid_xz(
 
 def get_grid_yz(
     farm_results,
-    resolution,
+    resolution=None,
+    n_img_points=None,
     x_direction=270,
     ymin=None,
     zmin=0.0,
@@ -288,6 +331,8 @@ def get_grid_yz(
     x=None,
     yspace=500.0,
     zspace=500.0,
+    states_sel=None,
+    states_isel=None,
     verbosity=0,
 ):
     """
@@ -298,8 +343,10 @@ def get_grid_yz(
     farm_results: xarray.Dataset
         The farm results. The calculated variables have
         dimensions (state, turbine)
-    resolution: float
+    resolution: float, optional
         The resolution in m
+    n_img_points: tuple of int, optional
+        The number of image points (n, m) in the two directions
     x_direction: float
         The direction of the x axis, 0 = north
     ymin: float
@@ -316,6 +363,10 @@ def get_grid_yz(
         The extra space in y direction, before and after wind farm
     zspace: float
         The extra space in z direction, below and above wind farm
+    states_sel: list, optional
+        Reduce to selected states
+    states_isel: list, optional
+        Reduce to the selected states indices
     verbosity: int, optional
         The verbosity level
 
@@ -333,6 +384,10 @@ def get_grid_yz(
     """
 
     # prepare:
+    if states_isel is not None:
+        farm_results = farm_results.isel({FC.STATE: states_isel})
+    if states_sel is not None:
+        farm_results = farm_results.sel({FC.STATE: states_sel})
     n_states, n_turbines = farm_results[FV.H].shape
     n_x = np.append(wd2uv(x_direction), [0.0], axis=0)
     n_z = np.array([0.0, 0.0, 1.0])
@@ -357,10 +412,22 @@ def get_grid_yz(
     x_max = x if x is not None else np.max(xx)
     del xx, yy, zz
 
+    # compute number of points:
+    if resolution is not None and n_img_points is None:
+        ny = int((y_max - y_min) / resolution + 0.5) + 1
+        nz = int((z_max - z_min) / resolution + 0.5) + 1
+    elif resolution is None and n_img_points is not None:
+        ny, nz = n_img_points
+    else:
+        raise ValueError(
+            f"Expecting either 'resolution' or 'n_img_points', got: resolution = {resolution}, n_img_points = {n_img_points}"
+        )
+
+    # compute points:
     y_pos, y_res = np.linspace(
         y_min,
         y_max,
-        num=int((y_max - y_min) / resolution) + 1,
+        num=ny,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -368,7 +435,7 @@ def get_grid_yz(
     z_pos, z_res = np.linspace(
         z_min,
         z_max,
-        num=int((z_max - z_min) / resolution) + 1,
+        num=nz,
         endpoint=True,
         retstep=True,
         dtype=None,
@@ -614,7 +681,10 @@ def np2xr_sp(data, states, a_pos, b_pos, c_pos, ori, label_map={}):
     return Dataset(
         coords={s: states, b: b_pos, a: a_pos},
         data_vars={
-            v: ((s, b, a), np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2))
+            label_map.get(v, v): (
+                (s, b, a),
+                np.swapaxes(d.reshape(n_s, n_a, n_b), 1, 2),
+            )
             for v, d in data.items()
         },
         attrs={c: float(c_pos)},

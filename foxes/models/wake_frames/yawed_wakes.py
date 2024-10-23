@@ -44,6 +44,7 @@ class YawedWakes(WakeFrame):
         alpha=0.58,
         beta=0.07,
         induction="Madsen",
+        max_length_km=30,
         **wake_k,
     ):
         """
@@ -63,9 +64,11 @@ class YawedWakes(WakeFrame):
             The induction model, if not found in wake model
         wake_k: dict, optional
             Parameters for the WakeK class, if not found in wake model
+        max_length_km: float
+            The maximal wake length in km
 
         """
-        super().__init__()
+        super().__init__(max_length_km=max_length_km)
 
         self.base_frame = base_frame
         self.model = None

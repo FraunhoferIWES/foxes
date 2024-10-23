@@ -12,7 +12,7 @@ def add_grid(
     indices=None,
     names=None,
     verbosity=1,
-    **turbine_parameters
+    **turbine_parameters,
 ):
     """
     Add a regular grid of turbines.
@@ -54,7 +54,7 @@ def add_grid(
                 xy=xy_base + xi * step_vectors[0] + yi * step_vectors[1],
                 index=None if indices is None else indices[i],
                 name=None if names is None else names[i],
-                **turbine_parameters
+                **turbine_parameters,
             ),
             verbosity=verbosity,
         )

@@ -1,6 +1,8 @@
+from copy import deepcopy
+
 from foxes.algorithms.sequential import SequentialPlugin
 
-from .flow_plots import FlowPlots2D
+from ..flow_plots_2d.flow_plots import FlowPlots2D
 
 
 class SeqFlowAnimationPlugin(SequentialPlugin):
@@ -12,16 +14,14 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     ----------
     orientation: str
         The orientation, either "yx", "xz" or "yz"
-    runner: foxes.utils.runners.Runner
-        The runner
     pars: dict
         Additional parameters for plotting
 
-    :group: output.flow_plots_2d
+    :group: output.seq_plugins
 
     """
 
-    def __init__(self, orientation, runner=None, **pars):
+    def __init__(self, orientation, **pars):
         """
         Constructor.
 
@@ -29,15 +29,12 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         ----------
         orientation: str
             The orientation, either "yx", "xz" or "yz"
-        runner: foxes.utils.runners.Runner, optional
-            The runner
         pars: dict, optional
             Additional parameters for plotting
 
         """
         super().__init__()
         self.orientation = orientation
-        self.runner = runner
         self.pars = pars
 
         if "title" in self.pars and callable(self.pars["title"]):
@@ -74,28 +71,73 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         """
         super().update(algo, fres, pres)
 
-        o = FlowPlots2D(algo, fres, self.runner)
+        o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
             self.pars["title"] = self._tfun(algo.states.counter, algo.states.index()[0])
 
         if self.orientation == "xy":
-            self._data.append(next(o.gen_states_fig_xy(**self.pars)))
+            d = next(o.gen_states_fig_xy(**self.pars, precalc=True))
         elif self.orientation == "xz":
-            self._data.append(next(o.gen_states_fig_xz(**self.pars)))
+            d = next(o.gen_states_fig_xz(**self.pars, precalc=True))
         elif self.orientation == "yz":
-            self._data.append(next(o.gen_states_fig_yz(**self.pars)))
+            d = next(o.gen_states_fig_yz(**self.pars, precalc=True))
         else:
             raise KeyError(
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
 
-        if (
-            self.pars.get("vmin", None) is not None
-            and self.pars.get("vmax", None) is not None
-        ):
-            self.pars["add_bar"] = False
+        # minimize stored data:
+        od = [d[0], d[1], None]
+        if len(self._data) == 0:
+            od[2] = d[2]
+        of = (
+            fres
+            if ("rotor_color" in self.pars and self.pars["rotor_color"] is not None)
+            else None
+        )
 
-    def gen_images(self):
-        for d in self._data:
-            yield d
+        self._data.append((of, od))
+
+    def gen_images(self, ax):
+        """
+
+        Parameters
+        ----------
+        ax: matplotlib.Axis
+            The plotting axis
+
+        Yields
+        ------
+        imgs: tuple
+            The (figure, artists) tuple
+
+        """
+        fig = ax.get_figure()
+        gdata = None
+        while len(self._data):
+
+            fres, d = self._data.pop(0)
+
+            if d[2] is not None:
+                gdata = d[2]
+
+            o = FlowPlots2D(self.algo, fres)
+
+            yield next(
+                o.gen_states_fig_xy(
+                    **self.pars,
+                    ax=ax,
+                    fig=fig,
+                    ret_im=True,
+                    precalc=(d[0], d[1], gdata),
+                )
+            )
+
+            del o, fres, d
+
+            if (
+                self.pars.get("vmin", None) is not None
+                and self.pars.get("vmax", None) is not None
+            ):
+                self.pars["add_bar"] = False

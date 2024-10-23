@@ -160,7 +160,7 @@ class TurbOParkWake(GaussianWakeModel):
         )
 
         # select targets:
-        st_sel = (x > 1e-5) & (ct > 0.0)
+        st_sel = (x > 1e-8) & (ct > 1e-8)
         if np.any(st_sel):
             # apply selection:
             x = x[st_sel]
@@ -443,7 +443,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
         )
 
         # select targets:
-        st_sel = (x > 1e-5) & (ct > 0.0)
+        st_sel = (x > 1e-8) & (ct > 1e-8)
         if np.any(st_sel):
             # apply selection:
             # x = x[st_sel]

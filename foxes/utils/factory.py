@@ -1,3 +1,5 @@
+import numpy as np
+
 from .dict import Dict
 import foxes.variables as FV
 
@@ -23,6 +25,8 @@ class Factory:
     hints: dict
         Hints for print_toc, only for variables for which the
         options are functions or missing
+    example: str
+        An example name
     options: dict
         For each variable, e.g. A, B or C, the list or dict
         or function that maps a str to the actual value
@@ -39,6 +43,7 @@ class Factory:
         kwargs={},
         var2arg={},
         hints={},
+        example_vars=None,
         **options,
     ):
         """
@@ -60,6 +65,8 @@ class Factory:
         hints: dict
             Hints for print_toc, only for variables for which the
             options are functions or missing
+        example_vars: dict, optional
+            Variable values for creating an example
         options: dict
             For each variable, e.g. A, B or C, the list or dict
             or function that maps a str to the actual value
@@ -122,6 +129,30 @@ class Factory:
                     f"Factory '{name_template}': Variable '{v}' has option of type '{type(v).__name__}'. Only list, tuple, dict or function are supported"
                 )
 
+        exvars = dict(
+            n=5,
+            n2=9,
+            superposition="linear",
+            kTI=0.2,
+            kb=0.001,
+            step=100,
+            dx=100,
+            dt="10s",
+        )
+        if example_vars is not None:
+            exvars.update(example_vars)
+        try:
+            self.example = ""
+            for i, v in enumerate(self._vars):
+                self.example += f"{self._pre[i]}{exvars[v]}"
+            self.example += self._pre[-1]
+            if not self.check_match(self.example, error=False):
+                raise ValueError(
+                    f"Example '{self.example}' does not match template '{self.name_template}'"
+                )
+        except KeyError:
+            self.example = None
+
     @property
     def name_prefix(self):
         """
@@ -171,40 +202,116 @@ class Factory:
                 s += f"\n  {v} from {list(self.options[v])}"
             else:
                 s += f"\n  {v}={self.hints.get(v, '(value)')}"
+        if self.example is not None:
+            s += f"\nExample: {self.example}"
         return s
 
-    def check_match(self, name):
+    def get_examples(self, **var_values):
         """
-        Tests if a name matches the template
+        Create example names from given values
+
+        Parameters
+        ----------
+        var_values: dict
+            Variables values. Key: Variable,
+            value: list or value
+
+        Returns
+        -------
+        examples: list of str
+            The examples
+
+        """
+
+        def gete(i, vals, vars, values, examples):
+            if i >= len(vars):
+                e = ""
+                for i, v in enumerate(self._vars):
+                    e += f"{self._pre[i]}{vals[v]}"
+                e += self._pre[-1]
+                self.check_match(e, error=True)
+                examples.append(e)
+            else:
+                v = vars[i]
+                if v in self._vars:
+                    vls = np.atleast_1d(values[i])
+                    for x in vls:
+                        vals[v] = x
+                        gete(i + 1, vals, vars, values, examples)
+                else:
+                    gete(i + 1, vals, vars, values, examples)
+
+        examples = []
+        gete(
+            0,
+            {},
+            list(var_values.keys()),
+            list(var_values.values()),
+            examples,
+        )
+
+        return examples
+
+    def check_match(self, name, error=False, ret_pars=False):
+        """
+        Tests if a name matches the template and constructs
+        parameters
 
         Parameters
         ----------
         name: str
             The name to be checked
+        error: bool
+            Flag for raising a Value error in case of
+            mismatch
+        ret_pars: bool
+            Flag for returning the parameters
 
         Returns
         -------
         success: bool
             True if the template is matched
+        pars: dict, optional
+            The constructed parameters
 
         """
-        data_str = name
-        for vi in range(len(self.variables)):
-            p = self._pre[vi]
-            i = data_str.find(p)
-            j = i + len(p)
-            if i < 0 or len(data_str) <= j:
-                return False
-            data_str = data_str[j:]
-
-            q = self._pre[vi + 1]
-            if q != "":
-                i = data_str.find(q)
-                j = i + len(q)
-                if i < 0 or len(data_str) <= j:
-                    return False
+        j = 0
+        wlist = []
+        for pi, p in enumerate(self._pre):
+            if len(p) > 0:
+                i = name[j:].find(p)
+                if i < 0 or (pi == 0 and i > 0):
+                    if error:
+                        raise ValueError(
+                            f"Factory '{self.name_template}': Name '{name}' not matching template"
+                        )
+                    elif ret_pars:
+                        return False, {}
+                    else:
+                        return False
+                w = name[j : j + i]
+                j += i + len(p)
             else:
-                data_str = ""
+                w = name[j:]
+            if pi > 0:
+                wlist.append(w)
+
+        if ret_pars:
+            kwargs = {}
+            for vi, v in enumerate(self.variables):
+                w = self.var2arg.get(v, v)
+                data = wlist[vi]
+                if v in self.options:
+                    o = self.options[v]
+                    if hasattr(o, "__call__"):
+                        kwargs[w] = o(data)
+                    else:
+                        kwargs[w] = self.options[v][data]
+                else:
+                    kwargs[w] = data
+
+            kwargs.update(self.kwargs)
+            return True, kwargs
 
         return True
 
@@ -223,37 +330,7 @@ class Factory:
             The instance of the base class
 
         """
-        j = 0
-        wlist = []
-        for pi, p in enumerate(self._pre):
-            if len(p) > 0:
-                i = name[j:].find(p)
-                if i < 0 or (pi == 0 and i > 0):
-                    raise ValueError(
-                        f"Factory '{self.name_template}': Name '{name}' not matching template"
-                    )
-                w = name[j : j + i]
-                j += i + len(p)
-            else:
-                w = name[j:]
-            if pi > 0:
-                wlist.append(w)
-
-        kwargs = {}
-        for vi, v in enumerate(self.variables):
-            w = self.var2arg.get(v, v)
-            data = wlist[vi]
-            if v in self.options:
-                o = self.options[v]
-                if hasattr(o, "__call__"):
-                    kwargs[w] = o(data)
-                else:
-                    kwargs[w] = self.options[v][data]
-            else:
-                kwargs[w] = data
-
-        kwargs.update(self.kwargs)
-
+        __, kwargs = self.check_match(name, error=True, ret_pars=True)
         return self.base(*self.args, **kwargs)
 
 
@@ -299,14 +376,20 @@ class WakeKFactory:
         i0 = name_template.find("_[wake_k]")
         i1 = i0 + len("_[wake_k]")
         kw = kwargs.pop("kwargs", {})
+        v2a = kwargs.pop("var2arg", {})
 
         if i0 < 0:
             raise ValueError(
                 f"String '_[wake_k]' not found in name template '{name_template}'"
             )
 
+        exvars = dict(k=0.04, ka=0.2, ambka=0.4, kb=0.001)
+        if "example_vars" in kwargs:
+            exvars.update(kwargs.pop("example_vars"))
+
         # add case ka, kb:
-        t = name_template[:i0] + "_ka<ka>_kb<kb>"
+        t0 = name_template[:i0]
+        t = t0 + "_ka<ka>_kb<kb>"
         if len(name_template) > i1:
             t += name_template[i1:]
         h = hints.copy()
@@ -323,17 +406,20 @@ class WakeKFactory:
                 **kwargs,
                 ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
                 kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                example_vars=exvars,
             )
         )
 
-        # add case ambient ka, kb:
-        t = name_template[:i0] + "_ambka<ka>_kb<kb>"
+        # add case ambient ambka, kb:
+        t = name_template[:i0] + "_ambka<ambka>_kb<kb>"
         if len(name_template) > i1:
             t += name_template[i1:]
         h = hints.copy()
-        h["ka"] = "(Value, e.g. 04 for 0.4)"
+        h["ambka"] = "(Value, e.g. 04 for 0.4)"
         h["kb"] = "(Value, e.g. 001 for 0.01)"
         kw["ti_var"] = FV.AMB_TI
+        hv2a = v2a.copy()
+        hv2a["ambka"] = "ka"
         self.factories.append(
             Factory(
                 base,
@@ -341,9 +427,11 @@ class WakeKFactory:
                 *args,
                 hints=h,
                 kwargs=kw.copy(),
+                var2arg=hv2a,
                 **kwargs,
-                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
                 kb=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                example_vars=exvars,
             )
         )
 
@@ -363,16 +451,19 @@ class WakeKFactory:
                 kwargs=kw.copy(),
                 **kwargs,
                 ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                example_vars=exvars,
             )
         )
 
-        # add case ka:
-        t = name_template[:i0] + "_ambka<ka>"
+        # add case ambka:
+        t = name_template[:i0] + "_ambka<ambka>"
         if len(name_template) > i1:
             t += name_template[i1:]
         h = hints.copy()
-        h["ka"] = "(Value, e.g. 04 for 0.4)"
+        h["ambka"] = "(Value, e.g. 04 for 0.4)"
         kw["ti_var"] = FV.AMB_TI
+        hv2a = v2a.copy()
+        hv2a["ambka"] = "ka"
         self.factories.append(
             Factory(
                 base,
@@ -380,8 +471,10 @@ class WakeKFactory:
                 *args,
                 hints=h,
                 kwargs=kw.copy(),
+                var2arg=hv2a,
                 **kwargs,
-                ka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                ambka=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                example_vars=exvars,
             )
         )
 
@@ -401,6 +494,7 @@ class WakeKFactory:
                 kwargs=kw.copy(),
                 **kwargs,
                 k=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+                example_vars=exvars,
             )
         )
 
@@ -417,6 +511,7 @@ class WakeKFactory:
                 hints=hints,
                 kwargs=kw.copy(),
                 **kwargs,
+                example_vars=exvars,
             )
         )
 

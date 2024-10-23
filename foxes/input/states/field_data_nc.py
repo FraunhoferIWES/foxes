@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interpn
+from pathlib import Path
 
 from foxes.core import States
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
 import foxes.variables as FV
 import foxes.constants as FC
@@ -120,7 +121,6 @@ class FieldDataNC(States):
         """
         super().__init__()
 
-        self.data_source = data_source
         self.states_coord = states_coord
         self.ovars = output_vars
         self.fixed_vars = fixed_vars
@@ -139,16 +139,18 @@ class FieldDataNC(States):
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
         }
 
-        self._inds = None
         self._N = None
-        self._weights = None
 
-        # pre-load file reading, usually prior to DaskRunner:
+        self.__data_source = data_source
+        self.__weights = None
+        self.__inds = None
+
+        # pre-load file reading:
         if not isinstance(self.data_source, xr.Dataset):
             if "*" in str(self.data_source):
                 pass
             else:
-                self.data_source = StaticData().get_file_path(
+                self.__data_source = StaticData().get_file_path(
                     STATES, self.data_source, check_raw=True
                 )
             if verbosity:
@@ -161,25 +163,53 @@ class FieldDataNC(States):
                         f"States '{self.name}': Reading index from '{self.data_source}'"
                     )
 
-            with xr.open_mfdataset(
-                str(self.data_source),
-                parallel=False,
-                concat_dim=self.states_coord,
-                combine="nested",
-                data_vars="minimal",
-                coords="minimal",
-                compat="override",
-            ) as ds:
-                self.data_source = ds
+            def _read_ds():
+                if Path(self.data_source).is_file():
+                    return xr.open_dataset(self.data_source)
+                else:
+                    # try to read multiple files, needs dask:
+                    try:
+                        return xr.open_mfdataset(
+                            str(self.data_source),
+                            parallel=False,
+                            concat_dim=self.states_coord,
+                            combine="nested",
+                            data_vars="minimal",
+                            coords="minimal",
+                            compat="override",
+                        )
+                    except ValueError as e:
+                        import_module("dask", hint="pip install dask")
+                        raise e
+
+            with _read_ds() as ds:
+                self.__data_source = ds
 
         if sel is not None:
-            self.data_source = self.data_source.sel(self.sel)
+            self.__data_source = self.data_source.sel(self.sel)
         if isel is not None:
-            self.data_source = self.data_source.isel(self.isel)
+            self.__data_source = self.data_source.isel(self.isel)
         if pre_load:
-            self.data_source.load()
+            self.__data_source.load()
 
         self._get_inds(self.data_source)
+
+    @property
+    def data_source(self):
+        """
+        The data source
+
+        Returns
+        -------
+        s: object
+            The data source
+
+        """
+        if self.pre_load and self.running:
+            raise ValueError(
+                f"States '{self.name}': Cannot acces data_source while running"
+            )
+        return self.__data_source
 
     def _get_inds(self, ds):
         """
@@ -192,13 +222,15 @@ class FieldDataNC(States):
                     f"States '{self.name}': Missing coordinate '{c}' in data"
                 )
 
-        self._inds = ds[self.states_coord].to_numpy()
+        self.__inds = ds[self.states_coord].to_numpy()
         if self.time_format is not None:
-            self._inds = pd.to_datetime(self._inds, format=self.time_format).to_numpy()
-        self._N = len(self._inds)
+            self.__inds = pd.to_datetime(
+                self.__inds, format=self.time_format
+            ).to_numpy()
+        self._N = len(self.__inds)
 
         if self.weight_ncvar is not None:
-            self._weights = ds[self.weight_ncvar].to_numpy()
+            self.__weights = ds[self.weight_ncvar].to_numpy()
 
         for v in self.ovars:
             if v in self.var2ncvar:
@@ -331,8 +363,8 @@ class FieldDataNC(States):
                 self._dkys[v] = len(self._dkys)
         self._n_dvars = len(self._dkys)
 
-        if self._weights is None:
-            self._weights = np.full(
+        if self.__weights is None:
+            self.__weights = np.full(
                 (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
             )
 
@@ -363,6 +395,84 @@ class FieldDataNC(States):
 
         return idata
 
+    def set_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to running, and moves
+        all large data to stash.
+
+        The stashed data will be returned by the
+        unset_running() function after running calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().set_running(algo, data_stash, sel, isel, verbosity)
+
+        data_stash[self.name] = dict(
+            weights=self.__weights,
+            inds=self.__inds,
+        )
+        del self.__weights, self.__inds
+
+        if self.pre_load:
+            data_stash[self.name]["data_source"] = self.__data_source
+            del self.__data_source
+
+    def unset_running(
+        self,
+        algo,
+        data_stash,
+        sel=None,
+        isel=None,
+        verbosity=0,
+    ):
+        """
+        Sets this model status to not running, recovering large data
+        from stash
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data_stash: dict
+            Large data stash, this function adds data here.
+            Key: model name. Value: dict, large model data
+        sel: dict, optional
+            The subset selection dictionary
+        isel: dict, optional
+            The index subset selection dictionary
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        super().unset_running(algo, data_stash, sel, isel, verbosity)
+
+        data = data_stash[self.name]
+        self.__weights = data.pop("weights")
+        self.__inds = data.pop("inds")
+
+        if self.pre_load:
+            self.__data_source = data.pop("data_source")
+
     def size(self):
         """
         The total number of states.
@@ -385,7 +495,9 @@ class FieldDataNC(States):
             The index labels of states, or None for default integers
 
         """
-        return self._inds
+        if self.running:
+            raise ValueError(f"States '{self.name}': Cannot acces index while running")
+        return self.__inds
 
     def output_point_vars(self, algo):
         """
@@ -419,7 +531,11 @@ class FieldDataNC(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return self._weights
+        if self.running:
+            raise ValueError(
+                f"States '{self.name}': Cannot acces weights while running"
+            )
+        return self.__weights
 
     def calculate(self, algo, mdata, fdata, tdata):
         """ "
@@ -464,7 +580,7 @@ class FieldDataNC(States):
 
         # read data for this chunk:
         else:
-            i0 = np.where(self._inds == mdata[FC.STATE][0])[0][0]
+            i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
 
@@ -520,17 +636,26 @@ class FieldDataNC(States):
 
         # interpolate:
         try:
-            data = interpn(gvars, data, pts, **self.interpn_pars).reshape(
+            ipars = dict(bounds_error=True, fill_value=None)
+            ipars.update(self.interpn_pars)
+            data = interpn(gvars, data, pts, **ipars).reshape(
                 n_states, n_pts, self._n_dvars
             )
         except ValueError as e:
-            print(f"\n\nStates '{self.name}': Interpolation error")
+            print(f"\nStates '{self.name}': Interpolation error")
             print("INPUT VARS: (state, heights, y, x)")
             print(
-                "DATA BOUNDS:", [np.min(d) for d in gvars], [np.max(d) for d in gvars]
+                "DATA BOUNDS:",
+                [float(np.min(d)) for d in gvars],
+                [float(np.max(d)) for d in gvars],
             )
             print(
-                "EVAL BOUNDS:", [np.min(p) for p in pts.T], [np.max(p) for p in pts.T]
+                "EVAL BOUNDS:",
+                [float(np.min(p)) for p in pts.T],
+                [float(np.max(p)) for p in pts.T],
+            )
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
             )
             raise e
         del pts, x, y, h, gvars

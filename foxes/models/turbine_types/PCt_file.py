@@ -106,6 +106,30 @@ class PCtFile(TurbineType):
         a += f", var_ws_ct={self.WSCT}, var_ws_P={self.WSP}"
         return f"{type(self).__name__}({a})"
 
+    def needs_rews2(self):
+        """
+        Returns flag for requirering REWS2 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS2 is required
+
+        """
+        return self.WSCT == FV.REWS2 or self.WSP == FV.REWS2
+
+    def needs_rews3(self):
+        """
+        Returns flag for requirering REWS3 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS3 is required
+
+        """
+        return self.WSCT == FV.REWS3 or self.WSP == FV.REWS3
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

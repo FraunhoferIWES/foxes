@@ -9,6 +9,56 @@ class NullType(TurbineType):
 
     """
 
+    def __init__(
+        self,
+        *args,
+        needs_rews2=False,
+        needs_rews3=False,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for TurbineType class
+        needs_rews2: bool
+            Flag for runs that require the REWS2 variable
+        needs_rews3: bool
+            Flag for runs that require the REWS3 variable
+        kwargs: dict, optional
+            Additional parameters for TurbineType class
+
+        """
+        super().__init__(*args, **kwargs)
+        self._rews2 = needs_rews2
+        self._rews3 = needs_rews3
+
+    def needs_rews2(self):
+        """
+        Returns flag for requirering REWS2 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS2 is required
+
+        """
+        return self._rews2
+
+    def needs_rews3(self):
+        """
+        Returns flag for requirering REWS3 variable
+
+        Returns
+        -------
+        flag: bool
+            True if REWS3 is required
+
+        """
+        return self._rews3
+
     def output_farm_vars(self, algo):
         """
         The variables which are being modified by the model.

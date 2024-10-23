@@ -27,23 +27,19 @@ class RotorModel(FarmDataModel):
 
     """
 
-    def __init__(self, calc_vars):
+    def __init__(self, calc_vars=None):
         """
         Constructor.
 
         Parameters
         ----------
-        calc_vars: list of str
+        calc_vars: list of str, optional
             The variables that are calculated by the model
             (Their ambients are added automatically)
 
         """
         super().__init__()
         self.calc_vars = calc_vars
-
-        self.RPOINTS = self.var("rpoints")
-        self.RWEIGHTS = self.var("rweights")
-        self.AMBRES = self.var("amb_res")
 
     def output_farm_vars(self, algo):
         """
@@ -60,12 +56,21 @@ class RotorModel(FarmDataModel):
             The output variable names
 
         """
-        return list(
-            set(
-                self.calc_vars
-                + [FV.var2amb[v] for v in self.calc_vars if v in FV.var2amb]
-            )
-        )
+        if self.calc_vars is None:
+            vrs = algo.states.output_point_vars(algo)
+            if FV.WS in vrs:
+                self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
+            else:
+                self.calc_vars = vrs
+
+            if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
+                self.calc_vars.append(FV.REWS2)
+            if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
+                self.calc_vars.append(FV.REWS3)
+
+            self.calc_vars = sorted(self.calc_vars)
+
+        return self.calc_vars
 
     @abstractmethod
     def n_rotor_points(self):
@@ -207,6 +212,10 @@ class RotorModel(FarmDataModel):
             variables after calculation
 
         """
+        for v in [FV.REWS2, FV.REWS3]:
+            if v in fdata and v not in self.calc_vars:
+                self.calc_vars.append(v)
+
         uvp = None
         uv = None
         if (
@@ -348,11 +357,11 @@ class RotorModel(FarmDataModel):
         """
 
         if rpoints is None:
-            rpoints = mdata.get(self.RPOINTS, self.get_rotor_points(algo, mdata, fdata))
+            rpoints = mdata.get(
+                FC.ROTOR_POINTS, self.get_rotor_points(algo, mdata, fdata)
+            )
         if store_rpoints:
-            mdata[self.RPOINTS] = rpoints
-            mdata.dims[self.RPOINTS] = (FC.STATE, FC.TURBINE, FC.TPOINT, FC.XYH)
-            self.data_to_store(self.RPOINTS, algo, mdata)
+            algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)
 
         if downwind_index is not None:
             rpoints = rpoints[:, downwind_index, None]
@@ -360,9 +369,7 @@ class RotorModel(FarmDataModel):
         if weights is None:
             weights = mdata.get(FC.TWEIGHTS, self.rotor_point_weights())
         if store_rweights:
-            mdata[self.RWEIGHTS] = weights
-            mdata.dims[self.RWEIGHTS] = (FC.TPOINT,)
-            self.data_to_store(self.RWEIGHTS, algo, mdata)
+            algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, weights, mdata=mdata)
 
         tdata = TData.from_tpoints(rpoints, weights)
         svars = algo.states.output_point_vars(algo)
@@ -377,8 +384,7 @@ class RotorModel(FarmDataModel):
         tdata.update(sres)
 
         if store_amb_res:
-            mdata[self.AMBRES] = sres.copy()
-            self.data_to_store(self.AMBRES, algo, mdata)
+            algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres.copy(), mdata=mdata)
 
         self.eval_rpoint_results(
             algo,

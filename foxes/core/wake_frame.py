@@ -6,7 +6,7 @@ from foxes.utils import all_subclasses
 import foxes.constants as FC
 import foxes.variables as FV
 
-from .data import MData, FData, TData
+from .data import TData
 from .model import Model
 
 
@@ -21,9 +21,27 @@ class WakeFrame(Model):
     They are also responsible for the calculation of
     the turbine evaluation order.
 
+    Attributes
+    ----------
+    max_length_km: float
+        The maximal wake length in km
+
     :group: core
 
     """
+
+    def __init__(self, max_length_km=3e4):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        max_length_km: float
+            The maximal wake length in km
+
+        """
+        super().__init__()
+        self.max_length_km = max_length_km
 
     @abstractmethod
     def calc_order(self, algo, mdata, fdata):
@@ -241,7 +259,7 @@ class WakeFrame(Model):
 
         # calc evaluation points:
         xmin = 0.0
-        xmax = np.nanmax(x)
+        xmax = min(np.nanmax(x), self.max_length_km * 1e3)
         n_steps = int((xmax - xmin) / dx)
         if xmin + n_steps * dx < xmax:
             n_steps += 1
@@ -262,7 +280,7 @@ class WakeFrame(Model):
         res = algo.states.calculate(algo, mdata, fdata, tdata)
         tdata.update(res)
         amb2var = algo.get_model("SetAmbPointResults")()
-        amb2var.initialize(algo, verbosity=0)
+        amb2var.initialize(algo, verbosity=0, force=True)
         res = amb2var.calculate(algo, mdata, fdata, tdata)
         tdata.update(res)
         del res, amb2var
@@ -277,7 +295,7 @@ class WakeFrame(Model):
         # calc wakes:
         if not ambient:
             wcalc = algo.get_model("PointWakesCalculation")(wake_models=wake_models)
-            wcalc.initialize(algo, verbosity=0)
+            wcalc.initialize(algo, verbosity=0, force=True)
             wsrc = downwind_index if self_wake else None
             res = wcalc.calculate(algo, mdata, fdata, tdata, downwind_index=wsrc)
             tdata.update(res)

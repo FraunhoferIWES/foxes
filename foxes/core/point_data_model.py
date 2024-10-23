@@ -27,6 +27,18 @@ class PointDataModel(DataCalcModel):
         """
         return []
 
+    def output_coords(self):
+        """
+        Gets the coordinates of all output arrays
+
+        Returns
+        -------
+        dims: tuple of str
+            The coordinates of all output arrays
+
+        """
+        return (FC.STATE, FC.TARGET, FC.TPOINT)
+
     def ensure_variables(self, algo, mdata, fdata, tdata):
         """
         Add variables to tdata, initialized with NaN
@@ -157,6 +169,9 @@ class PointDataModelList(PointDataModel):
         """
         super().__init__()
         self.models = models
+
+    def __repr__(self):
+        return f"{type(self).__name__}({[m.name for m in self.models]})"
 
     def append(self, model):
         """

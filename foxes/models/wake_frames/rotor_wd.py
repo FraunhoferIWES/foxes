@@ -20,7 +20,7 @@ class RotorWD(WakeFrame):
 
     """
 
-    def __init__(self, var_wd=FV.WD):
+    def __init__(self, var_wd=FV.WD, **kwargs):
         """
         Constructor.
 
@@ -28,9 +28,11 @@ class RotorWD(WakeFrame):
         ----------
         var_wd: str
             The wind direction variable
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.var_wd = var_wd
 
     def calc_order(self, algo, mdata, fdata):

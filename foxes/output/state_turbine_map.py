@@ -37,6 +37,7 @@ class StateTurbineMap(Output):
         title=None,
         ax=None,
         figsize=None,
+        rotate_xlabels=None,
         **kwargs,
     ):
         """
@@ -53,6 +54,8 @@ class StateTurbineMap(Output):
         figsize: tuple
             The figsize argument for plt.subplots()
             in case ax is not provided
+        rotate_xlabels: float, optional
+            Rotate the x-labels by this number of degrees
         kwargs: dict, optional
             Additional parameters for plt.pcolormesh()
 
@@ -73,29 +76,31 @@ class StateTurbineMap(Output):
         states = np.append(states, states[-1] + ds)
         turbines = np.arange(len(turbines) + 1)
 
-        y, x = np.meshgrid(states, turbines)
+        y, x = np.meshgrid(turbines, states)
         z = self.results[variable].to_numpy()
 
         prgs = {"shading": "flat"}
         prgs.update(kwargs)
 
-        c = ax.pcolormesh(x, y, z.T, **prgs)
+        c = ax.pcolormesh(x, y, z, **prgs)
 
-        ax.set_xticks(turbines[:-1] + 0.5)
-        ax.set_xticklabels(turbines[:-1])
-        yt = ax.get_yticks()
-        ytl = ax.get_yticklabels()
-        ax.set_yticks(yt[:-1] + 0.5 * (yt[-1] - yt[-2]), ytl[:-1])
+        ax.set_yticks(turbines[:-1] + 0.5)
+        ax.set_yticklabels(turbines[:-1])
+        xt = ax.get_xticks()
+        xtl = ax.get_xticklabels()
+        ax.set_xticks(
+            xt[:-1] + 0.5 * (xt[-1] - xt[-2]), xtl[:-1], rotation=rotate_xlabels
+        )
         if len(turbines) > 10:
-            xt = ax.get_xticks()
-            xtl = [None for t in xt]
-            xtl[::5] = ax.get_xticklabels()[::5]
-            ax.set_xticks(xt, xtl)
+            yt = ax.get_yticks()
+            ytl = [None for t in yt]
+            ytl[::5] = ax.get_yticklabels()[::5]
+            ax.set_yticks(yt, ytl)
         fig.colorbar(c, ax=ax)
 
         t = title if title is not None else variable
         ax.set_title(t)
-        ax.set_xlabel("Turbine index")
-        ax.set_ylabel("State")
+        ax.set_ylabel("Turbine index")
+        ax.set_xlabel("State")
 
         return ax

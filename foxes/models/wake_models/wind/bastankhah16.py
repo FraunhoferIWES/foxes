@@ -146,13 +146,13 @@ class Bastankhah2016Model(Model):
             The k parameter values, shape: (n_states, n_targets)
 
         """
-
         # store parameters:
         out = {self.PARS: self.pars}
         out[self.CHECK] = (
-            mdata[FC.STATE][0],
+            mdata.states_i0(counter=True),
+            mdata.n_states,
             downwind_index,
-            x.shape,
+            hash(x.tobytes()),
         )
 
         # get D:
@@ -180,7 +180,7 @@ class Bastankhah2016Model(Model):
         )
 
         # select targets:
-        st_sel = (x > 0) & (ct > 0.0)
+        st_sel = (x > 1e-8) & (ct > 1e-8)
         if np.any(st_sel):
             # get ws:
             ws = super().get_data(
@@ -329,7 +329,7 @@ class Bastankhah2016Model(Model):
 
         # update mdata:
         out[self.ST_SEL] = st_sel
-        mdata[self.MDATA_KEY] = out
+        mdata.add(self.MDATA_KEY, out, None)
 
     def has_data(self, mdata, downwind_index, x):
         """
@@ -352,9 +352,10 @@ class Bastankhah2016Model(Model):
 
         """
         check = (
-            mdata[FC.STATE][0],
+            mdata.states_i0(counter=True),
+            mdata.n_states,
             downwind_index,
-            x.shape,
+            hash(x.tobytes()),
         )
         return self.MDATA_KEY in mdata and mdata[self.MDATA_KEY][self.CHECK] == check
 

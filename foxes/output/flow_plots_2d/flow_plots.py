@@ -482,6 +482,7 @@ class FlowPlots2D(SliceData):
         ret_im=False,
         animated=False,
         rotor_color=None,
+        precalc=False,
         **kwargs,
     ):
         """
@@ -527,6 +528,11 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
+        precalc: bool or tuple
+            Flag for pre-calculation run, adding an additional
+            generator call before the actual plot generations,
+            yields data, states, gdata. The same tuple can be given
+            for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xy
 
@@ -546,15 +552,21 @@ class FlowPlots2D(SliceData):
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xy(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            data_format="numpy",
-            ret_states=True,
-            ret_grid=True,
-            **kwargs,
-        )
+        if isinstance(precalc, (tuple, list)):
+            data, states, gdata = precalc
+        else:
+            data, states, gdata = self.get_states_data_xy(
+                variables=variables,
+                vmin={var: vmin} if vmin is not None else {},
+                vmax={var: vmax} if vmax is not None else {},
+                data_format="numpy",
+                ret_states=True,
+                ret_grid=True,
+                **kwargs,
+            )
+            if precalc:
+                yield data, states, gdata
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -573,8 +585,12 @@ class FlowPlots2D(SliceData):
 
         # loop over states:
         for si, s in enumerate(states):
-            if animated and si > 0 and vmin is not None and vmax is not None:
+            if animated and si == 0:
+                vmin = vmin if vmin is not None else np.min(data[..., vi])
+                vmax = vmax if vmax is not None else np.max(data[..., vi])
+            elif animated and si > 0:
                 add_bar = False
+
             if not animated and title is None:
                 ttl = f"State {s}"
                 ttl += f", z =  {int(np.round(z_pos))} m"
@@ -652,6 +668,7 @@ class FlowPlots2D(SliceData):
         ret_im=False,
         animated=False,
         rotor_color=None,
+        precalc=False,
         **kwargs,
     ):
         """
@@ -699,6 +716,11 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
+        precalc: bool or tuple
+            Flag for pre-calculation run, adding an additional
+            generator call before the actual plot generations,
+            yields data, states, gdata. The same tuple can be given
+            for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_xz
 
@@ -718,16 +740,22 @@ class FlowPlots2D(SliceData):
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_xz(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            data_format="numpy",
-            ret_states=True,
-            ret_grid=True,
-            x_direction=x_direction,
-            **kwargs,
-        )
+        if isinstance(precalc, (tuple, list)):
+            data, states, gdata = precalc
+        else:
+            data, states, gdata = self.get_states_data_xz(
+                variables=variables,
+                vmin={var: vmin} if vmin is not None else {},
+                vmax={var: vmax} if vmax is not None else {},
+                data_format="numpy",
+                ret_states=True,
+                ret_grid=True,
+                x_direction=x_direction,
+                **kwargs,
+            )
+            if precalc:
+                yield data, states, gdata
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:
@@ -826,6 +854,7 @@ class FlowPlots2D(SliceData):
         ret_im=False,
         animated=False,
         rotor_color=None,
+        precalc=False,
         **kwargs,
     ):
         """
@@ -873,6 +902,11 @@ class FlowPlots2D(SliceData):
             Switch for usage for an animation
         rotor_color: str, optional
             Indicate the rotor orientation by a colored line
+        precalc: bool or tuple
+            Flag for pre-calculation run, adding an additional
+            generator call before the actual plot generations,
+            yields data, states, gdata. The same tuple can be given
+            for avoiding its calculation and picking up from there.
         kwargs: dict, optional
             Additional parameters for SliceData.get_states_data_yz
 
@@ -892,16 +926,22 @@ class FlowPlots2D(SliceData):
         wdi = variables.index(FV.WD)
         wsi = variables.index(FV.WS)
 
-        data, states, gdata = self.get_states_data_yz(
-            variables=variables,
-            vmin={var: vmin} if vmin is not None else {},
-            vmax={var: vmax} if vmax is not None else {},
-            data_format="numpy",
-            ret_states=True,
-            ret_grid=True,
-            x_direction=x_direction,
-            **kwargs,
-        )
+        if isinstance(precalc, (tuple, list)):
+            data, states, gdata = precalc
+        else:
+            data, states, gdata = self.get_states_data_yz(
+                variables=variables,
+                vmin={var: vmin} if vmin is not None else {},
+                vmax={var: vmax} if vmax is not None else {},
+                data_format="numpy",
+                ret_states=True,
+                ret_grid=True,
+                x_direction=x_direction,
+                **kwargs,
+            )
+            if precalc:
+                yield data, states, gdata
+
         x_pos, y_pos, z_pos, __ = gdata
 
         # define wind vector arrows:

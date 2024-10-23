@@ -5,7 +5,7 @@ from foxes.output import Output
 
 
 def _write_yaml(data, fpath):
-    """ Write the data to yaml """
+    """Write the data to yaml"""
     rmap = {
         "include": "!include",
     }
@@ -13,11 +13,12 @@ def _write_yaml(data, fpath):
         yaml.dump(data, file)
     with open(fpath, "r") as f:
         s = f.read()
-    with open(fpath, 'w') as f:
+    with open(fpath, "w") as f:
         for k1, k2 in rmap.items():
             s = s.replace(k1, k2)
         f.write(s)
-        
+
+
 class WindioRunner:
     """
     Runner for windio input
@@ -40,6 +41,10 @@ class WindioRunner:
         Name of the written input data file
     file_name_output_yaml: str
         Name of the written output data file
+    write_input_yaml: bool
+        Flag for writing file_name_input_yaml
+    write_output_yaml: bool
+        Flag for writing file_name_output_yaml
     verbosity: int
         The verbosity level, 0 = silent
 
@@ -48,15 +53,17 @@ class WindioRunner:
     """
 
     def __init__(
-        self, 
-        algo_dict, 
+        self,
+        algo_dict,
         output_dir=".",
-        output_dicts=[], 
-        wio_input_data=None, 
+        output_dicts=[],
+        wio_input_data=None,
         file_name_input_yaml="recorded_input.yaml",
         file_name_output_yaml="recorded_output.yaml",
+        write_input_yaml=False,
+        write_output_yaml=False,
         verbosity=1,
-        ):
+    ):
         """
         Conbstructor
 
@@ -74,6 +81,10 @@ class WindioRunner:
             Name of the written input data file
         file_name_output_yaml: str
             Name of the written output data file
+        write_input_yaml: bool
+            Flag for writing file_name_input_yaml
+        write_output_yaml: bool
+            Flag for writing file_name_output_yaml
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -84,15 +95,17 @@ class WindioRunner:
         self.wio_input_data = wio_input_data
         self.file_name_input_yaml = file_name_input_yaml
         self.file_name_output_yaml = file_name_output_yaml
+        self.write_input_yaml = write_input_yaml
+        self.write_output_yaml = write_output_yaml
         self.verbosity = verbosity
         self.farm_results = None
         self.output_results = None
 
         self.__initialized = False
-        
+
         self._output_yaml = {}
-        if wio_input_data is not None and len(wio_input_data):
-            fpath = output_dir/file_name_input_yaml
+        if self.write_input_yaml and len(wio_input_data):
+            fpath = output_dir / file_name_input_yaml
             self.print(f"Writing file", fpath)
             _write_yaml(wio_input_data, fpath)
             self._output_yaml["wind_energy_system"] = f"include {file_name_input_yaml}"
@@ -131,7 +144,7 @@ class WindioRunner:
             run_fname = odict.pop("run_func")
             run_args = odict.pop("run_args", ())
             run_kwargs = odict.pop("run_kwargs", {})
-                    
+
             _odict = odict.copy()
             if "output_yaml_update" in _odict:
                 self._output_yaml.update(_odict.pop("output_yaml_update"))
@@ -142,11 +155,12 @@ class WindioRunner:
             o = Output.new(**_odict)
             f = getattr(o, run_fname)
             self.output_results.append(f(*run_args, **run_kwargs))
-            
-        fpath = self.output_dir/self.file_name_output_yaml
-        self.print(f"Writing file", fpath)
-        _write_yaml(self._output_yaml, fpath)
-            
+
+        if self.write_output_yaml:
+            fpath = self.output_dir / self.file_name_output_yaml
+            self.print(f"Writing file", fpath)
+            _write_yaml(self._output_yaml, fpath)
+
     def run(self):
         """Runs all calculations"""
         self.run_farm_calc()

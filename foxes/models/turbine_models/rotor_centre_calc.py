@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes.core import TurbineModel, Data
+from foxes.core import TurbineModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -108,7 +108,7 @@ class RotorCentreCalc(TurbineModel):
 
         """
         # prepare target point data:
-        tdata = Data.from_points(
+        tdata = TData.from_points(
             fdata[FV.TXYH],
             data={
                 v: np.zeros_like(fdata[FV.X][:, :, None])
@@ -131,6 +131,7 @@ class RotorCentreCalc(TurbineModel):
         # extract results:
         out = {v: fdata[v] for v in self.calc_vars.keys()}
         for v in out.keys():
-            out[v][st_sel] = res[self.calc_vars[v]][st_sel]
+            w = self.calc_vars[v]
+            out[v][st_sel] = res[w][st_sel][..., 0]
 
         return out

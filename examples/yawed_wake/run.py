@@ -46,6 +46,24 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument("-e", "--engine", help="The engine", default="process")
+    parser.add_argument(
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
+    )
+    parser.add_argument(
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
+        default=None,
+        type=int,
+    )
+    parser.add_argument(
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=5000,
+        type=int,
+    )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
@@ -86,7 +104,10 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        chunks=None,
+        engine=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
     )
 
     # calculate farm results

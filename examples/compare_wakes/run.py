@@ -4,12 +4,9 @@ import matplotlib.pyplot as plt
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
-from foxes.utils.runners import DaskRunner
 
 
-def calc(runner, mbook, farm, states, wakes, points, args):
-    cks = None if args.nodask else {FC.STATE: args.chunksize}
+def calc(mbook, farm, states, wakes, points, args):
 
     algo = foxes.algorithms.Downwind(
         farm,
@@ -18,13 +15,12 @@ def calc(runner, mbook, farm, states, wakes, points, args):
         rotor_model=args.rotor,
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
-        chunks=cks,
         mbook=mbook,
         verbosity=0,
     )
 
-    farm_results = runner.run(algo.calc_farm)
-    point_results = runner.run(algo.calc_points, args=(farm_results, points[None, :]))
+    farm_results = algo.calc_farm()
+    point_results = algo.calc_points(farm_results, points[None, :])
 
     mbook.finalize(algo, verbosity=0)
 
@@ -103,26 +99,23 @@ if __name__ == "__main__":
         help="Plot the wind deficit instead of wind speed",
         action="store_true",
     )
+    parser.add_argument("-e", "--engine", help="The engine", default="ProcessEngine")
     parser.add_argument(
-        "-c", "--chunksize", help="The maximal chunk size", type=int, default=1000
+        "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
     parser.add_argument(
-        "-n",
-        "--n_workers",
-        help="The number of workers for distributed run",
-        type=int,
+        "-c",
+        "--chunksize_states",
+        help="The chunk size for states",
         default=None,
-    )
-    parser.add_argument(
-        "-tw",
-        "--threads_per_worker",
-        help="The number of threads per worker for distributed run",
         type=int,
-        default=None,
     )
     parser.add_argument(
-        "--nodask", help="Use numpy arrays instead of dask arrays", action="store_true"
+        "-C",
+        "--chunksize_points",
+        help="The chunk size for points",
+        default=None,
+        type=int,
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
@@ -175,18 +168,17 @@ if __name__ == "__main__":
 
     figsize = (ncols * args.figsize_scale, nrows * args.figsize_scale)
     fig, axs = plt.subplots(nrows, ncols, figsize=figsize, sharex=True, sharey=True)
-    with DaskRunner(
-        scheduler=args.scheduler,
-        n_workers=args.n_workers,
-        threads_per_worker=args.threads_per_worker,
-    ) as runner:
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
         for wake in args.wakes:
             wakes = [wake] + args.ewakes
             print("Calculating:", wakes)
 
-            results = calc(runner, mbook, farm, states, wakes, points, args).reshape(
-                nd, ny
-            )
+            results = calc(mbook, farm, states, wakes, points, args).reshape(nd, ny)
 
             for di, d in enumerate(args.dists_D):
                 if nrows == 1 or ncols == 1:
@@ -230,7 +222,7 @@ if __name__ == "__main__":
             wakes = [wake] + args.ewakes
             print("Calculating:", wakes)
 
-            results = calc(runner, mbook, farm, states, wakes, points, args)
+            results = calc(mbook, farm, states, wakes, points, args)
 
             if args.deficit:
                 dfz = (args.ws - results[0]) / args.ws
