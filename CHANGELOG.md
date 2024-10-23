@@ -629,3 +629,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes and `OnePointFlowTimeseries` inflow
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.0](https://github.com/FraunhoferIWES/foxes/commits/v1.0)
+
+## v1.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)
