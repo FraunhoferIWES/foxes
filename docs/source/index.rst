@@ -3,15 +3,22 @@
     :align: center
 
 .. versionchanged:: 1.0
-    User-selectable :ref:`Parallelization` by `Engines`, replacing `Runners`
+    User-selectable :ref:`Parallelization` via the new `Engines`, replacing `Runners`. 
+    The default is now based on `concurrent.futures <https://docs.python.org/3/library/concurrent.futures.html>`_ and comes with a speedup. 
+    Also `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ is now supported, for simplified
+    multi-node computations.
 
 .. versionadded:: 1.0
     New wake frame :ref:`DynamicWakes<Dynamic Wakes 1>`: Chunk-based vectorized dynamic
     wakes for any kind of inflow 
 
 .. versionadded:: 1.0
-    New ambient states :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
+    New inflow class :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
     Heterogeneous inflow fields extrapolated from data at a single point
+
+.. versionadded:: 1.0
+    New turbine type :ref:`FromLookupTable<foxes.models.turbine_types.FromLookupTable>`: 
+    Interpolates power and thrust coefficient from lookup table input data
 
 Welcome to FOXES
 ================
