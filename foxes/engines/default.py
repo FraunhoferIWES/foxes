@@ -12,7 +12,15 @@ class DefaultEngine(Engine):
 
     """
 
-    def run_calculation(self, algo, *args, point_data=None, **kwargs):
+    def run_calculation(
+        self,
+        algo,
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
+        **kwargs,
+    ):
         """
         Runs the model calculation
 
@@ -20,12 +28,15 @@ class DefaultEngine(Engine):
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
-        args: tuple, optional
-            Additional arguments for the calculation
+        model: foxes.core.DataCalcModel
+            The model that whose calculate function
+            should be run
+        model_data: xarray.Dataset, optional
+            The initial model data
+        farm_data: xarray.Dataset, optional
+            The initial farm data
         point_data: xarray.Dataset, optional
             The initial point data
-        kwargs: dict, optional
-            Additional arguments for the calculation
 
         Returns
         -------
@@ -33,17 +44,18 @@ class DefaultEngine(Engine):
             The model results
 
         """
-
         max_n = np.sqrt(self.n_procs) * (500 / algo.n_turbines) ** 1.5
 
         if (algo.n_states >= max_n) or (
-            point_data is not None and point_data.sizes[FC.TARGET] >= 10000
+            point_data is not None
+            and self.chunk_size_points is not None
+            and point_data.sizes[FC.TARGET] > self.chunk_size_points
         ):
             ename = "process"
         else:
             ename = "single"
 
-        self.print(f"{type(self).__name__}: Selecting engine '{ename}'")
+        self.print(f"{type(self).__name__}: Selecting engine '{ename}'", level=1)
 
         self.finalize()
 
@@ -54,7 +66,9 @@ class DefaultEngine(Engine):
             chunk_size_points=self.chunk_size_points,
             verbosity=self.verbosity,
         ) as e:
-            results = e.run_calculation(algo, *args, point_data=point_data, **kwargs)
+            results = e.run_calculation(
+                algo, model, model_data, farm_data, point_data=point_data, **kwargs
+            )
 
         self.initialize()
 

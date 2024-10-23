@@ -11,7 +11,7 @@
 
 .. versionadded:: 1.0
     New ambient states :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
-    Translate single-point inflow data into a heterogeneous flow field
+    Heterogeneous inflow fields extrapolated from data at a single point
 
 Welcome to FOXES
 ================
