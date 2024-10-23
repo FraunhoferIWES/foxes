@@ -1,7 +1,6 @@
 import numpy as np
 import xarray as xr
 from copy import deepcopy
-from os import cpu_count
 from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData

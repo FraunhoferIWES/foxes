@@ -12,7 +12,10 @@ if __name__ == "__main__":
         "-a", "--animation", help="Write flow animation file", action="store_true"
     )
     parser.add_argument(
-        "-A", "--ani_file", help="Path to the animation file to be written", default="ani.gif",
+        "-A",
+        "--ani_file",
+        help="Path to the animation file to be written",
+        default="ani.gif",
     )
     parser.add_argument(
         "-F",

@@ -599,7 +599,7 @@ If you are not running any optimizations, just don't do any of the above and enj
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v0.8.3](https://github.com/FraunhoferIWES/foxes/commits/v0.8.3)
 
-## v1
+## v1.0
 
 This major version introduces the concept of `Engines` which handle the chunking and parallelization of all *foxes* calculations. The default choice now prefers the [concurrent.futures](https://docs.python.org/3/library/concurrent.futures.html) package and provides a significant speedup compared to previous versions. See the documentation for more details and all engine choices. The `Engines` replace the `Runners` of previous versions.
 
@@ -627,4 +627,4 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Examples:
   - New example: `dyn_wakes`, similar to `timelines` but with dynamic wakes and `OnePointFlowTimeseries` inflow
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1](https://github.com/FraunhoferIWES/foxes/commits/v1)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.0](https://github.com/FraunhoferIWES/foxes/commits/v1.0)

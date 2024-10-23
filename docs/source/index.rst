@@ -2,6 +2,17 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.0
+    User-selectable :ref:`Parallelization` by `Engines`, replacing `Runners`
+
+.. versionadded:: 1.0
+    New wake frame :ref:`DynamicWakes<Dynamic Wakes 1>`: Chunk-based vectorized dynamic
+    wakes for any kind of inflow 
+
+.. versionadded:: 1.0
+    New ambient states :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
+    Translate single-point inflow data into a heterogeneous flow field
+
 Welcome to FOXES
 ================
 
