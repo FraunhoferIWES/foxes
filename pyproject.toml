@@ -9,7 +9,6 @@ name = "foxes"
 version = "1.0"
 authors = [
   {name = "Jonas Schulte"},
-  {name = "Lukas Vollmer"},
 ]
 maintainers = [
   {name = "Jonas Schulte"}
@@ -66,6 +65,13 @@ eng = [
     "dask-jobqueue",
     "setuptools",
     "mpi4py",
+]
+eng0 = [
+    "multiprocess",
+    "dask",
+    "distributed",
+    "dask-jobqueue",
+    "setuptools",
 ]
 test = [
     "flake8", 
