@@ -610,6 +610,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine `XArrayEngine` (short `xarray`): Runs parallelization via [xarray.apply_ufunc](https://docs.xarray.dev/en/stable/generated/xarray.apply_ufunc.html)
   - New engine `DaskEngine` (short `dask`): Submits chunk calculation functions to `dask`
   - New engine `LocalClusterEngine` (short `local_cluster`): Creates a virtual cluster on the local machine
+  - New engine `MPIEngine` (short `mpi`): Parallel computation via `mpi4py`, also multi-node
   - New engine `SlurmClusterEngine` (short `slurm_cluster`): Submits jobs to a SLURM system
   - New engine `NumpyEngine` (short `numpy`): Runs a loop over chunks
   - New engine `SingleChunkEngine` (short `single`): Runs single-chunk calculations
