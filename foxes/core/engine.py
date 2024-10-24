@@ -1,6 +1,6 @@
+import os
 import numpy as np
 from abc import ABC, abstractmethod
-from os import cpu_count
 from tqdm import tqdm
 from xarray import Dataset
 
@@ -58,7 +58,10 @@ class Engine(ABC):
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
-        self.n_procs = n_procs if n_procs is not None else max(cpu_count() - 1, 1)
+        try:
+            self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
+        except AttributeError:
+            self.n_procs = os.cpu_count() - 1
         self.verbosity = verbosity
         self.__initialized = False
         self.__entered = False
