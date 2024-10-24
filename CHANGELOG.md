@@ -632,5 +632,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.1
 
+- Python versions:
+  - Adding support for Python3.13
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)

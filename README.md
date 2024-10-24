@@ -62,6 +62,7 @@ The supported Python versions are:
 - `Python 3.10`
 - `Python 3.11`
 - `Python 3.12`
+- `Python 3.13`
 
 ## Installation
 
