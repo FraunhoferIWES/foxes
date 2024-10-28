@@ -143,6 +143,9 @@ def read_wind_resource_field(
         "lapse_rate",
         "capping_inversion_thickness",
         "capping_inversion_strength",
+        "tau_x",
+        "tau_y",
+        "fc",
     ]:
         if verbosity > 2:
             print(f"        Ignoring variable '{name}'")

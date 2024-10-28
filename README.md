@@ -31,8 +31,8 @@ Anaconda reference: [https://anaconda.org/conda-forge/foxes](https://anaconda.or
 
 ## Citation
 
-Please cite the JOSS paper `"FOXES: Farm Optimization and eXtended yield
-Evaluation Software"` 
+Please cite the JOSS paper [FOXES: Farm Optimization and eXtended yield
+Evaluation Software](https://doi.org/10.21105/joss.05464). 
 
  [![DOI](https://joss.theoj.org/papers/10.21105/joss.05464/status.svg)](https://doi.org/10.21105/joss.05464)
 
