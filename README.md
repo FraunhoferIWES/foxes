@@ -14,6 +14,7 @@ The software `foxes` is a modular wind farm simulation and wake modelling toolbo
 The fast performance of `foxes` is owed to vectorization and parallelization,
 and it is intended to be used for large wind farms and large timeseries inflow data.
 The parallelization on local or remote clusters is supported, based on 
+[mpi4py](https://mpi4py.readthedocs.io/en/stable/) or
 [dask.distributed](https://distributed.dask.org/en/stable/).
 The wind farm
 optimization capabilities invoke the [iwopy](https://github.com/FraunhoferIWES/iwopy) package which
@@ -31,8 +32,8 @@ Anaconda reference: [https://anaconda.org/conda-forge/foxes](https://anaconda.or
 
 ## Citation
 
-Please cite the JOSS paper [FOXES: Farm Optimization and eXtended yield
-Evaluation Software](https://doi.org/10.21105/joss.05464). 
+Please cite the JOSS paper `"FOXES: Farm Optimization and eXtended yield
+Evaluation Software"` 
 
  [![DOI](https://joss.theoj.org/papers/10.21105/joss.05464/status.svg)](https://doi.org/10.21105/joss.05464)
 
@@ -62,7 +63,6 @@ The supported Python versions are:
 - `Python 3.10`
 - `Python 3.11`
 - `Python 3.12`
-- `Python 3.13`
 
 ## Installation
 

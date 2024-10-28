@@ -36,6 +36,7 @@ by Fraunhofer IWES. It has many applications, for example
 The fast performance of *foxes* is owed to vectorization and parallelization,
 and it is intended to be used for large wind farms and large timeseries inflow data.
 The parallelization on local or remote clusters is supported, based on 
+`mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ or
 `dask.distributed <https://distributed.dask.org/en/stable/>`_.
 The wind farm
 optimization capabilities invoke the `iwopy <https://github.com/FraunhoferIWES/iwopy>`_
