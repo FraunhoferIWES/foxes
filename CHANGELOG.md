@@ -634,5 +634,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Python versions:
   - Adding support for Python3.13
+- Engines:
+  - Default number of processes is now os.cpu_count(), or os.process_cpu_count() for python3.13
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)
