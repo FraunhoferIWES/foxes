@@ -126,7 +126,7 @@ def _read_flow_field(wio_outs, odir, out_dicts, verbosity):
             )
 
 
-def read_outputs(wio_outs, algo_dict, verbosity):
+def read_outputs(wio_outs, algo_dict, output_dir=None, verbosity=1):
     """
     Reads the windio outputs
 
@@ -136,6 +136,8 @@ def read_outputs(wio_outs, algo_dict, verbosity):
         The windio output data
     algo_dict: dict
         The algorithm dictionary
+    output_dir: pathlib.Path, optional
+        Path to the output folder
     verbosity: int
         The verbosity level, 0=silent
 
@@ -150,7 +152,7 @@ def read_outputs(wio_outs, algo_dict, verbosity):
 
     """
     out_dicts = []
-    odir = Path(wio_outs.pop("output_folder", "results"))
+    odir = Path(output_dir) if output_dir is not None else Path(wio_outs.pop("output_folder", "results"))
     odir.mkdir(exist_ok=True, parents=True)
     if verbosity > 2:
         print("  Reading outputs")

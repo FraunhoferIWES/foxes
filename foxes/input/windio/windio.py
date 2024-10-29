@@ -95,6 +95,7 @@ def read_windio(
     windio_yaml,
     verbosity=1,
     algo_pars=None,
+    output_dir=None,
     **runner_pars,
 ):
     """
@@ -111,6 +112,8 @@ def read_windio(
         The verbosity level, 0 = silent
     algo_pars: dict, optional
         Additional algorithm parameters
+    output_dir: str, optional
+        Path to the output folder
     runner_pars: dict, optional
         Additional parameters for the WindioRunner
 
@@ -155,7 +158,8 @@ def read_windio(
     out_dicts, odir = read_attributes(
         wio,
         algo_dict,
-        verbosity,
+        output_dir=output_dir,
+        verbosity=verbosity,
     )
 
     if verbosity > 1:

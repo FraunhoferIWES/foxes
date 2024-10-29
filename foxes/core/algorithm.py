@@ -179,7 +179,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"Algorithm '{self.name}': Cannot initialize while running"
             )
-        super().initialize(self, self.verbosity)
+        super().initialize(self, self.verbosity-1)
 
     def store_model_data(self, model, idata, force=False):
         """
@@ -894,7 +894,7 @@ class Algorithm(Model):
         """
         if self.running:
             raise ValueError(f"Algorithm '{self.name}': Cannot finalize while running")
-        super().finalize(self, self.verbosity)
+        super().finalize(self, self.verbosity-1)
         if clear_mem:
             self.__idata_mem = Dict()
             # self.reset_chunk_store()

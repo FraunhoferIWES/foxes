@@ -311,7 +311,7 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
         print("deflection_model not found, using default settings")
 
 
-def read_attributes(wio, algo_dict, verbosity):
+def read_attributes(wio, algo_dict, verbosity=1, **output_pars):
     """
     Reads the attributes part of windio
 
@@ -323,6 +323,8 @@ def read_attributes(wio, algo_dict, verbosity):
         The algorithm dictionary
     verbosity: int
         The verbosity level, 0=silent
+    **output_pars: dict, optional
+        Additional parameters for output reading
 
     Returns
     -------
@@ -358,6 +360,6 @@ def read_attributes(wio, algo_dict, verbosity):
     out_dicts = []
     if "outputs" in wio_attrs:
         outputs = Dict(wio_attrs["outputs"], name="outputs")
-        out_dicts, odir = read_outputs(outputs, algo_dict, verbosity)
+        out_dicts, odir = read_outputs(outputs, algo_dict, verbosity=verbosity, **output_pars)
 
     return out_dicts, odir

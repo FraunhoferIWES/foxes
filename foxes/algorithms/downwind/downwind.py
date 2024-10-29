@@ -678,6 +678,7 @@ class Downwind(Algorithm):
         farm_results,
         points,
         point_models=None,
+        outputs=None,
         calc_parameters={},
         persist_mdata=True,
         persist_pdata=False,
@@ -698,6 +699,8 @@ class Downwind(Algorithm):
             dimensions (state, turbine)
         points: numpy.ndarray
             The points of interest, shape: (n_states, n_points, 3)
+        outputs: list of str, optional
+            The output variables, or None for defaults
         point_models: str or foxes.core.PointDataModel
             Additional point models to be executed
         calc_parameters: dict
@@ -780,7 +783,7 @@ class Downwind(Algorithm):
         self.print("\nInput point data:\n\n", point_data, "\n")
 
         # check vars:
-        ovars = mlist.output_point_vars(self)
+        ovars = mlist.output_point_vars(self) if outputs is None else outputs
         self.print(f"\nOutput point variables:", ", ".join(ovars))
 
         # calculate:

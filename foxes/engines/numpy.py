@@ -1,5 +1,6 @@
 from tqdm import tqdm
 from xarray import Dataset
+from tqdm import tqdm
 
 from foxes.core import Engine
 import foxes.constants as FC
@@ -14,28 +15,6 @@ class NumpyEngine(Engine):
     :group: engines
 
     """
-
-    def __init__(self, *args, **kwargs):
-        """
-        Constructor.
-
-        Parameters
-        ----------
-        args: tuple, optional
-            Additional parameters for the base class
-        kwargs: dict, optional
-            Additional parameters for the base class
-
-        """
-        ignr = ["n_procs"]
-        for k in ignr:
-            if kwargs.pop(k, None) is not None:
-                print(f"{type(self).__name__}: Ignoring {k}")
-        super().__init__(
-            *args,
-            n_procs=1,
-            **kwargs,
-        )
 
     def run_calculation(
         self,
@@ -124,7 +103,7 @@ class NumpyEngine(Engine):
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(f"Looping over {n_chunks_all} chunks")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 and n_chunks_all > 1 else None
         results = {}
         i0_states = 0
         for chunki_states in range(n_chunks_states):
@@ -134,7 +113,6 @@ class NumpyEngine(Engine):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
                 i = chunki_states * n_chunks_targets + chunki_points
-                self.print(f"Computing chunk {i}/{n_chunks_all}")
 
                 # get this chunk's data:
                 data = self.get_chunk_input_data(

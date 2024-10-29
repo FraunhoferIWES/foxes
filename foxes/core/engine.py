@@ -260,14 +260,18 @@ class Engine(ABC):
         chunk_sizes_targets = [n_targets]
         if n_targets > 1:
             if self.chunk_size_points is None:
-                chunk_size_targets = n_targets
-                n_chunks_targets = 1
+                if n_chunks_states == 1:
+                    n_chunks_targets = min(self.n_procs, n_targets)
+                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
+                else:
+                    chunk_size_targets = n_targets
+                    n_chunks_targets = 1
             else:
                 chunk_size_targets = min(n_targets, self.chunk_size_points)
                 n_chunks_targets = max(int(n_targets / chunk_size_targets), 1)
-                if int(n_targets / n_chunks_targets) > chunk_size_targets:
-                    n_chunks_targets += 1
-                    chunk_size_targets = int(n_targets / n_chunks_targets)
+            if int(n_targets / n_chunks_targets) > chunk_size_targets:
+                n_chunks_targets += 1
+                chunk_size_targets = int(n_targets / n_chunks_targets)
             chunk_sizes_targets = np.full(n_chunks_targets, chunk_size_targets)
             extra = n_targets - n_chunks_targets * chunk_size_targets
             if extra > 0:
@@ -422,7 +426,7 @@ class Engine(ABC):
             The final results dataset
 
         """
-        self.print("Combining results", level=2)
+        self.print(f"{type(self).__name__}: Combining results", level=2)
         pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
         data_vars = {}
         for v in out_vars:
@@ -505,10 +509,10 @@ class Engine(ABC):
         """
         n_states = model_data.sizes[FC.STATE]
         if point_data is None:
-            self.print(f"Calculating {n_states} states for {algo.n_turbines} turbines")
+            self.print(f"{type(self).__name__}: Calculating {n_states} states for {algo.n_turbines} turbines")
         else:
             self.print(
-                f"Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
+                f"{type(self).__name__}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
             )
         if not self.initialized:
             raise ValueError(f"Engine '{type(self).__name__}' not initialized")

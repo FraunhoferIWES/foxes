@@ -161,14 +161,14 @@ class PoolEngine(Engine):
         n_chunks_states = len(chunk_sizes_states)
         n_chunks_targets = len(chunk_sizes_targets)
         self.print(
-            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
+            f"{type(self).__name__}: Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
             level=2,
         )
 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
-            f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
+            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
         )
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         jobs = {}
