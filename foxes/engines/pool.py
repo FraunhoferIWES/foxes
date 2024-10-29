@@ -217,7 +217,7 @@ class PoolEngine(Engine):
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(
-                f"Computing {n_chunks_all} chunks using {self.n_procs} processes"
+                f"{type(self).__name__}: Computing {n_chunks_all} chunks using {self.n_procs} processes"
             )
         pbar = (
             tqdm(total=n_chunks_all)

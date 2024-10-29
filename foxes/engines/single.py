@@ -111,7 +111,7 @@ class SingleChunkEngine(Engine):
         # calculate:
 
         if n_states > 1:
-            self.print(f"Running single chunk calculation for {n_states} states")
+            self.print(f"{type(self).__name__}: Running single chunk calculation for {n_states} states")
 
         data = self.get_chunk_input_data(
             algo=algo,

@@ -96,13 +96,13 @@ class NumpyEngine(Engine):
         n_chunks_states = len(chunk_sizes_states)
         n_chunks_targets = len(chunk_sizes_targets)
         self.print(
-            f"Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
+            f"{type(self).__name__}: Selecting n_chunks_states = {n_chunks_states}, n_chunks_targets = {n_chunks_targets}",
             level=2,
         )
 
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
-        self.print(f"Looping over {n_chunks_all} chunks")
+        self.print(f"{type(self).__name__}: Looping over {n_chunks_all} chunks")
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 and n_chunks_all > 1 else None
         results = {}
         i0_states = 0

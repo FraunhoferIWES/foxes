@@ -343,7 +343,7 @@ class XArrayEngine(DaskBaseEngine):
         self.chunk_size_states = np.min(chunk_sizes_states)
         self.chunk_size_points = np.min(chunk_sizes_targets)
         self.print(
-            f"Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}"
+            f"{type(self).__name__}: Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}"
         )  # , level=2)
 
         # prepare:

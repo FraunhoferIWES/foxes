@@ -331,7 +331,7 @@ class Iterative(Downwind):
             self.finalize()
             for m in self._mlist0.models:
                 if m not in self.sub_models():
-                    m.finalize(self, self.verbosity)
+                    m.finalize(self, self.verbosity-1)
             del self._mlist0, self._calc_pars0
 
         if ret_dwnd_order:
