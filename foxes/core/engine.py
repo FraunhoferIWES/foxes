@@ -61,7 +61,7 @@ class Engine(ABC):
         try:
             self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
         except AttributeError:
-            self.n_procs = os.cpu_count() - 1
+            self.n_procs = os.cpu_count()
         self.verbosity = verbosity
         self.__initialized = False
         self.__entered = False
