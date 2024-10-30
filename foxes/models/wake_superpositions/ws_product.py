@@ -119,10 +119,10 @@ class WSProduct(WakeSuperposition):
                 f"Superposition '{self.name}': Expecting wind speed variable, got {variable}"
             )
 
+        if np.max(np.abs(wake_delta)) < 1e-14:
+            wake_delta[:] = 1
+                
         if np.any(st_sel):
-            if np.max(np.abs(wake_delta)) < 1e-14:
-                wake_delta[:] = 1
-
             wake_delta[st_sel] *= 1 + wake_model_result
 
         return wake_delta
