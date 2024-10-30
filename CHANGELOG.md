@@ -636,5 +636,6 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Adding support for Python3.13
 - Engines:
   - Default number of processes is now os.cpu_count(), or os.process_cpu_count() for python3.13
+  - New engine: `RayEngine` (short name `ray`), runs parallel computations based on  the[Ray package](https://docs.ray.io/en/latest/)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)

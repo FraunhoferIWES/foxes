@@ -548,6 +548,7 @@ class Engine(ABC):
                 local_cluster="LocalClusterEngine",
                 slurm_cluster="SlurmClusterEngine",
                 mpi="MPIEngine",
+                ray="RayEngine",
                 numpy="NumpyEngine",
                 single="SingleChunkEngine",
             ).get(engine_type, engine_type)

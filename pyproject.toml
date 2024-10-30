@@ -66,6 +66,7 @@ eng = [
     "dask-jobqueue",
     "setuptools",
     "mpi4py",
+    "ray",
 ]
 eng0 = [
     "multiprocess",
@@ -73,6 +74,7 @@ eng0 = [
     "distributed",
     "dask-jobqueue",
     "setuptools",
+    "ray",
 ]
 test = [
     "flake8", 
