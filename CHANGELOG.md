@@ -637,5 +637,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Engines:
   - Default number of processes is now os.cpu_count(), or os.process_cpu_count() for python3.13
   - New engine: `RayEngine` (short name `ray`), runs parallel computations based on  the[Ray package](https://docs.ray.io/en/latest/)
+- Bug fixes:
+  - Bug fixed in `WSProduct`, causing zero wind speed at regions not touched by wakes
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)
