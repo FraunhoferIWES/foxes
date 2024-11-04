@@ -325,7 +325,7 @@ class FarmLayoutOutput(Output):
         fname = file_path if file_path is not None else self.farm.name + ".xyh"
         np.savetxt(fname, data, header="x y h")
 
-    def write_csv(self, file_path=None):
+    def write_csv(self, file_path=None, type_col=None, algo=None):
         """
         Writes csv layout file.
 
@@ -334,6 +334,10 @@ class FarmLayoutOutput(Output):
         file_path: str
             The file into which to plot, or None
             for default
+        type_col: str, optional
+            Name of the turbine type column
+        algo: foxes.core.Algorithm, optional
+            The algorithm, needed for turbine types
 
         """
 
@@ -342,15 +346,17 @@ class FarmLayoutOutput(Output):
         fname = file_path if file_path is not None else self.farm.name + ".csv"
 
         lyt = pd.DataFrame(
-            index=range(len(data)), columns=["id", "name", "x", "y", "h", "D"]
+            index=range(len(data)), columns=["name", "x", "y", "h", "D"]
         )
         lyt.index.name = "index"
-        lyt["id"] = [t.info["id"] for t in self.farm.turbines]
-        lyt["name"] = [t.info["name"] for t in self.farm.turbines]
-        lyt["x"] = data[:, 0]
-        lyt["y"] = data[:, 1]
-        lyt["h"] = data[:, 2]
+        lyt["name"] = [t.name for t in self.farm.turbines]
+        lyt["x"] = np.round(data[:, 0], 4)
+        lyt["y"] = np.round(data[:, 1], 4)
+        lyt["h"] = np.round(data[:, 2], 4)
         lyt["D"] = [t.D for t in self.farm.turbines]
+
+        if type_col is not None:
+            lyt[type_col] = [m.name for m in algo.farm_controller.turbine_types]
 
         lyt.to_csv(fname)
 
