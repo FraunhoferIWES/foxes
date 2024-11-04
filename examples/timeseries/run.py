@@ -98,6 +98,15 @@ if __name__ == "__main__":
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
+        
+    engine = foxes.Engine.new(
+        args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+        verbosity=1,
+    )
+    engine.initialize()
 
     Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
     algo = Algo(
@@ -108,10 +117,6 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
@@ -176,6 +181,8 @@ if __name__ == "__main__":
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
+    
+    engine.finalize()
 
     if not args.nofig:
         o = foxes.output.StateTurbineMap(farm_results)

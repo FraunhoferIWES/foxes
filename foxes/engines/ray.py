@@ -9,9 +9,10 @@ ray = None
 def load_ray():
     """On-demand loading of the ray package"""
     global ray
-    ray = import_module(
-        "ray", hint="pip install ray"
-    )
+    if ray is None:
+        ray = import_module(
+            "ray", hint="pip install ray"
+        )
 
 
 class RayEngine(PoolEngine):
@@ -21,16 +22,11 @@ class RayEngine(PoolEngine):
     :group: engines
 
     """
-
-    def initialize(self):
-        """
-        Initializes the engine.
-        """
-        load_ray()
-        super().initialize()
         
     def _create_pool(self):
         """Creates the pool"""
+        self.print(f"Initializing pool of {self.n_procs} ray workers")
+        load_ray()
         ray.init(num_cpus=self.n_procs)
 
     def _submit(self, f, *args, **kwargs):
@@ -78,5 +74,6 @@ class RayEngine(PoolEngine):
     
     def _shutdown_pool(self):
         """Shuts down the pool"""
+        self.print(f"Shutting down pool of {self.n_procs} ray workers")
         ray.shutdown()
         

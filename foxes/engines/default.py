@@ -66,6 +66,7 @@ class DefaultEngine(Engine):
             chunk_size_points=self.chunk_size_points,
             verbosity=self.verbosity,
         ) as e:
+            print("HERE DEFAULT", ename, e)
             results = e.run_calculation(
                 algo, model, model_data, farm_data, point_data=point_data, **kwargs
             )

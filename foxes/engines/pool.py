@@ -74,12 +74,13 @@ class PoolEngine(Engine):
         """Shuts down the pool"""
         pass
 
-    def initialize(self):
-        """
-        Initializes the engine.
-        """
-        super().initialize()
+    def __enter__(self):
         self._create_pool()
+        return super().__enter__()
+        
+    def __exit__(self, *exit_args):
+        self._shutdown_pool()
+        super().__exit__(*exit_args)
 
     def run_calculation(
         self,
@@ -245,19 +246,3 @@ class PoolEngine(Engine):
             goal_data=goal_data,
             iterative=iterative,
         )
-
-    def finalize(self, *exit_args, **exit_kwargs):
-        """
-        Finalizes the engine.
-
-        Parameters
-        ----------
-        exit_args: tuple, optional
-            Arguments from the exit function
-        exit_kwargs: dict, optional
-            Arguments from the exit function
-
-        """
-        if self.initialized:
-            self._shutdown_pool()
-        super().finalize(*exit_args, **exit_kwargs)
