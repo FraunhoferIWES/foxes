@@ -6,13 +6,13 @@ from .pool import PoolEngine
 
 
 ray = None
+
+
 def load_ray():
     """On-demand loading of the ray package"""
     global ray
     if ray is None:
-        ray = import_module(
-            "ray", hint="pip install ray"
-        )
+        ray = import_module("ray", hint="pip install ray")
 
 
 class RayEngine(PoolEngine):
@@ -22,7 +22,7 @@ class RayEngine(PoolEngine):
     :group: engines
 
     """
-        
+
     def _create_pool(self):
         """Creates the pool"""
         self.print(f"Initializing pool of {self.n_procs} ray workers")
@@ -49,12 +49,13 @@ class RayEngine(PoolEngine):
             The future object
 
         """
+
         @ray.remote
         def f_ray(*args, **kwargs):
             return f(*deepcopy(args), **deepcopy(kwargs))
-        
+
         return f_ray.remote(*args, **kwargs)
-    
+
     def _result(self, future):
         """
         Waits for result from a future
@@ -71,9 +72,8 @@ class RayEngine(PoolEngine):
 
         """
         return ray.get(future)
-    
+
     def _shutdown_pool(self):
         """Shuts down the pool"""
         self.print(f"Shutting down pool of {self.n_procs} ray workers")
         ray.shutdown()
-        

@@ -541,7 +541,7 @@ class Downwind(Algorithm):
 
         # initialize models:
         if not mlist.initialized:
-            mlist.initialize(self, self.verbosity-1)
+            mlist.initialize(self, self.verbosity - 1)
             self._calc_farm_vars(mlist)
         self._print_model_oder(mlist, calc_pars)
 
@@ -574,7 +574,7 @@ class Downwind(Algorithm):
         # finalize models:
         if finalize:
             self.print("\n")
-            mlist.finalize(self, self.verbosity-1)
+            mlist.finalize(self, self.verbosity - 1)
             self.finalize()
         else:
             self.del_model_data(mlist)
@@ -749,7 +749,7 @@ class Downwind(Algorithm):
 
         # initialize models:
         if not mlist.initialized:
-            mlist.initialize(self, self.verbosity-1)
+            mlist.initialize(self, self.verbosity - 1)
 
         # subset selections:
         sel = {} if states_sel is None else {FC.STATE: states_sel}
@@ -803,7 +803,7 @@ class Downwind(Algorithm):
         # finalize models:
         if finalize:
             self.print("\n")
-            mlist.finalize(self, self.verbosity-1)
+            mlist.finalize(self, self.verbosity - 1)
             self.finalize()
 
         if ambient:

@@ -98,7 +98,7 @@ if __name__ == "__main__":
         ax = foxes.output.FarmLayoutOutput(farm).get_figure()
         plt.show()
         plt.close(ax.get_figure())
-        
+
     engine = foxes.Engine.new(
         args.engine,
         n_procs=args.n_cpus,
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     print(f"Farm ambient power: {P0/1000:.1f} MW")
     print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
-    
+
     engine.finalize()
 
     if not args.nofig:

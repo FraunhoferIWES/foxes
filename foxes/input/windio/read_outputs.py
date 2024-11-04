@@ -152,7 +152,11 @@ def read_outputs(wio_outs, algo_dict, output_dir=None, verbosity=1):
 
     """
     out_dicts = []
-    odir = Path(output_dir) if output_dir is not None else Path(wio_outs.pop("output_folder", "results"))
+    odir = (
+        Path(output_dir)
+        if output_dir is not None
+        else Path(wio_outs.pop("output_folder", "results"))
+    )
     odir.mkdir(exist_ok=True, parents=True)
     if verbosity > 2:
         print("  Reading outputs")

@@ -121,7 +121,7 @@ class WSProduct(WakeSuperposition):
 
         if np.max(np.abs(wake_delta)) < 1e-14:
             wake_delta[:] = 1
-                
+
         if np.any(st_sel):
             wake_delta[st_sel] *= 1 + wake_model_result
 

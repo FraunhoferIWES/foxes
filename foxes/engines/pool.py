@@ -77,7 +77,7 @@ class PoolEngine(Engine):
     def __enter__(self):
         self._create_pool()
         return super().__enter__()
-        
+
     def __exit__(self, *exit_args):
         self._shutdown_pool()
         super().__exit__(*exit_args)
@@ -169,7 +169,8 @@ class PoolEngine(Engine):
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
-            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
+            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_procs} processes",
+            level=2,
         )
         pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
         jobs = {}

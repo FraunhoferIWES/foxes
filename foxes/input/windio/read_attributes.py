@@ -360,6 +360,8 @@ def read_attributes(wio, algo_dict, verbosity=1, **output_pars):
     out_dicts = []
     if "outputs" in wio_attrs:
         outputs = Dict(wio_attrs["outputs"], name="outputs")
-        out_dicts, odir = read_outputs(outputs, algo_dict, verbosity=verbosity, **output_pars)
+        out_dicts, odir = read_outputs(
+            outputs, algo_dict, verbosity=verbosity, **output_pars
+        )
 
     return out_dicts, odir

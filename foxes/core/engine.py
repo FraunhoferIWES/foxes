@@ -509,7 +509,9 @@ class Engine(ABC):
         """
         n_states = model_data.sizes[FC.STATE]
         if point_data is None:
-            self.print(f"{type(self).__name__}: Calculating {n_states} states for {algo.n_turbines} turbines")
+            self.print(
+                f"{type(self).__name__}: Calculating {n_states} states for {algo.n_turbines} turbines"
+            )
         else:
             self.print(
                 f"{type(self).__name__}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
