@@ -230,7 +230,6 @@ class SeqDynamicWakes(FarmOrder):
         tdata,
         target,
         states0=None,
-        upcast=False,
     ):
         """
         Return data that is required for computing the
@@ -253,17 +252,12 @@ class SeqDynamicWakes(FarmOrder):
             FC.STATE_TARGET, FC.STATE_TARGET_TPOINT
         states0: numpy.ndarray, optional
             The states of wake creation
-        upcast: bool
-            Flag for ensuring targets dimension,
-            otherwise dimension 1 is entered
 
         Returns
         -------
         data: numpy.ndarray
             Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
-        dims: tuple
-            The data dimensions
 
         """
         if states0 is None and FC.STATE_SOURCE_ORDERI in tdata:
@@ -288,9 +282,9 @@ class SeqDynamicWakes(FarmOrder):
                     data = data[:, :, 0]
                 else:
                     data = np.einsum("stp,p->st", data, tdata[FC.TWEIGHTS])
-                return data, (FC.STATE, FC.TARGET)
+                return data
             elif target == FC.STATE_TARGET_TPOINT:
-                return data, (FC.STATE, FC.TARGET, FC.TPOINT)
+                return data
             else:
                 raise ValueError(
                     f"Cannot handle target '{target}', choices are {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
@@ -298,7 +292,7 @@ class SeqDynamicWakes(FarmOrder):
 
         else:
             return super().get_wake_modelling_data(
-                algo, variable, downwind_index, fdata, tdata, target, states0, upcast
+                algo, variable, downwind_index, fdata, tdata, target, states0
             )
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):

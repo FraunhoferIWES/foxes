@@ -175,8 +175,9 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # get TI:
             ati = self.get_data(
@@ -187,7 +188,8 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
+                upcast=False,
+                selection=st_sel,
             )
 
             # get k:
@@ -197,11 +199,10 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
                 amb_ti=ati,
-            )[st_sel]
-
-            ati = ati[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
@@ -458,8 +459,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # get k:
             k = self.wake_k(
@@ -468,8 +470,9 @@ class TurbOParkWakeIX(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))

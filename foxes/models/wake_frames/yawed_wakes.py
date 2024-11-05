@@ -177,7 +177,7 @@ class YawedWakes(WakeFrame):
             downwind_index=downwind_index,
             accept_nan=False,
         )
-        gamma *= np.pi / 180
+        gamma = gamma * np.pi / 180
 
         # get k:
         k = self.wake_k(

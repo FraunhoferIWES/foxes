@@ -278,8 +278,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
-        )[st_sel]
+            upcast=False,
+            selection=st_sel,
+        )
 
         # get TI:
         ti = self.get_data(
@@ -290,8 +291,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
-        )[st_sel]
+            upcast=False,
+            selection=st_sel,
+        )
 
         # calculate induction factor:
         twoa = 2 * self.induction.ct2a(ct)

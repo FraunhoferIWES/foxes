@@ -461,11 +461,20 @@ class ModelBook:
 
         self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
         self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
-        self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models[f"SelfSimilar2020"] = (
-            fm.wake_models.induction.SelfSimilar2020()
-        )
         self.wake_models[f"VortexSheet"] = fm.wake_models.induction.VortexSheet()
+
+        self.wake_models.add_factory(
+            fm.wake_models.induction.SelfSimilar,
+            "SelfSimilar_<superposition>",
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+        )
+        self.wake_models.add_factory(
+            fm.wake_models.induction.SelfSimilar2020,
+            "SelfSimilar2020_<superposition>",
+            superposition=lambda s: f"ws_{s}",
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+        )
 
         self.ground_models = FDict(name="ground_models")
         self.ground_models["no_ground"] = fm.ground_models.NoGround()

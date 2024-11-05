@@ -296,6 +296,7 @@ class Model(ABC):
         accept_nan=True,
         algo=None,
         upcast=False,
+        selection=None,
     ):
         """
         Getter for a data entry in the model object
@@ -335,6 +336,9 @@ class Model(ABC):
         upcast: bool
             Flag for ensuring targets dimension,
             otherwise dimension 1 is entered
+        selection: numpy.ndarray, optional
+            Apply this selection to the result,
+            state-turbine, state-target, or state-target-tpoint
 
         """
 
@@ -358,6 +362,8 @@ class Model(ABC):
 
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
+            if downwind_index is not None:
+                raise ValueError(f"Target '{target}' is incompatible with downwind_index (here {downwind_index})")
             n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
             shp = (n_states, n_turbines)
@@ -374,43 +380,50 @@ class Model(ABC):
             raise KeyError(
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
-
+        
+        def _match_shape(a):
+            out = np.asarray(a)
+            if len(out.shape) < len(shp):
+                for i, s in enumerate(shp):
+                    if i >= len(out.shape):
+                        out = out[..., None]
+                    elif a.shape[i] not in (1, s):
+                        raise ValueError(f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}")
+            elif len(out.shape) > len(shp):
+                raise ValueError(f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}")
+            return out
+        
+        def _filter_dims(source):
+            a = source[variable]
+            a_dims = tuple(source.dims[variable])
+            if downwind_index is None or FC.TURBINE not in a_dims:
+                d = a_dims
+            else:
+                slc = tuple([
+                    downwind_index if dd==FC.TURBINE else np.s_[:] 
+                    for dd in a_dims])
+                a = a[slc]
+                d = tuple([dd for dd in a_dims if dd != FC.TURBINE])
+            return a, d
+                    
         out = None
-        out_dims = None
         for s in lookup:
             # lookup self:
             if s == "s" and hasattr(self, variable):
                 a = getattr(self, variable)
                 if a is not None:
-                    if not upcast:
-                        out = a
-                        out_dims = None
-                    elif target == FC.STATE_TURBINE:
-                        out = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
-                        out[:] = a
-                        out_dims = (FC.STATE, FC.TURBINE)
-                    elif target == FC.STATE_TARGET:
-                        out = np.full((n_states, n_targets), np.nan, dtype=FC.DTYPE)
-                        out[:] = a
-                        out_dims = (FC.STATE, FC.TARGET)
-                    elif target == FC.STATE_TARGET_TPOINT:
-                        out = np.full(
-                            (n_states, n_targets, n_tpoints), np.nan, dtype=FC.DTYPE
-                        )
-                        out[:] = a
-                        out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
-                    else:
-                        raise NotImplementedError
+                    out = _match_shape(a)
 
             # lookup mdata:
             elif (
                 s == "m"
                 and mdata is not None
                 and variable in mdata
-                and tuple(mdata.dims[variable]) == dims
             ):
-                out = mdata[variable]
-                out_dims = dims
+                a, d = _filter_dims(mdata)
+                l = len(d)
+                if l <= len(dims) and d == dims[:l]:
+                    out = _match_shape(mdata[variable])
 
             # lookup fdata:
             elif (
@@ -419,18 +432,22 @@ class Model(ABC):
                 and variable in fdata
                 and tuple(fdata.dims[variable]) == (FC.STATE, FC.TURBINE)
             ):
-                out = fdata[variable]
-                out_dims = (FC.STATE, FC.TURBINE)
+                if target == FC.STATE_TURBINE:
+                    out = fdata[variable]
+                elif downwind_index is not None:
+                    out = _match_shape(fdata[variable][:, downwind_index])
 
             # lookup pdata:
             elif (
                 s == "t"
+                and target != FC.STATE_TURBINE
                 and tdata is not None
                 and variable in tdata
-                and tuple(tdata.dims[variable]) == (FC.STATE, FC.TARGET, FC.TPOINT)
             ):
-                out = tdata[variable]
-                out_dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+                a, d = _filter_dims(tdata)
+                l = len(d)
+                if l <= len(dims) and d == dims[:l]:
+                    out = _match_shape(tdata[variable])
 
             # lookup wake modelling data:
             elif (
@@ -442,85 +459,23 @@ class Model(ABC):
                 and downwind_index is not None
                 and algo is not None
             ):
-                out, out_dims = algo.wake_frame.get_wake_modelling_data(
-                    algo,
-                    variable,
-                    downwind_index,
-                    fdata,
-                    tdata=tdata,
-                    target=target,
-                    upcast=upcast,
+                out = _match_shape(
+                    algo.wake_frame.get_wake_modelling_data(
+                        algo, variable, downwind_index, fdata, tdata=tdata, target=target
+                    )
                 )
 
             if out is not None:
                 break
 
         # check for None:
-        if not accept_none and out is None:
-            raise ValueError(
-                f"Model '{self.name}': Variable '{variable}' is requested but not found."
-            )
-
-        # cast dimensions:
-        if out_dims != dims:
-            if out_dims is None:
-                if upcast:
-                    out0 = out
-                    out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0
-                    out_dims = dims
-                    del out0
-                else:
-                    out_dims = tuple([1 for _ in dims])
-
-            elif out_dims == (FC.STATE, FC.TURBINE):
-                if downwind_index is None:
-                    raise KeyError(
-                        f"Require downwind_index for target {target} and out dims {out_dims}"
-                    )
-                out0 = out[:, downwind_index, None]
-                if len(dims) == 3:
-                    out0 = out0[:, :, None]
-                if upcast:
-                    out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0
-                    out_dims = dims
-                else:
-                    out = out0
-                    out_dims = (FC.STATE, 1) if len(dims) == 2 else (FC.STATE, 1, 1)
-                del out0
-
-            elif out_dims == (FC.STATE, 1):
-                out0 = out
-                if len(dims) == 3:
-                    out0 = out0[:, :, None]
-                    out_dims = (FC.STATE, 1, 1)
-                if upcast:
-                    out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0
-                    out_dims = dims
-                else:
-                    out = out0
-                del out0
-
-            elif out_dims == (FC.STATE, 1, 1):
-                out0 = out
-                if len(dims) == 2:
-                    out0 = out0[:, :, 0]
-                    out_dims = (FC.STATE, 1)
-                if upcast:
-                    out = np.zeros(shp, dtype=FC.DTYPE)
-                    out[:] = out0
-                    out_dims = dims
-                else:
-                    out = out0
-                del out0
-
-            else:
-                raise NotImplementedError(
-                    f"No casting implemented for target {target} and out dims {out_dims} fo upcast {upcast}"
+        if out is None:
+            if not accept_none:
+                raise ValueError(
+                    f"Model '{self.name}': Variable '{variable}' is requested but not found."
                 )
-
+            return out
+        
         # data from other chunks, only with iterations:
         if (
             target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
@@ -529,10 +484,14 @@ class Model(ABC):
             and tdata is not None
             and FC.STATES_SEL in tdata
         ):
-            if out_dims != dims:
-                raise ValueError(
-                    f"Model '{self.name}': Iteration data found for variable '{variable}', but missing upcast: out_dims = {out_dims}, expecting {dims}"
-                )
+            if out.shape != shp:
+                # upcast to dims:
+                tmp = np.zeros(shp, dtype=out.dtype)
+                tmp[:] = out
+                out = tmp
+                del tmp
+            else:
+                out = out.copy()
             if downwind_index is None:
                 raise KeyError(
                     f"Model '{self.name}': Require downwind_index for obtaining results from previous iteration"
@@ -591,5 +550,35 @@ class Model(ABC):
                     )
             except TypeError:
                 pass
+
+        # apply selection:
+        if selection is not None:
+            if not isinstance(selection, np.ndarray) or selection.dtype != bool:
+                raise TypeError(f"Expecting boolean array as selection")
+            elif len(selection.shape) > len(out.shape):
+                raise ValueError(f"Expecting selection of shape {out.shape}, got {selection.shape}")
+            chp = []
+            for i, s in enumerate(out.shape):
+                if i < len(selection.shape) and selection.shape[i] > 1:
+                    if selection.shape[i] != shp[i]:
+                        raise ValueError(f"Incompatible selection shape {selection.shape} for output shape {shp[i]}")
+                    chp.append(shp[i])
+                else:
+                    chp.append(out.shape[i])
+            chp = tuple(chp)
+            if chp != out.shape:
+                tmp = np.zeros(chp, dtype=out.dtype)
+                tmp[:] = out
+                out = tmp
+                del tmp
+            out = out[selection]
+            shp = tuple([len(out)] + list(shp[len(selection.shape):]))
+        
+        # apply upcast:
+        if upcast and out.shape != shp:
+            tmp = np.zeros(shp, dtype=out.dtype)
+            tmp[:] = out
+            out = tmp
+            del tmp  
 
         return out

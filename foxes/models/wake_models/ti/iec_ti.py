@@ -169,7 +169,7 @@ class IECTIWake(TopHatWakeModel):
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
-                upcast=True,
+                upcast=False,
                 downwind_index=downwind_index,
             )
             return D / 2 + k * x
@@ -228,8 +228,9 @@ class IECTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
-        )[st_sel]
+            upcast=False,
+            selection=st_sel,
+        )
 
         # get ws:
         ws = self.get_data(
@@ -240,8 +241,9 @@ class IECTIWake(TopHatWakeModel):
             fdata=fdata,
             tdata=tdata,
             downwind_index=downwind_index,
-            upcast=True,
-        )[st_sel]
+            upcast=False,
+            selection=st_sel,
+        )
 
         # calculate wind deficit:
         if self.iec_type == "2005":

@@ -156,9 +156,9 @@ class JensenWake(TopHatWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
-            / 2
+                upcast=False,
+                selection=st_sel,
+            ) / 2
         )
 
         twoa = 2 * self.induction.ct2a(ct)

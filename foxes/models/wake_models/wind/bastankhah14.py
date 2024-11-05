@@ -157,8 +157,9 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # get k:
             k = self.wake_k(
@@ -167,8 +168,9 @@ class Bastankhah2014(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
 
             # calculate sigma:
             # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)

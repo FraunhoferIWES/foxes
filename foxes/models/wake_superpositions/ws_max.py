@@ -121,14 +121,15 @@ class WSMax(WakeSuperposition):
         if np.any(st_sel):
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
-                FC.STATE_TARGET,
+                FC.STATE_TARGET_TPOINT,
                 lookup="w",
                 algo=algo,
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
-            )[st_sel, None]
+                upcast=False,
+                selection=st_sel,
+            )
 
             wake_model_result = np.abs(scale * wake_model_result)
             odelta = wake_delta[st_sel]

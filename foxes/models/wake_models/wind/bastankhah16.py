@@ -191,7 +191,8 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
+                upcast=False,
+                selection=st_sel,
             )
 
             # get TI:
@@ -203,7 +204,8 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
+                upcast=False,
+                selection=st_sel,
             )
 
             # get alpha:
@@ -215,7 +217,8 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
+                upcast=False,
+                selection=st_sel,
             )
 
             # get beta:
@@ -227,19 +230,16 @@ class Bastankhah2016Model(Model):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=True,
+                upcast=False,
+                selection=st_sel,
             )
 
             # apply filter:
             x = x[st_sel]
             D = D[st_sel]
             ct = ct[st_sel]
-            ws = ws[st_sel]
-            ti = ti[st_sel]
             k = k[st_sel]
             gamma = gamma[st_sel]
-            alpha = alpha[st_sel]
-            beta = beta[st_sel]
 
             # calc theta_c0, Eq. (6.12):
             cosg = np.cos(gamma)
@@ -552,7 +552,7 @@ class Bastankhah2016(DistSlicedWakeModel):
                 upcast=True,
                 downwind_index=downwind_index,
             )
-            gamma *= np.pi / 180
+            gamma = gamma * np.pi / 180
 
             # get k:
             k = self.wake_k(

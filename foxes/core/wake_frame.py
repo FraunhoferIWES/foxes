@@ -112,7 +112,6 @@ class WakeFrame(Model):
         tdata,
         target,
         states0=None,
-        upcast=False,
     ):
         """
         Return data that is required for computing the
@@ -136,47 +135,26 @@ class WakeFrame(Model):
             FC.STATE_TARGET_TPOINT
         states0: numpy.ndarray, optional
             The states of wake creation
-        upcast: bool
-            Flag for ensuring targets dimension,
-            otherwise dimension 1 is entered
 
         Returns
         -------
         data: numpy.ndarray
             Data for wake modelling, shape:
             (n_states, n_turbines) or (n_states, n_target)
-        dims: tuple
-            The data dimensions
 
         """
-        n_states = fdata.n_states
         s = np.s_[:] if states0 is None else states0
 
-        if not upcast:
-            if target == FC.STATE_TARGET_TPOINT:
-                out = fdata[variable][s, downwind_index, None, None]
-                dims = (FC.STATE, 1, 1)
-            else:
-                out = fdata[variable][s, downwind_index, None]
-                dims = (FC.STATE, 1)
-        elif target == FC.STATE_TURBINE:
-            out = np.zeros((n_states, fdata.n_turbines), dtype=FC.DTYPE)
-            out[:] = fdata[variable][s, downwind_index, None]
-            dims = (FC.STATE, FC.TURBINE)
-        elif target == FC.STATE_TARGET:
-            out = np.zeros((n_states, tdata.n_targets), dtype=FC.DTYPE)
-            out[:] = fdata[variable][s, downwind_index, None]
-            dims = (FC.STATE, FC.TARGET)
-        elif target == FC.STATE_TARGET_TPOINT:
-            out = np.zeros((n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE)
-            out[:] = fdata[variable][s, downwind_index, None, None]
-            dims = (FC.STATE, FC.TARGET, FC.TPOINT)
+        if target == FC.STATE_TARGET_TPOINT:
+            out = fdata[variable][s, downwind_index, None, None]
+        elif target in [FC.STATE_TURBINE, FC.STATE_TARGET]:
+            out = fdata[variable][s, downwind_index, None]
         else:
             raise ValueError(
-                f"Unsupported target '{target}', expcting '{FC.STATE_TURBINE}', '{FC.STATE_TARGET}', {FC.STATE_TARGET_TPOINT}"
+                f"Unkown target '{target}', choices are {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
 
-        return out, dims
+        return out
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
