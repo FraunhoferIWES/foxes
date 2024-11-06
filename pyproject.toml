@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foxes"
-version = "1.1"
+version = "1.1.0.1"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -48,7 +48,7 @@ dependencies = [
 
 [project.optional-dependencies]
 io = [
-    "windIO @ git+ssh://git@github.com/kilojoules/windIO#egg=windIO"
+    "windIO @ git+ssh://git@github.com/kilojoules/windIO"
 ]
 opt = [
     "foxes-opt"
