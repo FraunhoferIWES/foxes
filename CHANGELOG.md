@@ -647,3 +647,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bugs fixes in `FarmLayoutOutput`, concerning the writing of the layout csv file
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1)
+
+## v1.2
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
