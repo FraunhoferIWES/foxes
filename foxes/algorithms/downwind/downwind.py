@@ -115,15 +115,15 @@ class Downwind(Algorithm):
         self.__states = states
         self.n_states = None
 
-        self.__rotor_model = self.mbook.rotor_models[rotor_model]
+        self.__rotor_model = self.mbook.rotor_models.get_item(rotor_model)
         self.rotor_model.name = rotor_model
 
-        self.__wake_frame = self.mbook.wake_frames[wake_frame]
+        self.__wake_frame = self.mbook.wake_frames.get_item(wake_frame)
         self.wake_frame.name = wake_frame
 
         self.__wake_models = {}
         for w in wake_models:
-            m = self.mbook.wake_models[w]
+            m = self.mbook.wake_models.get_item(w)
             m.name = w
             self.wake_models[w] = m
 
@@ -137,10 +137,10 @@ class Downwind(Algorithm):
                     try:
                         pw = values
                         if checkw:
-                            mbooks[pw].check_wmodel(self.wake_models[w], error=True)
+                            mbooks.get_item(pw).check_wmodel(self.wake_models[w], error=True)
                     except TypeError:
                         pw = deffunc(self.wake_models[w])
-                    target[w] = mbooks[pw]
+                    target[w] = mbooks.get_item(pw)
                     target[w].name = pw
             elif isinstance(values, list):
                 for i, w in enumerate(wake_models):
@@ -149,7 +149,7 @@ class Downwind(Algorithm):
                             f"Not enough {descr} in list {values}, expecting {len(wake_models)}"
                         )
                     pw = values[i]
-                    target[w] = mbooks[pw]
+                    target[w] = mbooks.get_item(pw)
                     target[w].name = pw
             else:
                 for w in wake_models:
@@ -157,7 +157,7 @@ class Downwind(Algorithm):
                         pw = values[w]
                     else:
                         pw = deffunc(self.wake_models[w])
-                    target[w] = mbooks[pw]
+                    target[w] = mbooks.get_item(pw)
                     target[w].name = pw
 
         self.__partial_wakes = {}
@@ -180,7 +180,7 @@ class Downwind(Algorithm):
             checkw=False,
         )
 
-        self.__farm_controller = self.mbook.farm_controllers[farm_controller]
+        self.__farm_controller = self.mbook.farm_controllers.get_item(farm_controller)
         self.farm_controller.name = farm_controller
 
     @property

@@ -115,13 +115,13 @@ As an example, the optional dependencies `eng0` are installed by
 pip install foxes[eng0]
 ```
 
-or, for development mode, from the `foxes` root directory, by
+or, for development mode, from the `foxes` root directory by
 
 ```console
 pip install -e .[eng0]
 ```
 
-Not that options can also be combined, e.g.
+Note that options can also be combined, e.g.
 
 ```console
 pip install foxes[test,dev,eng0]

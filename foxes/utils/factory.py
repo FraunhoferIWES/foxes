@@ -618,9 +618,36 @@ class FDict(Dict):
                     return True
         return found
 
-    def __getitem__(self, key, prnt=True):
+    def get_item(self, key, prnt=True):
+        """
+        Gets an item, prints readable error if not found
+
+        Parameters
+        ----------
+        key: immutable object
+            The key
+        prnt: bool
+            Flag for message printing
+
+        """
         try:
-            return super().__getitem__(key, prnt=False)
+            return self[key]
+        except KeyError as e:
+            if prnt:
+                print(f"\n{self.name}: Cannot find key '{key}', also no factory matches.\n")
+                print("Known keys:")
+                for k in self.keys():
+                    print("   ", k)
+                if len(self.factories):
+                    print("\nKnown factories:")
+                    for f in self.factories:
+                        print("   ", f.name_template)
+                print()
+            raise e
+        
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
         except KeyError:
             for f in self.factories:
                 try:
@@ -630,18 +657,6 @@ class FDict(Dict):
                     return obj
                 except ValueError:
                     pass
-
-        if prnt:
-            print(f"\n{self.name}: Cannot find key '{key}', also no factory matches.\n")
-            print("Known keys:")
-            for k in self.keys():
-                print("   ", k)
-            if len(self.factories):
-                print("\nKnown factories:")
-                for f in self.factories:
-                    print("   ", f.name_template)
-            print()
-
         k = ", ".join(sorted(list(self.keys())))
         e = f"{self.name}: Cannot find key '{key}', also no factory matches. Known keys: {k}. Known factories: {[f.name_template for f in self.factories]}"
         raise KeyError(e)

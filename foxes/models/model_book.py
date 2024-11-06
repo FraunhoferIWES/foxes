@@ -542,7 +542,7 @@ class ModelBook:
                 m.name = k
 
     def __getitem__(self, key):
-        return self.sources.__getitem__(key)
+        return self.sources.get_item(key)
 
     def print_toc(self, subset=None, search=None):
         """
