@@ -24,29 +24,35 @@ class VortexSheet(TurbineInductionModel):
 
     """
 
-    def __init__(self, pre_rotor_only=False, induction="Madsen"):
+    def __init__(
+        self,
+        superposition="ws_linear",
+        induction="Madsen",
+        pre_rotor_only=False,
+    ):
         """
         Constructor.
 
         Parameters
         ----------
-        pre_rotor_only: bool
-            Calculate only the pre-rotor region
+        superposition: str
+            The wind speed superposition
         induction: foxes.core.AxialInductionModel or str
             The induction model
-
-        :group: models.wake_models.induction
+        pre_rotor_only: bool
+            Calculate only the pre-rotor region
 
         """
         super().__init__()
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
+        self._superp_name = superposition
 
     def __repr__(self):
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
-        return f"{type(self).__name__}, induction={iname})"
+        return f"{type(self).__name__}({self._superp_name}, induction={iname})"
 
     def sub_models(self):
         """
@@ -58,7 +64,7 @@ class VortexSheet(TurbineInductionModel):
             All sub models
 
         """
-        return [self.induction]
+        return [self._superp, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -74,6 +80,7 @@ class VortexSheet(TurbineInductionModel):
             Overwrite existing data
 
         """
+        self._superp = algo.mbook.wake_superpositions[self._superp_name]
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
@@ -159,18 +166,6 @@ class VortexSheet(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        # get ws
-        ws = self.get_data(
-            FV.REWS,
-            FC.STATE_TARGET_TPOINT,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            upcast=True,
-            downwind_index=downwind_index,
-        )
-
         # get D
         D = self.get_data(
             FV.D,
@@ -184,44 +179,84 @@ class VortexSheet(TurbineInductionModel):
         )
 
         sp_sel = (ct > 1e-8) & (x <= 0)
-        ws_sel = ws[sp_sel]
         ct_sel = ct[sp_sel]
         r_sph_sel = r_sph[sp_sel]
         D_sel = D[sp_sel]
 
         if np.any(sp_sel):
-            blockage = (
-                ws_sel
-                * (
-                    1
-                    - self.induction.ct2a(ct_sel)
-                    * ((1 + 2 * r_sph_sel / D_sel) * (1 + (2 * r_sph_sel / D_sel) ** 2))
-                    ** (-0.5)
-                )
-            ) - ws_sel
-            wake_deltas[FV.WS][sp_sel] += blockage
+            blockage = self.induction.ct2a(ct_sel) * (
+                (1 + 2 * r_sph_sel / D_sel) * (1 + (2 * r_sph_sel / D_sel) ** 2)
+            ) ** (-0.5)
+
+            self._superp.add_wake(
+                algo,
+                mdata,
+                fdata,
+                tdata,
+                downwind_index,
+                sp_sel,
+                FV.WS,
+                wake_deltas[FV.WS],
+                -blockage,
+            )
 
         if not self.pre_rotor_only:
             sp_sel = (
                 (ct > 1e-8) & (x > 0) & (r > D / 2)
             )  # mirror in rotor plane and inverse blockage, but not directly behind rotor
-            ws_sel = ws[sp_sel]
             ct_sel = ct[sp_sel]
             r_sph_sel = r_sph[sp_sel]
             D_sel = D[sp_sel]
             if np.any(sp_sel):
-                blockage = (
-                    ws_sel
-                    * (
-                        1
-                        - self.induction.ct2a(ct_sel)
-                        * (
-                            (1 + 2 * r_sph_sel / D_sel)
-                            * (1 + (2 * r_sph_sel / D_sel) ** 2)
-                        )
-                        ** (-0.5)
-                    )
-                ) - ws_sel
-                wake_deltas[FV.WS][sp_sel] += -blockage
+                blockage = self.induction.ct2a(ct_sel) * (
+                    (1 + 2 * r_sph_sel / D_sel) * (1 + (2 * r_sph_sel / D_sel) ** 2)
+                ) ** (-0.5)
+
+                self._superp.add_wake(
+                    algo,
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
+                    sp_sel,
+                    FV.WS,
+                    wake_deltas[FV.WS],
+                    blockage,
+                )
 
         return wake_deltas
+
+    def finalize_wake_deltas(
+        self,
+        algo,
+        mdata,
+        fdata,
+        amb_results,
+        wake_deltas,
+    ):
+        """
+        Finalize the wake calculation.
+
+        Modifies wake_deltas on the fly.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        amb_results: dict
+            The ambient results, key: variable name str,
+            values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
+        wake_deltas: dict
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
+
+        """
+        wake_deltas[FV.WS] = self._superp.calc_final_wake_delta(
+            algo, mdata, fdata, FV.WS, amb_results[FV.WS], wake_deltas[FV.WS]
+        )

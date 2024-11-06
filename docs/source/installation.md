@@ -95,7 +95,7 @@ If you are planning to run wind farm optimizations, please also install the
 
 ### Optional dependencies
 
-These are the included optional dependencies, to be installed for example as `pip install foxes[eng0]` or `pip install -e .[eng0]`, or similar:
+The following optional dependencies are available:
 
 
 | Option | Usage                              |
@@ -109,7 +109,23 @@ These are the included optional dependencies, to be installed for example as `pi
 | doc    | Dependencies for creating the docs |
 | dev    | Usefull tools for code development |
 
-Not that those options can also be combined, e.g. `pip install -e .[test,dev,eng0]`.
+As an example, the optional dependencies `eng0` are installed by
+
+```console
+pip install foxes[eng0]
+```
+
+or, for development mode, from the `foxes` root directory, by
+
+```console
+pip install -e .[eng0]
+```
+
+Not that options can also be combined, e.g.
+
+```console
+pip install foxes[test,dev,eng0]
+```
 
 ## Installation via conda
 

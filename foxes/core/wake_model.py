@@ -304,6 +304,7 @@ class WakeK(Model):
             The k array as returned by get_data
 
         """
+        sel = kwargs.pop("selection", None)
         setattr(self, self.k_var, self._k)
         if self._ka is not None or self._kb is not None:
             if self.ti_var == FV.TI and ti is not None:
@@ -315,6 +316,6 @@ class WakeK(Model):
             kb = 0 if self._kb is None else self._kb
             setattr(self, self.k_var, self._ka * ti + kb)
 
-        k = self.get_data(self.k_var, *args, lookup=lookup_k, **kwargs)
+        k = self.get_data(self.k_var, *args, lookup=lookup_k, selection=sel, **kwargs)
         setattr(self, self.k_var, None)
         return k

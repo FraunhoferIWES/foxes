@@ -195,18 +195,6 @@ class SelfSimilar(TurbineInductionModel):
             downwind_index=downwind_index,
         )
 
-        # get ws
-        ws = self.get_data(
-            FV.REWS,
-            FC.STATE_TARGET_TPOINT,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            upcast=True,
-            downwind_index=downwind_index,
-        )
-
         # get R
         R = 0.5 * self.get_data(
             FV.D,
@@ -228,10 +216,8 @@ class SelfSimilar(TurbineInductionModel):
         if np.any(sp_sel):
             # velocity eqn 10 from [1]
             xr = x_R[sp_sel]
-            blockage = (
-                ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
-            )
-            # wdelta[sp_sel] -= blockage
+            blockage = self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
+
             self._superp.add_wake(
                 algo,
                 mdata,
@@ -250,11 +236,8 @@ class SelfSimilar(TurbineInductionModel):
             if np.any(sp_sel):
                 # velocity eqn 10 from [1]
                 xr = x_R[sp_sel]
-                blockage = (
-                    ws[sp_sel]
-                    * self._a(ct[sp_sel], -xr)
-                    * self._rad_fn(-xr, r_R[sp_sel])
-                )
+                blockage = self._a(ct[sp_sel], -xr) * self._rad_fn(-xr, r_R[sp_sel])
+
                 # wdelta[sp_sel] += blockage
                 self._superp.add_wake(
                     algo,

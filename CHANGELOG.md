@@ -639,7 +639,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New engine: `RayEngine` (short name `ray`), runs parallel computations based on  the [Ray package](https://docs.ray.io/en/latest/)
 - Models:
   - New turbine type `TBLFile`: Reads power, ct, D, H, P_rated from a *.tbl file
-  - Turbine induction models `SelfSimilar` and `SelfSimilar2020` now take accept any wind speed superposition model, no longer hard coded linear superposition
+  - Turbine induction models `SelfSimilar`, `SelfSimilar2020`, `Rathmann`, `VortexSheet` now optionally accept any wind speed superposition model, i.e., they are no longer based on hard-coded linear superposition
 - Bug fixes:
   - Bug fixed in `WSProduct`, causing zero wind speed at regions not touched by wakes
   - Bugs fixes in `FarmLayoutOutput`, concerning the writing of the layout csv file
