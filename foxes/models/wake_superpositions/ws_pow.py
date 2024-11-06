@@ -133,7 +133,7 @@ class WSPow(WakeSuperposition):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=False,
-                selection=st_sel
+                selection=st_sel,
             )
 
             wake_delta[st_sel] += np.abs(scale * wake_model_result) ** self.pow

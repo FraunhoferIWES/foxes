@@ -345,9 +345,7 @@ class FarmLayoutOutput(Output):
 
         fname = file_path if file_path is not None else self.farm.name + ".csv"
 
-        lyt = pd.DataFrame(
-            index=range(len(data)), columns=["name", "x", "y", "h", "D"]
-        )
+        lyt = pd.DataFrame(index=range(len(data)), columns=["name", "x", "y", "h", "D"])
         lyt.index.name = "index"
         lyt["name"] = [t.name for t in self.farm.turbines]
         lyt["x"] = np.round(data[:, 0], 4)

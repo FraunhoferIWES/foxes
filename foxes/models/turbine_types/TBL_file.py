@@ -13,9 +13,9 @@ class TBLFile(PCtFile):
 
     Examples
     --------
-    A TBL file is a csv file with space as separator 
+    A TBL file is a csv file with space as separator
     and two header lines. The followind lines denote
-    wind speed, ct, P. 
+    wind speed, ct, P.
 
     - first row will be ignored
     - second row: H D ct-stand-still rated-power-in-MW
@@ -59,20 +59,22 @@ class TBLFile(PCtFile):
 
         """
         fpath = Path(tbl_file)
-        assert fpath.suffix==".tbl", f"Expecting *.tbl file, got '{tbl_file}'"
+        assert fpath.suffix == ".tbl", f"Expecting *.tbl file, got '{tbl_file}'"
 
         meta = np.genfromtxt(fpath, skip_header=1, max_rows=1)
-        sdata = pd.read_csv(fpath, sep=" ", skiprows=2, header=None, names=["ws","ct","P"])
+        sdata = pd.read_csv(
+            fpath, sep=" ", skiprows=2, header=None, names=["ws", "ct", "P"]
+        )
 
         super().__init__(
-            sdata, 
-            col_ws="ws", 
-            col_P="P", 
-            col_ct="ct", 
-            H=meta[0], 
+            sdata,
+            col_ws="ws",
+            col_P="P",
+            col_ct="ct",
+            H=meta[0],
             D=meta[1],
-            P_nominal=meta[3]*1e3, 
+            P_nominal=meta[3] * 1e3,
             P_unit="kW",
-            rho=rho, 
+            rho=rho,
             **parameters,
         )

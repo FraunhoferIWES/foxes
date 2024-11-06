@@ -39,12 +39,12 @@ class SelfSimilar(TurbineInductionModel):
     """
 
     def __init__(
-            self, 
-            superposition="ws_linear", 
-            induction="Madsen", 
-            gamma=1.1, 
-            pre_rotor_only=False,
-        ):
+        self,
+        superposition="ws_linear",
+        induction="Madsen",
+        gamma=1.1,
+        pre_rotor_only=False,
+    ):
         """
         Constructor.
 
@@ -98,7 +98,7 @@ class SelfSimilar(TurbineInductionModel):
             Overwrite existing data
 
         """
-        self._superp = algo.mbook.wake_superpositions[self._superp_name] 
+        self._superp = algo.mbook.wake_superpositions[self._superp_name]
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
@@ -231,10 +231,18 @@ class SelfSimilar(TurbineInductionModel):
             blockage = (
                 ws[sp_sel] * self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
             )
-            #wdelta[sp_sel] -= blockage
+            # wdelta[sp_sel] -= blockage
             self._superp.add_wake(
-                algo, mdata, fdata, tdata, downwind_index, sp_sel, 
-                FV.WS, wake_deltas[FV.WS], -blockage)
+                algo,
+                mdata,
+                fdata,
+                tdata,
+                downwind_index,
+                sp_sel,
+                FV.WS,
+                wake_deltas[FV.WS],
+                -blockage,
+            )
 
         # set area behind to mirrored value EXCEPT for area behind turbine
         if not self.pre_rotor_only:
@@ -247,10 +255,18 @@ class SelfSimilar(TurbineInductionModel):
                     * self._a(ct[sp_sel], -xr)
                     * self._rad_fn(-xr, r_R[sp_sel])
                 )
-                #wdelta[sp_sel] += blockage
+                # wdelta[sp_sel] += blockage
                 self._superp.add_wake(
-                    algo, mdata, fdata, tdata, downwind_index, sp_sel, 
-                    FV.WS, wake_deltas[FV.WS], blockage)
+                    algo,
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
+                    sp_sel,
+                    FV.WS,
+                    wake_deltas[FV.WS],
+                    blockage,
+                )
 
         return wake_deltas
 

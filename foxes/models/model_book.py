@@ -464,7 +464,9 @@ class ModelBook:
         self.wake_models[f"VortexSheet"] = fm.wake_models.induction.VortexSheet()
 
         self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models[f"SelfSimilar2020"] = fm.wake_models.induction.SelfSimilar2020()
+        self.wake_models[f"SelfSimilar2020"] = (
+            fm.wake_models.induction.SelfSimilar2020()
+        )
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar,
             "SelfSimilar_<superposition>",

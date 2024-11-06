@@ -363,7 +363,9 @@ class Model(ABC):
         n_states = _geta("n_states")
         if target == FC.STATE_TURBINE:
             if downwind_index is not None:
-                raise ValueError(f"Target '{target}' is incompatible with downwind_index (here {downwind_index})")
+                raise ValueError(
+                    f"Target '{target}' is incompatible with downwind_index (here {downwind_index})"
+                )
             n_turbines = _geta("n_turbines")
             dims = (FC.STATE, FC.TURBINE)
             shp = (n_states, n_turbines)
@@ -380,7 +382,7 @@ class Model(ABC):
             raise KeyError(
                 f"Model '{self.name}': Wrong parameter 'target = {target}'. Choices: {FC.STATE_TURBINE}, {FC.STATE_TARGET}, {FC.STATE_TARGET_TPOINT}"
             )
-        
+
         def _match_shape(a):
             out = np.asarray(a)
             if len(out.shape) < len(shp):
@@ -388,24 +390,28 @@ class Model(ABC):
                     if i >= len(out.shape):
                         out = out[..., None]
                     elif a.shape[i] not in (1, s):
-                        raise ValueError(f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}")
+                        raise ValueError(
+                            f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
+                        )
             elif len(out.shape) > len(shp):
-                raise ValueError(f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}")
+                raise ValueError(
+                    f"Shape mismatch for '{variable}': Got {out.shape}, expecting {shp}"
+                )
             return out
-        
+
         def _filter_dims(source):
             a = source[variable]
             a_dims = tuple(source.dims[variable])
             if downwind_index is None or FC.TURBINE not in a_dims:
                 d = a_dims
             else:
-                slc = tuple([
-                    downwind_index if dd==FC.TURBINE else np.s_[:] 
-                    for dd in a_dims])
+                slc = tuple(
+                    [downwind_index if dd == FC.TURBINE else np.s_[:] for dd in a_dims]
+                )
                 a = a[slc]
                 d = tuple([dd for dd in a_dims if dd != FC.TURBINE])
             return a, d
-                    
+
         out = None
         for s in lookup:
             # lookup self:
@@ -415,11 +421,7 @@ class Model(ABC):
                     out = _match_shape(a)
 
             # lookup mdata:
-            elif (
-                s == "m"
-                and mdata is not None
-                and variable in mdata
-            ):
+            elif s == "m" and mdata is not None and variable in mdata:
                 a, d = _filter_dims(mdata)
                 l = len(d)
                 if l <= len(dims) and d == dims[:l]:
@@ -461,7 +463,12 @@ class Model(ABC):
             ):
                 out = _match_shape(
                     algo.wake_frame.get_wake_modelling_data(
-                        algo, variable, downwind_index, fdata, tdata=tdata, target=target
+                        algo,
+                        variable,
+                        downwind_index,
+                        fdata,
+                        tdata=tdata,
+                        target=target,
                     )
                 )
 
@@ -475,7 +482,7 @@ class Model(ABC):
                     f"Model '{self.name}': Variable '{variable}' is requested but not found."
                 )
             return out
-        
+
         # data from other chunks, only with iterations:
         if (
             target in [FC.STATE_TARGET, FC.STATE_TARGET_TPOINT]
@@ -551,7 +558,7 @@ class Model(ABC):
             except TypeError:
                 pass
 
-        # apply selection:      
+        # apply selection:
         if selection is not None:
 
             def _upcast_sel(sel_shape):
@@ -559,28 +566,36 @@ class Model(ABC):
                 for i, s in enumerate(out.shape):
                     if i < len(sel_shape) and sel_shape[i] > 1:
                         if sel_shape[i] != shp[i]:
-                            raise ValueError(f"Incompatible selection shape {sel_shape} for output shape {shp[i]}")
+                            raise ValueError(
+                                f"Incompatible selection shape {sel_shape} for output shape {shp[i]}"
+                            )
                         chp.append(shp[i])
                     else:
                         chp.append(s)
                 chp = tuple(chp)
-                eshp = list(shp[len(sel_shape):])
+                eshp = list(shp[len(sel_shape) :])
                 if chp != out.shape:
                     nout = np.zeros(chp, dtype=out.dtype)
                     nout[:] = out
                     return nout, eshp
                 return out, eshp
-        
+
             if isinstance(selection, np.ndarray) and selection.dtype == bool:
                 if len(selection.shape) > len(out.shape):
-                    raise ValueError(f"Expecting selection of shape {out.shape}, got {selection.shape}")
+                    raise ValueError(
+                        f"Expecting selection of shape {out.shape}, got {selection.shape}"
+                    )
                 out, eshp = _upcast_sel(selection.shape)
             elif isinstance(selection, (tuple, list)):
                 if len(selection) > len(out.shape):
-                    raise ValueError(f"Selection is tuple/list of length {len(selection)}, expecting <= {len(out.shape)} ")
-                out, eshp = _upcast_sel(shp[:len(selection)])
+                    raise ValueError(
+                        f"Selection is tuple/list of length {len(selection)}, expecting <= {len(out.shape)} "
+                    )
+                out, eshp = _upcast_sel(shp[: len(selection)])
             else:
-                raise TypeError(f"Expecting selection of type np.ndarray (bool), or tuple, or list. Got {type(selection).__name__}")
+                raise TypeError(
+                    f"Expecting selection of type np.ndarray (bool), or tuple, or list. Got {type(selection).__name__}"
+                )
             out = out[selection]
             shp = tuple([len(out)] + list(eshp))
 
@@ -589,6 +604,6 @@ class Model(ABC):
             tmp = np.zeros(shp, dtype=out.dtype)
             tmp[:] = out
             out = tmp
-            del tmp  
+            del tmp
 
         return out
