@@ -12,10 +12,12 @@ dask-jobqueue==0.9.0
 dill==0.3.9
 distributed==2024.10.0
 filelock==3.16.1
+flake8==7.1.1
 fonttools==4.54.1
 frozenlist==1.5.0
 fsspec==2024.10.0
 idna==3.10
+iniconfig==2.0.0
 Jinja2==3.1.4
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
@@ -23,6 +25,7 @@ kiwisolver==1.4.7
 locket==1.0.0
 MarkupSafe==3.0.2
 matplotlib==3.9.2
+mccabe==0.7.0
 msgpack==1.1.0
 multiprocess==0.70.17
 netCDF4==1.7.2
@@ -31,9 +34,13 @@ packaging==24.1
 pandas==2.2.3
 partd==1.4.2
 pillow==11.0.0
+pluggy==1.5.0
 protobuf==5.28.3
 psutil==6.1.0
+pycodestyle==2.12.1
+pyflakes==3.2.0
 pyparsing==3.2.0
+pytest==8.3.3
 python-dateutil==2.9.0.post0
 pytz==2024.2
 PyYAML==6.0.2
@@ -52,6 +59,7 @@ tqdm==4.66.6
 tzdata==2024.2
 urllib3==2.2.3
 wheel==0.44.0
+windIO @ git+ssh://git@github.com/kilojoules/windIO@dcabee920abfbc8b966af9360666cfe51035547a
 windrose==1.9.2
 xarray==2024.10.0
 zict==3.0.0
