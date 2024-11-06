@@ -24,6 +24,7 @@ def _read_wind_deficit(
         {
             "Linear": "ws_linear",
             "Quadratic": "ws_quadratic",
+            "Product": "ws_product",
         },
         name="ws_sup_dict",
     )
@@ -31,6 +32,7 @@ def _read_wind_deficit(
         {
             "Linear": "ws_linear_amb",
             "Quadratic": "ws_quadratic_amb",
+            "Product": "ws_product",
         },
         name="ws_sup_dict",
     )
