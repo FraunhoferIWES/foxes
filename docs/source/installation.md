@@ -93,6 +93,24 @@ The last line makes sure that all your code changes are included whenever import
 If you are planning to run wind farm optimizations, please also install the 
 [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package as described above.
 
+### Optional dependencies
+
+These are the included optional dependencies, to be installed for example as `pip install foxes[eng0]` or `pip install -e .[eng0]`, or similar:
+
+
+| Option | Usage                              |
+|--------|------------------------------------|
+| eng    | Installs all engine dependencies   |
+| eng0   | Like `eng`, but without `mpi4py`   |
+| dask   | Installs dependencies for `dask` engine |
+| io     | Installs a [windio](https://github.com/kilojoules/windIO.git) fork |
+| opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
+| test   | Dependencies for running the tests |
+| doc    | Dependencies for creating the docs |
+| dev    | Usefull tools for code development |
+
+Not that those options can also be combined, e.g. `pip install -e .[test,dev,eng0]`.
+
 ## Installation via conda
 
 ### Preparation (optional)

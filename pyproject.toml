@@ -48,7 +48,7 @@ dependencies = [
 
 [project.optional-dependencies]
 io = [
-    "windio>=1"
+    "windIO @ git+ssh://git@github.com/kilojoules/windIO#egg=windIO"
 ]
 opt = [
     "foxes-opt"
