@@ -264,7 +264,7 @@ class Timelines(WakeFrame):
             self.timelines_data = data.pop("data")
 
     def calc_order(self, algo, mdata, fdata):
-        """ "
+        """
         Calculates the order of turbine evaluation.
 
         This function is executed on a single chunk of data,
@@ -312,7 +312,7 @@ class Timelines(WakeFrame):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
 
         Returns
         -------

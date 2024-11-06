@@ -64,7 +64,7 @@ class FarmWakesCalculation(FarmDataModel):
         return [] if self.urelax is None else [self.urelax]
 
     def calculate(self, algo, mdata, fdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

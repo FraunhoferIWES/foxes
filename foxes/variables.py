@@ -4,7 +4,7 @@ X = "X"
 """
 
 Y = "Y"
-""" The y coordinate in 
+""" The y coordinate in m
 :group: foxes.variables
 """
 
@@ -257,7 +257,7 @@ Z0 = "z0"
 """
 
 MOL = "MOL"
-""" The Monin-Ubukhof length in m
+""" The Monin–Obukhov length in m
 :group: foxes.variables
 """
 
@@ -296,7 +296,7 @@ DEFAULT_DIGITS = {
 
 def get_default_digits(variable):
     """
-    Gets the default numbber of output digits
+    Gets the default number of output digits
 
     Parameters
     ----------

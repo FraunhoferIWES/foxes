@@ -35,7 +35,7 @@ def add_from_json(
 
     keys = list(dict.keys())
     if len(keys) != 1:
-        raise KeyError("Only one wind farm supported by flappy at the moment.")
+        raise KeyError("Only one wind farm supported by foxes at the moment.")
 
     farm_name = keys[0]
     fdict = dict[farm_name]

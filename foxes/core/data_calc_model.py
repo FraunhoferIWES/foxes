@@ -5,7 +5,7 @@ from .model import Model
 
 class DataCalcModel(Model):
     """
-    Abstract base class for models with
+    Abstract base class for models
     that run calculation on xarray Dataset
     data.
 
@@ -35,7 +35,7 @@ class DataCalcModel(Model):
 
     @abstractmethod
     def calculate(self, algo, *data, **parameters):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

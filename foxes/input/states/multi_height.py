@@ -124,7 +124,7 @@ class MultiHeightStates(States):
         """
         if self.running:
             raise ValueError(
-                f"States '{self.name}': Cannot acces data_source while running"
+                f"States '{self.name}': Cannot access data_source while running"
             )
         return self._data_source
 
@@ -370,7 +370,7 @@ class MultiHeightStates(States):
 
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces index while running")
+            raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
 
     def output_point_vars(self, algo):
@@ -407,12 +407,12 @@ class MultiHeightStates(States):
         """
         if self.running:
             raise ValueError(
-                f"States '{self.name}': Cannot acces weights while running"
+                f"States '{self.name}': Cannot access weights while running"
             )
         return self._weights
 
     def calculate(self, algo, mdata, fdata, tdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

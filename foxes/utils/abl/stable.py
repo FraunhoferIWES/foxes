@@ -64,7 +64,7 @@ def ustar(ws_ref, h_ref, z0, mol, kappa=0.41):
     mol: float
         The Monin-Obukhov height
     kappa: float
-        The van-Karman constant
+        The von Karman constant
 
     Returns
     -------
@@ -92,7 +92,7 @@ def calc_ws(height, z0, ustar, psi, kappa=0.41):
     psi: float
         The Psi function values
     kappa: float
-        The van-Karman constant
+        The von Karman constant
 
     Returns
     -------

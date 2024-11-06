@@ -69,7 +69,7 @@ class TurbineType(TurbineModel):
     @abstractmethod
     def needs_rews2(self):
         """
-        Returns flag for requirering REWS2 variable
+        Returns flag for requiring REWS2 variable
 
         Returns
         -------
@@ -82,7 +82,7 @@ class TurbineType(TurbineModel):
     @abstractmethod
     def needs_rews3(self):
         """
-        Returns flag for requirering REWS3 variable
+        Returns flag for requiring REWS3 variable
 
         Returns
         -------

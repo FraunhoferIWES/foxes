@@ -65,7 +65,7 @@ class Turbine2FarmModel(FarmModel):
         return self.turbine_model.output_farm_vars(algo)
 
     def calculate(self, algo, mdata, fdata, **parameters):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

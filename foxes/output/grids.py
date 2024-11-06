@@ -27,7 +27,7 @@ def calc_point_results(
     farm_results: xarray.Dataset, optional
         The farm results
     seq_iter: foxes.algorithms.sequential.SequentialIter, optional
-        The sequential itarator
+        The sequential iterator
     verbosity: int
         The verbosity level, 0 = silent
     kwargs: dict, optional

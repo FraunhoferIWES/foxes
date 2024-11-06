@@ -143,7 +143,7 @@ BLOCK_CONVERGENCE = "block_convergence"
 
 
 KAPPA = 0.41
-""" The Van-Karman constant
+""" The Von Karman constant
 :group: foxes.constants
 """
 
@@ -154,22 +154,22 @@ W = "W"
 """
 
 kW = "kW"
-""" The unit kilo watt
+""" The unit kilowatt
 :group: foxes.constants
 """
 
 MW = "MW"
-""" The unit mega watt
+""" The unit megawatt
 :group: foxes.constants
 """
 
 GW = "GW"
-""" The unit giga watt
+""" The unit gigawatt
 :group: foxes.constants
 """
 
 TW = "TW"
-""" The unit terra watt
+""" The unit terawatt
 :group: foxes.constants
 """
 

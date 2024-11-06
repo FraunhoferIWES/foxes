@@ -39,7 +39,7 @@ def ustar(ws_ref, h_ref, z0, kappa=0.41):
     z0: float
         The roughness length
     kappa: float
-        The van-Karman constant
+        The von Karman constant
 
     Returns
     -------
@@ -66,7 +66,7 @@ def calc_ws(height, z0, ustar, kappa=0.41):
     ustar: float
         The friction velocity
     kappa: float
-        The van-Karman constant
+        The von Karman constant
 
     Returns
     -------

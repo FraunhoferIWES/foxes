@@ -118,7 +118,7 @@ class RosePlotOutput(Output):
         var: str
             The data variable name
         var_bins: list of float
-            The variable bin seperation values
+            The variable bin separation values
         wd_var: str, optional
             The wind direction variable name
         turbine: int, optional
@@ -231,7 +231,7 @@ class RosePlotOutput(Output):
         var: str
             The data variable name
         var_bins: list of float
-            The variable bin seperation values
+            The variable bin separation values
         wd_var: str, optional
             The wind direction variable name
         turbine: int, optional
@@ -330,7 +330,7 @@ class RosePlotOutput(Output):
         var: str
             The data variable name
         var_bins: list of float
-            The variable bin seperation values
+            The variable bin separation values
         ret_data: bool
             Flag for returning wind rose data
         kwargs: dict, optional

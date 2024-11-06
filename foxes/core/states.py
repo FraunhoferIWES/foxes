@@ -295,7 +295,7 @@ class ExtendedStates(States):
         return self.states.output_point_vars(algo)
 
     def calculate(self, algo, mdata, fdata, tdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

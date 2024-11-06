@@ -34,7 +34,7 @@ class FarmWakesCalculation(FarmDataModel):
         return list(dict.fromkeys(ovars))
 
     def calculate(self, algo, mdata, fdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
