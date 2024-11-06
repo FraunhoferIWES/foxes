@@ -71,5 +71,6 @@ The full list of currently implemented ambient states can be found in the
 * :ref:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data, see :ref:`Timeseries data`,
 * :ref:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :ref:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data, see :ref:`Multi-height wind data`,
 * :ref:`FieldDataNC<foxes.input.states.FieldDataNC>`: Full field data, (time, x, y, z) dependent. See :ref:`Heterogeneous flow`,
+* :ref:`SliceDataNC<foxes.input.states.FieldDataNC>`: Height independent field data (time, x, y),
 * :ref:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights, see :ref:`Wind rose data`,
 * :ref:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow, see :ref:`Dynamic Wakes 1`.

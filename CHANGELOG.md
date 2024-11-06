@@ -637,6 +637,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Engines:
   - Default number of processes is now os.cpu_count(), or os.process_cpu_count() for python3.13
   - New engine: `RayEngine` (short name `ray`), runs parallel computations based on  the [Ray package](https://docs.ray.io/en/latest/)
+- Inputs:
+  - New states `SliceDataNC`, much like `FieldDataNC` but without height dependency
 - Models:
   - New turbine type `TBLFile`: Reads power, ct, D, H, P_rated from a *.tbl file
   - Turbine induction models `SelfSimilar`, `SelfSimilar2020`, `Rathmann`, `VortexSheet` now optionally accept any wind speed superposition model, i.e., they are no longer based on hard-coded linear superposition
