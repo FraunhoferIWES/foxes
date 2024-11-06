@@ -7,7 +7,7 @@ from .output import Output
 
 class StateTurbineMap(Output):
     """
-    Creates heat maps with turbines on the one
+    Creates heat maps with turbines on one axis
     and states on the other axis.
 
     Attributes

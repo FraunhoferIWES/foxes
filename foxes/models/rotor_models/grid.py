@@ -16,7 +16,7 @@ class GridRotor(RotorModel):
         maximal number of points is N = n * n
     reduce: bool
         Flag for reduction to points actually representing
-        an area with overlap with the circe, recalculating
+        an area with overlap with the circle, recalculating
         the self.__weights accordingly
     nint: int
         Integration steps per element
@@ -36,7 +36,7 @@ class GridRotor(RotorModel):
             maximal number of points is N = n * n
         reduce: bool
             Flag for reduction to points actually representing
-            an area with overlap with the circe, recalculating
+            an area with overlap with the circle, recalculating
             the self.__weights accordingly
         nint: int
             Integration steps per element

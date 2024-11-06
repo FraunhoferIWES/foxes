@@ -166,7 +166,7 @@ class SingleStateStates(States):
         return np.ones((1, algo.n_turbines), dtype=FC.DTYPE)
 
     def calculate(self, algo, mdata, fdata, tdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

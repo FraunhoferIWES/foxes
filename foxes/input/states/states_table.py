@@ -114,7 +114,7 @@ class StatesTable(States):
         """
         if self.running:
             raise ValueError(
-                f"States '{self.name}': Cannot acces data_source while running"
+                f"States '{self.name}': Cannot access data_source while running"
             )
         return self._data_source
 
@@ -291,7 +291,7 @@ class StatesTable(States):
 
         """
         if self.running:
-            raise ValueError(f"States '{self.name}': Cannot acces index while running")
+            raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self.__inds
 
     def output_point_vars(self, algo):
@@ -328,7 +328,7 @@ class StatesTable(States):
         """
         if self.running:
             raise ValueError(
-                f"States '{self.name}': Cannot acces weights while running"
+                f"States '{self.name}': Cannot access weights while running"
             )
         return self.__weights
 

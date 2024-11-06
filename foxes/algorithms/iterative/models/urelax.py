@@ -10,7 +10,7 @@ class URelax(FarmDataModel):
     ----------
     urel: dict
         The variables and their under-relaxation
-        factors bewteen 0 and 1
+        factors between 0 and 1
 
     :group: algorithms.iterative.models
 
@@ -24,7 +24,7 @@ class URelax(FarmDataModel):
         ----------
         urel: dict
             The variables and their under-relaxation
-            factors bewteen 0 and 1
+            factors between 0 and 1
 
         """
         super().__init__()
@@ -49,7 +49,7 @@ class URelax(FarmDataModel):
         return list(self.urel.keys())
 
     def calculate(self, algo, mdata, fdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

@@ -133,7 +133,7 @@ class PandasFileHelper:
         format_dict: dict
             Dictionary with format entries for
             columns, e.g. '{:.4f}'
-        kwargs: dict, optional
+        **kwargs: dict, optional
             Parameters forwarded to the pandas writing method.
 
         """

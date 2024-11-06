@@ -61,7 +61,7 @@ class SetAmbPointResults(PointDataModel):
         return [FV.var2amb[v] for v in self.vars]
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

@@ -7,7 +7,7 @@ import foxes.constants as FC
 
 class WSPow(WakeSuperposition):
     """
-    Power supersposition of wind deficit results
+    Power superposition of wind deficit results
 
     Attributes
     ----------
@@ -99,7 +99,7 @@ class WSPow(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str
@@ -188,7 +188,7 @@ class WSPow(WakeSuperposition):
 
 class WSPowLocal(WakeSuperposition):
     """
-    Local power supersposition of wind deficit results
+    Local power superposition of wind deficit results
 
     Attributes
     ----------
@@ -273,7 +273,7 @@ class WSPowLocal(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str

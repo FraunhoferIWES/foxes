@@ -89,7 +89,7 @@ class DataBook:
         context: str
             The context
         package: str or package
-            The package, must contain init.py` file
+            The package, must contain init.py file
         file_mane: str
             The file name
 

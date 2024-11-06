@@ -17,7 +17,7 @@ class FromLookupTable(TurbineType):
     source: str or pandas.DataFrame
         The file path, static name, or data
     rho: float
-        The air densitiy for which the data is valid
+        The air density for which the data is valid
         or None for no correction
     WSCT: str
         The wind speed variable for ct lookup
@@ -60,7 +60,7 @@ class FromLookupTable(TurbineType):
         lookup_pars: dict
             Additional parameters for the LookupTable model
         rho: float, optional
-            The air densitiy for which the data is valid
+            The air density for which the data is valid
             or None for no correction
         p_ct: float
             The exponent for yaw dependency of ct
@@ -119,7 +119,7 @@ class FromLookupTable(TurbineType):
 
     def needs_rews2(self):
         """
-        Returns flag for requirering REWS2 variable
+        Returns flag for requiring REWS2 variable
 
         Returns
         -------
@@ -131,7 +131,7 @@ class FromLookupTable(TurbineType):
 
     def needs_rews3(self):
         """
-        Returns flag for requirering REWS3 variable
+        Returns flag for requiring REWS3 variable
 
         Returns
         -------
@@ -228,7 +228,7 @@ class FromLookupTable(TurbineType):
             super().modify_cutin(modify_ct, modify_P)
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

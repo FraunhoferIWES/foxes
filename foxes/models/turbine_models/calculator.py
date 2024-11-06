@@ -8,11 +8,11 @@ class Calculator(TurbineModel):
     Attributes
     ----------
     in_vars: list of str
-        The input farm vairables
+        The input farm variables
     out_vars: list of str
         The output variables
     func: Function
-        The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
+        The function: f(in0, in1, ..., stsel) -> (out0, out1, ...)
         where inX and outY are numpy.ndarrays and
         st_sel is the state-turbine selection slice or array.
         All arrays have shape (n_states, n_turbines).
@@ -28,11 +28,11 @@ class Calculator(TurbineModel):
         Parameters
         ----------
         in_vars: list of str
-            The input farm vairables
+            The input farm variables
         out_vars: list of str
             The output variables
         func: Function
-            The function: f(in0, in1, ..., stsel) -> (out0, ou1, ...)
+            The function: f(in0, in1, ..., stsel) -> (out0, out1, ...)
             where inX and outY are numpy.ndarrays and
             st_sel is the state-turbine selection slice or array.
             All arrays have shape (n_states, n_turbines).

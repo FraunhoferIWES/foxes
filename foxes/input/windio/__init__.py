@@ -1,5 +1,5 @@
 """
-Functions for usingin windIO yaml files as input.
+Functions for using windIO yaml files as input.
 """
 
 from .windio import read_windio

@@ -6,7 +6,7 @@ from foxes.variables import get_default_digits
 
 def write_nc(ds, fpath, round={}, complevel=9, verbosity=1, **kwargs):
     """
-    Writes a dataset to netCFD file
+    Writes a dataset to netCDF file
 
     Parameters
     ----------

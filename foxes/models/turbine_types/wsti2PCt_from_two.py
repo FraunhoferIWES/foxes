@@ -37,11 +37,11 @@ class WsTI2PCtFromTwo(TurbineType):
     rpars_ct: dict, optional
         Parameters for pandas ct file reading
     ipars_P: dict, optional
-        Parameters for scipy.interpolate.interpn()
+        Parameters for scipy.interpolate.interpn
     ipars_ct: dict, optional
-        Parameters for scipy.interpolate.interpn()
+        Parameters for scipy.interpolate.interpn
     rho: float
-        The air densitiy for which the data is valid
+        The air density for which the data is valid
         or None for no correction
 
     :group: models.turbine_types
@@ -73,7 +73,7 @@ class WsTI2PCtFromTwo(TurbineType):
         data_source_ct: str or pandas.DataFrame
             The file path for the ct curve, static name, or data
         rho: float, optional
-            The air densitiy for which the data is valid
+            The air density for which the data is valid
             or None for no correction
         p_ct: float
             The exponent for yaw dependency of ct
@@ -88,9 +88,9 @@ class WsTI2PCtFromTwo(TurbineType):
         pd_file_read_pars_ct:  dict
             Parameters for pandas ct file reading
         interpn_pars_P: dict, optional
-            Parameters for scipy.interpolate.interpn()
+            Parameters for scipy.interpolate.interpn
         interpn_pars_ct: dict, optional
-            Parameters for scipy.interpolate.interpn()
+            Parameters for scipy.interpolate.interpn
         parameters: dict, optional
             Additional parameters for TurbineType class
 
@@ -129,7 +129,7 @@ class WsTI2PCtFromTwo(TurbineType):
 
     def needs_rews2(self):
         """
-        Returns flag for requirering REWS2 variable
+        Returns flag for requiring REWS2 variable
 
         Returns
         -------
@@ -141,7 +141,7 @@ class WsTI2PCtFromTwo(TurbineType):
 
     def needs_rews3(self):
         """
-        Returns flag for requirering REWS3 variable
+        Returns flag for requiring REWS3 variable
 
         Returns
         -------
@@ -241,7 +241,7 @@ class WsTI2PCtFromTwo(TurbineType):
         print()
 
     def calculate(self, algo, mdata, fdata, st_sel):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

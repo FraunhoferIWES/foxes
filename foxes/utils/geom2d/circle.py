@@ -21,7 +21,7 @@ class Circle(AreaGeometry):
 
     def __init__(self, centre, radius):
         """
-        Cobnstructor.
+        Constructor.
 
         Parameters
         ----------

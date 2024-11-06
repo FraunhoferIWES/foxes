@@ -87,7 +87,7 @@ class FarmController(FarmDataModel):
 
     def needs_rews2(self):
         """
-        Returns flag for requirering REWS2 variable
+        Returns flag for requiring REWS2 variable
 
         Returns
         -------
@@ -102,7 +102,7 @@ class FarmController(FarmDataModel):
 
     def needs_rews3(self):
         """
-        Returns flag for requirering REWS3 variable
+        Returns flag for requiring REWS3 variable
 
         Returns
         -------
@@ -348,7 +348,7 @@ class FarmController(FarmDataModel):
         return list(ovars)
 
     def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

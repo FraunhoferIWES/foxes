@@ -165,7 +165,7 @@ class Streamlines2D(WakeFrame):
         return coos.reshape(n_states, n_targets, n_tpoints, 3)
 
     def calc_order(self, algo, mdata, fdata):
-        """ "
+        """
         Calculates the order of turbine evaluation.
 
         This function is executed on a single chunk of data,
@@ -230,7 +230,7 @@ class Streamlines2D(WakeFrame):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
 
         Returns
         -------

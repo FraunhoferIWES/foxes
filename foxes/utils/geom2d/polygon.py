@@ -74,7 +74,7 @@ class ClosedPolygon(AreaGeometry):
         points: numpy.ndarray
             The probe points, shape (n_points, 2)
         return_nearest: bool
-            Flag for return of the nearest point on bundary
+            Flag for return of the nearest point on boundary
 
         Returns
         -------

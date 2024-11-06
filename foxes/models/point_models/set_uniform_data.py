@@ -119,7 +119,7 @@ class SetUniformData(PointDataModel):
         return self.ovars
 
     def calculate(self, algo, mdata, fdata, pdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

@@ -10,7 +10,10 @@ class VortexSheet(TurbineInductionModel):
     """
     The Vortex Sheet model implemented with a radial dependency
 
-    Ref: Medici, D., et al. "The upstream flow of a wind turbine: blockage effect." Wind Energy 14.5 (2011): 691-697.
+    Notes
+    -----
+    Reference: 
+    Medici, D., et al. "The upstream flow of a wind turbine: blockage effect." Wind Energy 14.5 (2011): 691-697.
     https://doi.org/10.1002/we.451
 
     Attributes
@@ -136,7 +139,7 @@ class VortexSheet(TurbineInductionModel):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)

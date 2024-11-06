@@ -83,7 +83,7 @@ class ResultsWriter(Output):
         Parameters
         ----------
         file_path: str
-            Path the the csv file
+            Path for the csv file
         variables: dict or list of str, optional
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
@@ -150,7 +150,7 @@ class ResultsWriter(Output):
         Parameters
         ----------
         file_path: str
-            Path the the csv file
+            Path for the nc file
         variables: dict or list of str, optional
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values

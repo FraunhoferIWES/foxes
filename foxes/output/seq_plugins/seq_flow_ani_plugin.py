@@ -49,7 +49,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         Parameters
         ----------
         algo: foxes.algorithms.sequential.Sequential
-            The current sequetial algorithm
+            The current sequential algorithm
 
         """
         super().initialize(algo)
@@ -62,7 +62,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         Parameters
         ----------
         algo: foxes.algorithms.sequential.Sequential
-            The latest sequetial algorithm
+            The latest sequential algorithm
         fres: xarray.Dataset
             The latest farm results
         pres: xarray.Dataset, optional

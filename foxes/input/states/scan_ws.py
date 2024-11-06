@@ -201,7 +201,7 @@ class ScanWS(States):
         return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=FC.DTYPE)
 
     def calculate(self, algo, mdata, fdata, tdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

@@ -7,7 +7,7 @@ import foxes.constants as FC
 
 class WSProduct(WakeSuperposition):
     """
-    Product supersposition of wind deficit results
+    Product superposition of wind deficit results
 
     This is based on the idea that the dimensionless
     wind deficit should be rescaled with the wake
@@ -95,7 +95,7 @@ class WSProduct(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str
