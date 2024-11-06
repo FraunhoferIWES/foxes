@@ -631,6 +631,16 @@ class FDict(Dict):
                 except ValueError:
                     pass
 
+        print(f"\n{self.name}: Cannot find key '{key}', also no factory matches.\n")
+        print("Known keys:")
+        for k in self.keys():
+            print("   ", k)
+        if len(self.factories):
+            print("\nKnown factories:")
+            for f in self.factories:
+                print("   ", f.name_template)
+        print()
+
         k = ", ".join(sorted(list(self.keys())))
         e = f"{self.name}: Cannot find key '{key}', also no factory matches. Known keys: {k}. Known factories: {[f.name_template for f in self.factories]}"
         raise KeyError(e)

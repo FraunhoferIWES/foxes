@@ -127,7 +127,7 @@ class PartialAxiwake(PartialCentre):
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
 
         # prepare x and r coordinates:
-        x = np.round(wcoos[..., 0, 0], 12)
+        x = wcoos[..., 0, 0]
         n = wcoos[..., 0, 1:3]
         R = np.linalg.norm(n, axis=-1)
         r = np.zeros((n_states, n_targets, self.n), dtype=FC.DTYPE)
@@ -145,7 +145,7 @@ class PartialAxiwake(PartialCentre):
             n[:, :, 0][~sel] = 1
 
         # case wake centre outside rotor disk:
-        sel = (x > 0) & (R > D / 2)
+        sel = (x > 1e-8) & (R > D / 2)
         if np.any(sel):
             n_sel = np.sum(sel)
             Rsel = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)

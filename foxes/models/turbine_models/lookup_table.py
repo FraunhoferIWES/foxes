@@ -192,8 +192,9 @@ class LookupTable(TurbineModel):
                 FC.STATE_TURBINE,
                 lookup="fs",
                 fdata=fdata,
-                upcast=True,
-            )[st_sel]
+                upcast=False,
+                selection=st_sel,
+            )
             for v in self.input_vars
         }
 

@@ -148,7 +148,7 @@ class PartialTopHat(PartialCentre):
             upcast=True,
         )
 
-        sel0 = (ct > 0) & (x > 0)
+        sel0 = (ct > 1e-8) & (x > 1e-8)
         if np.any(sel0):
             R = np.linalg.norm(yz, axis=-1)
             del yz

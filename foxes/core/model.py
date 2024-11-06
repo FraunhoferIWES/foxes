@@ -551,29 +551,39 @@ class Model(ABC):
             except TypeError:
                 pass
 
-        # apply selection:
+        # apply selection:      
         if selection is not None:
-            if not isinstance(selection, np.ndarray) or selection.dtype != bool:
-                raise TypeError(f"Expecting boolean array as selection")
-            elif len(selection.shape) > len(out.shape):
-                raise ValueError(f"Expecting selection of shape {out.shape}, got {selection.shape}")
-            chp = []
-            for i, s in enumerate(out.shape):
-                if i < len(selection.shape) and selection.shape[i] > 1:
-                    if selection.shape[i] != shp[i]:
-                        raise ValueError(f"Incompatible selection shape {selection.shape} for output shape {shp[i]}")
-                    chp.append(shp[i])
-                else:
-                    chp.append(out.shape[i])
-            chp = tuple(chp)
-            if chp != out.shape:
-                tmp = np.zeros(chp, dtype=out.dtype)
-                tmp[:] = out
-                out = tmp
-                del tmp
-            out = out[selection]
-            shp = tuple([len(out)] + list(shp[len(selection.shape):]))
+
+            def _upcast_sel(sel_shape):
+                chp = []
+                for i, s in enumerate(out.shape):
+                    if i < len(sel_shape) and sel_shape[i] > 1:
+                        if sel_shape[i] != shp[i]:
+                            raise ValueError(f"Incompatible selection shape {sel_shape} for output shape {shp[i]}")
+                        chp.append(shp[i])
+                    else:
+                        chp.append(s)
+                chp = tuple(chp)
+                eshp = list(shp[len(sel_shape):])
+                if chp != out.shape:
+                    nout = np.zeros(chp, dtype=out.dtype)
+                    nout[:] = out
+                    return nout, eshp
+                return out, eshp
         
+            if isinstance(selection, np.ndarray) and selection.dtype == bool:
+                if len(selection.shape) > len(out.shape):
+                    raise ValueError(f"Expecting selection of shape {out.shape}, got {selection.shape}")
+                out, eshp = _upcast_sel(selection.shape)
+            elif isinstance(selection, (tuple, list)):
+                if len(selection) > len(out.shape):
+                    raise ValueError(f"Selection is tuple/list of length {len(selection)}, expecting <= {len(out.shape)} ")
+                out, eshp = _upcast_sel(shp[:len(selection)])
+            else:
+                raise TypeError(f"Expecting selection of type np.ndarray (bool), or tuple, or list. Got {type(selection).__name__}")
+            out = out[selection]
+            shp = tuple([len(out)] + list(eshp))
+
         # apply upcast:
         if upcast and out.shape != shp:
             tmp = np.zeros(shp, dtype=out.dtype)
