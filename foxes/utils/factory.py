@@ -634,7 +634,9 @@ class FDict(Dict):
             return self[key]
         except KeyError as e:
             if prnt:
-                print(f"\n{self.name}: Cannot find key '{key}', also no factory matches.\n")
+                print(
+                    f"\n{self.name}: Cannot find key '{key}', also no factory matches.\n"
+                )
                 print("Known keys:")
                 for k in self.keys():
                     print("   ", k)
@@ -644,7 +646,7 @@ class FDict(Dict):
                         print("   ", f.name_template)
                 print()
             raise e
-        
+
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)

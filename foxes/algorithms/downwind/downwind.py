@@ -137,7 +137,9 @@ class Downwind(Algorithm):
                     try:
                         pw = values
                         if checkw:
-                            mbooks.get_item(pw).check_wmodel(self.wake_models[w], error=True)
+                            mbooks.get_item(pw).check_wmodel(
+                                self.wake_models[w], error=True
+                            )
                     except TypeError:
                         pw = deffunc(self.wake_models[w])
                     target[w] = mbooks.get_item(pw)
