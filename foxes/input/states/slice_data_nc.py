@@ -597,9 +597,7 @@ class SliceDataNC(States):
         # interpolate nan values:
         if self.interp_nans and np.any(np.isnan(data)):
             df = pd.DataFrame(
-                index=pd.MultiIndex.from_product(
-                    gvars, names=["state", "y", "x"]
-                ),
+                index=pd.MultiIndex.from_product(gvars, names=["state", "y", "x"]),
                 data={
                     v: data[..., vi].reshape(n_states * n_y * n_x)
                     for v, vi in self._dkys.items()

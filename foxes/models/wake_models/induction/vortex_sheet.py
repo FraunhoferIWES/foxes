@@ -12,7 +12,7 @@ class VortexSheet(TurbineInductionModel):
 
     Notes
     -----
-    Reference: 
+    Reference:
     Medici, D., et al. "The upstream flow of a wind turbine: blockage effect." Wind Energy 14.5 (2011): 691-697.
     https://doi.org/10.1002/we.451
 
