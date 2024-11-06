@@ -50,7 +50,7 @@ def check_import_utm():
 
 def read_shp(fname, **kwargs):
     """
-    Read a shape file
+    Read a shapefile file
 
     Parameters
     ----------
@@ -74,7 +74,7 @@ def read_shp(fname, **kwargs):
 
 def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
     """
-    Read shape file, write csv file
+    Read shapefile file, write csv file
 
     Parameters
     ----------
@@ -243,7 +243,7 @@ def shp2geom2d(*args, ret_utm_zone=False, **kwargs):
     geom: foxes.tools.geom2D.AreaGeometry
         The geometry object
     utm_zone_str: str, optional
-        The utem zone plus letter as str, e.g. "32U"
+        The utm zone plus letter as str, e.g. "32U"
 
     :group: utils
 

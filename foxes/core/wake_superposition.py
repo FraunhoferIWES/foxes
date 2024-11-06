@@ -45,7 +45,7 @@ class WakeSuperposition(Model):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str

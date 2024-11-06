@@ -7,7 +7,7 @@ import foxes.constants as FC
 
 class WSQuadratic(WakeSuperposition):
     """
-    Quadratic supersposition of wind deficit results
+    Quadratic superposition of wind deficit results
 
     Attributes
     ----------
@@ -94,7 +94,7 @@ class WSQuadratic(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str
@@ -182,7 +182,7 @@ class WSQuadratic(WakeSuperposition):
 
 class WSQuadraticLocal(WakeSuperposition):
     """
-    Local quadratic supersposition of wind deficit results
+    Local quadratic superposition of wind deficit results
 
     Attributes
     ----------
@@ -261,7 +261,7 @@ class WSQuadraticLocal(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str

@@ -50,7 +50,7 @@ def check_import_utm():
 
 def read_shp(fname, **kwargs):
     """
-    Read a shape file
+    Read a shapefile file
 
     Parameters
     ----------
@@ -74,7 +74,7 @@ def read_shp(fname, **kwargs):
 
 def shp2csv(ifile, ofile, in_kwargs={}, out_kwargs={}, verbosity=1):
     """
-    Read shape file, write csv file
+    Read shapefile file, write csv file
 
     Parameters
     ----------

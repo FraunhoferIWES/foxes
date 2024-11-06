@@ -1,5 +1,5 @@
 """
-Verctical profile models.
+Vertical profile models.
 """
 
 from .uniform import UniformProfile

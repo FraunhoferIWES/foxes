@@ -20,7 +20,7 @@ def import_module(name, package=None, hint=None):
     Returns
     -------
     mdl: module
-        The imnported package
+        The imported package
 
     :group: utils
 
@@ -35,7 +35,7 @@ def import_module(name, package=None, hint=None):
 
 def load_module(name, path):
     """
-    Imports a module from file path
+    Imports a module from a file path
 
     Parameters
     ----------

@@ -88,7 +88,7 @@ class PointWakesCalculation(PointDataModel):
         return self.pvars
 
     def calculate(self, algo, mdata, fdata, tdata, downwind_index=None):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

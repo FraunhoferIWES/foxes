@@ -66,7 +66,7 @@ class PointDataModel(DataCalcModel):
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata, tdata):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,
@@ -218,7 +218,7 @@ class PointDataModelList(PointDataModel):
         return list(dict.fromkeys(ovars))
 
     def calculate(self, algo, mdata, fdata, tdata, parameters=None):
-        """ "
+        """
         The main model calculation.
 
         This function is executed on a single chunk of data,

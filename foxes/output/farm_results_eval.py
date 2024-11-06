@@ -381,7 +381,7 @@ class FarmResultsEval(Output):
         algo: foxes.core.Algorithm, optional
             The algorithm, for P_nominal lookup
         annual: bool, optional
-            Flag for returing annual results, by default False
+            Flag for returning annual results, by default False
         ambient: bool, optional
             Flag for ambient power, by default False
         hours: int, optional

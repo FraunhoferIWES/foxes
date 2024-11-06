@@ -138,7 +138,7 @@ class FarmLayoutOutput(Output):
         ----------
         color_by: str, optional
             Set scatter color by variable results.
-            Use "mean_REWS" etc for means, also
+            Use "mean_REWS", etc, for means, also
             min, max, sum. All wrt states
         fontsize: int, optional
             Size of the turbine numbers

@@ -95,7 +95,7 @@ class PartialAxiwake(PartialCentre):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape

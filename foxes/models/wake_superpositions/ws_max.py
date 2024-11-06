@@ -7,7 +7,7 @@ import foxes.constants as FC
 
 class WSMax(WakeSuperposition):
     """
-    Max supersposition of wind deficit results
+    Max superposition of wind deficit results
 
     Attributes
     ----------
@@ -94,7 +94,7 @@ class WSMax(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str
@@ -185,7 +185,7 @@ class WSMax(WakeSuperposition):
 
 class WSMaxLocal(WakeSuperposition):
     """
-    Local max supersposition of wind deficit results
+    Local max superposition of wind deficit results
 
     Attributes
     ----------
@@ -264,7 +264,7 @@ class WSMaxLocal(WakeSuperposition):
             The target point data
         downwind_index: int
             The index of the wake causing turbine
-            in the downwnd order
+            in the downwind order
         st_sel: numpy.ndarray of bool
             The selection of targets, shape: (n_states, n_targets)
         variable: str

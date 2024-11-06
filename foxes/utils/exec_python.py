@@ -17,7 +17,7 @@ def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
     s: list, dict or object
         The source to by analyzed
     indicator: str
-        The indicator that trigger python evaluation
+        The indicator that triggers python evaluation
     newline: str
         The new line indicator
     globals: dict
