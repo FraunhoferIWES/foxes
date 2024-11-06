@@ -8,6 +8,9 @@ from foxes.utils import import_module
 import foxes.variables as FV
 import foxes.constants as FC
 
+dask = None
+distributed = None
+
 
 def delayed(func):
     """A dummy decorator"""
@@ -17,15 +20,19 @@ def delayed(func):
 def load_dask():
     """On-demand loading of the dask package"""
     global dask, ProgressBar, delayed
-    dask = import_module("dask", hint="pip install dask")
-    ProgressBar = import_module("dask.diagnostics", hint="pip install dask").ProgressBar
-    delayed = dask.delayed
+    if dask is None:
+        dask = import_module("dask", hint="pip install dask")
+        ProgressBar = import_module(
+            "dask.diagnostics", hint="pip install dask"
+        ).ProgressBar
+        delayed = dask.delayed
 
 
 def load_distributed():
     """On-demand loading of the distributed package"""
     global distributed
-    distributed = import_module("distributed", hint="pip install distributed")
+    if distributed is None:
+        distributed = import_module("distributed", hint="pip install distributed")
 
 
 class DaskBaseEngine(Engine):
@@ -337,7 +344,7 @@ class XArrayEngine(DaskBaseEngine):
         chunk_size_points0 = self.chunk_size_points
         n_states = model_data.sizes[FC.STATE]
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        __, chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
+        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
             n_states, n_targets
         )
         self.chunk_size_states = np.min(chunk_sizes_states)

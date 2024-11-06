@@ -2,11 +2,14 @@ from foxes.utils import import_module
 
 from .pool import PoolEngine
 
+Pool = None
+
 
 def load_multiprocess():
     """On-demand loading of the multiprocess package"""
     global Pool
-    Pool = import_module("multiprocess", hint="pip install multiprocess").Pool
+    if Pool is None:
+        Pool = import_module("multiprocess", hint="pip install multiprocess").Pool
 
 
 class MultiprocessEngine(PoolEngine):
@@ -17,15 +20,9 @@ class MultiprocessEngine(PoolEngine):
 
     """
 
-    def initialize(self):
-        """
-        Initializes the engine.
-        """
-        load_multiprocess()
-        super().initialize()
-
     def _create_pool(self):
         """Creates the pool"""
+        load_multiprocess()
         self._pool = Pool(processes=self.n_procs)
 
     def _submit(self, f, *args, **kwargs):
