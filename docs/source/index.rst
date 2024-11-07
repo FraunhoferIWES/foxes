@@ -39,8 +39,8 @@ The parallelization on local or remote clusters is supported, based on
 `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ or
 `dask.distributed <https://distributed.dask.org/en/stable/>`_.
 The wind farm
-optimization capabilities invoke the `iwopy <https://github.com/FraunhoferIWES/iwopy>`_
-package which as well supports vectorization.
+optimization capabilities invoke the `foxes-opt <https://github.com/FraunhoferIWES/foxes-opt>`_
+package which as well supports vectorization and parallelization.
 
 Source code repository (and issue tracker):
     https://github.com/FraunhoferIWES/foxes

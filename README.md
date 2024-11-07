@@ -17,8 +17,8 @@ The parallelization on local or remote clusters is supported, based on
 [mpi4py](https://mpi4py.readthedocs.io/en/stable/) or
 [dask.distributed](https://distributed.dask.org/en/stable/).
 The wind farm
-optimization capabilities invoke the [iwopy](https://github.com/FraunhoferIWES/iwopy) package which
-as well supports vectorization.
+optimization capabilities invoke the [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt) package which
+as well supports vectorization and parallelization.
 
 `foxes` is build upon many years of experience with wake model code development at IWES, starting with the C++ based in-house code _flapFOAM_ (2011-2019) and the Python based direct predecessor _flappy_ (2019-2022).
 
