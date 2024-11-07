@@ -654,3 +654,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Removing optional dependencies `io`. The installation advice will be printed when trying to use the `foxes.input.windio` sub package. The reason is that for now this depends on a personal [fork by kilojoules](https://github.com/kilojoules/windIO), and the inclusion of such dependencies is not supported by PyPi.
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1.1)
+
+## v1.1.2
+
+
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.1.2)
