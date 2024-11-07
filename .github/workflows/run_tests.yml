@@ -6,7 +6,8 @@ name: Running tests
 on:
   push:
     branches:    
-      - dev
+      - '**'      # matches every branch
+      - '!main'   # excludes main
 
   pull_request:
     branches:   
