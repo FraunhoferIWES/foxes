@@ -103,7 +103,6 @@ The following optional dependencies are available:
 | eng    | Installs all engine dependencies   |
 | eng0   | Like `eng`, but without `mpi4py`   |
 | dask   | Installs dependencies for `dask` engine |
-| io     | Installs a [windio](https://github.com/kilojoules/windIO.git) fork |
 | opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
 | test   | Dependencies for running the tests |
 | doc    | Dependencies for creating the docs |
