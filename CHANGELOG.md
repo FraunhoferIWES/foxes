@@ -663,5 +663,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New input package `foxes.input.yaml`, realizing the run via yaml parameter files. This is not following `windio`, but a *foxes* specific structure.
 - Examples:
   - New example `yaml_input`, demonstrating the command line application `foxes_yaml` and the new yaml parameter file
+- Bug fixes:
+  - Fix for `TurbOParkIX` wake model: Now `k` is truly `k`, such that only `ambka` or `ka` choices from `WakeK` correspond to multiplication with `AMB_TI` or `TI`, respectively.
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.1.2)

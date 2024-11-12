@@ -188,8 +188,7 @@ class TurbOParkWake(GaussianWakeModel):
                 fdata=fdata,
                 tdata=tdata,
                 downwind_index=downwind_index,
-                upcast=False,
-                selection=st_sel,
+                upcast=True,
             )
 
             # get k:
@@ -211,6 +210,7 @@ class TurbOParkWake(GaussianWakeModel):
             epsilon = self.sbeta_factor * np.sqrt(beta)
             del a, beta
 
+            ati = ati[st_sel]
             alpha = self.c1 * ati
             beta = self.c2 * ati / np.sqrt(ct)
 
@@ -218,7 +218,6 @@ class TurbOParkWake(GaussianWakeModel):
             sigma = D * (
                 epsilon
                 + k
-                * ati
                 / beta
                 * (
                     np.sqrt((alpha + beta * x / D) ** 2 + 1)
@@ -317,6 +316,8 @@ class TurbOParkWakeIX(GaussianWakeModel):
         self.self_wake = self_wake
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
+
+        assert not self.wake_k.is_kTI, f"{self.name}: Cannot apply ka or ambka setup"
 
     def __repr__(self):
         iname = (

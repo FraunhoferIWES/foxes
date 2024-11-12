@@ -1,7 +1,7 @@
 states:
   states_type: Timeseries
   data_source: timeseries_8000.csv.gz
-  output_vars: [ WS, WD, TI, RHO]
+  output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
     WD: wd 
