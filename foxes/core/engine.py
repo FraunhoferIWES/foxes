@@ -246,26 +246,21 @@ class Engine(ABC):
             if int(n_states / n_chunks_states) > chunk_size_states:
                 n_chunks_states += 1
                 chunk_size_states = int(n_states / n_chunks_states)
-        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
-        extra = n_states - n_chunks_states * chunk_size_states
-        if extra > 0:
-            chunk_sizes_states[-extra:] += 1
-
-        s = np.sum(chunk_sizes_states)
-        assert (
-            s == n_states
-        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
 
         # determine points chunks:
         chunk_sizes_targets = [n_targets]
         if n_targets > 1:
             if self.chunk_size_points is None:
-                if n_chunks_states == 1:
-                    n_chunks_targets = min(self.n_procs, n_targets)
-                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
-                else:
+                if n_targets < max(n_states, 1000):
                     chunk_size_targets = n_targets
                     n_chunks_targets = 1
+                else:     
+                    n_chunks_targets = min(self.n_procs, n_targets)
+                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
+                    if self.chunk_size_states is None and n_chunks_states > 1:
+                        while chunk_size_states * chunk_size_targets > n_targets:
+                            n_chunks_states += 1
+                            chunk_size_states = int(n_states / n_chunks_states)
             else:
                 chunk_size_targets = min(n_targets, self.chunk_size_points)
                 n_chunks_targets = max(int(n_targets / chunk_size_targets), 1)
@@ -281,6 +276,16 @@ class Engine(ABC):
             assert (
                 s == n_targets
             ), f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+
+        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
+        extra = n_states - n_chunks_states * chunk_size_states
+        if extra > 0:
+            chunk_sizes_states[-extra:] += 1
+
+        s = np.sum(chunk_sizes_states)
+        assert (
+            s == n_states
+        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
 
         return chunk_sizes_states, chunk_sizes_targets
 
@@ -603,7 +608,7 @@ def get_engine(error=True, default=True):
             return default
         elif isinstance(default, bool) and default:
             engine = Engine.new(
-                engine_type="DefaultEngine", chunk_size_points=20000, verbosity=0
+                engine_type="DefaultEngine", verbosity=1
             )
             print(f"Selecting '{engine}'")
             engine.initialize()

@@ -106,7 +106,7 @@ if __name__ == "__main__":
         "-C",
         "--chunksize_points",
         help="The chunk size for points",
-        default=5000,
+        default=None,
         type=int,
     )
     parser.add_argument(

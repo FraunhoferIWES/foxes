@@ -103,3 +103,6 @@ Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 exclude = ["notebooks", "examples", "tests", "docs"]
+
+[project.scripts]
+foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"

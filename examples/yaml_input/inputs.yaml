@@ -1,0 +1,45 @@
+states:
+  states_type: Timeseries
+  data_source: timeseries_8000.csv.gz
+  output_vars: [ WS, WD, TI, RHO]
+  var2col:
+    WS: ws
+    WD: wd 
+    TI: ti
+  fixed_vars:
+    RHO: 1.225
+  
+model_book:
+  turbine_types:
+    - name: my_turbine
+      ttype_type: PCtFile
+      data_source: NREL-5MW-D126-H90.csv
+  
+wind_farm:
+  layouts:
+    - function: add_from_file
+      file_path: test_farm_67.csv
+      turbine_models: [my_turbine]
+
+algorithm:
+  algo_type: Downwind
+  wake_models: [Bastankhah2014_linear_k004]
+
+calc_farm:
+  run: True 
+
+outputs:
+  FarmResultsEval:
+    farm_results: True
+    functions:
+      - name: add_capacity
+        algo: True
+      - name: add_efficiency
+  StateTurbineMap:
+    farm_results: True
+    functions:
+      - name: plot_map
+        variable: "P"
+        cmap: "inferno"
+        figsize: [6, 7]
+        plt_show: True
