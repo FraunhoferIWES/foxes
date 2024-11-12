@@ -374,6 +374,12 @@ class Algorithm(Model):
             idata = {"coords": {}, "data_vars": {}}
         else:
             idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
+        
+        if len(points.shape) == 2 and points.shape[1] == 3:
+            pts = np.zeros((n_states,) + points.shape, dtype=FC.DTYPE)
+            pts[:] = points[None]
+            points = pts
+            del pts
 
         if (
             len(points.shape) != 3

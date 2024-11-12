@@ -1,3 +1,5 @@
+import numpy as np
+
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
 import foxes.models as fm
@@ -742,6 +744,7 @@ class Downwind(Algorithm):
             )
 
         # welcome:
+        points = np.asarray(points)
         self._print_deco("calc_points", n_points=points.shape[1])
 
         # collect models and initialize:

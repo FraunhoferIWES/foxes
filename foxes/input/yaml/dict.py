@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -100,6 +101,21 @@ def run_dict(
         farm_results = algo.calc_farm(**rdict)
     else:
         farm_results = None
+    out = (farm_results,)
+
+    # run points calculation:
+    if "calc_points" in idict:
+        rdict = idict.get_item("calc_points")
+        if rdict.pop_item("run"):
+            _print("Running calc_points")
+            points = rdict.pop_item("points")
+            if isinstance(points, str):
+                _print("Reading file", points)
+                points = pd.read_csv(points).to_numpy()
+            point_results = algo.calc_points(farm_results, points=points, **rdict)
+        else:
+            point_results = None
+        out += (point_results,)
 
     # run outputs:
     out = (farm_results,)
