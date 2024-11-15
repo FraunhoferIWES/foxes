@@ -399,8 +399,8 @@ class DynamicWakes(WakeFrame):
                         nx[sel] = wdata[sts[sel], ags[sel] + 1, :2] - nx[sel]
                     if np.any(~sel):
                         nx[~sel] -= wdata[sts[~sel], ags[~sel] - 1, :2]
-                    dx = np.linalg.norm(nx, axis=-1)
-                    nx /= dx[:, None]
+                    dx = np.linalg.norm(nx, axis=-1) 
+                    nx /= dx[:, None] + 1e-14
 
                     projx = np.einsum("sd,sd->s", dp, nx)
                     sel = (projx > -dx) & (projx < dx)
