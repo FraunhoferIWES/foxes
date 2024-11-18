@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import States
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -198,7 +199,7 @@ class ScanWS(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=FC.DTYPE)
+        return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=config.dtype_double)
 
     def calculate(self, algo, mdata, fdata, tdata):
         """

@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.utils.two_circles import calc_area
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -130,11 +131,11 @@ class PartialAxiwake(PartialCentre):
         x = wcoos[..., 0, 0]
         n = wcoos[..., 0, 1:3]
         R = np.linalg.norm(n, axis=-1)
-        r = np.zeros((n_states, n_targets, self.n), dtype=FC.DTYPE)
+        r = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
         del wcoos
 
         # prepare circle section area calculation:
-        A = np.zeros((n_states, n_targets, self.n), dtype=FC.DTYPE)
+        A = np.zeros((n_states, n_targets, self.n), dtype=config.dtype_double)
         weights = np.zeros_like(A)
 
         # get normalized 2D vector between rotor and wake centres:
@@ -148,12 +149,12 @@ class PartialAxiwake(PartialCentre):
         sel = (x > 1e-8) & (R > D / 2)
         if np.any(sel):
             n_sel = np.sum(sel)
-            Rsel = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
+            Rsel = np.zeros((n_sel, self.n + 1), dtype=config.dtype_double)
             Rsel[:] = R[sel][:, None]
             Dsel = D[sel][:, None]
 
             # equal delta R2:
-            R1 = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
+            R1 = np.zeros((n_sel, self.n + 1), dtype=config.dtype_double)
             R1[:] = Dsel / 2
             steps = np.linspace(0.0, 1.0, self.n + 1, endpoint=True) - 0.5
             R2 = np.zeros_like(R1)
@@ -170,12 +171,12 @@ class PartialAxiwake(PartialCentre):
         sel = (x > 0) & (R < D / 2)
         if np.any(sel):
             n_sel = np.sum(sel)
-            Rsel = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
+            Rsel = np.zeros((n_sel, self.n + 1), dtype=config.dtype_double)
             Rsel[:] = R[sel][:, None]
             Dsel = D[sel][:, None]
 
             # equal delta R2:
-            R1 = np.zeros((n_sel, self.n + 1), dtype=FC.DTYPE)
+            R1 = np.zeros((n_sel, self.n + 1), dtype=config.dtype_double)
             R1[:, 1:] = Dsel / 2
             R2 = np.zeros_like(R1)
             # R2[:, 1:] = Rsel[:, :-1] + Dsel/2

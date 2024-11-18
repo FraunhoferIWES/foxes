@@ -1,8 +1,9 @@
 import numpy as np
 
 from foxes.core import TurbineModel
-import foxes.constants as FC
+from foxes import config
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class SetFarmVars(TurbineModel):
@@ -51,7 +52,7 @@ class SetFarmVars(TurbineModel):
         if self.running:
             raise ValueError(f"Model '{self.name}': Cannot add_var while running")
         self.vars.append(var)
-        self.__vdata.append(np.asarray(data, dtype=FC.DTYPE))
+        self.__vdata.append(np.asarray(data, dtype=config.dtype_double))
 
     def reset(self):
         """
@@ -105,7 +106,7 @@ class SetFarmVars(TurbineModel):
         idata = super().load_data(algo, verbosity)
 
         for i, v in enumerate(self.vars):
-            data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+            data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double)
             vdata = self.__vdata[i]
 
             # handle special case of call during vectorized optimization:
@@ -117,7 +118,7 @@ class SetFarmVars(TurbineModel):
                 n_pop = algo.states.n_pop
                 n_ost = algo.states.states.size()
                 n_trb = algo.n_turbines
-                vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
+                vdata = np.zeros((n_pop, n_ost, n_trb), dtype=config.dtype_double)
                 vdata[:] = self.__vdata[i][None, :]
                 vdata = vdata.reshape(n_pop * n_ost, n_trb)
 
@@ -130,7 +131,7 @@ class SetFarmVars(TurbineModel):
                 for ti in range(algo.n_turbines):
                     t = algo.farm.turbines[ti]
                     if len(t.xy.shape) == 1:
-                        xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
+                        xy = np.zeros((algo.n_states, 2), dtype=config.dtype_double)
                         xy[:] = t.xy[None, :]
                         t.xy = xy
                     t.xy[:, i] = np.where(
@@ -141,7 +142,7 @@ class SetFarmVars(TurbineModel):
             if v in [FV.D, FV.H]:
                 for ti in range(algo.n_turbines):
                     t = algo.farm.turbines[ti]
-                    x = np.zeros(algo.n_states, dtype=FC.DTYPE)
+                    x = np.zeros(algo.n_states, dtype=config.dtype_double)
                     if v == FV.D:
                         x[:] = t.D
                         t.D = x

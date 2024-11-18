@@ -1,7 +1,6 @@
 import numpy as np
 
 from foxes.core import TurbineInductionModel
-from foxes.utils import uv2wd, wd2uv
 import foxes.variables as FV
 import foxes.constants as FC
 

@@ -1,8 +1,9 @@
 import numpy as np
 from numbers import Number
 
-import foxes.constants as FC
 import foxes.variables as FV
+import foxes.constants as FC
+
 
 """ Mapping from windio to foxes variables
 :group: input.windio

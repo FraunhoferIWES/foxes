@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
-import foxes.constants as FC
 from foxes.utils import all_subclasses
+import foxes.constants as FC
 
 from .turbine_model import TurbineModel
 

@@ -1,7 +1,8 @@
 import numpy as np
 import argparse
 
-import foxes.constants as FC
+from foxes import config
+
 from .dict import Dict
 from .geom2d import AreaUnion, ClosedPolygon
 
@@ -212,7 +213,7 @@ def read_shp_polygons(
                 if not len(data):
                     return []
                 if isinstance(data[0], tuple):
-                    out = np.array(data, dtype=FC.DTYPE)
+                    out = np.array(data, dtype=config.dtype_double)
                     return _to_utm(out) if apply_utm else out
                 return [_to_numpy(d) for d in data]
 

@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import foxes.constants as FC
+from foxes import config
 import foxes.variables as FV
 from foxes.output.output import Output
 
@@ -75,7 +75,7 @@ class FarmLayoutOutput(Output):
 
         """
 
-        data = np.zeros([self.farm.n_turbines, 3], dtype=FC.DTYPE)
+        data = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
 
         if self.from_res:
             data[:, 0] = self.fres[FV.X][self.rstate]

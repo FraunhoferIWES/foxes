@@ -3,8 +3,6 @@ import pandas as pd
 from pathlib import Path
 
 from .PCt_file import PCtFile
-from foxes.data import parse_Pct_file_name
-import foxes.constants as FC
 
 
 class TBLFile(PCtFile):

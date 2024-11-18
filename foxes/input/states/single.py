@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import States, VerticalProfile
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -171,7 +172,7 @@ class SingleStateStates(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return np.ones((1, algo.n_turbines), dtype=FC.DTYPE)
+        return np.ones((1, algo.n_turbines), dtype=config.dtype_double)
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -203,25 +204,25 @@ class SingleStateStates(States):
             tdata[FV.WS] = np.full(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 self.ws,
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )
         if self.wd is not None:
             tdata[FV.WD] = np.full(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 self.wd,
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )
         if self.ti is not None:
             tdata[FV.TI] = np.full(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 self.ti,
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )
         if self.rho is not None:
             tdata[FV.RHO] = np.full(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 self.rho,
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )
 
         if len(self._profiles):

@@ -5,6 +5,7 @@ from abc import abstractmethod
 from .model import Model
 from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
+from foxes import config
 import foxes.constants as FC
 
 from .engine import Engine
@@ -379,7 +380,7 @@ class Algorithm(Model):
             idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
         
         if len(points.shape) == 2 and points.shape[1] == 3:
-            pts = np.zeros((n_states,) + points.shape, dtype=FC.DTYPE)
+            pts = np.zeros((n_states,) + points.shape, dtype=config.dtype_double)
             pts[:] = points[None]
             points = pts
             del pts
@@ -398,7 +399,7 @@ class Algorithm(Model):
         )
         idata["data_vars"][FC.TWEIGHTS] = (
             (FC.TPOINT,),
-            np.array([1.0], dtype=FC.DTYPE),
+            np.array([1.0], dtype=config.dtype_double),
         )
 
         return xr.Dataset(**idata)

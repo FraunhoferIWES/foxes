@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
+from foxes import config
 
 
 class InitFarmData(FarmDataModel):
@@ -75,14 +76,14 @@ class InitFarmData(FarmDataModel):
         n_turbines = algo.n_turbines
 
         # define FV.TXYH as vector [X, Y, H]:
-        fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=FC.DTYPE)
+        fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=config.dtype_double)
         fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
             fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
         # set X, Y, H, D:
-        fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+        fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
         for ti, t in enumerate(algo.farm.turbines):
 
             if len(t.xy.shape) == 1:

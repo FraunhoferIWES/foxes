@@ -5,8 +5,10 @@ from foxes.models.wake_models.wind.bastankhah16 import (
     Bastankhah2016Model,
     Bastankhah2016,
 )
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
+
 from .rotor_wd import RotorWD
 
 
@@ -200,7 +202,7 @@ class YawedWakes(WakeFrame):
         if np.any(st_sel):
             # prepare:
             n_st_sel = np.sum(st_sel)
-            ydef = np.zeros((n_st_sel,), dtype=FC.DTYPE)
+            ydef = np.zeros((n_st_sel,), dtype=config.dtype_double)
 
             # collect data:
             near = self.model.get_data(Bastankhah2016Model.NEAR, mdata)

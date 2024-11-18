@@ -4,6 +4,7 @@ from scipy.interpolate import interpn
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
 from foxes.core.data import TData
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -64,7 +65,7 @@ class Streamlines2D(WakeFrame):
         N = int(self.max_length_km * 1e3 / self.step)
 
         # calc data: x, y, z, wd
-        data = np.zeros((n_states, n_turbines, N, 4), dtype=FC.DTYPE)
+        data = np.zeros((n_states, n_turbines, N, 4), dtype=config.dtype_double)
         for i in range(N):
 
             # set streamline start point data (rotor centre):
@@ -86,7 +87,7 @@ class Streamlines2D(WakeFrame):
                 tdata = TData.from_points(
                     data[:, :, i, :3],
                     data={
-                        v: np.full((n_states, n_turbines, 1), np.nan, dtype=FC.DTYPE)
+                        v: np.full((n_states, n_turbines, 1), np.nan, dtype=config.dtype_double)
                         for v in svars
                     },
                     dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in svars},
@@ -151,7 +152,7 @@ class Streamlines2D(WakeFrame):
         del dists, selp
 
         # calculate coordinates:
-        coos = np.full((n_states, n_points, 3), np.nan, dtype=FC.DTYPE)
+        coos = np.full((n_states, n_points, 3), np.nan, dtype=config.dtype_double)
         coos[:, :, 2] = points[:, :, 2] - data[:, :, 2]
         delta = points[:, :, :2] - data[:, :, :2]
         nx = wd2uv(data[:, :, 3])
@@ -193,7 +194,7 @@ class Streamlines2D(WakeFrame):
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
-        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=FC.DTYPE)
+        coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=config.dtype_double)
         for ti in range(n_turbines):
             coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
                 :, :, 0, 0
@@ -201,7 +202,7 @@ class Streamlines2D(WakeFrame):
 
         # derive turbine order:
         # TODO: Remove loop over states
-        order = np.zeros((n_states, n_turbines), dtype=FC.ITYPE)
+        order = np.zeros((n_states, n_turbines), dtype=config.dtype_int)
         for si in range(n_states):
             order[si] = np.lexsort(keys=coosx[si])
 
@@ -273,7 +274,7 @@ class Streamlines2D(WakeFrame):
         xs = self.step * np.arange(n_spts)
 
         # interpolate to x of interest:
-        qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        qts = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = np.minimum(x, xs[-1])
         qts = qts.reshape(n_states * n_points, 2)

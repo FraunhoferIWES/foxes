@@ -4,7 +4,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-import foxes.constants as FC
+from foxes import config
 
 
 class TableFactors(TurbineModel):
@@ -112,9 +112,9 @@ class TableFactors(TurbineModel):
             rpars.update(self._rpars)
             self._data = PandasFileHelper.read_file(self.data_source, **rpars)
 
-        self._rvals = self._data.index.to_numpy(FC.DTYPE)
-        self._cvals = self._data.columns.to_numpy(FC.DTYPE)
-        self._data = self._data.to_numpy(FC.DTYPE)
+        self._rvals = self._data.index.to_numpy(config.dtype_double)
+        self._cvals = self._data.columns.to_numpy(config.dtype_double)
+        self._data = self._data.to_numpy(config.dtype_double)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
@@ -143,7 +143,7 @@ class TableFactors(TurbineModel):
 
         """
         n_sel = np.sum(st_sel)
-        qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)
+        qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
         qts[:, 0] = fdata[self.row_var][st_sel]
         qts[:, 1] = fdata[self.col_var][st_sel]
 

@@ -1,8 +1,8 @@
 import pandas as pd
 from xarray import Dataset
 
-import foxes.constants as FC
 from foxes.utils import write_nc
+import foxes.constants as FC
 
 from .output import Output
 

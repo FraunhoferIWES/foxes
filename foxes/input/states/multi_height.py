@@ -7,9 +7,10 @@ from scipy.interpolate import interp1d
 from foxes.core import States
 from foxes.utils import PandasFileHelper
 from foxes.data import STATES
+from foxes import config
+from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.utils import wd2uv, uv2wd
 
 
 class MultiHeightStates(States):
@@ -92,7 +93,7 @@ class MultiHeightStates(States):
         super().__init__()
 
         self.ovars = output_vars
-        self.heights = np.array(heights, dtype=FC.DTYPE)
+        self.heights = np.array(heights, dtype=config.dtype_double)
         self.rpars = pd_read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
@@ -226,7 +227,7 @@ class MultiHeightStates(States):
         self._inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
         if col_w in data:
             self._weights[:] = data[col_w].to_numpy()[:, None]
         elif FV.WEIGHT in self.var2col:
@@ -446,7 +447,7 @@ class MultiHeightStates(States):
         vrs = list(mdata[self.VARS])
         n_vars = len(vrs)
 
-        coeffs = np.zeros((n_h, n_h), dtype=FC.DTYPE)
+        coeffs = np.zeros((n_h, n_h), dtype=config.dtype_double)
         np.fill_diagonal(coeffs, 1.0)
         ipars = dict(
             assume_sorted=True,
@@ -499,10 +500,10 @@ class MultiHeightStates(States):
             elif has_wd and v == FV.WS:
                 results[v] = np.linalg.norm(uv, axis=-1)
             elif v in self.fixed_vars:
-                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=config.dtype_double)
                 results[v][:] = self.fixed_vars[v]
             elif v in self._solo:
-                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=FC.DTYPE)
+                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=config.dtype_double)
                 results[v][:] = mdata[self.var(v)][:, None, None]
             else:
                 results[v] = ires[vrs.index(v)]
@@ -652,7 +653,7 @@ class MultiHeightNCStates(MultiHeightStates):
             self._inds = format_times_func(self._inds)
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
         if w_name in data.data_vars:
             if data[w_name].dims != (self.state_coord,):
                 raise ValueError(
@@ -664,7 +665,7 @@ class MultiHeightNCStates(MultiHeightStates):
                 f"Weight variable '{w_name}' defined in var2col, but not found in data_vars {list(data.data_vars.keys())}"
             )
         else:
-            self._weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+            self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
             self._weights[:] = 1.0 / self._N
 
         cols = {}
@@ -707,11 +708,11 @@ class MultiHeightNCStates(MultiHeightStates):
             dims,
             np.stack(
                 [data.data_vars[c].to_numpy() for c in cols.values()], axis=1
-            ).astype(FC.DTYPE),
+            ).astype(config.dtype_double),
         )
 
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FC.STATE,), d.astype(FC.DTYPE))
+            idata["data_vars"][self.var(v)] = ((FC.STATE,), d.astype(config.dtype_double))
         self._solo = list(self._solo.keys())
 
         return idata

@@ -1,9 +1,10 @@
 import numpy as np
 from abc import abstractmethod
 
-from .data_calc_model import DataCalcModel
+from foxes import config
 import foxes.constants as FC
 
+from .data_calc_model import DataCalcModel
 
 class PointDataModel(DataCalcModel):
     """
@@ -60,7 +61,7 @@ class PointDataModel(DataCalcModel):
                 tdata[v] = np.full(
                     (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                     np.nan,
-                    dtype=FC.DTYPE,
+                    dtype=config.dtype_double,
                 )
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 

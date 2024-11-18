@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import PartialWakesModel
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -143,7 +144,7 @@ class PartialSegregated(PartialWakesModel):
         else:
             ares = {}
             for v, d in amb_res.items():
-                ares[v] = np.zeros((n_states, 1, tdata.n_tpoints), dtype=FC.DTYPE)
+                ares[v] = np.zeros((n_states, 1, tdata.n_tpoints), dtype=config.dtype_double)
                 ares[v][:] = np.einsum("sp,p->s", d[:, downwind_index], rpoint_weights)[
                     :, None, None
                 ]
@@ -151,7 +152,7 @@ class PartialSegregated(PartialWakesModel):
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
         for v in wdel.keys():
-            hdel = np.zeros((n_states, n_rotor_points), dtype=FC.DTYPE)
+            hdel = np.zeros((n_states, n_rotor_points), dtype=config.dtype_double)
             hdel[:] = np.einsum("sp,p->s", wdel[v][:, 0], gweights)[:, None]
             wdel[v] = hdel
 

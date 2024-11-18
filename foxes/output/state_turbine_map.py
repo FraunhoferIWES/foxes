@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import foxes.constants as FC
+
 from .output import Output
 
 

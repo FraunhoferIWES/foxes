@@ -3,8 +3,9 @@ import numpy as np
 from scipy.interpolate import interpn
 
 from foxes.utils import all_subclasses
-import foxes.constants as FC
+from foxes import config
 import foxes.variables as FV
+import foxes.constants as FC
 
 from .data import TData
 from .model import Model
@@ -243,7 +244,7 @@ class WakeFrame(Model):
             n_steps += 1
         n_ix = n_steps + 1
         xs = np.arange(xmin, xmin + n_ix * dx, dx)
-        xpts = np.zeros((n_states, n_steps), dtype=FC.DTYPE)
+        xpts = np.zeros((n_states, n_steps), dtype=config.dtype_double)
         xpts[:] = xs[None, 1:]
         pts = self.get_centreline_points(algo, mdata, fdata, downwind_index, xpts)
 
@@ -251,7 +252,7 @@ class WakeFrame(Model):
         tdata = TData.from_points(
             pts,
             data={
-                v: np.full((n_states, n_steps, 1), np.nan, dtype=FC.DTYPE) for v in vrs
+                v: np.full((n_states, n_steps, 1), np.nan, dtype=config.dtype_double) for v in vrs
             },
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )
@@ -280,13 +281,13 @@ class WakeFrame(Model):
             del wcalc, res
 
         # collect integration results:
-        iresults = np.zeros((n_states, n_ix, n_vars), dtype=FC.DTYPE)
+        iresults = np.zeros((n_states, n_ix, n_vars), dtype=config.dtype_double)
         for vi, v in enumerate(variables):
             for i in range(n_steps):
                 iresults[:, i + 1, vi] = iresults[:, i, vi] + tdata[v][:, i, 0] * dx
 
         # interpolate to x of interest:
-        qts = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+        qts = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
         qts[:, :, 0] = np.arange(n_states)[:, None]
         qts[:, :, 1] = x
         qts = qts.reshape(n_states * n_points, 2)

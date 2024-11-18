@@ -1,6 +1,5 @@
 from foxes.core import TurbineModel
 import foxes.variables as FV
-import foxes.constants as FC
 from foxes.utils import delta_wd
 
 

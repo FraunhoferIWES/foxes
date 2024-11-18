@@ -1,7 +1,7 @@
 from xarray import Dataset
 
-import foxes.constants as FC
 from foxes.core import Engine
+import foxes.constants as FC
 
 
 class SingleChunkEngine(Engine):

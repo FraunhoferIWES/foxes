@@ -4,8 +4,8 @@ from xarray import Dataset
 from numbers import Number
 
 from foxes.core import States
-import foxes.constants as FC
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):

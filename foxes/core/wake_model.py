@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import numpy as np
 
-from foxes.utils import all_subclasses, Factory
+from foxes.utils import all_subclasses
 import foxes.variables as FV
 import foxes.constants as FC
 

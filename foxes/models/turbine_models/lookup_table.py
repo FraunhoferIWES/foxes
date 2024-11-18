@@ -4,6 +4,7 @@ import xarray as xr
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
+from foxes import config
 import foxes.constants as FC
 
 
@@ -138,7 +139,7 @@ class LookupTable(TurbineModel):
             data = data[self.input_vars + self.output_vars]
             data.sort_values(by=self.input_vars, inplace=True)
             coords = {
-                v: np.asarray(data[v].unique(), dtype=FC.DTYPE) for v in self.input_vars
+                v: np.asarray(data[v].unique(), dtype=config.dtype_double) for v in self.input_vars
             }
 
             dvars = {}
@@ -146,7 +147,7 @@ class LookupTable(TurbineModel):
                 pivot_matrix = data.pivot_table(index=self.input_vars, values=[oname])
                 dvars[oname] = (
                     self.input_vars,
-                    pivot_matrix.to_numpy(FC.DTYPE).reshape(
+                    pivot_matrix.to_numpy(config.dtype_double).reshape(
                         pivot_matrix.index.levshape
                     ),
                 )

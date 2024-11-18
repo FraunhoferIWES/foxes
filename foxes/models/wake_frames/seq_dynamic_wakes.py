@@ -3,9 +3,10 @@ from scipy.spatial.distance import cdist
 
 from foxes.utils import wd2uv
 from foxes.core.data import TData
+from foxes import config
+from foxes.algorithms.sequential import Sequential
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.algorithms.sequential import Sequential
 
 from .farm_order import FarmOrder
 
@@ -80,19 +81,19 @@ class SeqDynamicWakes(FarmOrder):
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
             self._dt = (
-                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(config.dtype_int)
             )
         else:
             n = max(len(times) - 1, 1)
             self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
-                FC.ITYPE
+                config.dtype_int
             )
 
         # init wake traces data:
-        self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
-        self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=FC.DTYPE)
+        self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double)
+        self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double)
         self._traces_l = np.full(
-            (algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE
+            (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
         )
 
     def calc_order(self, algo, mdata, fdata):
@@ -192,7 +193,7 @@ class SeqDynamicWakes(FarmOrder):
         del dists
 
         # project:
-        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
+        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)
         wcoos[0, :, 2] = points[0, :, 2] - fdata[FV.TXYH][0, downwind_index, None, 2]
         nx = self._traces_v[tri, downwind_index, :2]
         mv = np.linalg.norm(nx, axis=-1)

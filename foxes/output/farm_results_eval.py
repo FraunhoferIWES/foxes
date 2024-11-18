@@ -4,6 +4,7 @@ from cycler import cycler
 import matplotlib.pyplot as plt
 
 from .output import Output
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -409,7 +410,7 @@ class FarmResultsEval(Output):
         if algo is not None and P_unit_W is None:
             P_unit_W = np.array(
                 [FC.P_UNITS[t.P_unit] for t in algo.farm_controller.turbine_types],
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )[:, None]
         elif algo is None and P_unit_W is not None:
             pass
@@ -472,10 +473,10 @@ class FarmResultsEval(Output):
         if algo is not None and P_nom is None:
             P_nom = np.array(
                 [t.P_nominal for t in algo.farm_controller.turbine_types],
-                dtype=FC.DTYPE,
+                dtype=config.dtype_double,
             )
         elif algo is None and P_nom is not None:
-            P_nom = np.array(P_nom, dtype=FC.DTYPE)
+            P_nom = np.array(P_nom, dtype=config.dtype_double)
         else:
             raise KeyError("Expecting either 'algo' or 'P_nom'")
 

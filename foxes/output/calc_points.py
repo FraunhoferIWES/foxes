@@ -1,9 +1,10 @@
 import numpy as np
 from xarray import Dataset
 
-import foxes.constants as FC
-import foxes.variables as FV
+from foxes import config
 from foxes.utils import write_nc
+import foxes.variables as FV
+import foxes.constants as FC
 
 from .output import Output
 
@@ -87,7 +88,7 @@ class PointCalculator(Output):
             pts = points
             p_has_s = True
         elif points.shape[-1] == 3 and len(points.shape) == 2:
-            pts = np.zeros([self.algo.n_states] + list(points.shape), dtype=FC.DTYPE)
+            pts = np.zeros([self.algo.n_states] + list(points.shape), dtype=config.dtype_double)
             pts[:] = points[None, :]
             p_has_s = False
         else:

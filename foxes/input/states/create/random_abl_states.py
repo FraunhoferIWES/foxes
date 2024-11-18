@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes import config
 
 
 def create_random_abl_states(
@@ -41,7 +41,7 @@ def create_random_abl_states(
 
     for v, mm in cols_minmax.items():
         data[v] = np.random.uniform(low=mm[0], high=mm[1], size=(n_states,)).astype(
-            FC.DTYPE
+            config.dtype_double
         )
 
     cmol = var2col.get(FV.MOL, FV.MOL)

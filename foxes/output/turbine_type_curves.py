@@ -7,8 +7,10 @@ from foxes.input.states import StatesTable
 from foxes.core import WindFarm, Turbine
 from foxes.algorithms import Downwind
 from foxes.models.turbine_models import SetFarmVars
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
+
 from .output import Output
 
 
@@ -113,7 +115,7 @@ class TurbineTypeCurves(Output):
         if not isinstance(axs, (list, tuple, np.ndarray)):
             axs = [axs]
 
-        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=FC.DTYPE)
+        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double)
         n_states = len(ws)
         sdata = pd.DataFrame(index=range(n_states))
         sdata.index.name = FC.STATE

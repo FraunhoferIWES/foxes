@@ -2,8 +2,8 @@ import numpy as np
 from abc import ABC
 from itertools import count
 
+from foxes import config
 import foxes.constants as FC
-
 
 class Model(ABC):
     """
@@ -522,7 +522,7 @@ class Model(ABC):
             if target == FC.STATE_TARGET and tdata.n_tpoints != 1:
                 # find the mean index and round it to nearest integer:
                 sts = tdata.tpoint_mean(FC.STATES_SEL)[:, :, None]
-                sts = (sts + 0.5).astype(FC.ITYPE)
+                sts = (sts + 0.5).astype(config.dtype_int)
             sel = sts < i0
             if np.any(sel):
                 if not hasattr(algo, "farm_results_downwind"):

@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 
-import foxes.variables as FV
-import foxes.constants as FC
 from foxes.utils import wd2uv, uv2wd, TabWindroseAxes
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
+import foxes.variables as FV
+import foxes.constants as FC
+
 from .output import Output
 
 

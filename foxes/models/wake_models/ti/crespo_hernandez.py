@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import WakeK
 from foxes.models.wake_models.top_hat import TopHatWakeModel
+from foxes import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -299,7 +300,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
         twoa = 2 * self.induction.ct2a(ct)
 
         # prepare output:
-        wake_deltas = np.zeros(n_targts, dtype=FC.DTYPE)
+        wake_deltas = np.zeros(n_targts, dtype=config.dtype_double)
 
         # calc near wake length, if not given
         if self.near_wake_D is None:

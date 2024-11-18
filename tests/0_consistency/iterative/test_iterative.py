@@ -3,7 +3,7 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes import config
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 

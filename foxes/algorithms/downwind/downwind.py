@@ -2,9 +2,11 @@ import numpy as np
 
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
+from foxes import config
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC
+
 from . import models as mdls
 
 
@@ -572,7 +574,7 @@ class Downwind(Algorithm):
         farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
         for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
             if v in farm_results:
-                farm_results[v] = farm_results[v].astype(FC.ITYPE)
+                farm_results[v] = farm_results[v].astype(config.dtype_int)
         del model_data
 
         # finalize models:
