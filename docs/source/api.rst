@@ -9,6 +9,7 @@ API
         ============================== ==================================================
         :ref:`foxes`                   Top-level package, shortcut to selected classes.
         :ref:`foxes.algorithms`        The foxes calculation algorithms.
+        :ref:`foxes.config`            *foxes* configurational data
         :ref:`foxes.constants`         List of constants and identifiers.
         :ref:`foxes.core`              Core functionality and abstract base classes.
         :ref:`foxes.data`              Static *foxes* data and functions to read/find it.

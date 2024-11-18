@@ -314,6 +314,7 @@ python_apigen_modules = {
     "foxes.algorithms.iterative.models": "_foxes/algorithms/iterative/models/",
     "foxes.algorithms.sequential": "_foxes/algorithms/sequential/",
     "foxes.algorithms.sequential.models": "_foxes/algorithms/sequential/models/",
+    "foxes.config": "_foxes/config/",
     "foxes.core": "_foxes/core/",
     "foxes.data": "_foxes/data/",
     "foxes.engines": "_foxes/engines/",

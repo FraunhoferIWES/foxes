@@ -126,13 +126,13 @@ STATE_SOURCE_ORDERI = "state-source-orderi"
 :group: foxes.constants
 """
 
-DTYPE = np.float64
-""" Default data type for floats
+DTYPE = "DTYPE"
+"""Identifier for default double data type
 :group: foxes.constants
 """
 
-ITYPE = np.int64
-""" Default data type for int
+ITYPE = "ITYPE"
+"""Identifier for default integer data type
 :group: foxes.constants
 """
 
