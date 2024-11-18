@@ -133,7 +133,10 @@ def read_windio(
     if verbosity > 0:
         print(f"Reading windio file {wio_file}")
 
-    yml_utils = import_module("windIO.utils.yml_utils", hint="pip install git+https://github.com/kilojoules/windIO@master#egg=windIO")
+    yml_utils = import_module(
+        "windIO.utils.yml_utils",
+        hint="pip install git+https://github.com/kilojoules/windIO@master#egg=windIO",
+    )
     wio = yml_utils.load_yaml(wio_file)
 
     if verbosity > 1:

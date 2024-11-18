@@ -5,6 +5,7 @@ from itertools import count
 from foxes.config import config
 import foxes.constants as FC
 
+
 class Model(ABC):
     """
     Base class for all models.

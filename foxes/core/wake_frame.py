@@ -252,7 +252,8 @@ class WakeFrame(Model):
         tdata = TData.from_points(
             pts,
             data={
-                v: np.full((n_states, n_steps, 1), np.nan, dtype=config.dtype_double) for v in vrs
+                v: np.full((n_states, n_steps, 1), np.nan, dtype=config.dtype_double)
+                for v in vrs
             },
             dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in vrs},
         )

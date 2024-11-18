@@ -59,10 +59,17 @@ def foxes_yaml():
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     parser.add_argument(
-        "-o", "--output_dir", help="Path to the output directory", default=None,
+        "-o",
+        "--output_dir",
+        help="Path to the output directory",
+        default=None,
     )
     parser.add_argument(
-        "-v", "--verbosity", help="The verbosity level, 0 = silent", type=int, default=None
+        "-v",
+        "--verbosity",
+        help="The verbosity level, 0 = silent",
+        type=int,
+        default=None,
     )
     args = parser.parse_args()
 
@@ -88,6 +95,6 @@ def foxes_yaml():
         wake_frame=args.frame,
         engine_pars=epars,
         iterative=args.iterative,
-        #output_dir=args.output_dir,
+        # output_dir=args.output_dir,
         verbosity=args.verbosity,
     )

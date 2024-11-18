@@ -144,7 +144,9 @@ class PartialSegregated(PartialWakesModel):
         else:
             ares = {}
             for v, d in amb_res.items():
-                ares[v] = np.zeros((n_states, 1, tdata.n_tpoints), dtype=config.dtype_double)
+                ares[v] = np.zeros(
+                    (n_states, 1, tdata.n_tpoints), dtype=config.dtype_double
+                )
                 ares[v][:] = np.einsum("sp,p->s", d[:, downwind_index], rpoint_weights)[
                     :, None, None
                 ]

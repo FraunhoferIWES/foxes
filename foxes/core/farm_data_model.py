@@ -84,7 +84,9 @@ class FarmDataModel(DataCalcModel):
         n_turbines = fdata.n_turbines
         for v in self.output_farm_vars(algo):
             if v not in fdata:
-                fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=config.dtype_double)
+                fdata[v] = np.full(
+                    (n_states, n_turbines), np.nan, dtype=config.dtype_double
+                )
                 fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
     @abstractmethod

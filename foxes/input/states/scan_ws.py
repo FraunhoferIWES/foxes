@@ -199,7 +199,9 @@ class ScanWS(States):
             The weights, shape: (n_states, n_turbines)
 
         """
-        return np.full((self.N, algo.n_turbines), 1.0 / self.N, dtype=config.dtype_double)
+        return np.full(
+            (self.N, algo.n_turbines), 1.0 / self.N, dtype=config.dtype_double
+        )
 
     def calculate(self, algo, mdata, fdata, tdata):
         """

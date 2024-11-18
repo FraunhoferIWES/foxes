@@ -4,6 +4,7 @@ from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class Rathmann(TurbineInductionModel):
     """
     The Rathmann induction wake model

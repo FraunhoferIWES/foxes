@@ -106,7 +106,9 @@ class SetFarmVars(TurbineModel):
         idata = super().load_data(algo, verbosity)
 
         for i, v in enumerate(self.vars):
-            data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double)
+            data = np.full(
+                (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
+            )
             vdata = self.__vdata[i]
 
             # handle special case of call during vectorized optimization:

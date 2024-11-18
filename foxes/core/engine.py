@@ -255,7 +255,7 @@ class Engine(ABC):
                 if n_targets < max(n_states, 1000):
                     chunk_size_targets = n_targets
                     n_chunks_targets = 1
-                else:     
+                else:
                     n_chunks_targets = min(self.n_procs, n_targets)
                     chunk_size_targets = max(int(n_targets / self.n_procs), 1)
                     if self.chunk_size_states is None and n_chunks_states > 1:
@@ -372,7 +372,9 @@ class Engine(ABC):
                 n_states = i1_states - i0_states
                 n_targets = i1_targets - i0_targets
                 for o in set(out_vars).difference(data.keys()):
-                    data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=config.dtype_double)
+                    data[o] = np.full(
+                        (n_states, n_targets, 1), np.nan, dtype=config.dtype_double
+                    )
                     dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
             tdata = TData.from_dataset(
@@ -545,7 +547,7 @@ class Engine(ABC):
 
         if engine_type is None:
             engine_type = "default"
-        
+
         engine_type = dict(
             default="DefaultEngine",
             threads="ThreadsEngine",
@@ -608,9 +610,7 @@ def get_engine(error=True, default=True):
             default.initialize()
             return default
         elif isinstance(default, bool) and default:
-            engine = Engine.new(
-                engine_type="DefaultEngine", verbosity=1
-            )
+            engine = Engine.new(engine_type="DefaultEngine", verbosity=1)
             print(f"Selecting '{engine}'")
             engine.initialize()
             return engine

@@ -139,7 +139,8 @@ class LookupTable(TurbineModel):
             data = data[self.input_vars + self.output_vars]
             data.sort_values(by=self.input_vars, inplace=True)
             coords = {
-                v: np.asarray(data[v].unique(), dtype=config.dtype_double) for v in self.input_vars
+                v: np.asarray(data[v].unique(), dtype=config.dtype_double)
+                for v in self.input_vars
             }
 
             dvars = {}

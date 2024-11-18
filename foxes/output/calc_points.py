@@ -88,7 +88,9 @@ class PointCalculator(Output):
             pts = points
             p_has_s = True
         elif points.shape[-1] == 3 and len(points.shape) == 2:
-            pts = np.zeros([self.algo.n_states] + list(points.shape), dtype=config.dtype_double)
+            pts = np.zeros(
+                [self.algo.n_states] + list(points.shape), dtype=config.dtype_double
+            )
             pts[:] = points[None, :]
             p_has_s = False
         else:

@@ -258,7 +258,7 @@ class WakeK(Model):
         else:
             s = f"k_var={self.k_var}"
         return s
-    
+
     @property
     def is_kTI(self):
         """Flag for ka != 0"""

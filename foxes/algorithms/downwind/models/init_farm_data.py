@@ -76,7 +76,9 @@ class InitFarmData(FarmDataModel):
         n_turbines = algo.n_turbines
 
         # define FV.TXYH as vector [X, Y, H]:
-        fdata[FV.TXYH] = np.full((n_states, n_turbines, 3), np.nan, dtype=config.dtype_double)
+        fdata[FV.TXYH] = np.full(
+            (n_states, n_turbines, 3), np.nan, dtype=config.dtype_double
+        )
         fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]

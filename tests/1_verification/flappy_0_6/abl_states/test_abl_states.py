@@ -39,7 +39,7 @@ def test():
         turbine_models=[ttype.name],
         verbosity=0,
     )
-    
+
     with foxes.Engine.new("threads", chunk_size_states=c):
 
         algo = foxes.algorithms.Downwind(
@@ -52,10 +52,12 @@ def test():
             partial_wakes={"Jensen_linear_k007": "centre"},
             verbosity=0,
         )
-        
+
         data = algo.calc_farm()
 
-        df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+        df = data.to_dataframe()[
+            [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
+        ]
 
         print()
         print("TRESULTS\n")

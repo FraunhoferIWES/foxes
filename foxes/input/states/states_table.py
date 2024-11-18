@@ -437,14 +437,17 @@ class StatesTable(States):
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
             else:
                 tdata[v] = np.zeros(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=config.dtype_double
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    dtype=config.dtype_double,
                 )
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         for v, f in self.fixed_vars.items():
             tdata[v] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), f, dtype=config.dtype_double
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                f,
+                dtype=config.dtype_double,
             )
 
         z = tdata[FC.TARGETS][..., 2]
@@ -569,7 +572,8 @@ class TabStates(StatesTable):
 
             wd0 = self.__tab_data["wd"].to_numpy()
             ws0 = a * np.append(
-                np.array([0], dtype=config.dtype_double), self.__tab_data["ws"].to_numpy()
+                np.array([0], dtype=config.dtype_double),
+                self.__tab_data["ws"].to_numpy(),
             )
             ws0 = 0.5 * (ws0[:-1] + ws0[1:])
 

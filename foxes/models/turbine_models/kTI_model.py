@@ -129,7 +129,8 @@ class kTI(TurbineModel):
         )
 
         k = fdata.get(
-            self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_double)
+            self.k_var,
+            np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_double),
         )
 
         k[st_sel] = kti * ti + kb

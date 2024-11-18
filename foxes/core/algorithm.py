@@ -69,7 +69,9 @@ class Algorithm(Model):
         if len(engine_pars):
             if "engine_type" in engine_pars:
                 if "engine" in engine_pars:
-                    raise KeyError(f"{self.name}: Expecting either 'engine' or 'engine_type', not both")
+                    raise KeyError(
+                        f"{self.name}: Expecting either 'engine' or 'engine_type', not both"
+                    )
             elif "engine" in engine_pars:
                 engine_pars["engine_type"] = engine_pars.pop("engine")
             v = engine_pars.pop("verbosity", verbosity)
@@ -378,7 +380,7 @@ class Algorithm(Model):
             idata = {"coords": {}, "data_vars": {}}
         else:
             idata = {"coords": {FC.STATE: states_indices}, "data_vars": {}}
-        
+
         if len(points.shape) == 2 and points.shape[1] == 3:
             pts = np.zeros((n_states,) + points.shape, dtype=config.dtype_double)
             pts[:] = points[None]

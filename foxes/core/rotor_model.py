@@ -155,7 +155,9 @@ class RotorModel(FarmDataModel):
         m[:] = np.stack([-n[:, :, 1], n[:, :, 0]], axis=-1)
         rax[:, :, 2, 2] = 1
 
-        points = np.zeros((n_states, n_turbines, n_points, 3), dtype=config.dtype_double)
+        points = np.zeros(
+            (n_states, n_turbines, n_points, 3), dtype=config.dtype_double
+        )
         points[:] = fdata[FV.TXYH][:, :, None, :]
         points[:] += (
             0.5 * D[:, :, None, None] * np.einsum("stad,pa->stpd", rax, dpoints)

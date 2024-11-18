@@ -9,19 +9,19 @@ from foxes.utils import Dict
 
 
 def run_dict(
-        idict, 
-        farm=None,
-        states=None, 
-        mbook=None,
-        algo=None,
-        engine_pars=None, 
-        iterative=None,
-        verbosity=None, 
-        **algo_pars,
-    ):
+    idict,
+    farm=None,
+    states=None,
+    mbook=None,
+    algo=None,
+    engine_pars=None,
+    iterative=None,
+    verbosity=None,
+    **algo_pars,
+):
     """
     Runs foxes from dictionary input
-    
+
     Parameters
     ----------
     idict: foxes.utils.Dict
@@ -52,7 +52,7 @@ def run_dict(
 
 
     :group: input.yaml
-    
+
     """
 
     def _print(*args, level=1, **kwargs):
@@ -73,8 +73,7 @@ def run_dict(
             for s, mlst in mdict.items():
                 t = mbook.sources.get_item(s)
                 c = mbook.base_classes.get_item(s)
-                ms = [Dict(m, name=f"{mdict.name}.s{i}")
-                    for i, m in enumerate(mlst)]
+                ms = [Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)]
                 for m in ms:
                     mname = m.pop_item("name")
                     _print(f"  Adding {s}.{mname}")
@@ -84,15 +83,17 @@ def run_dict(
     if farm is None:
         _print("Creating wind farm")
         fdict = idict.get_item("wind_farm")
-        lyts = [Dict(l, name=f"{fdict.name}.layout{i}")
-                for i, l in enumerate(fdict.pop_item("layouts"))]
+        lyts = [
+            Dict(l, name=f"{fdict.name}.layout{i}")
+            for i, l in enumerate(fdict.pop_item("layouts"))
+        ]
         farm = WindFarm(**fdict)
         for lyt in lyts:
             add_fun = getattr(farm_layout, lyt.pop_item("function"))
             if verbosity is not None:
                 lyt["verbosity"] = verbosity - 1
             add_fun(farm, **lyt)
-        
+
     # create engine:
     engine = None
     if engine_pars is not None:
@@ -153,8 +154,10 @@ def run_dict(
                 d["farm_results"] = farm_results
             if d.pop_item("algo", False):
                 d["algo"] = algo
-            flist = [Dict(f, name=f"{d.name}.function{i}")
-                     for i, f in enumerate(d.pop_item("functions"))]
+            flist = [
+                Dict(f, name=f"{d.name}.function{i}")
+                for i, f in enumerate(d.pop_item("functions"))
+            ]
             o = Output.new(ocls, **d)
             for fdict in flist:
                 fname = fdict.pop_item("name")
@@ -172,6 +175,5 @@ def run_dict(
     if engine is not None:
         _print(f"Finalizing engine: {engine}")
         engine.finalize()
-    
+
     return out
-    

@@ -31,14 +31,14 @@ class SingleStateStates(States):
     """
 
     def __init__(
-            self, 
-            ws=None, 
-            wd=None, 
-            ti=None, 
-            rho=None, 
-            profiles={}, 
-            **profdata,
-        ):
+        self,
+        ws=None,
+        wd=None,
+        ti=None,
+        rho=None,
+        profiles={},
+        **profdata,
+    ):
         """
         Constructor.
 

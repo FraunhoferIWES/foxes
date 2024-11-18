@@ -70,10 +70,16 @@ class Timelines(WakeFrame):
                 raise KeyError(
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
-            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(config.dtype_int)
+            dt = (
+                (times[1:] - times[:-1])
+                .astype("timedelta64[s]")
+                .astype(config.dtype_int)
+            )
         else:
             n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(config.dtype_int)
+            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
+                config.dtype_int
+            )
 
         # prepare mdata:
         data = algo.get_model_data(states)["coords"]

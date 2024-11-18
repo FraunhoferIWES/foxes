@@ -500,10 +500,14 @@ class MultiHeightStates(States):
             elif has_wd and v == FV.WS:
                 results[v] = np.linalg.norm(uv, axis=-1)
             elif v in self.fixed_vars:
-                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=config.dtype_double)
+                results[v] = np.zeros(
+                    (n_states, n_targets, n_tpoints), dtype=config.dtype_double
+                )
                 results[v][:] = self.fixed_vars[v]
             elif v in self._solo:
-                results[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=config.dtype_double)
+                results[v] = np.zeros(
+                    (n_states, n_targets, n_tpoints), dtype=config.dtype_double
+                )
                 results[v][:] = mdata[self.var(v)][:, None, None]
             else:
                 results[v] = ires[vrs.index(v)]
@@ -665,7 +669,9 @@ class MultiHeightNCStates(MultiHeightStates):
                 f"Weight variable '{w_name}' defined in var2col, but not found in data_vars {list(data.data_vars.keys())}"
             )
         else:
-            self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
+            self._weights = np.zeros(
+                (self._N, algo.n_turbines), dtype=config.dtype_double
+            )
             self._weights[:] = 1.0 / self._N
 
         cols = {}
@@ -712,7 +718,10 @@ class MultiHeightNCStates(MultiHeightStates):
         )
 
         for v, d in self._solo.items():
-            idata["data_vars"][self.var(v)] = ((FC.STATE,), d.astype(config.dtype_double))
+            idata["data_vars"][self.var(v)] = (
+                (FC.STATE,),
+                d.astype(config.dtype_double),
+            )
         self._solo = list(self._solo.keys())
 
         return idata

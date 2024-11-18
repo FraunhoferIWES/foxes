@@ -45,7 +45,7 @@ def test():
         turbine_models=["kTI_amb_02", ttype.name],
         verbosity=1,
     )
-    
+
     with foxes.Engine.new("threads", chunk_size_states=c):
 
         algo = foxes.algorithms.Downwind(

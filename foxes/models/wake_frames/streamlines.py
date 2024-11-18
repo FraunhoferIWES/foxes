@@ -87,7 +87,9 @@ class Streamlines2D(WakeFrame):
                 tdata = TData.from_points(
                     data[:, :, i, :3],
                     data={
-                        v: np.full((n_states, n_turbines, 1), np.nan, dtype=config.dtype_double)
+                        v: np.full(
+                            (n_states, n_turbines, 1), np.nan, dtype=config.dtype_double
+                        )
                         for v in svars
                     },
                     dims={v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in svars},

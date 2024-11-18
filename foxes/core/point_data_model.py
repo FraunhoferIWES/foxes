@@ -6,6 +6,7 @@ import foxes.constants as FC
 
 from .data_calc_model import DataCalcModel
 
+
 class PointDataModel(DataCalcModel):
     """
     Abstract base class for models that modify

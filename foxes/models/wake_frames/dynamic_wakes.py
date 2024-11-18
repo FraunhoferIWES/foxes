@@ -99,7 +99,9 @@ class DynamicWakes(WakeFrame):
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
             self._dt = (
-                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(config.dtype_int)
+                (times[1:] - times[:-1])
+                .astype("timedelta64[s]")
+                .astype(config.dtype_int)
             )
         else:
             n = max(len(times) - 1, 1)
@@ -164,10 +166,15 @@ class DynamicWakes(WakeFrame):
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
         if data is None:
-            data = np.full((n_states, self.max_age, 4), np.nan, dtype=config.dtype_double)
+            data = np.full(
+                (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
+            )
             data[:, 0, :3] = rxyh
             data[:, 0, 3] = 0
-            tdt = {v: np.zeros((n_states, 1, 1), dtype=config.dtype_double) for v in tdi.keys()}
+            tdt = {
+                v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
+                for v in tdi.keys()
+            }
             pts = data[:, 0, :3].copy()
             for age in range(self.max_age - 1):
                 if age == n_states:
@@ -400,7 +407,7 @@ class DynamicWakes(WakeFrame):
                         nx[sel] = wdata[sts[sel], ags[sel] + 1, :2] - nx[sel]
                     if np.any(~sel):
                         nx[~sel] -= wdata[sts[~sel], ags[~sel] - 1, :2]
-                    dx = np.linalg.norm(nx, axis=-1) 
+                    dx = np.linalg.norm(nx, axis=-1)
                     nx /= dx[:, None] + 1e-14
 
                     projx = np.einsum("sd,sd->s", dp, nx)

@@ -265,7 +265,9 @@ class SliceDataNC(States):
                     f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_sxy}, {cor_syx}, or {cor_s}"
                 )
 
-        data = np.zeros((n_sts, n_y, n_x, len(self.var2ncvar)), dtype=config.dtype_double)
+        data = np.zeros(
+            (n_sts, n_y, n_x, len(self.var2ncvar)), dtype=config.dtype_double
+        )
         for v in vars_syx:
             ncv = self.var2ncvar[v]
             if ds[ncv].dims == cor_syx:
@@ -589,7 +591,9 @@ class SliceDataNC(States):
 
         # prepare points:
         sts = np.arange(n_states)
-        pts = np.append(points, np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), axis=2)
+        pts = np.append(
+            points, np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), axis=2
+        )
         pts[:, :, 3] = sts[:, None]
         pts = pts.reshape(n_states * n_pts, 3)
         pts = np.flip(pts, axis=1)

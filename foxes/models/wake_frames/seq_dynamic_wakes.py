@@ -81,7 +81,9 @@ class SeqDynamicWakes(FarmOrder):
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
             self._dt = (
-                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(config.dtype_int)
+                (times[1:] - times[:-1])
+                .astype("timedelta64[s]")
+                .astype(config.dtype_int)
             )
         else:
             n = max(len(times) - 1, 1)
@@ -90,8 +92,12 @@ class SeqDynamicWakes(FarmOrder):
             )
 
         # init wake traces data:
-        self._traces_p = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double)
-        self._traces_v = np.zeros((algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double)
+        self._traces_p = np.zeros(
+            (algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double
+        )
+        self._traces_v = np.zeros(
+            (algo.n_states, algo.n_turbines, 3), dtype=config.dtype_double
+        )
         self._traces_l = np.full(
             (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
         )
