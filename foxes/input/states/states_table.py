@@ -222,7 +222,7 @@ class StatesTable(States):
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
                 self._data_source = algo.dbook.get_file_path(
-                    STATES, self.data_source, check_raw=False
+                    STATES, self.data_source.name, check_raw=False
                 )
                 if verbosity:
                     print(f"Path: {self.data_source}")
@@ -557,7 +557,7 @@ class TabStates(StatesTable):
                             f"States '{self.name}': Reading static data '{self.__tab_source}' from context '{STATES}'"
                         )
                     self.__tab_source = algo.dbook.get_file_path(
-                        STATES, self.__tab_source, check_raw=False
+                        STATES, self.__tab_source.name, check_raw=False
                     )
                     if verbosity:
                         print(f"Path: {self.__tab_source}")

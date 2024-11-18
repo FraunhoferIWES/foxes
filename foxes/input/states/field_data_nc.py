@@ -150,9 +150,11 @@ class FieldDataNC(States):
             if "*" in str(self.data_source):
                 pass
             else:
-                self.__data_source = StaticData().get_file_path(
-                    STATES, self.data_source, check_raw=True
-                )
+                self.__data_source = get_path(self.data_source)
+                if not self.data_source.is_file():
+                    self.__data_source = StaticData().get_file_path(
+                        STATES, self.data_source.name, check_raw=False
+                    )
             if verbosity:
                 if pre_load:
                     print(
