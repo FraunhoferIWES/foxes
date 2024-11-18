@@ -23,11 +23,11 @@ from . import output  # noqa: F401
 from . import utils  # noqa: F401
 
 import importlib
-import pathlib
+from pathlib import Path
 
 try:
     tomllib = importlib.import_module("tomllib")
-    source_location = pathlib.Path(__file__).parent
+    source_location = Path(__file__).parent
     if (source_location.parent / "pyproject.toml").exists():
         with open(source_location.parent / "pyproject.toml", "rb") as f:
             __version__ = tomllib.load(f)['project']['version']
