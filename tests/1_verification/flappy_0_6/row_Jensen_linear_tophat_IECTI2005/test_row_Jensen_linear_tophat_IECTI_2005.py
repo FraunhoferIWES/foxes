@@ -22,8 +22,6 @@ def test():
     cfile = thisdir / "flappy" / "results.csv.gz"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
 
-    ck = {FC.STATE: c}
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(
         data_source=tfile, var_ws_ct=FV.REWS, var_ws_P=FV.REWS
@@ -43,79 +41,80 @@ def test():
         turbine_models=[ttype.name],
         verbosity=1,
     )
+    
+    with foxes.Engine.new("process", chunk_size_states=c):
 
-    algo = foxes.algorithms.Downwind(
-        farm,
-        states,
-        rotor_model="centre",
-        mbook=mbook,
-        wake_models=["Jensen_linear_k007", "IECTI2005_max"],
-        wake_frame="rotor_wd",
-        partial_wakes=["top_hat", "top_hat"],
-        chunks=ck,
-        verbosity=1,
-    )
+        algo = foxes.algorithms.Downwind(
+            farm,
+            states,
+            rotor_model=rotor,
+            mbook=mbook,
+            wake_models=["Jensen_linear_k007", "IECTI2005_max"],
+            wake_frame="rotor_wd",
+            partial_wakes=["top_hat", "top_hat"],
+            verbosity=1,
+        )
 
-    data = algo.calc_farm()
+        data = algo.calc_farm()
 
-    df = data.to_dataframe()[
-        [
-            FV.X,
-            FV.Y,
-            FV.WD,
-            FV.AMB_REWS,
-            FV.REWS,
-            FV.AMB_TI,
-            FV.TI,
-            FV.AMB_CT,
-            FV.CT,
+        df = data.to_dataframe()[
+            [
+                FV.X,
+                FV.Y,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_CT,
+                FV.CT,
+            ]
         ]
-    ]
 
-    print("\nReading file", cfile)
-    fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+        print("\nReading file", cfile)
+        fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
-    print()
-    print("TRESULTS\n")
-    """sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
-    df = df.loc[sel]
-    fdata = fdata.loc[sel]"""
-    print(df)
-    print(fdata)
+        print()
+        print("TRESULTS\n")
+        """sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
+        df = df.loc[sel]
+        fdata = fdata.loc[sel]"""
+        print(df)
+        print(fdata)
 
-    print("\nVERIFYING\n")
-    df[FV.WS] = df["REWS"]
-    df[FV.AMB_WS] = df["AMB_REWS"]
+        print("\nVERIFYING\n")
+        df[FV.WS] = df["REWS"]
+        df[FV.AMB_WS] = df["AMB_REWS"]
 
-    delta = df - fdata
-    print(delta)
+        delta = df - fdata
+        print(delta)
 
-    chk = delta.abs()
-    print(chk.max())
+        chk = delta.abs()
+        print(chk.max())
 
-    var = FV.WS
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-3
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-3).all()
+        var = FV.WS
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-3
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-3).all()
 
-    var = FV.TI
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-4
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-4).all()
+        var = FV.TI
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-4
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-4).all()
 
-    var = FV.CT
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-5
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-5).all()
+        var = FV.CT
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-5
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-5).all()
 
 
 if __name__ == "__main__":

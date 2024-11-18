@@ -12,14 +12,11 @@ thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 def test():
     print(thisdir)
 
-    c = 2000
     cfile = thisdir / "flappy" / "results.csv.gz"
     tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
     tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
-
-    ck = {FC.STATE: c}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFromTwo(
@@ -56,7 +53,6 @@ def test():
         wake_models=["Jensen_linear_k007"],
         wake_frame="rotor_wd",
         partial_wakes={"Jensen_linear_k007": "top_hat"},
-        chunks=ck,
         verbosity=0,
     )
 
