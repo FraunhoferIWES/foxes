@@ -4,7 +4,7 @@ from cycler import cycler
 import matplotlib.pyplot as plt
 
 from .output import Output
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

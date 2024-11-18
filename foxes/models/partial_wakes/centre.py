@@ -1,7 +1,7 @@
 import numpy as np
 
 import foxes.variables as FV
-from foxes import config
+from foxes.config import config
 
 from .rotor_points import RotorPoints
 

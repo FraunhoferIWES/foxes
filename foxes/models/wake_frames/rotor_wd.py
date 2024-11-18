@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
-from foxes import config
+from foxes.config import config
 
 import foxes.variables as FV
 import foxes.constants as FC

@@ -2,7 +2,7 @@ import numpy as np
 from xarray import Dataset
 
 from foxes.algorithms import Iterative
-from foxes import config
+from foxes.config import config
 from foxes.core import get_engine
 import foxes.variables as FV
 import foxes.constants as FC

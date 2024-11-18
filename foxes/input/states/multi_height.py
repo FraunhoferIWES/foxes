@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d
 from foxes.core import States
 from foxes.utils import PandasFileHelper
 from foxes.data import STATES
-from foxes import config
+from foxes.config import config
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC

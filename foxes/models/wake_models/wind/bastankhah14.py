@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

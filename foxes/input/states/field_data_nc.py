@@ -9,7 +9,7 @@ from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes import config
+from foxes.config import config
 
 
 class FieldDataNC(States):

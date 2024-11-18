@@ -1,7 +1,7 @@
 import numpy as np
 import argparse
 
-from foxes import config
+from foxes.config import config
 
 from .dict import Dict
 from .geom2d import AreaUnion, ClosedPolygon

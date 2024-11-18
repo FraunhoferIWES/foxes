@@ -3,7 +3,7 @@ import pandas as pd
 from xarray import Dataset
 
 from foxes.utils import wd2uv, write_nc
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

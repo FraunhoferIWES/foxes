@@ -6,7 +6,7 @@ from pathlib import Path
 from foxes.core import States, VerticalProfile
 from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

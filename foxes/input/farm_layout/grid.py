@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import Turbine
-from foxes import config
+from foxes.config import config
 
 
 def add_grid(

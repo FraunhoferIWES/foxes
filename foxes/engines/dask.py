@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

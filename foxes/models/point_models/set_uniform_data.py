@@ -2,7 +2,7 @@ import pandas as pd
 
 from foxes.core.point_data_model import PointDataModel
 from foxes.utils import PandasFileHelper
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 

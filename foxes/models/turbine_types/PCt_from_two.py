@@ -5,7 +5,7 @@ from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
 import foxes.variables as FV
-from foxes import config
+from foxes.config import config
 
 
 class PCtFromTwo(TurbineType):

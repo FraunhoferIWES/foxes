@@ -1,7 +1,7 @@
 import numpy as np
 from abc import abstractmethod
 
-from foxes import config
+from foxes.config import config
 from foxes.utils import wd2uv, uv2wd, all_subclasses
 
 import foxes.variables as FV

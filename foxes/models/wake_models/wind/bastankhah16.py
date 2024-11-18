@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.core import Model, WakeK
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

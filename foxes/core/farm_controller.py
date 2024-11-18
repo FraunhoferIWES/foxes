@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 from .farm_data_model import FarmDataModelList, FarmDataModel

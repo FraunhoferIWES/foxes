@@ -3,7 +3,7 @@ import numpy as np
 from foxes.core import FarmDataModel, TData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes import config
+from foxes.config import config
 
 
 class InitFarmData(FarmDataModel):

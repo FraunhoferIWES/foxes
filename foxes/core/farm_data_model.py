@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import numpy as np
 
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 from .data_calc_model import DataCalcModel

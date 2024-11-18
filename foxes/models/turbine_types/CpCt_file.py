@@ -3,7 +3,7 @@ import pandas as pd
 
 from foxes.data import parse_Pct_file_name
 from foxes.utils import PandasFileHelper
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 from .PCt_file import PCtFile

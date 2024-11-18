@@ -6,7 +6,7 @@ from xarray import Dataset
 
 from foxes.core import MData, FData, TData
 from foxes.utils import all_subclasses
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 __global_engine_data__ = dict(

@@ -2,7 +2,7 @@ import numpy as np
 
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
-from foxes import config
+from foxes.config import config
 import foxes.models as fm
 import foxes.variables as FV
 import foxes.constants as FC

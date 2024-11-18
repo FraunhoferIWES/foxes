@@ -4,7 +4,7 @@ from scipy.spatial.distance import cdist
 from foxes.core import WakeFrame, TData
 from foxes.utils import wd2uv
 from foxes.algorithms.iterative import Iterative
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

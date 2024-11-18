@@ -5,7 +5,7 @@ from scipy.interpolate import interpn
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 
 

@@ -4,7 +4,7 @@ import pandas as pd
 from .PCt_from_two import PCtFromTwo
 from foxes.data import parse_Pct_two_files
 from foxes.utils import PandasFileHelper
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 

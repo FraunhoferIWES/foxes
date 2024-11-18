@@ -4,7 +4,7 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes import config
+from foxes.config import config
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 

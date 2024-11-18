@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist
 
 from foxes.utils import wd2uv
 from foxes.core.data import TData
-from foxes import config
+from foxes.config import config
 from foxes.algorithms.sequential import Sequential
 import foxes.variables as FV
 import foxes.constants as FC

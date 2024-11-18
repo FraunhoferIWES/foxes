@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 from foxes.output.output import Output
 

@@ -3,7 +3,7 @@ import numpy as np
 from scipy.interpolate import interpn
 
 from foxes.utils import all_subclasses
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

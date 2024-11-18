@@ -5,7 +5,7 @@ from abc import abstractmethod
 from .model import Model
 from foxes.data import StaticData
 from foxes.utils import Dict, all_subclasses
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 from .engine import Engine

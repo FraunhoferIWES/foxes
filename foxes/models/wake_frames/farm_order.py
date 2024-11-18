@@ -1,6 +1,6 @@
 import numpy as np
 
-from foxes import config
+from foxes.config import config
 from foxes.core import WakeFrame
 
 from .rotor_wd import RotorWD

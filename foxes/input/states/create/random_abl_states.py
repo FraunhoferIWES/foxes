@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 import foxes.variables as FV
-from foxes import config
+from foxes.config import config
 
 
 def create_random_abl_states(

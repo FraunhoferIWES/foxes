@@ -4,7 +4,7 @@ from scipy.interpolate import interpn
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
 from foxes.core.data import TData
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

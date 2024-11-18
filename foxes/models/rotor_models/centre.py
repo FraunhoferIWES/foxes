@@ -3,7 +3,7 @@ import numpy as np
 from foxes.core import RotorModel
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
-from foxes import config
+from foxes.config import config
 
 
 class CentreRotor(RotorModel):

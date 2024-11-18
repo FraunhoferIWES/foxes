@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import TurbineModel
-from foxes import config
+from foxes.config import config
 from foxes.utils import cubic_roots
 import foxes.variables as FV
 

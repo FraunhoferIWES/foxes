@@ -7,7 +7,7 @@ from foxes.input.states import StatesTable
 from foxes.core import WindFarm, Turbine
 from foxes.algorithms import Downwind
 from foxes.models.turbine_models import SetFarmVars
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

@@ -5,7 +5,7 @@ from foxes.models.wake_models.wind.bastankhah16 import (
     Bastankhah2016Model,
     Bastankhah2016,
 )
-from foxes import config
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 

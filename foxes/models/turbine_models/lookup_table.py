@@ -4,7 +4,7 @@ import xarray as xr
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 

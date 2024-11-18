@@ -4,7 +4,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-from foxes import config
+from foxes.config import config
 
 
 class TableFactors(TurbineModel):

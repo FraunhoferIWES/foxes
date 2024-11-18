@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABC
 from itertools import count
 
-from foxes import config
+from foxes.config import config
 import foxes.constants as FC
 
 class Model(ABC):
