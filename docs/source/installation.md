@@ -183,6 +183,8 @@ Note that the `--solver=libmamba` in both above commands is optional. Note that 
 
 ### Developers
 
+*The following steps require Python >= 3.11*
+
 For developers using `conda`, we recommend first installing foxes as described above, then removing only the `foxes` package while keeping the dependencies, and then adding `foxes` again from a git using `conda develop`:
 
 ```console

@@ -1,5 +1,3 @@
-import numpy as np
-
 XYH = "xyh"
 """ The vector (x, y, height)
 :group: foxes.variables
@@ -133,6 +131,11 @@ DTYPE = "DTYPE"
 
 ITYPE = "ITYPE"
 """Identifier for default integer data type
+:group: foxes.constants
+"""
+
+CWD_DIR = "cwd_dir"
+"""Identifier for the current working directory
 :group: foxes.constants
 """
 
