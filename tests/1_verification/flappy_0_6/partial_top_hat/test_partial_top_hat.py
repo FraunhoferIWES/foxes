@@ -35,7 +35,7 @@ def test():
         farm, lfile, turbine_models=[ttype.name], verbosity=0
     )
     
-    with foxes.Engine.new("process", chunk_size_states=1000):
+    with foxes.Engine.new("threads", chunk_size_states=1000):
 
         algo = foxes.algorithms.Downwind(
             farm,

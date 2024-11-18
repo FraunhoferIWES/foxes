@@ -22,8 +22,6 @@ def test():
     cfile = thisdir / "flappy" / "results.csv.gz"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
 
-    ck = {FC.STATE: c}
-
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(
         data_source=tfile, var_ws_ct=FV.REWS, var_ws_P=FV.REWS
@@ -44,7 +42,7 @@ def test():
         verbosity=1,
     )
     
-    with foxes.Engine.new("process", chunk_size_states=c):
+    with foxes.Engine.new("threads", chunk_size_states=c):
 
         algo = foxes.algorithms.Downwind(
             farm,
@@ -54,7 +52,6 @@ def test():
             wake_models=["Jensen_linear_k007", "IECTI2019_max"],
             wake_frame="rotor_wd",
             partial_wakes=["top_hat", "top_hat"],
-            chunks=ck,
             verbosity=1,
         )
 

@@ -4,7 +4,6 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -41,7 +40,7 @@ def test():
         verbosity=0,
     )
     
-    with foxes.Engine.new("process", chunk_size_states=c):
+    with foxes.Engine.new("threads", chunk_size_states=c):
 
         algo = foxes.algorithms.Downwind(
             farm,
