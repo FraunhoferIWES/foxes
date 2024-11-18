@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from foxes.utils import Dict
 
@@ -59,12 +60,6 @@ def foxes_yaml():
         "-nf", "--nofig", help="Do not show figures", action="store_true"
     )
     parser.add_argument(
-        "-o",
-        "--output_dir",
-        help="Path to the output directory",
-        default=None,
-    )
-    parser.add_argument(
         "-v",
         "--verbosity",
         help="The verbosity level, 0 = silent",
@@ -74,7 +69,8 @@ def foxes_yaml():
     args = parser.parse_args()
 
     v = 1 if args.verbosity is None else args.verbosity
-    idata = Dict.from_yaml(args.yml_file, verbosity=v)
+    fpath = Path(args.yml_file)
+    idata = Dict.from_yaml(fpath, verbosity=v)
 
     if args.engine is not None:
         epars = dict(
@@ -95,6 +91,6 @@ def foxes_yaml():
         wake_frame=args.frame,
         engine_pars=epars,
         iterative=args.iterative,
-        # output_dir=args.output_dir,
+        work_dir=fpath.parent,
         verbosity=args.verbosity,
     )

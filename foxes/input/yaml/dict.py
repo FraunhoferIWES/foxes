@@ -6,6 +6,8 @@ from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
 from foxes.output import Output
 from foxes.utils import Dict
+from foxes.config import config
+import foxes.constants as FC
 
 
 def run_dict(
@@ -17,6 +19,7 @@ def run_dict(
     engine_pars=None,
     iterative=None,
     verbosity=None,
+    work_dir=".",
     **algo_pars,
 ):
     """
@@ -43,21 +46,31 @@ def run_dict(
     verbosity: int, optional
         Force a verbosity level, 0 = silent, overrules
         settings from idict
+    work_dir: str or pathlib.Path
+        Path to the working directory
     algo_pars: dict, optional
         Additional parameters for the algorithm, overrules
         settings from idict
 
     Returns
     -------
-
+    farm_results: xarray.Dataset, optional
+        The farm results
+    point_results: xarray.Dataset, optional
+        The point results
+    output_i: object
+        For each output either None or the output result
 
     :group: input.yaml
 
     """
-
     def _print(*args, level=1, **kwargs):
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
+
+    # set working directory:
+    config[FC.WORK_DIR] = work_dir
+    _print("Working directory:", config.work_dir)
 
     # create states:
     if states is None:

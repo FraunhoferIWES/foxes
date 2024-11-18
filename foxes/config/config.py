@@ -18,7 +18,7 @@ class Config(Dict):
             {
                 FC.DTYPE: np.float64,
                 FC.ITYPE: np.int64,
-                FC.CWD_DIR: Path("."),
+                FC.WORK_DIR: Path("."),
             },
             name="config",
         )
@@ -50,7 +50,7 @@ class Config(Dict):
         return self.get_item(FC.ITYPE)
 
     @property
-    def cwd(self):
+    def work_dir(self):
         """
         The current working directory
         
@@ -60,12 +60,37 @@ class Config(Dict):
             Path to the current working directory
             
         """
-        pth = self.get_item(FC.CWD_DIR)
+        pth = self.get_item(FC.WORK_DIR)
         if not isinstance(pth, Path):
-            self[FC.CWD_DIR] = Path(pth)
-        return self[FC.CWD_DIR]
+            self[FC.WORK_DIR] = Path(pth)
+        return self[FC.WORK_DIR]
+
 
 config = Config()
 """Foxes configurational data object
 :group: foxes.config
 """
+
+
+def get_path(pth):
+    """
+    Gets path object, respecting the configurations
+    work directory
+
+    Parameters
+    ----------
+    pth: str or pathlib.Path
+        The path, optionally relative
+    
+    Returns
+    -------
+    out: pathlib.Path
+        The path, absolute or relative to working directory
+        from config
+    
+    :group: foxes.config
+
+    """
+    if not isinstance(pth, Path):
+        pth = Path(pth)
+    return pth if pth.is_absolute() else config.work_dir / pth

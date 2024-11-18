@@ -134,8 +134,8 @@ ITYPE = "ITYPE"
 :group: foxes.constants
 """
 
-CWD_DIR = "cwd_dir"
-"""Identifier for the current working directory
+WORK_DIR = "work_dir"
+"""Identifier for the working directory
 :group: foxes.constants
 """
 

@@ -68,7 +68,7 @@ class PointCalculator(Output):
         weight_turbine: int, optional
             Index of the turbine from which to take the weight
         to_file: str, optional
-            Path to the output netCDF file
+            The output netCDF file name
         write_vars: list of str
             The variables to be written to file, or None
             for all

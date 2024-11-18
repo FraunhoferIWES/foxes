@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from foxes.config import config
+from foxes.config import config, get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -99,8 +99,9 @@ def write_random_abl_states(
 
     """
 
+    fpath = get_path(file_path)
     if verbosity:
-        print("Writing file", file_path)
+        print("Writing file", fpath)
 
     data = create_random_abl_states(
         n_states, cols_minmax, var2col, mol_abs_range, normalize
@@ -131,4 +132,4 @@ def write_random_abl_states(
             if d is not None:
                 data[v] = data[v].round(d)
 
-    data.to_csv(file_path, **kwargs)
+    data.to_csv(fpath, **kwargs)

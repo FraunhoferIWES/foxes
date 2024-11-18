@@ -19,7 +19,7 @@ class StateTurbineTable(Output):
 
     """
 
-    def __init__(self, farm_results):
+    def __init__(self, farm_results, **kwargs):
         """
         Constructor.
 
@@ -27,8 +27,11 @@ class StateTurbineTable(Output):
         ----------
         farm_results: xarray.Dataset
             The farm results
-
+        kwargs: dict, optional
+            Additional parameters for the base class
+            
         """
+        super().__init__(**kwargs)
         self.farm_results = farm_results
 
     def get_dataset(
@@ -48,7 +51,7 @@ class StateTurbineTable(Output):
         name_map: dict
             Map from foxes to output names
         to_file: str, optional
-            The output file path, if writing is desired
+            Name of the output file, if writing is desired
         kwargs: dict, optional
             Additional parameters for write_nc
 
@@ -73,6 +76,7 @@ class StateTurbineTable(Output):
         )
 
         if to_file is not None:
-            write_nc(ds=ds, fpath=to_file, **kwargs)
+            fpath = self.get_fpath(to_file)
+            write_nc(ds=ds, fpath=fpath, **kwargs)
 
         return ds

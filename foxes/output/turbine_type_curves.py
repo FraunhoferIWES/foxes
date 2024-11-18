@@ -28,7 +28,7 @@ class TurbineTypeCurves(Output):
 
     """
 
-    def __init__(self, mbook):
+    def __init__(self, mbook, **kwargs):
         """
         Constructor.
 
@@ -36,8 +36,11 @@ class TurbineTypeCurves(Output):
         ----------
         mbook: foxes.models.ModelBook
             The model book
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.mbook = mbook
 
     def plot_curves(

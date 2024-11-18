@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 from xarray import Dataset, open_dataset
-from pathlib import Path
 from scipy.interpolate import interp1d
 
 from foxes.core import States
 from foxes.utils import PandasFileHelper
 from foxes.data import STATES
-from foxes.config import config
+from foxes.config import config, get_path
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
@@ -199,7 +198,8 @@ class MultiHeightStates(States):
 
         """
         if not isinstance(self.data_source, pd.DataFrame):
-            if not Path(self.data_source).is_file():
+            self._data_source = get_path(self.data_source)
+            if not self.data_source.is_file():
                 if verbosity:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
@@ -625,7 +625,8 @@ class MultiHeightNCStates(MultiHeightStates):
 
         """
         if not isinstance(self.data_source, Dataset):
-            if not Path(self.data_source).is_file():
+            self._data_source = get_path(self.data_source)
+            if not self.data_source.is_file():
                 if verbosity:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"

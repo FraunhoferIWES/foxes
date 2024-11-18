@@ -138,7 +138,7 @@ class ResultsWriter(Output):
 
     def write_nc(
         self,
-        file_path,
+        file_name,
         variables=None,
         turbine_names=False,
         verbosity=1,
@@ -149,8 +149,8 @@ class ResultsWriter(Output):
 
         Parameters
         ----------
-        file_path: str
-            Path for the nc file
+        file_name: str
+            The nc file name
         variables: dict or list of str, optional
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
@@ -185,5 +185,5 @@ class ResultsWriter(Output):
             },
         )
 
-        fpath = self.get_fpath(file_path)
+        fpath = self.get_fpath(file_name)
         write_nc(ds, fpath, verbosity=verbosity, **kwargs)

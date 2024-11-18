@@ -3,7 +3,7 @@ import pandas as pd
 
 from foxes.data import parse_Pct_file_name
 from foxes.utils import PandasFileHelper
-from foxes.config import config
+from foxes.config import config, get_path
 import foxes.constants as FC
 
 from .PCt_file import PCtFile
@@ -49,7 +49,8 @@ class CpCtFile(PCtFile):
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)
             pars.update(parameters)
-            data = PandasFileHelper.read_file(data_source, **pd_file_read_pars)
+            fpath = get_path(data_source)
+            data = PandasFileHelper.read_file(fpath, **pd_file_read_pars)
         else:
             data = data_source
             pars = parameters

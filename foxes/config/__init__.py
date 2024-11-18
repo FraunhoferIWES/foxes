@@ -1,1 +1,1 @@
-from .config import Config, config
+from .config import Config, config, get_path

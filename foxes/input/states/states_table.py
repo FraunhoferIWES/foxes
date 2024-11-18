@@ -6,7 +6,7 @@ from pathlib import Path
 from foxes.core import States, VerticalProfile
 from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
-from foxes.config import config
+from foxes.config import config, get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -215,7 +215,8 @@ class StatesTable(States):
             data = self.data_source
             isorg = True
         else:
-            if not Path(self.data_source).is_file():
+            self._data_source = get_path(self.data_source)
+            if not self.data_source.is_file():
                 if verbosity:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
@@ -549,7 +550,8 @@ class TabStates(StatesTable):
         """
         if self.data_source is None:
             if self.__tab_data is None:
-                if not Path(self.__tab_source).is_file():
+                self.__tab_source = get_path(self.__tab_source)
+                if not self.__tab_source.is_file():
                     if verbosity:
                         print(
                             f"States '{self.name}': Reading static data '{self.__tab_source}' from context '{STATES}'"

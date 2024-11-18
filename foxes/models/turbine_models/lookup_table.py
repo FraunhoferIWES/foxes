@@ -4,7 +4,7 @@ import xarray as xr
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-from foxes.config import config
+from foxes.config import config, get_path
 import foxes.constants as FC
 
 
@@ -128,9 +128,10 @@ class LookupTable(TurbineModel):
             if isinstance(self.data_source, pd.DataFrame):
                 data = self.data_source
             else:
+                fpath = get_path(self.data_source)
                 if verbosity > 0:
-                    print(f"{self.name}: Reading file {self.data_source}")
-                data = PandasFileHelper.read_file(self.data_source, **self._rpars)
+                    print(f"{self.name}: Reading file {fpath}")
+                data = PandasFileHelper.read_file(fpath, **self._rpars)
 
             if verbosity > 0:
                 print(f"{self.name}: Preparing interpolation data")

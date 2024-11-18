@@ -2,12 +2,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interpn
-from pathlib import Path
 
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
-from foxes.config import config
+from foxes.config import config, get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -160,7 +159,8 @@ class SliceDataNC(States):
                     )
 
             def _read_ds():
-                if Path(self.data_source).is_file():
+                self._data_source = get_path(self.data_source)
+                if self.data_source.is_file():
                     return xr.open_dataset(self.data_source)
                 else:
                     # try to read multiple files, needs dask:
@@ -178,8 +178,7 @@ class SliceDataNC(States):
                         import_module("dask", hint="pip install dask")
                         raise e
 
-            with _read_ds() as ds:
-                self.__data_source = ds
+            self.__data_source = _read_ds()
 
         if sel is not None:
             self.__data_source = self.data_source.sel(self.sel)
