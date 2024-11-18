@@ -33,7 +33,6 @@ class Algorithm(Model):
         farm,
         verbosity=1,
         dbook=None,
-        engine=None,
         **engine_pars,
     ):
         """
@@ -49,8 +48,6 @@ class Algorithm(Model):
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
-        engine: str
-            The engine class name
         engine_pars: dict, optional
             Parameters for the engine constructor
 
@@ -68,14 +65,20 @@ class Algorithm(Model):
         self.__idata_mem = Dict(name="idata_mem")
         self.__chunk_store = Dict(name="chunk_store")
 
-        if engine is not None:
-            e = Engine.new(engine_type=engine, verbosity=verbosity, **engine_pars)
+        if len(engine_pars):
+            if "engine_type" in engine_pars:
+                if "engine" in engine_pars:
+                    raise KeyError(f"{self.name}: Expecting either 'engine' or 'engine_type', not both")
+            elif "engine" in engine_pars:
+                engine_pars["engine_type"] = engine_pars.pop("engine")
+            v = engine_pars.pop("verbosity", verbosity)
+            try:
+                e = Engine.new(verbosity=v, **engine_pars)
+            except TypeError as e:
+                print(f"\nError while interpreting engine_pars {engine_pars}\n")
+                raise e
             self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
             e.initialize()
-        elif len(engine_pars):
-            self.print(
-                f"Algorithm '{self.name}': Parameter 'engine' is None; ignoring engine parameters {engine_pars}"
-            )
 
     @property
     def farm(self):

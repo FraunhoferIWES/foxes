@@ -10,11 +10,14 @@ from foxes.utils import Dict
 
 def run_dict(
         idict, 
-        *args, 
+        farm=None,
+        states=None, 
+        mbook=None,
+        algo=None,
         engine_pars=None, 
         iterative=None,
         verbosity=None, 
-        **kwargs,
+        **algo_pars,
     ):
     """
     Runs foxes from dictionary input
@@ -23,12 +26,26 @@ def run_dict(
     ----------
     idict: foxes.utils.Dict
         The input parameter dictionary
+    farm: foxes.core.WindFarm, optional
+        The wind farm, overrules settings from idict
+    states: foxes.core.States, optional
+        The ambient states, overrules settings from idict
+    mbook: foxes.models.ModelBook, optional
+        The model book, overrules settings from idict
+    algo: foxes.core.Algorithm, optional
+        The algorithm, overrules settings from idict
     engine_pars: dict, optional
-        Parameters for engine creation
+        Parameters for engine creation, overrules
+        settings from idict
     iterative: bool, optional
-        Force iterative calculations
+        Force iterative calculations, overrules
+        settings from idict
     verbosity: int, optional
-        Force a verbosity level, 0 = silent
+        Force a verbosity level, 0 = silent, overrules
+        settings from idict
+    algo_pars: dict, optional
+        Additional parameters for the algorithm, overrules
+        settings from idict
 
     Returns
     -------
@@ -43,35 +60,38 @@ def run_dict(
             print(*args, **kwargs)
 
     # create states:
-    _print("Creating states")
-    states = States.new(**idict["states"])
+    if states is None:
+        _print("Creating states")
+        states = States.new(**idict["states"])
 
     # create model book:
-    mbook = ModelBook()
-    if "model_book" in idict:
-        _print("Creating model book")
-        mdict = idict.get_item("model_book")
-        for s, mlst in mdict.items():
-            t = mbook.sources.get_item(s)
-            c = mbook.base_classes.get_item(s)
-            ms = [Dict(m, name=f"{mdict.name}.s{i}")
-                  for i, m in enumerate(mlst)]
-            for m in ms:
-                mname = m.pop_item("name")
-                _print(f"  Adding {s}.{mname}")
-                t[mname] = c.new(**m)
+    if mbook is None:
+        mbook = ModelBook()
+        if "model_book" in idict:
+            _print("Creating model book")
+            mdict = idict.get_item("model_book")
+            for s, mlst in mdict.items():
+                t = mbook.sources.get_item(s)
+                c = mbook.base_classes.get_item(s)
+                ms = [Dict(m, name=f"{mdict.name}.s{i}")
+                    for i, m in enumerate(mlst)]
+                for m in ms:
+                    mname = m.pop_item("name")
+                    _print(f"  Adding {s}.{mname}")
+                    t[mname] = c.new(**m)
 
     # create farm:
-    _print("Creating wind farm")
-    fdict = idict.get_item("wind_farm")
-    lyts = [Dict(l, name=f"{fdict.name}.layout{i}")
-            for i, l in enumerate(fdict.pop_item("layouts"))]
-    farm = WindFarm(**fdict)
-    hverbo = 1 if verbosity is None else verbosity
-    for lyt in lyts:
-        add_fun = getattr(farm_layout, lyt.pop_item("function"))
-        v = lyt.pop_item("verbosity", hverbo-1)
-        add_fun(farm, verbosity=v, **lyt)
+    if farm is None:
+        _print("Creating wind farm")
+        fdict = idict.get_item("wind_farm")
+        lyts = [Dict(l, name=f"{fdict.name}.layout{i}")
+                for i, l in enumerate(fdict.pop_item("layouts"))]
+        farm = WindFarm(**fdict)
+        for lyt in lyts:
+            add_fun = getattr(farm_layout, lyt.pop_item("function"))
+            if verbosity is not None:
+                lyt["verbosity"] = verbosity - 1
+            add_fun(farm, **lyt)
         
     # create engine:
     engine = None
@@ -80,19 +100,24 @@ def run_dict(
         _print(f"Initializing engine: {engine}")
         engine.initialize()
     elif "engine" in idict:
-        v = idict.pop_item("verbosity", hverbo)
-        engine = Engine.new(**idict["engine"], verbosity=v)
+        if verbosity is not None:
+            idict["verbosity"] = verbosity - 1
+        engine = Engine.new(**idict["engine"])
         engine.initialize()
         _print(f"Initializing engine: {engine}")
 
     # create algorithm:
-    _print("Creating algorithm")
-    adict = idict.get_item("algorithm")
-    if iterative is not None and iterative:
-        adict["algo_type"] = "Iterative"
-    adict.update(dict(farm=farm, states=states, mbook=mbook))
-    v = adict.pop("verbosity", hverbo-1)
-    algo = Algorithm.new(**adict, verbosity=v)
+    if algo is None:
+        _print("Creating algorithm")
+        adict = idict.get_item("algorithm")
+        if iterative is not None and iterative:
+            adict["algo_type"] = "Iterative"
+        adict.update(dict(farm=farm, states=states, mbook=mbook))
+        if verbosity is not None:
+            adict["verbosity"] = verbosity - 1
+        if algo_pars is not None:
+            adict.update(algo_pars)
+        algo = Algorithm.new(**adict)
 
     # run farm calculation:
     rdict = idict.get_item("calc_farm")

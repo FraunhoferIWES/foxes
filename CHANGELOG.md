@@ -658,7 +658,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.1.2
 
 - Command line applications:
-  - New command line tool `foxes_yaml`, runs *foxes* by interpreting a `*.yml` input parameter file (no script neccessary)
+  - Introducing the first command line application: `foxes_yaml`, runs *foxes* by interpreting a `yaml` input parameter file (no script neccessary)
 - Inputs:
   - New input package `foxes.input.yaml`, realizing the run via yaml parameter files. This is not following `windio`, but a *foxes* specific structure.
 - Examples:

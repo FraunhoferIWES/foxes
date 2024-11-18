@@ -543,22 +543,22 @@ class Engine(ABC):
         """
 
         if engine_type is None:
-            return None
-        else:
-            engine_type = dict(
-                default="DefaultEngine",
-                threads="ThreadsEngine",
-                process="ProcessEngine",
-                xarray="XArrayEngine",
-                dask="DaskEngine",
-                multiprocess="MultiprocessEngine",
-                local_cluster="LocalClusterEngine",
-                slurm_cluster="SlurmClusterEngine",
-                mpi="MPIEngine",
-                ray="RayEngine",
-                numpy="NumpyEngine",
-                single="SingleChunkEngine",
-            ).get(engine_type, engine_type)
+            engine_type = "default"
+        
+        engine_type = dict(
+            default="DefaultEngine",
+            threads="ThreadsEngine",
+            process="ProcessEngine",
+            xarray="XArrayEngine",
+            dask="DaskEngine",
+            multiprocess="MultiprocessEngine",
+            local_cluster="LocalClusterEngine",
+            slurm_cluster="SlurmClusterEngine",
+            mpi="MPIEngine",
+            ray="RayEngine",
+            numpy="NumpyEngine",
+            single="SingleChunkEngine",
+        ).get(engine_type, engine_type)
 
         allc = all_subclasses(cls)
         found = engine_type in [scls.__name__ for scls in allc]

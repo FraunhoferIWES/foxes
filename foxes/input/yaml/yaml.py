@@ -34,9 +34,6 @@ def foxes_yaml():
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
-    parser.add_argument(
-        "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
-    )
     parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-n", "--n_procs", help="The number of processes", default=None, type=int
@@ -87,11 +84,10 @@ def foxes_yaml():
         idata,
         rotor_model=args.rotor,
         partial_wakes=args.pwakes,
-        wakes=args.wakes,
+        wake_models=args.wakes,
         wake_frame=args.frame,
-        turbine_models=args.tmodels,
         engine_pars=epars,
         iterative=args.iterative,
-        output_dir=args.output_dir,
+        #output_dir=args.output_dir,
         verbosity=args.verbosity,
     )
