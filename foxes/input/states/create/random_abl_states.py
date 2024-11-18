@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
 
-import foxes.variables as FV
 from foxes.config import config
+import foxes.variables as FV
+import foxes.constants as FC
 
 
 def create_random_abl_states(
