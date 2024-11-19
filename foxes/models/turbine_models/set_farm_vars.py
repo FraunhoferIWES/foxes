@@ -14,12 +14,14 @@ class SetFarmVars(TurbineModel):
     ----------
     vars: list of str
         The variables to be set
+    once: bool
+        Flag for running only once
 
     :group: models.turbine_models
 
     """
 
-    def __init__(self, pre_rotor=False):
+    def __init__(self, pre_rotor=False, once=False):
         """
         Constructor.
 
@@ -28,9 +30,12 @@ class SetFarmVars(TurbineModel):
         pre_rotor: bool
             Flag for running this model before
             running the rotor model.
+        once: bool
+            Flag for running only once
 
         """
         super().__init__(pre_rotor=pre_rotor)
+        self.once = once
         self.reset()
 
     def add_var(self, var, data):
@@ -62,6 +67,23 @@ class SetFarmVars(TurbineModel):
             raise ValueError(f"Model '{self.name}': Cannot reset while running")
         self.vars = []
         self.__vdata = []
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        super().initialize(algo, verbosity, force)
+        self.__once_done = set()
 
     def output_farm_vars(self, algo):
         """
@@ -246,21 +268,26 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        if self.pre_rotor:
-            order = np.s_[:]
-            ssel = np.s_[:]
-        else:
-            order = fdata[FV.ORDER]
-            ssel = fdata[FV.ORDER_SSEL]
+        i0 = mdata.states_i0(counter=True)
+        if not self.once or i0 not in self.__once_done:
 
-        bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
-        bsel[st_sel] = True
+            if self.pre_rotor:
+                order = np.s_[:]
+                ssel = np.s_[:]
+            else:
+                order = fdata[FV.ORDER]
+                ssel = fdata[FV.ORDER_SSEL]
 
-        for v in self.vars:
-            data = mdata[self.var(v)][ssel, order]
-            hsel = ~np.isnan(data)
-            tsel = bsel & hsel
+            bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+            bsel[st_sel] = True
 
-            fdata[v][tsel] = data[tsel]
+            for v in self.vars:
+                data = mdata[self.var(v)][ssel, order]
+                hsel = ~np.isnan(data)
+                tsel = bsel & hsel
+
+                fdata[v][tsel] = data[tsel]
+
+            self.__once_done.add(i0)
 
         return {v: fdata[v] for v in self.vars}
