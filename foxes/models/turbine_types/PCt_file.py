@@ -179,7 +179,7 @@ class PCtFile(TurbineType):
                 if verbosity > 0:
                     print(
                         f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
-                    ) 
+                    )
                 fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=False)
             if verbosity > 0:
                 print(f"Turbine type '{self.name}': Reading file", fpath)

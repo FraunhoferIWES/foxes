@@ -369,16 +369,16 @@ class StatesRosePlotOutput(RosePlotOutput):
     """
 
     def __init__(
-            self, 
-            states, 
-            point, 
-            mbook=None, 
-            ws_var=FV.AMB_REWS, 
-            **kwargs,
-        ):
+        self,
+        states,
+        point,
+        mbook=None,
+        ws_var=FV.AMB_REWS,
+        **kwargs,
+    ):
         """
         Constructor.
-        
+
         Parameters
         ----------
         states: foxes.core.States

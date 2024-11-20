@@ -32,6 +32,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
     :group: input.yaml.windio
 
     """
+
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
             print(*args, **kwargs)
@@ -51,7 +52,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
         performance = Dict(wio_trbns["performance"], name="performance")
         _print("        Reading performance", level=3)
         _print("          Contents:", [k for k in performance.keys()], level=3)
-        
+
         # P, ct data:
         if "power_curve" in performance:
             power_curve = Dict(performance["power_curve"], name="power_curve")

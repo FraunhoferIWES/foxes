@@ -185,7 +185,9 @@ class WsRho2PCtFromTwo(TurbineType):
         else:
             fpath = get_path(self.source_P)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=False)
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_P, check_raw=False
+                )
             pars = {"index_col": 0}
             pars.update(self.rpars_P)
             data = PandasFileHelper.read_file(fpath, **pars)
@@ -202,7 +204,9 @@ class WsRho2PCtFromTwo(TurbineType):
         else:
             fpath = get_path(self.source_ct)
             if not fpath.is_file():
-                fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=False)
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_ct, check_raw=False
+                )
             pars = {"index_col": 0}
             pars.update(self.rpars_ct)
             data = PandasFileHelper.read_file(fpath, **pars)

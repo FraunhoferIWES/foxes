@@ -133,4 +133,3 @@ class Output:
                 output_type, sorted([i.__name__ for i in allc])
             )
             raise KeyError(estr)
-        

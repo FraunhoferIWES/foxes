@@ -3,6 +3,7 @@ import numpy as np
 from foxes.core import WakeSuperposition
 import foxes.variables as FV
 
+
 class WSProduct(WakeSuperposition):
     """
     Product superposition of wind deficit results

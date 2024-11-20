@@ -28,12 +28,12 @@ class Config(Dict):
     def dtype_double(self):
         """
         The default double data type
-        
+
         Returns
         -------
         dtp: type
             The default double data type
-            
+
         """
         return self.get_item(FC.DTYPE)
 
@@ -41,12 +41,12 @@ class Config(Dict):
     def dtype_int(self):
         """
         The default int data type
-        
+
         Returns
         -------
         dtp: type
             The default integer data type
-            
+
         """
         return self.get_item(FC.ITYPE)
 
@@ -54,12 +54,12 @@ class Config(Dict):
     def work_dir(self):
         """
         The foxes working directory
-        
+
         Returns
         -------
         pth: pathlib.Path
             Path to the foxes working directory
-            
+
         """
         pth = self.get_item(FC.WORK_DIR)
         if not isinstance(pth, Path):
@@ -70,14 +70,15 @@ class Config(Dict):
     def out_dir(self):
         """
         The default output directory
-        
+
         Returns
         -------
         pth: pathlib.Path
             Path to the default output directory
-            
+
         """
         return get_path(self.get_item(FC.OUT_DIR))
+
 
 config = Config()
 """Foxes configurational data object
@@ -94,19 +95,20 @@ def get_path(pth):
     ----------
     pth: str or pathlib.Path
         The path, optionally relative
-    
+
     Returns
     -------
     out: pathlib.Path
         The path, absolute or relative to working directory
         from config
-    
+
     :group: foxes.config
 
     """
     if not isinstance(pth, Path):
         pth = Path(pth)
     return pth if pth.is_absolute() else config.work_dir / pth
+
 
 def get_output_path(pth):
     """
@@ -117,13 +119,13 @@ def get_output_path(pth):
     ----------
     pth: str or pathlib.Path
         The path, optionally relative
-    
+
     Returns
     -------
     out: pathlib.Path
         The path, absolute or relative to output directory
         from config
-    
+
     :group: foxes.config
 
     """

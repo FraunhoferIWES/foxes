@@ -74,10 +74,10 @@ def foxes_yaml():
     idata = Dict.from_yaml(fpath, verbosity=v)
 
     if (
-        args.engine is not None or 
-        args.n_procs is not None or
-        args.chunksize_states is not None or 
-        args.chunksize_points is not None
+        args.engine is not None
+        or args.n_procs is not None
+        or args.chunksize_states is not None
+        or args.chunksize_points is not None
     ):
         epars = dict(
             engine_type=args.engine,

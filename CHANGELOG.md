@@ -655,7 +655,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1.1)
 
-## v1.1.2
+## v1.2
 
 - Command line applications:
   - New command line application: `foxes_yaml`, runs *foxes* by interpreting a `yaml` input parameter file (no script neccessary)
@@ -672,4 +672,4 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Fix for `TurbOParkIX` wake model: Now `k` is truly `k`, such that only `ambka` or `ka` choices from `WakeK` correspond to multiplication with `AMB_TI` or `TI`, respectively.
   
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.1.2)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)

@@ -14,24 +14,29 @@ from ..dict import run_dict
 
 def _read_site(wio_dict, verbosity):
     """Reads the site information"""
+
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
             print(*args, **kwargs)
 
-    wio_site = Dict(wio_dict["site"], name=wio_dict.name+".site")
+    wio_site = Dict(wio_dict["site"], name=wio_dict.name + ".site")
     _print("Reading site")
     _print("  Name:", wio_site.pop("name", None))
     _print("  Contents:", [k for k in wio_site.keys()])
     _print("  Ignoring boundaries", level=2)
 
     # read energy_resource:
-    energy_resource = Dict(wio_site["energy_resource"], name=wio_site.name+".energy_resource")
+    energy_resource = Dict(
+        wio_site["energy_resource"], name=wio_site.name + ".energy_resource"
+    )
     _print("  Reading energy_resource", level=2)
     _print("    Name:", energy_resource.pop("name", None), level=2)
     _print("    Contents:", [k for k in energy_resource.keys()], level=2)
 
     # read wind_resource:
-    wind_resource = Dict(energy_resource["wind_resource"], name=energy_resource.name+".wind_resource")
+    wind_resource = Dict(
+        energy_resource["wind_resource"], name=energy_resource.name + ".wind_resource"
+    )
     _print("    Reading wind_resource", level=3)
     _print("      Name:", wind_resource.pop("name", None), level=3)
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
@@ -58,7 +63,7 @@ def _read_site(wio_dict, verbosity):
 
 def _read_farm(wio_dict, mbook, verbosity):
     """Reads the wind farm information"""
-    wio_farm = Dict(wio_dict["wind_farm"], name=wio_dict.name+".wind_farm")
+    wio_farm = Dict(wio_dict["wind_farm"], name=wio_dict.name + ".wind_farm")
     if verbosity > 1:
         print("Reading wind farm")
         print("  Name:", wio_farm.pop("name", None))
@@ -80,10 +85,10 @@ def _read_farm(wio_dict, mbook, verbosity):
     farm = WindFarm()
     wfarm = wio_farm["layouts"]
     if isinstance(wfarm, dict):
-        layouts = Dict(wfarm, name=wio_farm.name+".layouts")
+        layouts = Dict(wfarm, name=wio_farm.name + ".layouts")
     else:
         layouts = {str(i): l for i, l in enumerate(wfarm)}
-        layouts = Dict(layouts, name=wio_farm.name+".layouts")
+        layouts = Dict(layouts, name=wio_farm.name + ".layouts")
     if verbosity > 2:
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])
@@ -103,7 +108,7 @@ def read_windio(wio_dict, verbosity=1):
         The windio data
     verbosity: int
         The verbosity level, 0 = silent
-    
+
     Returns
     -------
     idict: foxes.utils.Dict
@@ -114,10 +119,11 @@ def read_windio(wio_dict, verbosity=1):
         The wind farm
     mbook: foxes.models.ModelBook
         The model book
-    
+
     :group: input.yaml.windio
-    
+
     """
+
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
             print(*args, **kwargs)
@@ -130,9 +136,9 @@ def read_windio(wio_dict, verbosity=1):
         wind_farm=Dict(name="wio2fxs.farm"),
         algorithm=Dict(
             algo_type="Downwind",
-            wake_models=[], 
+            wake_models=[],
             name="wio2fxs.algorithm",
-            verbosity=verbosity-3,
+            verbosity=verbosity - 3,
         ),
         calc_farm=Dict(run=True, name="wio2fxs.calc_farm"),
         outputs=Dict(name="wio2fxs.outputs"),
@@ -212,15 +218,16 @@ def foxes_windio():
     args = parser.parse_args()
 
     v = 1 if args.verbosity is None else args.verbosity
+
     def _print(*args, level=1, **kwargs):
         if v >= level:
             print(*args, **kwargs)
 
     if (
-        args.engine is not None or 
-        args.n_procs is not None or
-        args.chunksize_states is not None or 
-        args.chunksize_points is not None
+        args.engine is not None
+        or args.n_procs is not None
+        or args.chunksize_states is not None
+        or args.chunksize_points is not None
     ):
         epars = dict(
             engine_type=args.engine,

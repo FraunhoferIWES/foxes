@@ -68,6 +68,7 @@ def run_dict(
     :group: input.yaml
 
     """
+
     def _print(*args, level=1, **kwargs):
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
@@ -163,7 +164,6 @@ def run_dict(
         out += (point_results,)
 
     # run outputs:
-    out = (farm_results,)
     if "outputs" in idict:
         _print("Running outputs")
         odict = idict["outputs"]
@@ -181,6 +181,11 @@ def run_dict(
             if "algo" in prs:
                 d["algo"] = algo
             if "farm_results" in prs:
+                if farm_results is None:
+                    print(f"No farm results; skipping output {ocls}")
+                    for fdict in flist:
+                        out += (None,)
+                    continue
                 d["farm_results"] = farm_results
             o = cls(**d)
             for fdict in flist:
@@ -195,6 +200,7 @@ def run_dict(
                 out += (res,) if not isinstance(res, tuple) else res
                 if plt_show:
                     plt.show()
+                    plt.close()
 
     # shutdown engine, if created above:
     if engine is not None:

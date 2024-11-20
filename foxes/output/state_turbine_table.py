@@ -29,7 +29,7 @@ class StateTurbineTable(Output):
             The farm results
         kwargs: dict, optional
             Additional parameters for the base class
-            
+
         """
         super().__init__(**kwargs)
         self.farm_results = farm_results

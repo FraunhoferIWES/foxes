@@ -101,7 +101,7 @@ Any of the applicable *foxes* classes and functions can be added to the respecti
 
 Whenever the outputs provided by the `foxes.output` package are sufficient for what you are planning to do, e.g. simple results writing to csv or NetCDF files, `foxes_yaml` might be the easiest way of running *foxes* for you.
 
-# foxes\_windio
+## foxes\_windio
 
 The [windio](https://github.com/IEAWindTask37/windIO) framework is an attempt to unify input and output data of software tools in the wind energy community. This framework is also based on yaml files following a specific schema, which is still under development. Currently *foxes* is following a [windIO fork](https://github.com/kilojoules/windIO), which can be installed by
 
