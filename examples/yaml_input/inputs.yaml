@@ -30,16 +30,13 @@ calc_farm:
 
 outputs:
   FarmResultsEval:
-    farm_results: True
     functions:
       - name: add_capacity
-        algo: True
       - name: add_efficiency
   StateTurbineMap:
-    farm_results: True
     functions:
       - name: plot_map
-        variable: "P"
+        variable: "EFF"
         cmap: "inferno"
         figsize: [6, 7]
         plt_show: True

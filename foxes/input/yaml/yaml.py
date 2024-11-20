@@ -23,6 +23,7 @@ def foxes_yaml():
         "yml_file",
         help="The input yaml file",
     )
+    parser.add_argument("-o", "--out_dir", help="The output directory", default=".")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
@@ -72,7 +73,12 @@ def foxes_yaml():
     fpath = Path(args.yml_file)
     idata = Dict.from_yaml(fpath, verbosity=v)
 
-    if args.engine is not None:
+    if (
+        args.engine is not None or 
+        args.n_procs is not None or
+        args.chunksize_states is not None or 
+        args.chunksize_points is not None
+    ):
         epars = dict(
             engine_type=args.engine,
             n_procs=args.n_procs,
@@ -92,5 +98,6 @@ def foxes_yaml():
         engine_pars=epars,
         iterative=args.iterative,
         work_dir=fpath.parent,
+        out_dir=args.out_dir,
         verbosity=args.verbosity,
     )

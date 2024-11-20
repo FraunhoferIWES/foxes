@@ -70,7 +70,7 @@ class ResultsWriter(Output):
 
     def write_csv(
         self,
-        file_path,
+        file_name,
         variables=None,
         turbine_names=False,
         state_turbine_table=False,
@@ -82,8 +82,8 @@ class ResultsWriter(Output):
 
         Parameters
         ----------
-        file_path: str
-            Path for the csv file
+        file_name: str
+            Name of the csv file
         variables: dict or list of str, optional
             The variables to be written. If a dict, then
             the keys are the foxes variables and the values
@@ -101,7 +101,7 @@ class ResultsWriter(Output):
 
         """
         if verbosity:
-            print(f"ResultsWriter: Writing file '{file_path}'")
+            print(f"ResultsWriter: Writing file '{file_name}'")
 
         data, variables = self._get_data_vars(variables)
         data.reset_index(inplace=True)
@@ -133,8 +133,7 @@ class ResultsWriter(Output):
         else:
             data.set_index([FC.STATE, tix], inplace=True)
 
-        fpath = self.get_fpath(file_path)
-        super().write(fpath, data, format_col2var=fc2v, **kwargs)
+        super().write(file_name, data, format_col2var=fc2v, **kwargs)
 
     def write_nc(
         self,

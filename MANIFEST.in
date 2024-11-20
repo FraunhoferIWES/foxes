@@ -5,4 +5,3 @@ include foxes/data/states/*.csv.gz
 include foxes/data/states/*.nc
 include foxes/data/states/*.tab
 include foxes/data/farms/*.csv
-include foxes/data/windio/*.yaml

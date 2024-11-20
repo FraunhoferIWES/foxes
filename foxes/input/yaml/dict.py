@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+from inspect import signature
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
-from foxes.output import Output
+from foxes import output
 from foxes.utils import Dict
 from foxes.config import config
 import foxes.constants as FC
@@ -20,6 +21,7 @@ def run_dict(
     iterative=None,
     verbosity=None,
     work_dir=".",
+    out_dir=".",
     **algo_pars,
 ):
     """
@@ -48,6 +50,8 @@ def run_dict(
         settings from idict
     work_dir: str or pathlib.Path
         Path to the working directory
+    out_dir: str or pathlib.Path
+        The default output directory
     algo_pars: dict, optional
         Additional parameters for the algorithm, overrules
         settings from idict
@@ -70,7 +74,9 @@ def run_dict(
 
     # set working directory:
     config[FC.WORK_DIR] = work_dir
+    config[FC.OUT_DIR] = out_dir
     _print("Working directory:", config.work_dir)
+    _print("Output directory :", config.out_dir)
 
     # create states:
     if states is None:
@@ -163,22 +169,28 @@ def run_dict(
         odict = idict["outputs"]
         for ocls, d in odict.items():
             _print(f"  Output {ocls}")
-            if d.pop_item("farm_results", False):
-                d["farm_results"] = farm_results
-            if d.pop_item("algo", False):
-                d["algo"] = algo
             flist = [
                 Dict(f, name=f"{d.name}.function{i}")
                 for i, f in enumerate(d.pop_item("functions"))
             ]
-            o = Output.new(ocls, **d)
+            try:
+                cls = getattr(output, ocls)
+            except AttributeError as e:
+                print(f"\nClass '{ocls}' not found in outputs. Found:")
+            prs = list(signature(cls.__init__).parameters.keys())
+            if "algo" in prs:
+                d["algo"] = algo
+            if "farm_results" in prs:
+                d["farm_results"] = farm_results
+            o = cls(**d)
             for fdict in flist:
                 fname = fdict.pop_item("name")
                 _print(f"  - {fname}")
-                if fdict.pop_item("algo", False):
-                    fdict["algo"] = algo
                 plt_show = fdict.pop("plt_show", False)
                 f = getattr(o, fname)
+                prs = list(signature(f).parameters.keys())
+                if "algo" in prs:
+                    fdict["algo"] = algo
                 res = f(**fdict)
                 out += (res,) if not isinstance(res, tuple) else res
                 if plt_show:

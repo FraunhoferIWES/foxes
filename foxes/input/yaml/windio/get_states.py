@@ -180,7 +180,7 @@ def get_states(coords, fields, dims, verbosity=1):
 
     """
     if verbosity > 2:
-        print("      Preparing states")
+        print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
     fixval = {FV.TI: 0.05, FV.RHO: 1.225}

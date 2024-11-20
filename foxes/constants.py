@@ -134,11 +134,6 @@ ITYPE = "ITYPE"
 :group: foxes.constants
 """
 
-WORK_DIR = "work_dir"
-"""Identifier for the working directory
-:group: foxes.constants
-"""
-
 BLOCK_CONVERGENCE = "block_convergence"
 """Identifier for convergence blocking signal
 :group: foxes.constants
@@ -185,5 +180,16 @@ key: unit str, value: factor
 
 POP = "pop"
 """ Population identifier
+:group: foxes.constants
+"""
+
+
+WORK_DIR = "work_dir"
+"""Identifier for the working directory
+:group: foxes.constants
+"""
+
+OUT_DIR = "out_dir"
+"""Identifier for the default output directory
 :group: foxes.constants
 """

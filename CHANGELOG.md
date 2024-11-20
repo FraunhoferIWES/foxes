@@ -658,11 +658,15 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.1.2
 
 - Command line applications:
-  - Introducing the first command line application: `foxes_yaml`, runs *foxes* by interpreting a `yaml` input parameter file (no script neccessary)
+  - New command line application: `foxes_yaml`, runs *foxes* by interpreting a `yaml` input parameter file (no script neccessary)
+  - New command line application: `foxes_windio`, runs *foxes* by interpreting a windio `yaml` input parameter file (no script neccessary)
 - Config:
-  - Introducing a dictionary-like configuration object `foxes.config`, setting default data types, the working directory, etc.
+  - Introducing a dictionary-like configuration object `foxes.config`, setting default data types, the directory choices, etc.
 - Inputs:
   - New input package `foxes.input.yaml`, realizing the run via yaml parameter files. This is not following `windio`, but a *foxes* specific structure.
+  - Reworked `windio` input package, now at `foxes.input.yaml.windio` and based on `foxes.input.yaml`
+- Outputs:
+  - Introducing the idea of a default output directory, accessible via `foxes.config.out_dir`. The file writing output classes now refer to this, or a output specific output directory that is given as an argument to the constructor of the output class.
 - Examples:
   - New example `yaml_input`, demonstrating the command line application `foxes_yaml` and the new yaml parameter file
 - Bug fixes:
