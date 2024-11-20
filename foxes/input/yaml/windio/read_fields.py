@@ -6,7 +6,7 @@ import foxes.constants as FC
 
 
 """ Mapping from windio to foxes variables
-:group: input.windio
+:group: input.yaml.windio
 """
 wio2foxes = {
     "time": FC.TIME,
@@ -25,14 +25,14 @@ wio2foxes = {
 }
 
 """ Mapping from foxes to windio variables
-:group: input.windio
+:group: input.yaml.windio
 """
 foxes2wio = {d: k for k, d in wio2foxes.items()}
 
 
 def _read_nondimensional_coordinate(name, wio_data, coords):
     """read nondimensional coordinate
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if isinstance(wio_data, Number):
         coords[wio2foxes[name]] = wio_data
@@ -42,7 +42,7 @@ def _read_nondimensional_coordinate(name, wio_data, coords):
 
 def _read_dimensional_coordinate(name, wio_data, coords):
     """read dimensional coordinate
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if isinstance(wio_data, list):
         wio_data = np.array(wio_data)
@@ -54,7 +54,7 @@ def _read_dimensional_coordinate(name, wio_data, coords):
 
 def _read_multi_dimensional_coordinate(name, wio_data, coords):
     """Read multi dimensional coordinate
-    :group: input.windio
+    :group: input.yaml.windio
     """
     return _read_nondimensional_coordinate(
         name, wio_data, coords
@@ -63,7 +63,7 @@ def _read_multi_dimensional_coordinate(name, wio_data, coords):
 
 def _read_nondimensional_data(name, wio_data, fields, dims):
     """read nondimensional data
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if isinstance(wio_data, Number):
         v = wio2foxes[name]
@@ -75,7 +75,7 @@ def _read_nondimensional_data(name, wio_data, fields, dims):
 
 def _read_dimensional_data(name, wio_data, fields, dims):
     """read dimensional data
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if isinstance(wio_data, dict) and "data" in wio_data and "dims" in wio_data:
         d = wio_data["data"]
@@ -92,7 +92,7 @@ def _read_dimensional_data(name, wio_data, fields, dims):
 
 def _read_multi_dimensional_data(name, wio_data, fields, dims):
     """Read multi dimensional data
-    :group: input.windio
+    :group: input.yaml.windio
     """
     return _read_nondimensional_data(
         name, wio_data, fields, dims
@@ -130,7 +130,7 @@ def read_wind_resource_field(
     success: bool
         Flag for successful data extraction
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     if name in [

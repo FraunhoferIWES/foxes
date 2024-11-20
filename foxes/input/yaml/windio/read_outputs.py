@@ -123,7 +123,7 @@ def read_outputs(wio_outs, odict, verbosity=1):
     odir: pathlib.Path
         The output directory
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     odir = wio_outs.pop("output_folder", ".")

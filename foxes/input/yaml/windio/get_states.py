@@ -10,7 +10,7 @@ import foxes.constants as FC
 
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
     """Read ABL profiles information
-    :group: input.windio
+    :group: input.yaml.windio
     """
     profiles = {}
     if FV.Z0 in fields:
@@ -42,7 +42,7 @@ def _get_SingleStateStates(
     coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
 ):
     """Try to generate single state parameters
-    :group: input.windio
+    :group: input.yaml.windio
     """
     for c in coords:
         if not isinstance(c, Number):
@@ -81,7 +81,7 @@ def _get_Timeseries(
     coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
 ):
     """Try to generate time series parameters
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if len(coords) == 1 and FC.TIME in coords:
         if verbosity > 2:
@@ -117,7 +117,7 @@ def _get_MultiHeightNCTimeseries(
     coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
 ):
     """Try to generate time series parameters
-    :group: input.windio
+    :group: input.yaml.windio
     """
     if len(coords) == 2 and FC.TIME in coords and FV.H in coords:
         if verbosity > 2:
@@ -176,7 +176,7 @@ def get_states(coords, fields, dims, verbosity=1):
     states: foxes.core.States
         The states object
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     if verbosity > 2:

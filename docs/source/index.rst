@@ -88,6 +88,11 @@ Contents
     .. toctree::
         :maxdepth: 2
 
+        apps
+
+    .. toctree::
+        :maxdepth: 2
+
         examples
 
     .. toctree::

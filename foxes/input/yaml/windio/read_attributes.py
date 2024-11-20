@@ -348,7 +348,7 @@ def read_attributes(wio, idict, mbook, verbosity=1):
     odir: pathlib.Path
         The output directory
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     wio_attrs = Dict(wio["attributes"], name=wio.name+".attributes")

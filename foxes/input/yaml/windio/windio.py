@@ -115,6 +115,8 @@ def read_windio(wio_dict, verbosity=1):
     mbook: foxes.models.ModelBook
         The model book
     
+    :group: input.yaml.windio
+    
     """
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
@@ -154,7 +156,7 @@ def foxes_windio():
     --------
     >>> foxes_windio input.yaml
 
-    :group: input.yaml
+    :group: input.yaml.windio
 
     """
 

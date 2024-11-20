@@ -29,7 +29,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
         Mapping from turbine type key to turbine
         type name in the model book
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     def _print(*args, level=1, **kwargs):
@@ -148,7 +148,7 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     verbosity: int
         The verbosity level, 0=silent
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
     if verbosity > 2:
