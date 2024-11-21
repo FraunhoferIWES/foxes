@@ -13,7 +13,6 @@ dill==0.3.9
 distributed==2024.11.2
 filelock==3.16.1
 fonttools==4.55.0
--e git+ssh://git@gitlab.cc-asp.fraunhofer.de/iwes-cfsd/windsite-assessment/foxes.git@0f2a8e10458c0c85fde9b7720438608086a6cc0e#egg=foxes
 frozenlist==1.5.0
 fsspec==2024.10.0
 idna==3.10
