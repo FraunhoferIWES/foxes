@@ -673,3 +673,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fix for `TurbOParkIX` wake model: Now `k` is truly `k`, such that only `ambka` or `ka` choices from `WakeK` correspond to multiplication with `AMB_TI` or `TI`, respectively.
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
+
+## v1.2.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.1](https://github.com/FraunhoferIWES/foxes/commits/v1.2.1)
