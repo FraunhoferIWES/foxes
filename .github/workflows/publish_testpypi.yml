@@ -1,4 +1,4 @@
-name: Publish Python 🐍 distribution 📦 to TestPyPI
+name: Publish 🐍 to TestPyPI 📦
 
 on: 
   push:
