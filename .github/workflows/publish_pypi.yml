@@ -81,16 +81,13 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.API_TOKEN_TESTPYPI }}
         skip-existing: true
 
   publish-to-pypi:
     name: >-
       Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
     - tests
-    - build
     - publish-to-testpypi
     runs-on: ubuntu-latest
     environment:
@@ -107,8 +104,6 @@ jobs:
         path: dist/
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.API_TOKEN_PYPI }}
 
   github-release:
     name: >-
