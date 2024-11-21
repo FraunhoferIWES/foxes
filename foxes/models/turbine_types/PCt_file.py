@@ -5,6 +5,7 @@ from pathlib import Path
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
+from foxes.config import get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -173,15 +174,15 @@ class PCtFile(TurbineType):
         if isinstance(self.source, pd.DataFrame):
             data = self.source
         else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=True)
-            if verbosity > 0:
-                if not Path(self.source).is_file():
+            fpath = get_path(self.source)
+            if not fpath.is_file():
+                if verbosity > 0:
                     print(
                         f"Turbine type '{self.name}': Reading static data from context '{PCTCURVE}'"
                     )
-                    print(f"Path: {fpath}")
-                else:
-                    print(f"Turbine type '{self.name}': Reading file", self.source)
+                fpath = algo.dbook.get_file_path(PCTCURVE, self.source, check_raw=False)
+            if verbosity > 0:
+                print(f"Turbine type '{self.name}': Reading file", fpath)
             data = PandasFileHelper.read_file(fpath, **self.rpars)
 
         data = data.set_index(self.col_ws).sort_index()

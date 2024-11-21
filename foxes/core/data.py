@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.utils import Dict
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -620,7 +621,7 @@ class TData(Data):
             )
         data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
-        data[FC.TWEIGHTS] = np.array([1], dtype=FC.DTYPE)
+        data[FC.TWEIGHTS] = np.array([1], dtype=config.dtype_double)
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
         return cls(data, dims, [FC.STATE, FC.TARGET], name=name, **kwargs)
 

@@ -6,6 +6,7 @@ from xarray import Dataset
 
 from foxes.core import MData, FData, TData
 from foxes.utils import all_subclasses
+from foxes.config import config
 import foxes.constants as FC
 
 __global_engine_data__ = dict(
@@ -246,26 +247,21 @@ class Engine(ABC):
             if int(n_states / n_chunks_states) > chunk_size_states:
                 n_chunks_states += 1
                 chunk_size_states = int(n_states / n_chunks_states)
-        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
-        extra = n_states - n_chunks_states * chunk_size_states
-        if extra > 0:
-            chunk_sizes_states[-extra:] += 1
-
-        s = np.sum(chunk_sizes_states)
-        assert (
-            s == n_states
-        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
 
         # determine points chunks:
         chunk_sizes_targets = [n_targets]
         if n_targets > 1:
             if self.chunk_size_points is None:
-                if n_chunks_states == 1:
-                    n_chunks_targets = min(self.n_procs, n_targets)
-                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
-                else:
+                if n_targets < max(n_states, 1000):
                     chunk_size_targets = n_targets
                     n_chunks_targets = 1
+                else:
+                    n_chunks_targets = min(self.n_procs, n_targets)
+                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
+                    if self.chunk_size_states is None and n_chunks_states > 1:
+                        while chunk_size_states * chunk_size_targets > n_targets:
+                            n_chunks_states += 1
+                            chunk_size_states = int(n_states / n_chunks_states)
             else:
                 chunk_size_targets = min(n_targets, self.chunk_size_points)
                 n_chunks_targets = max(int(n_targets / chunk_size_targets), 1)
@@ -281,6 +277,16 @@ class Engine(ABC):
             assert (
                 s == n_targets
             ), f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+
+        chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
+        extra = n_states - n_chunks_states * chunk_size_states
+        if extra > 0:
+            chunk_sizes_states[-extra:] += 1
+
+        s = np.sum(chunk_sizes_states)
+        assert (
+            s == n_states
+        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
 
         return chunk_sizes_states, chunk_sizes_targets
 
@@ -342,7 +348,7 @@ class Engine(ABC):
                 n_states = i1_states - i0_states
                 for o in set(out_vars).difference(data.keys()):
                     data[o] = np.full(
-                        (n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE
+                        (n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
                     )
                     dims[o] = (FC.STATE, FC.TURBINE)
 
@@ -366,7 +372,9 @@ class Engine(ABC):
                 n_states = i1_states - i0_states
                 n_targets = i1_targets - i0_targets
                 for o in set(out_vars).difference(data.keys()):
-                    data[o] = np.full((n_states, n_targets, 1), np.nan, dtype=FC.DTYPE)
+                    data[o] = np.full(
+                        (n_states, n_targets, 1), np.nan, dtype=config.dtype_double
+                    )
                     dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
             tdata = TData.from_dataset(
@@ -538,22 +546,22 @@ class Engine(ABC):
         """
 
         if engine_type is None:
-            return None
-        else:
-            engine_type = dict(
-                default="DefaultEngine",
-                threads="ThreadsEngine",
-                process="ProcessEngine",
-                xarray="XArrayEngine",
-                dask="DaskEngine",
-                multiprocess="MultiprocessEngine",
-                local_cluster="LocalClusterEngine",
-                slurm_cluster="SlurmClusterEngine",
-                mpi="MPIEngine",
-                ray="RayEngine",
-                numpy="NumpyEngine",
-                single="SingleChunkEngine",
-            ).get(engine_type, engine_type)
+            engine_type = "default"
+
+        engine_type = dict(
+            default="DefaultEngine",
+            threads="ThreadsEngine",
+            process="ProcessEngine",
+            xarray="XArrayEngine",
+            dask="DaskEngine",
+            multiprocess="MultiprocessEngine",
+            local_cluster="LocalClusterEngine",
+            slurm_cluster="SlurmClusterEngine",
+            mpi="MPIEngine",
+            ray="RayEngine",
+            numpy="NumpyEngine",
+            single="SingleChunkEngine",
+        ).get(engine_type, engine_type)
 
         allc = all_subclasses(cls)
         found = engine_type in [scls.__name__ for scls in allc]
@@ -602,9 +610,7 @@ def get_engine(error=True, default=True):
             default.initialize()
             return default
         elif isinstance(default, bool) and default:
-            engine = Engine.new(
-                engine_type="DefaultEngine", chunk_size_points=20000, verbosity=0
-            )
+            engine = Engine.new(engine_type="DefaultEngine", verbosity=1)
             print(f"Selecting '{engine}'")
             engine.initialize()
             return engine

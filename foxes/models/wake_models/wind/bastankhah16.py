@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.models.wake_models.dist_sliced import DistSlicedWakeModel
 from foxes.core import Model, WakeK
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -570,7 +571,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         # select targets:
         st_sel = self.model.get_data(Bastankhah2016Model.ST_SEL, mdata)
         n_sp_sel = np.sum(st_sel)
-        wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=FC.DTYPE)}
+        wdeltas = {FV.WS: np.zeros((n_sp_sel, n_y_per_z), dtype=config.dtype_double)}
         if np.any(st_sel):
             # apply filter:
             yz = yz[st_sel]

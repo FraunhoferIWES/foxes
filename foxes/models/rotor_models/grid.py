@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.core import RotorModel
-import foxes.constants as FC
+from foxes.config import config
 
 
 class GridRotor(RotorModel):
@@ -75,12 +75,12 @@ class GridRotor(RotorModel):
         x = [-1.0 + (i + 0.5) * delta for i in range(self.n)]
         x, y = np.meshgrid(x, x, indexing="ij")
 
-        self.__dpoints = np.zeros([N, 3], dtype=FC.DTYPE)
+        self.__dpoints = np.zeros([N, 3], dtype=config.dtype_double)
         self.__dpoints[:, 1] = x.reshape(N)
         self.__dpoints[:, 2] = y.reshape(N)
 
         if self.reduce:
-            self.__weights = np.zeros((self.n, self.n), dtype=FC.DTYPE)
+            self.__weights = np.zeros((self.n, self.n), dtype=config.dtype_double)
             for i in range(0, self.n):
                 for j in range(0, self.n):
                     d = delta / self.nint
@@ -90,7 +90,7 @@ class GridRotor(RotorModel):
                     hy = [
                         y[i, j] - delta / 2.0 + (k + 0.5) * d for k in range(self.nint)
                     ]
-                    pts = np.zeros((self.nint, self.nint, 2), dtype=FC.DTYPE)
+                    pts = np.zeros((self.nint, self.nint, 2), dtype=config.dtype_double)
                     pts[:, :, 0], pts[:, :, 1] = np.meshgrid(hx, hy, indexing="ij")
 
                     d = np.linalg.norm(pts, axis=2)
@@ -105,7 +105,7 @@ class GridRotor(RotorModel):
         else:
             self.__dpoints[:, 1] = x.reshape(N)
             self.__dpoints[:, 2] = y.reshape(N)
-            self.__weights = np.ones(N, dtype=FC.DTYPE) / N
+            self.__weights = np.ones(N, dtype=config.dtype_double) / N
 
     def n_rotor_points(self):
         """

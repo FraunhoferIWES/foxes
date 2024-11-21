@@ -2,6 +2,8 @@ import numpy as np
 
 from foxes.core import WakeFrame
 from foxes.utils import wd2uv
+from foxes.config import config
+
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -104,7 +106,7 @@ class RotorWD(WakeFrame):
 
         wd = fdata[self.var_wd][:, downwind_index]
 
-        nax = np.zeros((n_states, 3, 3), dtype=FC.DTYPE)
+        nax = np.zeros((n_states, 3, 3), dtype=config.dtype_double)
         n = nax[:, 0, :2]
         n[:] = wd2uv(wd, axis=-1)
         m = nax[:, 1, :2]

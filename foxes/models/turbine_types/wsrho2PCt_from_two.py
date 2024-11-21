@@ -5,8 +5,8 @@ from scipy.interpolate import interpn
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
+from foxes.config import config, get_path
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class WsRho2PCtFromTwo(TurbineType):
@@ -183,31 +183,39 @@ class WsRho2PCtFromTwo(TurbineType):
         if isinstance(self.source_P, pd.DataFrame):
             data = self.source_P
         else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_P, check_raw=True)
+            fpath = get_path(self.source_P)
+            if not fpath.is_file():
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_P, check_raw=False
+                )
             pars = {"index_col": 0}
             pars.update(self.rpars_P)
             data = PandasFileHelper.read_file(fpath, **pars)
 
         data.sort_index(inplace=True)
-        data.columns = data.columns.astype(FC.DTYPE)
-        self._ws_P = data.index.to_numpy(FC.DTYPE)
+        data.columns = data.columns.astype(config.dtype_double)
+        self._ws_P = data.index.to_numpy(config.dtype_double)
         self._rho_P = np.sort(data.columns.to_numpy())
-        self._P = data[self._rho_P].to_numpy(FC.DTYPE)
+        self._P = data[self._rho_P].to_numpy(config.dtype_double)
 
         # read ct curve:
         if isinstance(self.source_ct, pd.DataFrame):
             data = self.source_ct
         else:
-            fpath = algo.dbook.get_file_path(PCTCURVE, self.source_ct, check_raw=True)
+            fpath = get_path(self.source_ct)
+            if not fpath.is_file():
+                fpath = algo.dbook.get_file_path(
+                    PCTCURVE, self.source_ct, check_raw=False
+                )
             pars = {"index_col": 0}
             pars.update(self.rpars_ct)
             data = PandasFileHelper.read_file(fpath, **pars)
 
         data.sort_index(inplace=True)
-        data.columns = data.columns.astype(FC.DTYPE)
-        self._ws_ct = data.index.to_numpy(FC.DTYPE)
+        data.columns = data.columns.astype(config.dtype_double)
+        self._ws_ct = data.index.to_numpy(config.dtype_double)
         self._rho_ct = np.sort(data.columns.to_numpy())
-        self._ct = data[self._rho_ct].to_numpy(FC.DTYPE)
+        self._ct = data[self._rho_ct].to_numpy(config.dtype_double)
 
         return super().load_data(algo, verbosity)
 
@@ -267,7 +275,7 @@ class WsRho2PCtFromTwo(TurbineType):
         if np.any(st_sel_P):
             # prepare interpolation:
             n_sel = np.sum(st_sel_P)
-            qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
+            qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_P]
             qts[:, 1] = fdata[FV.RHO][st_sel_P]
 
@@ -307,7 +315,7 @@ class WsRho2PCtFromTwo(TurbineType):
         if np.any(st_sel_ct):
             # prepare interpolation:
             n_sel = np.sum(st_sel_ct)
-            qts = np.zeros((n_sel, 2), dtype=FC.DTYPE)  # ws, rho
+            qts = np.zeros((n_sel, 2), dtype=config.dtype_double)  # ws, rho
             qts[:, 0] = fdata[self.WSP][st_sel_ct]
             qts[:, 1] = fdata[FV.RHO][st_sel_ct]
 

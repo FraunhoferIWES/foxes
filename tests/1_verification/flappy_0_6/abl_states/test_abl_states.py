@@ -4,7 +4,6 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -15,8 +14,6 @@ def test():
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
     sfile = thisdir / "states.csv.gz"
     lfile = thisdir / "test_farm.csv"
-
-    ck = {FC.STATE: c}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(
@@ -43,44 +40,47 @@ def test():
         verbosity=0,
     )
 
-    algo = foxes.algorithms.Downwind(
-        farm,
-        states,
-        mbook=mbook,
-        rotor_model="centre",
-        wake_models=["Jensen_linear_k007"],
-        wake_frame="rotor_wd",
-        partial_wakes={"Jensen_linear_k007": "centre"},
-        chunks=ck,
-        verbosity=0,
-    )
+    with foxes.Engine.new("threads", chunk_size_states=c):
 
-    data = algo.calc_farm()
+        algo = foxes.algorithms.Downwind(
+            farm,
+            states,
+            mbook=mbook,
+            rotor_model="centre",
+            wake_models=["Jensen_linear_k007"],
+            wake_frame="rotor_wd",
+            partial_wakes={"Jensen_linear_k007": "centre"},
+            verbosity=0,
+        )
 
-    df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+        data = algo.calc_farm()
 
-    print()
-    print("TRESULTS\n")
-    print(df)
+        df = data.to_dataframe()[
+            [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
+        ]
 
-    print("\nReading file", cfile)
-    fdata = pd.read_csv(cfile)
-    print(fdata)
+        print()
+        print("TRESULTS\n")
+        print(df)
 
-    print("\nVERIFYING\n")
-    df[FV.WS] = df["REWS"]
-    df[FV.AMB_WS] = df["AMB_REWS"]
+        print("\nReading file", cfile)
+        fdata = pd.read_csv(cfile)
+        print(fdata)
 
-    delta = df.reset_index() - fdata
-    print(delta)
-    print(delta.max())
-    chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-    print(chk.max())
+        print("\nVERIFYING\n")
+        df[FV.WS] = df["REWS"]
+        df[FV.AMB_WS] = df["AMB_REWS"]
 
-    assert (chk[FV.AMB_WS] < 1e-5).all()
-    assert (chk[FV.AMB_P] < 1e-3).all()
-    assert (chk[FV.WS] < 1e-5).all()
-    assert (chk[FV.P] < 1e-3).all()
+        delta = df.reset_index() - fdata
+        print(delta)
+        print(delta.max())
+        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
+        print(chk.max())
+
+        assert (chk[FV.AMB_WS] < 1e-5).all()
+        assert (chk[FV.AMB_P] < 1e-3).all()
+        assert (chk[FV.WS] < 1e-5).all()
+        assert (chk[FV.P] < 1e-3).all()
 
 
 if __name__ == "__main__":

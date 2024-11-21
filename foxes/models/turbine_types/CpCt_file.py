@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from .PCt_file import PCtFile
 from foxes.data import parse_Pct_file_name
 from foxes.utils import PandasFileHelper
+from foxes.config import config, get_path
 import foxes.constants as FC
+
+from .PCt_file import PCtFile
 
 
 class CpCtFile(PCtFile):
@@ -47,7 +49,8 @@ class CpCtFile(PCtFile):
         if not isinstance(data_source, pd.DataFrame):
             pars = parse_Pct_file_name(data_source)
             pars.update(parameters)
-            data = PandasFileHelper.read_file(data_source, **pd_file_read_pars)
+            fpath = get_path(data_source)
+            data = PandasFileHelper.read_file(fpath, **pd_file_read_pars)
         else:
             data = data_source
             pars = parameters
@@ -63,7 +66,7 @@ class CpCtFile(PCtFile):
         ws_max = np.max(ws)
         N = int((ws_max - ws_min) / ws_delta)
 
-        data_P = pd.DataFrame(index=range(N), dtype=FC.DTYPE)
+        data_P = pd.DataFrame(index=range(N), dtype=config.dtype_double)
         data_P["ws"] = np.linspace(ws_min, ws_max, N, endpoint=True)
         data_P["cp"] = np.interp(data_P["ws"], ws, cp, left=0, right=0)
         data_P["P"] = (

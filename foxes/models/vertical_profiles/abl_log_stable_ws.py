@@ -1,7 +1,7 @@
 from foxes.core import VerticalProfile
 from foxes.utils.abl import stable
-import foxes.constants as FC
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class ABLLogStableWsProfile(VerticalProfile):

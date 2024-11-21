@@ -6,7 +6,13 @@ from .read_outputs import read_outputs
 
 
 def _read_wind_deficit(
-    wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity
+    wake_model_key,
+    wind_deficit,
+    superposition,
+    induction,
+    algo_dict,
+    mbook,
+    verbosity,
 ):
     """Reads the wind deficit wake model"""
 
@@ -69,17 +75,25 @@ def _read_wind_deficit(
     supd = ws_sup_dict if eff_ws else ws_sup_amb_dict
     wind_def_dict["superposition"] = supd[superposition["ws_superposition"]]
 
-    algo_dict["mbook"].wake_models[wname] = WakeModel.new(**wind_def_dict)
+    mbook.wake_models[wname] = WakeModel.new(**wind_def_dict)
     if verbosity > 2:
         print(f"      Created wake model '{wname}':")
-        print("       ", algo_dict["mbook"].wake_models[wname])
+        print("       ", mbook.wake_models[wname])
     algo_dict["wake_models"].append(wname)
 
     return ka, kb, amb_ti
 
 
 def _read_turbulence(
-    turbulence_model, superposition, induction, algo_dict, ka, kb, amb_ti, verbosity
+    turbulence_model,
+    superposition,
+    induction,
+    algo_dict,
+    mbook,
+    ka,
+    kb,
+    amb_ti,
+    verbosity,
 ):
     """Reads the ti wake model"""
 
@@ -128,14 +142,14 @@ def _read_turbulence(
             tiwake_dict["ti_var"] = ti_var
         tiwake_dict["superposition"] = ti_sup_dict[superposition["ti_superposition"]]
 
-        algo_dict["mbook"].wake_models[wname] = WakeModel.new(**tiwake_dict)
+        mbook.wake_models[wname] = WakeModel.new(**tiwake_dict)
         if verbosity > 2:
             print(f"      Created wake model '{wname}':")
-            print("       ", algo_dict["mbook"].wake_models[wname])
+            print("       ", mbook.wake_models[wname])
         algo_dict["wake_models"].append(wname)
 
 
-def _read_blockage(blockage_model, induction, algo_dict, verbosity):
+def _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity):
     """Reads the blockage model"""
     indc_def_map = Dict(
         {
@@ -154,10 +168,10 @@ def _read_blockage(blockage_model, induction, algo_dict, verbosity):
         print("      Contents:", [k for k in blockage_model.keys()])
     if wname not in ["None", "none"]:
         indc_dict = Dict(wmodel_type=indc_def_map[wname], induction=induction)
-        algo_dict["mbook"].wake_models[wname] = WakeModel.new(**indc_dict)
+        mbook.wake_models[wname] = WakeModel.new(**indc_dict)
         if verbosity > 2:
             print(f"      Created wake model '{wname}':")
-            print("       ", algo_dict["mbook"].wake_models[wname])
+            print("       ", mbook.wake_models[wname])
         algo_dict["wake_models"].append(wname)
         algo_dict["algo_type"] = "Iterative"
 
@@ -214,7 +228,7 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
         print("        --> partial_wakes   :", algo_dict["partial_wakes"])
 
 
-def _read_deflection(deflection, induction, algo_dict, verbosity):
+def _read_deflection(deflection, induction, algo_dict, mbook, verbosity):
     """Reads deflection model"""
     defl_def_map = Dict(
         {
@@ -231,25 +245,25 @@ def _read_deflection(deflection, induction, algo_dict, verbosity):
         print("      Contents:", [k for k in deflection.keys()])
     indc_dict = Dict(wframe_type=defl_def_map[wname])
     try:
-        algo_dict["mbook"].wake_frames[wname] = WakeFrame.new(
-            **indc_dict, induction=induction
-        )
+        mbook.wake_frames[wname] = WakeFrame.new(**indc_dict, induction=induction)
     except TypeError:
-        algo_dict["mbook"].wake_frames[wname] = WakeFrame.new(**indc_dict)
+        mbook.wake_frames[wname] = WakeFrame.new(**indc_dict)
     if verbosity > 2:
         print(f"      Created wake frame '{wname}':")
-        print("       ", algo_dict["mbook"].wake_frames[wname])
+        print("       ", mbook.wake_frames[wname])
     algo_dict["wake_frame"] = wname
 
 
-def _read_analysis(wio_ana, algo_dict, verbosity):
+def _read_analysis(wio_ana, idict, mbook, verbosity):
     """Reads the windio analyses"""
     if verbosity > 2:
         print("    Reading analysis")
         print("      Contents:", [k for k in wio_ana.keys()])
 
     # superposition:
-    superposition = Dict(wio_ana["superposition_model"], name="superposition_model")
+    superposition = Dict(
+        wio_ana["superposition_model"], name=wio_ana.name + ".superposition_model"
+    )
     if verbosity > 2:
         print("    Reading superposition_model")
         print("      Contents:", [k for k in superposition.keys()])
@@ -270,9 +284,18 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     wake_model_key = (
         "wind_deficit_model" if "wind_deficit_model" in wio_ana else "wake_model"
     )
-    wind_deficit = Dict(wio_ana[wake_model_key], name=wake_model_key)
+    algo_dict = idict["algorithm"]
+    wind_deficit = Dict(
+        wio_ana[wake_model_key], name=wio_ana.name + "." + wake_model_key
+    )
     ka, kb, amb_ti = _read_wind_deficit(
-        wake_model_key, wind_deficit, superposition, induction, algo_dict, verbosity
+        wake_model_key,
+        wind_deficit,
+        superposition,
+        induction,
+        algo_dict,
+        mbook,
+        verbosity,
     )
 
     # turbulence model:
@@ -283,6 +306,7 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
             superposition,
             induction,
             algo_dict,
+            mbook,
             ka,
             kb,
             amb_ti,
@@ -294,7 +318,7 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     # blockage model:
     if "blockage_model" in wio_ana:
         blockage_model = Dict(wio_ana["blockage_model"], name="blockage_model")
-        _read_blockage(blockage_model, induction, algo_dict, verbosity)
+        _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity)
     elif verbosity > 0:
         print("blockage_model not found, not using a turbine induction model")
 
@@ -308,37 +332,35 @@ def _read_analysis(wio_ana, algo_dict, verbosity):
     # deflection:
     if "deflection_model" in wio_ana:
         deflection = Dict(wio_ana["deflection_model"], name="deflection_model")
-        _read_deflection(deflection, induction, algo_dict, verbosity)
+        _read_deflection(deflection, induction, algo_dict, mbook, verbosity)
     elif verbosity > 0:
         print("deflection_model not found, using default settings")
 
 
-def read_attributes(wio, algo_dict, verbosity=1, **output_pars):
+def read_attributes(wio, idict, mbook, verbosity=1):
     """
     Reads the attributes part of windio
 
     Parameters
     ----------
-    wio: dict
+    wio: foxes.utils.Dict
         The windio data
-    algo_dict: dict
-        The algorithm dictionary
+    idict: foxes.utils.Dict
+        The foxes input data dictionary
+    mbook: foxes.models.ModelBook
+        The model book
     verbosity: int
         The verbosity level, 0=silent
-    **output_pars: dict, optional
-        Additional parameters for output reading
 
     Returns
     -------
-    out_dicts: list of dict
-        The output dictionaries
     odir: pathlib.Path
-        Path to the output folder
+        The output directory
 
-    :group: input.windio
+    :group: input.yaml.windio
 
     """
-    wio_attrs = Dict(wio["attributes"], name="attributes")
+    wio_attrs = Dict(wio["attributes"], name=wio.name + ".attributes")
     if verbosity > 1:
         print("Reading attributes")
         print("  Contents:", [k for k in wio_attrs.keys()])
@@ -355,15 +377,14 @@ def read_attributes(wio, algo_dict, verbosity=1, **output_pars):
             print(f"Running flow model 'foxes', overruling original choice '{fmname}'")
 
     # read analysis:
-    wio_ana = Dict(wio_attrs["analysis"], name="analyses")
-    _read_analysis(wio_ana, algo_dict, verbosity)
+    wio_ana = Dict(wio_attrs["analysis"], name=wio_attrs.name + ".analysis")
+    _read_analysis(wio_ana, idict, mbook, verbosity)
 
     # outputs:
-    out_dicts = []
+    odict = idict["outputs"]
+    odir = "."
     if "outputs" in wio_attrs:
-        outputs = Dict(wio_attrs["outputs"], name="outputs")
-        out_dicts, odir = read_outputs(
-            outputs, algo_dict, verbosity=verbosity, **output_pars
-        )
+        outputs = Dict(wio_attrs["outputs"], name=wio_attrs.name + ".outputs")
+        odir = read_outputs(outputs, odict, verbosity=verbosity)
 
-    return out_dicts, odir
+    return odir

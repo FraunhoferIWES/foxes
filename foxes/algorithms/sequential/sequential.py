@@ -2,9 +2,10 @@ import numpy as np
 from xarray import Dataset
 
 from foxes.algorithms import Iterative
-import foxes.constants as FC
-import foxes.variables as FV
+from foxes.config import config
 from foxes.core import get_engine
+import foxes.variables as FV
+import foxes.constants as FC
 
 from . import models as mdls
 
@@ -170,7 +171,7 @@ class Sequential(Iterative):
             self._farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
             if FV.ORDER in self._farm_results:
                 self._farm_results[FV.ORDER] = self._farm_results[FV.ORDER].astype(
-                    FC.ITYPE
+                    config.dtype_int
                 )
             self._farm_results_dwnd = self._farm_results.copy(deep=True)
 

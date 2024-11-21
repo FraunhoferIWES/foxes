@@ -2,6 +2,10 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionadded:: 1.2
+    :ref:`Command line applications <Command line applications>` that can run *foxes* from yaml file input,
+    simply by `foxes_yaml imputs.yaml` or `foxes_windio inputs.yaml` - no Python script needed.
+
 .. versionchanged:: 1.0
     User-selectable :ref:`Parallelization` via the new `Engines`, replacing `Runners`. 
     The default is now based on `concurrent.futures <https://docs.python.org/3/library/concurrent.futures.html>`_ and comes with a speedup. 
@@ -84,6 +88,11 @@ Contents
         :maxdepth: 2
 
         notebooks/parallelization
+
+    .. toctree::
+        :maxdepth: 2
+
+        apps
 
     .. toctree::
         :maxdepth: 2

@@ -1,8 +1,9 @@
 import numpy as np
 
-import foxes.constants as FC
-from .rotor_wd import RotorWD
+from foxes.config import config
 from foxes.core import WakeFrame
+
+from .rotor_wd import RotorWD
 
 
 class FarmOrder(WakeFrame):
@@ -90,7 +91,7 @@ class FarmOrder(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.ITYPE)
+        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(fdata.n_turbines)[None, :]
 
         return order

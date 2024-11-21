@@ -3,7 +3,7 @@ import numpy as np
 from foxes.core import RotorModel
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes.config import config
 
 
 class CentreRotor(RotorModel):
@@ -155,7 +155,7 @@ class CentreRotor(RotorModel):
         vdone = []
         for v in self.calc_vars:
             if v not in fdata:
-                fdata[v] = np.zeros((n_states, n_turbines), dtype=FC.DTYPE)
+                fdata[v] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
 
             if v == FV.WD or v == FV.YAW:
                 if wd is None:

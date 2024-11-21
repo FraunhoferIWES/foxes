@@ -1,10 +1,11 @@
 import numpy as np
 
+from foxes.config import config
+import foxes.constants as FC
+
 from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
 from .turbine_type import TurbineType
-import foxes.constants as FC
-import foxes.variables as FV
 
 
 class FarmController(FarmDataModel):
@@ -122,7 +123,7 @@ class FarmController(FarmDataModel):
         tmodels = []
         tmsels = []
         mnames = [[m.name for m in mlist] for mlist in models]
-        tmis = np.zeros(algo.n_turbines, dtype=FC.ITYPE)
+        tmis = np.zeros(algo.n_turbines, dtype=config.dtype_int)
         news = True
         while news:
             news = False

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foxes"
-version = "1.1.1"
+version = "1.2"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -103,3 +103,7 @@ Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 exclude = ["notebooks", "examples", "tests", "docs"]
+
+[project.scripts]
+foxes_yaml = "foxes.input.yaml.yaml:foxes_yaml"
+foxes_windio = "foxes.input.yaml.windio.windio:foxes_windio"

@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -212,7 +213,7 @@ def _run_as_ufunc(
     odims = {v: tuple(out_coords) for v in out_vars}
     odata = {
         v: (
-            np.full(oshape, np.nan, dtype=FC.DTYPE)
+            np.full(oshape, np.nan, dtype=config.dtype_double)
             if v not in init_vars
             else prev[init_vars.index(v)].copy()
         )
@@ -264,7 +265,7 @@ def _run_as_ufunc(
 
     # create output:
     n_vars = len(out_vars)
-    data = np.zeros(oshape + [n_vars], dtype=FC.DTYPE)
+    data = np.zeros(oshape + [n_vars], dtype=config.dtype_double)
     for v in out_vars:
         data[..., out_vars.index(v)] = results[v]
 
@@ -449,7 +450,7 @@ class XArrayEngine(DaskBaseEngine):
             *ldata,
             input_core_dims=[[]] + iidims + icdims,
             output_core_dims=[out_core_vars],
-            output_dtypes=[FC.DTYPE],
+            output_dtypes=[config.dtype_double],
             dask="parallelized",
             dask_gufunc_kwargs=dargs,
             kwargs=wargs,

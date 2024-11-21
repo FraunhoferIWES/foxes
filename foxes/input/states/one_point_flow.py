@@ -4,6 +4,7 @@ from scipy.interpolate import interpn
 from foxes.core import States
 from foxes.utils import uv2wd
 from foxes.models.wake_frames.timelines import Timelines
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -65,7 +66,7 @@ class OnePointFlowStates(States):
 
         """
         super().__init__()
-        self.ref_xy = np.array(ref_xy, dtype=FC.DTYPE)
+        self.ref_xy = np.array(ref_xy, dtype=config.dtype_double)
         self.heights = tl_heights
         self.base_states = base_states
         self.dt_min = dt_min
@@ -268,9 +269,9 @@ class OnePointFlowStates(States):
 
         i0 = mdata.states_i0(counter=True)
         trace_p = points[:, :, :2] - ref_xy[:, :, :2]
-        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         trace_si[:] = i0 + np.arange(n_states)[:, None]
-        coeffs = np.full((n_states, n_points), np.nan, dtype=FC.DTYPE)
+        coeffs = np.full((n_states, n_points), np.nan, dtype=config.dtype_double)
 
         # flake8: noqa: F821
         def _eval_trace(sel, hdxy=None, hdxy0=None, trs=None):
@@ -396,7 +397,7 @@ class OnePointFlowStates(States):
             sts = trace_si[hi]
             cfs = coeffs[hi]
             data = self.timelines_data[v].to_numpy()[hi]
-            out = np.zeros(sts.shape, dtype=FC.DTYPE)
+            out = np.zeros(sts.shape, dtype=config.dtype_double)
 
             sel_low = sts < 0
             if np.any(sel_low):
@@ -436,7 +437,7 @@ class OnePointFlowStates(States):
             vres = list(data.keys())
             data = np.stack(list(data.values()), axis=-1)
 
-            eval = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
+            eval = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
             eval[:, :, 0] = points[:, :, 2]
             eval[:, :, 1] = ar_states[:, None]
             eval[:, :, 2] = ar_points[None, :]

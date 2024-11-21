@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import foxes.constants as FC
+
 from .output import Output
 
 
@@ -19,7 +20,7 @@ class StateTurbineMap(Output):
 
     """
 
-    def __init__(self, farm_results):
+    def __init__(self, farm_results, **kwargs):
         """
         Constructor.
 
@@ -27,8 +28,11 @@ class StateTurbineMap(Output):
         ----------
         farm_results: xarray.Dataset
             The farm results
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.results = farm_results
 
     def plot_map(

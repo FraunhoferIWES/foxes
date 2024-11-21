@@ -1,6 +1,7 @@
 import numpy as np
 
 from foxes.core import TurbineModel
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -128,7 +129,8 @@ class kTI(TurbineModel):
         )
 
         k = fdata.get(
-            self.k_var, np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.DTYPE)
+            self.k_var,
+            np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_double),
         )
 
         k[st_sel] = kti * ti + kb

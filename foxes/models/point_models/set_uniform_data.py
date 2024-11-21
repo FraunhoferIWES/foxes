@@ -2,8 +2,8 @@ import pandas as pd
 
 from foxes.core.point_data_model import PointDataModel
 from foxes.utils import PandasFileHelper
+from foxes.config import config
 import foxes.constants as FC
-import foxes.variables as FV
 
 
 class SetUniformData(PointDataModel):
@@ -84,7 +84,7 @@ class SetUniformData(PointDataModel):
         if isinstance(self.data_source, pd.DataFrame):
             data = self.data_source[
                 [self.var2col.get(v, v) for v in self.ovars]
-            ].to_numpy(FC.DTYPE)
+            ].to_numpy(config.dtype_double)
         elif isinstance(self.data_source, dict):
             pass
         else:
@@ -93,7 +93,9 @@ class SetUniformData(PointDataModel):
             rpars = dict(index_col=0)
             rpars.update(self._rpars)
             data = PandasFileHelper().read_file(self.data_source, **rpars)
-            data = data[[self.var2col.get(v, v) for v in self.ovars]].to_numpy(FC.DTYPE)
+            data = data[[self.var2col.get(v, v) for v in self.ovars]].to_numpy(
+                config.dtype_double
+            )
 
         idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self.ovars

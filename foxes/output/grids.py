@@ -3,6 +3,7 @@ import pandas as pd
 from xarray import Dataset
 
 from foxes.utils import wd2uv, write_nc
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -151,7 +152,7 @@ def get_grid_xy(
     N_x, N_y = len(x_pos), len(y_pos)
     n_pts = len(x_pos) * len(y_pos)
     z_pos = 0.5 * (z_min + z_max)
-    g_pts = np.zeros((n_states, N_x, N_y, 3), dtype=FC.DTYPE)
+    g_pts = np.zeros((n_states, N_x, N_y, 3), dtype=config.dtype_double)
     g_pts[:, :, :, 0] = x_pos[None, :, None]
     g_pts[:, :, :, 1] = y_pos[None, None, :]
     g_pts[:, :, :, 2] = z_pos
@@ -248,7 +249,7 @@ def get_grid_xz(
     n_y = np.cross(n_z, n_x)
 
     # project to axes:
-    xyz = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
+    xyz = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
     xyz[:, :, 0] = farm_results[FV.X]
     xyz[:, :, 1] = farm_results[FV.Y]
     xyz[:, :, 2] = farm_results[FV.H]
@@ -297,7 +298,7 @@ def get_grid_xz(
     N_x, N_z = len(x_pos), len(z_pos)
     n_pts = len(x_pos) * len(z_pos)
     y_pos = 0.5 * (y_min + y_max)
-    g_pts = np.zeros((n_states, N_x, N_z, 3), dtype=FC.DTYPE)
+    g_pts = np.zeros((n_states, N_x, N_z, 3), dtype=config.dtype_double)
     g_pts[:] += x_pos[None, :, None, None] * n_x[None, None, None, :]
     g_pts[:] += y_pos * n_y[None, None, None, :]
     g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
@@ -394,7 +395,7 @@ def get_grid_yz(
     n_y = np.cross(n_z, n_x)
 
     # project to axes:
-    xyz = np.zeros((n_states, n_turbines, 3), dtype=FC.DTYPE)
+    xyz = np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double)
     xyz[:, :, 0] = farm_results[FV.X]
     xyz[:, :, 1] = farm_results[FV.Y]
     xyz[:, :, 2] = farm_results[FV.H]
@@ -443,7 +444,7 @@ def get_grid_yz(
     N_y, N_z = len(y_pos), len(z_pos)
     n_pts = len(y_pos) * len(z_pos)
     x_pos = 0.5 * (x_min + x_max)
-    g_pts = np.zeros((n_states, N_y, N_z, 3), dtype=FC.DTYPE)
+    g_pts = np.zeros((n_states, N_y, N_z, 3), dtype=config.dtype_double)
     g_pts[:] += x_pos * n_x[None, None, None, :]
     g_pts[:] += y_pos[None, :, None, None] * n_y[None, None, None, :]
     g_pts[:] += z_pos[None, None, :, None] * n_z[None, None, None, :]
@@ -491,7 +492,7 @@ def np2np_p(data, a_pos, b_pos):
     n_a = len(a_pos)
     n_b = len(b_pos)
     n_v = len(data)
-    out = np.zeros((n_a, n_b, n_v), dtype=FC.DTYPE)
+    out = np.zeros((n_a, n_b, n_v), dtype=config.dtype_double)
     for vi, (v, d) in enumerate(data.items()):
         out[:, :, vi] = d.reshape(n_a, n_b)
     return out
@@ -526,7 +527,7 @@ def np2np_sp(data, states, a_pos, b_pos):
     n_a = len(a_pos)
     n_b = len(b_pos)
     n_v = len(data)
-    out = np.zeros((n_s, n_a, n_b, n_v), dtype=FC.DTYPE)
+    out = np.zeros((n_s, n_a, n_b, n_v), dtype=config.dtype_double)
     for vi, (v, d) in enumerate(data.items()):
         out[:, :, :, vi] = d.reshape(n_s, n_a, n_b)
     return out

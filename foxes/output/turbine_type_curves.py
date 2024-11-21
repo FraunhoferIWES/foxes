@@ -7,8 +7,10 @@ from foxes.input.states import StatesTable
 from foxes.core import WindFarm, Turbine
 from foxes.algorithms import Downwind
 from foxes.models.turbine_models import SetFarmVars
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
+
 from .output import Output
 
 
@@ -26,7 +28,7 @@ class TurbineTypeCurves(Output):
 
     """
 
-    def __init__(self, mbook):
+    def __init__(self, mbook, **kwargs):
         """
         Constructor.
 
@@ -34,8 +36,11 @@ class TurbineTypeCurves(Output):
         ----------
         mbook: foxes.models.ModelBook
             The model book
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.mbook = mbook
 
     def plot_curves(
@@ -113,7 +118,7 @@ class TurbineTypeCurves(Output):
         if not isinstance(axs, (list, tuple, np.ndarray)):
             axs = [axs]
 
-        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=FC.DTYPE)
+        ws = np.arange(ws_min, ws_max + ws_step, ws_step, dtype=config.dtype_double)
         n_states = len(ws)
         sdata = pd.DataFrame(index=range(n_states))
         sdata.index.name = FC.STATE

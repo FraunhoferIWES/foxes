@@ -1,8 +1,10 @@
 from abc import abstractmethod
 import numpy as np
 
-from .data_calc_model import DataCalcModel
+from foxes.config import config
 import foxes.constants as FC
+
+from .data_calc_model import DataCalcModel
 
 
 class FarmDataModel(DataCalcModel):
@@ -82,7 +84,9 @@ class FarmDataModel(DataCalcModel):
         n_turbines = fdata.n_turbines
         for v in self.output_farm_vars(algo):
             if v not in fdata:
-                fdata[v] = np.full((n_states, n_turbines), np.nan, dtype=FC.DTYPE)
+                fdata[v] = np.full(
+                    (n_states, n_turbines), np.nan, dtype=config.dtype_double
+                )
                 fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
     @abstractmethod

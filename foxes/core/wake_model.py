@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import numpy as np
 
-from foxes.utils import all_subclasses, Factory
+from foxes.utils import all_subclasses
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -258,6 +258,11 @@ class WakeK(Model):
         else:
             s = f"k_var={self.k_var}"
         return s
+
+    @property
+    def is_kTI(self):
+        """Flag for ka != 0"""
+        return self._ka is not None and self._ka != 0
 
     @property
     def all_none(self):

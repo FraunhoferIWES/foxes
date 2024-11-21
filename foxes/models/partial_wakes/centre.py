@@ -1,7 +1,8 @@
 import numpy as np
 
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes.config import config
+
 from .rotor_points import RotorPoints
 
 
@@ -37,4 +38,4 @@ class PartialCentre(RotorPoints):
             The target point weights, shape: (n_tpoints,)
 
         """
-        return fdata[FV.TXYH][:, :, None], np.ones(1, dtype=FC.DTYPE)
+        return fdata[FV.TXYH][:, :, None], np.ones(1, dtype=config.dtype_double)

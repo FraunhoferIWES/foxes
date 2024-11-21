@@ -1,5 +1,3 @@
-import numpy as np
-
 XYH = "xyh"
 """ The vector (x, y, height)
 :group: foxes.variables
@@ -126,13 +124,13 @@ STATE_SOURCE_ORDERI = "state-source-orderi"
 :group: foxes.constants
 """
 
-DTYPE = np.float64
-""" Default data type for floats
+DTYPE = "DTYPE"
+"""Identifier for default double data type
 :group: foxes.constants
 """
 
-ITYPE = np.int64
-""" Default data type for int
+ITYPE = "ITYPE"
+"""Identifier for default integer data type
 :group: foxes.constants
 """
 
@@ -182,5 +180,16 @@ key: unit str, value: factor
 
 POP = "pop"
 """ Population identifier
+:group: foxes.constants
+"""
+
+
+WORK_DIR = "work_dir"
+"""Identifier for the working directory
+:group: foxes.constants
+"""
+
+OUT_DIR = "out_dir"
+"""Identifier for the default output directory
 :group: foxes.constants
 """

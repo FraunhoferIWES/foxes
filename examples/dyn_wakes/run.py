@@ -99,14 +99,14 @@ if __name__ == "__main__":
         "-c",
         "--chunksize_states",
         help="The chunk size for states",
-        default=None,
+        default=20,
         type=int,
     )
     parser.add_argument(
         "-C",
         "--chunksize_points",
         help="The chunk size for points",
-        default=5000,
+        default=None,
         type=int,
     )
     parser.add_argument(

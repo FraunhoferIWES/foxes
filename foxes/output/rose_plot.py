@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 
-import foxes.variables as FV
-import foxes.constants as FC
 from foxes.utils import wd2uv, uv2wd, TabWindroseAxes
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
+import foxes.variables as FV
+import foxes.constants as FC
+
 from .output import Output
 
 
@@ -23,7 +24,7 @@ class RosePlotOutput(Output):
 
     """
 
-    def __init__(self, results):
+    def __init__(self, results, **kwargs):
         """
         Constructor.
 
@@ -31,8 +32,11 @@ class RosePlotOutput(Output):
         ----------
         results: xarray.Dataset
             The calculation results (farm or points)
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         dims = list(results.sizes.keys())
         if dims[1] == FC.TURBINE:
             self._rtype = FC.TURBINE
@@ -324,7 +328,7 @@ class RosePlotOutput(Output):
         Parameters
         ----------
         file_name: str
-            Path to the output file
+            Name of the output file
         sectors: int
             The number of wind direction sectors
         var: str
@@ -350,31 +354,45 @@ class RosePlotOutput(Output):
             ret_data=ret_data,
             **kwargs,
         )
+        fpath = self.get_fpath(file_name)
         if ret_data:
-            r[0].write_image(file_name)
+            r[0].write_image(fpath)
             return r[1]
         else:
-            r.write_image(file_name)
+            r.write_image(fpath)
 
 
 class StatesRosePlotOutput(RosePlotOutput):
     """
-     Class for rose plot creation directly from states
-
-     Parameters
-     ----------
-     states: foxes.core.States
-         The states from which to compute the wind rose
-     point: numpy.ndarray
-         The evaluation point, shape: (3,)
-     mbook: foxes.models.ModelBook, optional
-         The model book
-
+    Class for rose plot creation directly from states
     :group: output
-
     """
 
-    def __init__(self, states, point, mbook=None, ws_var=FV.AMB_REWS):
+    def __init__(
+        self,
+        states,
+        point,
+        mbook=None,
+        ws_var=FV.AMB_REWS,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        states: foxes.core.States
+            The states from which to compute the wind rose
+        point: numpy.ndarray
+            The evaluation point, shape: (3,)
+        mbook: foxes.models.ModelBook, optional
+            The model book
+        ws_var: str
+            The wind speed variable name
+        kwargs: dict, optional
+            Additional parameters for the base class
+
+        """
         farm = WindFarm()
         farm.add_turbine(
             Turbine(
@@ -390,4 +408,4 @@ class StatesRosePlotOutput(RosePlotOutput):
 
         results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
 
-        super().__init__(results)
+        super().__init__(results, **kwargs)

@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.core import WakeK
 from foxes.models.wake_models.gaussian import GaussianWakeModel
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -187,7 +188,7 @@ class Bastankhah2014(GaussianWakeModel):
         else:
             st_sel = np.zeros_like(x, dtype=bool)
             n_sp = np.sum(st_sel)
-            ampld = np.zeros(n_sp, dtype=FC.DTYPE)
-            sigma = np.zeros(n_sp, dtype=FC.DTYPE)
+            ampld = np.zeros(n_sp, dtype=config.dtype_double)
+            sigma = np.zeros(n_sp, dtype=config.dtype_double)
 
         return {FV.WS: (ampld, sigma)}, st_sel

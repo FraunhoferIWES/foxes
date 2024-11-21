@@ -14,3 +14,4 @@ via the *foxes* package, e.g. *foxes.WindFarm*.
     .. python-apigen-entity-summary:: foxes.data.FARM
     .. python-apigen-entity-summary:: foxes.data.STATES
     .. python-apigen-entity-summary:: foxes.data.PCTCURVE
+    .. python-apigen-entity-summary:: foxes.config.config

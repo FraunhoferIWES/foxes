@@ -11,7 +11,8 @@ Classes and functions that describe user input data.
         :ref:`foxes.input.farm_layout`           Functions for adding turbines to the wind farm.
         :ref:`foxes.input.states`                Atmospheric input states.
         :ref:`foxes.input.states.create`         Functions for the creation of ambient states from parameters.
-        :ref:`foxes.input.windio`                An interface to WindIO yaml files. 
+        :ref:`foxes.input.yaml`                  Runs *foxes* via parameter input yaml files, for *foxes_yaml*
+        :ref:`foxes.input.yaml.windio`           An interface to WindIO yaml files, via *foxes_windio*
         =======================================  =============================================================
 
 foxes.input.farm_layout
@@ -33,8 +34,17 @@ Functions for the creation of ambient states from parameters.
 
     .. python-apigen-group:: input.states.create
 
-foxes.input.windio
+foxes.input.yaml
 ------------------
-Interface to WindIO yaml input files.
+Runs *foxes* via parameter input yaml files, used by the command line application
+*foxes_yaml*.
 
-    .. python-apigen-group:: input.windio
+    .. python-apigen-group:: input.yaml
+        
+
+foxes.input.yaml.windio
+-----------------------
+Interface to WindIO yaml input files, used by the command line application
+*foxes_windio*.
+
+    .. python-apigen-group:: input.yaml.windio

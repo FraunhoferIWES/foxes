@@ -5,7 +5,7 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes.config import config
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -21,8 +21,6 @@ def test():
     stp = np.array([601.0, 15.0])
     cfile = thisdir / "flappy" / "results.csv.gz"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
-
-    ck = {FC.STATE: c}
 
     mbook = foxes.models.ModelBook()
     ttype = foxes.models.turbine_types.PCtFile(
@@ -44,78 +42,79 @@ def test():
         verbosity=1,
     )
 
-    algo = foxes.algorithms.Downwind(
-        farm,
-        states,
-        mbook=mbook,
-        rotor_model=rotor,
-        wake_models=["Jensen_linear_k007", "IECTI2019_max"],
-        wake_frame="rotor_wd",
-        partial_wakes=["top_hat", "top_hat"],
-        chunks=ck,
-        verbosity=1,
-    )
+    with foxes.Engine.new("threads", chunk_size_states=c):
 
-    data = algo.calc_farm()
+        algo = foxes.algorithms.Downwind(
+            farm,
+            states,
+            mbook=mbook,
+            rotor_model=rotor,
+            wake_models=["Jensen_linear_k007", "IECTI2019_max"],
+            wake_frame="rotor_wd",
+            partial_wakes=["top_hat", "top_hat"],
+            verbosity=1,
+        )
 
-    df = data.to_dataframe()[
-        [
-            FV.X,
-            FV.Y,
-            FV.WD,
-            FV.AMB_REWS,
-            FV.REWS,
-            FV.AMB_TI,
-            FV.TI,
-            FV.AMB_CT,
-            FV.CT,
+        data = algo.calc_farm()
+
+        df = data.to_dataframe()[
+            [
+                FV.X,
+                FV.Y,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_CT,
+                FV.CT,
+            ]
         ]
-    ]
 
-    print("\nReading file", cfile)
-    fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
+        print("\nReading file", cfile)
+        fdata = pd.read_csv(cfile).set_index(["state", "turbine"])
 
-    print()
-    print("TRESULTS\n")
-    """sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
-    df = df.loc[sel]
-    fdata = fdata.loc[sel]"""
-    print(df)
-    print(fdata)
+        print()
+        print("TRESULTS\n")
+        """sel = (df[FV.P] > 0) & (fdata[FV.P] > 0)
+        df = df.loc[sel]
+        fdata = fdata.loc[sel]"""
+        print(df)
+        print(fdata)
 
-    print("\nVERIFYING\n")
-    df[FV.WS] = df["REWS"]
-    df[FV.AMB_WS] = df["AMB_REWS"]
+        print("\nVERIFYING\n")
+        df[FV.WS] = df["REWS"]
+        df[FV.AMB_WS] = df["AMB_REWS"]
 
-    delta = df - fdata
-    print(delta)
+        delta = df - fdata
+        print(delta)
 
-    chk = delta.abs()
-    print(chk.max())
+        chk = delta.abs()
+        print(chk.max())
 
-    var = FV.WS
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-3
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-3).all()
+        var = FV.WS
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-3
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-3).all()
 
-    var = FV.TI
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-4
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-4).all()
+        var = FV.TI
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-4
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-4).all()
 
-    var = FV.CT
-    print(f"\nCHECKING {var}")
-    sel = chk[var] >= 3e-5
-    print(df.loc[sel])
-    print(fdata.loc[sel])
-    print(chk.loc[sel])
-    assert (chk[var] < 3e-5).all()
+        var = FV.CT
+        print(f"\nCHECKING {var}")
+        sel = chk[var] >= 3e-5
+        print(df.loc[sel])
+        print(fdata.loc[sel])
+        print(chk.loc[sel])
+        assert (chk[var] < 3e-5).all()
 
 
 if __name__ == "__main__":

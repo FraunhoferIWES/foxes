@@ -1,9 +1,9 @@
 import numpy as np
 
 from foxes.core import TurbineModel
-import foxes.variables as FV
-import foxes.constants as FC
+from foxes.config import config
 from foxes.utils import cubic_roots
+import foxes.variables as FV
 
 
 class PowerMask(TurbineModel):
@@ -33,7 +33,13 @@ class PowerMask(TurbineModel):
 
     """
 
-    def __init__(self, var_ws_P=FV.REWS3, factor_P=1.0e3, P_lim=100, induction="Betz"):
+    def __init__(
+        self,
+        var_ws_P=FV.REWS3,
+        factor_P=1.0e3,
+        P_lim=100,
+        induction="Betz",
+    ):
         """
         Constructor.
 
@@ -110,13 +116,13 @@ class PowerMask(TurbineModel):
 
         self._P_rated = []
         for t in algo.farm_controller.turbine_types:
-            Pnom = FC.DTYPE(t.P_nominal)
+            Pnom = config.dtype_double(t.P_nominal)
             if np.isnan(Pnom):
                 raise ValueError(
                     f"Model '{self.name}': P_nominal is NaN for turbine type '{t.name}'"
                 )
             self._P_rated.append(Pnom)
-        self._P_rated = np.array(self._P_rated, dtype=FC.DTYPE)
+        self._P_rated = np.array(self._P_rated, dtype=config.dtype_double)
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """
@@ -183,9 +189,9 @@ class PowerMask(TurbineModel):
 
             # find roots:
             N = len(cp)
-            a3 = np.full(N, 4.0, dtype=FC.DTYPE)
-            a2 = np.full(N, -8.0, dtype=FC.DTYPE)
-            a1 = np.full(N, 4.0, dtype=FC.DTYPE)
+            a3 = np.full(N, 4.0, dtype=config.dtype_double)
+            a2 = np.full(N, -8.0, dtype=config.dtype_double)
+            a1 = np.full(N, 4.0, dtype=config.dtype_double)
             a0 = -cp / e
             rts = cubic_roots(a0, a1, a2, a3)
             rts[np.isnan(rts)] = np.inf

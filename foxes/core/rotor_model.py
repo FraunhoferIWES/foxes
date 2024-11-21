@@ -1,12 +1,14 @@
 import numpy as np
 from abc import abstractmethod
 
-import foxes.variables as FV
-import foxes.constants as FC
-from .farm_data_model import FarmDataModel
+from foxes.config import config
 from foxes.utils import wd2uv, uv2wd, all_subclasses
 
+import foxes.variables as FV
+import foxes.constants as FC
+
 from .data import TData
+from .farm_data_model import FarmDataModel
 
 
 class RotorModel(FarmDataModel):
@@ -146,14 +148,16 @@ class RotorModel(FarmDataModel):
         dpoints = self.design_points()
         D = fdata[FV.D]
 
-        rax = np.zeros((n_states, n_turbines, 3, 3), dtype=FC.DTYPE)
+        rax = np.zeros((n_states, n_turbines, 3, 3), dtype=config.dtype_double)
         n = rax[:, :, 0, 0:2]
         m = rax[:, :, 1, 0:2]
         n[:] = wd2uv(fdata[FV.YAW], axis=-1)
         m[:] = np.stack([-n[:, :, 1], n[:, :, 0]], axis=-1)
         rax[:, :, 2, 2] = 1
 
-        points = np.zeros((n_states, n_turbines, n_points, 3), dtype=FC.DTYPE)
+        points = np.zeros(
+            (n_states, n_turbines, n_points, 3), dtype=config.dtype_double
+        )
         points[:] = fdata[FV.TXYH][:, :, None, :]
         points[:] += (
             0.5 * D[:, :, None, None] * np.einsum("stad,pa->stpd", rax, dpoints)

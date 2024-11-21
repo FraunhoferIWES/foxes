@@ -6,6 +6,7 @@ from pathlib import Path
 from foxes.core import States, VerticalProfile
 from foxes.utils import PandasFileHelper, read_tab_file
 from foxes.data import STATES
+from foxes.config import config, get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -214,13 +215,14 @@ class StatesTable(States):
             data = self.data_source
             isorg = True
         else:
-            if not Path(self.data_source).is_file():
+            self._data_source = get_path(self.data_source)
+            if not self.data_source.is_file():
                 if verbosity:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
                 self._data_source = algo.dbook.get_file_path(
-                    STATES, self.data_source, check_raw=False
+                    STATES, self.data_source.name, check_raw=False
                 )
                 if verbosity:
                     print(f"Path: {self.data_source}")
@@ -238,7 +240,7 @@ class StatesTable(States):
         self.__inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self.__weights = np.zeros((self._N, algo.n_turbines), dtype=FC.DTYPE)
+        self.__weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
         if col_w in data:
             self.__weights[:] = data[col_w].to_numpy()[:, None]
         elif FV.WEIGHT in self.var2col:
@@ -436,14 +438,17 @@ class StatesTable(States):
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
             else:
                 tdata[v] = np.zeros(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=FC.DTYPE
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    dtype=config.dtype_double,
                 )
                 tdata[v][:] = mdata[self.DATA][:, i, None, None]
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         for v, f in self.fixed_vars.items():
             tdata[v] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), f, dtype=FC.DTYPE
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                f,
+                dtype=config.dtype_double,
             )
 
         z = tdata[FC.TARGETS][..., 2]
@@ -545,13 +550,14 @@ class TabStates(StatesTable):
         """
         if self.data_source is None:
             if self.__tab_data is None:
-                if not Path(self.__tab_source).is_file():
+                self.__tab_source = get_path(self.__tab_source)
+                if not self.__tab_source.is_file():
                     if verbosity:
                         print(
                             f"States '{self.name}': Reading static data '{self.__tab_source}' from context '{STATES}'"
                         )
                     self.__tab_source = algo.dbook.get_file_path(
-                        STATES, self.__tab_source, check_raw=False
+                        STATES, self.__tab_source.name, check_raw=False
                     )
                     if verbosity:
                         print(f"Path: {self.__tab_source}")
@@ -568,14 +574,15 @@ class TabStates(StatesTable):
 
             wd0 = self.__tab_data["wd"].to_numpy()
             ws0 = a * np.append(
-                np.array([0], dtype=FC.DTYPE), self.__tab_data["ws"].to_numpy()
+                np.array([0], dtype=config.dtype_double),
+                self.__tab_data["ws"].to_numpy(),
             )
             ws0 = 0.5 * (ws0[:-1] + ws0[1:])
 
             n_ws = self.__tab_data.sizes["ws"]
             n_wd = self.__tab_data.sizes["wd"]
-            ws = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
-            wd = np.zeros((n_ws, n_wd), dtype=FC.DTYPE)
+            ws = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
+            wd = np.zeros((n_ws, n_wd), dtype=config.dtype_double)
             ws[:] = ws0[:, None]
             wd[:] = wd0[None, :]
 

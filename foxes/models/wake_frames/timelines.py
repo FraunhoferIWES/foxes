@@ -4,6 +4,7 @@ from xarray import Dataset
 from foxes.core import WakeFrame, MData, FData, TData
 from foxes.utils import wd2uv
 from foxes.algorithms.iterative import Iterative
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -69,10 +70,16 @@ class Timelines(WakeFrame):
                 raise KeyError(
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
-            dt = (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+            dt = (
+                (times[1:] - times[:-1])
+                .astype("timedelta64[s]")
+                .astype(config.dtype_int)
+            )
         else:
             n = max(len(times) - 1, 1)
-            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(FC.ITYPE)
+            dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
+                config.dtype_int
+            )
 
         # prepare mdata:
         data = algo.get_model_data(states)["coords"]
@@ -90,11 +97,11 @@ class Timelines(WakeFrame):
         # prepare tdata:
         n_states = states.size()
         data = {
-            v: np.zeros((n_states, 1, 1), dtype=FC.DTYPE)
+            v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
             for v in states.output_point_vars(algo)
         }
         pdims = {v: (FC.STATE, FC.TARGET, FC.TPOINT) for v in data.keys()}
-        points = np.zeros((n_states, 1, 3), dtype=FC.DTYPE)
+        points = np.zeros((n_states, 1, 3), dtype=config.dtype_double)
 
         # calculate all heights:
         self.timelines_data = {"dxy": (("height", FC.STATE, "dir"), [])}
@@ -175,7 +182,7 @@ class Timelines(WakeFrame):
         super().initialize(algo, verbosity)
 
         # find turbine hub heights:
-        t2h = np.zeros(algo.n_turbines, dtype=FC.DTYPE)
+        t2h = np.zeros(algo.n_turbines, dtype=config.dtype_double)
         for ti, t in enumerate(algo.farm.turbines):
             t2h[ti] = (
                 t.H if t.H is not None else algo.farm_controller.turbine_types[ti].H
@@ -285,7 +292,7 @@ class Timelines(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.ITYPE)
+        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(fdata.n_turbines)[None, :]
         return order
 
@@ -331,26 +338,26 @@ class Timelines(WakeFrame):
         heights = self.timelines_data["height"].to_numpy()
         data_dxy = self.timelines_data["dxy"].to_numpy()
 
-        D = np.zeros((n_states, n_points), dtype=FC.DTYPE)
+        D = np.zeros((n_states, n_points), dtype=config.dtype_double)
         D[:] = fdata[FV.D][:, downwind_index, None]
 
-        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
+        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)
         wcoosx = wcoos[:, :, 0]
         wcoosy = wcoos[:, :, 1]
         wcoos[:, :, 2] = points[:, :, 2] - rxyz[:, None, 2]
 
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + mdata.n_states
-        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         trace_si[:] = i0 + np.arange(n_states)[:, None]
         for hi, h in enumerate(heights):
             dxy = data_dxy[hi][:i1]
             precond = theights[:, None] == h
 
-            trace_p = np.zeros((n_states, n_points, 2), dtype=FC.DTYPE)
+            trace_p = np.zeros((n_states, n_points, 2), dtype=config.dtype_double)
             trace_p[:] = points[:, :, :2] - rxyz[:, None, :2]
-            trace_l = np.zeros((n_states, n_points), dtype=FC.DTYPE)
-            trace_d = np.full((n_states, n_points), np.inf, dtype=FC.DTYPE)
+            trace_l = np.zeros((n_states, n_points), dtype=config.dtype_double)
+            trace_d = np.full((n_states, n_points), np.inf, dtype=config.dtype_double)
             h_trace_si = trace_si.copy()
 
             # flake8: noqa: F821
@@ -446,12 +453,12 @@ class Timelines(WakeFrame):
         heights = self.timelines_data["height"].to_numpy()
         data_dxy = self.timelines_data["dxy"].to_numpy()
 
-        points = np.zeros((n_states, n_points, 3), dtype=FC.DTYPE)
+        points = np.zeros((n_states, n_points, 3), dtype=config.dtype_double)
         points[:] = rxyz[:, None, :]
 
         trace_dp = np.zeros_like(points[..., :2])
         trace_l = x.copy()
-        trace_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        trace_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         trace_si[:] = np.arange(n_states)[:, None]
 
         for hi, h in enumerate(heights):

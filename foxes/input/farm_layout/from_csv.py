@@ -1,6 +1,7 @@
 import pandas as pd
 
 from foxes.core import Turbine
+from foxes.config import get_path
 
 
 def add_from_csv(
@@ -75,7 +76,8 @@ def add_from_csv(
     else:
         if verbosity:
             print("Reading file", data_source)
-        data = pd.read_csv(data_source, index_col=col_index)
+        pth = get_path(data_source)
+        data = pd.read_csv(pth, index_col=col_index)
 
     tmodels = turbine_parameters.pop("turbine_models", [])
     H = turbine_parameters.pop("H", None)

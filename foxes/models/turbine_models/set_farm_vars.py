@@ -1,8 +1,9 @@
 import numpy as np
 
 from foxes.core import TurbineModel
-import foxes.constants as FC
+from foxes.config import config
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 class SetFarmVars(TurbineModel):
@@ -13,12 +14,14 @@ class SetFarmVars(TurbineModel):
     ----------
     vars: list of str
         The variables to be set
+    once: bool
+        Flag for running only once
 
     :group: models.turbine_models
 
     """
 
-    def __init__(self, pre_rotor=False):
+    def __init__(self, pre_rotor=False, once=False):
         """
         Constructor.
 
@@ -27,9 +30,12 @@ class SetFarmVars(TurbineModel):
         pre_rotor: bool
             Flag for running this model before
             running the rotor model.
+        once: bool
+            Flag for running only once
 
         """
         super().__init__(pre_rotor=pre_rotor)
+        self.once = once
         self.reset()
 
     def add_var(self, var, data):
@@ -51,7 +57,7 @@ class SetFarmVars(TurbineModel):
         if self.running:
             raise ValueError(f"Model '{self.name}': Cannot add_var while running")
         self.vars.append(var)
-        self.__vdata.append(np.asarray(data, dtype=FC.DTYPE))
+        self.__vdata.append(np.asarray(data, dtype=config.dtype_double))
 
     def reset(self):
         """
@@ -61,6 +67,23 @@ class SetFarmVars(TurbineModel):
             raise ValueError(f"Model '{self.name}': Cannot reset while running")
         self.vars = []
         self.__vdata = []
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        super().initialize(algo, verbosity, force)
+        self.__once_done = set()
 
     def output_farm_vars(self, algo):
         """
@@ -105,7 +128,9 @@ class SetFarmVars(TurbineModel):
         idata = super().load_data(algo, verbosity)
 
         for i, v in enumerate(self.vars):
-            data = np.full((algo.n_states, algo.n_turbines), np.nan, dtype=FC.DTYPE)
+            data = np.full(
+                (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
+            )
             vdata = self.__vdata[i]
 
             # handle special case of call during vectorized optimization:
@@ -117,7 +142,7 @@ class SetFarmVars(TurbineModel):
                 n_pop = algo.states.n_pop
                 n_ost = algo.states.states.size()
                 n_trb = algo.n_turbines
-                vdata = np.zeros((n_pop, n_ost, n_trb), dtype=FC.DTYPE)
+                vdata = np.zeros((n_pop, n_ost, n_trb), dtype=config.dtype_double)
                 vdata[:] = self.__vdata[i][None, :]
                 vdata = vdata.reshape(n_pop * n_ost, n_trb)
 
@@ -130,7 +155,7 @@ class SetFarmVars(TurbineModel):
                 for ti in range(algo.n_turbines):
                     t = algo.farm.turbines[ti]
                     if len(t.xy.shape) == 1:
-                        xy = np.zeros((algo.n_states, 2), dtype=FC.DTYPE)
+                        xy = np.zeros((algo.n_states, 2), dtype=config.dtype_double)
                         xy[:] = t.xy[None, :]
                         t.xy = xy
                     t.xy[:, i] = np.where(
@@ -141,7 +166,7 @@ class SetFarmVars(TurbineModel):
             if v in [FV.D, FV.H]:
                 for ti in range(algo.n_turbines):
                     t = algo.farm.turbines[ti]
-                    x = np.zeros(algo.n_states, dtype=FC.DTYPE)
+                    x = np.zeros(algo.n_states, dtype=config.dtype_double)
                     if v == FV.D:
                         x[:] = t.D
                         t.D = x
@@ -243,21 +268,26 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        if self.pre_rotor:
-            order = np.s_[:]
-            ssel = np.s_[:]
-        else:
-            order = fdata[FV.ORDER]
-            ssel = fdata[FV.ORDER_SSEL]
+        i0 = mdata.states_i0(counter=True)
+        if not self.once or i0 not in self.__once_done:
 
-        bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
-        bsel[st_sel] = True
+            if self.pre_rotor:
+                order = np.s_[:]
+                ssel = np.s_[:]
+            else:
+                order = fdata[FV.ORDER]
+                ssel = fdata[FV.ORDER_SSEL]
 
-        for v in self.vars:
-            data = mdata[self.var(v)][ssel, order]
-            hsel = ~np.isnan(data)
-            tsel = bsel & hsel
+            bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
+            bsel[st_sel] = True
 
-            fdata[v][tsel] = data[tsel]
+            for v in self.vars:
+                data = mdata[self.var(v)][ssel, order]
+                hsel = ~np.isnan(data)
+                tsel = bsel & hsel
+
+                fdata[v][tsel] = data[tsel]
+
+            self.__once_done.add(i0)
 
         return {v: fdata[v] for v in self.vars}

@@ -2,7 +2,7 @@ from foxes.algorithms.downwind.downwind import Downwind
 
 from foxes.core import FarmDataModelList
 from foxes.utils import Dict
-import foxes.variables as FV
+
 from . import models as mdls
 
 

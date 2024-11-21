@@ -1,14 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
-from matplotlib.colors import LinearSegmentedColormap
 
 from foxes.input.states import SingleStateStates
 from foxes.core import WindFarm
 from foxes.algorithms import Downwind
 
+from .output import Output
 
-class RotorPointPlot:
+
+class RotorPointPlot(Output):
     """
     Visualizes rotor points and their weights.
 
@@ -23,7 +24,7 @@ class RotorPointPlot:
 
     """
 
-    def __init__(self, rotor_model, algo=None):
+    def __init__(self, rotor_model, algo=None, **kwargs):
         """
         Constructor.
 
@@ -33,8 +34,11 @@ class RotorPointPlot:
             The rotor model
         algo: foxes.core.Algorithm, optional
             The algorithm
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.rotor_model = rotor_model
         self.algo = algo
 

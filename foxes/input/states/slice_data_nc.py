@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interpn
-from pathlib import Path
 
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
+from foxes.config import config, get_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -145,9 +145,11 @@ class SliceDataNC(States):
             if "*" in str(self.data_source):
                 pass
             else:
-                self.__data_source = StaticData().get_file_path(
-                    STATES, self.data_source, check_raw=True
-                )
+                self.__data_source = get_path(self.data_source)
+                if not self.data_source.is_file():
+                    self.__data_source = StaticData().get_file_path(
+                        STATES, self.data_source.name, check_raw=False
+                    )
             if verbosity:
                 if pre_load:
                     print(
@@ -159,7 +161,8 @@ class SliceDataNC(States):
                     )
 
             def _read_ds():
-                if Path(self.data_source).is_file():
+                self._data_source = get_path(self.data_source)
+                if self.data_source.is_file():
                     return xr.open_dataset(self.data_source)
                 else:
                     # try to read multiple files, needs dask:
@@ -177,8 +180,7 @@ class SliceDataNC(States):
                         import_module("dask", hint="pip install dask")
                         raise e
 
-            with _read_ds() as ds:
-                self.__data_source = ds
+            self.__data_source = _read_ds()
 
         if sel is not None:
             self.__data_source = self.data_source.sel(self.sel)
@@ -264,7 +266,9 @@ class SliceDataNC(States):
                     f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_sxy}, {cor_syx}, or {cor_s}"
                 )
 
-        data = np.zeros((n_sts, n_y, n_x, len(self.var2ncvar)), dtype=FC.DTYPE)
+        data = np.zeros(
+            (n_sts, n_y, n_x, len(self.var2ncvar)), dtype=config.dtype_double
+        )
         for v in vars_syx:
             ncv = self.var2ncvar[v]
             if ds[ncv].dims == cor_syx:
@@ -276,7 +280,7 @@ class SliceDataNC(States):
             data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None]
         if FV.WD in self.fixed_vars:
             data[..., self._dkys[FV.WD]] = np.full(
-                (n_sts, n_y, n_x), self.fixed_vars[FV.WD], dtype=FC.DTYPE
+                (n_sts, n_y, n_x), self.fixed_vars[FV.WD], dtype=config.dtype_double
             )
 
         if verbosity > 1:
@@ -351,7 +355,7 @@ class SliceDataNC(States):
 
         if self.__weights is None:
             self.__weights = np.full(
-                (self._N, algo.n_turbines), 1.0 / self._N, dtype=FC.DTYPE
+                (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
             )
 
         idata = super().load_data(algo, verbosity)
@@ -588,7 +592,9 @@ class SliceDataNC(States):
 
         # prepare points:
         sts = np.arange(n_states)
-        pts = np.append(points, np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE), axis=2)
+        pts = np.append(
+            points, np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), axis=2
+        )
         pts[:, :, 3] = sts[:, None]
         pts = pts.reshape(n_states * n_pts, 3)
         pts = np.flip(pts, axis=1)
@@ -675,7 +681,7 @@ class SliceDataNC(States):
                     out[v] = data[..., self._dkys[v]]
                 else:
                     out[v] = np.full(
-                        (n_states, n_pts), self.fixed_vars[v], dtype=FC.DTYPE
+                        (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )
 
         return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}

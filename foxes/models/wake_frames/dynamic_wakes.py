@@ -4,6 +4,7 @@ from scipy.spatial.distance import cdist
 from foxes.core import WakeFrame, TData
 from foxes.utils import wd2uv
 from foxes.algorithms.iterative import Iterative
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -98,12 +99,14 @@ class DynamicWakes(WakeFrame):
                     f"{self.name}: Expecting 'dt_min' for single step timeseries"
                 )
             self._dt = (
-                (times[1:] - times[:-1]).astype("timedelta64[s]").astype(FC.ITYPE)
+                (times[1:] - times[:-1])
+                .astype("timedelta64[s]")
+                .astype(config.dtype_int)
             )
         else:
             n = max(len(times) - 1, 1)
             self._dt = np.full(n, self.dt_min * 60, dtype="timedelta64[s]").astype(
-                FC.ITYPE
+                config.dtype_int
             )
         self._dt = np.append(self._dt, self._dt[-1, None], axis=0)
 
@@ -141,7 +144,7 @@ class DynamicWakes(WakeFrame):
             The turbine order, shape: (n_states, n_turbines)
 
         """
-        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=FC.ITYPE)
+        order = np.zeros((fdata.n_states, fdata.n_turbines), dtype=config.dtype_int)
         order[:] = np.arange(fdata.n_turbines)[None, :]
         return order
 
@@ -163,10 +166,15 @@ class DynamicWakes(WakeFrame):
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
         if data is None:
-            data = np.full((n_states, self.max_age, 4), np.nan, dtype=FC.DTYPE)
+            data = np.full(
+                (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
+            )
             data[:, 0, :3] = rxyh
             data[:, 0, 3] = 0
-            tdt = {v: np.zeros((n_states, 1, 1), dtype=FC.DTYPE) for v in tdi.keys()}
+            tdt = {
+                v: np.zeros((n_states, 1, 1), dtype=config.dtype_double)
+                for v in tdi.keys()
+            }
             pts = data[:, 0, :3].copy()
             for age in range(self.max_age - 1):
                 if age == n_states:
@@ -259,7 +267,7 @@ class DynamicWakes(WakeFrame):
                         n_pts = len(pts)
 
                         tdt = {
-                            v: np.zeros((n_states, n_pts, 1), dtype=FC.DTYPE)
+                            v: np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
                             for v in algo.states.output_point_vars(algo)
                         }
 
@@ -368,9 +376,9 @@ class DynamicWakes(WakeFrame):
         i0 = mdata.states_i0(counter=True)
 
         # initialize:
-        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=FC.DTYPE)
+        wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)
         wcoos[:, :, 2] = points[:, :, 2] - rxyh[:, None, 2]
-        wake_si = np.zeros((n_states, n_points), dtype=FC.ITYPE)
+        wake_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         wake_si[:] = i0 + np.arange(n_states)[:, None]
 
         # find nearest wake point:
@@ -400,7 +408,7 @@ class DynamicWakes(WakeFrame):
                     if np.any(~sel):
                         nx[~sel] -= wdata[sts[~sel], ags[~sel] - 1, :2]
                     dx = np.linalg.norm(nx, axis=-1)
-                    nx /= dx[:, None]
+                    nx /= dx[:, None] + 1e-14
 
                     projx = np.einsum("sd,sd->s", dp, nx)
                     sel = (projx > -dx) & (projx < dx)

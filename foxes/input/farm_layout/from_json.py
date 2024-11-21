@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 
 from foxes.core import Turbine
+from foxes.config import get_path
 
 
 def add_from_json(
@@ -27,10 +28,10 @@ def add_from_json(
     :group: input.farm_layout
 
     """
-
+    fpath = get_path(file_path)
     if verbosity:
-        print("Reading file", file_path)
-    with open(file_path) as f:
+        print("Reading file", fpath)
+    with open(fpath) as f:
         dict = json.load(f)
 
     keys = list(dict.keys())

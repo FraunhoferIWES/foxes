@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import foxes.constants as FC
+from foxes.config import config
 import foxes.variables as FV
 from foxes.output.output import Output
 
@@ -31,7 +31,13 @@ class FarmLayoutOutput(Output):
     """
 
     def __init__(
-        self, farm, farm_results=None, from_results=False, results_state=None, D=None
+        self,
+        farm,
+        farm_results=None,
+        from_results=False,
+        results_state=None,
+        D=None,
+        **kwargs,
     ):
         """
         Constructor.
@@ -48,8 +54,11 @@ class FarmLayoutOutput(Output):
             The state index, for from_res
         D: float, optional
             The rotor diameter, if not from data
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.farm = farm
         self.fres = farm_results
         self.from_res = from_results
@@ -75,7 +84,7 @@ class FarmLayoutOutput(Output):
 
         """
 
-        data = np.zeros([self.farm.n_turbines, 3], dtype=FC.DTYPE)
+        data = np.zeros([self.farm.n_turbines, 3], dtype=config.dtype_double)
 
         if self.from_res:
             data[:, 0] = self.fres[FV.X][self.rstate]
@@ -284,14 +293,14 @@ class FarmLayoutOutput(Output):
 
         return ax
 
-    def write_plot(self, file_path=None, fontsize=8, **kwargs):
+    def write_plot(self, file_name=None, fontsize=8, **kwargs):
         """
         Writes the layout plot to file.
 
         Parameters
         ----------
-        file_path: str
-            The file into which to plot, or None
+        file_name: str
+            Name of the file into which to plot, or None
             for default
         fontsize: int
             Size of the turbine numbers
@@ -303,8 +312,9 @@ class FarmLayoutOutput(Output):
         ax = self.get_figure(fontsize=fontsize, ret_im=False, **kwargs)
         fig = ax.get_figure()
 
-        fname = file_path if file_path is not None else self.farm.name + ".png"
-        fig.savefig(fname, bbox_inches="tight")
+        fname = file_name if file_name is not None else self.farm.name + ".png"
+        fpath = self.get_fpath(fname)
+        fig.savefig(fpath, bbox_inches="tight")
 
         plt.close(fig)
 
@@ -325,14 +335,14 @@ class FarmLayoutOutput(Output):
         fname = file_path if file_path is not None else self.farm.name + ".xyh"
         np.savetxt(fname, data, header="x y h")
 
-    def write_csv(self, file_path=None, type_col=None, algo=None):
+    def write_csv(self, file_name=None, type_col=None, algo=None):
         """
         Writes csv layout file.
 
         Parameters
         ----------
-        file_path: str
-            The file into which to plot, or None
+        file_name: str
+            Name of the file into which to plot, or None
             for default
         type_col: str, optional
             Name of the turbine type column
@@ -343,7 +353,8 @@ class FarmLayoutOutput(Output):
 
         data = self.get_layout_data()
 
-        fname = file_path if file_path is not None else self.farm.name + ".csv"
+        fname = file_name if file_name is not None else self.farm.name + ".csv"
+        fpath = self.get_fpath(fname)
 
         lyt = pd.DataFrame(index=range(len(data)), columns=["name", "x", "y", "h", "D"])
         lyt.index.name = "index"
@@ -356,22 +367,23 @@ class FarmLayoutOutput(Output):
         if type_col is not None:
             lyt[type_col] = [m.name for m in algo.farm_controller.turbine_types]
 
-        lyt.to_csv(fname)
+        lyt.to_csv(fpath)
 
-    def write_json(self, file_path=None):
+    def write_json(self, file_name=None):
         """
         Writes xyh layout file.
 
         Parameters
         ----------
-        file_path: str
-            The file into which to plot, or None
+        file_name: str
+            Name of the file into which to plot, or None
             for default
 
         """
 
         data = self.get_layout_dict()
 
-        fname = file_path if file_path is not None else self.farm.name + ".json"
-        with open(fname, "w") as outfile:
+        fname = file_name if file_name is not None else self.farm.name + ".json"
+        fpath = self.get_fpath(fname)
+        with open(fpath, "w") as outfile:
             json.dump(data, outfile, indent=4)

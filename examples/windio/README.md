@@ -5,10 +5,10 @@ This example runs an example windio yaml input file.
 ## Check options
 Check options by
 ```
-python3 run.py -h
+foxes_windio -h
 ```
 
 ## Run command
 ```
-python3 run.py
+foxes_windio windio_5turbines_timeseries.yaml
 ```

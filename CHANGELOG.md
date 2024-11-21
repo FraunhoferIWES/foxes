@@ -654,3 +654,22 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Removing optional dependencies `io`. The installation advice will be printed when trying to use the `foxes.input.windio` sub package. The reason is that for now this depends on a personal [fork by kilojoules](https://github.com/kilojoules/windIO), and the inclusion of such dependencies is not supported by PyPi.
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.1.1](https://github.com/FraunhoferIWES/foxes/commits/v1.1.1)
+
+## v1.2
+
+- Command line applications:
+  - New command line application: `foxes_yaml`, runs *foxes* by interpreting a `yaml` input parameter file (no script neccessary)
+  - New command line application: `foxes_windio`, runs *foxes* by interpreting a windio `yaml` input parameter file (no script neccessary)
+- Config:
+  - Introducing a dictionary-like configuration object `foxes.config`, setting default data types, the directory choices, etc.
+- Inputs:
+  - New input package `foxes.input.yaml`, realizing the run via yaml parameter files. This is not following `windio`, but a *foxes* specific structure.
+  - Reworked `windio` input package, now at `foxes.input.yaml.windio` and based on `foxes.input.yaml`
+- Outputs:
+  - Introducing the idea of a default output directory, accessible via `foxes.config.out_dir`. The file writing output classes now refer to this, or a output specific output directory that is given as an argument to the constructor of the output class.
+- Examples:
+  - New example `yaml_input`, demonstrating the command line application `foxes_yaml` and the new yaml parameter file
+- Bug fixes:
+  - Fix for `TurbOParkIX` wake model: Now `k` is truly `k`, such that only `ambka` or `ka` choices from `WakeK` correspond to multiplication with `AMB_TI` or `TI`, respectively.
+  
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
