@@ -2,6 +2,11 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.2.1
+    The `FarmResultsEval` output now makes a difference between the two states contraction methods `mean` and `weights`.
+    Only the latter includes the states weights when summing the results, so please check your code whenever you 
+    are using this class.
+
 .. versionadded:: 1.2
     :ref:`Command line applications <Command line applications>` that can run *foxes* from yaml file input,
     simply by `foxes_yaml imputs.yaml` or `foxes_windio inputs.yaml` - no Python script needed.
@@ -15,14 +20,6 @@
 .. versionadded:: 1.0
     New wake frame :ref:`DynamicWakes<Dynamic Wakes 1>`: Chunk-based vectorized dynamic
     wakes for any kind of inflow 
-
-.. versionadded:: 1.0
-    New inflow class :ref:`OnePointFlowStates<Dynamic Wakes 1>`: 
-    Heterogeneous inflow fields extrapolated from data at a single point
-
-.. versionadded:: 1.0
-    New turbine type :ref:`FromLookupTable<foxes.models.turbine_types.FromLookupTable>`: 
-    Interpolates power and thrust coefficient from lookup table input data
 
 Welcome to FOXES
 ================

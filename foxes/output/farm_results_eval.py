@@ -64,7 +64,10 @@ class FarmResultsEval(Output):
         fields = []
         for v in vars:
             if isinstance(v, str):
-                fields.append(self.results[v].to_numpy())
+                vdata = self.results[v].to_numpy()
+                nns = np.sum(np.isnan(vdata))
+                assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                fields.append(vdata)
             else:
                 fields.append(v)
             if nas is None:
@@ -99,7 +102,7 @@ class FarmResultsEval(Output):
         vars_op: dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
-            are: sum, mean, min, max.
+            are: sum, mean, min, max, weights.
 
         Returns
         -------
@@ -111,23 +114,25 @@ class FarmResultsEval(Output):
 
         rdata = {}
         for v, op in vars_op.items():
-            if op == "mean":
-                rdata[v] = self.weinsum("t", v)
+            vdata = self.results[v].to_numpy()
+            nns = np.sum(np.isnan(vdata))
+            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+
+            if op == "weights":
+                rdata[v] = self.weinsum("t", vdata)
+            elif op == "mean":
+                rdata[v] = np.mean(vdata, axis=0)
             elif op == "sum":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=0)
             elif op == "min":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=0)
             elif op == "max":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=0)
             elif op == "std":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.std(vdata, axis=0)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max, weights"
                 )
 
         data = pd.DataFrame(index=range(n_turbines), data=rdata)
@@ -144,7 +149,7 @@ class FarmResultsEval(Output):
         vars_op: dict
             The operation per variable. Key: str, the variable
             name. Value: str, the operation, choices
-            are: sum, mean, min, max.
+            are: sum, mean, min, max, weights.
 
         Returns
         -------
@@ -156,20 +161,23 @@ class FarmResultsEval(Output):
 
         rdata = {}
         for v, op in vars_op.items():
-            if op == "mean":
-                rdata[v] = self.weinsum("s", v)
+            vdata = self.results[v].to_numpy()
+            nns = np.sum(np.isnan(vdata))
+            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+
+            if op == "weights":
+                rdata[v] = self.weinsum("s", vdata)
+            elif op == "mean":
+                rdata[v] = np.mean(vdata, axis=1)   
             elif op == "sum":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.sum(vdata, axis=1)
             elif op == "min":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.min(vdata, axis=1)
             elif op == "max":
-                vdata = self.results[v].to_numpy()
                 rdata[v] = np.max(vdata, axis=1)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max, weights"
                 )
 
         data = pd.DataFrame(index=states, data=rdata)
@@ -205,29 +213,30 @@ class FarmResultsEval(Output):
         rdata = {}
         for v, op in turbines_op.items():
             vdata = sdata[v].to_numpy()
-            if op == "mean":
-                if states_op[v] == "mean":
+            nns = np.sum(np.isnan(vdata))
+            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+
+            if op == "weights":
+                if states_op[v] == "weights":
                     rdata[v] = self.weinsum("", v)
                 else:
-                    vdata = sdata[v].to_numpy()
                     rdata[v] = self.weinsum("", vdata[None, :])
+            elif op == "mean":
+                rdata[v] = np.sum(vdata)
             elif op == "sum":
-                vdata = sdata[v].to_numpy()
                 rdata[v] = np.sum(vdata)
             elif op == "min":
-                vdata = sdata[v].to_numpy()
                 rdata[v] = np.min(vdata)
             elif op == "max":
-                vdata = sdata[v].to_numpy()
                 rdata[v] = np.max(vdata)
             else:
                 raise KeyError(
-                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max"
+                    f"Unknown operation '{op}' for variable '{v}'. Please choose: sum, mean, min, max, weights"
                 )
 
         return rdata
 
-    def calc_states_mean(self, vars):
+    def calc_states_mean(self, vars, use_weights=True):
         """
         Calculates the mean wrt states.
 
@@ -235,6 +244,8 @@ class FarmResultsEval(Output):
         ----------
         vars: list of str
             The variables
+        use_weights: bool
+            Flag for using states weights for the mean
 
         Returns
         -------
@@ -242,9 +253,10 @@ class FarmResultsEval(Output):
             The results per turbine
 
         """
+        r = "weights" if use_weights else "mean"
         if isinstance(vars, str):
-            return self.reduce_states({vars: "mean"})
-        return self.reduce_states({v: "mean" for v in vars})
+            return self.reduce_states({vars: r})
+        return self.reduce_states({v: r for v in vars})
 
     def calc_states_sum(self, vars):
         """
@@ -325,7 +337,7 @@ class FarmResultsEval(Output):
             The fully contracted results
 
         """
-        op = {v: "mean" for v in vars}
+        op = {v: "weights" for v in vars}
         return self.reduce_all(states_op=op, turbines_op=op)
 
     def calc_farm_sum(self, vars):
@@ -362,7 +374,7 @@ class FarmResultsEval(Output):
 
         """
         v = FV.P if not ambient else FV.AMB_P
-        cdata = self.reduce_all(states_op={v: "mean"}, turbines_op={v: "sum"})
+        cdata = self.reduce_all(states_op={v: "weights"}, turbines_op={v: "sum"})
         return cdata[v]
 
     def calc_turbine_yield(
@@ -536,10 +548,12 @@ class FarmResultsEval(Output):
             The verbosity level, 0 = silent
 
         """
-        P = self.results[FV.P]
-        P0 = self.results[FV.AMB_P] + 1e-14
-        self.results[FV.EFF] = P / P0  # add to farm results
-        if verbosity:
+        P = self.results[FV.P].to_numpy()
+        P0 = np.maximum(self.results[FV.AMB_P].to_numpy(), 1e-12)
+        eff = np.minimum(P / P0, 1)
+        eff[P < 1e-10] = 0
+        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff) # add to farm results
+        if verbosity > 0:
             print("Efficiency added to farm results")
 
     def calc_farm_efficiency(self):

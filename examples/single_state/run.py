@@ -155,11 +155,11 @@ if __name__ == "__main__":
     # results by turbine
     turbine_results = o.reduce_states(
         {
-            FV.AMB_P: "mean",
-            FV.P: "mean",
-            FV.AMB_CAP: "mean",
-            FV.CAP: "mean",
-            FV.EFF: "mean",
+            FV.AMB_P: "weights",
+            FV.P: "weights",
+            FV.AMB_CAP: "weights",
+            FV.CAP: "weights",
+            FV.EFF: "weights",
         }
     )
     turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
