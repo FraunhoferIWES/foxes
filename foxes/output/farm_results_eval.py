@@ -552,7 +552,7 @@ class FarmResultsEval(Output):
         P0 = np.maximum(self.results[FV.AMB_P].to_numpy(), 1e-12)
         eff = np.minimum(P / P0, 1)
         eff[P < 1e-10] = 0
-        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff) # add to farm results
+        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff) 
         if verbosity > 0:
             print("Efficiency added to farm results")
 
@@ -567,8 +567,8 @@ class FarmResultsEval(Output):
 
         """
         P = self.calc_mean_farm_power()
-        P0 = self.calc_mean_farm_power(ambient=True) + 1e-14
-        return P / P0
+        P0 = np.maximum(self.calc_mean_farm_power(ambient=True), 1e-14)
+        return np.minimum(P / P0, 1)
 
     def gen_stdata(
         self,

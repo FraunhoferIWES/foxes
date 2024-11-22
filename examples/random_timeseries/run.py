@@ -191,13 +191,13 @@ if __name__ == "__main__":
                 FV.P: "weights",
                 FV.AMB_CAP: "weights",
                 FV.CAP: "weights",
-                FV.EFF: "weights",
             }
         )
         turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
             algo=algo, annual=True, ambient=True
         )
         turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
+        turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
         print("\nResults by turbine:\n")
         print(turbine_results)
 
