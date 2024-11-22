@@ -296,7 +296,9 @@ class FieldDataNC(States):
             if ds[ncv].dims == cor_syx:
                 data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None]
             else:
-                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 1, 2)[:, None]
+                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 1, 2)[
+                    :, None
+                ]
         for v in vars_sh:
             ncv = self.var2ncvar[v]
             data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]

@@ -66,7 +66,9 @@ class FarmResultsEval(Output):
             if isinstance(v, str):
                 vdata = self.results[v].to_numpy()
                 nns = np.sum(np.isnan(vdata))
-                assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                assert (
+                    nns == 0
+                ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
                 fields.append(vdata)
             else:
                 fields.append(v)
@@ -116,7 +118,9 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert (
+                nns == 0
+            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
 
             if op == "weights":
                 rdata[v] = self.weinsum("t", vdata)
@@ -163,12 +167,14 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert (
+                nns == 0
+            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
 
             if op == "weights":
                 rdata[v] = self.weinsum("s", vdata)
             elif op == "mean":
-                rdata[v] = np.mean(vdata, axis=1)   
+                rdata[v] = np.mean(vdata, axis=1)
             elif op == "sum":
                 rdata[v] = np.sum(vdata, axis=1)
             elif op == "min":
@@ -214,7 +220,9 @@ class FarmResultsEval(Output):
         for v, op in turbines_op.items():
             vdata = sdata[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert nns==0, f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert (
+                nns == 0
+            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
 
             if op == "weights":
                 if states_op[v] == "weights":
@@ -552,7 +560,7 @@ class FarmResultsEval(Output):
         P0 = np.maximum(self.results[FV.AMB_P].to_numpy(), 1e-12)
         eff = np.minimum(P / P0, 1)
         eff[P < 1e-10] = 0
-        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff) 
+        self.results[FV.EFF] = (self.results[FV.AMB_P].dims, eff)
         if verbosity > 0:
             print("Efficiency added to farm results")
 
