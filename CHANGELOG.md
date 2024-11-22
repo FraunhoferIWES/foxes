@@ -674,9 +674,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
 
-## v1.2.1
+## v1.3
 
 - Outputs:
   - Output `FarmResultsEval` now makes a difference between the states contraction rules `weights` and `mean`, make sure you adopt your code accordingly (usually you would want to use `mean`).
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.1](https://github.com/FraunhoferIWES/foxes/commits/v1.2.1)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)

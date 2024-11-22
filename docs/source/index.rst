@@ -2,7 +2,7 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionchanged:: 1.2.1
+.. versionchanged:: 1.3
     The `FarmResultsEval` output now makes a difference between the two states contraction methods `mean` and `weights`.
     Only the latter includes the states weights when summing the results, so please check your code whenever you 
     are using this class.
