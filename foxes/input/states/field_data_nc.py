@@ -260,21 +260,26 @@ class FieldDataNC(States):
 
         cor_shxy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
         cor_shyx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
+        cor_sxy = (self.states_coord, self.x_coord, self.y_coord)
+        cor_syx = (self.states_coord, self.y_coord, self.x_coord)
         cor_sh = (self.states_coord, self.h_coord)
         cor_s = (self.states_coord,)
         vars_shyx = []
+        vars_syx = []
         vars_sh = []
         vars_s = []
         for v, ncv in self.var2ncvar.items():
             if ds[ncv].dims == cor_shyx or ds[ncv].dims == cor_shxy:
                 vars_shyx.append(v)
+            elif ds[ncv].dims == cor_syx or ds[ncv].dims == cor_sxy:
+                vars_syx.append(v)
             elif ds[ncv].dims == cor_sh:
                 vars_sh.append(v)
             elif ds[ncv].dims == cor_s:
                 vars_s.append(v)
             else:
                 raise ValueError(
-                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_shxy}, {cor_shyx}, {cor_sh} or {cor_s}"
+                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_shxy}, {cor_shyx}, {cor_sxy}, {cor_syx}, {cor_sh} or {cor_s}"
                 )
 
         data = np.zeros(
@@ -286,6 +291,12 @@ class FieldDataNC(States):
                 data[..., self._dkys[v]] = ds[ncv][:]
             else:
                 data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 2, 3)
+        for v in vars_syx:
+            ncv = self.var2ncvar[v]
+            if ds[ncv].dims == cor_syx:
+                data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None]
+            else:
+                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 1, 2)[:, None]
         for v in vars_sh:
             ncv = self.var2ncvar[v]
             data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]
