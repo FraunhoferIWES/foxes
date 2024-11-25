@@ -80,7 +80,7 @@ algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
 
-calc_farm:
+calc_farm:                      # this section is optional; will run by default
   run: True                     # this triggers algo.calc_farm
 
 outputs:                        # this section is optional

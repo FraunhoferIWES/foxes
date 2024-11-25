@@ -141,8 +141,8 @@ def run_dict(
         algo = Algorithm.new(**adict)
 
     # run farm calculation:
-    rdict = idict.get_item("calc_farm")
-    if rdict.pop_item("run"):
+    rdict = idict.get_item("calc_farm", Dict(name=idict.name+".calc_farm"))
+    if rdict.pop_item("run", True):
         _print("Running calc_farm")
         farm_results = algo.calc_farm(**rdict)
     else:

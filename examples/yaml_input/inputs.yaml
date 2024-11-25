@@ -25,9 +25,6 @@ algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
 
-calc_farm:
-  run: True 
-
 outputs:
   FarmResultsEval:
     functions:
