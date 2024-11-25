@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from inspect import signature
+from copy import deepcopy
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -62,8 +63,10 @@ def run_dict(
         The farm results
     point_results: xarray.Dataset, optional
         The point results
-    output_i: object
-        For each output either None or the output result
+    output_i: tuple
+        For each output enty, a tuple (dict, results),
+        where results is a tuple with size of the list
+        of called functions
 
     :group: input.yaml
 
@@ -169,6 +172,8 @@ def run_dict(
         odict = idict["outputs"]
         for ocls, d in odict.items():
             _print(f"  Output {ocls}")
+            d0 = dict(output_type=ocls)
+            d0.update(d) 
             flist = [
                 Dict(f, name=f"{d.name}.function{i}")
                 for i, f in enumerate(d.pop_item("functions"))
@@ -184,23 +189,27 @@ def run_dict(
                 if farm_results is None:
                     print(f"No farm results; skipping output {ocls}")
                     for fdict in flist:
-                        out += (None,)
+                        out += (d0, None)
                     continue
                 d["farm_results"] = farm_results
             o = cls(**d)
+            fres = []
             for fdict in flist:
                 fname = fdict.pop_item("name")
                 _print(f"  - {fname}")
                 plt_show = fdict.pop("plt_show", False)
+                plt_close = fdict.pop("plt_close", False)
                 f = getattr(o, fname)
                 prs = list(signature(f).parameters.keys())
                 if "algo" in prs:
                     fdict["algo"] = algo
-                res = f(**fdict)
-                out += (res,) if not isinstance(res, tuple) else res
+                fres.append(f(**fdict))
                 if plt_show:
                     plt.show()
+                if plt_close:
+                    fres[-1] = None
                     plt.close()
+            out += (d0, tuple(fres))
 
     # shutdown engine, if created above:
     if engine is not None:
