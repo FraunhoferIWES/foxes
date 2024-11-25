@@ -113,7 +113,7 @@ class WakeSuperposition(Model):
     @classmethod
     def new(cls, superp_type, *args, **kwargs):
         """
-        Run-time wake superpositino model factory.
+        Run-time wake superposition model factory.
 
         Parameters
         ----------
