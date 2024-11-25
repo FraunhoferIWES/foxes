@@ -674,13 +674,13 @@ This major version introduces the concept of `Engines` which handle the chunking
   
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2)
 
-## v1.3
+## v1.2.1
 
 - Outputs:
-  - Output `FarmResultsEval` now makes a difference between the states contraction rules `weights` and `mean`, make sure you adopt your code accordingly (usually you would want to use `mean`).
+  - Output `FarmResultsEval`: Renaming contraction rule `mean` into `weights`. Introducing new rule `mean_no_weights`.
 - Inputs:
   - States `FieldDataNC` now also accepts fields without heights, signature (state, x, y) and (state, y, x)
 - Bug fixes:
   - Fixing some examples that were computing the turbine efficiency incorrectly
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.1](https://github.com/FraunhoferIWES/foxes/commits/v1.2.1)

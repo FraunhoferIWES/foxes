@@ -3,9 +3,8 @@
     :align: center
 
 .. versionchanged:: 1.3
-    The `FarmResultsEval` output now makes a difference between the two states contraction methods `mean` and `weights`.
-    Only the latter includes the states weights when summing the results, so please check your code whenever you 
-    are using this class.
+    Output `FarmResultsEval`: Renaming contraction rule `mean` into `weights`. Please use this for AEP and all kinds of calculations of mean 
+    results with respect to the states. Also introducing new rule `mean_no_weights`, not respecting the weights.
 
 .. versionadded:: 1.2
     :ref:`Command line applications <Command line applications>` that can run *foxes* from yaml file input,
