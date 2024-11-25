@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+from foxes.utils import new_instance
+
 from .model import Model
 
 
@@ -106,3 +108,22 @@ class WakeSuperposition(Model):
 
         """
         pass
+
+
+    @classmethod
+    def new(cls, superp_type, *args, **kwargs):
+        """
+        Run-time wake superpositino model factory.
+
+        Parameters
+        ----------
+        superp_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+        return new_instance(cls, superp_type, *args, **kwargs)
+    

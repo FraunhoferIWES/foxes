@@ -1,3 +1,5 @@
+from foxes.utils import new_instance
+
 from .model import Model
 
 
@@ -252,3 +254,21 @@ class GroundModel(Model):
 
         """
         wmodel.finalize_wake_deltas(algo, mdata, fdata, amb_results, wake_deltas)
+
+    @classmethod
+    def new(cls, ground_type, *args, **kwargs):
+        """
+        Run-time ground model factory.
+
+        Parameters
+        ----------
+        ground_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        """
+        return new_instance(cls, ground_type, *args, **kwargs)
+    

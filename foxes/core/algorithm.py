@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from .model import Model
 from foxes.data import StaticData
-from foxes.utils import Dict, all_subclasses
+from foxes.utils import Dict, new_instance
 from foxes.config import config
 import foxes.constants as FC
 
@@ -926,22 +926,4 @@ class Algorithm(Model):
             Additional parameters for the constructor
 
         """
-
-        if algo_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = algo_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == algo_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = (
-                "Algorithm type '{}' is not defined, available types are \n {}".format(
-                    algo_type, sorted([i.__name__ for i in allc])
-                )
-            )
-            raise KeyError(estr)
+        return new_instance(cls, algo_type, *args, **kwargs)

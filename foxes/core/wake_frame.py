@@ -2,7 +2,7 @@ from abc import abstractmethod
 import numpy as np
 from scipy.interpolate import interpn
 
-from foxes.utils import all_subclasses
+from foxes.utils import new_instance
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -318,22 +318,4 @@ class WakeFrame(Model):
             Additional parameters for constructor
 
         """
-
-        if wframe_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = wframe_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == wframe_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = (
-                "Wake frame type '{}' is not defined, available types are \n {}".format(
-                    wframe_type, sorted([i.__name__ for i in allc])
-                )
-            )
-            raise KeyError(estr)
+        return new_instance(cls, wframe_type, *args, **kwargs)

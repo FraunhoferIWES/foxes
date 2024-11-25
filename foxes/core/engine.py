@@ -5,7 +5,7 @@ from tqdm import tqdm
 from xarray import Dataset
 
 from foxes.core import MData, FData, TData
-from foxes.utils import all_subclasses
+from foxes.utils import new_instance
 from foxes.config import config
 import foxes.constants as FC
 
@@ -563,20 +563,7 @@ class Engine(ABC):
             single="SingleChunkEngine",
         ).get(engine_type, engine_type)
 
-        allc = all_subclasses(cls)
-        found = engine_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == engine_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = "engine type '{}' is not defined, available types are \n {}".format(
-                engine_type, sorted([i.__name__ for i in allc])
-            )
-            raise KeyError(estr)
-
+        return new_instance(cls, engine_type, *args, **kwargs)
 
 def get_engine(error=True, default=True):
     """

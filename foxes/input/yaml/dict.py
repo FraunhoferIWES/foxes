@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from inspect import signature
-from copy import deepcopy
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -12,7 +11,7 @@ from foxes.config import config
 import foxes.constants as FC
 
 
-def run_dict(
+def read_dict(
     idict,
     farm=None,
     states=None,
@@ -20,13 +19,13 @@ def run_dict(
     algo=None,
     engine_pars=None,
     iterative=None,
-    verbosity=None,
+    verbosity=None,   
     work_dir=".",
     out_dir=".",
-    **algo_pars,
+    **algo_pars, 
 ):
     """
-    Runs foxes from dictionary input
+    Read dictionary input into foxes objects
 
     Parameters
     ----------
@@ -59,19 +58,14 @@ def run_dict(
 
     Returns
     -------
-    farm_results: xarray.Dataset, optional
-        The farm results
-    point_results: xarray.Dataset, optional
-        The point results
-    output_i: tuple
-        For each output enty, a tuple (dict, results),
-        where results is a tuple with size of the list
-        of called functions
-
+    algo: foxes.core.Algorithm
+        The algorithm
+    engine: foxes.core.Engine
+        The engine, or None if not set
+    
     :group: input.yaml
 
     """
-
     def _print(*args, level=1, **kwargs):
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
@@ -142,6 +136,46 @@ def run_dict(
         if algo_pars is not None:
             adict.update(algo_pars)
         algo = Algorithm.new(**adict)
+    
+    return algo, engine
+
+def run_dict(idict, *args, verbosity=None, **kwargs):
+    """
+    Runs foxes from dictionary input
+
+    Parameters
+    ----------
+    idict: foxes.utils.Dict
+        The input parameter dictionary
+    args: tuple, optional
+        Additional parameters for read_dict
+    verbosity: int, optional
+        Force a verbosity level, 0 = silent, overrules
+        settings from idict
+    kwargs: dict, optional
+        Additional parameters for read_dict
+
+    Returns
+    -------
+    farm_results: xarray.Dataset, optional
+        The farm results
+    point_results: xarray.Dataset, optional
+        The point results
+    output_i: tuple
+        For each output enty, a tuple (dict, results),
+        where results is a tuple with size of the list
+        of called functions
+
+    :group: input.yaml
+
+    """
+
+    def _print(*args, level=1, **kwargs):
+        if verbosity is None or verbosity >= level:
+            print(*args, **kwargs)
+
+    # read dictionary:
+    algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
 
     # run farm calculation:
     rdict = idict.get_item("calc_farm", Dict(name=idict.name+".calc_farm"))

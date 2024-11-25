@@ -2,6 +2,7 @@ import numpy as np
 
 from foxes.config import config
 import foxes.constants as FC
+from foxes.utils import new_instance
 
 from .farm_data_model import FarmDataModelList, FarmDataModel
 from .turbine_model import TurbineModel
@@ -395,3 +396,21 @@ class FarmController(FarmDataModel):
         """
         super().finalize(algo, verbosity)
         self.turbine_model_names = None
+
+    @classmethod
+    def new(cls, controller_type, *args, **kwargs):
+        """
+        Run-time farm controller factory.
+
+        Parameters
+        ----------
+        controller_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        """
+        return new_instance(cls, controller_type, *args, **kwargs)
+    

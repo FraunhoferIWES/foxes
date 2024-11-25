@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import numpy as np
 
-from foxes.utils import all_subclasses
+from foxes.utils import new_instance
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -141,25 +141,7 @@ class WakeModel(Model):
             Additional parameters for constructor
 
         """
-
-        if wmodel_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = wmodel_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == wmodel_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = (
-                "Wake model type '{}' is not defined, available types are \n {}".format(
-                    wmodel_type, sorted([i.__name__ for i in allc])
-                )
-            )
-            raise KeyError(estr)
+        return new_instance(cls, wmodel_type, *args, **kwargs)
 
 
 class TurbineInductionModel(WakeModel):
@@ -184,6 +166,23 @@ class TurbineInductionModel(WakeModel):
         """
         return False
 
+    @classmethod
+    def new(cls, induction_type, *args, **kwargs):
+        """
+        Run-time turbine induction model factory.
+
+        Parameters
+        ----------
+        induction_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for constructor
+        kwargs: dict, optional
+            Additional parameters for constructor
+
+        """
+        return new_instance(cls, induction_type, *args, **kwargs)
+    
 
 class WakeK(Model):
     """

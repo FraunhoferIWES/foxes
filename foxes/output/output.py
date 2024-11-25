@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from foxes.config import config, get_path
-from foxes.utils import PandasFileHelper, all_subclasses
+from foxes.utils import PandasFileHelper, new_instance, all_subclasses
 
 
 class Output:
@@ -116,20 +116,4 @@ class Output:
             Additional parameters for the constructor
 
         """
-
-        if output_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = output_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == output_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = "Output type '{}' is not defined, available types are \n {}".format(
-                output_type, sorted([i.__name__ for i in allc])
-            )
-            raise KeyError(estr)
+        return new_instance(cls, output_type, *args, **kwargs)

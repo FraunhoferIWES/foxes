@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from .model import Model
-from foxes.utils import all_subclasses
+from foxes.utils import new_instance
 
 
 class VerticalProfile(Model):
@@ -48,30 +48,19 @@ class VerticalProfile(Model):
         pass
 
     @classmethod
-    def new(cls, profile_type, **kwargs):
+    def new(cls, profile_type, *args, **kwargs):
         """
-        Run-time profile factory.
+        Run-time vertical profile factory.
 
         Parameters
         ----------
         profile_type: str
             The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
 
         """
-
-        if profile_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = profile_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == profile_type:
-                    return scls(**kwargs)
-
-        else:
-            estr = "Vertical profile type '{}' is not defined, available types are \n {}".format(
-                profile_type, sorted([i.__name__ for i in allc])
-            )
-            raise KeyError(estr)
+        return new_instance(cls, profile_type, *args, **kwargs)
+    

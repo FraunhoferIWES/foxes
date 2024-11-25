@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+from foxes.utils import new_instance
 from .model import Model
 
 
@@ -28,3 +29,21 @@ class AxialInductionModel(Model):
 
         """
         pass
+
+    @classmethod
+    def new(cls, induction_type, *args, **kwargs):
+        """
+        Run-time axial induction model factory.
+
+        Parameters
+        ----------
+        induction_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        """
+        return new_instance(cls, induction_type, *args, **kwargs)
+    

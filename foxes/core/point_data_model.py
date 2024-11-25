@@ -2,6 +2,7 @@ import numpy as np
 from abc import abstractmethod
 
 from foxes.config import config
+from foxes.utils import new_instance
 import foxes.constants as FC
 
 from .data_calc_model import DataCalcModel
@@ -263,3 +264,21 @@ class PointDataModelList(PointDataModel):
             tdata.update(res)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
+
+    @classmethod
+    def new(cls, model_type, *args, **kwargs):
+        """
+        Run-time point model factory.
+
+        Parameters
+        ----------
+        model_type: str
+            The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        """
+        return new_instance(cls, model_type, *args, **kwargs)
+    

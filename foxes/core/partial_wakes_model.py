@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from foxes.utils import all_subclasses
+from foxes.utils import new_instance
 
 from .model import Model
 
@@ -189,30 +189,18 @@ class PartialWakesModel(Model):
         pass
 
     @classmethod
-    def new(cls, pwake_type, **kwargs):
+    def new(cls, pwakes_type, *args, **kwargs):
         """
-        Run-time partial wakes factory.
+        Run-time partial wakes model factory.
 
         Parameters
         ----------
-        pwake_type: str
+        pwakes_type: str
             The selected derived class name
+        args: tuple, optional
+            Additional parameters for the constructor
+        kwargs: dict, optional
+            Additional parameters for the constructor
 
         """
-
-        if pwake_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = pwake_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == pwake_type:
-                    return scls(**kwargs)
-
-        else:
-            estr = "Partial wakes model type '{}' is not defined, available types are \n {}".format(
-                pwake_type, sorted([i.__name__ for i in allc])
-            )
-            raise KeyError(estr)
+        return new_instance(cls, pwakes_type, *args, **kwargs)

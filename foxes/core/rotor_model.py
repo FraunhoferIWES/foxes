@@ -2,7 +2,7 @@ import numpy as np
 from abc import abstractmethod
 
 from foxes.config import config
-from foxes.utils import wd2uv, uv2wd, all_subclasses
+from foxes.utils import wd2uv, uv2wd, new_instance
 
 import foxes.variables as FV
 import foxes.constants as FC
@@ -417,20 +417,4 @@ class RotorModel(FarmDataModel):
             Additional parameters for constructor
 
         """
-
-        if rmodel_type is None:
-            return None
-
-        allc = all_subclasses(cls)
-        found = rmodel_type in [scls.__name__ for scls in allc]
-
-        if found:
-            for scls in allc:
-                if scls.__name__ == rmodel_type:
-                    return scls(*args, **kwargs)
-
-        else:
-            estr = "Rotor model type '{}' is not defined, available types are \n {}".format(
-                rmodel_type, sorted([i.__name__ for i in allc])
-            )
-            raise KeyError(estr)
+        return new_instance(cls, rmodel_type, *args, **kwargs)
