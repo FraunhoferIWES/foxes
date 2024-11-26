@@ -71,7 +71,7 @@ model_book:                 # this section is optional
       data_source: NREL-5MW-D126-H90.csv # specify constructor arguments here
   
 wind_farm:
-  layouts:          # list functions from foxes.input.farm_layout below
+  layouts:    # list functions from foxes.input.farm_layout below
     - function: add_from_file
       file_path: test_farm_67.csv
       turbine_models: [my_turbine]
@@ -80,22 +80,22 @@ algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
 
-calc_farm:                      # this section is optional; will run by default
-  run: True                     # this triggers algo.calc_farm
+calc_farm:    # this section is optional; will run by default
+  run: True   # this triggers algo.calc_farm
 
-outputs:                        # this section is optional
-  FarmResultsEval:              # class from foxes.output
-    functions:                  # list of functions from that class below
-      - name: add_capacity
-      - name: add_efficiency
-  StateTurbineMap:              # class from foxes.output
-    functions:                  # list of functions from that class below
-      - name: plot_map          # name of the function
-        variable: "EFF"         # specify function parameters here
+outputs:                          # this section is optional
+  - output_type: FarmResultsEval  # class from foxes.output
+    functions:                    # list of functions from that class below
+      - function: add_capacity
+      - function: add_efficiency
+  StateTurbineMap:                # class from foxes.output
+    functions:                    # list of functions from that class below
+      - function: plot_map        # name of the function
+        variable: "EFF"           # specify function parameters here
         cmap: "inferno"
         figsize: [6, 7]
-        plt_show: True          # optional, displays the created figure
-        plt_close: True         # optional, closes pyplot
+        plt_show: True            # optional, displays the created figure
+        plt_close: True           # optional, closes pyplot
 ```
 
 Any of the applicable *foxes* classes and functions can be added to the respective section of the input yaml file, together with the specific parameter choices.

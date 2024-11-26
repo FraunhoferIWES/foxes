@@ -311,14 +311,24 @@ class Downwind(Algorithm):
         """
         return getattr(mdls, name)
 
-    def _print_deco(self, func_name, n_points=None):
+    def print_deco(self, func_name=None, n_points=None):
         """
         Helper function for printing model names
+
+        Parameters
+        ----------
+        func_name: str, optional
+            Name of the calling function
+        n_points: int, optional
+            The number of points
+
         """
         if self.verbosity > 0:
-            deco = "-" * 50
+            deco = "-" * 60
             print(f"\n{deco}")
-            print(f"  Running {self.name}: {func_name}")
+            print(f"  Algorithm: {type(self).__name__}")
+            if func_name is not None:
+                print(f"  Running {self.name}: {func_name}")
             print(deco)
             print(f"  n_states : {self.n_states}")
             print(f"  n_turbines: {self.n_turbines}")
@@ -538,7 +548,7 @@ class Downwind(Algorithm):
             self.initialize()
 
         # welcome:
-        self._print_deco("calc_farm")
+        self.print_deco("calc_farm")
 
         # collect models:
         if outputs == "default":
@@ -747,7 +757,7 @@ class Downwind(Algorithm):
 
         # welcome:
         points = np.asarray(points)
-        self._print_deco("calc_points", n_points=points.shape[1])
+        self.print_deco("calc_points", n_points=points.shape[1])
 
         # collect models and initialize:
         mlist, calc_pars = self._collect_point_models(

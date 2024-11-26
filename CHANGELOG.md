@@ -678,7 +678,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Outputs:
   - Output `FarmResultsEval`: Renaming contraction rule `mean` into `weights`. Introducing new rule `mean_no_weights`.
+  - New Output `WindRoseBinPlot`, for example showing variable mean values for wind rose bins
 - Inputs:
+  - Generalizing `ScanWS` states to `ScanStates`, for arbitrary tensor products of variable lists
   - States `FieldDataNC` now also accepts fields without heights, signature (state, x, y) and (state, y, x)
 - Bug fixes:
   - Fixing some examples that were computing the turbine efficiency incorrectly

@@ -6,46 +6,35 @@ import foxes.variables as FV
 import foxes.constants as FC
 
 
-class ScanWS(States):
+class ScanStates(States):
     """
-    A given list of wind speeds, all other variables are fixed.
+    Scan over selected variables
 
     Parameters
     ----------
-    wd: float
-        The wind direction
-    ti: float
-        The TI value
-    rho: float
-        The air density
+    scans: dict
+        The scans, key: variable name,
+        value: scan values
 
     :group: input.states
 
     """
 
-    def __init__(self, ws_list, wd, ti=None, rho=None):
+    def __init__(self, scans, **kwargs):
         """
         Constructor.
 
         Parameters
         ----------
-        ws_list: array_like
-            The wind speed values
-        wd: float
-            The wind direction
-        ti: float, optional
-            The TI value
-        rho: float, optional
-            The air density
+        scans: dict
+            The scans, key: variable name,
+            value: scan values
+        kwargs: dict, optional
+            Parameters for the base class
 
         """
-        super().__init__()
-
-        self.__wsl = np.array(ws_list)
-        self.N = len(ws_list)
-        self.wd = wd
-        self.ti = ti
-        self.rho = rho
+        super().__init__(**kwargs)
+        self.scans = {v: np.asarray(d) for v, d in scans.items()}
 
     def load_data(self, algo, verbosity=0):
         """
@@ -70,10 +59,24 @@ class ScanWS(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self.WS = self.var(FV.WS)
+        n_v = len(self.scans)
+        shp = [len(v) for v in self.scans.values()]
+        self._N = np.prod(shp)
+        self._vars = list(self.scans.keys())
 
+        data = np.zeros(shp+[n_v], dtype=config.dtype_double)
+        for i, d in enumerate(self.scans.values()):
+            s = [None]*n_v
+            s[i] = np.s_[:]
+            s = tuple(s)
+            data[..., i] = d[s]
+        data = data.reshape(self._N, n_v)
+
+        self.VARS = self.var("vars")
+        self.DATA = self.var("data")
         idata = super().load_data(algo, verbosity)
-        idata["data_vars"][self.WS] = ((FC.STATE,), self.__wsl)
+        idata["coords"][self.VARS] = self._vars
+        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
 
         return idata
 
@@ -111,10 +114,10 @@ class ScanWS(States):
 
         data_stash[self.name].update(
             dict(
-                wsl=self.__wsl,
+                scans = self.scans
             )
         )
-        del self.__wsl
+        del self.scans
 
     def unset_running(
         self,
@@ -146,7 +149,7 @@ class ScanWS(States):
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
         data = data_stash[self.name]
-        self.__wsl = data.pop("wsl")
+        self.scans = data.pop("scans")
 
     def size(self):
         """
@@ -158,7 +161,7 @@ class ScanWS(States):
             The total number of states
 
         """
-        return self.N
+        return self._N
 
     def output_point_vars(self, algo):
         """
@@ -175,14 +178,7 @@ class ScanWS(States):
             The output variable names
 
         """
-        pvars = [FV.WS]
-        if self.wd is not None:
-            pvars.append(FV.WD)
-        if self.ti is not None:
-            pvars.append(FV.TI)
-        if self.rho is not None:
-            pvars.append(FV.RHO)
-        return pvars
+        return self._vars
 
     def weights(self, algo):
         """
@@ -200,7 +196,7 @@ class ScanWS(States):
 
         """
         return np.full(
-            (self.N, algo.n_turbines), 1.0 / self.N, dtype=config.dtype_double
+            (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
         )
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -229,14 +225,8 @@ class ScanWS(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        tdata[FV.WS] = np.zeros_like(tdata[FC.TARGETS][..., 0])
-        tdata[FV.WS][:] = mdata[self.WS][:, None, None]
-
-        if self.wd is not None:
-            tdata[FV.WD] = np.full_like(tdata[FV.WS], self.wd)
-        if self.ti is not None:
-            tdata[FV.TI] = np.full_like(tdata[FV.WS], self.ti)
-        if self.rho is not None:
-            tdata[FV.RHO] = np.full_like(tdata[FV.WS], self.rho)
+        for i, v in enumerate(self._vars):
+            tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
+            tdata[v][:] = mdata[self.DATA][:, None, None, i]
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

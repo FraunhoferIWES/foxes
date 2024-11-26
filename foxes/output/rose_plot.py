@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from foxes.utils import wd2uv, uv2wd, TabWindroseAxes
 from foxes.algorithms import Downwind
@@ -24,30 +25,38 @@ class RosePlotOutput(Output):
 
     """
 
-    def __init__(self, results, **kwargs):
+    def __init__(
+            self, 
+            farm_results=None, 
+            point_results=None, 
+            use_points=False,
+            **kwargs,
+        ):
         """
         Constructor.
 
         Parameters
         ----------
-        results: xarray.Dataset
-            The calculation results (farm or points)
+        farm_results: xarray.Dataset, optional
+            The farm results
+        point_results: xarray.Dataset, optional
+            The point results
+        use_points: bool
+            Flag for using points in cases where both
+            farm and point results are given
         kwargs: dict, optional
             Additional parameters for the base class
 
         """
         super().__init__(**kwargs)
-        dims = list(results.sizes.keys())
-        if dims[1] == FC.TURBINE:
-            self._rtype = FC.TURBINE
-        elif dims[1] == FC.POINT:
+        if use_points or (farm_results is None and point_results is not None):
+            self.results = point_results.to_dataframe()
             self._rtype = FC.POINT
+        elif farm_results is not None:
+            self.results = farm_results.to_dataframe()
+            self._rtype = FC.TURBINE
         else:
-            raise KeyError(
-                f"Results dimension 1 is neither '{FC.TURBINE}' nor '{FC.POINT}': dims = {results.dims}"
-            )
-
-        self.results = results.to_dataframe()
+            raise KeyError(f"Require either farm_results or point_results")
 
     @classmethod
     def get_data_info(cls, dname):
@@ -108,6 +117,7 @@ class RosePlotOutput(Output):
         var,
         var_bins,
         wd_var=FV.AMB_WD,
+        weight_var=FV.WEIGHT,
         turbine=None,
         point=None,
         start0=False,
@@ -125,6 +135,8 @@ class RosePlotOutput(Output):
             The variable bin separation values
         wd_var: str, optional
             The wind direction variable name
+        weight_var: str, optional
+            The weights variable name
         turbine: int, optional
             Only relevant in case of farm results.
             If None, mean over all turbines.
@@ -149,14 +161,14 @@ class RosePlotOutput(Output):
         wdb = np.append(wds, 360) if start0 else np.arange(-dwd / 2, 360.0, dwd)
         lgd = f"interval_{var}"
 
-        data = self.results[[wd_var, FV.WEIGHT]].copy()
+        data = self.results[[wd_var, weight_var]].copy()
         data[lgd] = self.results[var]
         uv = wd2uv(data[wd_var].to_numpy())
         data["u"] = uv[:, 0]
         data["v"] = uv[:, 1]
 
-        data[FV.WEIGHT] *= 100
-        data = data.rename(columns={FV.WEIGHT: "frequency"})
+        data[weight_var] *= 100
+        data = data.rename(columns={weight_var: "frequency"})
 
         el = turbine if self._rtype == FC.TURBINE else point
         if el is None:
@@ -213,6 +225,7 @@ class RosePlotOutput(Output):
         var,
         var_bins,
         wd_var=FV.AMB_WD,
+        weight_var=FV.WEIGHT,
         turbine=None,
         point=None,
         title=None,
@@ -223,6 +236,7 @@ class RosePlotOutput(Output):
         figsize=None,
         rect=None,
         ret_data=False,
+        cmap=None,
         **kwargs,
     ):
         """
@@ -238,6 +252,8 @@ class RosePlotOutput(Output):
             The variable bin separation values
         wd_var: str, optional
             The wind direction variable name
+        weight_var: str, optional
+            The weights variable name
         turbine: int, optional
             Only relevant in case of farm results.
             If None, mean over all turbines.
@@ -264,6 +280,8 @@ class RosePlotOutput(Output):
             e.g. [0.1, 0.1, 0.8, 0.8]
         ret_data: bool
             Flag for returning wind rose data
+        cmap: str, optional
+            The pyplot color map name
         kwargs: dict, optional
             Additional arguments for TabWindroseAxes
             plot function
@@ -287,6 +305,7 @@ class RosePlotOutput(Output):
             var=var,
             var_bins=var_bins,
             wd_var=wd_var,
+            weight_var=weight_var,
             turbine=turbine,
             point=point,
             start0=start0,
@@ -294,6 +313,9 @@ class RosePlotOutput(Output):
 
         ax = TabWindroseAxes.from_ax(fig=fig, rect=rect, figsize=figsize)
         fig = ax.get_figure()
+
+        if cmap is not None:
+            kwargs["cmap"] = plt.get_cmap(cmap)
 
         plfun = getattr(ax, design)
         plfun(
@@ -409,3 +431,125 @@ class StatesRosePlotOutput(RosePlotOutput):
         results = algo.calc_farm(ambient=True).rename_vars({ws_var: FV.AMB_WS})
 
         super().__init__(results, **kwargs)
+
+class WindRoseBinPlot(Output):
+    """
+    Plots mean data in wind rose bins
+    
+    Attributes
+    ----------
+    farm_results: xarray.Dataset
+        The wind farm results
+    
+    :group: output
+
+    """
+
+    def __init__(self, farm_results, **kwargs):
+        """ 
+        Constructor
+        
+        Parameters
+        ----------
+        farm_results: xarray.Dataset
+            The wind farm results
+        kwargs: dict, optional
+            Parameters for the base class
+        
+        """
+        super().__init__(**kwargs)
+        self.farm_results = farm_results
+
+    def get_figure(
+            self,
+            turbine,
+            variable,
+            ws_bins,
+            wd_sectors=12,
+            wd_var=FV.AMB_WD,
+            ws_var=FV.AMB_REWS,
+            contraction="weights",
+            fig=None,
+            ax=None,
+            title=None,
+            figsize=None,
+            **kwargs,
+        ):
+        """
+        Gather the plot data
+        
+        Parameters
+        ----------
+        turbine: int
+            The turbine index
+        variable: str   
+            The variable name
+        ws_bins: list of float
+            The wind speed bins
+        wd_var: str
+            The wind direction variable
+        ws_var: str
+            The wind speed variable
+        contraction: str
+            The contraction method for states:
+            weights, mean_no_weights, sum_no_weights
+        fig: pyplot.Figure, optional
+            The figure object
+        ax: pyplot.Axes, optional
+            The axes object
+        title: str, optional
+            The title
+        figsize: tuple, optional
+            The figsize argument for plt.subplots
+        kwargs: dict, optional
+            Additional parameters for plt.ax_hist2d
+        
+        Returns
+        -------
+        ax: pyplot.Axes
+            The axes object
+        
+        """
+        var = self.farm_results[variable].to_numpy()[:, turbine]
+        w = self.farm_results[FV.WEIGHT].to_numpy()[:, turbine]
+        ws = self.farm_results[ws_var].to_numpy()[:, turbine]
+        wd = self.farm_results[wd_var].to_numpy()[:, turbine].copy()
+        wd_delta = 360/wd_sectors
+        wd[wd>=360-wd_delta/2] -= 360
+        wd = np.mod(90 - wd, 360)
+        wd = np.radians(wd)
+        wd_bins = np.arange(-wd_delta/2, 360, wd_delta)
+        wd_bins = np.radians(wd_bins)
+
+        if ax is not None:
+            ax.set_projection("polar")
+        else:
+            fig, ax = plt.subplots(
+                figsize=figsize, subplot_kw={"projection": "polar"})
+        
+        y, x = np.meshgrid(ws_bins, wd_bins)
+        if contraction == "weights":
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w)[0]
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w*var)[0] / z
+        elif contraction == "mean_no_weights":
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins))[0]
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=var)[0] / z
+        elif contraction == "sum_no_weights":
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=var)[0]
+        else:
+            raise KeyError(f"Contraction '{contraction}' not supported. Choices: weights, mean_no_weights, sum_no_weights")
+
+        prgs = {"shading": "flat"}
+        prgs.update(kwargs)
+
+        img = ax.pcolormesh(x, y, z, **prgs)
+
+        tksl = np.arange(0,360,wd_delta)
+        tks = np.radians(np.mod(90 - tksl, 360))
+        ax.set_xticks(tks, [f"{d}°" for d in tksl])
+        ax.set_yticks(ws_bins)
+        ax.set_title(title)
+        cbar = fig.colorbar(img, ax=ax, pad=0.12)
+        cbar.ax.set_title(variable)
+        
+        return ax

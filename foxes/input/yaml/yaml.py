@@ -24,18 +24,18 @@ def foxes_yaml():
         help="The input yaml file",
     )
     parser.add_argument("-o", "--out_dir", help="The output directory", default=".")
-    parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
+    parser.add_argument("-r", "--rotor", help="The rotor model", default=None)
     parser.add_argument(
-        "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
+        "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
     parser.add_argument(
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Jensen_linear_k007"],
+        default=None,
         nargs="+",
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
+    parser.add_argument("-f", "--frame", help="The wake frame", default=None)
     parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-n", "--n_procs", help="The number of processes", default=None, type=int
@@ -51,7 +51,7 @@ def foxes_yaml():
         "-C",
         "--chunksize_points",
         help="The chunk size for points",
-        default=5000,
+        default=None,
         type=int,
     )
     parser.add_argument(

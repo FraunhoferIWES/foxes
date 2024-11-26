@@ -3,7 +3,7 @@ Atmospheric input states.
 """
 
 from .single import SingleStateStates
-from .scan_ws import ScanWS
+from .scan import ScanStates
 from .states_table import StatesTable, Timeseries, TabStates
 from .field_data_nc import FieldDataNC
 from .slice_data_nc import SliceDataNC

@@ -136,7 +136,7 @@ class Sequential(Iterative):
         if not self.iterating:
             if not self.initialized:
                 self.initialize()
-            self._print_deco("calc_farm")
+            self.print_deco("calc_farm")
 
             self._inds = self.states0.index()
             self._weights = self.states0.weights(self)

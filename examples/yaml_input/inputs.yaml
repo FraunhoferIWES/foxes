@@ -26,13 +26,13 @@ algorithm:
   wake_models: [Bastankhah2014_linear_k004]
 
 outputs:
-  FarmResultsEval:
+  - output_type: FarmResultsEval
     functions:
-      - name: add_capacity
-      - name: add_efficiency
-  StateTurbineMap:
+      - function: add_capacity
+      - function: add_efficiency
+  - output_type: StateTurbineMap
     functions:
-      - name: plot_map
+      - function: plot_map
         variable: "EFF"
         cmap: "inferno"
         figsize: [6, 7]

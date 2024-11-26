@@ -177,6 +177,28 @@ class Algorithm(Model):
         if self.verbosity >= vlim:
             print(*args, **kwargs)
 
+    def print_deco(self, func_name=None, n_points=None):
+        """
+        Helper function for printing model names
+
+        Parameters
+        ----------
+        func_name: str, optional
+            Name of the calling function
+        n_points: int, optional
+            The number of points
+
+        """
+        if self.verbosity > 0:
+            deco = "-" * 60
+            print(f"\n{deco}")
+            print(f"  Algorithm: {type(self).__name__}")
+            if func_name is not None:
+                print(f"  Running {self.name}: {func_name}")
+            print(deco)
+            print(f"  n_states : {self.n_states}")
+            print(f"  n_turbines: {self.n_turbines}")
+
     def initialize(self):
         """
         Initializes the algorithm.

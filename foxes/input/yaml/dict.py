@@ -5,8 +5,8 @@ from inspect import signature
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
 from foxes.models import ModelBook
-from foxes import output
-from foxes.utils import Dict
+from foxes.output import Output
+from foxes.utils import Dict, new_cls
 from foxes.config import config
 import foxes.constants as FC
 
@@ -134,10 +134,104 @@ def read_dict(
         if verbosity is not None:
             adict["verbosity"] = verbosity - 1
         if algo_pars is not None:
-            adict.update(algo_pars)
+            adict.update({v: d for v, d in algo_pars.items() if d is not None})
         algo = Algorithm.new(**adict)
     
     return algo, engine
+
+def run_outputs(
+        idict, 
+        algo=None, 
+        farm_results=None, 
+        point_results=None,
+        verbosity=None,
+    ):
+    """
+    Run outputs from dict.
+
+    Parameters
+    ----------
+    idict: foxes.utils.Dict
+        The input parameter dictionary
+    algo: foxes.core.Algorithm, optional
+        The algorithm
+    farm_results: xarray.Dataset, optional
+        The farm results
+    point_results: xarray.Dataset, optional
+        The point results
+    verbosity: int, optional
+        Force a verbosity level, 0 = silent, overrules
+        settings from idict
+    
+    Returns
+    -------
+    outputs: list of tuple
+        For each output enty, a tuple (dict, results),
+        where results is a tuple that represents one
+        entry per function call
+
+    :group: input.yaml
+
+    """
+    def _print(*args, level=1, **kwargs):
+        if verbosity is None or verbosity >= level:
+            print(*args, **kwargs)
+
+    out = []
+    if "outputs" in idict:
+        _print("Running outputs")
+        odicts = [
+            Dict(odict, name=f"{idict.name}.output{i}")
+            for i, odict in enumerate(idict["outputs"])
+        ]
+        for i, d in enumerate(odicts):
+            ocls = d.pop_item("output_type")
+            _print(f"  Output {i}: {ocls}")
+            d0 = dict(output_type=ocls)
+            d0.update(d) 
+            flist = [
+                Dict(f, name=f"{d.name}.function{i}")
+                for i, f in enumerate(d.pop_item("functions"))
+            ]
+            cls = new_cls(Output, ocls)
+            prs = list(signature(cls.__init__).parameters.keys())
+            if "algo" in prs:
+                assert algo is not None, f"Output {i} of type '{ocls}' requires algo"
+                d["algo"] = algo
+            if "farm" in prs:
+                d["farm"] = algo.farm
+            if "farm_results" in prs:
+                if farm_results is None:
+                    print(f"No farm results; skipping output {ocls}")
+                    for fdict in flist:
+                        out += (d0, None)
+                    continue
+                d["farm_results"] = farm_results
+            if "point_results" in prs:
+                d["point_results"] = point_results
+            o = cls(**d)
+            fres = []
+            for fdict in flist:
+                fname = fdict.pop_item("function")
+                _print(f"  - {fname}")
+                plt_show = fdict.pop("plt_show", False)
+                plt_close = fdict.pop("plt_close", False)
+                assert hasattr(o, fname), f"Output {i} of type '{ocls}': Function '{fname}' not found"
+                f = getattr(o, fname)
+                prs = list(signature(f).parameters.keys())
+                if "algo" in prs:
+                    fdict["algo"] = algo
+                if "farm" in prs:
+                    fdict["farm"] = algo.farm
+                fres.append(f(**fdict))
+                if plt_show:
+                    plt.show()
+                if plt_close:
+                    fres[-1] = None
+                    plt.close()
+            out.append((d0, tuple(fres)))
+    
+    return out
 
 def run_dict(idict, *args, verbosity=None, **kwargs):
     """
@@ -161,10 +255,10 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         The farm results
     point_results: xarray.Dataset, optional
         The point results
-    output_i: tuple
+    outputs: list of tuple
         For each output enty, a tuple (dict, results),
-        where results is a tuple with size of the list
-        of called functions
+        where results is a tuple that represents one
+        entry per function call
 
     :group: input.yaml
 
@@ -174,7 +268,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
-    # read dictionary:
+    # read components:
     algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
 
     # run farm calculation:
@@ -187,6 +281,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
     out = (farm_results,)
 
     # run points calculation:
+    point_results = None
     if "calc_points" in idict:
         rdict = idict.get_item("calc_points")
         if rdict.pop_item("run"):
@@ -201,49 +296,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         out += (point_results,)
 
     # run outputs:
-    if "outputs" in idict:
-        _print("Running outputs")
-        odict = idict["outputs"]
-        for ocls, d in odict.items():
-            _print(f"  Output {ocls}")
-            d0 = dict(output_type=ocls)
-            d0.update(d) 
-            flist = [
-                Dict(f, name=f"{d.name}.function{i}")
-                for i, f in enumerate(d.pop_item("functions"))
-            ]
-            try:
-                cls = getattr(output, ocls)
-            except AttributeError as e:
-                print(f"\nClass '{ocls}' not found in outputs. Found:")
-            prs = list(signature(cls.__init__).parameters.keys())
-            if "algo" in prs:
-                d["algo"] = algo
-            if "farm_results" in prs:
-                if farm_results is None:
-                    print(f"No farm results; skipping output {ocls}")
-                    for fdict in flist:
-                        out += (d0, None)
-                    continue
-                d["farm_results"] = farm_results
-            o = cls(**d)
-            fres = []
-            for fdict in flist:
-                fname = fdict.pop_item("name")
-                _print(f"  - {fname}")
-                plt_show = fdict.pop("plt_show", False)
-                plt_close = fdict.pop("plt_close", False)
-                f = getattr(o, fname)
-                prs = list(signature(f).parameters.keys())
-                if "algo" in prs:
-                    fdict["algo"] = algo
-                fres.append(f(**fdict))
-                if plt_show:
-                    plt.show()
-                if plt_close:
-                    fres[-1] = None
-                    plt.close()
-            out += (d0, tuple(fres))
+    out += (run_outputs(idict, algo, farm_results, point_results, verbosity), )
 
     # shutdown engine, if created above:
     if engine is not None:
