@@ -184,64 +184,109 @@ def run_outputs(
             Dict(odict, name=f"{idict.name}.output{i}")
             for i, odict in enumerate(idict["outputs"])
         ]
+
+        rlabels = Dict(name="result_labels")
+        def _get_object(rlabels, d):
+            d = d.replace("]", "")
+            i0 = d.find("[")
+            if i0 > 0:
+                inds = [int(x) for x in d[i0+1:].split(",")]
+                return rlabels[d[:i0]][*inds]
+            else:
+                return rlabels[d]
+                            
         for i, d in enumerate(odicts):
-            ocls = d.pop_item("output_type")
-            _print(f"  Output {i}: {ocls}")
-            d0 = dict(output_type=ocls)
-            d0.update(d) 
-            flist = [
-                Dict(f, name=f"{d.name}.function{i}")
-                for i, f in enumerate(d.pop_item("functions"))
-            ]
-            cls = new_cls(Output, ocls)
-            prs = list(signature(cls.__init__).parameters.keys())
-            if "algo" in prs:
-                assert algo is not None, f"Output {i} of type '{ocls}' requires algo"
-                d["algo"] = algo
-            if "farm" in prs:
-                d["farm"] = algo.farm
-            if "farm_results" in prs:
-                if farm_results is None:
-                    print(f"No farm results; skipping output {ocls}")
-                    for fdict in flist:
-                        out += (d0, None)
-                    continue
-                d["farm_results"] = farm_results
-            if "point_results" in prs:
-                d["point_results"] = point_results
-            o = cls(**d)
+
+            if "output_type" in d:
+                ocls = d.pop_item("output_type")
+                _print(f"  Output {i}: {ocls}")
+                d0 = dict(output_type=ocls)
+                d0.update(d) 
+                flist = [
+                    Dict(f, name=f"{d.name}.function{i}")
+                    for i, f in enumerate(d.pop_item("functions"))
+                ]
+                cls = new_cls(Output, ocls)
+                prs = list(signature(cls.__init__).parameters.keys())
+                if "algo" in prs:
+                    assert algo is not None, f"Output {i} of type '{ocls}' requires algo"
+                    d["algo"] = algo
+                if "farm" in prs:
+                    d["farm"] = algo.farm
+                if "farm_results" in prs:
+                    if farm_results is None:
+                        print(f"No farm results; skipping output {ocls}")
+                        for fdict in flist:
+                            out += (d0, None)
+                        continue
+                    d["farm_results"] = farm_results
+                if "point_results" in prs:
+                    d["point_results"] = point_results
+                o = cls(**d)
+            
+            elif "object" in d:
+                ocls = d.pop("object")
+                o = _get_object(rlabels, ocls)
+                d0 = dict(object=ocls)
+                d0.update(d) 
+                flist = [
+                    Dict(f, name=f"{d.name}.function{i}")
+                    for i, f in enumerate(d.pop_item("functions"))
+                ]
+
+            else:
+                raise KeyError(f"Output {i} of type '{ocls}': Please specify either 'output_type' or 'object'")
+
             fres = []
             for fdict in flist:
                 fname = fdict.pop_item("function")
                 _print(f"  - {fname}")
                 plt_show = fdict.pop("plt_show", False)
                 plt_close = fdict.pop("plt_close", False)
-
-                for k in fdict.keys():
-                    d = fdict[k]
-                    if isinstance(d, str) and len(d) > 9 and d[:8] == "$output(" and d[-1] == ")":
-                        oi = [int(x) for x in d[8:-1].split(",")]
-                        print("HERE OI",oi,out)
-                        x = out[oi.pop(0)][1]
-                        print("HERE OI",oi,x)
-                        while len(oi):
-                            x = x[oi.pop(0)]
-                        fdict[k] = x
-                        print("HERE SETTING",k,x)
-
+                rlbs = fdict.pop("result_labels", None)
+                
+                # grab function:
                 assert hasattr(o, fname), f"Output {i} of type '{ocls}': Function '{fname}' not found"
                 f = getattr(o, fname)
+                
+                # add required input data objects:
                 prs = list(signature(f).parameters.keys())
                 if "algo" in prs:
                     fdict["algo"] = algo
                 if "farm" in prs:
                     fdict["farm"] = algo.farm
-                fres.append(f(**fdict))
+                
+                # replace result labels by objects:
+                for k, d in fdict.items():
+                    if isinstance(d, str) and d[0] == "$":
+                        fdict[k] = _get_object(rlabels, d)
+
+                # run function:
+                args = fdict.pop("args", tuple())
+                results = f(*args, **fdict)
+
+                # pyplot shortcuts:
                 if plt_show:
                     plt.show()
                 if plt_close:
-                    fres[-1] = None
+                    results = None
                     plt.close()
+
+                # store results under result labels:
+                if rlbs is not None:
+                    def _set_label(rlabels, k, r):
+                        if k not in ["", "none", "None", "_", "__"]:
+                            assert k[0] == "$", f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
+                            assert "[" not in k and "]" not in k and "," not in k, f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                            _print(f"    result label {k}: {type(r).__name__}")
+                            rlabels[k] = r
+                    if isinstance(rlbs, (list, tuple)):
+                        for i, k in enumerate(rlbs):
+                            _set_label(rlabels, k, results[i])
+                    else:
+                        _set_label(rlabels, rlbs, results)
+                
+                fres.append(results)
             out.append((d0, fres))
     
     return out

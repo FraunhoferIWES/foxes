@@ -11,6 +11,10 @@ class plt(Output):
 
     """
 
+    def figure(self, *args, **kwargs):
+        """Runs pyplot.figure"""
+        return pyplot.figure(*args, **kwargs)
+    
     def subplot(self, *args, **kwargs):
         """Runs pyplot.subplot"""
         return pyplot.subplot(*args, **kwargs)
