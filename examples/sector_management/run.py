@@ -138,25 +138,29 @@ if __name__ == "__main__":
     print(fr)
 
     if not args.nofig:
+        fig = plt.figure(figsize=(12, 4))
+        ax1 = fig.add_subplot(121, polar=True)
+        ax2 = fig.add_subplot(122, polar=True)
+
         o = foxes.output.RosePlotOutput(farm_results)
-        fig = o.get_figure(
+        o.get_figure(
             16,
             FV.P,
-            [100, 1000, 2000, 4000, 5001, 7000],
+            [0, 100, 1000, 2000, 4000, 5001, 7000],
             turbine=0,
             title="Power turbine 0",
-            figsize=(12, 6),
-            rect=[0.05, 0.1, 0.4, 0.8],
+            fig=fig,
+            ax=ax1,
         )
 
         o = foxes.output.RosePlotOutput(farm_results)
-        fig = o.get_figure(
+        o.get_figure(
             16,
             FV.P,
-            [100, 1000, 2000, 4000, 5001, 7000],
+            [0, 100, 1000, 2000, 4000, 5001, 7000],
             turbine=1,
             title="Power turbine 1",
             fig=fig,
-            rect=[0.35, 0.1, 0.8, 0.8],
+            ax=ax2,
         )
         plt.show()

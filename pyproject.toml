@@ -40,7 +40,6 @@ dependencies = [
     "xarray",
     "scipy",
     "netcdf4",
-    "windrose",
     "cycler",
     "tqdm",
     "pyyaml"

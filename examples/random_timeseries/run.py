@@ -101,21 +101,21 @@ if __name__ == "__main__":
     ):
 
         if not args.nofig:
-            # fig, axs= plt.subplots(2, 1, figsize=(12,6))
-            # foxes.output.FarmLayoutOutput(farm).get_figure(ax=axs[0])
+            fig = plt.figure(figsize=(14.5, 7))
+            ax1 = fig.add_subplot(121)
+            ax2 = fig.add_subplot(122, polar=True)
+            foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax1)
 
             o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-            fig = o.get_figure(
+            o.get_figure(
                 16,
                 FV.AMB_WS,
                 [0, 3.5, 6, 10, 15, 20],
-                figsize=(14.5, 7),
-                rect=[0.01, 0.05, 0.45, 0.85],
+                fig=fig,
+                ax=ax2,
+                freq_delta=2,
             )
 
-            ax = plt.Axes(fig, rect=[0.3, 0.1, 0.8, 0.8])
-            fig.add_axes(ax)
-            foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax)
             plt.show()
             plt.close(fig)
 

@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.projections.polar import PolarAxes
 
-from foxes.utils import wd2uv, uv2wd, TabWindroseAxes
+from foxes.utils import wd2uv, uv2wd
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
@@ -50,10 +52,10 @@ class RosePlotOutput(Output):
         """
         super().__init__(**kwargs)
         if use_points or (farm_results is None and point_results is not None):
-            self.results = point_results.to_dataframe()
+            self.results = point_results
             self._rtype = FC.POINT
         elif farm_results is not None:
-            self.results = farm_results.to_dataframe()
+            self.results = farm_results
             self._rtype = FC.TURBINE
         else:
             raise KeyError(f"Require either farm_results or point_results")
@@ -220,120 +222,123 @@ class RosePlotOutput(Output):
         return data
 
     def get_figure(
-        self,
-        sectors,
-        var,
-        var_bins,
-        wd_var=FV.AMB_WD,
-        weight_var=FV.WEIGHT,
-        turbine=None,
-        point=None,
-        title=None,
-        legend=None,
-        design="bar",
-        start0=False,
-        fig=None,
-        figsize=None,
-        rect=None,
-        ret_data=False,
-        cmap=None,
-        **kwargs,
-    ):
+            self,
+            wd_sectors,
+            ws_var,
+            ws_bins,
+            wd_var=FV.AMB_WD,
+            turbine=0,
+            point=0,
+            fig=None,
+            ax=None,
+            figsize=None,
+            freq_delta=3,
+            cmap="Greens",
+            title=None,
+            cbar_title=None,
+            add_inf=False,
+        ):
         """
-        Creates figure object
-
+        Gather the plot data
+        
         Parameters
         ----------
-        sectors: int
-            The number of wind direction sectors
-        var: str
-            The data variable name
-        var_bins: list of float
-            The variable bin separation values
-        wd_var: str, optional
-            The wind direction variable name
-        weight_var: str, optional
-            The weights variable name
-        turbine: int, optional
-            Only relevant in case of farm results.
-            If None, mean over all turbines.
-            Else, data from a single turbine
-        point: int, optional
-            Only relevant in case of point results.
-            If None, mean over all points.
-            Else, data from a single point
-        title. str, optional
-            The title
-        legend: str, optional
-            The data legend string
-        design: str
-            The wind rose design: bar, contour, ...
-        start0: bool
-            Flag for starting the first sector at
-            zero degrees instead of minus half width
-        fig: matplotlib.Figure
-            The figure to which to add an axis
+        wd_sectors: int
+            The number of wind rose sectors
+        ws_var: str
+            The wind speed variable
+        ws_bins: list of float
+            The wind speed bins
+        wd_var: str
+            The wind direction variable
+        turbine: int
+            The turbine index, for weights and for
+            data if farm_results are given
+        point: int
+            The point index, for data if point_results
+            are given
+        fig: pyplot.Figure, optional
+            The figure object
+        ax: pyplot.Axes, optional
+            The axes object
         figsize: tuple, optional
-            The figsize of the newly created figure
-        rect: list, optional
-            The rectangle of the figure which to fill,
-            e.g. [0.1, 0.1, 0.8, 0.8]
-        ret_data: bool
-            Flag for returning wind rose data
-        cmap: str, optional
-            The pyplot color map name
-        kwargs: dict, optional
-            Additional arguments for TabWindroseAxes
-            plot function
+            The figsize argument for plt.subplots
+        freq_delta: int
+            The frequency delta for the label
+            in percent
+        cmap: str
+            The color map
+        title: str, optional
+            The title
+        cbar_title: str, optional
+            The title of the colorbar
+        add_inf: bool
+            Add an upper bin up to infinity
 
         Returns
         -------
-        fig: matplotlib.pyplot.Figure
-            The rose plot figure
-        data: pd.DataFrame, optional
-            The wind rose data
-
+        ax: pyplot.Axes
+            The axes object
+        
         """
-        lg = legend
-        if title is None or legend is None:
-            ttl, lg = self.get_data_info(var)
-        if title is not None:
-            ttl = title
+        if add_inf:
+            ws_bins = list(ws_bins) + [np.inf]
+        w = self.results[FV.WEIGHT].to_numpy()[:, turbine]
+        t = turbine if self._rtype == FC.TURBINE else point
+        ws = self.results[ws_var].to_numpy()[:, t]
+        wd = self.results[wd_var].to_numpy()[:, t].copy()
+        wd_delta = 360/wd_sectors
+        wd[wd>=360-wd_delta/2] -= 360
+        wd_bins = np.arange(-wd_delta/2, 360, wd_delta)
+        wd_cent = np.arange(0, 360, wd_delta)
+        wd_cent = np.radians(np.mod(90 - wd_cent, 360))
+        wd_width = np.radians(wd_delta*0.9)
+        n_wdb = len(wd_bins) - 1
+        n_wsb = len(ws_bins) - 1
 
-        wrdata = self.get_data(
-            sectors=sectors,
-            var=var,
-            var_bins=var_bins,
-            wd_var=wd_var,
-            weight_var=weight_var,
-            turbine=turbine,
-            point=point,
-            start0=start0,
-        )
-
-        ax = TabWindroseAxes.from_ax(fig=fig, rect=rect, figsize=figsize)
-        fig = ax.get_figure()
-
-        if cmap is not None:
-            kwargs["cmap"] = plt.get_cmap(cmap)
-
-        plfun = getattr(ax, design)
-        plfun(
-            direction=wrdata[wd_var].to_numpy(),
-            var=wrdata[var].to_numpy(),
-            weights=wrdata["frequency"].to_numpy(),
-            bin_min_dir=np.sort(wrdata[f"bin_min_{wd_var}"].unique()),
-            bin_min_var=np.sort(wrdata[f"bin_min_{var}"].unique()),
-            bin_max_var=np.sort(wrdata[f"bin_max_{var}"].unique()),
-            **kwargs,
-        )
-        ax.set_legend(title=lg)
-        ax.set_title(ttl)
-
-        if ret_data:
-            return fig, wrdata
+        if ax is not None:
+            if not isinstance(ax, PolarAxes):
+                raise TypeError(f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'")
         else:
-            return fig
+            fig, ax = plt.subplots(
+                figsize=figsize, subplot_kw={"projection": "polar"})
+        
+        freq = 100*np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w)[0]
+
+        bcmap = plt.get_cmap(cmap, n_wsb)
+        color_list = bcmap(np.linspace(0, 1, n_wsb))
+    
+        bottom = np.zeros(n_wdb)
+        for wsi in range(n_wsb):
+            ax.bar(wd_cent, freq[:, wsi], bottom=bottom, width=wd_width, color=color_list[wsi])
+            bottom += freq[:, wsi]
+
+        fmax = np.max(np.sum(freq, axis=1))
+        freq_delta = int(freq_delta)
+        freq_ticks = np.arange(0, fmax+freq_delta/2, freq_delta, dtype=np.int32)[1:]
+
+        tksl = np.arange(0,360,wd_delta)
+        tks = np.radians(np.mod(90 - tksl, 360))
+        ax.set_xticks(tks, [f"{int(d)}°" for d in tksl])
+        ax.set_yticks(freq_ticks, [f"{f}%" for f in freq_ticks])
+        ax.set_title(title)
+
+        sm = ScalarMappable(cmap=bcmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(0,1,n_wsb+1), pad=0.1)
+        clabels = [f"{ws}" for ws in ws_bins]
+        clabels[-1] = f""
+        cbar.ax.set_yticklabels(ws_bins)
+
+        if cbar_title is None:
+            cbar_title = f"{ws_var}"
+            wsl = [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]
+            wsl += [FV.var2amb[v] for v in wsl]
+            if ws_var in wsl:
+                cbar_title += " [m/s]"
+        cbar.ax.set_title(cbar_title)
+        
+        return ax
 
     def write_figure(
         self,
@@ -432,6 +437,7 @@ class StatesRosePlotOutput(RosePlotOutput):
 
         super().__init__(results, **kwargs)
 
+
 class WindRoseBinPlot(Output):
     """
     Plots mean data in wind rose bins
@@ -522,7 +528,8 @@ class WindRoseBinPlot(Output):
         wd_bins = np.radians(wd_bins)
 
         if ax is not None:
-            ax.set_projection("polar")
+            if not isinstance(ax, PolarAxes):
+                raise TypeError(f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'")
         else:
             fig, ax = plt.subplots(
                 figsize=figsize, subplot_kw={"projection": "polar"})
