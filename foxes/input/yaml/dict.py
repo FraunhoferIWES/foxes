@@ -190,8 +190,8 @@ def run_outputs(
             d = d.replace("]", "")
             i0 = d.find("[")
             if i0 > 0:
-                inds = [int(x) for x in d[i0+1:].split(",")]
-                return rlabels[d[:i0]][*inds]
+                inds = tuple([int(x) for x in d[i0+1:].split(",")])
+                return rlabels[d[:i0]][inds]
             else:
                 return rlabels[d]
                             
