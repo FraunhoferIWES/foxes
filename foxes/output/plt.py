@@ -11,22 +11,9 @@ class plt(Output):
 
     """
 
-    def figure(self, *args, **kwargs):
-        """Runs pyplot.figure"""
-        return pyplot.figure(*args, **kwargs)
+    def __getattr__(self, name):
+        return getattr(pyplot, name)
     
-    def subplot(self, *args, **kwargs):
-        """Runs pyplot.subplot"""
-        return pyplot.subplot(*args, **kwargs)
-    
-    def subplots(self, *args, **kwargs):
-        """Runs pyplot.subplots"""
-        return pyplot.subplots(*args, **kwargs)
-    
-    def show(self, *args, **kwargs):
-        """Runs pyplot.show"""
-        pyplot.show(*args, **kwargs)
-
-    def close(self, *args, **kwargs):
-        """Runs pyplot.close"""
-        pyplot.close(*args, **kwargs)
+    def savefig(self, fname, *args, **kwargs):
+        fpath = super().get_fpath(fname)
+        pyplot.savefig(fpath, *args, **kwargs)
