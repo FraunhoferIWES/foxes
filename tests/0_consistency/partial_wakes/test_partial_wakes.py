@@ -24,7 +24,7 @@ def test():
     ]
 
     base_results = None
-    with foxes.Engine.new("process", chunk_size_states=100):
+    with foxes.Engine.new("threads", chunk_size_states=100):
         for rotor, pwake, lim in cases:
             print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
 

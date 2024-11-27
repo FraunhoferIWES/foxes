@@ -36,4 +36,7 @@ outputs:
         variable: "EFF"
         cmap: "inferno"
         figsize: [6, 7]
-        plt_show: True
+  - output_type: plt
+    functions:
+      - function: show
+      - function: close

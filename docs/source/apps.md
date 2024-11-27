@@ -94,8 +94,10 @@ outputs:                          # this section is optional
         variable: "EFF"           # specify function parameters here
         cmap: "inferno"
         figsize: [6, 7]
-        plt_show: True            # optional, displays the created figure
-        plt_close: True           # optional, closes pyplot
+  - output_type: plt              # class from foxes.output
+    functions:                    # list of functions from that class below
+      - function: show            # runs plt.show()
+      - function: close           # runs plt.close()
 ```
 
 Any of the applicable *foxes* classes and functions can be added to the respective section of the input yaml file, together with the specific parameter choices.

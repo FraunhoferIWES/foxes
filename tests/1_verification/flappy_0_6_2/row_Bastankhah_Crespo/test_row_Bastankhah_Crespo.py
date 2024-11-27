@@ -5,7 +5,6 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
 
 thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
@@ -35,9 +34,12 @@ def test():
         superposition="ti_max", induction="Betz"
     )
 
-    states = foxes.input.states.ScanWS(
-        ws_list=np.linspace(6.0, 16.0, n_s), wd=wd, ti=ti, rho=1.225
-    )
+    states = foxes.input.states.ScanStates({
+        FV.WS: np.linspace(6.0, 16.0, n_s), 
+        FV.WD: [wd], 
+        FV.TI: [ti], 
+        FV.RHO: [1.225],
+    })
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(

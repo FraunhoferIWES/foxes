@@ -216,6 +216,19 @@ def run_outputs(
                 _print(f"  - {fname}")
                 plt_show = fdict.pop("plt_show", False)
                 plt_close = fdict.pop("plt_close", False)
+
+                for k in fdict.keys():
+                    d = fdict[k]
+                    if isinstance(d, str) and len(d) > 9 and d[:8] == "$output(" and d[-1] == ")":
+                        oi = [int(x) for x in d[8:-1].split(",")]
+                        print("HERE OI",oi,out)
+                        x = out[oi.pop(0)][1]
+                        print("HERE OI",oi,x)
+                        while len(oi):
+                            x = x[oi.pop(0)]
+                        fdict[k] = x
+                        print("HERE SETTING",k,x)
+
                 assert hasattr(o, fname), f"Output {i} of type '{ocls}': Function '{fname}' not found"
                 f = getattr(o, fname)
                 prs = list(signature(f).parameters.keys())
@@ -229,7 +242,7 @@ def run_outputs(
                 if plt_close:
                     fres[-1] = None
                     plt.close()
-            out.append((d0, tuple(fres)))
+            out.append((d0, fres))
     
     return out
 

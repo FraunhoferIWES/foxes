@@ -28,9 +28,12 @@ def test():
     )
     mbook.turbine_types[ttype.name] = ttype
 
-    states = foxes.input.states.ScanWS(
-        ws_list=np.linspace(6.0, 16.0, n_s), wd=wd, ti=ti, rho=1.225
-    )
+    states = foxes.input.states.ScanStates({
+        FV.WS: np.linspace(6.0, 16.0, n_s),
+        FV.WD: [wd], 
+        FV.TI: [ti], 
+        FV.RHO: [1.225],
+    })
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(
