@@ -273,7 +273,7 @@ class RosePlotOutput(Output):
         freq_delta = int(freq_delta)
         freq_ticks = np.arange(0, fmax+freq_delta/2, freq_delta, dtype=np.int32)[1:]
 
-        tksl = np.arange(0,360,wd_delta)
+        tksl = np.arange(0,360,max(wd_delta, 30))
         tks = np.radians(np.mod(90 - tksl, 360))
         ax.set_xticks(tks, [f"{int(d)}°" for d in tksl])
         ax.set_yticks(freq_ticks, [f"{f}%" for f in freq_ticks])
@@ -561,7 +561,7 @@ class WindRoseBinPlot(Output):
 
         img = ax.pcolormesh(x, y, z, **prgs)
 
-        tksl = np.arange(0,360,wd_delta)
+        tksl = np.arange(0,360,max(wd_delta, 30))
         tks = np.radians(np.mod(90 - tksl, 360))
         ax.set_xticks(tks, [f"{d}°" for d in tksl])
         ax.set_yticks(ws_bins)
