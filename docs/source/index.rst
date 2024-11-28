@@ -2,7 +2,7 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionchanged:: 1.3
+.. versionchanged:: 1.2.1
     Output `FarmResultsEval`: Renaming contraction rule `mean` into `weights`. Please use this for AEP and all kinds of calculations of mean 
     results with respect to the states. Also introducing new rule `mean_no_weights`, not respecting the weights.
 
