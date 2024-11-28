@@ -63,4 +63,3 @@ class VerticalProfile(Model):
 
         """
         return new_instance(cls, profile_type, *args, **kwargs)
-    

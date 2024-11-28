@@ -20,6 +20,7 @@ def all_subclasses(cls):
         [s for c in cls.__subclasses__() for s in all_subclasses(c)]
     )
 
+
 def new_cls(base_cls, cls_name):
     """
     Run-time class selector.
@@ -30,12 +31,12 @@ def new_cls(base_cls, cls_name):
         The base class
     cls_name: string
         Name of the class
-    
+
     Returns
     -------
     cls: object
         The derived class
-    
+
     :group: utils
 
     """
@@ -56,7 +57,8 @@ def new_cls(base_cls, cls_name):
             cls_name, base_cls.__name__, sorted([i.__name__ for i in allc])
         )
         raise KeyError(estr)
-    
+
+
 def new_instance(base_cls, cls_name, *args, **kwargs):
     """
     Run-time factory.
@@ -71,12 +73,12 @@ def new_instance(base_cls, cls_name, *args, **kwargs):
         Additional parameters for the constructor
     kwargs: dict, optional
         Additional parameters for the constructor
-    
+
     Returns
     -------
     obj: object
         The instance of the derived class
-    
+
     :group: utils
 
     """
@@ -86,4 +88,3 @@ def new_instance(base_cls, cls_name, *args, **kwargs):
         return None
     else:
         return cls(*args, **kwargs)
-        

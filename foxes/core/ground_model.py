@@ -271,4 +271,3 @@ class GroundModel(Model):
 
         """
         return new_instance(cls, ground_type, *args, **kwargs)
-    

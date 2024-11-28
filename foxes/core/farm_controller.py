@@ -413,4 +413,3 @@ class FarmController(FarmDataModel):
 
         """
         return new_instance(cls, controller_type, *args, **kwargs)
-    

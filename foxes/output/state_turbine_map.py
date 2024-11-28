@@ -82,7 +82,7 @@ class StateTurbineMap(Output):
 
         y, x = np.meshgrid(turbines, states)
         z = self.results[variable].to_numpy()
-        
+
         prgs = {"shading": "flat"}
         prgs.update(kwargs)
 

@@ -182,7 +182,7 @@ class TurbineInductionModel(WakeModel):
 
         """
         return new_instance(cls, induction_type, *args, **kwargs)
-    
+
 
 class WakeK(Model):
     """

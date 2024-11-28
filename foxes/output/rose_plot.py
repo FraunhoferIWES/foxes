@@ -29,12 +29,12 @@ class RosePlotOutput(Output):
     """
 
     def __init__(
-            self, 
-            farm_results=None, 
-            point_results=None, 
-            use_points=False,
-            **kwargs,
-        ):
+        self,
+        farm_results=None,
+        point_results=None,
+        use_points=False,
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -115,18 +115,18 @@ class RosePlotOutput(Output):
         return dname, dname
 
     def get_data(
-            self,
-            wd_sectors,
-            ws_var,
-            ws_bins,
-            wd_var=FV.AMB_WD,
-            turbine=0,
-            point=0,
-            add_inf=False,
-        ):
+        self,
+        wd_sectors,
+        ws_var,
+        ws_bins,
+        wd_var=FV.AMB_WD,
+        turbine=0,
+        point=0,
+        add_inf=False,
+    ):
         """
         Generates the plot data
-        
+
         Parameters
         ----------
         wd_sectors: int
@@ -150,7 +150,7 @@ class RosePlotOutput(Output):
         -------
         data: xarray.Dataset
             The plot data
-        
+
         """
         if add_inf:
             ws_bins = list(ws_bins) + [np.inf]
@@ -158,52 +158,52 @@ class RosePlotOutput(Output):
         t = turbine if self._rtype == FC.TURBINE else point
         ws = self.results[ws_var].to_numpy()[:, t]
         wd = self.results[wd_var].to_numpy()[:, t].copy()
-        wd_delta = 360/wd_sectors
-        wd[wd>=360-wd_delta/2] -= 360
-        wd_bins = np.arange(-wd_delta/2, 360, wd_delta)
+        wd_delta = 360 / wd_sectors
+        wd[wd >= 360 - wd_delta / 2] -= 360
+        wd_bins = np.arange(-wd_delta / 2, 360, wd_delta)
         ws_bins = np.asarray(ws_bins, dtype=ws.dtype)
-        
-        freq = 100*np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w)[0]
+
+        freq = 100 * np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w)[0]
 
         data = Dataset(
             coords={
                 wd_var: np.arange(0, 360, wd_delta),
-                ws_var: 0.5*(ws_bins[:-1] + ws_bins[1:])
+                ws_var: 0.5 * (ws_bins[:-1] + ws_bins[1:]),
             },
             data_vars={
                 f"bin_min_{wd_var}": (wd_var, wd_bins[:-1]),
                 f"bin_max_{wd_var}": (wd_var, wd_bins[1:]),
                 f"bin_min_{ws_var}": (ws_var, ws_bins[:-1]),
-                f"bin_max_{ws_var}": (ws_var, ws_bins[1:]), 
+                f"bin_max_{ws_var}": (ws_var, ws_bins[1:]),
                 "frequency": ((wd_var, ws_var), freq),
             },
             attrs={
                 f"{wd_var}_bounds": wd_bins,
                 f"{ws_var}_bounds": ws_bins,
-            }
+            },
         )
 
         return data
 
     def get_figure(
-            self,
-            wd_sectors,
-            ws_var,
-            ws_bins,
-            wd_var=FV.AMB_WD,
-            fig=None,
-            ax=None,
-            figsize=None,
-            freq_delta=3,
-            cmap="Greens",
-            title=None,
-            cbar_title=None,
-            ret_data=False,
-            **kwargs,
-        ):
+        self,
+        wd_sectors,
+        ws_var,
+        ws_bins,
+        wd_var=FV.AMB_WD,
+        fig=None,
+        ax=None,
+        figsize=None,
+        freq_delta=3,
+        cmap="Greens",
+        title=None,
+        cbar_title=None,
+        ret_data=False,
+        **kwargs,
+    ):
         """
         Creates the figure
-        
+
         Parameters
         ----------
         wd_sectors: int
@@ -242,38 +242,44 @@ class RosePlotOutput(Output):
             The plot data
 
         """
-        data = self.get_data(
-            wd_sectors, ws_var, ws_bins, wd_var, **kwargs)
+        data = self.get_data(wd_sectors, ws_var, ws_bins, wd_var, **kwargs)
 
         n_wsb = data.sizes[ws_var]
         n_wdb = data.sizes[wd_var]
         ws_bins = np.asarray(data.attrs[f"{ws_var}_bounds"])
         wd_cent = np.mod(90 - data[wd_var].to_numpy(), 360)
         wd_cent = np.radians(wd_cent)
-        wd_delta = 360/n_wdb
+        wd_delta = 360 / n_wdb
         wd_width = np.radians(0.9 * wd_delta)
         freq = data["frequency"].to_numpy()
 
         if ax is not None:
             if not isinstance(ax, PolarAxes):
-                raise TypeError(f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'")
+                raise TypeError(
+                    f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'"
+                )
         else:
-            fig, ax = plt.subplots(
-                figsize=figsize, subplot_kw={"projection": "polar"})
+            fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
 
         bcmap = plt.get_cmap(cmap, n_wsb)
         color_list = bcmap(np.linspace(0, 1, n_wsb))
-    
+
         bottom = np.zeros(n_wdb)
         for wsi in range(n_wsb):
-            ax.bar(wd_cent, freq[:, wsi], bottom=bottom, width=wd_width, color=color_list[wsi])
+            ax.bar(
+                wd_cent,
+                freq[:, wsi],
+                bottom=bottom,
+                width=wd_width,
+                color=color_list[wsi],
+            )
             bottom += freq[:, wsi]
 
         fmax = np.max(np.sum(freq, axis=1))
         freq_delta = int(freq_delta)
-        freq_ticks = np.arange(0, fmax+freq_delta/2, freq_delta, dtype=np.int32)[1:]
+        freq_ticks = np.arange(0, fmax + freq_delta / 2, freq_delta, dtype=np.int32)[1:]
 
-        tksl = np.arange(0,360,max(wd_delta, 30))
+        tksl = np.arange(0, 360, max(wd_delta, 30))
         tks = np.radians(np.mod(90 - tksl, 360))
         ax.set_xticks(tks, [f"{int(d)}°" for d in tksl])
         ax.set_yticks(freq_ticks, [f"{f}%" for f in freq_ticks])
@@ -281,7 +287,7 @@ class RosePlotOutput(Output):
 
         sm = ScalarMappable(cmap=bcmap)
         sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(0,1,n_wsb+1), pad=0.1)
+        cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(0, 1, n_wsb + 1), pad=0.1)
         cbar.ax.set_yticklabels(ws_bins)
 
         if cbar_title is None:
@@ -291,7 +297,7 @@ class RosePlotOutput(Output):
             if ws_var in wsl:
                 cbar_title += " [m/s]"
         cbar.ax.set_title(cbar_title)
-        
+
         if ret_data:
             return ax, data
         else:
@@ -317,7 +323,7 @@ class RosePlotOutput(Output):
         data: pd.DataFrame, optional
             The wind rose data
 
-        """ 
+        """
 
         r = self.get_figure(*args, ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
@@ -380,47 +386,47 @@ class StatesRosePlotOutput(RosePlotOutput):
 class WindRoseBinPlot(Output):
     """
     Plots mean data in wind rose bins
-    
+
     Attributes
     ----------
     farm_results: xarray.Dataset
         The wind farm results
-    
+
     :group: output
 
     """
 
     def __init__(self, farm_results, **kwargs):
-        """ 
+        """
         Constructor
-        
+
         Parameters
         ----------
         farm_results: xarray.Dataset
             The wind farm results
         kwargs: dict, optional
             Parameters for the base class
-        
+
         """
         super().__init__(**kwargs)
         self.farm_results = farm_results
 
     def get_data(
-            self,
-            variable,
-            ws_bins,
-            wd_sectors=12,
-            wd_var=FV.AMB_WD,
-            ws_var=FV.AMB_REWS,
-            turbine=0,
-            contraction="weights",
-        ):
+        self,
+        variable,
+        ws_bins,
+        wd_sectors=12,
+        wd_var=FV.AMB_WD,
+        ws_var=FV.AMB_REWS,
+        turbine=0,
+        contraction="weights",
+    ):
         """
         Generates the plot data
-        
+
         Parameters
         ----------
-        variable: str   
+        variable: str
             The variable name
         ws_bins: list of float
             The wind speed bins
@@ -433,39 +439,41 @@ class WindRoseBinPlot(Output):
         contraction: str
             The contraction method for states:
             weights, mean_no_weights, sum_no_weights
-        
+
         Returns
         -------
         data: xarray.Dataset
             The plot data
-        
+
         """
         var = self.farm_results[variable].to_numpy()[:, turbine]
         w = self.farm_results[FV.WEIGHT].to_numpy()[:, turbine]
         ws = self.farm_results[ws_var].to_numpy()[:, turbine]
         wd = self.farm_results[wd_var].to_numpy()[:, turbine].copy()
-        wd_delta = 360/wd_sectors
-        wd[wd>=360-wd_delta/2] -= 360
-        wd_bins = np.arange(-wd_delta/2, 360, wd_delta)
+        wd_delta = 360 / wd_sectors
+        wd[wd >= 360 - wd_delta / 2] -= 360
+        wd_bins = np.arange(-wd_delta / 2, 360, wd_delta)
         ws_bins = np.asarray(ws_bins)
-        
+
         if contraction == "weights":
             z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w)[0]
-            z[z<1e-13] = np.nan
-            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w*var)[0] / z
+            z[z < 1e-13] = np.nan
+            z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=w * var)[0] / z
         elif contraction == "mean_no_weights":
             z = np.histogram2d(wd, ws, (wd_bins, ws_bins))[0].astype(w.dtype)
-            z[z<1] = np.nan
+            z[z < 1] = np.nan
             z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=var)[0] / z
         elif contraction == "sum_no_weights":
             z = np.histogram2d(wd, ws, (wd_bins, ws_bins), weights=var)[0]
         else:
-            raise KeyError(f"Contraction '{contraction}' not supported. Choices: weights, mean_no_weights, sum_no_weights")
+            raise KeyError(
+                f"Contraction '{contraction}' not supported. Choices: weights, mean_no_weights, sum_no_weights"
+            )
 
         data = Dataset(
             coords={
-                wd_var: 0.5*(wd_bins[:-1] + wd_bins[1:]),
-                ws_var: 0.5*(ws_bins[:-1] + ws_bins[1:]),
+                wd_var: 0.5 * (wd_bins[:-1] + wd_bins[1:]),
+                ws_var: 0.5 * (ws_bins[:-1] + ws_bins[1:]),
             },
             data_vars={
                 variable: ((wd_var, ws_var), z),
@@ -473,33 +481,33 @@ class WindRoseBinPlot(Output):
             attrs={
                 f"{wd_var}_bounds": wd_bins,
                 f"{ws_var}_bounds": ws_bins,
-            }
+            },
         )
-        
+
         return data
-    
+
     def get_figure(
-            self,
-            variable,
-            ws_bins,
-            wd_sectors=12,
-            wd_var=FV.AMB_WD,
-            ws_var=FV.AMB_REWS,
-            turbine=0,
-            contraction="weights",
-            fig=None,
-            ax=None,
-            title=None,
-            figsize=None,
-            ret_data=False,
-            **kwargs,
-        ):
+        self,
+        variable,
+        ws_bins,
+        wd_sectors=12,
+        wd_var=FV.AMB_WD,
+        ws_var=FV.AMB_REWS,
+        turbine=0,
+        contraction="weights",
+        fig=None,
+        ax=None,
+        title=None,
+        figsize=None,
+        ret_data=False,
+        **kwargs,
+    ):
         """
         Creates the figure
-        
+
         Parameters
         ----------
-        variable: str   
+        variable: str
             The variable name
         ws_bins: list of float
             The wind speed bins
@@ -524,12 +532,12 @@ class WindRoseBinPlot(Output):
             Flag for returning wind rose data
         kwargs: dict, optional
             Additional parameters for plt.pcolormesh
-        
+
         Returns
         -------
         ax: pyplot.Axes
             The axes object
-        
+
         """
         data = self.get_data(
             variable=variable,
@@ -541,18 +549,19 @@ class WindRoseBinPlot(Output):
             contraction=contraction,
         )
 
-        wd_delta = 360/data.sizes[wd_var]
+        wd_delta = 360 / data.sizes[wd_var]
         wd_bins = np.mod(90 - data.attrs[f"{wd_var}_bounds"], 360)
         wd_bins = np.radians(wd_bins)
         ws_bins = data.attrs[f"{ws_var}_bounds"]
 
         if ax is not None:
             if not isinstance(ax, PolarAxes):
-                raise TypeError(f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'")
+                raise TypeError(
+                    f"Require axes of type '{PolarAxes.__name__}' for '{type(self).__name__}', got '{type(ax).__name__}'"
+                )
         else:
-            fig, ax = plt.subplots(
-                figsize=figsize, subplot_kw={"projection": "polar"})
-        
+            fig, ax = plt.subplots(figsize=figsize, subplot_kw={"projection": "polar"})
+
         y, x = np.meshgrid(ws_bins, wd_bins)
         z = data[variable].to_numpy()
 
@@ -561,14 +570,14 @@ class WindRoseBinPlot(Output):
 
         img = ax.pcolormesh(x, y, z, **prgs)
 
-        tksl = np.arange(0,360,max(wd_delta, 30))
+        tksl = np.arange(0, 360, max(wd_delta, 30))
         tks = np.radians(np.mod(90 - tksl, 360))
         ax.set_xticks(tks, [f"{d}°" for d in tksl])
         ax.set_yticks(ws_bins)
         ax.set_title(title)
         cbar = fig.colorbar(img, ax=ax, pad=0.12)
         cbar.ax.set_title(variable)
-        
+
         if ret_data:
             return ax, data
         else:
@@ -594,7 +603,7 @@ class WindRoseBinPlot(Output):
         data: pd.DataFrame, optional
             The wind rose data
 
-        """ 
+        """
 
         r = self.get_figure(*args, ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)

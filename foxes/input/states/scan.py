@@ -64,9 +64,9 @@ class ScanStates(States):
         self._N = np.prod(shp)
         self._vars = list(self.scans.keys())
 
-        data = np.zeros(shp+[n_v], dtype=config.dtype_double)
+        data = np.zeros(shp + [n_v], dtype=config.dtype_double)
         for i, d in enumerate(self.scans.values()):
-            s = [None]*n_v
+            s = [None] * n_v
             s[i] = np.s_[:]
             s = tuple(s)
             data[..., i] = d[s]
@@ -112,11 +112,7 @@ class ScanStates(States):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name].update(
-            dict(
-                scans = self.scans
-            )
-        )
+        data_stash[self.name].update(dict(scans=self.scans))
         del self.scans
 
     def unset_running(

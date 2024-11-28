@@ -109,7 +109,6 @@ class WakeSuperposition(Model):
         """
         pass
 
-
     @classmethod
     def new(cls, superp_type, *args, **kwargs):
         """
@@ -126,4 +125,3 @@ class WakeSuperposition(Model):
 
         """
         return new_instance(cls, superp_type, *args, **kwargs)
-    

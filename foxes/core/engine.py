@@ -565,6 +565,7 @@ class Engine(ABC):
 
         return new_instance(cls, engine_type, *args, **kwargs)
 
+
 def get_engine(error=True, default=True):
     """
     Gets the global calculation engine

@@ -76,12 +76,14 @@ if __name__ == "__main__":
     D = ttype.D
     H = ttype.H
 
-    states = foxes.input.states.ScanStates({
-        FV.WS: np.linspace(args.ws0, args.ws1, n_s),
-        FV.WD: [270],
-        FV.TI: [0.08],
-        FV.RHO: [1.225],
-    })
+    states = foxes.input.states.ScanStates(
+        {
+            FV.WS: np.linspace(args.ws0, args.ws1, n_s),
+            FV.WD: [270],
+            FV.TI: [0.08],
+            FV.RHO: [1.225],
+        }
+    )
 
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_row(

@@ -281,4 +281,3 @@ class PointDataModelList(PointDataModel):
 
         """
         return new_instance(cls, model_type, *args, **kwargs)
-    

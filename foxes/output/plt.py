@@ -13,7 +13,7 @@ class plt(Output):
 
     def __getattr__(self, name):
         return getattr(pyplot, name)
-    
+
     def savefig(self, fname, *args, **kwargs):
         fpath = super().get_fpath(fname)
         pyplot.savefig(fpath, *args, **kwargs)
