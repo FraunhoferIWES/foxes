@@ -1,11 +1,10 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from xarray import Dataset
 from matplotlib.cm import ScalarMappable
 from matplotlib.projections.polar import PolarAxes
+from matplotlib.lines import Line2D
 
-from foxes.utils import wd2uv, uv2wd
 from foxes.algorithms import Downwind
 from foxes.core import WindFarm, Turbine
 from foxes.models import ModelBook
@@ -197,7 +196,7 @@ class RosePlotOutput(Output):
         freq_delta=3,
         cmap="Greens",
         title=None,
-        cbar_title=None,
+        legend_pars=None,
         ret_data=False,
         **kwargs,
     ):
@@ -227,8 +226,8 @@ class RosePlotOutput(Output):
             The color map
         title: str, optional
             The title
-        cbar_title: str, optional
-            The title of the colorbar
+        legend_pars: dict, optional
+            Parameters for the legend
         ret_data: bool
             Flag for returning wind rose data
         kwargs: dict, optional
@@ -285,18 +284,22 @@ class RosePlotOutput(Output):
         ax.set_yticks(freq_ticks, [f"{f}%" for f in freq_ticks])
         ax.set_title(title)
 
-        sm = ScalarMappable(cmap=bcmap)
-        sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(0, 1, n_wsb + 1), pad=0.1)
-        cbar.ax.set_yticklabels(ws_bins)
-
-        if cbar_title is None:
-            cbar_title = f"{ws_var}"
-            wsl = [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]
-            wsl += [FV.var2amb[v] for v in wsl]
-            if ws_var in wsl:
-                cbar_title += " [m/s]"
-        cbar.ax.set_title(cbar_title)
+        llines = [Line2D([0], [0], color=c, lw=10) for c in np.flip(color_list, axis=0)]
+        lleg = [
+            f"[{ws_bins[i]:.1f}, {ws_bins[i+1]:.1f})" for i in range(n_wsb - 1, -1, -1)
+        ]
+        lpars = dict(
+            loc="upper left",
+            bbox_to_anchor=(0.8, 0.5),
+            title=f"{ws_var}",
+        )
+        wsl = [FV.WS, FV.REWS, FV.REWS2, FV.REWS3]
+        wsl += [FV.var2amb[v] for v in wsl]
+        if ws_var in wsl:
+            lpars["title"] += " [m/s]"
+        if legend_pars is not None:
+            lpars.update(legend_pars)
+        ax.legend(llines, lleg, **lpars)
 
         if ret_data:
             return ax, data
