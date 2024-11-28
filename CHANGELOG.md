@@ -689,3 +689,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Fixing some examples that were computing the turbine efficiency incorrectly
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.1](https://github.com/FraunhoferIWES/foxes/commits/v1.2.1)
+
+## v1.2.2
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2.2)
