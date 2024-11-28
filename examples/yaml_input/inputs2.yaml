@@ -29,7 +29,7 @@ outputs:
   - output_type: plt
     functions:
       - function: figure
-        figsize: [10, 4]
+        figsize: [10, 5]
         result_labels: $fig   # store the result of the function under $fig
   - object: $fig              # now run functions of the object behind $fig  
     functions:

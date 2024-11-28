@@ -119,7 +119,7 @@ outputs:
   - output_type: plt
     functions:
       - function: figure
-        figsize: [10, 4]
+        figsize: [10, 5]
         result_labels: $fig   # store the result of the function under $fig
   - object: $fig              # now run functions of the object behind $fig  
     functions:
@@ -153,11 +153,11 @@ outputs:
       - function: show
       - function: close
 ```
-If a function returns more than one result, those can be associated to variables by corresponding lists of variable names, e.g. `result_labels: [$a, $b]` for a function that returns two objects.
+If a function returns more than one result, those can be associated with variables by providing corresponding lists of variable names, e.g. `result_labels: [$a, $b]` for a function that returns two objects.
 
-For objects that are array-like, it is additionally possible to use a syntax like `$data[0]` or `$data[0, 2, 5]`, etc, for using sub elements of stored results as function arguments.
+For objects that are array-like, it is additionally possible to use a syntax like `$data[0]` or `$data[0, 2, 5]`, etc, for passing sub elements of stored results to function arguments.
 
-Notice the line `object $fig` which starts a section that calls functions of the object behind the `$fig` variable.
+Notice the line `object $fig` which starts a section that calls functions of the object behind the `$fig` variable, instead of an instance of an `output_type`. 
 
 The above outputs create and save a figure that is composed of two sub plots, where the second is based on polar projection:
 

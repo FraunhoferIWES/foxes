@@ -194,7 +194,7 @@ class RosePlotOutput(Output):
         ax=None,
         figsize=None,
         freq_delta=3,
-        cmap="Greens",
+        cmap="summer",
         title=None,
         legend_pars=None,
         ret_data=False,

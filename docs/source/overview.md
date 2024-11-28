@@ -1,6 +1,6 @@
 # Overview - how to setup foxes
 
-Running a wind farm simulation with `foxes` requires the following steps, usually reflected in a Python script or notebook:
+Running a wind farm simulation with `foxes` requires the following steps, usually reflected in a Python script, notebook or an input parameter file:
 
 1. _Optional:_ Create the so-called `model book`, which contains all selectable models. You can also choose to rely on pre-defined models and skip this step.
 2. Create ambient meteorological conditions, called `states` in `foxes` terminology
@@ -10,4 +10,4 @@ Running a wind farm simulation with `foxes` requires the following steps, usuall
 6. Optionally evaluate the flow field at arbitrary points of interest, also via the algorithm
 7. Post-process the results, for example using the `foxes.output` package
 
-The details will become clear in the _Models_ and _Examples_ sections.
+The details will become clear in the sections on _Models_, _Examples_ and _Input parameter files_.
