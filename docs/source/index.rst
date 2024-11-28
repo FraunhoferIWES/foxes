@@ -7,7 +7,7 @@
     results with respect to the states. Also introducing new rule `mean_no_weights`, not respecting the weights.
 
 .. versionadded:: 1.2
-    :ref:`Command line applications <Command line applications>` that can run *foxes* from yaml file input,
+    Running *foxes* from :ref:`Input parameter files <Input parameter files>` in *yaml* format,
     simply by `foxes_yaml imputs.yaml` or `foxes_windio inputs.yaml` - no Python script needed.
 
 .. versionchanged:: 1.0
@@ -88,7 +88,7 @@ Contents
     .. toctree::
         :maxdepth: 2
 
-        apps
+        parameter_files
 
     .. toctree::
         :maxdepth: 2

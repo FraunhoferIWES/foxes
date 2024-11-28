@@ -140,6 +140,7 @@ scratch/
 *.mp4
 submodules/
 results/
+result*.*
 
 # exceptions:
 

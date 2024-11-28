@@ -1,6 +1,6 @@
 states:
-  states_type: Timeseries
-  data_source: timeseries_8000.csv.gz
+  states_type: Timeseries               # class from foxes.input.states
+  data_source: timeseries_8000.csv.gz   # specify constructor arguments here
   output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
@@ -9,14 +9,14 @@ states:
   fixed_vars:
     RHO: 1.225
   
-model_book:
-  turbine_types:
-    - name: my_turbine
-      ttype_type: PCtFile
-      data_source: NREL-5MW-D126-H90.csv
+model_book:                 # this section is optional
+  turbine_types:            # name of the model book section to be updated
+    - name: my_turbine      # name of the new model
+      ttype_type: PCtFile   # class from foxes.models.turbine_types
+      data_source: NREL-5MW-D126-H90.csv # specify constructor arguments here
   
 wind_farm:
-  layouts:
+  layouts:    # list functions from foxes.input.farm_layout below
     - function: add_from_file
       file_path: test_farm_67.csv
       turbine_models: [my_turbine]
@@ -25,18 +25,21 @@ algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
 
-outputs:
-  - output_type: FarmResultsEval
-    functions:
+calc_farm:    # this section is optional; will run by default
+  run: True   # this triggers algo.calc_farm
+
+outputs:                          # this section is optional
+  - output_type: FarmResultsEval  # class from foxes.output
+    functions:                    # list of functions from that class below
       - function: add_capacity
       - function: add_efficiency
-  - output_type: StateTurbineMap
-    functions:
-      - function: plot_map
-        variable: "EFF"
+  - output_type: StateTurbineMap  # class from foxes.output
+    functions:                    # list of functions from that class below
+      - function: plot_map        # name of the function
+        variable: "EFF"           # specify function parameters here
         cmap: "inferno"
         figsize: [6, 7]
-  - output_type: plt
-    functions:
-      - function: show
-      - function: close
+  - output_type: plt              # class from foxes.output
+    functions:                    # list of functions from that class below
+      - function: show            # runs plt.show(), triggering the display
+      - function: close           # runs plt.close(), optional
