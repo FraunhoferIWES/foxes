@@ -676,9 +676,12 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.1
 
+- Dependencies:
+  - Removing dependency on `windrose` package
 - Outputs:
   - Output `FarmResultsEval`: Renaming contraction rule `mean` into `weights`. Introducing new rule `mean_no_weights`.
   - New Output `WindRoseBinPlot`, for example showing variable mean values for wind rose bins
+  - Re-implementation of `WindRosePlot`, no longer needs the `windrose` package
 - Inputs:
   - Generalizing `ScanWS` states to `ScanStates`, for arbitrary tensor products of variable lists
   - States `FieldDataNC` now also accepts fields without heights, signature (state, x, y) and (state, y, x)

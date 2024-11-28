@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     if not args.nofig:
         o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-        fig = o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20, 25])
+        o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20], add_inf=True)
         plt.show()
 
     time0 = time.time()

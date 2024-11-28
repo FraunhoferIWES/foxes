@@ -226,7 +226,8 @@ class ScanStates(States):
 
         """
         for i, v in enumerate(self._vars):
-            tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
+            if v not in tdata:
+                tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
             tdata[v][:] = mdata[self.DATA][:, None, None, i]
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
