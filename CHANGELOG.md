@@ -692,6 +692,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.2
 
-
+- Developments required by `foxes_opt` v0.3, related to running also wind farm optimizations by yaml parameter files
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.2](https://github.com/FraunhoferIWES/foxes/commits/v1.2.2)
