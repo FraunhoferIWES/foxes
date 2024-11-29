@@ -257,7 +257,7 @@ def run_obj_function(
     ocls = type(obj).__name__
     assert hasattr(
         obj, fname
-    ), f"Output {i} of type '{ocls}': Function '{fname}' not found"
+    ), f"Output of type '{ocls}': Function '{fname}' not found"
     f = getattr(obj, fname)
 
     # add required input data objects:
