@@ -140,6 +140,7 @@ def read_dict(
 
     return algo, engine
 
+
 def get_output_obj(
     ocls,
     odict,
@@ -176,14 +177,12 @@ def get_output_obj(
         The output object
 
     :group: input.yaml
-    
+
     """
     cls = new_cls(base_class, ocls)
     prs = list(signature(cls.__init__).parameters.keys())
     if "algo" in prs:
-        assert (
-            algo is not None
-        ), f"Output of type '{ocls}' requires algo"
+        assert algo is not None, f"Output of type '{ocls}' requires algo"
         odict["algo"] = algo
     if "farm" in prs:
         odict["farm"] = algo.farm
@@ -199,7 +198,8 @@ def get_output_obj(
             odict[k] = v
 
     return cls(**odict)
-                
+
+
 def _get_object(rlabels, d):
     """Helper function for object extraction"""
     d = d.replace("]", "")
@@ -209,7 +209,8 @@ def _get_object(rlabels, d):
         return rlabels[d[:i0]][inds]
     else:
         return rlabels[d]
-            
+
+
 def run_obj_function(
     obj,
     fdict,
@@ -237,7 +238,7 @@ def run_obj_function(
     -------
     results: object
         The returns of the function
-    
+
     :group: input.yaml
 
     """
@@ -301,8 +302,9 @@ def run_obj_function(
                 _set_label(rlabels, k, results[i])
         else:
             _set_label(rlabels, rlbs, results)
-    
+
     return results
+
 
 def run_outputs(
     idict,
@@ -372,7 +374,9 @@ def run_outputs(
                     for i, f in enumerate(d.pop_item("functions"))
                 ]
 
-                o = get_output_obj(ocls, d, algo, farm_results, point_results, extra_sig=extra_sig)
+                o = get_output_obj(
+                    ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
+                )
                 if o is None:
                     out.append((d0, None))
                     continue
@@ -399,6 +403,7 @@ def run_outputs(
             out.append((d0, fres))
 
     return out if not ret_rlabels else out, rlabels
+
 
 def run_dict(idict, *args, verbosity=None, **kwargs):
     """
