@@ -255,9 +255,7 @@ def run_obj_function(
 
     # grab function:
     ocls = type(obj).__name__
-    assert hasattr(
-        obj, fname
-    ), f"Output of type '{ocls}': Function '{fname}' not found"
+    assert hasattr(obj, fname), f"Output of type '{ocls}': Function '{fname}' not found"
     f = getattr(obj, fname)
 
     # add required input data objects:
@@ -362,16 +360,16 @@ def run_outputs(
             for i, odict in enumerate(idict["outputs"])
         ]
 
-        for d in odicts:
+        for i, d in enumerate(odicts):
             if "output_type" in d:
                 ocls = d.pop_item("output_type")
-                _print(f"  Output type '{ocls}'")
+                _print(f"  Output {i}: {ocls}")
                 d0 = dict(output_type=ocls)
                 d0.update(d)
 
                 flist = [
-                    Dict(f, name=f"{d.name}.function{i}")
-                    for i, f in enumerate(d.pop_item("functions"))
+                    Dict(f, name=f"{d.name}.function{j}")
+                    for j, f in enumerate(d.pop_item("functions"))
                 ]
 
                 o = get_output_obj(
@@ -383,17 +381,18 @@ def run_outputs(
 
             elif "object" in d:
                 ocls = d.pop("object")
+                _print(f"  Output {i}: Object {ocls}")
                 o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
                 d0.update(d)
                 flist = [
-                    Dict(f, name=f"{d.name}.function{i}")
-                    for i, f in enumerate(d.pop_item("functions"))
+                    Dict(f, name=f"{d.name}.function{j}")
+                    for j, f in enumerate(d.pop_item("functions"))
                 ]
 
             else:
                 raise KeyError(
-                    f"Output of type '{ocls}': Please specify either 'output_type' or 'object'"
+                    f"Output {i}: Please specify either 'output_type' or 'object'"
                 )
 
             fres = []
