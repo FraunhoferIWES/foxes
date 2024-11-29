@@ -140,12 +140,177 @@ def read_dict(
 
     return algo, engine
 
+def get_output_obj(
+    ocls,
+    odict,
+    algo,
+    farm_results=None,
+    point_results=None,
+    base_class=Output,
+    extra_sig={},
+):
+    """
+    Create the output object
+
+    Parameters
+    ----------
+    ocls: str
+        Name of the output class
+    odict: dict
+        The output dict
+    algo: foxes.core.Algorithm
+        The algorithm
+    farm_results: xarray.Dataset, optional
+        The farm results
+    point_results: xarray.Dataset, optional
+        The point results
+    base_class: object
+        The output's base class
+    extra_sig: dict
+        Extra function signature check, sets
+        arguments (key) with data (value)
+
+    Returns
+    -------
+    obj: object or None
+        The output object
+
+    :group: input.yaml
+    
+    """
+    cls = new_cls(base_class, ocls)
+    prs = list(signature(cls.__init__).parameters.keys())
+    if "algo" in prs:
+        assert (
+            algo is not None
+        ), f"Output of type '{ocls}' requires algo"
+        odict["algo"] = algo
+    if "farm" in prs:
+        odict["farm"] = algo.farm
+    if "farm_results" in prs:
+        if farm_results is None:
+            print(f"No farm results; skipping output {ocls}")
+            return None
+        odict["farm_results"] = farm_results
+    if "point_results" in prs:
+        odict["point_results"] = point_results
+    for k, v in extra_sig.items():
+        if k in prs:
+            odict[k] = v
+
+    return cls(**odict)
+                
+def _get_object(rlabels, d):
+    """Helper function for object extraction"""
+    d = d.replace("]", "")
+    i0 = d.find("[")
+    if i0 > 0:
+        inds = tuple([int(x) for x in d[i0 + 1 :].split(",")])
+        return rlabels[d[:i0]][inds]
+    else:
+        return rlabels[d]
+            
+def run_obj_function(
+    obj,
+    fdict,
+    algo,
+    rlabels,
+    verbosity=None,
+):
+    """
+    Runs a function of an object
+
+    Parameters
+    ----------
+    obj: object
+        The object
+    fdict: dict
+        The function call dict
+    algo: foxes.core.Algorithm
+        The algorithm
+    rlabels: dict
+        Storage for result variables
+    verbosity: int, optional
+        The verbosity level, 0 = silent
+
+    Returns
+    -------
+    results: object
+        The returns of the function
+    
+    :group: input.yaml
+
+    """
+
+    def _print(*args, level=1, **kwargs):
+        if verbosity is None or verbosity >= level:
+            print(*args, **kwargs)
+
+    fname = fdict.pop_item("function")
+    _print(f"  - {fname}")
+    plt_show = fdict.pop("plt_show", False)
+    plt_close = fdict.pop("plt_close", False)
+    rlbs = fdict.pop("result_labels", None)
+
+    # grab function:
+    ocls = type(obj).__name__
+    assert hasattr(
+        obj, fname
+    ), f"Output {i} of type '{ocls}': Function '{fname}' not found"
+    f = getattr(obj, fname)
+
+    # add required input data objects:
+    prs = list(signature(f).parameters.keys())
+    if "algo" in prs:
+        fdict["algo"] = algo
+    if "farm" in prs:
+        fdict["farm"] = algo.farm
+
+    # replace result labels by objects:
+    for k, d in fdict.items():
+        if isinstance(d, str) and d[0] == "$":
+            fdict[k] = _get_object(rlabels, d)
+
+    # run function:
+    args = fdict.pop("args", tuple())
+    results = f(*args, **fdict)
+
+    # pyplot shortcuts:
+    if plt_show:
+        plt.show()
+    if plt_close:
+        results = None
+        plt.close()
+
+    # store results under result labels:
+    if rlbs is not None:
+
+        def _set_label(rlabels, k, r):
+            if k not in ["", "none", "None", "_", "__"]:
+                assert (
+                    k[0] == "$"
+                ), f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
+                assert (
+                    "[" not in k and "]" not in k and "," not in k
+                ), f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                _print(f"    result label {k}: {type(r).__name__}")
+                rlabels[k] = r
+
+        if isinstance(rlbs, (list, tuple)):
+            for i, k in enumerate(rlbs):
+                _set_label(rlabels, k, results[i])
+        else:
+            _set_label(rlabels, rlbs, results)
+    
+    return results
 
 def run_outputs(
     idict,
     algo=None,
     farm_results=None,
     point_results=None,
+    extra_sig={},
+    ret_rlabels=False,
     verbosity=None,
 ):
     """
@@ -161,9 +326,13 @@ def run_outputs(
         The farm results
     point_results: xarray.Dataset, optional
         The point results
+    extra_sig: dict
+        Extra function signature check, sets
+        arguments (key) with data (value)
+    ret_rlabels: bool
+        Flag for returning results variables
     verbosity: int, optional
-        Force a verbosity level, 0 = silent, overrules
-        settings from idict
+        The verbosity level, 0 = silent
 
     Returns
     -------
@@ -171,6 +340,8 @@ def run_outputs(
         For each output enty, a tuple (dict, results),
         where results is a tuple that represents one
         entry per function call
+    rlabels: dict, optional
+        The results variables
 
     :group: input.yaml
 
@@ -181,6 +352,7 @@ def run_outputs(
             print(*args, **kwargs)
 
     out = []
+    rlabels = Dict(name="result_labels")
     if "outputs" in idict:
         _print("Running outputs")
         odicts = [
@@ -188,47 +360,22 @@ def run_outputs(
             for i, odict in enumerate(idict["outputs"])
         ]
 
-        rlabels = Dict(name="result_labels")
-
-        def _get_object(rlabels, d):
-            d = d.replace("]", "")
-            i0 = d.find("[")
-            if i0 > 0:
-                inds = tuple([int(x) for x in d[i0 + 1 :].split(",")])
-                return rlabels[d[:i0]][inds]
-            else:
-                return rlabels[d]
-
-        for i, d in enumerate(odicts):
-
+        for d in odicts:
             if "output_type" in d:
                 ocls = d.pop_item("output_type")
-                _print(f"  Output {i}: {ocls}")
+                _print(f"  Output type '{ocls}'")
                 d0 = dict(output_type=ocls)
                 d0.update(d)
+
                 flist = [
                     Dict(f, name=f"{d.name}.function{i}")
                     for i, f in enumerate(d.pop_item("functions"))
                 ]
-                cls = new_cls(Output, ocls)
-                prs = list(signature(cls.__init__).parameters.keys())
-                if "algo" in prs:
-                    assert (
-                        algo is not None
-                    ), f"Output {i} of type '{ocls}' requires algo"
-                    d["algo"] = algo
-                if "farm" in prs:
-                    d["farm"] = algo.farm
-                if "farm_results" in prs:
-                    if farm_results is None:
-                        print(f"No farm results; skipping output {ocls}")
-                        for fdict in flist:
-                            out += (d0, None)
-                        continue
-                    d["farm_results"] = farm_results
-                if "point_results" in prs:
-                    d["point_results"] = point_results
-                o = cls(**d)
+
+                o = get_output_obj(ocls, d, algo, farm_results, point_results, extra_sig=extra_sig)
+                if o is None:
+                    out.append((d0, None))
+                    continue
 
             elif "object" in d:
                 ocls = d.pop("object")
@@ -242,71 +389,16 @@ def run_outputs(
 
             else:
                 raise KeyError(
-                    f"Output {i} of type '{ocls}': Please specify either 'output_type' or 'object'"
+                    f"Output of type '{ocls}': Please specify either 'output_type' or 'object'"
                 )
 
             fres = []
             for fdict in flist:
-                fname = fdict.pop_item("function")
-                _print(f"  - {fname}")
-                plt_show = fdict.pop("plt_show", False)
-                plt_close = fdict.pop("plt_close", False)
-                rlbs = fdict.pop("result_labels", None)
-
-                # grab function:
-                assert hasattr(
-                    o, fname
-                ), f"Output {i} of type '{ocls}': Function '{fname}' not found"
-                f = getattr(o, fname)
-
-                # add required input data objects:
-                prs = list(signature(f).parameters.keys())
-                if "algo" in prs:
-                    fdict["algo"] = algo
-                if "farm" in prs:
-                    fdict["farm"] = algo.farm
-
-                # replace result labels by objects:
-                for k, d in fdict.items():
-                    if isinstance(d, str) and d[0] == "$":
-                        fdict[k] = _get_object(rlabels, d)
-
-                # run function:
-                args = fdict.pop("args", tuple())
-                results = f(*args, **fdict)
-
-                # pyplot shortcuts:
-                if plt_show:
-                    plt.show()
-                if plt_close:
-                    results = None
-                    plt.close()
-
-                # store results under result labels:
-                if rlbs is not None:
-
-                    def _set_label(rlabels, k, r):
-                        if k not in ["", "none", "None", "_", "__"]:
-                            assert (
-                                k[0] == "$"
-                            ), f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
-                            assert (
-                                "[" not in k and "]" not in k and "," not in k
-                            ), f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
-                            _print(f"    result label {k}: {type(r).__name__}")
-                            rlabels[k] = r
-
-                    if isinstance(rlbs, (list, tuple)):
-                        for i, k in enumerate(rlbs):
-                            _set_label(rlabels, k, results[i])
-                    else:
-                        _set_label(rlabels, rlbs, results)
-
+                results = run_obj_function(o, fdict, algo, rlabels, verbosity)
                 fres.append(results)
             out.append((d0, fres))
 
-    return out
-
+    return out if not ret_rlabels else out, rlabels
 
 def run_dict(idict, *args, verbosity=None, **kwargs):
     """
@@ -371,7 +463,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         out += (point_results,)
 
     # run outputs:
-    out += (run_outputs(idict, algo, farm_results, point_results, verbosity),)
+    out += (run_outputs(idict, algo, farm_results, point_results, verbosity=verbosity),)
 
     # shutdown engine, if created above:
     if engine is not None:
