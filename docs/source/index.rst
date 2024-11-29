@@ -5,7 +5,7 @@
 .. versionchanged:: 1.2.1
     Output `FarmResultsEval`: Renaming contraction rule `mean` as `weights`. Usually this
     is the contraction rule of choice for AEP and other weighted mean computations wrt states.
-    Also introducing the weights ignoring rule `mean_no_weights`, for special cases and debugging.
+    Also introducing the rule `mean_no_weights`, for special cases and debugging.
 
 .. versionadded:: 1.2
     Running *foxes* from :ref:`Input parameter files <Input parameter files>` in *yaml* format,
