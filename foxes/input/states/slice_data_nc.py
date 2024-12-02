@@ -6,7 +6,7 @@ from scipy.interpolate import interpn
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
-from foxes.config import config, get_path
+from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -145,7 +145,7 @@ class SliceDataNC(States):
             if "*" in str(self.data_source):
                 pass
             else:
-                self.__data_source = get_path(self.data_source)
+                self.__data_source = get_input_path(self.data_source)
                 if not self.data_source.is_file():
                     self.__data_source = StaticData().get_file_path(
                         STATES, self.data_source.name, check_raw=False
@@ -161,7 +161,7 @@ class SliceDataNC(States):
                     )
 
             def _read_ds():
-                self._data_source = get_path(self.data_source)
+                self._data_source = get_input_path(self.data_source)
                 if self.data_source.is_file():
                     return xr.open_dataset(self.data_source)
                 else:

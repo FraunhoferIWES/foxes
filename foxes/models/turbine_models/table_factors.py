@@ -4,7 +4,7 @@ from scipy.interpolate import interpn
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-from foxes.config import config, get_path
+from foxes.config import config, get_input_path
 
 
 class TableFactors(TurbineModel):
@@ -106,7 +106,7 @@ class TableFactors(TurbineModel):
         if isinstance(self.data_source, pd.DataFrame):
             self._data = self.data_source
         else:
-            fpath = get_path(self.data_source)
+            fpath = get_input_path(self.data_source)
             if verbosity > 0:
                 print(f"{self.name}: Reading file {fpath}")
             rpars = dict(index_col=0)

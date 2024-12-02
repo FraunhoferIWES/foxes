@@ -74,14 +74,17 @@ class Algorithm(Model):
                     )
             elif "engine" in engine_pars:
                 engine_pars["engine_type"] = engine_pars.pop("engine")
-            v = engine_pars.pop("verbosity", verbosity)
-            try:
-                e = Engine.new(verbosity=v, **engine_pars)
-            except TypeError as e:
-                print(f"\nError while interpreting engine_pars {engine_pars}\n")
-                raise e
-            self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
-            e.initialize()
+            
+            if "engine_type" in engine_pars:
+                try:
+                    e = Engine.new(verbosity=verbosity, **engine_pars)
+                except TypeError as e:
+                    print(f"\nError while interpreting engine_pars {engine_pars}\n")
+                    raise e
+                self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
+                e.initialize()
+            else:
+                raise KeyError(f"{self.name}: Found unsupported parameters {list(engine_pars.keys())}")
 
     @property
     def farm(self):

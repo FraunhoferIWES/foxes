@@ -4,7 +4,7 @@ import pandas as pd
 from .PCt_from_two import PCtFromTwo
 from foxes.data import parse_Pct_two_files
 from foxes.utils import PandasFileHelper
-from foxes.config import config, get_path
+from foxes.config import config, get_input_path
 import foxes.constants as FC
 
 
@@ -56,8 +56,8 @@ class CpCtFromTwo(PCtFromTwo):
             data_source_ct, pd.DataFrame
         ):
             pars = parse_Pct_two_files(data_source_cp, data_source_ct)
-            path_cp = get_path(data_source_cp)
-            path_ct = get_path(data_source_ct)
+            path_cp = get_input_path(data_source_cp)
+            path_ct = get_input_path(data_source_ct)
             data_cp = PandasFileHelper.read_file(path_cp, **pd_file_read_pars_cp)
             data_ct = PandasFileHelper.read_file(path_ct, **pd_file_read_pars_ct)
         else:

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from foxes.config import config, get_path
+from foxes.config import config, get_output_path
 from foxes.utils import PandasFileHelper, new_instance, all_subclasses
 
 
@@ -34,7 +34,7 @@ class Output:
             Modifies file names by f(fname)
 
         """
-        self.out_dir = get_path(out_dir) if out_dir is not None else config.out_dir
+        self.out_dir = get_output_path(out_dir) if out_dir is not None else config.output_dir
         self.out_fname_fun = out_fname_fun
 
         if not self.out_dir.is_dir():
@@ -59,7 +59,7 @@ class Output:
         fnm = Path(fname)
         if self.out_fname_fun is not None:
             fnm = self.out_fname_fun(fnm)
-        return self.out_dir / fnm if self.out_dir is not None else get_path(fnm)
+        return self.out_dir / fnm if self.out_dir is not None else get_output_path(fnm)
 
     def write(self, file_name, data, format_col2var={}, format_dict={}, **kwargs):
         """

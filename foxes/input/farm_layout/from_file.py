@@ -1,5 +1,5 @@
 from foxes.data import FARM, StaticData
-from foxes.config import get_path
+from foxes.config import get_input_path
 
 from .from_json import add_from_json
 from .from_csv import add_from_csv
@@ -31,7 +31,7 @@ def add_from_file(farm, file_path, *args, verbosity=1, dbook=None, **kwargs):
 
     """
 
-    fpath = get_path(file_path)
+    fpath = get_input_path(file_path)
     dbook = StaticData() if dbook is None else dbook
 
     if not fpath.is_file():

@@ -3,7 +3,7 @@ import pandas as pd
 
 from foxes.core import TurbineModel
 from foxes.utils import PandasFileHelper
-from foxes.config import get_path
+from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -91,7 +91,7 @@ class SectorManagement(TurbineModel):
         if isinstance(self.source, pd.DataFrame):
             data = self.source
         else:
-            fpath = get_path(self.source)
+            fpath = get_input_path(self.source)
             if verbosity > 0:
                 print(f"{self.name}: Reading file {fpath}")
             data = PandasFileHelper.read_file(fpath, **self._rpars)

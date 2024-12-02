@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from foxes.config import config, get_path
+from foxes.config import config, get_output_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -99,7 +99,7 @@ def write_random_abl_states(
 
     """
 
-    fpath = get_path(file_path)
+    fpath = get_output_path(file_path)
     if verbosity:
         print("Writing file", fpath)
 

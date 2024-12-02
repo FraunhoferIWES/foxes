@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from foxes.config import get_path
+from foxes.config import get_input_path
 
 from .PCt_file import PCtFile
 
@@ -57,7 +57,7 @@ class TBLFile(PCtFile):
             Additional parameters for PCtFile class
 
         """
-        fpath = get_path(tbl_file)
+        fpath = get_input_path(tbl_file)
         assert fpath.suffix == ".tbl", f"Expecting *.tbl file, got '{tbl_file}'"
 
         meta = np.genfromtxt(fpath, skip_header=1, max_rows=1)

@@ -20,8 +20,9 @@ def read_dict(
     engine_pars=None,
     iterative=None,
     verbosity=None,
-    work_dir=".",
-    out_dir=".",
+    work_dir=None,
+    input_dir=None,
+    output_dir=None,
     **algo_pars,
 ):
     """
@@ -48,9 +49,11 @@ def read_dict(
     verbosity: int, optional
         Force a verbosity level, 0 = silent, overrules
         settings from idict
-    work_dir: str or pathlib.Path
+    work_dir: str or pathlib.Path, optional
         Path to the working directory
-    out_dir: str or pathlib.Path
+    input_dir: str or pathlib.Path, optional
+        The default input directory
+    output_dir: str or pathlib.Path, optional
         The default output directory
     algo_pars: dict, optional
         Additional parameters for the algorithm, overrules
@@ -73,9 +76,11 @@ def read_dict(
 
     # set working directory:
     config[FC.WORK_DIR] = work_dir
-    config[FC.OUT_DIR] = out_dir
+    config[FC.INPUT_DIR] = input_dir
+    config[FC.OUTPUT_DIR] = output_dir
     _print("Working directory:", config.work_dir)
-    _print("Output directory :", config.out_dir)
+    _print("Input directory :", config.output_dir)
+    _print("Output directory :", config.output_dir)
 
     # create states:
     if states is None:

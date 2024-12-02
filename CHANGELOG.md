@@ -698,6 +698,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.3
 
-
+- Config:
+  - Now three directories are defined: `work_dir`, `input_dir`, `output_dir`. If not defined, falling back to `work_dir`, defaulting to cwd.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.3](https://github.com/FraunhoferIWES/foxes/commits/v1.2.3)

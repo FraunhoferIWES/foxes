@@ -4,7 +4,7 @@ import pandas as pd
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
-from foxes.config import get_path
+from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -195,7 +195,7 @@ class PCtFromTwo(TurbineType):
         if isinstance(self.source_P, pd.DataFrame):
             self._data_P = self.source_P
         else:
-            fpath = get_path(self.source_P)
+            fpath = get_input_path(self.source_P)
             if not fpath.is_file():
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_P, check_raw=False
@@ -210,7 +210,7 @@ class PCtFromTwo(TurbineType):
         if isinstance(self.source_ct, pd.DataFrame):
             self._data_ct = self.source_ct
         else:
-            fpath = get_path(self.source_ct)
+            fpath = get_input_path(self.source_ct)
             if not fpath.is_file():
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=False

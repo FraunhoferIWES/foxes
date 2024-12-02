@@ -8,7 +8,7 @@ from foxes.utils import wd2uv, uv2wd, import_module
 from foxes.data import STATES, StaticData
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.config import config, get_path
+from foxes.config import config, get_input_path
 
 
 class FieldDataNC(States):
@@ -150,7 +150,7 @@ class FieldDataNC(States):
             if "*" in str(self.data_source):
                 pass
             else:
-                self.__data_source = get_path(self.data_source)
+                self.__data_source = get_input_path(self.data_source)
                 if not self.data_source.is_file():
                     self.__data_source = StaticData().get_file_path(
                         STATES, self.data_source.name, check_raw=False
@@ -166,7 +166,7 @@ class FieldDataNC(States):
                     )
 
             def _read_ds():
-                fpath = get_path(self.data_source)
+                fpath = get_input_path(self.data_source)
                 if fpath.is_file():
                     return xr.open_dataset(fpath)
                 else:

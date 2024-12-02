@@ -111,7 +111,7 @@ def read_windio(wio_dict, verbosity=1):
 
     Returns
     -------
-    idict: foxes.utils.Dict
+    idict: foxes.utils.Dict or dict
         The foxes input data dictionary
     states: foxes.core.States
         The states object
@@ -119,7 +119,9 @@ def read_windio(wio_dict, verbosity=1):
         The wind farm
     mbook: foxes.models.ModelBook
         The model book
-
+    odir: pathlib.Path
+        The output directory
+        
     :group: input.yaml.windio
 
     """
@@ -127,6 +129,9 @@ def read_windio(wio_dict, verbosity=1):
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
             print(*args, **kwargs)
+
+    if not isinstance(wio_dict, Dict):
+        wio_dict = Dict(wio_dict, name="windio")
 
     _print(f"Reading windio data")
     _print("  Name:", wio_dict.pop("name", None))
@@ -171,7 +176,7 @@ def foxes_windio():
         "yml_file",
         help="The windio yaml file",
     )
-    parser.add_argument("-o", "--out_dir", help="The output directory", default=None)
+    parser.add_argument("-o", "--output_dir", help="The output directory", default=None)
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
@@ -249,7 +254,7 @@ def foxes_windio():
     wio = Dict(yml_utils.load_yaml(wio_file), name="windio")
     idict, states, farm, mbook, odir = read_windio(wio, verbosity=v)
 
-    if args.out_dir is not None:
+    if args.output_dir is not None:
         odir = args.odir
 
     run_dict(
@@ -263,7 +268,7 @@ def foxes_windio():
         wake_frame=args.frame,
         engine_pars=epars,
         iterative=args.iterative,
-        work_dir=wio_file.parent,
-        out_dir=odir,
+        input_dir=wio_file.parent,
+        output_dir=odir,
         verbosity=args.verbosity,
     )

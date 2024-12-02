@@ -189,7 +189,12 @@ WORK_DIR = "work_dir"
 :group: foxes.constants
 """
 
-OUT_DIR = "out_dir"
+INPUT_DIR = "in_dir"
+"""Identifier for the input base directory
+:group: foxes.constants
+"""
+
+OUTPUT_DIR = "out_dir"
 """Identifier for the default output directory
 :group: foxes.constants
 """

@@ -5,7 +5,7 @@ from pathlib import Path
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_file_name
-from foxes.config import get_path
+from foxes.config import get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -174,7 +174,7 @@ class PCtFile(TurbineType):
         if isinstance(self.source, pd.DataFrame):
             data = self.source
         else:
-            fpath = get_path(self.source)
+            fpath = get_input_path(self.source)
             if not fpath.is_file():
                 if verbosity > 0:
                     print(

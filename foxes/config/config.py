@@ -19,7 +19,8 @@ class Config(Dict):
                 FC.DTYPE: np.float64,
                 FC.ITYPE: np.int64,
                 FC.WORK_DIR: Path("."),
-                FC.OUT_DIR: Path("."),
+                FC.INPUT_DIR: None,
+                FC.OUTPUT_DIR: None,
             },
             name="config",
         )
@@ -62,12 +63,33 @@ class Config(Dict):
 
         """
         pth = self.get_item(FC.WORK_DIR)
-        if not isinstance(pth, Path):
+        if self[FC.WORK_DIR] is None:
+            self[FC.WORK_DIR] = Path(".")
+        elif not isinstance(pth, Path):
             self[FC.WORK_DIR] = Path(pth)
         return self[FC.WORK_DIR]
 
     @property
-    def out_dir(self):
+    def input_dir(self):
+        """
+        The input base directory
+
+        Returns
+        -------
+        pth: pathlib.Path
+            Path to the input base directory
+
+        """
+        if self[FC.INPUT_DIR] is None:
+            return self.work_dir
+        else:
+            pth = self.get_item(FC.INPUT_DIR)
+            if not isinstance(pth, Path):
+                self[FC.INPUT_DIR] = Path(pth)
+            return self[FC.INPUT_DIR]
+    
+    @property
+    def output_dir(self):
         """
         The default output directory
 
@@ -77,7 +99,13 @@ class Config(Dict):
             Path to the default output directory
 
         """
-        return get_path(self.get_item(FC.OUT_DIR))
+        if self[FC.OUTPUT_DIR] is None:
+            return self.work_dir
+        else:
+            pth = self.get_item(FC.OUTPUT_DIR)
+            if not isinstance(pth, Path):
+                self[FC.OUTPUT_DIR] = Path(pth)
+            return self[FC.OUTPUT_DIR]
 
 
 config = Config()
@@ -86,10 +114,37 @@ config = Config()
 """
 
 
-def get_path(pth):
+def get_path(pth, base):
+    """
+    Gets path object, respecting the base directory
+
+    Parameters
+    ----------
+    pth: str or pathlib.Path
+        The path, optionally relative to base
+    base: pathlib.Path
+        The base directory
+
+    Returns
+    -------
+    out: pathlib.Path
+        The path, absolute or relative to base directory
+
+    :group: foxes.config
+
+    """
+    if not isinstance(pth, Path):
+        pth = Path(pth)
+    if pth.is_absolute():
+        return pth
+    else:
+        return base / pth
+
+
+def get_input_path(pth):
     """
     Gets path object, respecting the configurations
-    work directory
+    input directory
 
     Parameters
     ----------
@@ -99,15 +154,13 @@ def get_path(pth):
     Returns
     -------
     out: pathlib.Path
-        The path, absolute or relative to working directory
+        The path, absolute or relative to input directory
         from config
 
     :group: foxes.config
 
     """
-    if not isinstance(pth, Path):
-        pth = Path(pth)
-    return pth if pth.is_absolute() else config.work_dir / pth
+    return get_path(pth, base=config.input_dir)
 
 
 def get_output_path(pth):
@@ -129,6 +182,4 @@ def get_output_path(pth):
     :group: foxes.config
 
     """
-    if not isinstance(pth, Path):
-        pth = Path(pth)
-    return pth if pth.is_absolute() else config.out_dir / pth
+    return get_path(pth, base=config.output_dir)

@@ -5,7 +5,7 @@ from scipy.interpolate import interpn
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
-from foxes.config import config, get_path
+from foxes.config import config, get_input_path
 import foxes.variables as FV
 
 
@@ -183,7 +183,7 @@ class WsRho2PCtFromTwo(TurbineType):
         if isinstance(self.source_P, pd.DataFrame):
             data = self.source_P
         else:
-            fpath = get_path(self.source_P)
+            fpath = get_input_path(self.source_P)
             if not fpath.is_file():
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_P, check_raw=False
@@ -202,7 +202,7 @@ class WsRho2PCtFromTwo(TurbineType):
         if isinstance(self.source_ct, pd.DataFrame):
             data = self.source_ct
         else:
-            fpath = get_path(self.source_ct)
+            fpath = get_input_path(self.source_ct)
             if not fpath.is_file():
                 fpath = algo.dbook.get_file_path(
                     PCTCURVE, self.source_ct, check_raw=False
