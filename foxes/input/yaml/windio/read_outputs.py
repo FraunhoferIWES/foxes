@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
@@ -7,7 +5,7 @@ import foxes.constants as FC
 from .read_fields import foxes2wio
 
 
-def _read_turbine_outputs(wio_outs, odict, verbosity):
+def _read_turbine_outputs(wio_outs, olist, verbosity):
     """Reads the turbine outputs request"""
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get(
         "report", True
@@ -36,7 +34,8 @@ def _read_turbine_outputs(wio_outs, odict, verbosity):
             }
         )
 
-        odict["StateTurbineTable"] = Dict(
+        olist.append(Dict(
+            output_type="StateTurbineTable",
             functions=[
                 dict(
                     name="get_dataset",
@@ -47,11 +46,11 @@ def _read_turbine_outputs(wio_outs, odict, verbosity):
                     verbosity=verbosity,
                 )
             ],
-            name=odict.name + ".StateTurbineTable",
-        )
+            name=f"outputs.output{len(olist)}.StateTurbineTable",
+        ))
 
 
-def _read_flow_field(wio_outs, odict, verbosity):
+def _read_flow_field(wio_outs, olist, verbosity):
     """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get("report", True):
         flow_field = Dict(wio_outs["flow_field"], name=wio_outs.name + ".flow_field")
@@ -89,7 +88,8 @@ def _read_flow_field(wio_outs, odict, verbosity):
             )
 
         if xy_sampling == "default":
-            odict["SliceData"] = Dict(
+            olist.append(Dict(
+                output_type="SliceData",
                 verbosity_delta=3,
                 functions=[
                     dict(
@@ -103,15 +103,15 @@ def _read_flow_field(wio_outs, odict, verbosity):
                         verbosity=verbosity,
                     )
                 ],
-                name=odict.name + ".SliceData",
-            )
+                name=f"outputs.output{len(olist)}.SliceData",
+            ))
         else:
             raise NotImplementedError(
                 f"xy_sampling '{xy_sampling}' is not supported (yet)"
             )
 
 
-def read_outputs(wio_outs, odict, verbosity=1):
+def read_outputs(wio_outs, olist, verbosity=1):
     """
     Reads the windio outputs
 
@@ -119,8 +119,8 @@ def read_outputs(wio_outs, odict, verbosity=1):
     ----------
     wio_outs: foxes.utils.Dict
         The windio output data dict
-    odict: foxes.utils.Dict
-        The foxes output dictionary
+    olist: list of foxes.utils.Dict
+        The foxes output dictionary list
     verbosity: int
         The verbosity level, 0=silent
 
@@ -139,9 +139,9 @@ def read_outputs(wio_outs, odict, verbosity=1):
         print("    Contents  :", [k for k in wio_outs.keys()])
 
     # read turbine_outputs:
-    _read_turbine_outputs(wio_outs, odict, verbosity)
+    _read_turbine_outputs(wio_outs, olist, verbosity)
 
     # read flow field:
-    _read_flow_field(wio_outs, odict, verbosity)
+    _read_flow_field(wio_outs, olist, verbosity)
 
     return odir

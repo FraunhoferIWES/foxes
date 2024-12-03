@@ -381,7 +381,7 @@ def read_attributes(wio, idict, mbook, verbosity=1):
     _read_analysis(wio_ana, idict, mbook, verbosity)
 
     # outputs:
-    odict = idict["outputs"]
+    odict = []
     odir = None
     if "outputs" in wio_attrs:
         outputs = Dict(wio_attrs["outputs"], name=wio_attrs.name + ".outputs")

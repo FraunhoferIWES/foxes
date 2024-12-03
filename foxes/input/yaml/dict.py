@@ -75,12 +75,18 @@ def read_dict(
             print(*args, **kwargs)
 
     # set working directory:
-    config[FC.WORK_DIR] = work_dir
-    config[FC.INPUT_DIR] = input_dir
-    config[FC.OUTPUT_DIR] = output_dir
-    _print("Working directory:", config.work_dir)
-    _print("Input directory :", config.output_dir)
-    _print("Output directory :", config.output_dir)
+    l = 0
+    for c, d in zip(
+        [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], 
+        [work_dir, input_dir, output_dir]
+    ):
+        if d is not None:
+            config[c] = d
+            l = max(l, len(str(d)))
+    _print("\n--------------------- Reading foxes parameter dict ---------------------")
+    _print("Working directory  :", config.work_dir)
+    _print("Input directory    :", config.input_dir)
+    _print("Output directory   :", config.output_dir)
 
     # create states:
     if states is None:
@@ -132,16 +138,18 @@ def read_dict(
 
     # create algorithm:
     if algo is None:
-        _print("Creating algorithm")
         adict = idict.get_item("algorithm")
         if iterative is not None and iterative:
             adict["algo_type"] = "Iterative"
+        _print("Creating algorithm :", adict["algo_type"])
         adict.update(dict(farm=farm, states=states, mbook=mbook))
         if verbosity is not None:
             adict["verbosity"] = verbosity - 1
         if algo_pars is not None:
             adict.update({v: d for v, d in algo_pars.items() if d is not None})
         algo = Algorithm.new(**adict)
+    
+    _print("------------------------------------------------------------------------\n")
 
     return algo, engine
 
@@ -343,7 +351,7 @@ def run_outputs(
     -------
     outputs: list of tuple
         For each output enty, a tuple (dict, results),
-        where results is a tuple that represents one
+        where results is a list that represents one
         entry per function call
     rlabels: dict, optional
         The results variables
@@ -433,7 +441,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         The point results
     outputs: list of tuple
         For each output enty, a tuple (dict, results),
-        where results is a tuple that represents one
+        where results is a list that represents one
         entry per function call
 
     :group: input.yaml
