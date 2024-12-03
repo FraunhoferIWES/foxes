@@ -83,6 +83,7 @@ class ModelBook:
         """
         self.point_models = FDict(name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
+        self.point_models["ustar2ti"] = fm.point_models.Ustar2TI()
 
         self.rotor_models = FDict(name="rotor_models")
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor()

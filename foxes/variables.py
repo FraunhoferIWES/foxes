@@ -261,6 +261,11 @@ MOL = "MOL"
 :group: foxes.variables
 """
 
+USTAR = "USTAR"
+""" The friction velocity in m/s
+:group: foxes.variables
+"""
+
 SHEAR = "shear"
 """ The shear exponent
 :group: foxes.variables
