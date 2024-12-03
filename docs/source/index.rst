@@ -2,6 +2,9 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionchanged:: 1.2.3
+    Rmoving states class `SliceDataNC`, since now `FieldDataNC` can also handle data without height dependency
+
 .. versionchanged:: 1.2.1
     Output `FarmResultsEval`: Renaming contraction rule `mean` as `weights`. Usually this
     is the contraction rule of choice for AEP and other weighted mean computations wrt states.

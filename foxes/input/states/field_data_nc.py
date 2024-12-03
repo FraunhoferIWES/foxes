@@ -98,7 +98,7 @@ class FieldDataNC(States):
             The x coordinate name in the data
         y_coord: str
             The y coordinate name in the data
-        h_coord: str
+        h_coord: str, optional
             The height coordinate name in the data
         pre_load: bool
             Flag for loading all data into memory during
@@ -219,7 +219,7 @@ class FieldDataNC(States):
         reading
         """
         for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
-            if not c in ds:
+            if c is not None and c not in ds:
                 raise KeyError(
                     f"States '{self.name}': Missing coordinate '{c}' in data"
                 )
@@ -250,13 +250,13 @@ class FieldDataNC(States):
         """
         Helper function for data extraction
         """
-        x = ds[self.x_coord].to_numpy()
-        y = ds[self.y_coord].to_numpy()
-        h = ds[self.h_coord].to_numpy()
-        n_x = len(x)
-        n_y = len(y)
-        n_h = len(h)
-        n_sts = ds.sizes[self.states_coord]
+        llst = []
+        for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
+            if c is not None:
+                llst.append(ds.sizes[c])
+            else:
+                llst.append(1)
+        n_sts, n_x, n_y, n_h = llst
 
         cor_shxy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
         cor_shyx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
@@ -278,8 +278,9 @@ class FieldDataNC(States):
             elif ds[ncv].dims == cor_s:
                 vars_s.append(v)
             else:
+                expc = [c for c in [cor_shxy, cor_shyx, cor_sxy, cor_syx, cor_sh, cor_s] if None not in c]
                 raise ValueError(
-                    f"States '{self.name}': Wrong coordinate order for variable '{ncv}': Found {ds[ncv].dims}, expecting {cor_shxy}, {cor_shyx}, {cor_sxy}, {cor_syx}, {cor_sh} or {cor_s}"
+                    f"States '{self.name}': Wrong coordinates for variable '{ncv}': Found {ds[ncv].dims}, expecting one of {expc}"
                 )
 
         data = np.zeros(
@@ -398,9 +399,13 @@ class FieldDataNC(States):
 
             ds = self.data_source
 
-            h = ds[self.h_coord].to_numpy()
-            y = ds[self.y_coord].to_numpy()
-            x = ds[self.x_coord].to_numpy()
+            dlst = []
+            for c in [self.h_coord, self.y_coord, self.x_coord]:
+                if c is not None:
+                    dlst.append(np.atleast_1d(ds[c].to_numpy()))
+                else:
+                    dlst.append(np.array([0], dtype=config.dtype_double))
+            h, y, x = dlst
             v = list(self._dkys.keys())
             coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
             data = self._get_data(ds, verbosity)
@@ -603,9 +608,13 @@ class FieldDataNC(States):
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
 
-            x = ds[self.x_coord].to_numpy()
-            y = ds[self.y_coord].to_numpy()
-            h = ds[self.h_coord].to_numpy()
+            dlst = []
+            for c in [self.h_coord, self.y_coord, self.x_coord]:
+                if c is not None:
+                    dlst.append(np.atleast_1d(ds[c].to_numpy()))
+                else:
+                    dlst.append(np.array([0], dtype=config.dtype_double))
+            h, y, x = dlst
             data = self._get_data(ds, verbosity=0)
 
             del ds
@@ -634,6 +643,12 @@ class FieldDataNC(States):
         pts = pts.reshape(n_states * n_pts, 4)
         pts = np.flip(pts, axis=1)
         gvars = (sts, h, y, x)
+
+        # reset None coordinate data, since that should not be interpolated:
+        crds = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
+        for i, (c, g) in enumerate(zip(crds, gvars)):
+            if c is None:
+                pts[..., i] = g[0]
 
         # interpolate nan values:
         if self.interp_nans and np.any(np.isnan(data)):

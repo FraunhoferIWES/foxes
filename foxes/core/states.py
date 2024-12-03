@@ -277,7 +277,7 @@ class ExtendedStates(States):
             The output variable names
 
         """
-        return self.states.output_point_vars(algo)
+        return self.pmodels.output_point_vars(algo)
 
     def calculate(self, algo, mdata, fdata, tdata):
         """

@@ -700,5 +700,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Config:
   - Now three directories are defined: `work_dir`, `input_dir`, `output_dir`. If not defined, falling back to `work_dir`, defaulting to cwd.
+- Inputs:
+  - Removing `SliceDataNC`, since now `FieldDataNC` can handle data without height dependency
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.3](https://github.com/FraunhoferIWES/foxes/commits/v1.2.3)
