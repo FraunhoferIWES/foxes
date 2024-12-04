@@ -176,6 +176,39 @@ class FarmController(FarmDataModel):
 
         return [m.name for m in tmodels], tmsels
 
+    def find_turbine_types(self, algo):
+        """
+        Collects the turbine types.
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        """
+
+        # check turbine models, and find turbine types and pre/post-rotor models:
+        self.turbine_types = [None for t in algo.farm.turbines]
+        for ti, t in enumerate(algo.farm.turbines):
+            for mname in t.models:
+                if mname in algo.mbook.turbine_types:
+                    m = algo.mbook.turbine_types[mname]
+                    if not isinstance(m, TurbineType):
+                        raise TypeError(
+                            f"Model {mname} type {type(m).__name__} is not derived from {TurbineType.__name__}"
+                        )
+                    if self.turbine_types[ti] is not None:
+                        raise TypeError(
+                            f"Two turbine type models found for turbine {ti}: {self.turbine_types[ti].name} and {mname}"
+                        )
+                    m.name = mname
+                    self.turbine_types[ti] = m
+
+            if self.turbine_types[ti] is None:
+                raise ValueError(
+                    f"Turbine {ti}, {t.name}: Missing a turbine type model among models {t.models}"
+                )
+
     def collect_models(self, algo):
         """
         Analyze and gather turbine models, based on the
@@ -188,22 +221,18 @@ class FarmController(FarmDataModel):
 
         """
 
+        if self.turbine_types is None:
+            self.find_turbine_types(algo)
+
         # check turbine models, and find turbine types and pre/post-rotor models:
-        self.turbine_types = [None for t in algo.farm.turbines]
         prer_models = [[] for t in algo.farm.turbines]
         postr_models = [[] for t in algo.farm.turbines]
+        ttypes = {m.name: m for m in self.turbine_types}
         for ti, t in enumerate(algo.farm.turbines):
             prer = None
             for mi, mname in enumerate(t.models):
-                istype = False
-                if mname in algo.mbook.turbine_types:
-                    m = algo.mbook.turbine_types[mname]
-                    if not isinstance(m, TurbineType):
-                        raise TypeError(
-                            f"Model {mname} type {type(m).__name__} is not derived from {TurbineType.__name__}"
-                        )
-                    models = [m]
-                    istype = True
+                if mname in ttypes:
+                    models = [ttypes[mname]]
                 elif mname in algo.mbook.turbine_models:
                     m = algo.mbook.turbine_models[mname]
                     models = m.models if isinstance(m, FarmDataModelList) else [m]
@@ -212,21 +241,14 @@ class FarmController(FarmDataModel):
                             raise TypeError(
                                 f"Model {mname} type {type(mm).__name__} is not derived from {TurbineModel.__name__}"
                             )
+                    m.name = mname
                 else:
                     raise KeyError(
                         f"Model {mname} not found in model book types or models"
                     )
 
-                if istype:
-                    if self.turbine_types[ti] is None:
-                        self.turbine_types[ti] = m
-                    else:
-                        raise ValueError(
-                            f"Turbine {ti}, {t.name}: Multiple turbine types found in self.turbine_models list, {self.turbine_types[ti].name} and {mname}"
-                        )
-
+                prer = None
                 for m in models:
-                    m.name = mname
                     if prer is None:
                         prer = m.pre_rotor
                     elif not prer and m.pre_rotor:
@@ -237,11 +259,6 @@ class FarmController(FarmDataModel):
                         prer_models[ti].append(m)
                     else:
                         postr_models[ti].append(m)
-
-            if self.turbine_types[ti] is None:
-                raise ValueError(
-                    f"Turbine {ti}, {t.name}: Missing a turbine type model among models {t.models}"
-                )
 
         # analyze models:
         mnames_pre, tmsels_pre = self._analyze_models(

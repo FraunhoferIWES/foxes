@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interpn
+from functools import partial
 
 from foxes.core import States
 from foxes.utils import wd2uv, uv2wd, import_module
@@ -52,6 +53,9 @@ class FieldDataNC(States):
         Linearly interpolate nan values
     interpn_pars: dict, optional
         Additional parameters for scipy.interpolate.interpn
+    bounds_extra_space: float or str
+        The extra space, either float in m,
+        or str for units of D, e.g. '2.5D'
 
     :group: input.states
 
@@ -73,7 +77,7 @@ class FieldDataNC(States):
         sel=None,
         isel=None,
         interp_nans=False,
-        verbosity=1,
+        bounds_extra_space="1.5D",
         **interpn_pars,
     ):
         """
@@ -113,8 +117,9 @@ class FieldDataNC(States):
             Subset selection via xr.Dataset.isel()
         interp_nans: bool
             Linearly interpolate nan values
-        verbosity: int
-            Verbosity level for pre_load file reading
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
         interpn_pars: dict, optional
             Additional parameters for scipy.interpolate.interpn
 
@@ -130,10 +135,11 @@ class FieldDataNC(States):
         self.weight_ncvar = weight_ncvar
         self.pre_load = pre_load
         self.time_format = time_format
-        self.sel = sel
-        self.isel = isel
+        self.sel = sel if sel is not None else {}
+        self.isel = isel if isel is not None else {}
         self.interpn_pars = interpn_pars
         self.interp_nans = interp_nans
+        self.bounds_extra_space = bounds_extra_space
 
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
@@ -144,57 +150,6 @@ class FieldDataNC(States):
         self.__data_source = data_source
         self.__weights = None
         self.__inds = None
-
-        # pre-load file reading:
-        if not isinstance(self.data_source, xr.Dataset):
-            if "*" in str(self.data_source):
-                pass
-            else:
-                self.__data_source = get_input_path(self.data_source)
-                if not self.data_source.is_file():
-                    self.__data_source = StaticData().get_file_path(
-                        STATES, self.data_source.name, check_raw=False
-                    )
-            if verbosity:
-                if pre_load:
-                    print(
-                        f"States '{self.name}': Reading data from '{self.data_source}'"
-                    )
-                else:
-                    print(
-                        f"States '{self.name}': Reading index from '{self.data_source}'"
-                    )
-
-            def _read_ds():
-                fpath = get_input_path(self.data_source)
-                if fpath.is_file():
-                    return xr.open_dataset(fpath)
-                else:
-                    # try to read multiple files, needs dask:
-                    try:
-                        return xr.open_mfdataset(
-                            str(fpath),
-                            parallel=False,
-                            concat_dim=self.states_coord,
-                            combine="nested",
-                            data_vars="minimal",
-                            coords="minimal",
-                            compat="override",
-                        )
-                    except ValueError as e:
-                        import_module("dask", hint="pip install dask")
-                        raise e
-
-            self.__data_source = _read_ds()
-
-        if sel is not None:
-            self.__data_source = self.data_source.sel(self.sel)
-        if isel is not None:
-            self.__data_source = self.data_source.isel(self.isel)
-        if pre_load:
-            self.__data_source.load()
-
-        self._get_inds(self.data_source)
 
     @property
     def data_source(self):
@@ -364,6 +319,90 @@ class FieldDataNC(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+
+        # pre-load file reading:
+        if not isinstance(self.data_source, xr.Dataset):
+            if "*" in str(self.data_source):
+                pass
+            else:
+                self.__data_source = get_input_path(self.data_source)
+                if not self.data_source.is_file():
+                    self.__data_source = StaticData().get_file_path(
+                        STATES, self.data_source.name, check_raw=False
+                    )
+            if verbosity:
+                if self.pre_load:
+                    print(
+                        f"States '{self.name}': Reading data from '{self.data_source}'"
+                    )
+                else:
+                    print(
+                        f"States '{self.name}': Reading index from '{self.data_source}'"
+                    )
+
+            # find bounds:
+            xy_min, xy_max = algo.farm.get_xy_bounds(
+                extra_space=self.bounds_extra_space, algo=algo)
+            if verbosity > 0:
+                print(f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}")
+            sel = {}
+            if self.x_coord is not None:
+                sel.update({
+                    self.x_coord: slice(xy_min[0], xy_max[1]),
+                    self.y_coord: slice(xy_min[1], xy_max[1]),
+                })
+            sel.update(self.sel)
+
+            # read file:
+            fpath = get_input_path(self.data_source)
+            if fpath.is_file():
+                # read single file:
+                ds = xr.open_dataset(fpath)[list(self.var2ncvar.keys())]
+                if self.isel is not None:
+                    ds = ds.isel(**self.isel)
+                ds = ds.sel(**sel)
+                self.__data_source = ds
+                del ds
+            else:
+                # find all variables, by loading a single file:
+                hpath = next(fpath.parent.glob(fpath.name))
+                tmp = xr.open_dataset(hpath)
+                drop = [v for v in tmp.data_vars.keys() if v not in self.var2ncvar]
+                del tmp
+
+                def _prep_fields(a, sel=None, isel=None):
+                    """Filters fields while reading"""
+                    if isel is not None:
+                        isel = {k: v for k, v in isel.items() if k in a.dims}
+                        a = a.isel(**isel)
+                    if sel is not None:
+                        sel = {k: v for k, v in sel.items() if k in a.dims}
+                        a = a.sel(**sel)
+                    return a
+                prep = partial(_prep_fields, sel=sel, isel=self.isel)
+
+                # try to read multiple files, needs dask:
+                try:
+                    self.__data_source = xr.open_mfdataset(
+                        str(fpath),
+                        parallel=False,
+                        concat_dim=self.states_coord,
+                        combine="nested",
+                        data_vars="minimal",
+                        coords="minimal",
+                        compat="override",
+                        drop_variables=drop,
+                        preprocess=prep,
+                        combine_attrs="drop",
+                    )
+                except ValueError as e:
+                    import_module("dask", hint="pip install dask")
+                    raise e
+
+        if self.pre_load:
+            self.__data_source.load()
+
+        self._get_inds(self.data_source)
 
         if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
             FV.WS not in self.ovars and FV.WD in self.ovars

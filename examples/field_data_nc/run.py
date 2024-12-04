@@ -71,7 +71,7 @@ if __name__ == "__main__":
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        fixed_vars={FV.RHO: 1.225},
+        #fixed_vars={FV.RHO: 1.225},
         pre_load=not args.no_pre_load,
     )
 

@@ -188,6 +188,7 @@ class Downwind(Algorithm):
 
         self.__farm_controller = self.mbook.farm_controllers.get_item(farm_controller)
         self.farm_controller.name = farm_controller
+        self.farm_controller.find_turbine_types(self)
 
     @property
     def states(self):
