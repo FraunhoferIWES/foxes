@@ -1,10 +1,10 @@
 import numpy as np
 
-from foxes.output import Output
 from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .output import Output
 from . import grids
 
 

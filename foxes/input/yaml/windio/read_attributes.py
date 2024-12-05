@@ -43,8 +43,8 @@ def _read_wind_deficit(
         name="ws_sup_dict",
     )
 
-    wname = wind_deficit.pop("name")
-    eff_ws = wind_deficit.pop("use_effective_ws", True)
+    wname = wind_deficit.pop_item("name")
+    eff_ws = wind_deficit.pop_item("use_effective_ws", True)
     if verbosity > 2:
         print("    Reading", wake_model_key)
         print("      Name    :", wname)
@@ -53,8 +53,8 @@ def _read_wind_deficit(
     wind_def_dict = Dict(wmodel_type=wind_def_map[wname], induction=induction)
     kcoef = Dict(wind_deficit["wake_expansion_coefficient"], name="kcoef")
     ka = kcoef["k_a"]
-    kb = kcoef.get("k_b", 0.0)
-    amb_ti = kcoef.get("free_stream_ti", False)
+    kb = kcoef.get_item("k_b", 0.0)
+    amb_ti = kcoef.get_item("free_stream_ti", False)
     if ka is None or ka == 0.0:
         wind_def_dict["k"] = kb
         if verbosity > 2:
@@ -113,7 +113,7 @@ def _read_turbulence(
         name="ti_sup_dict",
     )
 
-    wname = turbulence_model.pop("name")
+    wname = turbulence_model.pop_item("name")
     if verbosity > 2:
         print("    Reading turbulence_model")
         print("      Name:", wname)
@@ -126,8 +126,8 @@ def _read_turbulence(
         if "wake_expansion_coefficient" in turbulence_model:
             kcoef = Dict(turbulence_model["wake_expansion_coefficient"], name="kcoef")
             ka = kcoef["k_a"]
-            kb = kcoef.get("k_b", 0.0)
-            amb_ti = kcoef.get("free_stream_ti", False)
+            kb = kcoef.get_item("k_b", 0.0)
+            amb_ti = kcoef.get_item("free_stream_ti", False)
         if ka is None or ka == 0.0:
             tiwake_dict["k"] = kb
             if verbosity > 2:
@@ -161,7 +161,7 @@ def _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity):
         name="twake_def_map",
     )
 
-    wname = blockage_model.pop("name")
+    wname = blockage_model.pop_item("name")
     if verbosity > 2:
         print("    Reading blockage_model")
         print("      Name:", wname)
@@ -238,7 +238,7 @@ def _read_deflection(deflection, induction, algo_dict, mbook, verbosity):
         name="defl_def_map",
     )
 
-    wname = deflection.pop("name")
+    wname = deflection.pop_item("name")
     if verbosity > 2:
         print("    Reading deflection_model")
         print("      Name:", wname)
@@ -276,7 +276,7 @@ def _read_analysis(wio_ana, idict, mbook, verbosity):
         },
         name="induction mapping",
     )
-    induction = imap[wio_ana.get("axial_induction_model", "1D")]
+    induction = imap[wio_ana.get_item("axial_induction_model", "1D")]
     if verbosity > 2:
         print("    axial induction model:", induction)
 
@@ -368,7 +368,7 @@ def read_attributes(wio, idict, mbook, verbosity=1):
     # read flow model:
     if "flow_model" in wio_attrs:
         flow_model = Dict(wio_attrs["flow_model"], name="flow_model")
-        fmname = flow_model.pop("name")
+        fmname = flow_model.pop_item("name")
         if verbosity > 2:
             print("    Reading flow_model")
             print("      Name:", fmname)

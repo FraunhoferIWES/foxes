@@ -42,7 +42,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
 
     ttypes = {}
     for k, wio_trbns in wio_farm["turbine_types"].items():
-        tname = wio_trbns.pop("name")
+        tname = wio_trbns.pop_item("name")
         ttypes[k] = tname
         _print("    Reading turbine type", k, level=3)
         _print("      Name:", tname, level=3)
@@ -155,7 +155,7 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     if verbosity > 2:
         print(f"        Reading '{lname}'")
     cdict = Dict(ldict["coordinates"], name="coordinates")
-    tmap = ldict.get("turbine_types", None)
+    tmap = ldict.get_item("turbine_types", None)
     if verbosity > 2:
         print(f"          Turbine type map:", tmap)
     for i, xy in enumerate(zip(cdict["x"], cdict["y"])):

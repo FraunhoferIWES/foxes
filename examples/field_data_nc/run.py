@@ -70,8 +70,6 @@ if __name__ == "__main__":
     states = foxes.input.states.FieldDataNC(
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        # var2ncvar={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        #fixed_vars={FV.RHO: 1.225},
         pre_load=not args.no_pre_load,
     )
 
@@ -115,7 +113,12 @@ if __name__ == "__main__":
     fr = farm_results.to_dataframe()
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
+    o = foxes.output.SlicesData(algo, farm_results)
+    ds = o.get_states_data_xy(z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1)
+    print(ds)
+
     if not args.nofig:
         o = foxes.output.FlowPlots2D(algo, farm_results)
         o.get_mean_fig_xy(FV.WS, resolution=10)
         plt.show()
+

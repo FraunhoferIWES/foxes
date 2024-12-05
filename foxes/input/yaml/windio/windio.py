@@ -21,7 +21,7 @@ def _read_site(wio_dict, verbosity):
 
     wio_site = Dict(wio_dict["site"], name=wio_dict.name + ".site")
     _print("Reading site")
-    _print("  Name:", wio_site.pop("name", None))
+    _print("  Name:", wio_site.pop_item("name", None))
     _print("  Contents:", [k for k in wio_site.keys()])
     _print("  Ignoring boundaries", level=2)
 
@@ -30,7 +30,7 @@ def _read_site(wio_dict, verbosity):
         wio_site["energy_resource"], name=wio_site.name + ".energy_resource"
     )
     _print("  Reading energy_resource", level=2)
-    _print("    Name:", energy_resource.pop("name", None), level=2)
+    _print("    Name:", energy_resource.pop_item("name", None), level=2)
     _print("    Contents:", [k for k in energy_resource.keys()], level=2)
 
     # read wind_resource:
@@ -38,7 +38,7 @@ def _read_site(wio_dict, verbosity):
         energy_resource["wind_resource"], name=energy_resource.name + ".wind_resource"
     )
     _print("    Reading wind_resource", level=3)
-    _print("      Name:", wind_resource.pop("name", None), level=3)
+    _print("      Name:", wind_resource.pop_item("name", None), level=3)
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
 
     # read fields
@@ -66,7 +66,7 @@ def _read_farm(wio_dict, mbook, verbosity):
     wio_farm = Dict(wio_dict["wind_farm"], name=wio_dict.name + ".wind_farm")
     if verbosity > 1:
         print("Reading wind farm")
-        print("  Name:", wio_farm.pop("name", None))
+        print("  Name:", wio_farm.pop_item("name", None))
         print("  Contents:", [k for k in wio_farm.keys()])
 
     # find REWS exponents:
@@ -134,7 +134,7 @@ def read_windio(wio_dict, verbosity=1):
         wio_dict = Dict(wio_dict, name="windio")
 
     _print(f"Reading windio data")
-    _print("  Name:", wio_dict.pop("name", None))
+    _print("  Name:", wio_dict.pop_item("name", None))
     _print("  Contents:", [k for k in wio_dict.keys()])
 
     idict = Dict(

@@ -262,9 +262,9 @@ def run_obj_function(
 
     fname = fdict.pop_item("function")
     _print(f"  - {fname}")
-    plt_show = fdict.pop("plt_show", False)
-    plt_close = fdict.pop("plt_close", False)
-    rlbs = fdict.pop("result_labels", None)
+    plt_show = fdict.pop_item("plt_show", False)
+    plt_close = fdict.pop_item("plt_close", False)
+    rlbs = fdict.pop_item("result_labels", None)
 
     # grab function:
     ocls = type(obj).__name__
@@ -284,7 +284,7 @@ def run_obj_function(
             fdict[k] = _get_object(rlabels, d)
 
     # run function:
-    args = fdict.pop("args", tuple())
+    args = fdict.pop_item("args", tuple())
     results = f(*args, **fdict)
 
     # pyplot shortcuts:
@@ -393,7 +393,7 @@ def run_outputs(
                     continue
 
             elif "object" in d:
-                ocls = d.pop("object")
+                ocls = d.pop_item("object")
                 _print(f"  Output {i}: Object {ocls}")
                 o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
