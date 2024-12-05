@@ -99,6 +99,12 @@ def _read_flow_field(wio_outs, olist, verbosity):
         print("          z_list        :", list(z_list))
 
         if xy_sampling == "grid":
+            xb = z_planes.pop_item("x_bounds")
+            assert len(xb) == 2, f"Expecting two entries for x_bounds, got {xb}"
+            yb = z_planes.pop_item("y_bounds")
+            assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
+            dx = z_planes.pop_item("dx")
+            dy = z_planes.pop_item("dy")
             olist.append(Dict(
                 output_type="SliceData",
                 verbosity_delta=3,
