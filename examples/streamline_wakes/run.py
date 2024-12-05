@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true"
     )
-    parser.add_argument("-e", "--engine", help="The engine", default=None)
+    parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )

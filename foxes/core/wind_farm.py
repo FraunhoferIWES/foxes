@@ -125,6 +125,7 @@ class WindFarm:
         if extra_space is not None:
             if isinstance(extra_space, str):
                 assert algo is not None, f"WindFarm: require algo argument for extra_space '{extra_space}'"
+                assert len(extra_space) > 1 and extra_space[-1] == "D", f"Expecting float or str like '2.5D', got extra_space = '{extra_space}'"
                 extra_space = float(extra_space[:-1])
                 rds = self.get_rotor_diameters(algo)
                 if xy is None:

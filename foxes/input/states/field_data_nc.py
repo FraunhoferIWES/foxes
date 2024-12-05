@@ -77,7 +77,7 @@ class FieldDataNC(States):
         sel=None,
         isel=None,
         interp_nans=False,
-        bounds_extra_space="1.5D",
+        bounds_extra_space=3000,
         **interpn_pars,
     ):
         """
@@ -357,7 +357,7 @@ class FieldDataNC(States):
             fpath = get_input_path(self.data_source)
             if fpath.is_file():
                 # read single file:
-                ds = xr.open_dataset(fpath)[list(self.var2ncvar.keys())]
+                ds = xr.open_dataset(fpath)[list(self.var2ncvar.values())]
                 if self.isel is not None:
                     ds = ds.isel(**self.isel)
                 ds = ds.sel(**sel)
