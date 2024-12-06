@@ -94,6 +94,8 @@ def _read_flow_field(wio_outs, olist, algo, verbosity):
             assert len(zb) == 2, f"Expecting two entries for z_bounds, got {zb}"
             zn = z_planes.pop_item("z_number")
             z_list = np.linspace(zb[0], zb[1], zn)
+        elif isinstance(z_sampling, (int, float)):
+            z_list = np.atleast_1d(z_sampling)
         else:
             raise NotImplementedError(
                 f"z_sampling '{z_sampling}' is not supported. Choices: plane_list, hub_height, grid."
