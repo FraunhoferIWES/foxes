@@ -46,4 +46,7 @@ def write_nc(ds, fpath, round={}, complevel=9, verbosity=1, **kwargs):
 
     if verbosity > 0:
         print("Writing file", fpath)
-    ds.to_netcdf(fpath, encoding=enc, **kwargs)
+
+    kw = dict(encoding=enc, engine="h5netcdf")
+    kw.update(kwargs)
+    ds.to_netcdf(fpath, **kw)

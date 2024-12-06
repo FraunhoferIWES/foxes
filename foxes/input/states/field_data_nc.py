@@ -366,7 +366,8 @@ class FieldDataNC(States):
             fpath = get_input_path(self.data_source)
             if fpath.is_file():
                 # read single file:
-                ds = xr.open_dataset(fpath)[list(self.var2ncvar.values())]
+                ds = xr.open_dataset(fpath, engine="h5netcdf")
+                ds = ds[list(self.var2ncvar.values())]
                 if self.isel is not None:
                     ds = ds.isel(**self.isel)
                 ds = ds.sel(**sel)
@@ -411,6 +412,7 @@ class FieldDataNC(States):
                         cache=self.pre_load,
                         preprocess=prep,
                         combine_attrs="drop",
+                        engine="h5netcdf",
                     )
                 except ValueError as e:
                     import_module("dask", hint="pip install dask")
