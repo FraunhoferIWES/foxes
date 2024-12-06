@@ -22,9 +22,11 @@ def load_dask():
     """On-demand loading of the dask package"""
     global dask, ProgressBar, delayed
     if dask is None:
-        dask = import_module("dask", hint="pip install dask")
+        dask = import_module("dask")
         ProgressBar = import_module(
-            "dask.diagnostics", hint="pip install dask"
+            "dask.diagnostics",
+            pip_hint="pip install dask",
+            conda_hint="conda install dask -c conda-forge",
         ).ProgressBar
         delayed = dask.delayed
 
@@ -33,7 +35,7 @@ def load_distributed():
     """On-demand loading of the distributed package"""
     global distributed
     if distributed is None:
-        distributed = import_module("distributed", hint="pip install distributed")
+        distributed = import_module("distributed")
 
 
 class DaskBaseEngine(Engine):
@@ -969,8 +971,11 @@ class SlurmClusterEngine(LocalClusterEngine):
         nodes = cargs.pop("nodes", 1)
 
         dask_jobqueue = import_module(
-            "dask_jobqueue", hint="pip install setuptools dask-jobqueue"
+            "dask_jobqueue", 
+            pip_hint="pip install setuptools dask-jobqueue",
+            conda_hint="conda install setuptools dask-jobqueue -c conda-forge",
         )
+
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
         self._cluster.scale(jobs=nodes)
         self._cluster = self._cluster.__enter__()

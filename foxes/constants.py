@@ -198,3 +198,9 @@ OUTPUT_DIR = "out_dir"
 """Identifier for the default output directory
 :group: foxes.constants
 """
+
+
+NC_ENGINE = "nc_engine"
+"""Identifier for the NetCDF engine
+:group: foxes.constants
+"""

@@ -3,7 +3,7 @@ import importlib.util
 import sys
 
 
-def import_module(name, package=None, hint=None):
+def import_module(name, package=None, pip_hint=None, conda_hint=None):
     """
     Imports a module dynamically.
 
@@ -14,7 +14,9 @@ def import_module(name, package=None, hint=None):
     package: str, optional
         The explicit package name, deduced from name
         if not given
-    hint: str, optional
+    pip_hint: str, optional
+        Installation advice, in case the import fails
+    conda_hint: str, optional
         Installation advice, in case the import fails
 
     Returns
@@ -29,8 +31,10 @@ def import_module(name, package=None, hint=None):
         return importlib.import_module(name, package)
     except ModuleNotFoundError:
         mdl = name if package is None else f"{package}.{name}"
-        hint = hint if hint is not None else f"pip install {name}"
-        raise ModuleNotFoundError(f"Module '{mdl}' not found, maybe try '{hint}'")
+        piph = pip_hint if pip_hint is not None else f"pip install {name}"
+        cndh = conda_hint if conda_hint is not None else f"conda install {name} -c conda-forge"
+        hts = " or ".join([f"'{h}'" for h in [piph, cndh] if len(h)])
+        raise ModuleNotFoundError(f"Module '{mdl}' not found, maybe try {hts}")
 
 
 def load_module(name, path):

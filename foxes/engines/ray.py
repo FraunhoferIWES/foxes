@@ -12,7 +12,7 @@ def load_ray():
     """On-demand loading of the ray package"""
     global ray
     if ray is None:
-        ray = import_module("ray", hint="pip install ray")
+        ray = import_module("ray")
 
 
 class RayEngine(PoolEngine):

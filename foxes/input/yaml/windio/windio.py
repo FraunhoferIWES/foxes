@@ -165,7 +165,8 @@ def foxes_windio():
     _print(f"Reading windio file {wio_file}")
     yml_utils = import_module(
         "windIO.utils.yml_utils",
-        hint="pip install git+https://github.com/EUFLOW/windIO@master#egg=windIO",
+        pip_hint="pip install git+https://github.com/EUFLOW/windIO@master#egg=windIO",
+        conda_hint="",
     )
 
     wio = Dict(yml_utils.load_yaml(wio_file), name="windio")

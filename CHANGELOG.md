@@ -700,7 +700,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Dependencies:
   - Switching `windIO` support to fork at [https://github.com/EUFLOW/windIO](https://github.com/EUFLOW/windIO)
-  - Adding dependency `h5netcdf`, for faster NetCDF handling
+  - Removing dependency `netcdf4`, since this or `h5netcdf` are now a dynamic choice, called when NetCDF files are being used
 - Config:
   - Now three directories are defined: `work_dir`, `input_dir`, `output_dir`. If not defined, falling back to `work_dir`, defaulting to cwd.
 - Inputs:

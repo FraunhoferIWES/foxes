@@ -1,6 +1,6 @@
-import netCDF4
 from pathlib import Path
 
+from foxes.config import config
 from foxes.variables import get_default_digits
 
 
@@ -47,6 +47,6 @@ def write_nc(ds, fpath, round={}, complevel=9, verbosity=1, **kwargs):
     if verbosity > 0:
         print("Writing file", fpath)
 
-    kw = dict(encoding=enc, engine="h5netcdf")
+    kw = dict(encoding=enc, engine=config.nc_engine)
     kw.update(kwargs)
     ds.to_netcdf(fpath, **kw)

@@ -366,7 +366,7 @@ class FieldDataNC(States):
             fpath = get_input_path(self.data_source)
             if fpath.is_file():
                 # read single file:
-                ds = xr.open_dataset(fpath, engine="h5netcdf")
+                ds = xr.open_dataset(fpath, engine=config.nc_engine)
                 ds = ds[list(self.var2ncvar.values())]
                 if self.isel is not None:
                     ds = ds.isel(**self.isel)
@@ -376,7 +376,7 @@ class FieldDataNC(States):
             else:
                 # find all variables, by loading a single file:
                 hpath = next(fpath.parent.glob(fpath.name))
-                tmp = xr.open_dataset(hpath)
+                tmp = xr.open_dataset(hpath, engine=config.nc_engine)
                 drop = [v for v in tmp.data_vars.keys() if v not in self.var2ncvar.values()]
                 del tmp
 
@@ -412,10 +412,10 @@ class FieldDataNC(States):
                         cache=self.pre_load,
                         preprocess=prep,
                         combine_attrs="drop",
-                        engine="h5netcdf",
+                        engine=config.nc_engine,
                     )
-                except ValueError as e:
-                    import_module("dask", hint="pip install dask")
+                except (ValueError, ModuleNotFoundError) as e:
+                    import_module("dask")
                     raise e
 
         if self.pre_load:
