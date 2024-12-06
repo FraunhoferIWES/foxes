@@ -87,7 +87,7 @@ class Config(Dict):
             if not isinstance(pth, Path):
                 self[FC.INPUT_DIR] = Path(pth)
             return self[FC.INPUT_DIR]
-    
+
     @property
     def output_dir(self):
         """

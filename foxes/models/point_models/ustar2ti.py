@@ -20,14 +20,14 @@ class Ustar2TI(PointDataModel):
     def __init__(self, max_ti=None, **kwargs):
         """
         Constructor
-        
+
         Parameters
         ----------
         max_ti: float, optional
             Upper limit of the computed TI values
         kwargs: dict, optional
             Additional parameters for the base class
-        
+
         """
         super().__init__(**kwargs)
         self.max_ti = max_ti

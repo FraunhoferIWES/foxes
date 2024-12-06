@@ -77,8 +77,7 @@ def read_dict(
     # set working directory:
     l = 0
     for c, d in zip(
-        [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], 
-        [work_dir, input_dir, output_dir]
+        [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], [work_dir, input_dir, output_dir]
     ):
         if d is not None:
             config[c] = d
@@ -96,7 +95,9 @@ def read_dict(
         else:
             states = algo.states
     else:
-        assert algo is None, f"Cannot handle both the algo and the states argument, please drop one"
+        assert (
+            algo is None
+        ), f"Cannot handle both the algo and the states argument, please drop one"
 
     # create model book:
     if mbook is None:
@@ -108,7 +109,9 @@ def read_dict(
                 for s, mlst in mdict.items():
                     t = mbook.sources.get_item(s)
                     c = mbook.base_classes.get_item(s)
-                    ms = [Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)]
+                    ms = [
+                        Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)
+                    ]
                     for m in ms:
                         mname = m.pop_item("name")
                         _print(f"  Adding {s}.{mname}")
@@ -116,7 +119,9 @@ def read_dict(
         else:
             mbook = algo.mbook
     else:
-        assert algo is None, f"Cannot handle both the algo and the mbook argument, please drop one"
+        assert (
+            algo is None
+        ), f"Cannot handle both the algo and the mbook argument, please drop one"
 
     # create farm:
     if farm is None:
@@ -136,7 +141,9 @@ def read_dict(
         else:
             farm = algo.farm
     else:
-        assert algo is None, f"Cannot handle both the algo and the farm argument, please drop one"
+        assert (
+            algo is None
+        ), f"Cannot handle both the algo and the farm argument, please drop one"
 
     # create engine:
     engine = None
@@ -163,7 +170,7 @@ def read_dict(
         if algo_pars is not None:
             adict.update({v: d for v, d in algo_pars.items() if d is not None})
         algo = Algorithm.new(**adict)
-    
+
     _print("------------------------------------------------------------------------\n")
 
     return algo, engine
@@ -427,7 +434,7 @@ def run_outputs(
                 results = run_obj_function(o, fdict, algo, rlabels, verbosity)
                 fres.append(results)
             out.append((d0, fres))
-        
+
         if len(odicts):
             _print()
 

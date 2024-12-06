@@ -34,7 +34,9 @@ class Output:
             Modifies file names by f(fname)
 
         """
-        self.out_dir = get_output_path(out_dir) if out_dir is not None else config.output_dir
+        self.out_dir = (
+            get_output_path(out_dir) if out_dir is not None else config.output_dir
+        )
         self.out_fname_fun = out_fname_fun
 
         if not self.out_dir.is_dir():

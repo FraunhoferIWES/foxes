@@ -94,7 +94,7 @@ class WindFarm:
 
         """
         return np.array([t.xy for t in self.turbines], dtype=config.dtype_double)
-        
+
     def get_xy_bounds(self, extra_space=None, algo=None):
         """
         Returns min max points of the wind farm ground points
@@ -124,17 +124,21 @@ class WindFarm:
 
         if extra_space is not None:
             if isinstance(extra_space, str):
-                assert algo is not None, f"WindFarm: require algo argument for extra_space '{extra_space}'"
-                assert len(extra_space) > 1 and extra_space[-1] == "D", f"Expecting float or str like '2.5D', got extra_space = '{extra_space}'"
+                assert (
+                    algo is not None
+                ), f"WindFarm: require algo argument for extra_space '{extra_space}'"
+                assert (
+                    len(extra_space) > 1 and extra_space[-1] == "D"
+                ), f"Expecting float or str like '2.5D', got extra_space = '{extra_space}'"
                 extra_space = float(extra_space[:-1])
                 rds = self.get_rotor_diameters(algo)
                 if xy is None:
                     extra_space *= np.max(rds)
                 else:
-                    p_min = np.min(xy-extra_space*rds[:, None], axis=0)
-                    p_max = np.max(xy+extra_space*rds[:, None], axis=0)
+                    p_min = np.min(xy - extra_space * rds[:, None], axis=0)
+                    p_max = np.max(xy + extra_space * rds[:, None], axis=0)
                     return p_min, p_max
-                
+
             p_min -= extra_space
             p_max += extra_space
 
@@ -143,12 +147,12 @@ class WindFarm:
     def get_rotor_diameters(self, algo):
         """
         Gets the rotor diameters
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm
-        
+
         Returns
         -------
         rds: numpy.ndarray
@@ -156,8 +160,7 @@ class WindFarm:
 
         """
         rds = [
-            t.D if t.D is not None 
-            else algo.farm_controller.turbine_types[i].D
+            t.D if t.D is not None else algo.farm_controller.turbine_types[i].D
             for i, t in enumerate(self.turbines)
         ]
         return np.array(rds, dtype=config.dtype_double)
@@ -165,12 +168,12 @@ class WindFarm:
     def get_hub_heights(self, algo):
         """
         Gets the hub heights
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The algorithm
-        
+
         Returns
         -------
         hhs: numpy.ndarray
@@ -178,9 +181,7 @@ class WindFarm:
 
         """
         hhs = [
-            t.H if t.H is not None 
-            else algo.farm_controller.turbine_types[i].H
+            t.H if t.H is not None else algo.farm_controller.turbine_types[i].H
             for i, t in enumerate(self.turbines)
         ]
         return np.array(hhs, dtype=config.dtype_double)
-    

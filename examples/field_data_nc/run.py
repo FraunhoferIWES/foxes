@@ -114,11 +114,12 @@ if __name__ == "__main__":
     print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
     o = foxes.output.SlicesData(algo, farm_results)
-    ds = o.get_states_data_xy(z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1)
+    ds = o.get_states_data_xy(
+        z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1
+    )
     print(ds)
 
     if not args.nofig:
         o = foxes.output.FlowPlots2D(algo, farm_results)
         o.get_mean_fig_xy(FV.WS, resolution=10)
         plt.show()
-

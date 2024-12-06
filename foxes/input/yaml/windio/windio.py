@@ -31,7 +31,7 @@ def read_windio(wio_dict, verbosity=1):
         The algorithm
     odir: pathlib.Path
         The output directory
-        
+
     :group: input.yaml.windio
 
     """
@@ -67,7 +67,8 @@ def read_windio(wio_dict, verbosity=1):
     read_attributes(wio_attrs, idict, mbook, verbosity=verbosity)
 
     algo = Algorithm.new(
-        farm=farm, states=states, mbook=mbook, **idict.pop_item("algorithm"))
+        farm=farm, states=states, mbook=mbook, **idict.pop_item("algorithm")
+    )
 
     odir = None
     if "outputs" in wio_attrs:
@@ -75,6 +76,7 @@ def read_windio(wio_dict, verbosity=1):
         odir = read_outputs(outputs, idict, algo, verbosity=verbosity)
 
     return idict, algo, odir
+
 
 def foxes_windio():
     """

@@ -233,7 +233,11 @@ class FieldDataNC(States):
             elif ds[ncv].dims == cor_s:
                 vars_s.append(v)
             else:
-                expc = [c for c in [cor_shxy, cor_shyx, cor_sxy, cor_syx, cor_sh, cor_s] if None not in c]
+                expc = [
+                    c
+                    for c in [cor_shxy, cor_shyx, cor_sxy, cor_syx, cor_sh, cor_s]
+                    if None not in c
+                ]
                 raise ValueError(
                     f"States '{self.name}': Wrong coordinates for variable '{ncv}': Found {ds[ncv].dims}, expecting one of {expc}"
                 )
@@ -342,15 +346,20 @@ class FieldDataNC(States):
 
             # find bounds:
             xy_min, xy_max = algo.farm.get_xy_bounds(
-                extra_space=self.bounds_extra_space, algo=algo)
+                extra_space=self.bounds_extra_space, algo=algo
+            )
             if verbosity > 0:
-                print(f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}")
+                print(
+                    f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}"
+                )
             sel = {}
             if self.x_coord is not None:
-                sel.update({
-                    self.x_coord: slice(xy_min[0], xy_max[1]),
-                    self.y_coord: slice(xy_min[1], xy_max[1]),
-                })
+                sel.update(
+                    {
+                        self.x_coord: slice(xy_min[0], xy_max[1]),
+                        self.y_coord: slice(xy_min[1], xy_max[1]),
+                    }
+                )
             sel.update(self.sel)
 
             # read file:
@@ -379,6 +388,7 @@ class FieldDataNC(States):
                         sel = {k: v for k, v in sel.items() if k in a.dims}
                         a = a.sel(**sel)
                     return a
+
                 prep = partial(_prep_fields, sel=sel, isel=self.isel)
 
                 # try to read multiple files, needs dask:

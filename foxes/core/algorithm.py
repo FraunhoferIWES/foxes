@@ -74,7 +74,7 @@ class Algorithm(Model):
                     )
             elif "engine" in engine_pars:
                 engine_pars["engine_type"] = engine_pars.pop("engine")
-            
+
             if "engine_type" in engine_pars:
                 try:
                     e = Engine.new(verbosity=verbosity, **engine_pars)
@@ -84,7 +84,9 @@ class Algorithm(Model):
                 self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
                 e.initialize()
             else:
-                raise KeyError(f"{self.name}: Found unsupported parameters {list(engine_pars.keys())}")
+                raise KeyError(
+                    f"{self.name}: Found unsupported parameters {list(engine_pars.keys())}"
+                )
 
     @property
     def farm(self):

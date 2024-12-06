@@ -207,24 +207,25 @@ def get_states(coords, fields, dims, verbosity=1):
             f"Failed to create states for coords {list(coords.keys())} and fields {list(fields.keys())} with dims {dims}"
         )
 
+
 def read_site(wio_dict, verbosity=1):
     """
     Reads the site information
-    
+
     Parameters
     ----------
     wio_dict: foxes.utils.Dict
         The windio data
     verbosity: int
         The verbosity level, 0=silent
-    
+
     Returns
     -------
     states: foxes.core.States
         The states object
-        
+
     :group: input.yaml.windio
-    
+
     """
 
     def _print(*args, level=1, **kwargs):

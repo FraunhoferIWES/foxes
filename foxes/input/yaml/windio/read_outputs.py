@@ -36,20 +36,24 @@ def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
             }
         )
 
-        olist.append(Dict(
-            output_type="StateTurbineTable",
-            functions=[
-                dict(
-                    function="get_dataset",
-                    variables=[vmap[v] for v in output_variables],
-                    name_map=ivmap,
-                    to_file=turbine_nc_filename,
-                    round={vw: FV.get_default_digits(vf) for vw, vf in vmap.items()},
-                    verbosity=verbosity,
-                )
-            ],
-            name=f"outputs.output{len(olist)}.StateTurbineTable",
-        ))
+        olist.append(
+            Dict(
+                output_type="StateTurbineTable",
+                functions=[
+                    dict(
+                        function="get_dataset",
+                        variables=[vmap[v] for v in output_variables],
+                        name_map=ivmap,
+                        to_file=turbine_nc_filename,
+                        round={
+                            vw: FV.get_default_digits(vf) for vw, vf in vmap.items()
+                        },
+                        verbosity=verbosity,
+                    )
+                ],
+                name=f"outputs.output{len(olist)}.StateTurbineTable",
+            )
+        )
 
 
 def _read_flow_field(wio_outs, olist, algo, verbosity):
@@ -67,7 +71,9 @@ def _read_flow_field(wio_outs, olist, algo, verbosity):
         else:
             states_isel = cases_run.pop_item("occurences_list")
 
-        z_planes = Dict(flow_field.pop_item("z_planes"), name=flow_field.name + ".z_planes")
+        z_planes = Dict(
+            flow_field.pop_item("z_planes"), name=flow_field.name + ".z_planes"
+        )
         z_sampling = z_planes["z_sampling"]
         xy_sampling = z_planes["xy_sampling"]
 
@@ -124,27 +130,29 @@ def _read_flow_field(wio_outs, olist, algo, verbosity):
                 print("          nx, ny        :", (nx, ny))
                 print("          true dx       :", (xb[1] - xb[0]) / (nx - 1))
                 print("          true dy       :", (yb[1] - yb[0]) / (ny - 1))
-            olist.append(Dict(
-                output_type="SlicesData",
-                verbosity_delta=3,
-                functions=[
-                    dict(
-                        function="get_states_data_xy",
-                        z_list=z_list,
-                        states_isel=states_isel,
-                        xmin=xb[0],
-                        xmax=xb[1],
-                        ymin=yb[0],
-                        ymax=yb[1],
-                        n_img_points=(nx, ny),
-                        variables=[vmap[v] for v in output_variables],
-                        to_file=flow_nc_filename,
-                        label_map=foxes2wio,
-                        verbosity=verbosity,
-                    )
-                ],
-                name=f"outputs.output{len(olist)}.SliceData",
-            ))
+            olist.append(
+                Dict(
+                    output_type="SlicesData",
+                    verbosity_delta=3,
+                    functions=[
+                        dict(
+                            function="get_states_data_xy",
+                            z_list=z_list,
+                            states_isel=states_isel,
+                            xmin=xb[0],
+                            xmax=xb[1],
+                            ymin=yb[0],
+                            ymax=yb[1],
+                            n_img_points=(nx, ny),
+                            variables=[vmap[v] for v in output_variables],
+                            to_file=flow_nc_filename,
+                            label_map=foxes2wio,
+                            verbosity=verbosity,
+                        )
+                    ],
+                    name=f"outputs.output{len(olist)}.SliceData",
+                )
+            )
         else:
             raise NotImplementedError(
                 f"xy_sampling '{xy_sampling}' is not supported. Choices: 'grid'."

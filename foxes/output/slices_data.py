@@ -40,9 +40,9 @@ class SlicesData(Output):
         """
         super().__init__(**kwargs)
         self._slice_data = SliceData(
-            algo=algo, 
-            farm_results=farm_results, 
-            verbosity_delta=verbosity_delta, 
+            algo=algo,
+            farm_results=farm_results,
+            verbosity_delta=verbosity_delta,
             **kwargs,
         )
 
@@ -79,8 +79,8 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice z = {z}")
             dsl.append(
                 self._slice_data.get_mean_data_xy(
-                    *args, 
-                    z=z,  
+                    *args,
+                    z=z,
                     data_format="xarray",
                     ret_states=False,
                     ret_grid=False,
@@ -125,8 +125,8 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice y = {y}")
             dsl.append(
                 self._slice_data.get_mean_data_xz(
-                    *args, 
-                    y=y,  
+                    *args,
+                    y=y,
                     data_format="xarray",
                     ret_states=False,
                     ret_grid=False,
@@ -171,8 +171,8 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice x = {x}")
             dsl.append(
                 self._slice_data.get_mean_data_yz(
-                    *args, 
-                    x=x,  
+                    *args,
+                    x=x,
                     data_format="xarray",
                     ret_states=False,
                     ret_grid=False,
@@ -217,8 +217,8 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice z = {z}")
             dsl.append(
                 self._slice_data.get_states_data_xy(
-                    *args, 
-                    z=z,  
+                    *args,
+                    z=z,
                     data_format="xarray",
                     ret_states=False,
                     ret_grid=False,
@@ -263,8 +263,8 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice y = {y}")
             dsl.append(
                 self._slice_data.get_states_data_xz(
-                    *args, 
-                    y=y,  
+                    *args,
+                    y=y,
                     data_format="xarray",
                     ret_states=False,
                     ret_grid=False,
@@ -309,7 +309,7 @@ class SlicesData(Output):
                 print(f"{type(self).__name__}: Creating slice x = {x}")
             dsl.append(
                 self._slice_data.get_states_data_yz(
-                    *args, 
+                    *args,
                     x=x,
                     data_format="xarray",
                     ret_states=False,
@@ -321,4 +321,3 @@ class SlicesData(Output):
         out = xr.concat(dsl, pd.Index(x_list, name="x"))
         del out.attrs["x"]
         return out.transpose(FC.STATE, "z", "y", "x", ...)
-    

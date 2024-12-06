@@ -179,7 +179,7 @@ class FarmController(FarmDataModel):
     def find_turbine_types(self, algo):
         """
         Collects the turbine types.
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm

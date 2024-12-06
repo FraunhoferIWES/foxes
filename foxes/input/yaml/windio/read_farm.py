@@ -167,6 +167,7 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     if verbosity > 2:
         print(f"          Added {farm.n_turbines} turbines")
 
+
 def read_farm(wio_dict, mbook, verbosity):
     """
     Reads the wind farm information
@@ -177,12 +178,12 @@ def read_farm(wio_dict, mbook, verbosity):
         The windio data
     verbosity: int
         The verbosity level, 0=silent
-    
+
     Returns
     -------
     farm: foxes.core.WindFarm
         The wind farm
-    
+
     :group: input.yaml.windio
 
     """
