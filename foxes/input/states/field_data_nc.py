@@ -407,6 +407,7 @@ class FieldDataNC(States):
                         coords="minimal",
                         compat="override",
                         drop_variables=drop,
+                        cache=self.pre_load,
                         preprocess=prep,
                         combine_attrs="drop",
                     )
