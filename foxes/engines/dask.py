@@ -971,7 +971,7 @@ class SlurmClusterEngine(LocalClusterEngine):
         nodes = cargs.pop("nodes", 1)
 
         dask_jobqueue = import_module(
-            "dask_jobqueue", 
+            "dask_jobqueue",
             pip_hint="pip install setuptools dask-jobqueue",
             conda_hint="conda install setuptools dask-jobqueue -c conda-forge",
         )

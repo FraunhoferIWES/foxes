@@ -1,5 +1,4 @@
 import numpy as np
-from sys import version_info
 from pathlib import Path
 
 from foxes.utils import Dict, import_module
@@ -108,17 +107,17 @@ class Config(Dict):
             if not isinstance(pth, Path):
                 self[FC.OUTPUT_DIR] = Path(pth)
             return self[FC.OUTPUT_DIR]
-        
+
     @property
     def nc_engine(self):
         """
         The NetCDF engine
-        
+
         Returns
         -------
         nce: str
             The NetCDF engine
-        
+
         """
         import_module(self[FC.NC_ENGINE])
         return self[FC.NC_ENGINE]

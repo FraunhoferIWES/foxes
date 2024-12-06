@@ -32,7 +32,11 @@ def import_module(name, package=None, pip_hint=None, conda_hint=None):
     except ModuleNotFoundError:
         mdl = name if package is None else f"{package}.{name}"
         piph = pip_hint if pip_hint is not None else f"pip install {name}"
-        cndh = conda_hint if conda_hint is not None else f"conda install {name} -c conda-forge"
+        cndh = (
+            conda_hint
+            if conda_hint is not None
+            else f"conda install {name} -c conda-forge"
+        )
         hts = " or ".join([f"'{h}'" for h in [piph, cndh] if len(h)])
         raise ModuleNotFoundError(f"Module '{mdl}' not found, maybe try {hts}")
 
