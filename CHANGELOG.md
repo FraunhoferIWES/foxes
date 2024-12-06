@@ -698,10 +698,13 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.3
 
+- Dependencies:
+  - Switching `windIO` support to fork at [https://github.com/EUFLOW/windIO](https://github.com/EUFLOW/windIO)
 - Config:
   - Now three directories are defined: `work_dir`, `input_dir`, `output_dir`. If not defined, falling back to `work_dir`, defaulting to cwd.
 - Inputs:
   - Removing `SliceDataNC`, since now `FieldDataNC` can handle data without height dependency
+  - Enhancing `FieldDataNC` for more efficient loading of large data
   - Enhancing `windio` inputs for output generation
 - Outputs:
   - New output `SlicesData` which combines slices from `SliceData` into a single NetCDF file, resulting in full 3d field output (or 4d, with time/states dimension)

@@ -77,7 +77,7 @@ class FieldDataNC(States):
         sel=None,
         isel=None,
         interp_nans=False,
-        bounds_extra_space=3000,
+        bounds_extra_space=1000,
         **interpn_pars,
     ):
         """
@@ -334,7 +334,7 @@ class FieldDataNC(States):
                     self.__data_source = StaticData().get_file_path(
                         STATES, self.data_source.name, check_raw=False
                     )
-            if verbosity:
+            if verbosity > 0:
                 if self.pre_load:
                     print(
                         f"States '{self.name}': Reading data from '{self.data_source}'"
@@ -376,8 +376,13 @@ class FieldDataNC(States):
                 # find all variables, by loading a single file:
                 hpath = next(fpath.parent.glob(fpath.name))
                 tmp = xr.open_dataset(hpath)
-                drop = [v for v in tmp.data_vars.keys() if v not in self.var2ncvar]
+                drop = [v for v in tmp.data_vars.keys() if v not in self.var2ncvar.values()]
                 del tmp
+
+                if verbosity > 0 and len(drop):
+                    print(
+                        f"States '{self.name}': Dropping variables {drop}"
+                    )
 
                 def _prep_fields(a, sel=None, isel=None):
                     """Filters fields while reading"""
