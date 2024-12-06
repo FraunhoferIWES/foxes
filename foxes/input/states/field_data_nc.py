@@ -401,11 +401,12 @@ class FieldDataNC(States):
                     self.__data_source = xr.open_mfdataset(
                         str(fpath),
                         parallel=False,
+                        chunks="auto",
                         concat_dim=self.states_coord,
                         combine="nested",
                         data_vars="minimal",
                         coords="minimal",
-                        compat="override",
+                        compat="equals",
                         drop_variables=drop,
                         cache=self.pre_load,
                         preprocess=prep,
