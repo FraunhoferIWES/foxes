@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from foxes.utils import Dict
-from foxes.core import Turbine, TurbineType
+from foxes.core import Turbine, TurbineType, WindFarm
 import foxes.variables as FV
 
 
@@ -166,3 +166,56 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
         )
     if verbosity > 2:
         print(f"          Added {farm.n_turbines} turbines")
+
+def read_farm(wio_dict, mbook, verbosity):
+    """
+    Reads the wind farm information
+
+    Parameters
+    ----------
+    wio_dict: foxes.utils.Dict
+        The windio data
+    verbosity: int
+        The verbosity level, 0=silent
+    
+    Returns
+    -------
+    farm: foxes.core.WindFarm
+        The wind farm
+    
+    :group: input.yaml.windio
+
+    """
+    wio_farm = Dict(wio_dict["wind_farm"], name=wio_dict.name + ".wind_farm")
+    if verbosity > 1:
+        print("Reading wind farm")
+        print("  Name:", wio_farm.pop_item("name", None))
+        print("  Contents:", [k for k in wio_farm.keys()])
+
+    # find REWS exponents:
+    try:
+        rotor_averaging = wio_dict["attributes"]["analysis"]["rotor_averaging"]
+        ws_exp_P = rotor_averaging["wind_speed_exponent_for_power"]
+        ws_exp_ct = rotor_averaging["wind_speed_exponent_for_ct"]
+    except KeyError:
+        ws_exp_P = 1
+        ws_exp_ct = 1
+
+    # read turbine type:
+    ttypes = read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity)
+
+    # read layouts and create wind farm:
+    farm = WindFarm()
+    wfarm = wio_farm["layouts"]
+    if isinstance(wfarm, dict):
+        layouts = Dict(wfarm, name=wio_farm.name + ".layouts")
+    else:
+        layouts = {str(i): l for i, l in enumerate(wfarm)}
+        layouts = Dict(layouts, name=wio_farm.name + ".layouts")
+    if verbosity > 2:
+        print("    Reading layouts")
+        print("      Contents:", [k for k in layouts.keys()])
+    for lname, ldict in layouts.items():
+        read_layout(lname, ldict, farm, ttypes, verbosity)
+
+    return farm

@@ -2,8 +2,6 @@ from foxes.utils import Dict
 from foxes.core import WakeModel, WakeFrame
 import foxes.variables as FV
 
-from .read_outputs import read_outputs
-
 
 def _read_wind_deficit(
     wake_model_key,
@@ -337,14 +335,14 @@ def _read_analysis(wio_ana, idict, mbook, verbosity):
         print("deflection_model not found, using default settings")
 
 
-def read_attributes(wio, idict, mbook, verbosity=1):
+def read_attributes(wio_attrs, idict, mbook, verbosity=1):
     """
     Reads the attributes part of windio
 
     Parameters
     ----------
-    wio: foxes.utils.Dict
-        The windio data
+    wio_attrs: foxes.utils.Dict
+        The windio attributes data
     idict: foxes.utils.Dict
         The foxes input data dictionary
     mbook: foxes.models.ModelBook
@@ -352,15 +350,9 @@ def read_attributes(wio, idict, mbook, verbosity=1):
     verbosity: int
         The verbosity level, 0=silent
 
-    Returns
-    -------
-    odir: pathlib.Path
-        The output directory
-
     :group: input.yaml.windio
 
     """
-    wio_attrs = Dict(wio["attributes"], name=wio.name + ".attributes")
     if verbosity > 1:
         print("Reading attributes")
         print("  Contents:", [k for k in wio_attrs.keys()])
@@ -379,12 +371,3 @@ def read_attributes(wio, idict, mbook, verbosity=1):
     # read analysis:
     wio_ana = Dict(wio_attrs["analysis"], name=wio_attrs.name + ".analysis")
     _read_analysis(wio_ana, idict, mbook, verbosity)
-
-    # outputs:
-    odict = []
-    odir = None
-    if "outputs" in wio_attrs:
-        outputs = Dict(wio_attrs["outputs"], name=wio_attrs.name + ".outputs")
-        odir = read_outputs(outputs, odict, verbosity=verbosity)
-
-    return odir

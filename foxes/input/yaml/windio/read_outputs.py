@@ -7,7 +7,7 @@ import foxes.constants as FC
 from .read_fields import foxes2wio
 
 
-def _read_turbine_outputs(wio_outs, olist, verbosity):
+def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
     """Reads the turbine outputs request"""
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get_item(
         "report", True
@@ -40,7 +40,7 @@ def _read_turbine_outputs(wio_outs, olist, verbosity):
             output_type="StateTurbineTable",
             functions=[
                 dict(
-                    name="get_dataset",
+                    function="get_dataset",
                     variables=[vmap[v] for v in output_variables],
                     name_map=ivmap,
                     to_file=turbine_nc_filename,
@@ -52,7 +52,7 @@ def _read_turbine_outputs(wio_outs, olist, verbosity):
         ))
 
 
-def _read_flow_field(wio_outs, olist, verbosity):
+def _read_flow_field(wio_outs, olist, algo, verbosity):
     """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get_item("report", True):
         flow_field = Dict(wio_outs["flow_field"], name=wio_outs.name + ".flow_field")
@@ -87,6 +87,8 @@ def _read_flow_field(wio_outs, olist, verbosity):
         z_list = []
         if z_sampling == "plane_list":
             z_list = z_planes.pop_item("z_list")
+        elif z_sampling == "hub_height":
+            z_list = np.unique(algo.farm.get_hub_heights(algo))
         elif z_sampling == "grid":
             zb = z_planes.pop_item("z_bounds")
             assert len(zb) == 2, f"Expecting two entries for z_bounds, got {zb}"
@@ -94,9 +96,11 @@ def _read_flow_field(wio_outs, olist, verbosity):
             z_list = np.linspace(zb[0], zb[1], zn)
         else:
             raise NotImplementedError(
-                f"z_sampling '{z_sampling}' is not supported. Choices: 'plane_list', 'grid'."
+                f"z_sampling '{z_sampling}' is not supported. Choices: plane_list, hub_height, grid."
             )
-        print("          z_list        :", list(z_list))
+        z_list = np.asarray(z_list)
+        if verbosity > 2:
+            print("          z_list        :", z_list)
 
         if xy_sampling == "grid":
             xb = z_planes.pop_item("x_bounds")
@@ -105,16 +109,33 @@ def _read_flow_field(wio_outs, olist, verbosity):
             assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
             dx = z_planes.pop_item("dx")
             dy = z_planes.pop_item("dy")
+            nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
+            if (xb[1] - xb[0]) / (nx - 1) > dx:
+                nx += 1
+            ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
+            if (yb[1] - yb[0]) / (ny - 1) > dy:
+                ny += 1
+            z_list = np.asarray(z_list)
+            if verbosity > 2:
+                print("          x_bounds      :", xb)
+                print("          y_bounds      :", yb)
+                print("          nx, ny        :", (nx, ny))
+                print("          true dx       :", (xb[1] - xb[0]) / (nx - 1))
+                print("          true dy       :", (yb[1] - yb[0]) / (ny - 1))
             olist.append(Dict(
-                output_type="SliceData",
+                output_type="SlicesData",
                 verbosity_delta=3,
                 functions=[
                     dict(
-                        name="get_states_data_xy",
+                        function="get_states_data_xy",
+                        z_list=z_list,
                         states_isel=states_isel,
-                        n_img_points=(100, 100),
+                        xmin=xb[0],
+                        xmax=xb[1],
+                        ymin=yb[0],
+                        ymax=yb[1],
+                        n_img_points=(nx, ny),
                         variables=[vmap[v] for v in output_variables],
-                        z=z,
                         to_file=flow_nc_filename,
                         label_map=foxes2wio,
                         verbosity=verbosity,
@@ -128,7 +149,7 @@ def _read_flow_field(wio_outs, olist, verbosity):
             )
 
 
-def read_outputs(wio_outs, olist, verbosity=1):
+def read_outputs(wio_outs, idict, algo, verbosity=1):
     """
     Reads the windio outputs
 
@@ -136,8 +157,10 @@ def read_outputs(wio_outs, olist, verbosity=1):
     ----------
     wio_outs: foxes.utils.Dict
         The windio output data dict
-    olist: list of foxes.utils.Dict
-        The foxes output dictionary list
+    idict: foxes.utils.Dict
+        The foxes input data dictionary
+    algo: foxes.core.Algorithm
+        The algorithm
     verbosity: int
         The verbosity level, 0=silent
 
@@ -150,15 +173,19 @@ def read_outputs(wio_outs, olist, verbosity=1):
 
     """
     odir = wio_outs.pop_item("output_folder", ".")
+    olist = []
     if verbosity > 2:
         print("  Reading outputs")
         print("    Output dir:", odir)
         print("    Contents  :", [k for k in wio_outs.keys()])
 
     # read turbine_outputs:
-    _read_turbine_outputs(wio_outs, olist, verbosity)
+    _read_turbine_outputs(wio_outs, olist, algo, verbosity)
 
     # read flow field:
-    _read_flow_field(wio_outs, olist, verbosity)
+    _read_flow_field(wio_outs, olist, algo, verbosity)
+
+    if len(olist):
+        idict["outputs"] = olist
 
     return odir

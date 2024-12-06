@@ -48,8 +48,7 @@ class DefaultEngine(Engine):
 
         if (algo.n_states >= max_n) or (
             point_data is not None
-            and self.chunk_size_points is not None
-            and point_data.sizes[FC.TARGET] > self.chunk_size_points
+            and algo.n_states * point_data.sizes[FC.TARGET] > 10000
         ):
             ename = "process"
         else:

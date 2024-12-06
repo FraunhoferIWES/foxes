@@ -90,38 +90,53 @@ def read_dict(
 
     # create states:
     if states is None:
-        _print("Creating states")
-        states = States.new(**idict["states"])
+        if algo is None:
+            _print("Creating states")
+            states = States.new(**idict["states"])
+        else:
+            states = algo.states
+    else:
+        assert algo is None, f"Cannot handle both the algo and the states argument, please drop one"
 
     # create model book:
     if mbook is None:
-        mbook = ModelBook()
-        if "model_book" in idict:
-            _print("Creating model book")
-            mdict = idict.get_item("model_book")
-            for s, mlst in mdict.items():
-                t = mbook.sources.get_item(s)
-                c = mbook.base_classes.get_item(s)
-                ms = [Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)]
-                for m in ms:
-                    mname = m.pop_item("name")
-                    _print(f"  Adding {s}.{mname}")
-                    t[mname] = c.new(**m)
+        if algo is None:
+            mbook = ModelBook()
+            if "model_book" in idict:
+                _print("Creating model book")
+                mdict = idict.get_item("model_book")
+                for s, mlst in mdict.items():
+                    t = mbook.sources.get_item(s)
+                    c = mbook.base_classes.get_item(s)
+                    ms = [Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)]
+                    for m in ms:
+                        mname = m.pop_item("name")
+                        _print(f"  Adding {s}.{mname}")
+                        t[mname] = c.new(**m)
+        else:
+            mbook = algo.mbook
+    else:
+        assert algo is None, f"Cannot handle both the algo and the mbook argument, please drop one"
 
     # create farm:
     if farm is None:
-        _print("Creating wind farm")
-        fdict = idict.get_item("wind_farm")
-        lyts = [
-            Dict(l, name=f"{fdict.name}.layout{i}")
-            for i, l in enumerate(fdict.pop_item("layouts"))
-        ]
-        farm = WindFarm(**fdict)
-        for lyt in lyts:
-            add_fun = getattr(farm_layout, lyt.pop_item("function"))
-            if verbosity is not None:
-                lyt["verbosity"] = verbosity - 1
-            add_fun(farm, **lyt)
+        if algo is None:
+            _print("Creating wind farm")
+            fdict = idict.get_item("wind_farm")
+            lyts = [
+                Dict(l, name=f"{fdict.name}.layout{i}")
+                for i, l in enumerate(fdict.pop_item("layouts"))
+            ]
+            farm = WindFarm(**fdict)
+            for lyt in lyts:
+                add_fun = getattr(farm_layout, lyt.pop_item("function"))
+                if verbosity is not None:
+                    lyt["verbosity"] = verbosity - 1
+                add_fun(farm, **lyt)
+        else:
+            farm = algo.farm
+    else:
+        assert algo is None, f"Cannot handle both the algo and the farm argument, please drop one"
 
     # create engine:
     engine = None
@@ -261,7 +276,7 @@ def run_obj_function(
             print(*args, **kwargs)
 
     fname = fdict.pop_item("function")
-    _print(f"  - {fname}")
+    _print(f"Running function {type(obj).__name__}.{fname}")
     plt_show = fdict.pop_item("plt_show", False)
     plt_close = fdict.pop_item("plt_close", False)
     rlbs = fdict.pop_item("result_labels", None)
@@ -367,7 +382,6 @@ def run_outputs(
     out = []
     rlabels = Dict(name="result_labels")
     if "outputs" in idict:
-        _print("Running outputs")
         odicts = [
             Dict(odict, name=f"{idict.name}.output{i}")
             for i, odict in enumerate(idict["outputs"])
@@ -376,7 +390,7 @@ def run_outputs(
         for i, d in enumerate(odicts):
             if "output_type" in d:
                 ocls = d.pop_item("output_type")
-                _print(f"  Output {i}: {ocls}")
+                _print(f"\nRunning output {i}: {ocls}")
                 d0 = dict(output_type=ocls)
                 d0.update(d)
 
@@ -394,7 +408,7 @@ def run_outputs(
 
             elif "object" in d:
                 ocls = d.pop_item("object")
-                _print(f"  Output {i}: Object {ocls}")
+                _print(f"Running output {i}: Object {ocls}")
                 o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
                 d0.update(d)
@@ -413,6 +427,9 @@ def run_outputs(
                 results = run_obj_function(o, fdict, algo, rlabels, verbosity)
                 fres.append(results)
             out.append((d0, fres))
+        
+        if len(odicts):
+            _print()
 
     return out if not ret_rlabels else out, rlabels
 

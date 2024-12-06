@@ -4,8 +4,11 @@ from xarray import Dataset
 from numbers import Number
 
 from foxes.core import States
+from foxes.utils import Dict
 import foxes.variables as FV
 import foxes.constants as FC
+
+from .read_fields import read_wind_resource_field
 
 
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
@@ -203,3 +206,68 @@ def get_states(coords, fields, dims, verbosity=1):
         raise ValueError(
             f"Failed to create states for coords {list(coords.keys())} and fields {list(fields.keys())} with dims {dims}"
         )
+
+def read_site(wio_dict, verbosity=1):
+    """
+    Reads the site information
+    
+    Parameters
+    ----------
+    wio_dict: foxes.utils.Dict
+        The windio data
+    verbosity: int
+        The verbosity level, 0=silent
+    
+    Returns
+    -------
+    states: foxes.core.States
+        The states object
+        
+    :group: input.yaml.windio
+    
+    """
+
+    def _print(*args, level=1, **kwargs):
+        if verbosity >= level:
+            print(*args, **kwargs)
+
+    wio_site = Dict(wio_dict["site"], name=wio_dict.name + ".site")
+    _print("Reading site")
+    _print("  Name:", wio_site.pop_item("name", None))
+    _print("  Contents:", [k for k in wio_site.keys()])
+    _print("  Ignoring boundaries", level=2)
+
+    # read energy_resource:
+    energy_resource = Dict(
+        wio_site["energy_resource"], name=wio_site.name + ".energy_resource"
+    )
+    _print("  Reading energy_resource", level=2)
+    _print("    Name:", energy_resource.pop_item("name", None), level=2)
+    _print("    Contents:", [k for k in energy_resource.keys()], level=2)
+
+    # read wind_resource:
+    wind_resource = Dict(
+        energy_resource["wind_resource"], name=energy_resource.name + ".wind_resource"
+    )
+    _print("    Reading wind_resource", level=3)
+    _print("      Name:", wind_resource.pop_item("name", None), level=3)
+    _print("      Contents:", [k for k in wind_resource.keys()], level=3)
+
+    # read fields
+    coords = Dict(name="coords")
+    fields = Dict(name="fields")
+    dims = Dict(name="dims")
+    for n, d in wind_resource.items():
+        read_wind_resource_field(n, d, coords, fields, dims, verbosity)
+    if verbosity > 2:
+        print("      Coords:")
+        for c, d in coords.items():
+            print(f"        {c}: Shape {d.shape}")
+        print("      Fields:")
+        for f, d in dims.items():
+            if len(d):
+                print(f"        {f}: Dims {d}, shape {fields[f].shape}")
+            else:
+                print(f"        {f} = {fields[f]}")
+
+    return get_states(coords, fields, dims, verbosity)
