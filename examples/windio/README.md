@@ -10,5 +10,5 @@ foxes_windio -h
 
 ## Run command
 ```
-foxes_windio windio_5turbines_timeseries.yaml
+foxes_windio windio_inputs.yaml
 ```
