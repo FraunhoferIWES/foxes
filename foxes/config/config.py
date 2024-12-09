@@ -115,7 +115,7 @@ class Config(Dict):
 
         Returns
         -------
-        nce: str
+        nce: str 
             The NetCDF engine
 
         """
