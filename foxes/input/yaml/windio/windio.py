@@ -71,8 +71,8 @@ def read_windio(wio_dict, verbosity=1):
     )
 
     odir = None
-    if "outputs" in wio_attrs:
-        outputs = Dict(wio_attrs["outputs"], name=wio_attrs.name + ".outputs")
+    if "model_outputs_specification" in wio_attrs:
+        outputs = Dict(wio_attrs["model_outputs_specification"], name=wio_attrs.name + ".outputs")
         odir = read_outputs(outputs, idict, algo, verbosity=verbosity)
 
     return idict, algo, odir

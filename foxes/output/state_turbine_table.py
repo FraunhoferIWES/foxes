@@ -39,6 +39,8 @@ class StateTurbineTable(Output):
         variables,
         name_map={},
         to_file=None,
+        isel=None,
+        sel=None,
         **kwargs,
     ):
         """
@@ -52,6 +54,10 @@ class StateTurbineTable(Output):
             Map from foxes to output names
         to_file: str, optional
             Name of the output file, if writing is desired
+        isel: dict, optional
+            Parameters for xarray.Dataset.isel
+        sel: dict, optional
+            Parameters for xarray.Dataset.sel   
         kwargs: dict, optional
             Additional parameters for write_nc
 
@@ -74,6 +80,11 @@ class StateTurbineTable(Output):
                 for v in variables
             },
         )
+
+        if isel is not None:
+            ds = ds.isel(**isel)
+        if sel is not None:
+            ds = ds.sel(**sel)
 
         if to_file is not None:
             fpath = self.get_fpath(to_file)

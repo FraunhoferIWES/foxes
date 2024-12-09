@@ -7,7 +7,7 @@ import foxes.constants as FC
 from .read_fields import foxes2wio
 
 
-def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
+def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
     """Reads the turbine outputs request"""
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get_item(
         "report", True
@@ -36,6 +36,10 @@ def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
             }
         )
 
+        isel = None
+        if states_isel is not None and len(states_isel):
+            isel = {"time": states_isel}
+
         olist.append(
             Dict(
                 output_type="StateTurbineTable",
@@ -48,6 +52,7 @@ def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
                         round={
                             vw: FV.get_default_digits(vf) for vw, vf in vmap.items()
                         },
+                        isel=isel,
                         verbosity=verbosity,
                     )
                 ],
@@ -56,20 +61,12 @@ def _read_turbine_outputs(wio_outs, olist, algo, verbosity):
         )
 
 
-def _read_flow_field(wio_outs, olist, algo, verbosity):
+def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
     """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get_item("report", True):
         flow_field = Dict(wio_outs["flow_field"], name=wio_outs.name + ".flow_field")
         flow_nc_filename = flow_field.pop_item("flow_nc_filename", "flow_field.nc")
         output_variables = flow_field.pop_item("output_variables")
-
-        cases_run = Dict(
-            flow_field.pop_item("cases_run", {}), name=flow_field.name + ".cases_run"
-        )
-        if cases_run.pop_item("all_occurences"):
-            states_isel = None
-        else:
-            states_isel = cases_run.pop_item("occurences_list")
 
         z_planes = Dict(
             flow_field.pop_item("z_planes"), name=flow_field.name + ".z_planes"
@@ -93,7 +90,7 @@ def _read_flow_field(wio_outs, olist, algo, verbosity):
         z_list = []
         if z_sampling == "plane_list":
             z_list = z_planes.pop_item("z_list")
-        elif z_sampling == "hub_height":
+        elif z_sampling == "hub_heights":
             z_list = np.unique(algo.farm.get_hub_heights(algo))
         elif z_sampling == "grid":
             zb = z_planes.pop_item("z_bounds")
@@ -104,7 +101,7 @@ def _read_flow_field(wio_outs, olist, algo, verbosity):
             z_list = np.atleast_1d(z_sampling)
         else:
             raise NotImplementedError(
-                f"z_sampling '{z_sampling}' is not supported. Choices: plane_list, hub_height, grid."
+                f"z_sampling '{z_sampling}' is not supported. Choices: plane_list, hub_heights, grid."
             )
         z_list = np.asarray(z_list)
         if verbosity > 2:
@@ -185,15 +182,24 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
     odir = wio_outs.pop_item("output_folder", ".")
     olist = []
     if verbosity > 2:
-        print("  Reading outputs")
+        print("  Reading model_outputs_specification")
         print("    Output dir:", odir)
         print("    Contents  :", [k for k in wio_outs.keys()])
 
+    # read subset:
+    cases_run = Dict(
+        wio_outs.pop_item("cases_run", {}), name=wio_outs.name + ".cases_run"
+    )
+    if cases_run.pop_item("all_occurences"):
+        states_isel = None
+    else:
+        states_isel = cases_run.pop_item("subset")
+
     # read turbine_outputs:
-    _read_turbine_outputs(wio_outs, olist, algo, verbosity)
+    _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity)
 
     # read flow field:
-    _read_flow_field(wio_outs, olist, algo, verbosity)
+    _read_flow_field(wio_outs, olist, algo, states_isel, verbosity)
 
     if len(olist):
         idict["outputs"] = olist
