@@ -27,7 +27,7 @@ def _read_wind_deficit(
     ws_sup_dict = Dict(
         {
             "Linear": "ws_linear",
-            "Quadratic": "ws_quadratic",
+            "Squared": "ws_quadratic",
             "Product": "ws_product",
         },
         name="ws_sup_dict",
@@ -35,7 +35,7 @@ def _read_wind_deficit(
     ws_sup_amb_dict = Dict(
         {
             "Linear": "ws_linear_amb",
-            "Quadratic": "ws_quadratic_amb",
+            "Squared": "ws_quadratic_amb",
             "Product": "ws_product",
         },
         name="ws_sup_dict",
@@ -106,7 +106,7 @@ def _read_turbulence(
     ti_sup_dict = Dict(
         {
             "Linear": "ti_linear",
-            "Quadratic": "ti_quadratic",
+            "Squared": "ti_quadratic",
         },
         name="ti_sup_dict",
     )
