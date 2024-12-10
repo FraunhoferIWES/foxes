@@ -43,7 +43,7 @@ if __name__ == "__main__":
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
     parser.add_argument(
-        "-npl", "--no_pre_load", help="Pre-load the nc data", action="store_true"
+        "-lm", "--load_mode", help="Do load mode", default="preload",
     )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         var2ncvar={FV.WS: "ws", FV.WD: "wd"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
-        pre_load=not args.no_pre_load,
+        load_mode=args.load_mode,
         bounds_error=False,
     )
 

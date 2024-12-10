@@ -100,6 +100,49 @@ class DaskBaseEngine(Engine):
         dask.config.set(**self.dask_config)
         super().initialize()
 
+    def map(
+        self, 
+        func, 
+        inputs,
+        *args, 
+        **kwargs,
+    ):
+        """
+        Runs a function on a list of files
+        
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on each file,
+            func(input, *args, **kwargs) -> data
+        inputs: array-like
+            The input data list
+        args: tuple, optional
+            Arguments for func
+        kwargs: dict, optional
+            Keyword arguments for func
+        
+        Returns
+        -------
+        results: list
+            The list of results
+            
+        """
+        if len(inputs) == 0:
+            return []
+        elif len(inputs) == 1:
+            return [func(inputs[0], *args, **kwargs)]
+        else:
+            inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
+            jobs = []
+            for subi in inptl:
+                jobs.append(_run_map(func, subi, *args, **kwargs))
+            results = dask.compute(jobs)[0]
+            out = []
+            for r in results:
+                out += r
+            return out
+        
     def chunk_data(self, data):
         """
         Applies the selected chunking
@@ -282,6 +325,39 @@ class XArrayEngine(DaskBaseEngine):
 
     """
 
+    def map(
+        self, 
+        func, 
+        inputs,
+        *args, 
+        **kwargs,
+    ):
+        """
+        Runs a function on a list of files
+        
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on each file,
+            func(input, *args, **kwargs) -> data
+        inputs: array-like
+            The input data list
+        args: tuple, optional
+            Arguments for func
+        kwargs: dict, optional
+            Keyword arguments for func
+        
+        Returns
+        -------
+        results: list
+            The list of results
+            
+        """
+        return [
+            func(input, *args, **kwargs)
+            for input in inputs
+        ]
+    
     def run_calculation(
         self,
         algo,
@@ -477,6 +553,13 @@ def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
 
+@delayed
+def _run_map(func, inputs, *args, **kwargs):
+    """Helper function for running map func on proc"""
+    return [
+        func(x, *args, **kwargs)
+        for x in inputs
+    ]
 
 class DaskEngine(DaskBaseEngine):
     """

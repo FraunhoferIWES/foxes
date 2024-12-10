@@ -12,6 +12,50 @@ class DefaultEngine(Engine):
 
     """
 
+    def map(
+        self, 
+        func, 
+        inputs,
+        *args, 
+        **kwargs,
+    ):
+        """
+        Runs a function on a list of files
+        
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on each file,
+            func(input, *args, **kwargs) -> data
+        inputs: array-like
+            The input data list
+        args: tuple, optional
+            Arguments for func
+        kwargs: dict, optional
+            Keyword arguments for func
+        
+        Returns
+        -------
+        results: list
+            The list of results
+            
+        """
+
+        self.finalize()
+
+        with Engine.new(
+            "process",
+            n_procs=self.n_procs,
+            chunk_size_states=self.chunk_size_states,
+            chunk_size_points=self.chunk_size_points,
+            verbosity=self.verbosity,
+        ) as e:
+            results = e.map(func, inputs, *args, **kwargs)
+
+        self.initialize()
+
+        return results
+
     def run_calculation(
         self,
         algo,
