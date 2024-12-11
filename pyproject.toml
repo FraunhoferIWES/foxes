@@ -80,6 +80,7 @@ test = [
     "h5netcdf",
 ]
 doc = [
+    "setuptools",
     "sphinx",
     "sphinx-immaterial",
     "nbsphinx",
