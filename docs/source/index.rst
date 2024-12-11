@@ -3,7 +3,11 @@
     :align: center
 
 .. versionchanged:: 1.2.3
-    Rmoving states class `SliceDataNC`, since now `FieldDataNC` can also handle data without height dependency
+    `FieldDataNC` now with more efficient parallel loading of large data, replacing `pre_load` flag with load 
+    mode options `preload`, `lazy`, `fly`
+
+.. versionchanged:: 1.2.3
+    Removing states class `SliceDataNC`, since now `FieldDataNC` can also handle data without height dependency
 
 .. versionchanged:: 1.2.1
     Output `FarmResultsEval`: Renaming contraction rule `mean` as `weights`. Usually this
