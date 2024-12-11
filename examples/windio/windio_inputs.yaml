@@ -41,7 +41,7 @@ attributes:
       name: CrespoHernandez
     superposition_model:
       ws_superposition: Linear
-      ti_superposition: Quadratic
+      ti_superposition: Squared
     rotor_averaging:
       grid: grid
       n_x_grid_points: 4
@@ -53,21 +53,26 @@ attributes:
     blockage_model:
       name: None
 
-  outputs:
-    output_folder: "results"
+  model_outputs_specification:
+    output_folder: results
+    cases_run:
+      all_occurences: False
+      subset: [0, 100, 200, 3000]
     turbine_outputs:
-        turbine_nc_filename: 'turbine_data.nc' # dimension = states, turbine
-        output_variables: ['power', 'rotor_effective_velocity'] #'frequency'
+        turbine_nc_filename: turbine_data.nc 
+        output_variables: [power, rotor_effective_velocity] 
     #
     flow_field:
-      report: False
-      flow_nc_filename: flow_field.nc
-      cases_run:
-        all_occurences: True
-      output_variables: ['wind_speed', 'wind_direction']
+      report: True
+      flow_nc_filename: result.nc
+      output_variables: [wind_speed, wind_direction]
       z_planes:
-        z_sampling: "hub_height"
-        xy_sampling: "default"
+        z_sampling: hub_heights
+        xy_sampling: grid
+        x_bounds: [-2000, 2000]
+        y_bounds: [-2000, 4000]
+        dx: 10
+        dy: 10
     #
     statistics:
       stats_filename: None

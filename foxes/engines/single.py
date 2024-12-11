@@ -39,6 +39,36 @@ class SingleChunkEngine(Engine):
     def __repr__(self):
         return f"{type(self).__name__}()"
 
+    def map(
+        self,
+        func,
+        inputs,
+        *args,
+        **kwargs,
+    ):
+        """
+        Runs a function on a list of files
+
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on each file,
+            func(input, *args, **kwargs) -> data
+        inputs: array-like
+            The input data list
+        args: tuple, optional
+            Arguments for func
+        kwargs: dict, optional
+            Keyword arguments for func
+
+        Returns
+        -------
+        results: list
+            The list of results
+
+        """
+        return [func(input, *args, **kwargs) for input in inputs]
+
     def run_calculation(
         self,
         algo,

@@ -60,7 +60,10 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
-        "-npl", "--no_pre_load", help="Do not pre-load data", action="store_true"
+        "-lm",
+        "--load_mode",
+        help="Do load mode",
+        default="preload",
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"
@@ -70,7 +73,7 @@ if __name__ == "__main__":
     states = foxes.input.states.FieldDataNC(
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        pre_load=not args.no_pre_load,
+        load_mode=args.load_mode,
     )
 
     mbook = foxes.models.ModelBook()

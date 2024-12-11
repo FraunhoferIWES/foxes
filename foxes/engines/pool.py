@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 from abc import abstractmethod
 from tqdm import tqdm
@@ -13,6 +14,11 @@ def _run(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
     chunk_store = algo.reset_chunk_store() if iterative else {}
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
+
+
+def _run_map(func, inputs, *args, **kwargs):
+    """Helper function for running map func on proc"""
+    return [func(x, *args, **kwargs) for x in inputs]
 
 
 class PoolEngine(Engine):
@@ -81,6 +87,48 @@ class PoolEngine(Engine):
     def __exit__(self, *exit_args):
         self._shutdown_pool()
         super().__exit__(*exit_args)
+
+    def map(
+        self,
+        func,
+        inputs,
+        *args,
+        **kwargs,
+    ):
+        """
+        Runs a function on a list of files
+
+        Parameters
+        ----------
+        func: Callable
+            Function to be called on each file,
+            func(input, *args, **kwargs) -> data
+        inputs: array-like
+            The input data list
+        args: tuple, optional
+            Arguments for func
+        kwargs: dict, optional
+            Keyword arguments for func
+
+        Returns
+        -------
+        results: list
+            The list of results
+
+        """
+        if len(inputs) == 0:
+            return []
+        elif len(inputs) == 1:
+            return [func(inputs[0], *args, **kwargs)]
+        else:
+            inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
+            jobs = []
+            for subi in inptl:
+                jobs.append(self._submit(_run_map, func, subi, *args, **kwargs))
+            results = []
+            for j in jobs:
+                results += self._result(j)
+            return results
 
     def run_calculation(
         self,

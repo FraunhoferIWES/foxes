@@ -4,13 +4,13 @@ from foxes.variables import get_default_digits
 
 
 def write_nc(
-        ds, 
-        fpath, 
-        round={}, 
-        complevel=9, 
-        verbosity=1, 
-        **kwargs,
-    ):
+    ds,
+    fpath,
+    round={},
+    complevel=9,
+    verbosity=1,
+    **kwargs,
+):
     """
     Writes a dataset to netCDF file
 
@@ -54,6 +54,7 @@ def write_nc(
         print("Writing file", fpath)
 
     from foxes.config import config
+
     kw = dict(encoding=enc, engine=config.nc_engine)
     kw.update(kwargs)
     ds.to_netcdf(fpath, **kw)
