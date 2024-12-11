@@ -211,17 +211,28 @@ class FieldDataNC(States):
             )
         return self.__data_source
 
-    def _get_data(self, ds, verbosity):
+    def _get_data(self, ds, coords, verbosity):
         """
         Helper function for data extraction
         """
-        llst = []
-        for c in [self.states_coord, self.x_coord, self.y_coord, self.h_coord]:
+        for ci, c in enumerate(coords):
+            found = False
             if c is not None:
-                llst.append(ds.sizes[c])
+                for v in ds.data_vars.values():
+                    if c in v.dims:
+                        found = True
+                        break
+            if not found:
+                coords[ci] = None   
+                    
+        dlst = []
+        for c in coords:
+            if c is not None:
+                dlst.append(np.atleast_1d(ds[c].to_numpy()))
             else:
-                llst.append(1)
-        n_sts, n_x, n_y, n_h = llst
+                dlst.append(np.array([0], dtype=config.dtype_double))
+        sts, h, y, x = dlst
+        n_sts, n_h, n_y, n_x = [len(u) for u in dlst]
 
         cor_shxy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
         cor_shyx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
@@ -291,7 +302,7 @@ class FieldDataNC(States):
                     f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)"
                 )
 
-        return data
+        return sts, h, y, x, data
 
     def output_point_vars(self, algo):
         """
@@ -335,6 +346,7 @@ class FieldDataNC(States):
         """
 
         # pre-load file reading:
+        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
         if not isinstance(self.data_source, xr.Dataset):
 
             # check variables:
@@ -391,7 +403,6 @@ class FieldDataNC(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
             files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
-            coords = [self.states_coord, self.x_coord, self.y_coord, self.h_coord]
             vars = list(self.var2ncvar.values())
             if self.weight_ncvar is not None:
                 vars += [self.weight_ncvar]
@@ -475,24 +486,16 @@ class FieldDataNC(States):
             self.VARS = self.var("vars")
             self.DATA = self.var("data")
 
-            ds = self.data_source
-
-            dlst = []
-            for c in [self.h_coord, self.y_coord, self.x_coord]:
-                if c is not None:
-                    dlst.append(np.atleast_1d(ds[c].to_numpy()))
-                else:
-                    dlst.append(np.array([0], dtype=config.dtype_double))
-            h, y, x = dlst
-            v = list(self._dkys.keys())
+            __, h, y, x, data = self._get_data(self.data_source, coords, verbosity)
+            self._prl_coords = coords
+            
             coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
-            data = self._get_data(ds, verbosity)
             data = (coos, data)
 
             idata["coords"][self.H] = h
             idata["coords"][self.Y] = y
             idata["coords"][self.X] = x
-            idata["coords"][self.VARS] = v
+            idata["coords"][self.VARS] = list(self._dkys.keys())
             idata["data_vars"][self.DATA] = data
 
         return idata
@@ -672,17 +675,7 @@ class FieldDataNC(States):
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
         n_states = fdata.n_states
-
-        def _eval_ds(ds):
-            dlst = []
-            for c in [self.h_coord, self.y_coord, self.x_coord]:
-                if c is not None:
-                    dlst.append(np.atleast_1d(ds[c].to_numpy()))
-                else:
-                    dlst.append(np.array([0], dtype=config.dtype_double))
-            h, y, x = dlst
-            data = self._get_data(ds, verbosity=0)
-            return x, y, h, data
+        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
 
         # case preload:
         if self.load_mode == "preload":
@@ -690,18 +683,18 @@ class FieldDataNC(States):
             y = mdata[self.Y]
             h = mdata[self.H]
             data = mdata[self.DATA].copy()
+            coords = self._prl_coords
 
         # case lazy:
         elif self.load_mode == "lazy":
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
-            x, y, h, data = _eval_ds(ds)
+            __, h, y, x, data = self._get_data(ds, coords, verbosity=0)
             del ds
         
         # case fly:
         elif self.load_mode == "fly":
-            coords = [self.states_coord, self.x_coord, self.y_coord, self.h_coord]
             vars = list(self.var2ncvar.values())
             if self.weight_ncvar is not None:
                 vars += [self.weight_ncvar]
@@ -738,7 +731,7 @@ class FieldDataNC(States):
             assert i0 == i1, f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
 
             data = xr.concat(data, dim=self.states_coord)
-            x, y, h, data = _eval_ds(data)
+            __, h, y, x, data = self._get_data(data, coords, verbosity=0)
 
         else:
             raise KeyError(f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly")
@@ -770,8 +763,7 @@ class FieldDataNC(States):
         gvars = (sts, h, y, x)
 
         # reset None coordinate data, since that should not be interpolated:
-        crds = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
-        for i, (c, g) in enumerate(zip(crds, gvars)):
+        for i, (c, g) in enumerate(zip(coords, gvars)):
             if c is None:
                 pts[..., i] = g[0]
 
