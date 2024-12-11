@@ -713,3 +713,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New point model `Ustar2TI`, estimates TI from friction velocity
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.3](https://github.com/FraunhoferIWES/foxes/commits/v1.2.3)
+
+## v1.2.4
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.4](https://github.com/FraunhoferIWES/foxes/commits/v1.2.4)
