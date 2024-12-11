@@ -60,7 +60,10 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
-        "-lm", "--load_mode", help="Do load mode", default="preload",
+        "-lm",
+        "--load_mode",
+        help="Do load mode",
+        default="preload",
     )
     parser.add_argument(
         "-nf", "--nofig", help="Do not show figures", action="store_true"

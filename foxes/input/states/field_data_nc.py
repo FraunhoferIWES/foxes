@@ -11,16 +11,17 @@ import foxes.variables as FV
 import foxes.constants as FC
 from foxes.config import config, get_input_path
 
+
 def _read_nc_file(
-        fpath, 
-        coords, 
-        vars, 
-        weight_var,
-        nc_engine, 
-        sel,
-        isel,
-        minimal,
-    ):
+    fpath,
+    coords,
+    vars,
+    weight_var,
+    nc_engine,
+    sel,
+    isel,
+    minimal,
+):
     """Helper function for nc file reading"""
     data = xr.open_dataset(fpath, engine=nc_engine)
     for c in coords:
@@ -29,12 +30,16 @@ def _read_nc_file(
                 f"Missing coordinate '{c}' in file {fpath}, got: {list(data.coords.keys())}"
             )
     if minimal:
-        weights = None 
+        weights = None
         if weight_var is not None:
             if weight_var not in data.data_vars:
-                raise KeyError(f"Missing weight var '{weight_var}' in file {fpath}, found: {list(data.data_vars.keys())}")
+                raise KeyError(
+                    f"Missing weight var '{weight_var}' in file {fpath}, found: {list(data.data_vars.keys())}"
+                )
             if data[weight_var].dims != (coords[0],):
-                raise ValueError(f"Wrong dimensions for variable '{weight_var}' in file {fpath}. Expecting {(coords[0],)}, got {data[weight_var].dims}")
+                raise ValueError(
+                    f"Wrong dimensions for variable '{weight_var}' in file {fpath}. Expecting {(coords[0],)}, got {data[weight_var].dims}"
+                )
             weights = data[weight_var].to_numpy()
         return data[coords[0]].to_numpy(), weights
     else:
@@ -45,7 +50,7 @@ def _read_nc_file(
         if sel is not None and len(sel):
             data = data.sel(**sel)
         return data
-    
+
 
 class FieldDataNC(States):
     """
@@ -78,7 +83,7 @@ class FieldDataNC(States):
         preload loads all data during initialization,
         lazy lazy-loads the data using dask, and fly
         reads only states index and weights during initialization
-        and then opens the relevant files again within 
+        and then opens the relevant files again within
         the chunk calculation
     weight_ncvar: str
         Name of the weight data variable in the nc file(s)
@@ -148,7 +153,7 @@ class FieldDataNC(States):
             preload loads all data during initialization,
             lazy lazy-loads the data using dask, and fly
             reads only states index and weights during initialization
-            and then opens the relevant files again within 
+            and then opens the relevant files again within
             the chunk calculation
         weight_ncvar: str, optional
             Name of the weight data variable in the nc file(s)
@@ -223,8 +228,8 @@ class FieldDataNC(States):
                         found = True
                         break
             if not found:
-                coords[ci] = None   
-                    
+                coords[ci] = None
+
         dlst = []
         for c in coords:
             if c is not None:
@@ -355,15 +360,13 @@ class FieldDataNC(States):
                     raise ValueError(
                         f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
                     )
-            if (
-                FV.WS in self.ovars and FV.WD not in self.ovars
-            ) or (
+            if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
                 FV.WS not in self.ovars and FV.WD in self.ovars
             ):
                 raise KeyError(
                     f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}"
                 )
-        
+
             # check static data:
             fpath = get_input_path(self.data_source)
             if "*" not in str(self.data_source):
@@ -387,7 +390,7 @@ class FieldDataNC(States):
                         self.y_coord: slice(xy_min[1], xy_max[1]),
                     }
                 )
-            
+
             # read files:
             if verbosity > 0:
                 if self.load_mode == "preload":
@@ -407,9 +410,9 @@ class FieldDataNC(States):
             if self.weight_ncvar is not None:
                 vars += [self.weight_ncvar]
             self.__data_source = get_engine().map(
-                _read_nc_file, 
+                _read_nc_file,
                 files,
-                coords=coords, 
+                coords=coords,
                 weight_var=self.weight_ncvar,
                 vars=vars,
                 nc_engine=config.nc_engine,
@@ -427,7 +430,7 @@ class FieldDataNC(States):
                         import_module("dask")
                         raise e
                 self.__data_source = xr.concat(
-                    self.__data_source, 
+                    self.__data_source,
                     dim=self.states_coord,
                     coords="minimal",
                     data_vars="minimal",
@@ -449,12 +452,16 @@ class FieldDataNC(States):
                 self.__inds = np.concatenate(self.__inds, axis=0)
                 self._N = len(self.__inds)
                 if weights[0] is not None:
-                    self.__weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
+                    self.__weights = np.zeros(
+                        (self._N, algo.n_turbines), dtype=config.dtype_double
+                    )
                     self.__weights[:] = np.concatenate(weights, axis=0)[:, None]
                     del weights
-            
+
             else:
-                raise KeyError(f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly")
+                raise KeyError(
+                    f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
+                )
 
             if self.time_format is not None:
                 self.__inds = pd.to_datetime(
@@ -488,7 +495,7 @@ class FieldDataNC(States):
 
             __, h, y, x, data = self._get_data(self.data_source, coords, verbosity)
             self._prl_coords = coords
-            
+
             coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
             data = (coos, data)
 
@@ -692,7 +699,7 @@ class FieldDataNC(States):
             ds = self.data_source.isel({self.states_coord: s}).load()
             __, h, y, x, data = self._get_data(ds, coords, verbosity=0)
             del ds
-        
+
         # case fly:
         elif self.load_mode == "fly":
             vars = list(self.var2ncvar.values())
@@ -714,27 +721,33 @@ class FieldDataNC(States):
                         isel = copy(self.isel)
                         isel[self.states_coord] = slice(a, b)
 
-                        data.append(_read_nc_file(
-                            fpath,
-                            coords=coords, 
-                            weight_var=self.weight_ncvar,
-                            vars=vars,
-                            nc_engine=config.nc_engine,
-                            isel=isel,
-                            sel=self.sel,
-                            minimal=False,
-                        ))
-                        
+                        data.append(
+                            _read_nc_file(
+                                fpath,
+                                coords=coords,
+                                weight_var=self.weight_ncvar,
+                                vars=vars,
+                                nc_engine=config.nc_engine,
+                                isel=isel,
+                                sel=self.sel,
+                                minimal=False,
+                            )
+                        )
+
                         i0 += b - a
                     j0 = j1
 
-            assert i0 == i1, f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+            assert (
+                i0 == i1
+            ), f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
 
             data = xr.concat(data, dim=self.states_coord)
             __, h, y, x, data = self._get_data(data, coords, verbosity=0)
 
         else:
-            raise KeyError(f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly")
+            raise KeyError(
+                f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
+            )
 
         n_h = len(h)
         n_y = len(y)

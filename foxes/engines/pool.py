@@ -15,12 +15,11 @@ def _run(algo, model, data, iterative, chunk_store, i0_t0, **cpars):
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
 
+
 def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
-    return [
-        func(x, *args, **kwargs)
-        for x in inputs
-    ]
+    return [func(x, *args, **kwargs) for x in inputs]
+
 
 class PoolEngine(Engine):
     """
@@ -90,15 +89,15 @@ class PoolEngine(Engine):
         super().__exit__(*exit_args)
 
     def map(
-        self, 
-        func, 
+        self,
+        func,
         inputs,
-        *args, 
+        *args,
         **kwargs,
     ):
         """
         Runs a function on a list of files
-        
+
         Parameters
         ----------
         func: Callable
@@ -110,12 +109,12 @@ class PoolEngine(Engine):
             Arguments for func
         kwargs: dict, optional
             Keyword arguments for func
-        
+
         Returns
         -------
         results: list
             The list of results
-            
+
         """
         if len(inputs) == 0:
             return []
@@ -130,7 +129,7 @@ class PoolEngine(Engine):
             for j in jobs:
                 results += self._result(j)
             return results
-                
+
     def run_calculation(
         self,
         algo,

@@ -101,15 +101,15 @@ class DaskBaseEngine(Engine):
         super().initialize()
 
     def map(
-        self, 
-        func, 
+        self,
+        func,
         inputs,
-        *args, 
+        *args,
         **kwargs,
     ):
         """
         Runs a function on a list of files
-        
+
         Parameters
         ----------
         func: Callable
@@ -121,12 +121,12 @@ class DaskBaseEngine(Engine):
             Arguments for func
         kwargs: dict, optional
             Keyword arguments for func
-        
+
         Returns
         -------
         results: list
             The list of results
-            
+
         """
         if len(inputs) == 0:
             return []
@@ -142,7 +142,7 @@ class DaskBaseEngine(Engine):
             for r in results:
                 out += r
             return out
-        
+
     def chunk_data(self, data):
         """
         Applies the selected chunking
@@ -326,15 +326,15 @@ class XArrayEngine(DaskBaseEngine):
     """
 
     def map(
-        self, 
-        func, 
+        self,
+        func,
         inputs,
-        *args, 
+        *args,
         **kwargs,
     ):
         """
         Runs a function on a list of files
-        
+
         Parameters
         ----------
         func: Callable
@@ -346,18 +346,15 @@ class XArrayEngine(DaskBaseEngine):
             Arguments for func
         kwargs: dict, optional
             Keyword arguments for func
-        
+
         Returns
         -------
         results: list
             The list of results
-            
+
         """
-        return [
-            func(input, *args, **kwargs)
-            for input in inputs
-        ]
-    
+        return [func(input, *args, **kwargs) for input in inputs]
+
     def run_calculation(
         self,
         algo,
@@ -553,13 +550,12 @@ def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
 
+
 @delayed
 def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
-    return [
-        func(x, *args, **kwargs)
-        for x in inputs
-    ]
+    return [func(x, *args, **kwargs) for x in inputs]
+
 
 class DaskEngine(DaskBaseEngine):
     """

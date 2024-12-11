@@ -57,7 +57,7 @@ class StateTurbineTable(Output):
         isel: dict, optional
             Parameters for xarray.Dataset.isel
         sel: dict, optional
-            Parameters for xarray.Dataset.sel   
+            Parameters for xarray.Dataset.sel
         kwargs: dict, optional
             Additional parameters for write_nc
 

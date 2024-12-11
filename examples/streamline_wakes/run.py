@@ -43,7 +43,10 @@ if __name__ == "__main__":
         "-nt", "--n_turbines", help="The number of turbines", default=9, type=int
     )
     parser.add_argument(
-        "-lm", "--load_mode", help="Do load mode", default="preload",
+        "-lm",
+        "--load_mode",
+        help="Do load mode",
+        default="preload",
     )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(

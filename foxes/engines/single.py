@@ -40,15 +40,15 @@ class SingleChunkEngine(Engine):
         return f"{type(self).__name__}()"
 
     def map(
-        self, 
-        func, 
+        self,
+        func,
         inputs,
-        *args, 
+        *args,
         **kwargs,
     ):
         """
         Runs a function on a list of files
-        
+
         Parameters
         ----------
         func: Callable
@@ -60,18 +60,15 @@ class SingleChunkEngine(Engine):
             Arguments for func
         kwargs: dict, optional
             Keyword arguments for func
-        
+
         Returns
         -------
         results: list
             The list of results
-            
+
         """
-        return [
-            func(input, *args, **kwargs)
-            for input in inputs
-        ]
-    
+        return [func(input, *args, **kwargs) for input in inputs]
+
     def run_calculation(
         self,
         algo,

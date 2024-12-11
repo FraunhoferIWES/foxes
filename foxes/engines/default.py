@@ -13,15 +13,15 @@ class DefaultEngine(Engine):
     """
 
     def map(
-        self, 
-        func, 
+        self,
+        func,
         inputs,
-        *args, 
+        *args,
         **kwargs,
     ):
         """
         Runs a function on a list of files
-        
+
         Parameters
         ----------
         func: Callable
@@ -33,12 +33,12 @@ class DefaultEngine(Engine):
             Arguments for func
         kwargs: dict, optional
             Keyword arguments for func
-        
+
         Returns
         -------
         results: list
             The list of results
-            
+
         """
 
         self.finalize()
