@@ -718,5 +718,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Config:
   - Fix for bug with `nc_engine` for Python 3.8
+- Utils:
+  - New util `ReaderWRG`, reading WRG files. Thanks @HassanKassem
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.4](https://github.com/FraunhoferIWES/foxes/commits/v1.2.4)
