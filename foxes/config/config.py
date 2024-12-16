@@ -1,5 +1,6 @@
 import numpy as np
 from pathlib import Path
+from sys import version_info
 
 from foxes.utils import Dict, import_module
 import foxes.constants as FC
@@ -25,6 +26,10 @@ class Config(Dict):
             },
             name="config",
         )
+
+        # special treat for Python 3.8:
+        if version_info[0] == 3 and version_info[1] == 8:
+            self["nc_engine"] = None
 
     @property
     def dtype_double(self):
@@ -119,8 +124,10 @@ class Config(Dict):
             The NetCDF engine
 
         """
-        import_module(self[FC.NC_ENGINE])
-        return self[FC.NC_ENGINE]
+        nce = self[FC.NC_ENGINE]
+        if nce is not None:
+            import_module(nce)
+        return nce
 
 
 config = Config()

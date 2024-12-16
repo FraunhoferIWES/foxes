@@ -716,5 +716,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.4
 
+- Config:
+  - Fix for bug with `nc_engine` for Python 3.8
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.4](https://github.com/FraunhoferIWES/foxes/commits/v1.2.4)
