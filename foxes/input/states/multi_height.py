@@ -200,14 +200,14 @@ class MultiHeightStates(States):
         if not isinstance(self.data_source, pd.DataFrame):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
-                if verbosity:
+                if verbosity > 0:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
                 self._data_source = algo.dbook.get_file_path(
                     STATES, self.data_source.name, check_raw=False
                 )
-                if verbosity:
+                if verbosity > 0:
                     print(f"Path: {self.data_source}")
             elif verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")
@@ -627,14 +627,14 @@ class MultiHeightNCStates(MultiHeightStates):
         if not isinstance(self.data_source, Dataset):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
-                if verbosity:
+                if verbosity > 0:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
                 self._data_source = algo.dbook.get_file_path(
                     STATES, self.data_source.name, check_raw=False
                 )
-                if verbosity:
+                if verbosity > 0:
                     print(f"Path: {self.data_source}")
             elif verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")

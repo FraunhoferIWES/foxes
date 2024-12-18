@@ -58,12 +58,17 @@ class ReaderWRG:
         cols[10::3] = cols_sel("Ks", self._n_sectors)
 
         self._data = pd.read_csv(
-            self.fpath, names=cols, skiprows=1, sep="\s+", usecols=range(1, n_cols)
+            self.fpath, names=cols, skiprows=1, sep=r"\s+", usecols=range(1, n_cols)
         )
 
         self._data[cols_sel("fs", self._n_sectors)] /= 10
         self._data[cols_sel("As", self._n_sectors)] /= 10
         self._data[cols_sel("Ks", self._n_sectors)] /= 100
+
+        if len(self._data.index) != self._nx * self._ny:
+            raise ValueError(
+                f"Expecting {self._nx * self._ny} rows in data, got {len(self._data.index)}"
+            )
 
     @property
     def data(self):
@@ -77,3 +82,82 @@ class ReaderWRG:
 
         """
         return self._data
+
+    @property
+    def nx(self):
+        """
+        The number of points in x direction
+
+        Returns
+        -------
+        n: int
+            The number of points in x direction
+
+        """
+        return self._nx
+    
+    @property
+    def ny(self):
+        """
+        The number of points in y direction
+
+        Returns
+        -------
+        n: int
+            The number of points in y direction
+
+        """
+        return self._ny
+
+    @property
+    def x0(self):
+        """
+        The lower left x coordinate
+
+        Returns
+        -------
+        x: float
+            The lower left x coordinate
+
+        """
+        return self._utmx0
+
+    @property
+    def y0(self):
+        """
+        The lower left y coordinate
+
+        Returns
+        -------
+        y: float
+            The lower left y coordinate
+
+        """
+        return self._utmy0
+
+    @property
+    def n_sectors(self):
+        """
+        The number of wind direction sectors
+
+        Returns
+        -------
+        n: int
+            The number of wind direction sectors
+
+        """
+        return self._n_sectors
+    
+    @property
+    def resolution(self):
+        """
+        The horizontal resolution
+
+        Returns
+        -------
+        res: float
+            The horizontal resolution
+
+        """
+        return self._res
+    
