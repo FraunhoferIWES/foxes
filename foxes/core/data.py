@@ -151,6 +151,8 @@ class Data(Dict):
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
         # remove axes of size 1, added by dask for extra loop dimensions:
+        if isinstance(dims, str):
+            dims = (dims,)
         if dims is not None:
             if len(dims) != len(data.shape):
                 for li, l in enumerate(self.loop_dims):
@@ -418,8 +420,6 @@ class FData(Data):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
-                    data[FV.WEIGHT] = mdata[FV.WEIGHT]
-                    dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
                 if callback is not None:
                     callback(data, dims)
 

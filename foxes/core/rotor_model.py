@@ -71,6 +71,8 @@ class RotorModel(FarmDataModel):
                 self.calc_vars.append(FV.REWS3)
 
             self.calc_vars = sorted(self.calc_vars)
+        if FV.WEIGHT not in self.calc_vars:
+            self.calc_vars.append(FV.WEIGHT)
 
         return self.calc_vars
 
@@ -384,7 +386,9 @@ class RotorModel(FarmDataModel):
                 dims=(FC.STATE, FC.TARGET, FC.TPOINT),
             )
 
-        sres = algo.states.calculate(algo, mdata, fdata, tdata)
+        sres = algo.states.calculate(
+            algo, mdata, fdata, tdata, calc_weights=True
+        )
         tdata.update(sres)
 
         if store_amb_res:

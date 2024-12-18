@@ -157,24 +157,7 @@ class SingleStateStates(States):
 
         return list(out)
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return np.ones((1, algo.n_turbines), dtype=config.dtype_double)
-
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
         """
         The main model calculation.
 
@@ -191,6 +174,9 @@ class SingleStateStates(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
+        calc_weights: bool
+            Flag for weights calculation at points,
+            add them to tdata
 
         Returns
         -------
@@ -232,5 +218,19 @@ class SingleStateStates(States):
             for v, p in self._profiles.items():
                 pres = p.calculate(tdata, z)
                 tdata[v] = pres
+        
+        vrs = self.output_point_vars(algo)
+        if calc_weights:
+            if FV.WEIGHT not in vrs:
+                vrs.append(FV.WEIGHT)
+            tdata.add(
+                FV.WEIGHT,
+                np.full(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    self.rho,
+                    dtype=config.dtype_double,
+                ),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            )
 
-        return {v: tdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in vrs}

@@ -98,9 +98,7 @@ class StatesTable(States):
         self._N = None
         self._tvars = None
         self._profiles = None
-
         self._data_source = data_source
-        self.__weights = None
 
     @property
     def data_source(self):
@@ -213,7 +211,6 @@ class StatesTable(States):
 
         if isinstance(self.data_source, pd.DataFrame):
             data = self.data_source
-            isorg = True
         else:
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -230,7 +227,6 @@ class StatesTable(States):
                 print(f"States '{self.name}': Reading file {self.data_source}")
             rpars = dict(self.RDICT, **self.rpars)
             data = PandasFileHelper().read_file(self.data_source, **rpars)
-            isorg = False
 
         if self.states_sel is not None:
             data = data.iloc[self.states_sel]
@@ -240,23 +236,22 @@ class StatesTable(States):
         self.__inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self.__weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
         if col_w in data:
-            self.__weights[:] = data[col_w].to_numpy()[:, None]
+            weights = data[col_w].to_numpy()
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
         else:
-            self.__weights[:] = 1.0 / self._N
-            if isorg:
-                data = data.copy()
-            data[col_w] = self.__weights[:, 0]
+            weights = np.full(
+                self._N, 1.0 / self._N, dtype=config.dtype_double)
 
         tcols = []
         for v in self._tvars:
             c = self.var2col.get(v, v)
-            if c in data.columns:
+            if c == col_w:
+                pass
+            elif c in data.columns:
                 tcols.append(c)
             elif v not in self._profiles.keys():
                 raise KeyError(
@@ -265,8 +260,9 @@ class StatesTable(States):
         data = data[tcols]
 
         idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = self._tvars
+        idata["coords"][self.VARS] = tcols
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
+        idata["data_vars"][FV.WEIGHT] = (FC.STATE, weights)
 
         return idata
 
@@ -313,27 +309,6 @@ class StatesTable(States):
         """
         return self.ovars
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        if self.running:
-            raise ValueError(
-                f"States '{self.name}': Cannot access weights while running"
-            )
-        return self.__weights
-
     def set_running(
         self,
         algo,
@@ -368,10 +343,9 @@ class StatesTable(States):
 
         data_stash[self.name] = dict(
             data_source=self._data_source,
-            weights=self.__weights,
             inds=self.__inds,
         )
-        del self._data_source, self.__weights, self.__inds
+        del self._data_source, self.__inds
 
     def unset_running(
         self,
@@ -404,10 +378,9 @@ class StatesTable(States):
 
         data = data_stash[self.name]
         self._data_source = data.pop("data_source")
-        self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
         """
         The main model calculation.
 
@@ -424,6 +397,9 @@ class StatesTable(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
+        calc_weights: bool
+            Flag for weights calculation at points,
+            add them to tdata
 
         Returns
         -------
@@ -433,29 +409,55 @@ class StatesTable(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        out = {}
         for i, v in enumerate(self._tvars):
-            if v in tdata:
-                tdata[v][:] = mdata[self.DATA][:, i, None, None]
+            if v == FV.WEIGHT:
+                pass
+            elif v in tdata:
+                out[v] = tdata[v]
+                out[v][:] = mdata[self.DATA][:, i, None, None]
             else:
-                tdata[v] = np.zeros(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                    dtype=config.dtype_double,
+                tdata.add(
+                    v,
+                    np.zeros(
+                        (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                        dtype=config.dtype_double,
+                    ),
+                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
                 )
-                tdata[v][:] = mdata[self.DATA][:, i, None, None]
-                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+                out[v] = tdata[v]
+                out[v][:] = mdata[self.DATA][:, i, None, None]
 
         for v, f in self.fixed_vars.items():
-            tdata[v] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                f,
-                dtype=config.dtype_double,
+            tdata.add(
+                v,
+                np.full(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    f,
+                    dtype=config.dtype_double,
+                ),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
             )
+            out[v] = tdata[v]
 
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
             tdata[v] = p.calculate(tdata, z)
+            out[v] = tdata[v]
+        
+        if calc_weights:
+            tdata.add(
+                FV.WEIGHT,
+                np.zeros(
+                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                    dtype=config.dtype_double,
+                ),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            )
+            tdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
+            out[FV.WEIGHT] = tdata[FV.WEIGHT]
 
-        return {v: tdata[v] for v in self.output_point_vars(algo)}
+        return out
 
     def finalize(self, algo, verbosity=0):
         """
@@ -469,10 +471,8 @@ class StatesTable(States):
             The verbosity level
 
         """
-        self.__weights = None
         self._N = None
         self._tvars = None
-
         super().finalize(algo, verbosity)
 
 

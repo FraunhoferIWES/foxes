@@ -77,6 +77,10 @@ class ScanStates(States):
         idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self._vars
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
+        idata["data_vars"][FV.WEIGHT] = (
+            FC.STATE, 
+            np.full(self._N, 1 / self._N, dtype=config.dtype_double),
+        )
 
         return idata
 
@@ -176,26 +180,7 @@ class ScanStates(States):
         """
         return self._vars
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return np.full(
-            (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
-        )
-
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
         """
         The main model calculation.
 
@@ -212,6 +197,9 @@ class ScanStates(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
+        calc_weights: bool
+            Flag for weights calculation at points,
+            add them to tdata
 
         Returns
         -------
@@ -221,9 +209,19 @@ class ScanStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        vars = self.output_point_vars(algo)
         for i, v in enumerate(self._vars):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
             tdata[v][:] = mdata[self.DATA][:, None, None, i]
 
-        return {v: tdata[v] for v in self.output_point_vars(algo)}
+        if calc_weights:
+            vars.append(FV.WEIGHT)
+            tdata.add(
+                FV.WEIGHT,
+                np.zeros_like(tdata[FC.TARGETS][..., 0]),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            )
+            tdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
+
+        return {v: tdata[v] for v in vars}

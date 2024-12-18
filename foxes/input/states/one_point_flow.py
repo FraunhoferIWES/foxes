@@ -172,23 +172,6 @@ class OnePointFlowStates(States):
         """
         return self.base_states.output_point_vars(algo)
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return self.base_states.weights(algo)
-
     def set_running(
         self,
         algo,
@@ -345,7 +328,7 @@ class OnePointFlowStates(States):
 
         return trace_si, coeffs
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
         """
         The main model calculation.
 
@@ -362,6 +345,9 @@ class OnePointFlowStates(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
+        calc_weights: bool
+            Flag for weights calculation at points,
+            add them to tdata
 
         Returns
         -------
@@ -487,6 +473,15 @@ class OnePointFlowStates(States):
                     )
                     results = {FV.WD: uv2wd(uv), FV.WS: np.linalg.norm(uv, axis=-1)}
                     del uv
+
+        if calc_weights:
+            if FV.WEIGHT not in mdata:
+                raise ValueError(f"States '{self.name}': Data '{FV.WEIGHT}' not found in mdata, maybe incompatible base states '{self.base_states.name}'")
+            results[FV.WEIGHT] = np.zeros(
+                (n_states, n_targets, n_tpoints), 
+                dtype=config.dtype_double,
+            )
+            results[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
 
         return {
             v: d.reshape(n_states, n_targets, n_tpoints) for v, d in results.items()
