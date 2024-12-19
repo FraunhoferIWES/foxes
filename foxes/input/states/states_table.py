@@ -409,53 +409,35 @@ class StatesTable(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        def _addv(v, tdata):
+            if v not in tdata:
+                tdata.add(
+                    v, 
+                    np.zeros_like(tdata[FC.TARGETS][..., 0]),
+                    dims=(FC.STATE, FC.TARGET, FC.TPOINT)
+                )
+            return tdata[v]
+
         out = {}
         for i, v in enumerate(self._tvars):
             if v == FV.WEIGHT:
                 pass
-            elif v in tdata:
-                out[v] = tdata[v]
-                out[v][:] = mdata[self.DATA][:, i, None, None]
             else:
-                tdata.add(
-                    v,
-                    np.zeros(
-                        (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                        dtype=config.dtype_double,
-                    ),
-                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-                )
-                out[v] = tdata[v]
+                out[v] = _addv(v, tdata)
                 out[v][:] = mdata[self.DATA][:, i, None, None]
 
         for v, f in self.fixed_vars.items():
-            tdata.add(
-                v,
-                np.full(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                    f,
-                    dtype=config.dtype_double,
-                ),
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
-            out[v] = tdata[v]
+            out[v] = _addv(v, tdata)
+            out[v][:] = f
 
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
-            tdata[v] = p.calculate(tdata, z)
-            out[v] = tdata[v]
+            out[v] = _addv(v, tdata)
+            out[v][:] = p.calculate(tdata, z)
         
         if calc_weights:
-            tdata.add(
-                FV.WEIGHT,
-                np.zeros(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                    dtype=config.dtype_double,
-                ),
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
-            tdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
-            out[FV.WEIGHT] = tdata[FV.WEIGHT]
+            out[FV.WEIGHT] = _addv(FV.WEIGHT, tdata)
+            out[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
 
         return out
 

@@ -71,16 +71,14 @@ class ScanStates(States):
             s = tuple(s)
             data[..., i] = d[s]
         data = data.reshape(self._N, n_v)
+        weights = np.full(self._N, 1 / self._N, dtype=config.dtype_double)
 
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
         idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self._vars
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
-        idata["data_vars"][FV.WEIGHT] = (
-            FC.STATE, 
-            np.full(self._N, 1 / self._N, dtype=config.dtype_double),
-        )
+        idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), weights)
 
         return idata
 
@@ -209,19 +207,13 @@ class ScanStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        vars = self.output_point_vars(algo)
+        out = {}
         for i, v in enumerate(self._vars):
-            if v not in tdata:
-                tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
-            tdata[v][:] = mdata[self.DATA][:, None, None, i]
+            out[v] = tdata[v]
+            out[v][:] = mdata[self.DATA][:, None, None, i]
 
         if calc_weights:
-            vars.append(FV.WEIGHT)
-            tdata.add(
-                FV.WEIGHT,
-                np.zeros_like(tdata[FC.TARGETS][..., 0]),
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
-            tdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
+            out[FV.WEIGHT] = tdata[FV.WEIGHT]
+            out[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
 
-        return {v: tdata[v] for v in vars}
+        return out
