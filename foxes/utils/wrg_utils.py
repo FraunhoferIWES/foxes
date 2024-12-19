@@ -61,7 +61,7 @@ class ReaderWRG:
             self.fpath, names=cols, skiprows=1, sep=r"\s+", usecols=range(1, n_cols)
         )
 
-        self._data[cols_sel("fs", self._n_sectors)] /= 10
+        self._data[cols_sel("fs", self._n_sectors)] /= 1000 # frequencies add to 1
         self._data[cols_sel("As", self._n_sectors)] /= 10
         self._data[cols_sel("Ks", self._n_sectors)] /= 100
 

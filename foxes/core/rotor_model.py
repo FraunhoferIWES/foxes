@@ -64,12 +64,10 @@ class RotorModel(FarmDataModel):
                 self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
             else:
                 self.calc_vars = vrs
-
             if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS2)
             if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS3)
-
             self.calc_vars = sorted(self.calc_vars)
         if FV.WEIGHT not in self.calc_vars:
             self.calc_vars.append(FV.WEIGHT)
@@ -377,15 +375,13 @@ class RotorModel(FarmDataModel):
         if store_rweights:
             algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, weights, mdata=mdata)
 
-        tdata = TData.from_tpoints(rpoints, weights)
-        svars = algo.states.output_point_vars(algo)
-        for v in svars:
-            tdata.add(
-                v,
-                data=np.full_like(rpoints[..., 0], np.nan),
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
-
+        tdata = TData.from_tpoints(
+            rpoints, weights, variables=algo.states.output_point_vars(algo))
+        tdata.add(
+            FV.WEIGHT, 
+            np.full_like(rpoints[..., 0], np.nan), 
+            dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+        )
         sres = algo.states.calculate(
             algo, mdata, fdata, tdata, calc_weights=True
         )
@@ -393,6 +389,7 @@ class RotorModel(FarmDataModel):
 
         if store_amb_res:
             algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres.copy(), mdata=mdata)
+        del sres
 
         self.eval_rpoint_results(
             algo,

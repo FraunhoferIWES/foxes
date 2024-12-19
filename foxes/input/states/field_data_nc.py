@@ -661,7 +661,6 @@ class FieldDataNC(States):
         n_tpoints = tdata.n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
-        n_states = fdata.n_states
         coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
 
         # case preload:

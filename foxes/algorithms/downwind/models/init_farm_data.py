@@ -86,6 +86,7 @@ class InitFarmData(FarmDataModel):
 
         # set X, Y, H, D:
         fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
+        fdata.dims[FV.D] = (FC.STATE, FC.TURBINE)
         for ti, t in enumerate(algo.farm.turbines):
 
             if len(t.xy.shape) == 1:
@@ -106,9 +107,11 @@ class InitFarmData(FarmDataModel):
             fdata[FV.D][:, ti] = D
 
         # calc WD and YAW at rotor centres:
-        tdata = TData.from_points(points=fdata[FV.TXYH])
+        tdata = TData.from_points(
+            points=fdata[FV.TXYH], variables=algo.states.output_point_vars(algo))
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata[FV.WD] = sres[FV.WD][:, :, 0]
+        fdata.dims[FV.WD] = (FC.STATE, FC.TURBINE)
         del tdata, sres
 
         # calculate and inverse:
@@ -119,6 +122,8 @@ class InitFarmData(FarmDataModel):
         fdata[FV.ORDER_SSEL] = ssel
         fdata[FV.ORDER_INV] = np.zeros_like(order)
         fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
+        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+            fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
         # apply downwind order to all data:
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]

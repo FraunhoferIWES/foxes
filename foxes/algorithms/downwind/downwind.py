@@ -482,6 +482,7 @@ class Downwind(Algorithm):
         mlist,
         *data,
         outputs=None,
+        normalize=False,
         **kwargs,
     ):
         """
@@ -495,6 +496,8 @@ class Downwind(Algorithm):
             The (mdata, fdata) inputs
         outputs: list of str, optional
             The output variables, or None for defaults
+        normalize: bool
+            Normalize the weights to 1 wrt sum over states
         kwargs: dict, optional
             Additional parameters for running
 
@@ -509,6 +512,9 @@ class Downwind(Algorithm):
         farm_results = get_engine().run_calculation(
             self, mlist, *data, out_vars=out_vars, **kwargs
         )
+
+        if normalize:
+            farm_results[FV.WEIGHT] /= farm_results[FV.WEIGHT].sum(dim=FC.STATE)
 
         return farm_results
 
