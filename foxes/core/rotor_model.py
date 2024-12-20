@@ -189,13 +189,7 @@ class RotorModel(FarmDataModel):
         copy_to_ambient=False,
     ):
         """
-        Evaluate rotor point results.
-
-        This function modifies `fdata`, either
-        for all turbines or one turbine per state,
-        depending on parameter `states_turbine`. In
-        the latter case, the turbine dimension of the
-        `rpoint_results` is expected to have size one.
+        Evaluates rotor point results stored in tdata, updating fdata.
 
         Parameters
         ----------
@@ -307,7 +301,16 @@ class RotorModel(FarmDataModel):
         del uvp
 
         for v in self.calc_vars:
-            if v not in vdone:
+            if v == FV.WEIGHT:
+                if v in mdata and mdata.dims[v] == (FC.STATE,):
+                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None]
+                elif v in mdata and mdata.dims[v] == (FC.STATE, FC.TURBINE):
+                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT]
+                elif v in tdata:
+                    fdata[FV.WEIGHT][:] = np.einsum('stp,p->st', tdata[v], weights)
+                else:
+                    raise ValueError(f"Rotor '{self.name}': Unable to compute weights. Not in tdata and not in mdata (or not in usable shape)")
+            elif v not in vdone:
                 res = np.einsum("stp,p->st", tdata[v], weights)
                 self._set_res(fdata, v, res, downwind_index)
             if copy_to_ambient and v in FV.var2amb:
@@ -377,13 +380,14 @@ class RotorModel(FarmDataModel):
 
         tdata = TData.from_tpoints(
             rpoints, weights, variables=algo.states.output_point_vars(algo))
-        tdata.add(
-            FV.WEIGHT, 
-            np.full_like(rpoints[..., 0], np.nan), 
-            dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-        )
+        if not FV.WEIGHT in mdata:
+            tdata.add(
+                FV.WEIGHT, 
+                np.full_like(rpoints[..., 0], np.nan), 
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            )
         sres = algo.states.calculate(
-            algo, mdata, fdata, tdata, calc_weights=True
+            algo, mdata, fdata, tdata, calc_weights=not FV.WEIGHT in mdata
         )
         tdata.update(sres)
 
