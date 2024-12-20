@@ -129,14 +129,20 @@ class InitFarmData(FarmDataModel):
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD, FV.WEIGHT]:
+        for v in [FV.D, FV.WD]:
             if np.any(fdata[v] != fdata[v][0, 0, None, None]):
                 fdata[v] = fdata[v][ssel, order]
-        fdata[FV.YAW] = fdata[FV.WD].copy()
         for k in mdata.keys():
             if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
                 mdata[k] != mdata[k][0, 0, None, None]
             ):
                 mdata[k] = mdata[k][ssel, order]
+        
+        # set yaw angle to wind direction at rotor centre:
+        fdata[FV.YAW] = fdata[FV.WD].copy()
+        fdata.dims[FV.YAW] = (FC.STATE, FC.TURBINE)
+
+        if mdata.states_i0(counter=True) == 0:
+            print("HERE INITFD YAW", fdata[FV.YAW][0, :5], mdata.states_i0(counter=True))
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

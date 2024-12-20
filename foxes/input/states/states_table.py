@@ -247,12 +247,14 @@ class StatesTable(States):
                 self._N, 1.0 / self._N, dtype=config.dtype_double)
 
         tcols = []
+        vrs = []
         for v in self._tvars:
             c = self.var2col.get(v, v)
             if c == col_w:
                 pass
             elif c in data.columns:
                 tcols.append(c)
+                vrs.append(v)
             elif v not in self._profiles.keys():
                 raise KeyError(
                     f"States '{self.name}': Missing variable '{c}' in states table columns, profiles or fixed vars"
@@ -260,7 +262,7 @@ class StatesTable(States):
         data = data[tcols]
 
         idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = tcols
+        idata["coords"][self.VARS] = vrs
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
         idata["data_vars"][FV.WEIGHT] = (FC.STATE, weights)
 
@@ -419,12 +421,15 @@ class StatesTable(States):
             return tdata[v]
 
         out = {}
-        for i, v in enumerate(self._tvars):
+        for v in self._tvars:
             if v == FV.WEIGHT:
                 pass
             else:
                 out[v] = _addv(v, tdata)
+                i = np.argwhere(mdata[self.VARS]==v)[0][0]
                 out[v][:] = mdata[self.DATA][:, i, None, None]
+                if mdata.states_i0(counter=True) == 0 and v in [FV.WD, FV.WS]:
+                    print("STATESTABLE MDATA", v, mdata[self.DATA][:5, i], out[v][:5, 0, 0], mdata.states_i0(counter=True),id(mdata))
 
         for v, f in self.fixed_vars.items():
             out[v] = _addv(v, tdata)
@@ -438,7 +443,12 @@ class StatesTable(States):
         if calc_weights:
             out[FV.WEIGHT] = _addv(FV.WEIGHT, tdata)
             out[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
-
+        
+        if mdata.states_i0(counter=True) == 0:
+            print("STATES",mdata[FC.STATE][:5])
+            print("STATESTABLE CALC WD", out[FV.WD].shape, out[FV.WD][:5, 0, 0], mdata.states_i0(counter=True), id(mdata),mdata[FV.WEIGHT][:3])
+            print("STATESTABLE CALC WS", out[FV.WS].shape, out[FV.WS][:5, 0, 0], mdata.states_i0(counter=True), id(mdata),mdata[FV.WEIGHT][:3])
+            
         return out
 
     def finalize(self, algo, verbosity=0):

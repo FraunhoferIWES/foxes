@@ -228,6 +228,7 @@ class RotorModel(FarmDataModel):
             ws = tdata[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = np.einsum("stpd,p->std", uvp, weights)
+            print("RMODEL      EVAL WS", tdata[FV.WS].shape, tdata[FV.WS][:5, 0, 0], mdata.states_i0(counter=True), id(mdata), mdata[FV.WEIGHT][:3])
 
         wd = None
         vdone = []
@@ -256,11 +257,15 @@ class RotorModel(FarmDataModel):
                 yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum("stpd,std->stp", uvp, nax)
+            if mdata.states_i0(counter=True) == 0:
+                print("YAW", fdata[FV.YAW][0, :5], tdata[FV.WD][0, :5, 0], nax[0,0], uvp[0,0,0], mdata.states_i0(counter=True))
 
             for v in self.calc_vars:
                 if v == FV.REWS:
                     rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
                     self._set_res(fdata, v, rews, downwind_index)
+                    if mdata.states_i0(counter=True) == 0:
+                        print("--> REWS", wsp[0, 0, :4], weights[:4], rews[0, :5], mdata.states_i0(counter=True))
                     del rews
                     vdone.append(v)
 
@@ -390,6 +395,8 @@ class RotorModel(FarmDataModel):
             algo, mdata, fdata, tdata, calc_weights=not FV.WEIGHT in mdata
         )
         tdata.update(sres)
+        if mdata.states_i0(counter=True) == 0:
+            print("RMODEL      CALC WS", tdata[FV.WS].shape, tdata[FV.WS][:5, 0, 0], mdata.states_i0(counter=True), id(mdata), mdata[FV.WEIGHT][:3])
 
         if store_amb_res:
             algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres.copy(), mdata=mdata)
