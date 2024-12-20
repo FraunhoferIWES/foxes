@@ -183,11 +183,11 @@ class VortexSheet(TurbineInductionModel):
         sp_sel = (ct > 1e-8) & (x <= 0)
         ct_sel = ct[sp_sel]
         r_sph_sel = r_sph[sp_sel]
-        R_sel = D[sp_sel]/2
-        xi = r_sph_sel/R_sel
+        R_sel = D[sp_sel] / 2
+        xi = r_sph_sel / R_sel
 
         if np.any(sp_sel):
-            blockage =  self.induction.ct2a(ct_sel) * (1 + -xi/np.sqrt(1+xi**2))
+            blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
 
             self._superp.add_wake(
                 algo,
@@ -207,10 +207,10 @@ class VortexSheet(TurbineInductionModel):
             )  # mirror in rotor plane and inverse blockage, but not directly behind rotor
             ct_sel = ct[sp_sel]
             r_sph_sel = r_sph[sp_sel]
-            R_sel = D[sp_sel]/2
-            xi = r_sph_sel/R_sel
+            R_sel = D[sp_sel] / 2
+            xi = r_sph_sel / R_sel
             if np.any(sp_sel):
-                blockage =  self.induction.ct2a(ct_sel) * (1 + -xi/np.sqrt(1+xi**2))
+                blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
                 self._superp.add_wake(
                     algo,
                     mdata,

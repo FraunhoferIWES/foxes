@@ -95,7 +95,7 @@ class ReaderWRG:
 
         """
         return self._nx
-    
+
     @property
     def ny(self):
         """
@@ -147,7 +147,7 @@ class ReaderWRG:
 
         """
         return self._n_sectors
-    
+
     @property
     def resolution(self):
         """
@@ -160,4 +160,3 @@ class ReaderWRG:
 
         """
         return self._res
-    
