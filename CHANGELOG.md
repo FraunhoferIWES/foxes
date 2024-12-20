@@ -725,6 +725,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.5
 
-
+- Models:
+  - Fix for bug in `VortexSheet` turbine induction wake model. Thanks @MellBeli
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.5](https://github.com/FraunhoferIWES/foxes/commits/v1.2.5)
