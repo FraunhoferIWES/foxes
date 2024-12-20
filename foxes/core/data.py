@@ -151,8 +151,6 @@ class Data(Dict):
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
         # remove axes of size 1, added by dask for extra loop dimensions:
-        if isinstance(dims, str):
-            dims = (dims,)
         if dims is not None:
             if len(dims) != len(data.shape):
                 for li, l in enumerate(self.loop_dims):
@@ -181,19 +179,7 @@ class Data(Dict):
             The dimensions
 
         """
-        if (
-            name in self
-            and isinstance(self[name], np.ndarray)
-            and isinstance(data, np.ndarray)
-            and self[name].shape != data.shape
-        ):
-            raise ValueError(f"{self.name}: Attempt to overwrite variable '{name}' with shape {self[name].shape} with data of shape {data.shape}")
-        
         self[name] = data
-
-        if name in self.dims and self.dims[name] != dims:
-            raise ValueError(f"{self.name}: Attempt to overwrite variable '{name}' with dims {self.dims[name]} with data of dims {dims}")
-        
         self.dims[name] = dims
         self._run_entry_checks(name, data, dims)
         self._auto_update()
@@ -432,6 +418,8 @@ class FData(Data):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
+                    data[FV.WEIGHT] = mdata[FV.WEIGHT]
+                    dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
                 if callback is not None:
                     callback(data, dims)
 
@@ -599,7 +587,6 @@ class TData(Data):
     def from_points(
         cls,
         points,
-        variables=None,
         data={},
         dims={},
         name="tdata",
@@ -612,9 +599,6 @@ class TData(Data):
         ----------
         points: np.ndarray
             The points, shape: (n_states, n_points, 3)
-        variables: list of str
-            Add default empty variables with NaN values
-            and shape (n_states, n_targets, n_tpoints)
         data: dict
             The initial data to be stored
         dims: dict
@@ -639,10 +623,6 @@ class TData(Data):
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = np.array([1], dtype=config.dtype_double)
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        if variables is not None:
-            for v in variables:
-                data[v] = np.full_like(points[:, :, None, 0], np.nan)
-                dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return cls(data, dims, [FC.STATE, FC.TARGET], name=name, **kwargs)
 
     @classmethod
@@ -650,7 +630,6 @@ class TData(Data):
         cls,
         tpoints,
         tweights,
-        variables=None,
         data={},
         dims={},
         name="tdata",
@@ -667,9 +646,6 @@ class TData(Data):
         tweights: np.ndarray, optional
             The target point weights, shape:
             (n_tpoints,)
-        variables: list of str
-            Add default empty variables with NaN values
-            and shape (n_states, n_targets, n_tpoints)
         data: dict
             The initial data to be stored
         dims: dict
@@ -694,10 +670,6 @@ class TData(Data):
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = tweights
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        if variables is not None:
-            for v in variables:
-                data[v] = np.full_like(tpoints[..., 0], np.nan)
-                dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return cls(data, dims, [FC.STATE], name=name, **kwargs)
 
     @classmethod

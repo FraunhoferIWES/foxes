@@ -229,21 +229,20 @@ class ConvVarDelta(ConvCrit):
         ok = True
         self._deltas = {}
         for v, lim in self.limits.items():
-            if v in prev_results:
-                x0 = prev_results[v].to_numpy()
-                x = results[v].to_numpy()
-                if v in self.wd_vars:
-                    self._deltas[v] = np.max(np.abs(delta_wd(x0, x)))
-                else:
-                    self._deltas[v] = np.max(np.abs(x - x0))
-                check = self._deltas[v]
-                ok = ok and (check <= lim)
+            x0 = prev_results[v].to_numpy()
+            x = results[v].to_numpy()
+            if v in self.wd_vars:
+                self._deltas[v] = np.max(np.abs(delta_wd(x0, x)))
+            else:
+                self._deltas[v] = np.max(np.abs(x - x0))
+            check = self._deltas[v]
+            ok = ok and (check <= lim)
 
-                if verbosity > 0:
-                    r = "FAILED" if check > lim else "OK"
-                    print(f"  {v:<{L}}: delta = {check:.3e}, lim = {lim:.3e}  --  {r}")
-                elif not ok:
-                    break
+            if verbosity > 0:
+                r = "FAILED" if check > lim else "OK"
+                print(f"  {v:<{L}}: delta = {check:.3e}, lim = {lim:.3e}  --  {r}")
+            elif not ok:
+                break
 
         return ok
 

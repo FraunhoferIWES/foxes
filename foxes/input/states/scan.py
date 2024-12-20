@@ -71,14 +71,12 @@ class ScanStates(States):
             s = tuple(s)
             data[..., i] = d[s]
         data = data.reshape(self._N, n_v)
-        weights = np.full(self._N, 1 / self._N, dtype=config.dtype_double)
 
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
         idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self._vars
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
-        idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), weights)
 
         return idata
 
@@ -178,7 +176,26 @@ class ScanStates(States):
         """
         return self._vars
 
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
+    def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        weights: numpy.ndarray
+            The weights, shape: (n_states, n_turbines)
+
+        """
+        return np.full(
+            (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
+        )
+
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -195,9 +212,6 @@ class ScanStates(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
 
         Returns
         -------
@@ -207,13 +221,9 @@ class ScanStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
-        out = {}
         for i, v in enumerate(self._vars):
-            out[v] = tdata[v]
-            out[v][:] = mdata[self.DATA][:, None, None, i]
+            if v not in tdata:
+                tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
+            tdata[v][:] = mdata[self.DATA][:, None, None, i]
 
-        if calc_weights:
-            out[FV.WEIGHT] = tdata[FV.WEIGHT]
-            out[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
-
-        return out
+        return {v: tdata[v] for v in self.output_point_vars(algo)}

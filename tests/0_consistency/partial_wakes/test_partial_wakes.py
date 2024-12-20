@@ -23,11 +23,10 @@ def test():
         ("centre", "grid36", 0.025),
     ]
 
+    base_results = None
     with foxes.Engine.new("threads", chunk_size_states=100):
-
-        base_results = None
         for rotor, pwake, lim in cases:
-            print(f"\n\nENTERING CASE {(rotor, pwake, lim)}\n\n")
+            print(f"\nENTERING CASE {(rotor, pwake, lim)}\n")
 
             mbook = foxes.models.ModelBook()
             ttype = foxes.models.turbine_types.PCtFile(
@@ -44,7 +43,7 @@ def test():
 
             farm = foxes.WindFarm()
             foxes.input.farm_layout.add_from_file(
-                farm, lfile, turbine_models=[ttype.name], verbosity=0
+                farm, lfile, turbine_models=[ttype.name], verbosity=1
             )
 
             algo = foxes.algorithms.Downwind(
@@ -55,34 +54,31 @@ def test():
                 wake_models=["Bastankhah025_linear_k002"],
                 wake_frame="rotor_wd",
                 partial_wakes=pwake,
-                verbosity=0,
+                verbosity=1,
             )
 
             data = algo.calc_farm()
 
             df = data.to_dataframe()[
                 [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-            ].reset_index()
+            ]
 
-            print(f"\nRESULTS CASE {(rotor, pwake, lim)}: {id(df)}\n")
+            print()
+            print("TRESULTS\n")
             print(df)
 
+            df = df.reset_index()
+
             if base_results is None:
-                print("SETTING BASE REUSULTS", id(df))
                 base_results = df
-                print(base_results)
-                quit()
 
             else:
-                print(f"\nBASE RESULTS: {id(base_results)}")
-                print(base_results)
-                print(f"\nDELTA CASE {(rotor, pwake, lim)}")
+                print(f"CASE {(rotor, pwake, lim)}")
                 delta = df - base_results
                 print(delta)
                 print(delta.min(), delta.max())
                 chk = delta[FV.REWS].abs()
-                print(f"\nMAX REWS DELTA FOR CASE {(rotor, pwake, lim)}:", chk.max(), "\n")
-
+                print(f"CASE {(rotor, pwake, lim)}:", chk.max())
 
                 assert (chk < lim).all()
 

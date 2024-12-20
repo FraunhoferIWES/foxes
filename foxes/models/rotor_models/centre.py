@@ -1,10 +1,9 @@
 import numpy as np
 
-from foxes.config import config
 from foxes.core import RotorModel
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
-import foxes.constants as FC
+from foxes.config import config
 
 
 class CentreRotor(RotorModel):
@@ -89,13 +88,19 @@ class CentreRotor(RotorModel):
         algo,
         mdata,
         fdata,
-        tdata,
+        rpoint_results,
         weights,
         downwind_index=None,
         copy_to_ambient=False,
     ):
         """
-        Evaluates rotor point results stored in tdata, updating fdata.
+        Evaluate rotor point results.
+
+        This function modifies `fdata`, either
+        for all turbines or one turbine per state,
+        depending on parameter `states_turbine`. In
+        the latter case, the turbine dimension of the
+        `rpoint_results` is expected to have size one.
 
         Parameters
         ----------
@@ -105,8 +110,11 @@ class CentreRotor(RotorModel):
             The model data
         fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.TData
-            The target point data
+        rpoint_results: dict
+            The results at rotor points. Keys: variable str.
+            Values: numpy.ndarray, shape if `states_turbine`
+            is None: (n_states, n_turbines, n_rpoints).
+            Else: (n_states, 1, n_rpoints)
         weights: numpy.ndarray
             The rotor point weights, shape: (n_rpoints,)
         downwind_index: int, optional
@@ -118,7 +126,7 @@ class CentreRotor(RotorModel):
         """
         if len(weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, tdata, weights, downwind_index
+                algo, mdata, fdata, rpoint_results, weights, downwind_index
             )
 
         n_states = mdata.n_states
@@ -138,8 +146,8 @@ class CentreRotor(RotorModel):
             or FV.REWS2 in self.calc_vars
             or FV.REWS3 in self.calc_vars
         ):
-            wd = tdata[FV.WD]
-            ws = tdata[FV.WS]
+            wd = rpoint_results[FV.WD]
+            ws = rpoint_results[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = uvp[:, :, 0]
 
@@ -184,17 +192,8 @@ class CentreRotor(RotorModel):
         del uvp
 
         for v in self.calc_vars:
-            if v == FV.WEIGHT:
-                if v in mdata and mdata.dims[v] == (FC.STATE,):
-                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None]
-                elif v in mdata and mdata.dims[v] == (FC.STATE, FC.TURBINE):
-                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT]
-                elif v in tdata:
-                    fdata[FV.WEIGHT][:] = tdata[v][:, :, 0]
-                else:
-                    raise ValueError(f"Rotor '{self.name}': Unable to compute weights. Not in tdata and not in mdata (or not in usable shape)")
-            elif v not in vdone:
-                res = tdata[v][:, :, 0]
+            if v not in vdone:
+                res = rpoint_results[v][:, :, 0]
                 self._set_res(fdata, v, res, downwind_index)
                 del res
             if copy_to_ambient and v in FV.var2amb:

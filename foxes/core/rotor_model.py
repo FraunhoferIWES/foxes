@@ -64,13 +64,13 @@ class RotorModel(FarmDataModel):
                 self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
             else:
                 self.calc_vars = vrs
+
             if algo.farm_controller.needs_rews2() and FV.REWS2 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS2)
             if algo.farm_controller.needs_rews3() and FV.REWS3 not in self.calc_vars:
                 self.calc_vars.append(FV.REWS3)
+
             self.calc_vars = sorted(self.calc_vars)
-        if FV.WEIGHT not in self.calc_vars:
-            self.calc_vars.append(FV.WEIGHT)
 
         return self.calc_vars
 
@@ -189,7 +189,13 @@ class RotorModel(FarmDataModel):
         copy_to_ambient=False,
     ):
         """
-        Evaluates rotor point results stored in tdata, updating fdata.
+        Evaluate rotor point results.
+
+        This function modifies `fdata`, either
+        for all turbines or one turbine per state,
+        depending on parameter `states_turbine`. In
+        the latter case, the turbine dimension of the
+        `rpoint_results` is expected to have size one.
 
         Parameters
         ----------
@@ -228,7 +234,6 @@ class RotorModel(FarmDataModel):
             ws = tdata[FV.WS]
             uvp = wd2uv(wd, ws, axis=-1)
             uv = np.einsum("stpd,p->std", uvp, weights)
-            print("RMODEL      EVAL WS", tdata[FV.WS].shape, tdata[FV.WS][:5, 0, 0], mdata.states_i0(counter=True), id(mdata), mdata[FV.WEIGHT][:3])
 
         wd = None
         vdone = []
@@ -257,15 +262,11 @@ class RotorModel(FarmDataModel):
                 yaw = fdata[FV.YAW][:, downwind_index, None]
             nax = wd2uv(yaw, axis=-1)
             wsp = np.einsum("stpd,std->stp", uvp, nax)
-            if mdata.states_i0(counter=True) == 0:
-                print("YAW", fdata[FV.YAW][0, :5], tdata[FV.WD][0, :5, 0], nax[0,0], uvp[0,0,0], mdata.states_i0(counter=True))
 
             for v in self.calc_vars:
                 if v == FV.REWS:
                     rews = np.maximum(np.einsum("stp,p->st", wsp, weights), 0.0)
                     self._set_res(fdata, v, rews, downwind_index)
-                    if mdata.states_i0(counter=True) == 0:
-                        print("--> REWS", wsp[0, 0, :4], weights[:4], rews[0, :5], mdata.states_i0(counter=True))
                     del rews
                     vdone.append(v)
 
@@ -306,16 +307,7 @@ class RotorModel(FarmDataModel):
         del uvp
 
         for v in self.calc_vars:
-            if v == FV.WEIGHT:
-                if v in mdata and mdata.dims[v] == (FC.STATE,):
-                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None]
-                elif v in mdata and mdata.dims[v] == (FC.STATE, FC.TURBINE):
-                    fdata[FV.WEIGHT][:] = mdata[FV.WEIGHT]
-                elif v in tdata:
-                    fdata[FV.WEIGHT][:] = np.einsum('stp,p->st', tdata[v], weights)
-                else:
-                    raise ValueError(f"Rotor '{self.name}': Unable to compute weights. Not in tdata and not in mdata (or not in usable shape)")
-            elif v not in vdone:
+            if v not in vdone:
                 res = np.einsum("stp,p->st", tdata[v], weights)
                 self._set_res(fdata, v, res, downwind_index)
             if copy_to_ambient and v in FV.var2amb:
@@ -383,24 +375,20 @@ class RotorModel(FarmDataModel):
         if store_rweights:
             algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, weights, mdata=mdata)
 
-        tdata = TData.from_tpoints(
-            rpoints, weights, variables=algo.states.output_point_vars(algo))
-        if not FV.WEIGHT in mdata:
+        tdata = TData.from_tpoints(rpoints, weights)
+        svars = algo.states.output_point_vars(algo)
+        for v in svars:
             tdata.add(
-                FV.WEIGHT, 
-                np.full_like(rpoints[..., 0], np.nan), 
+                v,
+                data=np.full_like(rpoints[..., 0], np.nan),
                 dims=(FC.STATE, FC.TARGET, FC.TPOINT),
             )
-        sres = algo.states.calculate(
-            algo, mdata, fdata, tdata, calc_weights=not FV.WEIGHT in mdata
-        )
+
+        sres = algo.states.calculate(algo, mdata, fdata, tdata)
         tdata.update(sres)
-        if mdata.states_i0(counter=True) == 0:
-            print("RMODEL      CALC WS", tdata[FV.WS].shape, tdata[FV.WS][:5, 0, 0], mdata.states_i0(counter=True), id(mdata), mdata[FV.WEIGHT][:3])
 
         if store_amb_res:
             algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres.copy(), mdata=mdata)
-        del sres
 
         self.eval_rpoint_results(
             algo,

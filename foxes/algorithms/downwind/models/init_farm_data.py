@@ -86,7 +86,6 @@ class InitFarmData(FarmDataModel):
 
         # set X, Y, H, D:
         fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
-        fdata.dims[FV.D] = (FC.STATE, FC.TURBINE)
         for ti, t in enumerate(algo.farm.turbines):
 
             if len(t.xy.shape) == 1:
@@ -107,11 +106,9 @@ class InitFarmData(FarmDataModel):
             fdata[FV.D][:, ti] = D
 
         # calc WD and YAW at rotor centres:
-        tdata = TData.from_points(
-            points=fdata[FV.TXYH], variables=algo.states.output_point_vars(algo))
+        tdata = TData.from_points(points=fdata[FV.TXYH])
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata[FV.WD] = sres[FV.WD][:, :, 0]
-        fdata.dims[FV.WD] = (FC.STATE, FC.TURBINE)
         del tdata, sres
 
         # calculate and inverse:
@@ -122,27 +119,19 @@ class InitFarmData(FarmDataModel):
         fdata[FV.ORDER_SSEL] = ssel
         fdata[FV.ORDER_INV] = np.zeros_like(order)
         fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
-        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
-            fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
         # apply downwind order to all data:
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD]:
+        for v in [FV.D, FV.WD, FV.WEIGHT]:
             if np.any(fdata[v] != fdata[v][0, 0, None, None]):
                 fdata[v] = fdata[v][ssel, order]
+        fdata[FV.YAW] = fdata[FV.WD].copy()
         for k in mdata.keys():
             if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
                 mdata[k] != mdata[k][0, 0, None, None]
             ):
                 mdata[k] = mdata[k][ssel, order]
-        
-        # set yaw angle to wind direction at rotor centre:
-        fdata[FV.YAW] = fdata[FV.WD].copy()
-        fdata.dims[FV.YAW] = (FC.STATE, FC.TURBINE)
-
-        if mdata.states_i0(counter=True) == 0:
-            print("HERE INITFD YAW", fdata[FV.YAW][0, :5], mdata.states_i0(counter=True))
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

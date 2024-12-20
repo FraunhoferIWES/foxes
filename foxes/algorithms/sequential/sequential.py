@@ -139,6 +139,7 @@ class Sequential(Iterative):
             self.print_deco("calc_farm")
 
             self._inds = self.states0.index()
+            self._weights = self.states0.weights(self)
             self._i = 0
             self._counter = 0
 
@@ -157,13 +158,12 @@ class Sequential(Iterative):
                 print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
 
-            n_states = self._model_data.sizes[FC.STATE]
             self._farm_results = Dataset(
                 coords={FC.STATE: self._model_data[FC.STATE].to_numpy()},
                 data_vars={
                     v: (
                         (FC.STATE, FC.TURBINE),
-                        np.zeros((n_states, self.n_turbines), dtype=config.dtype_double),
+                        np.zeros_like(self._model_data[FV.WEIGHT].to_numpy()),
                     )
                     for v in self.farm_vars
                 },
@@ -191,6 +191,7 @@ class Sequential(Iterative):
             self.states._counter = self._i
             self.states._size = 1
             self.states._indx = self._inds[self._i]
+            self.states._weight = self._weights[self._i]
 
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
@@ -256,6 +257,7 @@ class Sequential(Iterative):
             self.states._counter = None
             self.states._size = len(self._inds)
             self.states._indx = self._inds
+            self.states._weight = self._weights
 
             for p in self.plugins:
                 p.finalize(self)
@@ -320,6 +322,19 @@ class Sequential(Iterative):
 
         """
         return self.counter if counter else self.index
+
+    @property
+    def weight(self):
+        """
+        The current weight array
+
+        Returns
+        -------
+        w: numpy.ndarray
+            The current weight array, shape: (n_turbines,)
+
+        """
+        return self.states._weight if self.iterating else None
 
     @property
     def farm_results(self):

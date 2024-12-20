@@ -43,6 +43,24 @@ class States(PointDataModel):
         """
         return list(range(self.size()))
 
+    @abstractmethod
+    def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        weights: numpy.ndarray
+            The weights, shape: (n_states, n_turbines)
+
+        """
+        pass
+
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
         Reset the states, optionally select states
@@ -88,9 +106,19 @@ class States(PointDataModel):
         if sinds is not None:
             idata["coords"][FC.STATE] = sinds
 
+        weights = self.weights(algo)
+        if len(weights.shape) != 2:
+            raise ValueError(
+                f"States '{self.name}': Wrong weights dimension, expecing ({FC.STATE}, {FC.TURBINE}), got shape {weights.shape}"
+            )
+        if weights.shape[1] != algo.n_turbines:
+            raise ValueError(
+                f"States '{self.name}': Wrong size of second axis dimension '{FC.TURBINE}': Expecting {algo.n_turbines}, got {weights.shape[1]}"
+            )
+        idata["data_vars"][FV.WEIGHT] = ((FC.STATE, FC.TURBINE), weights)
+
         return idata
 
-    @abstractmethod
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -106,7 +134,7 @@ class States(PointDataModel):
             The output variable names
 
         """
-        pass
+        return [FV.WS, FV.WD, FV.TI, FV.RHO]
 
     def __add__(self, s):
         if isinstance(s, list):
@@ -217,6 +245,23 @@ class ExtendedStates(States):
         """
         return self.states.index()
 
+    def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        weights: numpy.ndarray
+            The weights, shape: (n_states, n_turbines)
+
+        """
+        return self.states.weights(algo)
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -234,7 +279,7 @@ class ExtendedStates(States):
         """
         return self.pmodels.output_point_vars(algo)
 
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -251,9 +296,6 @@ class ExtendedStates(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
 
         Returns
         -------
@@ -262,11 +304,7 @@ class ExtendedStates(States):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
-        pars = [
-            {"calc_weights": calc_weights if m is self.states else False} 
-            for m in self.pmodels.models
-        ]
-        return self.pmodels.calculate(algo, mdata, fdata, tdata, parameters=pars)
+        return self.pmodels.calculate(algo, mdata, fdata, tdata)
 
     def __add__(self, m):
         models = self.pmodels.models[1:]

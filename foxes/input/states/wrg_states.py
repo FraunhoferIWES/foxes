@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.interpolate import interpn
 
 from foxes.core.states import States
 from foxes.config import config, get_input_path
@@ -26,8 +25,6 @@ class WRGStates(States):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    interpn_pars: dict
-        Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
     
@@ -39,7 +36,7 @@ class WRGStates(States):
             ws_bins, 
             fixed_vars={},
             bounds_extra_space="1D",
-            **interpn_pars,
+            **kwargs,
         ):
         """
         Constructor
@@ -57,16 +54,15 @@ class WRGStates(States):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        interpn_pars: dict, optional
-            Additional parameters for scipy.interpolate.interpn
+        kwargs: dict, optional
+            Parameters for the base class
 
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.wrg_fname = wrg_fname
         self.ws_bins = np.asarray(ws_bins)
         self.fixed_vars = fixed_vars
         self.bounds_extra_space = bounds_extra_space
-        self.interpn_pars = interpn_pars
 
     def load_data(self, algo, verbosity=0):
         """
@@ -106,11 +102,11 @@ class WRGStates(States):
         elif verbosity:
             print(f"States '{self.name}': Reading file {fpath}")
         wrg = ReaderWRG(fpath)
-        p0 = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
-        nx = wrg.nx
-        ny = wrg.ny
-        ns = wrg.n_sectors
-        res = wrg.resolution
+        self._p0 = np.array([wrg.x0, wrg.y0], dtype=config.dtype_double)
+        self._nx = wrg.nx
+        self._ny = wrg.ny
+        self._ns = wrg.n_sectors
+        self._res = wrg.resolution
 
         # find bounds:
         if self.bounds_extra_space is not None:
@@ -121,56 +117,49 @@ class WRGStates(States):
                 print(
                     f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}"
                 )
-            ij_min = np.asarray((xy_min - p0)/res, dtype=config.dtype_int)
-            ij_max = np.asarray((xy_max - p0)/res, dtype=config.dtype_int) + 1
+            xy_min -= self._p0
+            xy_max -= self._p0
+            ij_min = np.asarray(xy_min/self._res, dtype=config.dtype_int)
+            ij_max = np.asarray(xy_max/self._res, dtype=config.dtype_int) + 1
             sx = slice(ij_min[0], ij_max[0])
             sy = slice(ij_min[1], ij_max[1])
         else:
             sx = np.s_[:]
             sy = np.s_[:]
-        self._x = p0[0] + np.arange(nx) * res
-        self._x = self._x[sx]
-        self._y = p0[1] + np.arange(ny) * res
-        self._y = self._y[sy]
-        if len(self._x) < 2 or len(self._y) < 2:
-            p1 = p0 + np.array([nx * res, ny * res])
-            raise ValueError(f"No overlap with data at {p0} -- {p1}")
 
         # store data:
         A = []
         k = []
-        f = []
-        for s in range(ns):
+        fs = []
+        for s in range(self._ns):
             A.append(
-                wrg.data[f"As_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
+                wrg.data[f"A_{s}"].to_numpy().reshape(self._ny, self._nx)[sy, sx]
             )
             k.append(
-                wrg.data[f"Ks_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
+                wrg.data[f"k_{s}"].to_numpy().reshape(self._ny, self._nx)[sy, sx]
             )
-            f.append(
-                wrg.data[f"fs_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
+            fs.append(
+                wrg.data[f"fs_{s}"].to_numpy().reshape(self._ny, self._nx)[sy, sx]
             )
         del wrg
         A = np.stack(A, axis=0).T
         k = np.stack(k, axis=0).T
-        f = np.stack(f, axis=0).T
-        self._data = np.stack([A, k, f], axis=-1) # (x, y, wd, AKfs)
+        fs = np.stack(fs, axis=0).T
+        self._data = np.stack([A, k, fs], axis=-1) # (x, y, wd, AKfs)
 
         # store ws and wd:
-        self.VARS = self.var("VARS")
-        self.DATA = self.var("DATA")
-        self._wds = np.arange(0., 360., 360 / ns)
+        self.WSWD = self.var("WSWD")
+        self._wds = np.arange(0., 360., 360 / self._ns)
         self._wsd = self.ws_bins[1:] - self.ws_bins[:-1]
         self._wss = 0.5 * (self.ws_bins[:-1] + self.ws_bins[1:])
-        self._N = len(self._wss) * ns
-        data = np.zeros((len(self._wss), ns, 3), dtype=config.dtype_double)
-        data[..., 0] = self._wss[:, None]
-        data[..., 1] = self._wds[None, :]
-        data[..., 2] = self._wsd[:, None]
-        data = data.reshape(self._N, 3)
+        self._N = len(self._wss) * self._ns
+        wswd = np.zeros((len(self._wss), self._ns, 2), dtype=config.dtype_double)
+        wswd[..., 0] = self._wss[:, None]
+        wswd[..., 1] = self._wds[None, :]
+        wswd = wswd.reshape(self._N, 2)
         idata = super().load_data(algo, verbosity)
-        idata["coords"][self.VARS] = ["ws", "wd", "dws"]
-        idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data)
+        idata.coords[self.WSWD] = [self.var(FV.WS), self.var(FV.WD)]
+        idata.data_vars[self.WSWD] = ((FC.STATE, self.WSWD), wswd)
 
         return idata
 
@@ -201,109 +190,7 @@ class WRGStates(States):
             The output variable names
 
         """
-        ovars = set([FV.WS, FV.WD])
-        ovars.update(self.fixed_vars.keys())
+        ovars = set([FV.WS, FV.WD, FV.WEIGHT])
+        ovars.update(self.fixed_vars.values())
         return list(ovars)
-    
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
-
-        Returns
-        -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-
-        """
-        # prepare:
-        n_states = tdata.n_states
-        n_targets = tdata.n_targets
-        n_tpoints = tdata.n_tpoints
-        n_pts = n_states * n_targets * n_tpoints
-        points = tdata[FC.TARGETS]
-        ws = mdata[self.DATA][:, 0]
-        wd = mdata[self.DATA][:, 1]
-        wsd = mdata[self.DATA][:, 2]
-
-        out = {}
-
-        out[FV.WS] = tdata[FV.WS]
-        out[FV.WS][:] = ws[:, None, None]
-
-        out[FV.WD] = tdata[FV.WD]
-        out[FV.WD][:] = wd[:, None, None]
-
-        for v, d in self.fixed_vars.items():
-            out[v] = tdata[v]
-            out[v][:] = d
-
-        if calc_weights:
-
-            # interpolate A, k, f from x, y, wd
-            z = points[..., 2].copy()
-            points[..., 2] = wd[:, None, None]
-            pts = points.reshape(n_pts, 3)
-            gvars = (self._x, self._y, self._wds)
-            try:
-                ipars = dict(bounds_error=True, fill_value=None)
-                ipars.update(self.interpn_pars)
-                data = interpn(gvars, self._data, pts, **ipars).reshape(
-                    n_states, n_targets, n_tpoints, 3
-                )
-            except ValueError as e:
-                print(f"\nStates '{self.name}': Interpolation error")
-                print("INPUT VARS: (x, y, wd)")
-                print(
-                    "DATA BOUNDS:",
-                    [float(np.min(d)) for d in gvars],
-                    [float(np.max(d)) for d in gvars],
-                )
-                print(
-                    "EVAL BOUNDS:",
-                    [float(np.min(p)) for p in pts.T],
-                    [float(np.max(p)) for p in pts.T],
-                )
-                print(
-                    "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
-                )
-                raise e
-            
-            A = data[..., 0]
-            k = data[..., 1]
-            f = data[..., 2]
-            points[..., 2] = z
-            del data, gvars, pts, z, wd
-
-            tdata.add(
-                FV.WEIGHT,
-                f,
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            )
-            out[FV.WEIGHT] = tdata[FV.WEIGHT]
-            
-            wsA = out[FV.WS] / A
-            out[FV.WEIGHT] *= wsd[:, None, None] * (
-                k / A * wsA ** (k - 1) * np.exp(-wsA ** k)
-            )
-
-        return out
     

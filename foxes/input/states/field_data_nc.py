@@ -196,8 +196,8 @@ class FieldDataNC(States):
         self._N = None
 
         self.__data_source = data_source
-        self.__inds = None
         self.__weights = None
+        self.__inds = None
 
     @property
     def data_source(self):
@@ -452,7 +452,10 @@ class FieldDataNC(States):
                 self.__inds = np.concatenate(self.__inds, axis=0)
                 self._N = len(self.__inds)
                 if weights[0] is not None:
-                    self.__weights = np.concatenate(weights, axis=0)
+                    self.__weights = np.zeros(
+                        (self._N, algo.n_turbines), dtype=config.dtype_double
+                    )
+                    self.__weights[:] = np.concatenate(weights, axis=0)[:, None]
                     del weights
 
             else:
@@ -467,7 +470,7 @@ class FieldDataNC(States):
 
             if self.__weights is None:
                 self.__weights = np.full(
-                    self._N, 1.0 / self._N, dtype=config.dtype_double
+                    (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
                 )
 
         # ensure WD and WS get the first two slots of data:
@@ -482,7 +485,6 @@ class FieldDataNC(States):
         self._n_dvars = len(self._dkys)
 
         idata = super().load_data(algo, verbosity)
-        idata["data_vars"][FV.WEIGHT] = (FC.STATE, self.__weights)
 
         if self.load_mode == "preload":
             self.X = self.var(FV.X)
@@ -626,7 +628,28 @@ class FieldDataNC(States):
         """
         return self.ovars
 
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
+    def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        weights: numpy.ndarray
+            The weights, shape: (n_states, n_turbines)
+
+        """
+        if self.running:
+            raise ValueError(
+                f"States '{self.name}': Cannot access weights while running"
+            )
+        return self.__weights
+
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -643,9 +666,6 @@ class FieldDataNC(States):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
 
         Returns
         -------
@@ -661,6 +681,7 @@ class FieldDataNC(States):
         n_tpoints = tdata.n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
+        n_states = fdata.n_states
         coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
 
         # case preload:
@@ -844,10 +865,5 @@ class FieldDataNC(States):
                     out[v] = np.full(
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )
-        
-        if calc_weights:
-            out[FV.WEIGHT] = np.zeros((n_states, n_targets, n_tpoints), 
-                                      dtype=config.dtype_double)
-            out[FV.WEIGHT][:] = mdata[FV.WEIGHT][:, None, None]
 
         return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}

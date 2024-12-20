@@ -30,6 +30,7 @@ class SeqState(States):
 
         # updated by SequentialIter:
         self._size = states.size()
+        self._weight = None
         self._indx = None
         self._counter = None
 
@@ -99,6 +100,23 @@ class SeqState(States):
         """
         return self._counter
 
+    def weights(self, algo):
+        """
+        The statistical weights of all states.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        weights: numpy.ndarray
+            The weights, shape: (n_states, n_turbines)
+
+        """
+        return self._weight[None, :] if self._size == 1 else self.states.weights(algo)
+
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -116,7 +134,7 @@ class SeqState(States):
         """
         return self.states.output_point_vars(algo)
 
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -127,22 +145,19 @@ class SeqState(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.MData
+        mdata: foxes.core.Data
             The model data
-        fdata: foxes.core.FData
+        fdata: foxes.core.Data
             The farm data
-        tdata: foxes.core.TData
+        tdata: foxes.core.Data
             The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
 
         Returns
         -------
         results: dict
             The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape (n_states, n_points)
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
 
         """
-        return self.states.calculate(
-            algo, mdata, fdata, tdata, calc_weights=calc_weights)
+        return self.states.calculate(algo, mdata, fdata, tdata)

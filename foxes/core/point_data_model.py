@@ -68,7 +68,7 @@ class PointDataModel(DataCalcModel):
                 tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
     @abstractmethod
-    def calculate(self, algo, mdata, fdata, tdata, calc_weights=False):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -85,9 +85,6 @@ class PointDataModel(DataCalcModel):
             The farm data
         tdata: foxes.core.TData
             The target point data
-        calc_weights: bool
-            Flag for weights calculation at points,
-            add them to tdata
 
         Returns
         -------
