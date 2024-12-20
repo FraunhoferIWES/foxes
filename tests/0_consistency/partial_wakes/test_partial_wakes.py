@@ -62,12 +62,10 @@ def test():
 
             df = data.to_dataframe()[
                 [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-            ]
+            ].reset_index()
 
             print(f"\nRESULTS CASE {(rotor, pwake, lim)}: {id(df)}\n")
             print(df)
-
-            df = df.reset_index()
 
             if base_results is None:
                 print("SETTING BASE REUSULTS", id(df))
