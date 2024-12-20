@@ -88,6 +88,8 @@ doc = [
     "ipywidgets",
     "m2r2",
     "lxml_html_clean",
+    "dask",
+    "distributed",
 ]
 dev = [
     "flake8",
