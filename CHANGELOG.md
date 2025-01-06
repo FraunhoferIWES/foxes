@@ -732,6 +732,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.6
 
-
+- Examples:
+  - New example `quickstart`, demonstrating _foxes_ in a minimal script
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.6](https://github.com/FraunhoferIWES/foxes/commits/v1.2.6)
