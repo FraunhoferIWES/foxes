@@ -362,8 +362,7 @@ class FData(Data):
         super()._run_entry_checks(name, data, dims)
         data = self[name]
         dims = self.dims[name]
-
-        if name not in self.sizes and name not in FC.TNAME:
+        if name not in self.sizes and name not in [FC.TNAME, FV.WEIGHT]:
             dms = (FC.STATE, FC.TURBINE)
             shp = (self.n_states, self.n_turbines)
             if len(data.shape) < 2:

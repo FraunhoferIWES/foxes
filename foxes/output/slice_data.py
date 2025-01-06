@@ -147,7 +147,12 @@ class SliceData(Output):
         del g_pts
 
         # take mean over states:
-        weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
+        if self.fres[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
+            weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
+        elif self.fres[FV.WEIGHT].dims == (FC.STATE,):
+            weights = self.fres[FV.WEIGHT].to_numpy()
+        else:
+            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}': Expecting {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.fres[FV.WEIGHT].dims}")
         data = {
             v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
             for v in variables

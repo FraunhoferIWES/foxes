@@ -810,8 +810,6 @@ class Downwind(Algorithm):
             point_data,
             outputs=ovars,
             parameters=calc_pars,
-            # sel=sel,
-            # isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data
