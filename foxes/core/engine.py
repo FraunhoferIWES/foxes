@@ -514,10 +514,22 @@ class Engine(ABC):
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        
+        dvars = {}
+        for v, d in data_vars.items():
+            dims = []
+            s = []
+            for i, c in enumerate(d[0]):
+                if d[1].shape[i] > 1 or model_data.sizes[c] == 1:
+                    dims.append(c)
+                    s.append(slice(None))
+                else:
+                    s.append(0)
+            dvars[v] = (tuple(dims), d[1][tuple(s)])
 
         return Dataset(
             coords=coords,
-            data_vars={v: tuple(d) for v, d in data_vars.items()},
+            data_vars=dvars,
         )
 
     @abstractmethod

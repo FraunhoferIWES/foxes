@@ -61,8 +61,6 @@ class Downwind(Algorithm):
         FV.TI,
         FV.CT,
         FV.P,
-        FV.ORDER,
-        FV.WEIGHT,
     ]
 
     def __init__(

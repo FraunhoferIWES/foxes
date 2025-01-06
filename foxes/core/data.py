@@ -418,8 +418,6 @@ class FData(Data):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
-                    data[FV.WEIGHT] = mdata[FV.WEIGHT]
-                    dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
                 if callback is not None:
                     callback(data, dims)
 

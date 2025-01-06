@@ -243,7 +243,6 @@ class RotorModel(FarmDataModel):
                     wd = uv2wd(uv, axis=-1)
                 self._set_res(fdata, v, wd, downwind_index)
                 vdone.append(v)
-
             elif v == FV.WS:
                 ws = np.linalg.norm(uv, axis=-1)
                 self._set_res(fdata, v, ws, downwind_index)
@@ -307,7 +306,9 @@ class RotorModel(FarmDataModel):
         del uvp
 
         for v in self.calc_vars:
-            if v not in vdone:
+            if v not in vdone and (
+                fdata[v].shape[1] > 1 or downwind_index == 0
+            ):
                 res = np.einsum("stp,p->st", tdata[v], weights)
                 self._set_res(fdata, v, res, downwind_index)
             if copy_to_ambient and v in FV.var2amb:

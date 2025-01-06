@@ -76,22 +76,46 @@ class FarmResultsEval(Output):
                 nas = np.zeros_like(fields[-1], dtype=bool)
             nas = nas | np.isnan(fields[-1])
 
-        inds = ["st" for v in fields] + ["st"]
-        expr = ",".join(inds) + "->" + rhs
+        inds = ["st" for __ in fields]
+        if self.results[FV.WEIGHT].dims == (FC.STATE,):
+            inds += ["s"]
 
-        if np.any(nas):
-            sel = ~np.any(nas, axis=1)
-            fields = [f[sel] for f in fields]
+            if np.any(nas):
+                sel = ~np.any(nas, axis=1)
+                fields = [f[sel] for f in fields]
 
-            weights0 = self.results[FV.WEIGHT].to_numpy()
-            w0 = np.sum(weights0, axis=0)[None, :]
-            weights = weights0[sel]
-            w1 = np.sum(weights, axis=0)[None, :]
-            weights *= w0 / w1
-            fields.append(weights)
+                weights0 = self.results[FV.WEIGHT].to_numpy()
+                w0 = np.sum(weights0)
+                weights = weights0[sel]
+                w1 = np.sum(weights)
+                weights *= w0 / w1
+                fields.append(weights)
+
+            else:
+                fields.append(self.results[FV.WEIGHT].to_numpy())
+
+        elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
+            inds += ["st"]
+
+            if np.any(nas):
+                sel = ~np.any(nas, axis=1)
+                fields = [f[sel] for f in fields]
+
+                weights0 = self.results[FV.WEIGHT].to_numpy()
+                w0 = np.sum(weights0, axis=0)[None, :]
+                weights = weights0[sel]
+                w1 = np.sum(weights, axis=0)[None, :]
+                weights *= w0 / w1
+                fields.append(weights)
+
+            else:
+                fields.append(self.results[FV.WEIGHT].to_numpy())
 
         else:
-            fields.append(self.results[FV.WEIGHT].to_numpy())
+            raise ValueError(
+                f"Expecting '{FV.WEIGHT}' variable with dimensions {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.results[FV.WEIGHT].dims}"
+            )
+        expr = ",".join(inds) + "->" + rhs
 
         return np.einsum(expr, *fields)
 

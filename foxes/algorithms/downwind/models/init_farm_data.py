@@ -43,7 +43,6 @@ class InitFarmData(FarmDataModel):
             FV.WD,
             FV.YAW,
             FV.ORDER,
-            FV.WEIGHT,
             FV.ORDER_SSEL,
             FV.ORDER_INV,
         ]
@@ -124,7 +123,7 @@ class InitFarmData(FarmDataModel):
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD, FV.WEIGHT]:
+        for v in [FV.D, FV.WD]:
             if np.any(fdata[v] != fdata[v][0, 0, None, None]):
                 fdata[v] = fdata[v][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()

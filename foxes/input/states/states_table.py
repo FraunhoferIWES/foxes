@@ -82,7 +82,7 @@ class StatesTable(States):
         """
         super().__init__()
 
-        self.ovars = output_vars
+        self.ovars = list(output_vars)
         self.rpars = pd_read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
@@ -98,9 +98,7 @@ class StatesTable(States):
         self._N = None
         self._tvars = None
         self._profiles = None
-
         self._data_source = data_source
-        self.__weights = None
 
     @property
     def data_source(self):
@@ -154,6 +152,9 @@ class StatesTable(States):
             The verbosity level, 0 = silent
 
         """
+        if FV.WEIGHT in self.ovars:
+            del self.ovars[FV.WEIGHT]
+
         self._profiles = {}
         self._tvars = set(self.ovars)
         for v, d in self.profdicts.items():
@@ -171,6 +172,8 @@ class StatesTable(States):
             self._tvars.update(self._profiles[v].input_vars())
         self._tvars -= set(self.fixed_vars.keys())
         self._tvars = list(self._tvars)
+        
+        self.ovars.append(FV.WEIGHT)
         super().initialize(algo, verbosity)
 
     def sub_models(self):
@@ -210,10 +213,10 @@ class StatesTable(States):
         """
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
 
         if isinstance(self.data_source, pd.DataFrame):
             data = self.data_source
-            isorg = True
         else:
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
@@ -230,7 +233,6 @@ class StatesTable(States):
                 print(f"States '{self.name}': Reading file {self.data_source}")
             rpars = dict(self.RDICT, **self.rpars)
             data = PandasFileHelper().read_file(self.data_source, **rpars)
-            isorg = False
 
         if self.states_sel is not None:
             data = data.iloc[self.states_sel]
@@ -240,18 +242,13 @@ class StatesTable(States):
         self.__inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self.__weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
+        weights = None
         if col_w in data:
-            self.__weights[:] = data[col_w].to_numpy()[:, None]
+            weights = data[col_w].to_numpy()
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
-        else:
-            self.__weights[:] = 1.0 / self._N
-            if isorg:
-                data = data.copy()
-            data[col_w] = self.__weights[:, 0]
 
         tcols = []
         for v in self._tvars:
@@ -267,6 +264,8 @@ class StatesTable(States):
         idata = super().load_data(algo, verbosity)
         idata["coords"][self.VARS] = self._tvars
         idata["data_vars"][self.DATA] = ((FC.STATE, self.VARS), data.to_numpy())
+        if weights is not None:
+            idata["data_vars"][self.WEIGHT] = (FC.STATE, weights)
 
         return idata
 
@@ -313,27 +312,6 @@ class StatesTable(States):
         """
         return self.ovars
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        if self.running:
-            raise ValueError(
-                f"States '{self.name}': Cannot access weights while running"
-            )
-        return self.__weights
-
     def set_running(
         self,
         algo,
@@ -368,10 +346,9 @@ class StatesTable(States):
 
         data_stash[self.name] = dict(
             data_source=self._data_source,
-            weights=self.__weights,
             inds=self.__inds,
         )
-        del self._data_source, self.__weights, self.__inds
+        del self._data_source, self.__inds
 
     def unset_running(
         self,
@@ -404,7 +381,6 @@ class StatesTable(States):
 
         data = data_stash[self.name]
         self._data_source = data.pop("data_source")
-        self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -454,6 +430,10 @@ class StatesTable(States):
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
             tdata[v] = p.calculate(tdata, z)
+        
+        if self.WEIGHT in mdata:
+            tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
+            tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
 

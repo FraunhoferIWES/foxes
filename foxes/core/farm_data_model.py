@@ -246,6 +246,7 @@ class FarmDataModelList(FarmDataModel):
         ovars = []
         for m in self.models:
             ovars += m.output_farm_vars(algo)
+
         return list(dict.fromkeys(ovars))
 
     def calculate(self, algo, mdata, fdata, parameters=[]):
