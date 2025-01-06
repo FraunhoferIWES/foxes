@@ -151,9 +151,19 @@ class RosePlotOutput(Output):
             The plot data
 
         """
+        if self.results[FV.WEIGHT].dims == (FC.STATE,):
+            w = self.results[FV.WEIGHT].to_numpy()
+        elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
+            w = self.results[FV.WEIGHT].to_numpy()[:, turbine]
+        elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.POINT):
+            w = self.results[FV.WEIGHT].to_numpy()[:, point]
+        elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.TARGET, FC.TPOINT):
+            w = np.sum(self.results[FV.WEIGHT].to_numpy()[:, point], axis=1)
+        else:
+            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}'. Expecting {(FC.STATE,)}, {(FC.STATE, FC.TURBINE)}, {(FC.STATE, FC.POINT)} or {(FC.STATE, FC.TARGET, FC.TPOINT)}, got {self.results[FV.WEIGHT].dims}")
+        
         if add_inf:
             ws_bins = list(ws_bins) + [np.inf]
-        w = self.results[FV.WEIGHT].to_numpy()[:, turbine]
         t = turbine if self._rtype == FC.TURBINE else point
         ws = self.results[ws_var].to_numpy()[:, t]
         wd = self.results[wd_var].to_numpy()[:, t].copy()
