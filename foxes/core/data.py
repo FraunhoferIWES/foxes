@@ -158,8 +158,10 @@ class Data(Dict):
                         self[name] = np.squeeze(data, axis=li)
 
             for ci, c in enumerate(dims):
-                if c not in self.sizes:
+                if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
+                elif self[name].shape[ci] == 1:
+                    pass
                 elif self.sizes[c] != self[name].shape[ci]:
                     raise ValueError(
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
@@ -288,12 +290,16 @@ class Data(Dict):
                     raise ValueError(
                         f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
                     )
-                n_states = len(d.to_numpy())
+                n_states = d.shape[0]
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                dims[v] = d.dims
+                if v == FV.WEIGHT and d.dims == (FC.STATE,):
+                    data[v] = data[v][:, None]
+                    dims[v] = (FC.STATE, FC.TURBINE)
             else:
                 data[v] = d.to_numpy().copy() if copy else d.to_numpy()
-            dims[v] = d.dims
+                dims[v] = d.dims
 
         if callback is not None:
             callback(data, dims)

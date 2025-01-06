@@ -518,7 +518,7 @@ class Engine(ABC):
         # reducing weights dimensions:
         dvars = {}
         for v, (dims, d) in data_vars.items():
-            if dims == (FC.STATE, FC.TURBINE) and d.shape[1] == 1:
+            if dims == (FC.STATE, FC.TURBINE) and d.shape[1] == 1 and algo.n_turbines > 1:
                 dvars[v] = ((FC.STATE,), d[:, 0])
             elif (
                 dims == (FC.STATE, FC.TARGET, FC.TPOINT) and 

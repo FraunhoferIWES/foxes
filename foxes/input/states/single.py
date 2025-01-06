@@ -153,26 +153,9 @@ class SingleStateStates(States):
             out.add(FV.TI)
         if self.rho is not None:
             out.add(FV.RHO)
-        out.update(list(self._profiles.keys()))
+        out.update(list(self._profiles.keys()) + [FV.WEIGHT])
 
         return list(out)
-
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return np.ones((1, algo.n_turbines), dtype=config.dtype_double)
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -232,5 +215,8 @@ class SingleStateStates(States):
             for v, p in self._profiles.items():
                 pres = p.calculate(tdata, z)
                 tdata[v] = pres
+        
+        tdata[FV.WEIGHT] = np.full((1, 1, 1), 1., dtype=config.dtype_double)
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
