@@ -91,7 +91,7 @@ class MultiHeightStates(States):
         """
         super().__init__()
 
-        self.ovars = output_vars
+        self.ovars = list(output_vars)
         self.heights = np.array(heights, dtype=config.dtype_double)
         self.rpars = pd_read_pars
         self.var2col = var2col
@@ -100,9 +100,11 @@ class MultiHeightStates(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
+        if FV.WEIGHT not in self.ovars:
+            self.ovars.append(FV.WEIGHT)
+
         self._data_source = data_source
         self._solo = None
-        self._weights = None
         self._inds = None
         self._N = None
 
@@ -213,9 +215,7 @@ class MultiHeightStates(States):
                 print(f"States '{self.name}': Reading file {self.data_source}")
             rpars = dict(self.RDICT, **self.rpars)
             data = PandasFileHelper().read_file(self.data_source, **rpars)
-            isorg = False
         else:
-            isorg = True
             data = self.data_source
 
         if self.states_sel is not None:
@@ -227,34 +227,31 @@ class MultiHeightStates(States):
         self._inds = data.index.to_numpy()
 
         col_w = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
+        weights = None
         if col_w in data:
-            self._weights[:] = data[col_w].to_numpy()[:, None]
+            weights = data[col_w].to_numpy()
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
-        else:
-            self._weights[:] = 1.0 / self._N
-            if isorg:
-                data = data.copy()
-            data[col_w] = self._weights[:, 0]
 
         cols = []
         cmap = {}
         self._solo = {}
         for v in self.ovars:
-            vcols = self._find_cols(v, data.columns)
-            if len(vcols) == 1:
-                self._solo[v] = data[vcols[0]].to_numpy()
-            elif len(vcols) > 1:
-                cmap[v] = (len(cols), len(cols) + len(vcols))
-                cols += vcols
+            if v != FV.WEIGHT:
+                vcols = self._find_cols(v, data.columns)
+                if len(vcols) == 1:
+                    self._solo[v] = data[vcols[0]].to_numpy()
+                elif len(vcols) > 1:
+                    cmap[v] = (len(cols), len(cols) + len(vcols))
+                    cols += vcols
         data = data[cols]
 
         self.H = self.var(FV.H)
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
 
         idata = super().load_data(algo, verbosity)
 
@@ -268,7 +265,8 @@ class MultiHeightStates(States):
             dims,
             data.to_numpy().reshape(self._N, n_vrs, n_hts),
         )
-
+        if weights is not None:
+            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = ((FC.STATE,), d)
         self._solo = list(self._solo.keys())
@@ -309,10 +307,9 @@ class MultiHeightStates(States):
 
         data_stash[self.name] = dict(
             data_source=self._data_source,
-            weights=self._weights,
             inds=self._inds,
         )
-        del self._data_source, self._weights, self._inds
+        del self._data_source, self._inds
 
     def unset_running(
         self,
@@ -345,7 +342,6 @@ class MultiHeightStates(States):
 
         data = data_stash[self.name]
         self._data_source = data.pop("data_source")
-        self._weights = data.pop("weights")
         self._inds = data.pop("inds")
 
     def size(self):
@@ -390,27 +386,6 @@ class MultiHeightStates(States):
 
         """
         return self.ovars
-
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        if self.running:
-            raise ValueError(
-                f"States '{self.name}': Cannot access weights while running"
-            )
-        return self._weights
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -495,7 +470,12 @@ class MultiHeightStates(States):
 
         results = {}
         for v in self.ovars:
-            if has_wd and v == FV.WD:
+            if v == FV.WEIGHT:
+                if self.WEIGHT in mdata:
+                    results[v] = mdata[self.WEIGHT][:, None, None]
+                else:
+                    results[v] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+            elif has_wd and v == FV.WD:
                 results[v] = uv2wd(uv, axis=-1)
             elif has_wd and v == FV.WS:
                 results[v] = np.linalg.norm(uv, axis=-1)
@@ -528,7 +508,6 @@ class MultiHeightStates(States):
         """
         super().finalize(algo, verbosity)
         self._solo = None
-        self._weights = None
         self._N = None
 
 
@@ -658,30 +637,25 @@ class MultiHeightNCStates(MultiHeightStates):
             self._inds = format_times_func(self._inds)
 
         w_name = self.var2col.get(FV.WEIGHT, FV.WEIGHT)
-        self._weights = np.zeros((self._N, algo.n_turbines), dtype=config.dtype_double)
+        weights = None
         if w_name in data.data_vars:
             if data[w_name].dims != (self.state_coord,):
                 raise ValueError(
                     f"Weights data '{w_name}': Expecting dims ({self.state_coord},), got {data[w_name]}"
                 )
-            self._weights[:] = data.data_vars[w_name].to_numpy()[:, None]
+            weights = data.data_vars[w_name].to_numpy()
         elif FV.WEIGHT in self.var2col:
             raise KeyError(
                 f"Weight variable '{w_name}' defined in var2col, but not found in data_vars {list(data.data_vars.keys())}"
             )
-        else:
-            self._weights = np.zeros(
-                (self._N, algo.n_turbines), dtype=config.dtype_double
-            )
-            self._weights[:] = 1.0 / self._N
 
         cols = {}
         self._solo = {}
         for v in self.ovars:
+            if v in self.fixed_vars or v == FV.WEIGHT:
+                continue
             c = self.var2col.get(v, v)
-            if c in self.fixed_vars:
-                pass
-            elif c in data.attrs:
+            if c in data.attrs:
                 self._solo[v] = np.full(self._N, data.attrs)
             elif c in data.data_vars:
                 if data[c].dims == (self.state_coord,):
@@ -705,6 +679,7 @@ class MultiHeightNCStates(MultiHeightStates):
         self.H = self.var(FV.H)
         self.VARS = self.var("vars")
         self.DATA = self.var("data")
+        self.WEIGHT = self.var(FV.WEIGHT)
 
         idata = States.load_data(self, algo, verbosity)
         idata["coords"][self.H] = self.heights
@@ -717,7 +692,8 @@ class MultiHeightNCStates(MultiHeightStates):
                 [data.data_vars[c].to_numpy() for c in cols.values()], axis=1
             ).astype(config.dtype_double),
         )
-
+        if weights is not None:
+            idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
         for v, d in self._solo.items():
             idata["data_vars"][self.var(v)] = (
                 (FC.STATE,),
