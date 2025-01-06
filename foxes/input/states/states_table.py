@@ -153,7 +153,7 @@ class StatesTable(States):
 
         """
         if FV.WEIGHT in self.ovars:
-            del self.ovars[FV.WEIGHT]
+            del self.ovars[self.ovars.index(FV.WEIGHT)]
 
         self._profiles = {}
         self._tvars = set(self.ovars)
@@ -433,7 +433,9 @@ class StatesTable(States):
         
         if self.WEIGHT in mdata:
             tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
-            tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+        else:
+            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}
 
@@ -449,7 +451,6 @@ class StatesTable(States):
             The verbosity level
 
         """
-        self.__weights = None
         self._N = None
         self._tvars = None
 

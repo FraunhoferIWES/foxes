@@ -193,7 +193,7 @@ class CentreRotor(RotorModel):
 
         for v in self.calc_vars:
             if v not in vdone and (
-                fdata[v].shape[1] > 1 or downwind_index == 0
+                fdata[v].shape[1] > 1 or downwind_index is None or downwind_index == 0
             ):
                 res = rpoint_results[v][:, :, 0]
                 self._set_res(fdata, v, res, downwind_index)
