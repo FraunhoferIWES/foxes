@@ -100,9 +100,6 @@ class MultiHeightStates(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-        if FV.WEIGHT not in self.ovars:
-            self.ovars.append(FV.WEIGHT)
-
         self._data_source = data_source
         self._solo = None
         self._inds = None
@@ -470,12 +467,7 @@ class MultiHeightStates(States):
 
         results = {}
         for v in self.ovars:
-            if v == FV.WEIGHT:
-                if self.WEIGHT in mdata:
-                    results[v] = mdata[self.WEIGHT][:, None, None]
-                else:
-                    results[v] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
-            elif has_wd and v == FV.WD:
+            if has_wd and v == FV.WD:
                 results[v] = uv2wd(uv, axis=-1)
             elif has_wd and v == FV.WS:
                 results[v] = np.linalg.norm(uv, axis=-1)
@@ -491,6 +483,13 @@ class MultiHeightStates(States):
                 results[v][:] = mdata[self.var(v)][:, None, None]
             else:
                 results[v] = ires[vrs.index(v)]
+        
+        # add weights:
+        if self.WEIGHT in mdata:
+            tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
+        else:
+            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return results
 

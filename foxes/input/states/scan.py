@@ -63,7 +63,6 @@ class ScanStates(States):
         shp = [len(v) for v in self.scans.values()]
         self._N = np.prod(shp)
         self._vars = list(self.scans.keys())
-        self._ovars = list(set(self._vars + [FV.WEIGHT]))
 
         data = np.zeros(shp + [n_v], dtype=config.dtype_double)
         for i, d in enumerate(self.scans.values()):
@@ -175,7 +174,7 @@ class ScanStates(States):
             The output variable names
 
         """
-        return self._ovars
+        return self._vars
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -207,8 +206,9 @@ class ScanStates(States):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
             tdata[v][:] = mdata[self.DATA][:, None, None, i]
-        
-        if FV.WEIGHT not in mdata[self.VARS]:
-            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+            
+        # add weights:
+        tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

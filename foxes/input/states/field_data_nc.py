@@ -16,7 +16,6 @@ def _read_nc_file(
     fpath,
     coords,
     vars,
-    weight_var,
     nc_engine,
     sel,
     isel,
@@ -181,9 +180,6 @@ class FieldDataNC(States):
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
         }
-
-        if FV.WEIGHT not in self.ovars:
-            self.ovars.append(FV.WEIGHT)
 
         self._N = None
 
@@ -414,7 +410,6 @@ class FieldDataNC(States):
                 _read_nc_file,
                 files,
                 coords=coords,
-                weight_var=self.weight_ncvar,
                 vars=vars,
                 nc_engine=config.nc_engine,
                 isel=self.isel,
@@ -694,7 +689,6 @@ class FieldDataNC(States):
                             _read_nc_file(
                                 fpath,
                                 coords=coords,
-                                weight_var=self.weight_ncvar,
                                 vars=vars,
                                 nc_engine=config.nc_engine,
                                 isel=isel,
@@ -835,14 +829,11 @@ class FieldDataNC(States):
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )
 
-        out = {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
-
         # add weights:
         if weights is not None:
             tdata[FV.WEIGHT] = weights[:, None, None]
         else:
             tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        out[FV.WEIGHT] = tdata[FV.WEIGHT]
 
-        return out
+        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
