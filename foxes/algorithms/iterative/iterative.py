@@ -175,6 +175,7 @@ class Iterative(Downwind):
                 calc_parameters=calc_parameters,
                 ambient=ambient,
             )
+            self._calc_pars0[2]["store_weights"] = True
 
             n = 0
             if self._urelax is not None:

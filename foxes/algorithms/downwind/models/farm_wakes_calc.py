@@ -58,7 +58,7 @@ class FarmWakesCalculation(FarmDataModel):
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        weights = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
+        rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
 
         # generate all wake evaluation points
@@ -77,11 +77,11 @@ class FarmWakesCalculation(FarmDataModel):
             return tdata, wdelta
 
         def _evaluate(
-            gmodel, tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake
+            gmodel, tdata, amb_res, rwghts, wake_res, wdeltas, oi, wmodel, pwake
         ):
             """Helper function for data evaluation at turbines"""
             wres = gmodel.finalize_farm_wakes(
-                algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi, pwake
+                algo, mdata, fdata, tdata, amb_res, rwghts, wdeltas, wmodel, oi, pwake
             )
 
             hres = {v: d[:, oi, None] 
@@ -92,7 +92,7 @@ class FarmWakesCalculation(FarmDataModel):
                     hres[v] += d[:, None]
 
             rotor.eval_rpoint_results(
-                algo, mdata, fdata, hres, weights, downwind_index=oi
+                algo, mdata, fdata, hres, rwghts, downwind_index=oi
             )
 
             res = algo.farm_controller.calculate(
@@ -121,7 +121,7 @@ class FarmWakesCalculation(FarmDataModel):
                             gmodel,
                             tdatap,
                             amb_res,
-                            weights,
+                            rwghts,
                             wake_res,
                             wdeltas,
                             oi,
@@ -146,7 +146,7 @@ class FarmWakesCalculation(FarmDataModel):
                             gmodel,
                             tdatap,
                             amb_res,
-                            weights,
+                            rwghts,
                             wake_res,
                             wdeltas,
                             oi,

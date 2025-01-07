@@ -153,7 +153,7 @@ class SingleStateStates(States):
             out.add(FV.TI)
         if self.rho is not None:
             out.add(FV.RHO)
-        out.update(list(self._profiles.keys()) + [FV.WEIGHT])
+        out.update(list(self._profiles.keys()))
 
         return list(out)
 

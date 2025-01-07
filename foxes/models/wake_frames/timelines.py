@@ -105,6 +105,7 @@ class Timelines(WakeFrame):
 
         # calculate all heights:
         self.timelines_data = {"dxy": (("height", FC.STATE, "dir"), [])}
+        weight_data = None
         for h in heights:
 
             if verbosity > 0:
@@ -118,6 +119,11 @@ class Timelines(WakeFrame):
             )
 
             res = states.calculate(algo, mdata, fdata, tdata)
+
+            if weight_data is None:
+                weight_data = ((FC.STATE,), tdata[FV.WEIGHT][:, 0, 0])
+            elif not np.all(tdata[FV.WEIGHT] == weight_data[1]):
+                raise AssertionError(f"States '{self.name}': weight data mismatch between heights")
             del tdata
 
             uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2]
@@ -162,6 +168,8 @@ class Timelines(WakeFrame):
                 for v, d in self.timelines_data.items()
             },
         )
+
+        return weight_data
 
     def initialize(self, algo, verbosity=0):
         """

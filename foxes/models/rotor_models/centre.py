@@ -89,7 +89,7 @@ class CentreRotor(RotorModel):
         mdata,
         fdata,
         rpoint_results,
-        weights,
+        rpoint_weights,
         downwind_index=None,
         copy_to_ambient=False,
     ):
@@ -124,9 +124,9 @@ class CentreRotor(RotorModel):
             variables after calculation
 
         """
-        if len(weights) > 1:
+        if len(rpoint_weights) > 1:
             return super().eval_rpoint_results(
-                algo, mdata, fdata, rpoint_results, weights, downwind_index
+                algo, mdata, fdata, rpoint_results, rpoint_weights, downwind_index
             )
 
         n_states = mdata.n_states

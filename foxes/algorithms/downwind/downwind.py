@@ -445,9 +445,7 @@ class Downwind(Algorithm):
         # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        calc_pars[-1].update(
-            {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-        )
+        calc_pars[-1].update({"store_ambres": True, "store_weights": False})
 
         # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
@@ -473,7 +471,7 @@ class Downwind(Algorithm):
 
     def _calc_farm_vars(self, mlist):
         """Helper function that gathers the farm variables"""
-        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
+        self.farm_vars = sorted(list(mlist.output_farm_vars(self)))
 
     def _launch_parallel_farm_calc(
         self,

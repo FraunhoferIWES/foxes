@@ -152,9 +152,6 @@ class StatesTable(States):
             The verbosity level, 0 = silent
 
         """
-        if FV.WEIGHT in self.ovars:
-            del self.ovars[self.ovars.index(FV.WEIGHT)]
-
         self._profiles = {}
         self._tvars = set(self.ovars)
         for v, d in self.profdicts.items():
@@ -172,8 +169,6 @@ class StatesTable(States):
             self._tvars.update(self._profiles[v].input_vars())
         self._tvars -= set(self.fixed_vars.keys())
         self._tvars = list(self._tvars)
-        
-        self.ovars.append(FV.WEIGHT)
         super().initialize(algo, verbosity)
 
     def sub_models(self):
