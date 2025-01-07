@@ -730,9 +730,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.5](https://github.com/FraunhoferIWES/foxes/commits/v1.2.5)
 
-## v1.2.6
+## v1.3
 
 - Examples:
   - New example `quickstart`, demonstrating _foxes_ in a minimal script
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.6](https://github.com/FraunhoferIWES/foxes/commits/v1.2.6)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
