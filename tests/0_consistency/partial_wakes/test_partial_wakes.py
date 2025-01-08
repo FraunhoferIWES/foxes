@@ -4,10 +4,11 @@ import inspect
 import foxes
 import foxes.variables as FV
 
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
 
     tfile = thisdir / "NREL-5MW-D126-H90.csv"
     sfile = thisdir / "states.csv.gz"

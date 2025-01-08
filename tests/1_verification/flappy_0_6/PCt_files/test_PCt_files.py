@@ -4,48 +4,46 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
-
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-    print(thisdir)
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
 
-    cfile = thisdir / "flappy" / "results.csv.gz"
-    tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
-    tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
-    sfile = thisdir / "states.csv.gz"
-    lfile = thisdir / "test_farm.csv"
+    with foxes.Engine.new("numpy", chunk_size_states=1000):
 
-    mbook = foxes.models.ModelBook()
-    ttype = foxes.models.turbine_types.PCtFromTwo(
-        data_source_P=tPfile,
-        data_source_ct=tCtfile,
-        col_ws_P_file="ws",
-        col_ws_ct_file="ws",
-        col_P="P",
-        col_ct="ct",
-        P_nominal=5000,
-        H=90.0,
-        D=126,
-        name="power_and_ct_curve",
-    )
-    mbook.turbine_types[ttype.name] = ttype
+        cfile = thisdir / "flappy" / "results.csv.gz"
+        tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
+        tCtfile = thisdir / "NREL-5MW-D126-H90-Ct.csv"
+        sfile = thisdir / "states.csv.gz"
+        lfile = thisdir / "test_farm.csv"
 
-    states = foxes.input.states.StatesTable(
-        data_source=sfile,
-        output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
-        fixed_vars={FV.RHO: 1.225},
-    )
+        mbook = foxes.models.ModelBook()
+        ttype = foxes.models.turbine_types.PCtFromTwo(
+            data_source_P=tPfile,
+            data_source_ct=tCtfile,
+            col_ws_P_file="ws",
+            col_ws_ct_file="ws",
+            col_P="P",
+            col_ct="ct",
+            P_nominal=5000,
+            H=90.0,
+            D=126,
+            name="power_and_ct_curve",
+        )
+        mbook.turbine_types[ttype.name] = ttype
 
-    farm = foxes.WindFarm()
-    foxes.input.farm_layout.add_from_file(
-        farm, lfile, turbine_models=[ttype.name], verbosity=0
-    )
+        states = foxes.input.states.StatesTable(
+            data_source=sfile,
+            output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
+            var2col={FV.WS: "ws", FV.WD: "wd", FV.TI: "ti"},
+            fixed_vars={FV.RHO: 1.225},
+        )
 
-    with foxes.Engine.new("threads", chunk_size_states=1000):
+        farm = foxes.WindFarm()
+        foxes.input.farm_layout.add_from_file(
+            farm, lfile, turbine_models=[ttype.name], verbosity=0
+        )
 
         algo = foxes.algorithms.Downwind(
             farm,
@@ -98,8 +96,8 @@ def test():
         print(chk.loc[sel & sel_ws])
         print(chk.max())
 
-        assert ((chk[FV.WS] < 1e-5)).all()
-        assert (chk[FV.P] < 1e-3).all()
+    assert ((chk[FV.WS] < 1e-5)).all()
+    assert (chk[FV.P] < 1e-3).all()
 
 
 if __name__ == "__main__":

@@ -5,12 +5,12 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
-
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
+
     n_s = 1000
     n_t = 55
     c = 1000

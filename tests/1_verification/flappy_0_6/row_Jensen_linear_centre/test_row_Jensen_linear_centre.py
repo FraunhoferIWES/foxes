@@ -6,10 +6,11 @@ import inspect
 import foxes
 import foxes.variables as FV
 
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
+
     n_s = 800
     n_t = 76
     p0 = np.array([0.0, 0.0])

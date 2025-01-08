@@ -3,12 +3,11 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
-
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
 
     ttype = "DTU10MW"
     sfile = "wind_rose_bremen.csv"
