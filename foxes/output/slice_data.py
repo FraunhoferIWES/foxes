@@ -123,7 +123,6 @@ class SliceData(Output):
         label_map,
         vmin,
         vmax,
-        weight_turbine,
         to_file,
         write_pars,
         ret_states,
@@ -147,17 +146,20 @@ class SliceData(Output):
         del g_pts
 
         # take mean over states:
-        if self.fres[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
-            weights = self.fres[FV.WEIGHT][:, weight_turbine].to_numpy()
-        elif self.fres[FV.WEIGHT].dims == (FC.STATE,):
-            weights = self.fres[FV.WEIGHT].to_numpy()
+        weights = point_results[FV.WEIGHT].to_numpy()
+        if point_results[FV.WEIGHT].dims == (FC.STATE,):
+            data = {
+                v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
+                for v in variables
+            }
+        elif point_results[FV.WEIGHT].dims == (FC.STATE, FC.POINT):
+            data = {
+                v: np.einsum("sp,sp->p", weights, point_results[v].to_numpy())
+                for v in variables
+            }
         else:
-            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}': Expecting {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.fres[FV.WEIGHT].dims}")
-        data = {
-            v: np.einsum("s,sp->p", weights, point_results[v].to_numpy())
-            for v in variables
-        }
-        del point_results
+            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}': Expecting {(FC.STATE,)} or {(FC.STATE, FC.POINT)}, got {point_results[FV.WEIGHT].dims}")
+        del point_results, weights
 
         # apply data modification:
         a_pos, b_pos, c_pos, data = self._data_mod(
@@ -212,7 +214,6 @@ class SliceData(Output):
         vmax={},
         states_sel=None,
         states_isel=None,
-        weight_turbine=0,
         to_file=None,
         write_pars={},
         ret_states=False,
@@ -265,8 +266,6 @@ class SliceData(Output):
             Reduce to selected states
         states_isel: list, optional
             Reduce to the selected states indices
-        weight_turbine: int, optional
-            Index of the turbine from which to take the weight
         to_file: str, optional
             Write data to this file name
         write_pars: dict
@@ -319,7 +318,6 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            weight_turbine,
             to_file,
             write_pars,
             ret_states,
@@ -357,7 +355,6 @@ class SliceData(Output):
         vmax={},
         states_sel=None,
         states_isel=None,
-        weight_turbine=0,
         to_file=None,
         write_pars={},
         ret_states=False,
@@ -412,8 +409,6 @@ class SliceData(Output):
             Reduce to selected states
         states_isel: list, optional
             Reduce to the selected states indices
-        weight_turbine: int, optional
-            Index of the turbine from which to take the weight
         to_file: str, optional
             Write data to this file name
         write_pars: dict
@@ -468,7 +463,6 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            weight_turbine,
             to_file,
             write_pars,
             ret_states,
@@ -506,7 +500,6 @@ class SliceData(Output):
         vmax={},
         states_sel=None,
         states_isel=None,
-        weight_turbine=0,
         to_file=None,
         write_pars={},
         ret_states=False,
@@ -561,8 +554,6 @@ class SliceData(Output):
             Reduce to selected states
         states_isel: list, optional
             Reduce to the selected states indices
-        weight_turbine: int, optional
-            Index of the turbine from which to take the weight
         to_file: str, optional
             Write data to this file name
         write_pars: dict
@@ -617,7 +608,6 @@ class SliceData(Output):
             label_map,
             vmin,
             vmax,
-            weight_turbine,
             to_file,
             write_pars,
             ret_states,

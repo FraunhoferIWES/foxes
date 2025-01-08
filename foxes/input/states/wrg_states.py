@@ -111,6 +111,11 @@ class WRGStates(States):
         ny = wrg.ny
         ns = wrg.n_sectors
         res = wrg.resolution
+        p1 = p0 + np.array([nx * res, ny * res])
+        if verbosity > 0:
+            print(
+                f"States '{self.name}': Data bounds {p0} - {p1}"
+            )
 
         # find bounds:
         if self.bounds_extra_space is not None:
@@ -119,7 +124,7 @@ class WRGStates(States):
             )
             if verbosity > 0:
                 print(
-                    f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}"
+                    f"States '{self.name}': Farm bounds {xy_min} - {xy_max}"
                 )
             ij_min = np.asarray((xy_min - p0)/res, dtype=config.dtype_int)
             ij_max = np.asarray((xy_max - p0)/res, dtype=config.dtype_int) + 1
@@ -133,8 +138,15 @@ class WRGStates(States):
         self._y = p0[1] + np.arange(ny) * res
         self._y = self._y[sy]
         if len(self._x) < 2 or len(self._y) < 2:
-            p1 = p0 + np.array([nx * res, ny * res])
-            raise ValueError(f"No overlap with data at {p0} -- {p1}")
+            raise ValueError(f"No overlap between data bounds and farm bounds")
+        p0[0] = np.min(self._x)
+        p0[1] = np.min(self._y)
+        p1[0] = np.max(self._x)
+        p1[1] = np.max(self._y)
+        if verbosity > 0:
+            print(
+                f"States '{self.name}':  New bounds {p0} - {p1}"
+            )
 
         # store data:
         A = []
