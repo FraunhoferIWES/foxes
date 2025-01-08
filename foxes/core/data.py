@@ -62,6 +62,7 @@ class Data(Dict):
         self.__states_i0 = states_i0
 
         self.sizes = {}
+        print("DATA INIT",list(data.keys()))
         for v, d in data.items():
             self._run_entry_checks(v, d, dims[v])
 
@@ -156,7 +157,6 @@ class Data(Dict):
                 for li, l in enumerate(self.loop_dims):
                     if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
                         self[name] = np.squeeze(data, axis=li)
-
             for ci, c in enumerate(dims):
                 if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
@@ -590,9 +590,9 @@ class TData(Data):
     def from_points(
         cls,
         points,
+        data=None,
+        dims=None,
         variables=None,
-        data={},
-        dims={},
         name="tdata",
         **kwargs,
     ):
@@ -603,14 +603,14 @@ class TData(Data):
         ----------
         points: np.ndarray
             The points, shape: (n_states, n_points, 3)
+        data: dict, optional
+            The initial data to be stored
+        dims: dict, optional
+            The dimensions tuples, same or subset
+            of data keys
         variables: list of str
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        data: dict
-            The initial data to be stored
-        dims: dict
-            The dimensions tuples, same or subset
-            of data keys
         name: str
             The data container name
         kwargs: dict, optional
@@ -626,6 +626,8 @@ class TData(Data):
             raise ValueError(
                 f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
             )
+        data = {} if data is None else data
+        dims = {} if dims is None else dims
         data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = np.array([1], dtype=config.dtype_double)
@@ -634,16 +636,16 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(data, dims, [FC.STATE, FC.TARGET], name=name, **kwargs)
+        return cls(data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
 
     @classmethod
     def from_tpoints(
         cls,
         tpoints,
         tweights,
+        data=None,
+        dims=None,
         variables=None,
-        data={},
-        dims={},
         name="tdata",
         **kwargs,
     ):
@@ -658,14 +660,14 @@ class TData(Data):
         tweights: np.ndarray, optional
             The target point weights, shape:
             (n_tpoints,)
+        data: dict, optional
+            The initial data to be stored
+        dims: dict, optional
+            The dimensions tuples, same or subset
+            of data keys
         variables: list of str
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
-        data: dict
-            The initial data to be stored
-        dims: dict
-            The dimensions tuples, same or subset
-            of data keys
         name: str
             The data container name
         kwargs: dict, optional
@@ -681,6 +683,8 @@ class TData(Data):
             raise ValueError(
                 f"Expecting tpoints shape (n_states, n_targets, n_tpoints, 3), got {tpoints.shape}"
             )
+        data = {} if data is None else data
+        dims = {} if dims is None else dims
         data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = tweights
@@ -689,7 +693,7 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(data, dims, [FC.STATE], name=name, **kwargs)
+        return cls(data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
 
     @classmethod
     def from_dataset(
