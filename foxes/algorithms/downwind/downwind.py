@@ -445,7 +445,7 @@ class Downwind(Algorithm):
         # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        calc_pars[-1].update({"store_ambres": True, "store_weights": False})
+        calc_pars[-1].update({"store": True})
 
         # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)

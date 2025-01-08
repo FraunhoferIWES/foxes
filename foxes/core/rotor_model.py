@@ -179,9 +179,7 @@ class RotorModel(FarmDataModel):
         elif res.shape[1] == 1:
             fdata[v][:, downwind_index] = res[:, 0]
         else:
-            raise ValueError(
-                f"Rotor model '{self.name}': downwind_index is not None, but results shape for '{v}' has more than one turbine, {res.shape}"
-            )
+            fdata[v, downwind_index] = res[:, downwind_index]
 
     def eval_rpoint_results(
         self,
@@ -326,8 +324,7 @@ class RotorModel(FarmDataModel):
         fdata,
         rpoints=None,
         rpoint_weights=None,
-        store_ambres=False,
-        store_weights=False,
+        store=False,
         downwind_index=None,
     ):
         """
@@ -347,10 +344,8 @@ class RotorModel(FarmDataModel):
         rpoint_weights: numpy.ndarray, optional
             The rotor point weights, or None for automatic
             for this rotor. Shape: (n_rpoints,)
-        store_ambres: bool, optional
+        store: bool, optional
             Flag for storing ambient rotor point results
-        store_weights: bool, optional
-            Flag for storing state weights at rotor points
         downwind_index: int, optional
             Only compute for index in the downwind order
 
@@ -385,11 +380,10 @@ class RotorModel(FarmDataModel):
         if FV.WEIGHT not in tdata:
             raise KeyError(f"Rotor '{self.name}': States '{algo.states.name}' failed to provide '{FV.WEIGHT}' in tdata")
 
-        if store_ambres:
+        if store:
             algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)
             algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, rpoint_weights, mdata=mdata)
             algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres, mdata=mdata)
-        if store_weights:
             algo.add_to_chunk_store(FC.WEIGHT_RES, tdata[FV.WEIGHT], mdata=mdata)
 
         self.eval_rpoint_results(

@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from foxes.core import FarmDataModel, TData
 import foxes.constants as FC
+import foxes.variables as FV
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -60,6 +61,7 @@ class FarmWakesCalculation(FarmDataModel):
         rotor = algo.rotor_model
         rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
+        weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
@@ -90,6 +92,7 @@ class FarmWakesCalculation(FarmDataModel):
             for v, d in wres.items():
                 if v in wake_res:
                     hres[v] += d[:, None]
+            hres[FV.WEIGHT] = weights
 
             rotor.eval_rpoint_results(
                 algo, mdata, fdata, hres, rwghts, downwind_index=oi
