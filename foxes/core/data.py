@@ -62,7 +62,6 @@ class Data(Dict):
         self.__states_i0 = states_i0
 
         self.sizes = {}
-        print("DATA INIT",list(data.keys()))
         for v, d in data.items():
             self._run_entry_checks(v, d, dims[v])
 
