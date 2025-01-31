@@ -63,7 +63,7 @@ pip install foxes
 This commands installs the version that correspond to the `main` branch at [github](https://github.com/FraunhoferIWES/foxes). Alternatively, you can decide to install the latest pre-release developments (non-stable) by
 
 ```console
-pip install git+https://github.com/FraunhoferIWES/foxes@dev#egg=foxes
+pip install git+https://github.com/FraunhoferIWES/foxes@dev
 ```
 
 If you are planning to run wind farm optimizations, please install the 
