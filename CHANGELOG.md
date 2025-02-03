@@ -738,5 +738,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Introducing `WRGStates`, reading and running Wind Resource Grid (WRG) data files which describe Weibull factors on a regular horizontal grid.
 - Examples:
   - New example `quickstart`, demonstrating _foxes_ in a minimal script
+- Bug fixes:
+  - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states (github #49)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
