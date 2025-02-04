@@ -739,6 +739,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Examples:
   - New example `quickstart`, demonstrating _foxes_ in a minimal script
 - Bug fixes:
-  - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states (github #49)
+  - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
