@@ -86,9 +86,10 @@ class FarmWakesCalculation(FarmDataModel):
                 algo, mdata, fdata, tdata, amb_res, rwghts, wdeltas, wmodel, oi, pwake
             )
 
-            hres = {v: d[:, oi, None] 
-                    if d.shape[1] > 1 else d[:, 0, None] 
-                    for v, d in wake_res.items()}
+            hres = {
+                v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
+                for v, d in wake_res.items()
+            }
             for v, d in wres.items():
                 if v in wake_res:
                     hres[v] += d[:, None]

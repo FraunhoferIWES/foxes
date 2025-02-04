@@ -158,7 +158,9 @@ class SliceData(Output):
                 for v in variables
             }
         else:
-            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}': Expecting {(FC.STATE,)} or {(FC.STATE, FC.POINT)}, got {point_results[FV.WEIGHT].dims}")
+            raise ValueError(
+                f"Wrong dimensions for '{FV.WEIGHT}': Expecting {(FC.STATE,)} or {(FC.STATE, FC.POINT)}, got {point_results[FV.WEIGHT].dims}"
+            )
         del point_results, weights
 
         # apply data modification:

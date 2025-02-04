@@ -60,7 +60,9 @@ class RotorModel(FarmDataModel):
         """
         if self.calc_vars is None:
             vrs = algo.states.output_point_vars(algo)
-            assert FV.WEIGHT not in vrs, f"Rotor '{self.name}': States '{algo.states.name}' output_point_vars contain '{FV.WEIGHT}', please remove"
+            assert (
+                FV.WEIGHT not in vrs
+            ), f"Rotor '{self.name}': States '{algo.states.name}' output_point_vars contain '{FV.WEIGHT}', please remove"
 
             if FV.WS in vrs:
                 self.calc_vars = [FV.REWS] + [v for v in vrs if v != FV.WS]
@@ -280,7 +282,9 @@ class RotorModel(FarmDataModel):
                     if uvp.shape[2] > 1:
                         rews2 = np.sqrt(
                             np.maximum(
-                                np.einsum("stp,p->st", np.sign(wsp) * wsp**2, rpoint_weights),
+                                np.einsum(
+                                    "stp,p->st", np.sign(wsp) * wsp**2, rpoint_weights
+                                ),
                                 0.0,
                             )
                         )
@@ -300,7 +304,9 @@ class RotorModel(FarmDataModel):
                             np.einsum("stp,p->st", wsp**3, rpoint_weights), 0.0
                         ) ** (1.0 / 3.0)
                     else:
-                        rews3 = (np.einsum("stp,p->st", wsp**3, rpoint_weights)) ** (1.0 / 3.0)
+                        rews3 = (np.einsum("stp,p->st", wsp**3, rpoint_weights)) ** (
+                            1.0 / 3.0
+                        )
                     self._set_res(fdata, v, rews3, downwind_index)
                     del rews3
                     vdone.append(v)
@@ -378,7 +384,9 @@ class RotorModel(FarmDataModel):
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         tdata.update(sres)
         if FV.WEIGHT not in tdata:
-            raise KeyError(f"Rotor '{self.name}': States '{algo.states.name}' failed to provide '{FV.WEIGHT}' in tdata")
+            raise KeyError(
+                f"Rotor '{self.name}': States '{algo.states.name}' failed to provide '{FV.WEIGHT}' in tdata"
+            )
 
         if store:
             algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)

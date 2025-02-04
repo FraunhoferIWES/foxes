@@ -54,9 +54,7 @@ def test():
     with foxes.Engine.new("threads", chunk_size_states=2000):
         data = algo.calc_farm()
 
-    df = data.to_dataframe()[
-        [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-    ]
+    df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
 
     print()
     print("TRESULTS\n")

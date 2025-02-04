@@ -123,7 +123,9 @@ class Timelines(WakeFrame):
             if weight_data is None:
                 weight_data = ((FC.STATE,), tdata[FV.WEIGHT][:, 0, 0])
             elif not np.all(tdata[FV.WEIGHT] == weight_data[1]):
-                raise AssertionError(f"States '{self.name}': weight data mismatch between heights")
+                raise AssertionError(
+                    f"States '{self.name}': weight data mismatch between heights"
+                )
             del tdata
 
             uv = wd2uv(res[FV.WD], res[FV.WS])[:, 0, 0, :2]

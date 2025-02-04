@@ -163,7 +163,9 @@ class Sequential(Iterative):
                 data_vars={
                     v: (
                         (FC.STATE, FC.TURBINE),
-                        np.zeros((len(sts), self.n_turbines), dtype=config.dtype_double),
+                        np.zeros(
+                            (len(sts), self.n_turbines), dtype=config.dtype_double
+                        ),
                     )
                     for v in self.farm_vars
                 },

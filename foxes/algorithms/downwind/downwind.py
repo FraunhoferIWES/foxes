@@ -681,9 +681,7 @@ class Downwind(Algorithm):
         """
         return (
             get_engine()
-            .run_calculation(
-                self, mlist, *data, out_vars=outputs, **kwargs
-            )
+            .run_calculation(self, mlist, *data, out_vars=outputs, **kwargs)
             .sel({FC.TPOINT: 0})
             .rename({FC.TARGET: FC.POINT})
         )

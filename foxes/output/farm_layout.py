@@ -9,6 +9,7 @@ from foxes.output.output import Output
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class FarmLayoutOutput(Output):
     """
     Plot the farm layout
@@ -235,10 +236,10 @@ class FarmLayoutOutput(Output):
                     elif weights.dims == (FC.STATE, FC.TURBINE):
                         wx = "st"
                     else:
-                        raise ValueError(f"Unsupported dimensions for '{FV.WEIGHT}': Expecting '{(FC.STATE,)}' or '{(FC.STATE, FC.TURBINE)}', got '{weights.dims}'")
-                    kw["c"] = np.einsum(
-                        f"st,{wx}->t", self.fres[color_by[5:]], weights
-                    )
+                        raise ValueError(
+                            f"Unsupported dimensions for '{FV.WEIGHT}': Expecting '{(FC.STATE,)}' or '{(FC.STATE, FC.TURBINE)}', got '{weights.dims}'"
+                        )
+                    kw["c"] = np.einsum(f"st,{wx}->t", self.fres[color_by[5:]], weights)
                 elif color_by[:4] == "sum_":
                     kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
                 elif color_by[:4] == "min_":

@@ -483,12 +483,14 @@ class MultiHeightStates(States):
                 results[v][:] = mdata[self.var(v)][:, None, None]
             else:
                 results[v] = ires[vrs.index(v)]
-        
+
         # add weights:
         if self.WEIGHT in mdata:
             tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
         else:
-            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+            tdata[FV.WEIGHT] = np.full(
+                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return results

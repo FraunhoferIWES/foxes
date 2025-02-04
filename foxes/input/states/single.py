@@ -215,8 +215,10 @@ class SingleStateStates(States):
             for v, p in self._profiles.items():
                 pres = p.calculate(tdata, z)
                 tdata[v] = pres
-        
-        tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1., dtype=config.dtype_double)
+
+        tdata[FV.WEIGHT] = np.full(
+            (mdata.n_states, 1, 1), 1.0, dtype=config.dtype_double
+        )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

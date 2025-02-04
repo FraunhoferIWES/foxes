@@ -76,9 +76,9 @@ class ReorderFarmOutput(FarmDataModel):
         out = {}
         for v in self.output_farm_vars(algo):
             if (
-                v != FV.ORDER and 
-                fdata[v].shape[1] > 1 and
-                np.any(fdata[v] != fdata[v][0, 0, None, None])
+                v != FV.ORDER
+                and fdata[v].shape[1] > 1
+                and np.any(fdata[v] != fdata[v][0, 0, None, None])
             ):
                 out[v] = fdata[v][ssel, order_inv]
             else:

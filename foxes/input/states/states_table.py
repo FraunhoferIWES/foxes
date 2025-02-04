@@ -425,11 +425,13 @@ class StatesTable(States):
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
             tdata[v] = p.calculate(tdata, z)
-        
+
         if self.WEIGHT in mdata:
             tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
         else:
-            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+            tdata[FV.WEIGHT] = np.full(
+                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

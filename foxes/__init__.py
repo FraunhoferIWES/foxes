@@ -1,6 +1,6 @@
 """
 Farm Optimization and eXtended yield Evaluation Software
-    
+
 """
 
 from .config import config, get_path  # noqa: F401

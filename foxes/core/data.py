@@ -635,7 +635,9 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
+        return cls(
+            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+        )
 
     @classmethod
     def from_tpoints(
@@ -692,7 +694,9 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
+        return cls(
+            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+        )
 
     @classmethod
     def from_dataset(

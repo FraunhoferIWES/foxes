@@ -158,8 +158,10 @@ class RosePlotOutput(Output):
         elif self.results[FV.WEIGHT].dims == (FC.STATE, FC.POINT):
             w = self.results[FV.WEIGHT].to_numpy()[:, point]
         else:
-            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}'. Expecting {(FC.STATE,)}, {(FC.STATE, FC.TURBINE)} or {(FC.STATE, FC.POINT)}, got {self.results[FV.WEIGHT].dims}")
-        
+            raise ValueError(
+                f"Wrong dimensions for '{FV.WEIGHT}'. Expecting {(FC.STATE,)}, {(FC.STATE, FC.TURBINE)} or {(FC.STATE, FC.POINT)}, got {self.results[FV.WEIGHT].dims}"
+            )
+
         if add_inf:
             ws_bins = list(ws_bins) + [np.inf]
         t = turbine if self._rtype == FC.TURBINE else point
@@ -462,8 +464,10 @@ class WindRoseBinPlot(Output):
         elif self.farm_results[FV.WEIGHT].dims == (FC.STATE, FC.TURBINE):
             w = self.farm_results[FV.WEIGHT].to_numpy()[:, turbine]
         else:
-            raise ValueError(f"Wrong dimensions for '{FV.WEIGHT}'. Expecting {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.farm_results[FV.WEIGHT].dims}")
-        
+            raise ValueError(
+                f"Wrong dimensions for '{FV.WEIGHT}'. Expecting {(FC.STATE,)} or {(FC.STATE, FC.TURBINE)}, got {self.farm_results[FV.WEIGHT].dims}"
+            )
+
         var = self.farm_results[variable].to_numpy()[:, turbine]
         ws = self.farm_results[ws_var].to_numpy()[:, turbine]
         wd = self.farm_results[wd_var].to_numpy()[:, turbine].copy()

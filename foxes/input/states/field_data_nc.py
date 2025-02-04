@@ -288,9 +288,13 @@ class FieldDataNC(States):
         weights = None
         if self.weight_ncvar is not None:
             if self.weight_ncvar not in ds.data_vars:
-                raise KeyError(f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}")
+                raise KeyError(
+                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}"
+                )
             if ds[self.weight_ncvar].dims != (self.states_coord,):
-                raise ValueError(f"States '{self.name}': Weights variable '{self.weight_ncvar}' has wrong dimensions. Expecting {(self.states_coord,)}, got {ds[self.weight_ncvar].dims}")
+                raise ValueError(
+                    f"States '{self.name}': Weights variable '{self.weight_ncvar}' has wrong dimensions. Expecting {(self.states_coord,)}, got {ds[self.weight_ncvar].dims}"
+                )
             weights = ds[self.weight_ncvar].to_numpy()
 
         if verbosity > 1:
@@ -477,7 +481,9 @@ class FieldDataNC(States):
             self.DATA = self.var("data")
             self.WEIGHT = self.var(FV.WEIGHT)
 
-            __, h, y, x, data, weights = self._get_data(self.data_source, coords, verbosity)
+            __, h, y, x, data, weights = self._get_data(
+                self.data_source, coords, verbosity
+            )
             self._prl_coords = coords
 
             coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
@@ -833,7 +839,9 @@ class FieldDataNC(States):
         if weights is not None:
             tdata[FV.WEIGHT] = weights[:, None, None]
         else:
-            tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+            tdata[FV.WEIGHT] = np.full(
+                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}

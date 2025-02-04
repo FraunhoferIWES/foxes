@@ -4,7 +4,7 @@ This is a script for automatically running all foxes
 examples, which have to be located within the same
 folder as this file, or a subset of them.
 
-Please have a look at the list of options, by running 
+Please have a look at the list of options, by running
 
     python run_all.py --help
 

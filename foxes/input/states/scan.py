@@ -206,9 +206,11 @@ class ScanStates(States):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
             tdata[v][:] = mdata[self.DATA][:, None, None, i]
-            
+
         # add weights:
-        tdata[FV.WEIGHT] = np.full((mdata.n_states, 1, 1), 1/self._N, dtype=config.dtype_double)
+        tdata[FV.WEIGHT] = np.full(
+            (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+        )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

@@ -30,20 +30,20 @@ class WRGStates(States):
         Additional parameters for scipy.interpolate.interpn
 
     :group: input.states
-    
+
     """
 
     def __init__(
-            self, 
-            wrg_fname, 
-            ws_bins, 
-            fixed_vars={},
-            bounds_extra_space="1D",
-            **interpn_pars,
-        ):
+        self,
+        wrg_fname,
+        ws_bins,
+        fixed_vars={},
+        bounds_extra_space="1D",
+        **interpn_pars,
+    ):
         """
         Constructor
-        
+
         Parameters
         ----------
         wrg_fname: str
@@ -98,9 +98,7 @@ class WRGStates(States):
                 print(
                     f"States '{self.name}': Reading static data '{self.wrg_fname}' from context '{STATES}'"
                 )
-            fpath = algo.dbook.get_file_path(
-                STATES, self.wrg_fname, check_raw=False
-            )
+            fpath = algo.dbook.get_file_path(STATES, self.wrg_fname, check_raw=False)
             if verbosity > 0:
                 print(f"Path: {fpath}")
         elif verbosity:
@@ -113,9 +111,7 @@ class WRGStates(States):
         res = wrg.resolution
         p1 = p0 + np.array([nx * res, ny * res])
         if verbosity > 0:
-            print(
-                f"States '{self.name}': Data bounds {p0} - {p1}"
-            )
+            print(f"States '{self.name}': Data bounds {p0} - {p1}")
 
         # find bounds:
         if self.bounds_extra_space is not None:
@@ -123,11 +119,9 @@ class WRGStates(States):
                 extra_space=self.bounds_extra_space, algo=algo
             )
             if verbosity > 0:
-                print(
-                    f"States '{self.name}': Farm bounds {xy_min} - {xy_max}"
-                )
-            ij_min = np.asarray((xy_min - p0)/res, dtype=config.dtype_int)
-            ij_max = np.asarray((xy_max - p0)/res, dtype=config.dtype_int) + 1
+                print(f"States '{self.name}': Farm bounds {xy_min} - {xy_max}")
+            ij_min = np.asarray((xy_min - p0) / res, dtype=config.dtype_int)
+            ij_max = np.asarray((xy_max - p0) / res, dtype=config.dtype_int) + 1
             sx = slice(ij_min[0], ij_max[0])
             sy = slice(ij_min[1], ij_max[1])
         else:
@@ -144,34 +138,26 @@ class WRGStates(States):
         p1[0] = np.max(self._x)
         p1[1] = np.max(self._y)
         if verbosity > 0:
-            print(
-                f"States '{self.name}':  New bounds {p0} - {p1}"
-            )
+            print(f"States '{self.name}':  New bounds {p0} - {p1}")
 
         # store data:
         A = []
         k = []
         f = []
         for s in range(ns):
-            A.append(
-                wrg.data[f"As_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
-            )
-            k.append(
-                wrg.data[f"Ks_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
-            )
-            f.append(
-                wrg.data[f"fs_{s}"].to_numpy().reshape(ny, nx)[sy, sx]
-            )
+            A.append(wrg.data[f"As_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
+            k.append(wrg.data[f"Ks_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
+            f.append(wrg.data[f"fs_{s}"].to_numpy().reshape(ny, nx)[sy, sx])
         del wrg
         A = np.stack(A, axis=0).T
         k = np.stack(k, axis=0).T
         f = np.stack(f, axis=0).T
-        self._data = np.stack([A, k, f], axis=-1) # (x, y, wd, AKfs)
+        self._data = np.stack([A, k, f], axis=-1)  # (x, y, wd, AKfs)
 
         # store ws and wd:
         self.VARS = self.var("VARS")
         self.DATA = self.var("DATA")
-        self._wds = np.arange(0., 360., 360 / ns)
+        self._wds = np.arange(0.0, 360.0, 360 / ns)
         self._wsd = self.ws_bins[1:] - self.ws_bins[:-1]
         self._wss = 0.5 * (self.ws_bins[:-1] + self.ws_bins[1:])
         self._N = len(self._wss) * ns
@@ -216,7 +202,7 @@ class WRGStates(States):
         ovars = set([FV.WS, FV.WD])
         ovars.update(self.fixed_vars.keys())
         return list(ovars)
-    
+
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -294,7 +280,7 @@ class WRGStates(States):
                 "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
             )
             raise e
-        
+
         A = data[..., 0]
         k = data[..., 1]
         f = data[..., 2]
@@ -306,11 +292,10 @@ class WRGStates(States):
             f,
             dims=(FC.STATE, FC.TARGET, FC.TPOINT),
         )
-        
+
         wsA = out[FV.WS] / A
         tdata[FV.WEIGHT] *= wsd[:, None, None] * (
-            k / A * wsA ** (k - 1) * np.exp(-wsA ** k)
+            k / A * wsA ** (k - 1) * np.exp(-(wsA**k))
         )
 
         return out
-    

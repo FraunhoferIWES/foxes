@@ -5,7 +5,6 @@ import foxes
 import foxes.variables as FV
 
 
-
 def test():
     thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
     print("TESTDIR:", thisdir)

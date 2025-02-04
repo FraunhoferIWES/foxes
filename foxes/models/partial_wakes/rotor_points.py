@@ -91,12 +91,14 @@ class RotorPoints(PartialWakesModel):
             of shape (n_states, n_rotor_points)
 
         """
-        ares = {v: d[:, downwind_index, None] 
-                if d.shape[1] > 1 else d[:, 0, None] 
-                for v, d in amb_res.items()}
-        wdel = {v: d[:, downwind_index, None].copy() 
-                if d.shape[1] > 1 else d[:, 0, None] 
-                for v, d in wake_deltas.items()}
+        ares = {
+            v: d[:, downwind_index, None] if d.shape[1] > 1 else d[:, 0, None]
+            for v, d in amb_res.items()
+        }
+        wdel = {
+            v: d[:, downwind_index, None].copy() if d.shape[1] > 1 else d[:, 0, None]
+            for v, d in wake_deltas.items()
+        }
         wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
 
         return {v: d[:, 0] for v, d in wdel.items()}
