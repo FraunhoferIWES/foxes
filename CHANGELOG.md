@@ -742,3 +742,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
+
+## v1.3.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3.1](https://github.com/FraunhoferIWES/foxes/commits/v1.3.1)
