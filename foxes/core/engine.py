@@ -127,7 +127,6 @@ class Engine(ABC):
                 raise ValueError(
                     f"Cannot initialize engine '{type(self).__name__}', since engine already set to '{type(get_engine()).__name__}'"
                 )
-            global __global_engine_data__
             __global_engine_data__["engine"] = self
             self.__initialized = True
 
@@ -148,7 +147,6 @@ class Engine(ABC):
         if self.entered:
             self.__exit__(type, value, traceback)
         elif self.initialized:
-            global __global_engine_data__
             __global_engine_data__["engine"] = None
             self.__initialized = False
 
