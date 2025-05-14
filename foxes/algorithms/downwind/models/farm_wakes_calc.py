@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from foxes.core import FarmDataModel, TData
 import foxes.constants as FC
+import foxes.variables as FV
 
 
 class FarmWakesCalculation(FarmDataModel):
@@ -58,8 +59,9 @@ class FarmWakesCalculation(FarmDataModel):
         """
         # collect ambient rotor results and weights:
         rotor = algo.rotor_model
-        weights = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
+        rwghts = algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata)
         amb_res = algo.get_from_chunk_store(FC.AMB_ROTOR_RES, mdata=mdata)
+        weights = algo.get_from_chunk_store(FC.WEIGHT_RES, mdata=mdata)
 
         # generate all wake evaluation points
         # (n_states, n_order, n_rpoints)
@@ -77,20 +79,24 @@ class FarmWakesCalculation(FarmDataModel):
             return tdata, wdelta
 
         def _evaluate(
-            gmodel, tdata, amb_res, weights, wake_res, wdeltas, oi, wmodel, pwake
+            gmodel, tdata, amb_res, rwghts, wake_res, wdeltas, oi, wmodel, pwake
         ):
             """Helper function for data evaluation at turbines"""
             wres = gmodel.finalize_farm_wakes(
-                algo, mdata, fdata, tdata, amb_res, weights, wdeltas, wmodel, oi, pwake
+                algo, mdata, fdata, tdata, amb_res, rwghts, wdeltas, wmodel, oi, pwake
             )
 
-            hres = {v: d[:, oi, None] for v, d in wake_res.items()}
+            hres = {
+                v: d[:, oi, None] if d.shape[1] > 1 else d[:, 0, None]
+                for v, d in wake_res.items()
+            }
             for v, d in wres.items():
                 if v in wake_res:
                     hres[v] += d[:, None]
+            hres[FV.WEIGHT] = weights
 
             rotor.eval_rpoint_results(
-                algo, mdata, fdata, hres, weights, downwind_index=oi
+                algo, mdata, fdata, hres, rwghts, downwind_index=oi
             )
 
             res = algo.farm_controller.calculate(
@@ -119,7 +125,7 @@ class FarmWakesCalculation(FarmDataModel):
                             gmodel,
                             tdatap,
                             amb_res,
-                            weights,
+                            rwghts,
                             wake_res,
                             wdeltas,
                             oi,
@@ -144,7 +150,7 @@ class FarmWakesCalculation(FarmDataModel):
                             gmodel,
                             tdatap,
                             amb_res,
-                            weights,
+                            rwghts,
                             wake_res,
                             wdeltas,
                             oi,

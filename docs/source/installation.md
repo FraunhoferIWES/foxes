@@ -2,14 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are:
-
-- `Python 3.8`
-- `Python 3.9`
-- `Python 3.10`
-- `Python 3.11`
-- `Python 3.12`
-- `Python 3.13`
+The supported Python versions are `Python 3.8`...`3.13`.
 
 ## TLDR; Quick installation guide
 
@@ -63,7 +56,7 @@ pip install foxes
 This commands installs the version that correspond to the `main` branch at [github](https://github.com/FraunhoferIWES/foxes). Alternatively, you can decide to install the latest pre-release developments (non-stable) by
 
 ```console
-pip install git+https://github.com/FraunhoferIWES/foxes@dev#egg=foxes
+pip install git+https://github.com/FraunhoferIWES/foxes@dev
 ```
 
 If you are planning to run wind farm optimizations, please install the 

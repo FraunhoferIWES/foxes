@@ -176,25 +176,6 @@ class ScanStates(States):
         """
         return self._vars
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return np.full(
-            (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
-        )
-
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -225,5 +206,11 @@ class ScanStates(States):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])
             tdata[v][:] = mdata[self.DATA][:, None, None, i]
+
+        # add weights:
+        tdata[FV.WEIGHT] = np.full(
+            (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+        )
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: tdata[v] for v in self.output_point_vars(algo)}

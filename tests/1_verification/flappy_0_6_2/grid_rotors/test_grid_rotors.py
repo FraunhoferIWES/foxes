@@ -4,12 +4,12 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
-
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
+
     c = 500
     cpath = thisdir / "flappy"
     tfile = thisdir / "NREL-5MW-D126-H90.csv"

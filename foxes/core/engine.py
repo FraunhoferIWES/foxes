@@ -127,7 +127,6 @@ class Engine(ABC):
                 raise ValueError(
                     f"Cannot initialize engine '{type(self).__name__}', since engine already set to '{type(get_engine()).__name__}'"
                 )
-            global __global_engine_data__
             __global_engine_data__["engine"] = self
             self.__initialized = True
 
@@ -148,7 +147,6 @@ class Engine(ABC):
         if self.entered:
             self.__exit__(type, value, traceback)
         elif self.initialized:
-            global __global_engine_data__
             __global_engine_data__["engine"] = None
             self.__initialized = False
 
@@ -515,9 +513,27 @@ class Engine(ABC):
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
 
+        # reducing weights dimensions:
+        dvars = {}
+        for v, (dims, d) in data_vars.items():
+            if (
+                dims == (FC.STATE, FC.TURBINE)
+                and d.shape[1] == 1
+                and algo.n_turbines > 1
+            ):
+                dvars[v] = ((FC.STATE,), d[:, 0])
+            elif (
+                dims == (FC.STATE, FC.TARGET, FC.TPOINT)
+                and goal_data.sizes[FC.TARGET] > n_chunks_targets
+                and d.shape[1:] == (n_chunks_targets, 1)
+            ):
+                dvars[v] = ((FC.STATE,), d[:, 0, 0])
+            else:
+                dvars[v] = (dims, d)
+
         return Dataset(
             coords=coords,
-            data_vars={v: tuple(d) for v, d in data_vars.items()},
+            data_vars=dvars,
         )
 
     @abstractmethod

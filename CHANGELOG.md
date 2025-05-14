@@ -725,6 +725,25 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.2.5
 
-
+- Models:
+  - Fix for bug in `VortexSheet` turbine induction wake model. Thanks @MellBeli
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.2.5](https://github.com/FraunhoferIWES/foxes/commits/v1.2.5)
+
+## v1.3
+
+- Core:
+  - The statistical weights of the states are now no longer required to be known a-priori, but they are computed at target points during the states calculation. So in principle, weights can now depend on the evaluation point, as it is required by the new `WRGStates`, see below.
+- Input:
+  - Introducing `WRGStates`, reading and running Wind Resource Grid (WRG) data files which describe Weibull factors on a regular horizontal grid.
+- Examples:
+  - New example `quickstart`, demonstrating _foxes_ in a minimal script
+- Bug fixes:
+  - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
+
+## v1.3.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3.1](https://github.com/FraunhoferIWES/foxes/commits/v1.3.1)

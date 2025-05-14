@@ -73,8 +73,14 @@ ROTOR_WEIGHTS = "rotor_weights"
 """ Identifier for rotor point weights
 :group: foxes.constants
 """
+
 AMB_ROTOR_RES = "amb_rotor_res"
 """ Identifier for ambient rotor point results
+:group: foxes.constants
+"""
+
+WEIGHT_RES = "weight_res"
+""" Identifier for weights results at rotor points
 :group: foxes.constants
 """
 

@@ -101,9 +101,13 @@ class OnePointFlowStates(States):
         """
         return [self.base_states]
 
-    def initialize(self, algo, verbosity=0):
+    def load_data(self, algo, verbosity=0):
         """
-        Initializes the model.
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
 
         Parameters
         ----------
@@ -112,8 +116,14 @@ class OnePointFlowStates(States):
         verbosity: int
             The verbosity level, 0 = silent
 
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
         """
-        super().initialize(algo, verbosity)
 
         # find heights:
         if self.heights is None:
@@ -127,9 +137,13 @@ class OnePointFlowStates(States):
                 )
 
         # pre-calc data:
-        Timelines._precalc_data(
+        self.WEIGHT = self.var(FV.WEIGHT)
+        idata = super().load_data(algo, verbosity)
+        idata["data_vars"][self.WEIGHT] = Timelines._precalc_data(
             self, algo, self.base_states, self.heights, verbosity, needs_res=True
         )
+
+        return idata
 
     def size(self):
         """
@@ -171,23 +185,6 @@ class OnePointFlowStates(States):
 
         """
         return self.base_states.output_point_vars(algo)
-
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return self.base_states.weights(algo)
 
     def set_running(
         self,
@@ -487,6 +484,10 @@ class OnePointFlowStates(States):
                     )
                     results = {FV.WD: uv2wd(uv), FV.WS: np.linalg.norm(uv, axis=-1)}
                     del uv
+
+        # set weights:
+        tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {
             v: d.reshape(n_states, n_targets, n_tpoints) for v, d in results.items()

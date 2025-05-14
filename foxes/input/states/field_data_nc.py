@@ -16,7 +16,6 @@ def _read_nc_file(
     fpath,
     coords,
     vars,
-    weight_var,
     nc_engine,
     sel,
     isel,
@@ -30,18 +29,7 @@ def _read_nc_file(
                 f"Missing coordinate '{c}' in file {fpath}, got: {list(data.coords.keys())}"
             )
     if minimal:
-        weights = None
-        if weight_var is not None:
-            if weight_var not in data.data_vars:
-                raise KeyError(
-                    f"Missing weight var '{weight_var}' in file {fpath}, found: {list(data.data_vars.keys())}"
-                )
-            if data[weight_var].dims != (coords[0],):
-                raise ValueError(
-                    f"Wrong dimensions for variable '{weight_var}' in file {fpath}. Expecting {(coords[0],)}, got {data[weight_var].dims}"
-                )
-            weights = data[weight_var].to_numpy()
-        return data[coords[0]].to_numpy(), weights
+        return data[coords[0]].to_numpy()
     else:
         data = data[vars]
         data.attrs = {}
@@ -175,7 +163,7 @@ class FieldDataNC(States):
         super().__init__()
 
         self.states_coord = states_coord
-        self.ovars = output_vars
+        self.ovars = list(output_vars)
         self.fixed_vars = fixed_vars
         self.x_coord = x_coord
         self.y_coord = y_coord
@@ -196,7 +184,6 @@ class FieldDataNC(States):
         self._N = None
 
         self.__data_source = data_source
-        self.__weights = None
         self.__inds = None
 
     @property
@@ -298,6 +285,18 @@ class FieldDataNC(States):
                 dtype=config.dtype_double,
             )
 
+        weights = None
+        if self.weight_ncvar is not None:
+            if self.weight_ncvar not in ds.data_vars:
+                raise KeyError(
+                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}"
+                )
+            if ds[self.weight_ncvar].dims != (self.states_coord,):
+                raise ValueError(
+                    f"States '{self.name}': Weights variable '{self.weight_ncvar}' has wrong dimensions. Expecting {(self.states_coord,)}, got {ds[self.weight_ncvar].dims}"
+                )
+            weights = ds[self.weight_ncvar].to_numpy()
+
         if verbosity > 1:
             print(f"\n{self.name}: Data ranges")
             for v, i in self._dkys.items():
@@ -307,7 +306,7 @@ class FieldDataNC(States):
                     f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)"
                 )
 
-        return sts, h, y, x, data
+        return sts, h, y, x, data, weights
 
     def output_point_vars(self, algo):
         """
@@ -356,7 +355,9 @@ class FieldDataNC(States):
 
             # check variables:
             for v in self.ovars:
-                if v not in self.var2ncvar and v not in self.fixed_vars:
+                if v == FV.WEIGHT and self.weight_ncvar is None:
+                    pass
+                elif v not in self.var2ncvar and v not in self.fixed_vars:
                     raise ValueError(
                         f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
                     )
@@ -413,7 +414,6 @@ class FieldDataNC(States):
                 _read_nc_file,
                 files,
                 coords=coords,
-                weight_var=self.weight_ncvar,
                 vars=vars,
                 nc_engine=config.nc_engine,
                 isel=self.isel,
@@ -440,23 +440,15 @@ class FieldDataNC(States):
                 )
                 if self.load_mode == "preload":
                     self.__data_source.load()
-                if self.weight_ncvar is not None:
-                    self.__weights = self.__data_source[self.weight_ncvar].to_numpy()
                 self.__inds = self.__data_source[self.states_coord].to_numpy()
                 self._N = len(self.__inds)
 
             elif self.load_mode == "fly":
-                self.__inds, weights = zip(*self.__data_source)
+                self.__inds = self.__data_source
                 self.__data_source = fpath
                 self._files_maxi = {f: len(inds) for f, inds in zip(files, self.__inds)}
                 self.__inds = np.concatenate(self.__inds, axis=0)
                 self._N = len(self.__inds)
-                if weights[0] is not None:
-                    self.__weights = np.zeros(
-                        (self._N, algo.n_turbines), dtype=config.dtype_double
-                    )
-                    self.__weights[:] = np.concatenate(weights, axis=0)[:, None]
-                    del weights
 
             else:
                 raise KeyError(
@@ -467,11 +459,6 @@ class FieldDataNC(States):
                 self.__inds = pd.to_datetime(
                     self.__inds, format=self.time_format
                 ).to_numpy()
-
-            if self.__weights is None:
-                self.__weights = np.full(
-                    (self._N, algo.n_turbines), 1.0 / self._N, dtype=config.dtype_double
-                )
 
         # ensure WD and WS get the first two slots of data:
         self._dkys = {}
@@ -492,8 +479,11 @@ class FieldDataNC(States):
             self.H = self.var(FV.H)
             self.VARS = self.var("vars")
             self.DATA = self.var("data")
+            self.WEIGHT = self.var(FV.WEIGHT)
 
-            __, h, y, x, data = self._get_data(self.data_source, coords, verbosity)
+            __, h, y, x, data, weights = self._get_data(
+                self.data_source, coords, verbosity
+            )
             self._prl_coords = coords
 
             coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
@@ -504,6 +494,8 @@ class FieldDataNC(States):
             idata["coords"][self.X] = x
             idata["coords"][self.VARS] = list(self._dkys.keys())
             idata["data_vars"][self.DATA] = data
+            if weights is not None:
+                idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
 
         return idata
 
@@ -540,10 +532,9 @@ class FieldDataNC(States):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         data_stash[self.name] = dict(
-            weights=self.__weights,
             inds=self.__inds,
         )
-        del self.__weights, self.__inds
+        del self.__inds
 
         if self.load_mode == "preload":
             data_stash[self.name]["data_source"] = self.__data_source
@@ -579,7 +570,6 @@ class FieldDataNC(States):
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
         data = data_stash[self.name]
-        self.__weights = data.pop("weights")
         self.__inds = data.pop("inds")
 
         if self.load_mode == "preload":
@@ -628,27 +618,6 @@ class FieldDataNC(States):
         """
         return self.ovars
 
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        if self.running:
-            raise ValueError(
-                f"States '{self.name}': Cannot access weights while running"
-            )
-        return self.__weights
-
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -690,6 +659,7 @@ class FieldDataNC(States):
             y = mdata[self.Y]
             h = mdata[self.H]
             data = mdata[self.DATA].copy()
+            weights = mdata.get(self.WEIGHT, None)
             coords = self._prl_coords
 
         # case lazy:
@@ -697,7 +667,7 @@ class FieldDataNC(States):
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
-            __, h, y, x, data = self._get_data(ds, coords, verbosity=0)
+            __, h, y, x, data, weights = self._get_data(ds, coords, verbosity=0)
             del ds
 
         # case fly:
@@ -725,7 +695,6 @@ class FieldDataNC(States):
                             _read_nc_file(
                                 fpath,
                                 coords=coords,
-                                weight_var=self.weight_ncvar,
                                 vars=vars,
                                 nc_engine=config.nc_engine,
                                 isel=isel,
@@ -742,7 +711,7 @@ class FieldDataNC(States):
             ), f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
 
             data = xr.concat(data, dim=self.states_coord)
-            __, h, y, x, data = self._get_data(data, coords, verbosity=0)
+            __, h, y, x, data, weights = self._get_data(data, coords, verbosity=0)
 
         else:
             raise KeyError(
@@ -858,12 +827,21 @@ class FieldDataNC(States):
             out[FV.WD] = uv2wd(uv, axis=-1)
             del uv
         for v in self.ovars:
-            if v not in out:
+            if v != FV.WEIGHT and v not in out:
                 if v in self._dkys:
                     out[v] = data[..., self._dkys[v]]
                 else:
                     out[v] = np.full(
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )
+
+        # add weights:
+        if weights is not None:
+            tdata[FV.WEIGHT] = weights[:, None, None]
+        else:
+            tdata[FV.WEIGHT] = np.full(
+                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            )
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}

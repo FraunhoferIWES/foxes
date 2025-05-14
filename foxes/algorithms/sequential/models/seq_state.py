@@ -30,7 +30,6 @@ class SeqState(States):
 
         # updated by SequentialIter:
         self._size = states.size()
-        self._weight = None
         self._indx = None
         self._counter = None
 
@@ -99,23 +98,6 @@ class SeqState(States):
 
         """
         return self._counter
-
-    def weights(self, algo):
-        """
-        The statistical weights of all states.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        weights: numpy.ndarray
-            The weights, shape: (n_states, n_turbines)
-
-        """
-        return self._weight[None, :] if self._size == 1 else self.states.weights(algo)
 
     def output_point_vars(self, algo):
         """

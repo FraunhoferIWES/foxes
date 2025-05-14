@@ -60,7 +60,7 @@ jobs:
         path: dist/
 
   publish-to-testpypi:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    name: Publish 🐍 to TestPyPI 📦
     needs:
     - build
     runs-on: ubuntu-latest
@@ -85,7 +85,7 @@ jobs:
 
   publish-to-pypi:
     name: >-
-      Publish Python 🐍 distribution 📦 to PyPI
+      Publish 🐍 to PyPI 📦
     needs:
     - tests
     - publish-to-testpypi

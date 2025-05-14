@@ -58,7 +58,7 @@ class SetAmbPointResults(PointDataModel):
             The output variable names
 
         """
-        return [FV.var2amb[v] for v in self.vars]
+        return [FV.var2amb[v] for v in self.vars] + [FV.WEIGHT]
 
     def calculate(self, algo, mdata, fdata, pdata):
         """

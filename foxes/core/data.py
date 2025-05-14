@@ -156,10 +156,11 @@ class Data(Dict):
                 for li, l in enumerate(self.loop_dims):
                     if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
                         self[name] = np.squeeze(data, axis=li)
-
             for ci, c in enumerate(dims):
-                if c not in self.sizes:
+                if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
+                elif self[name].shape[ci] == 1:
+                    pass
                 elif self.sizes[c] != self[name].shape[ci]:
                     raise ValueError(
                         f"Inconsistent size for data entry '{name}', dimension '{c}': Expecting {self.sizes[c]}, found {self[name].shape[ci]} in shape {self[name].shape}"
@@ -288,12 +289,16 @@ class Data(Dict):
                     raise ValueError(
                         f"Expecting coordinate '{FC.STATE}' at position 0 for data variable '{v}', got {d.dims}"
                     )
-                n_states = len(d.to_numpy())
+                n_states = d.shape[0]
                 s = np.s_[:] if s_states is None else s_states
                 data[v] = d.to_numpy()[s].copy() if copy else d.to_numpy()[s]
+                dims[v] = d.dims
+                if v == FV.WEIGHT and d.dims == (FC.STATE,):
+                    data[v] = data[v][:, None]
+                    dims[v] = (FC.STATE, FC.TURBINE)
             else:
                 data[v] = d.to_numpy().copy() if copy else d.to_numpy()
-            dims[v] = d.dims
+                dims[v] = d.dims
 
         if callback is not None:
             callback(data, dims)
@@ -362,8 +367,7 @@ class FData(Data):
         super()._run_entry_checks(name, data, dims)
         data = self[name]
         dims = self.dims[name]
-
-        if name not in self.sizes and name not in FC.TNAME:
+        if name not in self.sizes and name not in [FC.TNAME, FV.WEIGHT]:
             dms = (FC.STATE, FC.TURBINE)
             shp = (self.n_states, self.n_turbines)
             if len(data.shape) < 2:
@@ -418,8 +422,6 @@ class FData(Data):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
-                    data[FV.WEIGHT] = mdata[FV.WEIGHT]
-                    dims[FV.WEIGHT] = mdata.dims[FV.WEIGHT]
                 if callback is not None:
                     callback(data, dims)
 
@@ -587,8 +589,9 @@ class TData(Data):
     def from_points(
         cls,
         points,
-        data={},
-        dims={},
+        data=None,
+        dims=None,
+        variables=None,
         name="tdata",
         **kwargs,
     ):
@@ -599,11 +602,14 @@ class TData(Data):
         ----------
         points: np.ndarray
             The points, shape: (n_states, n_points, 3)
-        data: dict
+        data: dict, optional
             The initial data to be stored
-        dims: dict
+        dims: dict, optional
             The dimensions tuples, same or subset
             of data keys
+        variables: list of str
+            Add default empty variables with NaN values
+            and shape (n_states, n_targets, n_tpoints)
         name: str
             The data container name
         kwargs: dict, optional
@@ -619,19 +625,28 @@ class TData(Data):
             raise ValueError(
                 f"Expecting points shape (n_states, n_points, 3), got {points.shape}"
             )
+        data = {} if data is None else data
+        dims = {} if dims is None else dims
         data[FC.TARGETS] = points[:, :, None, :]
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = np.array([1], dtype=config.dtype_double)
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        return cls(data, dims, [FC.STATE, FC.TARGET], name=name, **kwargs)
+        if variables is not None:
+            for v in variables:
+                data[v] = np.full_like(points[:, :, None, 0], np.nan)
+                dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+        return cls(
+            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+        )
 
     @classmethod
     def from_tpoints(
         cls,
         tpoints,
         tweights,
-        data={},
-        dims={},
+        data=None,
+        dims=None,
+        variables=None,
         name="tdata",
         **kwargs,
     ):
@@ -646,11 +661,14 @@ class TData(Data):
         tweights: np.ndarray, optional
             The target point weights, shape:
             (n_tpoints,)
-        data: dict
+        data: dict, optional
             The initial data to be stored
-        dims: dict
+        dims: dict, optional
             The dimensions tuples, same or subset
             of data keys
+        variables: list of str
+            Add default empty variables with NaN values
+            and shape (n_states, n_targets, n_tpoints)
         name: str
             The data container name
         kwargs: dict, optional
@@ -666,11 +684,19 @@ class TData(Data):
             raise ValueError(
                 f"Expecting tpoints shape (n_states, n_targets, n_tpoints, 3), got {tpoints.shape}"
             )
+        data = {} if data is None else data
+        dims = {} if dims is None else dims
         data[FC.TARGETS] = tpoints
         dims[FC.TARGETS] = (FC.STATE, FC.TARGET, FC.TPOINT, FC.XYH)
         data[FC.TWEIGHTS] = tweights
         dims[FC.TWEIGHTS] = (FC.TPOINT,)
-        return cls(data, dims, [FC.STATE], name=name, **kwargs)
+        if variables is not None:
+            for v in variables:
+                data[v] = np.full_like(tpoints[..., 0], np.nan)
+                dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+        return cls(
+            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+        )
 
     @classmethod
     def from_dataset(

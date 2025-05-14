@@ -61,8 +61,6 @@ class Downwind(Algorithm):
         FV.TI,
         FV.CT,
         FV.P,
-        FV.ORDER,
-        FV.WEIGHT,
     ]
 
     def __init__(
@@ -447,9 +445,7 @@ class Downwind(Algorithm):
         # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        calc_pars[-1].update(
-            {"store_rpoints": True, "store_rweights": True, "store_amb_res": True}
-        )
+        calc_pars[-1].update({"store": True})
 
         # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
@@ -475,13 +471,14 @@ class Downwind(Algorithm):
 
     def _calc_farm_vars(self, mlist):
         """Helper function that gathers the farm variables"""
-        self.farm_vars = sorted(list(set([FV.WEIGHT] + mlist.output_farm_vars(self))))
+        self.farm_vars = sorted(list(mlist.output_farm_vars(self)))
 
     def _launch_parallel_farm_calc(
         self,
         mlist,
         *data,
         outputs=None,
+        normalize=False,
         **kwargs,
     ):
         """
@@ -495,6 +492,8 @@ class Downwind(Algorithm):
             The (mdata, fdata) inputs
         outputs: list of str, optional
             The output variables, or None for defaults
+        normalize: bool
+            Normalize the weights to 1 wrt sum over states
         kwargs: dict, optional
             Additional parameters for running
 
@@ -509,6 +508,9 @@ class Downwind(Algorithm):
         farm_results = get_engine().run_calculation(
             self, mlist, *data, out_vars=out_vars, **kwargs
         )
+
+        if normalize:
+            farm_results[FV.WEIGHT] /= farm_results[FV.WEIGHT].sum(dim=FC.STATE)
 
         return farm_results
 
@@ -679,13 +681,7 @@ class Downwind(Algorithm):
         """
         return (
             get_engine()
-            .run_calculation(
-                self,
-                mlist,
-                *data,
-                out_vars=outputs,
-                **kwargs,
-            )
+            .run_calculation(self, mlist, *data, out_vars=outputs, **kwargs)
             .sel({FC.TPOINT: 0})
             .rename({FC.TARGET: FC.POINT})
         )
@@ -812,8 +808,6 @@ class Downwind(Algorithm):
             point_data,
             outputs=ovars,
             parameters=calc_pars,
-            # sel=sel,
-            # isel=isel,
             **kwargs,
         )
         del model_data, farm_results, point_data

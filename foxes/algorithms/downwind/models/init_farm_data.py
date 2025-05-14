@@ -43,7 +43,6 @@ class InitFarmData(FarmDataModel):
             FV.WD,
             FV.YAW,
             FV.ORDER,
-            FV.WEIGHT,
             FV.ORDER_SSEL,
             FV.ORDER_INV,
         ]
@@ -106,10 +105,11 @@ class InitFarmData(FarmDataModel):
             fdata[FV.D][:, ti] = D
 
         # calc WD and YAW at rotor centres:
-        tdata = TData.from_points(points=fdata[FV.TXYH])
+        svrs = algo.states.output_point_vars(algo)
+        tdata = TData.from_points(points=fdata[FV.TXYH], variables=svrs)
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata[FV.WD] = sres[FV.WD][:, :, 0]
-        del tdata, sres
+        del tdata, sres, svrs
 
         # calculate and inverse:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)
@@ -124,7 +124,7 @@ class InitFarmData(FarmDataModel):
         fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD, FV.WEIGHT]:
+        for v in [FV.D, FV.WD]:
             if np.any(fdata[v] != fdata[v][0, 0, None, None]):
                 fdata[v] = fdata[v][ssel, order]
         fdata[FV.YAW] = fdata[FV.WD].copy()

@@ -4,13 +4,11 @@ import inspect
 
 import foxes
 import foxes.variables as FV
-from foxes.config import config
-
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
 
 
 def test():
-    print(thisdir)
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
 
     cfile = thisdir / "flappy" / "results.csv.gz"
     tPfile = thisdir / "NREL-5MW-D126-H90-P.csv"
@@ -45,61 +43,55 @@ def test():
         farm, lfile, turbine_models=[ttype.name], verbosity=0
     )
 
-    with foxes.Engine.new("threads", chunk_size_states=1000):
+    algo = foxes.algorithms.Downwind(
+        farm=farm,
+        states=states,
+        mbook=mbook,
+        rotor_model="centre",
+        wake_models=["Jensen_linear_k007"],
+        wake_frame="rotor_wd",
+        partial_wakes={"Jensen_linear_k007": "top_hat"},
+        verbosity=0,
+    )
 
-        algo = foxes.algorithms.Downwind(
-            farm,
-            states,
-            mbook=mbook,
-            rotor_model="centre",
-            wake_models=["Jensen_linear_k007"],
-            wake_frame="rotor_wd",
-            partial_wakes={"Jensen_linear_k007": "top_hat"},
-            verbosity=0,
-        )
-
+    with foxes.Engine.new("threads", chunk_size_states=2000):
         data = algo.calc_farm()
 
-        df = data.to_dataframe()[
-            [FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]
-        ]
-        df = df.reset_index()
+    df = data.to_dataframe()[[FV.AMB_WD, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]]
+    df = df.reset_index()
 
-        print()
-        print("TRESULTS\n")
-        print(df)
+    print()
+    print("TRESULTS\n")
+    print(df)
 
-        # print("\Reading file", cfile)
-        fdata = pd.read_csv(cfile)
-        print(fdata)
+    # print("\Reading file", cfile)
+    fdata = pd.read_csv(cfile)
+    print(fdata)
 
-        print("\nVERIFYING\n")
-        df[FV.WS] = df["REWS"]
-        df[FV.AMB_WS] = df["AMB_REWS"]
+    print("\nVERIFYING\n")
+    df[FV.WS] = df["REWS"]
+    df[FV.AMB_WS] = df["AMB_REWS"]
 
-        # neglecting ws < 5 and ws > 20
-        sel_ws = (
-            (fdata[FV.WS] > 5)
-            & (fdata[FV.WS] < 20)
-            & (df["REWS"] > 5)
-            & (df["REWS"] < 20)
-        )
+    # neglecting ws < 5 and ws > 20
+    sel_ws = (
+        (fdata[FV.WS] > 5) & (fdata[FV.WS] < 20) & (df["REWS"] > 5) & (df["REWS"] < 20)
+    )
 
-        # calculating difference
-        delta = df.reset_index() - fdata
-        delta = delta[sel_ws]
-        print(delta)
-        print(delta.max())
-        chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
-        sel = chk[FV.WS] >= 1e-5
-        print(sel)
-        print(df[sel & sel_ws])
-        print(fdata[sel & sel_ws])
-        print(chk.loc[sel & sel_ws])
-        print(chk.max())
+    # calculating difference
+    delta = df.reset_index() - fdata
+    delta = delta[sel_ws]
+    print(delta)
+    print(delta.max())
+    chk = delta[[FV.AMB_WS, FV.AMB_P, FV.WS, FV.P]].abs()
+    sel = chk[FV.WS] >= 1e-5
+    print(sel)
+    print(df[sel & sel_ws])
+    print(fdata[sel & sel_ws])
+    print(chk.loc[sel & sel_ws])
+    print(chk.max())
 
-        assert ((chk[FV.WS] < 1e-5)).all()
-        assert (chk[FV.P] < 1e-3).all()
+    assert ((chk[FV.WS] < 1e-5)).all()
+    assert (chk[FV.P] < 1e-3).all()
 
 
 if __name__ == "__main__":

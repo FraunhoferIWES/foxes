@@ -56,14 +56,7 @@ Evaluation Software"`
 
 ## Requirements
 
-The supported Python versions are: 
-
-- `Python 3.8`
-- `Python 3.9`
-- `Python 3.10`
-- `Python 3.11`
-- `Python 3.12`
-- `Python 3.13`
+The supported Python versions are `Python 3.8`...`3.13`.
 
 ## Installation
 
@@ -86,15 +79,17 @@ For detailed examples of how to run _foxes_, check the `examples` and `notebooks
 ```python
 import foxes
 
-states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
+if __name__ == "__main__":
 
-farm = foxes.WindFarm()
-foxes.input.farm_layout.add_from_file(farm, "test_farm_67.csv", turbine_models=["NREL5MW"])
+    states = foxes.input.states.Timeseries("timeseries_3000.csv.gz", ["WS", "WD","TI","RHO"])
 
-algo = foxes.algorithms.Downwind(farm, states, ["Jensen_linear_k007"])
-farm_results = algo.calc_farm()
+    farm = foxes.WindFarm()
+    foxes.input.farm_layout.add_from_file(farm, "test_farm_67.csv", turbine_models=["NREL5MW"])
 
-print(farm_results)
+    algo = foxes.algorithms.Downwind(farm, states, ["Jensen_linear_k007"])
+    farm_results = algo.calc_farm()
+
+    print(farm_results)
 ```
 
 ## Testing

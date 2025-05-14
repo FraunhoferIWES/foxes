@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "foxes"
-version = "1.2.5"
+version = "1.3.1"
 authors = [
   {name = "Jonas Schulte"},
 ]
@@ -88,6 +88,8 @@ doc = [
     "ipywidgets",
     "m2r2",
     "lxml_html_clean",
+    "dask",
+    "distributed",
 ]
 dev = [
     "flake8",

@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from foxes.config import config
-import foxes.variables as FV
 from foxes.output.output import Output
+import foxes.variables as FV
+import foxes.constants as FC
 
 
 class FarmLayoutOutput(Output):
@@ -229,9 +230,16 @@ class FarmLayoutOutput(Output):
                 if self.fres is None:
                     raise ValueError(f"Missing farm_results for color_by '{color_by}'")
                 if color_by[:5] == "mean_":
-                    kw["c"] = np.einsum(
-                        "st,st->t", self.fres[color_by[5:]], self.fres[FV.WEIGHT]
-                    )
+                    weights = self.fres[FV.WEIGHT]
+                    if weights.dims == (FC.STATE,):
+                        wx = "s"
+                    elif weights.dims == (FC.STATE, FC.TURBINE):
+                        wx = "st"
+                    else:
+                        raise ValueError(
+                            f"Unsupported dimensions for '{FV.WEIGHT}': Expecting '{(FC.STATE,)}' or '{(FC.STATE, FC.TURBINE)}', got '{weights.dims}'"
+                        )
+                    kw["c"] = np.einsum(f"st,{wx}->t", self.fres[color_by[5:]], weights)
                 elif color_by[:4] == "sum_":
                     kw["c"] = np.sum(self.fres[color_by[4:]], axis=0)
                 elif color_by[:4] == "min_":

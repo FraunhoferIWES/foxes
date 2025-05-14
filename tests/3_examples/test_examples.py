@@ -5,10 +5,11 @@ import os
 
 from foxes.utils import load_module
 
-thisdir = Path(inspect.getfile(inspect.currentframe())).parent
-
 
 def test():
+    thisdir = Path(inspect.getabsfile(inspect.currentframe())).parent
+    print("TESTDIR:", thisdir)
+
     rdir = thisdir.parent.parent / "examples"
     rpath = rdir / "run_all.py"
     print(rpath)

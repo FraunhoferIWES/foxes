@@ -186,12 +186,15 @@ class SeqDynamicWakes(FarmOrder):
 
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
-            hpdata = TData.from_points(points=self._traces_p[None, :N, downwind_index])
+            svrs = algo.states.output_point_vars(algo)
+            hpdata = TData.from_points(
+                points=self._traces_p[None, :N, downwind_index], variables=svrs
+            )
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             self._traces_v[:N, downwind_index, :2] = wd2uv(
                 res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
             )
-            del hpdata, res
+            del hpdata, res, svrs
 
         # find nearest wake point:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])

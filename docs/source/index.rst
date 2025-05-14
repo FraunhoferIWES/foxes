@@ -2,17 +2,10 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionchanged:: 1.2.3
-    `FieldDataNC` now with more efficient parallel loading of large data, replacing `pre_load` flag with load 
-    mode options `preload`, `lazy`, `fly`
-
-.. versionchanged:: 1.2.3
-    Removing states class `SliceDataNC`, since now `FieldDataNC` can also handle data without height dependency
-
-.. versionchanged:: 1.2.1
-    Output `FarmResultsEval`: Renaming contraction rule `mean` as `weights`. Usually this
-    is the contraction rule of choice for AEP and other weighted mean computations wrt states.
-    Also introducing the rule `mean_no_weights`, for special cases and debugging.
+.. versionadded:: 1.3
+    Input states `WRGStates`, representing wind resource grid data, ie, a regular grid of wind roses. 
+    This required a change of the treatment of statistical weights of the states, such that they 
+    may now depend on the evaluation point.
 
 .. versionadded:: 1.2
     Running *foxes* from :ref:`Input parameter files <Input parameter files>` in *yaml* format,
@@ -23,10 +16,6 @@
     The default is now based on `concurrent.futures <https://docs.python.org/3/library/concurrent.futures.html>`_ and comes with a speedup. 
     Also `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ is now supported, for simplified
     multi-node computations.
-
-.. versionadded:: 1.0
-    New wake frame :ref:`DynamicWakes<Dynamic Wakes 1>`: Chunk-based vectorized dynamic
-    wakes for any kind of inflow 
 
 Welcome to FOXES
 ================
