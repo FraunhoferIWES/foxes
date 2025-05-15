@@ -305,6 +305,27 @@ PA_BETA = "PA_beta"
 :group: foxes.variables
 """
 
+DEFAULT_DIGITS = 4
+
+ROUND_DIGITS = {
+    WD: 3,
+    TI: 6,
+    RHO: 5,
+    P: 3,
+    CT: 6,
+    T: 3,
+    YLD: 3,
+    CAP: 5,
+    EFF: 5,
+    WEIBULL_A: 3,
+    WEIBULL_k: 3,
+    YAW: 3,
+    YAWM: 3
+}
+ROUND_DIGITS.update({
+    var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys()
+    if v in ROUND_DIGITS    
+})
 
 def get_default_digits(variable):
     """
@@ -321,7 +342,4 @@ def get_default_digits(variable):
         The default number of output digits
 
     """
-    v = amb2var.get(variable, variable)
-    if v in [REWS, REWS2, REWS3]:
-        v = WS
-    return DEFAULT_DIGITS.get(v, None)
+    return ROUND_DIGITS.get(variable, DEFAULT_DIGITS)
