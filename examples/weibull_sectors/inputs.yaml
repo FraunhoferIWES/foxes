@@ -1,0 +1,25 @@
+states:
+  states_type: WeibullSectors               
+  data_source: weibull_sectors_12.nc 
+  output_vars: [WS, WD, TI, RHO]
+  var2ncvar:
+    Weibull_A: weibull_a
+    Weibull_k: weibull_k
+    weight: sector_probability
+    WD: wind_direction
+    TI: turbulence_intensity
+  fixed_vars:
+    RHO: 1.225
+  ws_bins: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 20, 25, 30, 100]
+
+
+wind_farm:
+  layouts:    
+    - function: add_from_file
+      file_path: test_farm_67.csv
+      turbine_models: [DTU10MW]
+
+algorithm:
+  algo_type: Downwind
+  wake_models: [Bastankhah2014_linear_k004]
+

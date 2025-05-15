@@ -51,7 +51,7 @@ class StatesTable(States):
         var2col={},
         fixed_vars={},
         profiles={},
-        pd_read_pars={},
+        read_pars={},
         states_sel=None,
         states_loc=None,
     ):
@@ -72,7 +72,7 @@ class StatesTable(States):
         profiles: dict
             Key: output variable name str, Value: str or dict
             or `foxes.core.VerticalProfile`
-        pd_read_pars: dict
+        read_pars: dict
             pandas file reading parameters
         states_sel: slice or range or list of int, optional
             States subset selection
@@ -83,7 +83,7 @@ class StatesTable(States):
         super().__init__()
 
         self.ovars = list(output_vars)
-        self.rpars = pd_read_pars
+        self.rpars = read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
         self.profdicts = profiles
@@ -153,7 +153,6 @@ class StatesTable(States):
 
         """
         self._profiles = {}
-        self._tvars = set(self.ovars)
         for v, d in self.profdicts.items():
             if isinstance(d, str):
                 self._profiles[v] = VerticalProfile.new(d)
@@ -166,9 +165,7 @@ class StatesTable(States):
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
-            self._tvars.update(self._profiles[v].input_vars())
-        self._tvars -= set(self.fixed_vars.keys())
-        self._tvars = list(self._tvars)
+
         super().initialize(algo, verbosity)
 
     def sub_models(self):
@@ -244,6 +241,12 @@ class StatesTable(States):
             raise KeyError(
                 f"Weight variable '{col_w}' defined in var2col, but not found in states table columns {data.columns}"
             )
+
+        self._tvars = set(self.ovars)
+        for v in self.profdicts.keys():
+            self._tvars.update(self._profiles[v].input_vars())
+        self._tvars -= set(self.fixed_vars.keys())
+        self._tvars = list(self._tvars)
 
         tcols = []
         for v in self._tvars:

@@ -15,5 +15,6 @@ from .one_point_flow import (
     OnePointFlowMultiHeightNCTimeseries,
 )
 from .wrg_states import WRGStates
+from .weibull_sectors import WeibullSectors
 
 from . import create

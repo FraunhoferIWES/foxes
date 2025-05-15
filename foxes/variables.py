@@ -128,6 +128,17 @@ calculated from third moment
 """
 
 
+WEIBULL_A = "Weibull_A"
+""" The Weibull scale parameter,
+:group: foxes.variables
+"""
+
+WEIBULL_k = "Weibull_k"
+""" The Weibull shape parameter,
+:group: foxes.variables
+"""
+
+
 AMB_WS = "AMB_WS"
 """ The ambient wind speed in m/s
 :group: foxes.variables
@@ -203,6 +214,16 @@ calculated from third moment
 :group: foxes.variables
 """
 
+AMB_WEIBULL_A = "AMB_Weibull_A"
+""" Ambient Weibull scale parameter,
+:group: foxes.variables
+"""
+
+AMB_WEIBULL_k = "AMB_Weibull_k"
+""" Ambient Weibull shape parameter,
+:group: foxes.variables
+"""
+
 
 var2amb = {
     v: f"AMB_{v}"
@@ -219,6 +240,8 @@ var2amb = {
         REWS,
         REWS2,
         REWS3,
+        WEIBULL_A,
+        WEIBULL_k,
         YLD,
         CAP,
     ]
@@ -279,22 +302,6 @@ PA_ALPHA = "PA_alpha"
 
 PA_BETA = "PA_beta"
 """ The beta parameter of the PorteAgel wake model
-:group: foxes.variables
-"""
-
-DEFAULT_DIGITS = {
-    WD: 3,
-    WS: 4,
-    TI: 6,
-    RHO: 5,
-    P: 3,
-    CT: 6,
-    T: 3,
-    YLD: 3,
-    CAP: 5,
-    EFF: 5,
-}
-""" The default output digits
 :group: foxes.variables
 """
 
