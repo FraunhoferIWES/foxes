@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+from os import PathLike
 from xarray import Dataset, open_dataset
 
 from foxes.data import STATES
+from foxes.utils import PandasFileHelper
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
@@ -108,9 +110,7 @@ class WeibullSectors(StatesTable):
 
         """
 
-        if isinstance(self.data_source, Dataset):
-            data = self.data_source
-        else:
+        if isinstance(self.data_source, (str, PathLike)):
             self._data_source = get_input_path(self.data_source)
             if not self.data_source.is_file():
                 if verbosity > 0:
@@ -125,7 +125,16 @@ class WeibullSectors(StatesTable):
             elif verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")
             rpars = dict(self.RDICT, **self.rpars)
-            data = open_dataset(self.data_source, engine=config.nc_engine, **rpars)
+            if self.data_source.suffix == ".nc":
+                data = open_dataset(self.data_source, engine=config.nc_engine, **rpars)
+            else:
+                data = PandasFileHelper().read_file(self.data_source, **rpars).to_xarray()
+
+        elif isinstance(self.data_source, Dataset):
+            data = self.data_source
+        
+        elif isinstance(self.data_source, pd.DataFrame):
+            data = self.data_source.to_xarray()
 
         if self.isel is not None and len(self.isel):
             data = data.isel(**self.isel)

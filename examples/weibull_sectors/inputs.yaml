@@ -1,6 +1,6 @@
 states:
   states_type: WeibullSectors               
-  data_source: weibull_sectors_12.nc 
+  data_source: weibull_sectors_12.csv # weibull_sectors_12.nc 
   output_vars: [WS, WD, TI, RHO]
   var2ncvar:
     Weibull_A: weibull_a
