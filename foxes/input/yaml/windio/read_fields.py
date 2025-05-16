@@ -22,6 +22,8 @@ wio2foxes = {
     "LMO": FV.MOL,
     "z0": FV.Z0,
     "reference_height": FV.H,
+    "weibull_a": FV.WEIBULL_A,
+    "weibull_k": FV.WEIBULL_k,
 }
 
 """ Mapping from foxes to windio variables
@@ -134,8 +136,6 @@ def read_wind_resource_field(
 
     """
     if name in [
-        "weibull_a",
-        "weibull_k",
         "potential_temperature",
         "friction_velocity",
         "k",
@@ -178,6 +178,8 @@ def read_wind_resource_field(
         "LMO",
         "z0",
         "reference_height",
+        "weibull_a",
+        "weibull_k",
     ] and _read_multi_dimensional_data(name, wio_data, fields, dims):
         return True
 

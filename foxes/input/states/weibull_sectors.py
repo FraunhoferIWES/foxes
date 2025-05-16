@@ -82,6 +82,8 @@ class WeibullSectors(StatesTable):
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
             if v in self.ovars:
                 raise ValueError(f"States '{self.name}': Cannot have '{v}' as output variable")
+        
+        self._original_data_source = None
 
     def __repr__(self):
         return f"{type(self).__name__}(ws_bins={self._n_ws})"
@@ -110,25 +112,30 @@ class WeibullSectors(StatesTable):
 
         """
 
+        if self._original_data_source is not None:
+            self._data_source = self._original_data_source
+            self._original_data_source = None
+
         if isinstance(self.data_source, (str, PathLike)):
-            self._data_source = get_input_path(self.data_source)
-            if not self.data_source.is_file():
+            fpath = get_input_path(self.data_source)
+            if not fpath.is_file():
                 if verbosity > 0:
                     print(
-                        f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
+                        f"States '{self.name}': Reading static data '{fpath}' from context '{STATES}'"
                     )
-                self._data_source = algo.dbook.get_file_path(
-                    STATES, self.data_source.name, check_raw=False
+                fpath = algo.dbook.get_file_path(
+                    STATES, fpath.name, check_raw=False
                 )
                 if verbosity > 0:
-                    print(f"Path: {self.data_source}")
+                    print(f"Path: {fpath}")
             elif verbosity:
-                print(f"States '{self.name}': Reading file {self.data_source}")
+                print(f"States '{self.name}': Reading file {fpath}")
             rpars = dict(self.RDICT, **self.rpars)
-            if self.data_source.suffix == ".nc":
-                data = open_dataset(self.data_source, engine=config.nc_engine, **rpars)
+            if fpath.suffix == ".nc":
+                data = open_dataset(fpath, engine=config.nc_engine, **rpars)
             else:
-                data = PandasFileHelper().read_file(self.data_source, **rpars).to_xarray()
+                data = PandasFileHelper().read_file(fpath, **rpars).to_xarray()
+            self._original_data_source = data
 
         elif isinstance(self.data_source, Dataset):
             data = self.data_source
@@ -156,6 +163,8 @@ class WeibullSectors(StatesTable):
 
         secn = None
         n_secs = None
+        if self._original_data_source is None:
+            self._original_data_source = self.data_source
         self._data_source = {}
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT] + self.ovars:
             if v != FV.WS and v not in self.fixed_vars:
