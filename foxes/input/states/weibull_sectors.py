@@ -4,7 +4,7 @@ from os import PathLike
 from xarray import Dataset, open_dataset
 
 from foxes.data import STATES
-from foxes.utils import PandasFileHelper
+from foxes.utils import PandasFileHelper, weibull_weights
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
@@ -179,13 +179,12 @@ class WeibullSectors(StatesTable):
         self._data_source[FV.WS][:] = wss[None, :]
         del wss
 
-        A = self._data_source.pop(FV.WEIBULL_A)
-        k = self._data_source.pop(FV.WEIBULL_k)
-        wsA = self._data_source[FV.WS] / A
-        self._data_source[FV.WEIGHT] *= wsd[None, :] * (
-            k / A * wsA ** (k - 1) * np.exp(-(wsA**k))
+        self._data_source[FV.WEIGHT] *= weibull_weights(
+            ws=self._data_source[FV.WS], 
+            ws_deltas=wsd[None, :],
+            A=self._data_source.pop(FV.WEIBULL_A), 
+            k=self._data_source.pop(FV.WEIBULL_k), 
         )
-        del A, k, wsd, wsA
 
         # remove wd 360 from the end, if wd 0 is given:
         if FV.WD in self._data_source:

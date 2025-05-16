@@ -3,7 +3,7 @@ from scipy.interpolate import interpn
 
 from foxes.core.states import States
 from foxes.config import config, get_input_path
-from foxes.utils.wrg_utils import ReaderWRG
+from foxes.utils import ReaderWRG, weibull_weights
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
@@ -293,9 +293,11 @@ class WRGStates(States):
             dims=(FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        wsA = out[FV.WS] / A
-        tdata[FV.WEIGHT] *= wsd[:, None, None] * (
-            k / A * wsA ** (k - 1) * np.exp(-(wsA**k))
+        tdata[FV.WEIGHT] *= weibull_weights(
+            ws=out[FV.WS], 
+            ws_deltas=wsd[:, None, None],
+            A=A, 
+            k=k, 
         )
 
         return out
