@@ -19,6 +19,8 @@ def weibull_weights(ws, ws_deltas, A, k):
     -------
     weights: numpy.ndarray
         The weights, same shape as ws
+    
+    :group: utils
 
     """
     wsA = ws / A

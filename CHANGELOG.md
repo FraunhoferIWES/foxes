@@ -745,5 +745,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.3.1
 
+- Inputs:
+  - New states `WeibullSectors`, reading and interpreting spatially homogeneous Weibull scale and shape parameters for wind direction sectors, from csv or nc files
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3.1](https://github.com/FraunhoferIWES/foxes/commits/v1.3.1)
