@@ -12,28 +12,20 @@ import foxes.constants as FC
 from .rotor_wd import RotorWD
 
 
-class YawedWakes(WakeFrame):
+class YawDeflectionJimenez(WakeFrame):
     """
     Bend the wakes for yawed turbines, based on the
-    Bastankhah 2016 wake model
+    Jimenez model
 
     Notes
     -----
     Reference:
-    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
-    Majid Bastankhah, Fernando Porté-Agel
-    https://doi.org/10.1017/jfm.2016.595
+    "Application of a LES technique to characterize the wake deflection of a wind turbine in yaw"
+    A. Jimenez, A. Crespo, E. Migoya
+    https://doi.org/10.1002/we.380
 
     Attributes
     ----------
-    model: Bastankhah2016Model
-        The model for computing common data
-    alpha: float
-        model parameter used to determine onset of far wake region,
-        if not found in wake model
-    beta: float
-        model parameter used to determine onset of far wake region,
-        if not found in wake model
     base_frame: foxes.core.WakeFrame
         The wake frame from which to start
     wake_k: dict
@@ -50,7 +42,7 @@ class YawedWakes(WakeFrame):
         base_frame=RotorWD(),
         alpha=0.58,
         beta=0.07,
-        induction="Madsen",
+        induction=None,
         max_length_km=30,
         **wake_k,
     ):
@@ -67,7 +59,7 @@ class YawedWakes(WakeFrame):
         beta: float
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        induction: foxes.core.AxialInductionModel or str
+        induction: foxes.core.AxialInductionModel or str, optional
             The induction model, if not found in wake model
         wake_k: dict, optional
             Parameters for the WakeK class, if not found in wake model
@@ -78,9 +70,6 @@ class YawedWakes(WakeFrame):
         super().__init__(max_length_km=max_length_km)
 
         self.base_frame = base_frame
-        self.model = None
-        self.alpha = alpha
-        self.beta = beta
         self.induction = induction
         self.wake_k = None
         self._wake_k_pars = wake_k
@@ -103,7 +92,7 @@ class YawedWakes(WakeFrame):
             Names of all sub models
 
         """
-        return [self.wake_k, self.base_frame, self.model]
+        return [self.wake_k, self.base_frame]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -120,26 +109,23 @@ class YawedWakes(WakeFrame):
 
         """
         if not self.initialized:
-            for w in algo.wake_models.values():
-                if isinstance(w, Bastankhah2016):
-                    if not w.initialized:
-                        w.initialize(algo, verbosity, force)
-                    self.model = w.model
-                    self.wake_k = w.wake_k
-                    break
-            if self.model is None:
-                self.model = Bastankhah2016Model(
-                    alpha=self.alpha, beta=self.beta, induction=self.induction
-                )
             if self.wake_k is None:
                 wake_k = WakeK(**self._wake_k_pars)
                 if not wake_k.all_none:
                     self.wake_k = wake_k
                 else:
                     for w in algo.wake_models.values():
-                        if hasattr(w, "wake_k"):
+                        if self.wake_k is None and hasattr(w, "wake_k"):
                             self.wake_k = w.wake_k
                             break
+            if isinstance(self.induction, str):
+                self.induction = algo.mbook.axial_induction[self.induction]
+            else:
+                for w in algo.wake_models.values():
+                    if self.induction is None and hasattr(w, "induction"):
+                        self.induction = w.induction   
+                        break     
+            assert self.induction is not None, f"{self.name}: Expecting induction model, not found in wake models"
 
         super().initialize(algo, verbosity, force)
 
@@ -171,6 +157,12 @@ class YawedWakes(WakeFrame):
         """
         Helper function for y deflection
         """
+
+        # compute beta:
+        a = self.induction.ct2a(ct)
+        beta = (1 - a) / (1 - 2 * a)
+
+
 
         # get gamma:
         gamma = self.get_data(
