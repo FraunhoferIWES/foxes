@@ -198,9 +198,12 @@ class YawDeflectionJimenez(WakeFrame):
             beta = (1 - a) / (1 - 2 * a)
             del a
 
-            # integrate along x:
-            alpha = np.cos(gamma)**2 * np.sin(gamma) * ct/2
-            
+            # compute delta y:
+            alpha0 = np.cos(gamma)**2 * np.sin(gamma) * ct/2 
+            dalpha_dx = -2*alpha0*beta/D/(1 + beta*x/D)**3
+            dsinalpha_dx = dalpha_dx*cos(alpha)
+
+
 
 
 
