@@ -158,12 +158,6 @@ class YawDeflectionJimenez(WakeFrame):
         Helper function for y deflection
         """
 
-        # compute beta:
-        a = self.induction.ct2a(ct)
-        beta = (1 - a) / (1 - 2 * a)
-
-
-
         # get gamma:
         gamma = self.get_data(
             FV.YAWM,
@@ -177,6 +171,38 @@ class YawDeflectionJimenez(WakeFrame):
             accept_nan=False,
         )
         gamma = gamma * np.pi / 180
+
+        # get ct:
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=True,
+        )
+
+        sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8) & (x >= 0)
+        if np.any(sel):
+
+            # apply selection:
+            gamma = gamma[sel]
+            ct = ct[sel]
+            x = x[sel]
+            n = len(x)
+
+            # compute beta:
+            a = self.induction.ct2a(ct)
+            beta = (1 - a) / (1 - 2 * a)
+            del a
+
+            # integrate along x:
+            alpha = np.cos(gamma)**2 * np.sin(gamma) * ct/2
+            
+
+
 
         # get k:
         k = self.wake_k(
