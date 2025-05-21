@@ -54,7 +54,7 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2014_linear_lim_k004"],
+        default=["Jensen_linear_lim_k004"],
         nargs="+",
     )
     parser.add_argument(
@@ -109,21 +109,28 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
+    # set turbines in yaw
+    N = 3
+    yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
+    yawm[:, :N] = 30
+    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+    mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
+        fixed_vars={FV.WD:270},
+        var2col={FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
         states_sel=range(240, 240 + args.n_states),
     )
 
     farm = foxes.WindFarm()
-    N = 3
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base=np.array([0.0, 0.0]),
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
+        turbine_models=["set_yawm"] + args.tmodels + [ttype.name],
     )
 
     if not args.nofig and args.show_layout:
@@ -157,10 +164,10 @@ if __name__ == "__main__":
                 levels=None,
                 quiver_pars=dict(scale=0.01),
                 quiver_n=307,
-                xmin=-5000,
-                ymin=-5000,
-                xmax=7000,
-                ymax=7000,
+                xmin=-1000,
+                ymin=-1000,
+                xmax=4000,
+                ymax=3000,
                 vmin=0,
                 vmax=args.max_variable,
                 title=None,

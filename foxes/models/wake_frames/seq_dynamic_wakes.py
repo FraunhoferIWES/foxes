@@ -23,12 +23,20 @@ class SeqDynamicWakes(FarmOrder):
     dt_min: float, optional
         The delta t value in minutes,
         if not from timeseries data
+    induction: foxes.core.AxialInductionModel
+        The induction model
 
     :group: models.wake_frames.sequential
 
     """
 
-    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
+    def __init__(
+            self, 
+            cl_ipars={}, 
+            dt_min=None, 
+            induction="Madsen",
+            **kwargs
+        ):
         """
         Constructor.
 
@@ -40,6 +48,8 @@ class SeqDynamicWakes(FarmOrder):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -47,10 +57,26 @@ class SeqDynamicWakes(FarmOrder):
         super().__init__(**kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
+        self.induction = induction
 
     def __repr__(self):
-        return f"{type(self).__name__}(dt_min={self.dt_min})"
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        return f"{type(self).__name__}(dt_min={self.dt_min}, induction={iname})"
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+    
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -63,7 +89,11 @@ class SeqDynamicWakes(FarmOrder):
             The verbosity level, 0 = silent
 
         """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+
         super().initialize(algo, verbosity)
+
         if not isinstance(algo, Sequential):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Sequential.__name__}"
@@ -101,6 +131,9 @@ class SeqDynamicWakes(FarmOrder):
         self._traces_l = np.full(
             (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
         )
+        self._traces_yawa = np.full(
+            (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
+        )
 
     def calc_order(self, algo, mdata, fdata):
         """
@@ -125,6 +158,35 @@ class SeqDynamicWakes(FarmOrder):
 
         """
         return super().calc_order(algo, mdata, fdata)
+
+    def _get_yaw_alpha(self, algo, fdata, N, downwind_index):
+        """ Helper function for computing wind vector rotation angles
+        at the current trace points due to yawed rotor """
+
+        def _get_data(var):
+            data = algo.farm_results_downwind[var].to_numpy()[:N, downwind_index]
+            data[-1] = fdata[var][0, downwind_index]
+            return data
+
+        gamma = _get_data(FV.YAWM)
+        ct = _get_data(FV.CT)
+        alpha = np.zeros_like(gamma)
+
+        sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        if np.any(sel):
+
+            gamma = gamma[sel] * np.pi / 180
+            ct = ct[sel]
+            x = self._traces_l[:N, downwind_index][sel]
+
+            D = _get_data(FV.D)[sel]
+            #a = self.induction.ct2a(ct)
+            beta = 0.1#(1 - a) / (1 - 2 * a)
+            alpha[sel] = -180 / np.pi * np.cos(gamma)**2 * np.sin(gamma) * ct/2 / (
+                1 + beta * x / D
+            )**2
+
+        return alpha
 
     def get_wake_coos(
         self,
@@ -183,7 +245,7 @@ class SeqDynamicWakes(FarmOrder):
                     dxyz, axis=-1
                 )
                 del dxyz
-
+                
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
             svrs = algo.states.output_point_vars(algo)
@@ -191,10 +253,13 @@ class SeqDynamicWakes(FarmOrder):
                 points=self._traces_p[None, :N, downwind_index], variables=svrs
             )
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
+            wd = res[FV.WD][0, :, 0]
+            if FV.YAWM in fdata:
+                wd += self._get_yaw_alpha(algo, fdata, N, downwind_index)
             self._traces_v[:N, downwind_index, :2] = wd2uv(
-                res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+                wd, res[FV.WS][0, :, 0]
             )
-            del hpdata, res, svrs
+            del hpdata, res, svrs, wd
 
         # find nearest wake point:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])

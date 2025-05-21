@@ -22,7 +22,7 @@ class Bastankhah2014(GaussianWakeModel):
     ----------
     sbeta_factor: float
         Factor multiplying sbeta
-    induction: foxes.core.AxialInductionModel or str
+    induction: foxes.core.AxialInductionModel
         The induction model
     wake_k: foxes.core.WakeK
         Handler for the wake growth parameter k
