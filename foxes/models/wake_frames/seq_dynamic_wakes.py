@@ -5,6 +5,7 @@ from foxes.utils import wd2uv
 from foxes.core.data import TData
 from foxes.config import config
 from foxes.algorithms.sequential import Sequential
+from foxes.models.wake_models import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -131,9 +132,6 @@ class SeqDynamicWakes(FarmOrder):
         self._traces_l = np.full(
             (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
         )
-        self._traces_yawa = np.full(
-            (algo.n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
-        )
 
     def calc_order(self, algo, mdata, fdata):
         """
@@ -159,7 +157,7 @@ class SeqDynamicWakes(FarmOrder):
         """
         return super().calc_order(algo, mdata, fdata)
 
-    def _get_yaw_alpha(self, algo, fdata, N, downwind_index):
+    def _get_yaw_alpha(self, algo, mdata, fdata, tdata, N, downwind_index, wmodel):
         """ Helper function for computing wind vector rotation angles
         at the current trace points due to yawed rotor """
 
@@ -175,16 +173,41 @@ class SeqDynamicWakes(FarmOrder):
         sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8)
         if np.any(sel):
 
+            x = self._traces_l[:N, downwind_index]
+            D = _get_data(FV.D)[sel]
+            if isinstance(wmodel, TopHatWakeModel):
+                delta = 2 * wmodel.calc_wake_radius(
+                    algo, mdata, fdata, tdata, downwind_index, x[None, :], ct[None, :]
+                )[0, sel] / D
+            elif hasattr(wmodel, "wake_k"):
+                k = wmodel.wake_k(
+                    FC.STATE_TARGET,
+                    algo=algo,
+                    fdata=fdata,
+                    tdata=tdata,
+                    downwind_index=downwind_index,
+                    upcast=True,
+                )[0, sel]
+                
+                # calculate sigma:
+                # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
+                a = wmodel.induction.ct2a(ct[None, sel])[0]
+                beta = (1 - a) / (1 - 2 * a)
+                delta = 2 * (k * x[sel] / D + wmodel.sbeta_factor * np.sqrt(beta))
+                print("HERE SEQDW",k.shape,beta.shape,delta.shape)
+                del beta, a
+
             gamma = gamma[sel] * np.pi / 180
             ct = ct[sel]
-            x = self._traces_l[:N, downwind_index][sel]
+            #x = self._traces_l[:N, downwind_index][sel]
+            #D = D[sel]
 
-            D = _get_data(FV.D)[sel]
+            #D = _get_data(FV.D)[sel]
+
+
             #a = self.induction.ct2a(ct)
-            beta = 0.1#(1 - a) / (1 - 2 * a)
-            alpha[sel] = -180 / np.pi * np.cos(gamma)**2 * np.sin(gamma) * ct/2 / (
-                1 + beta * x / D
-            )**2
+            #beta = 0.1#(1 - a) / (1 - 2 * a)
+            alpha[sel] = -180 / np.pi * np.cos(gamma)**2 * np.sin(gamma) * ct/2 / delta**2
 
         return alpha
 
@@ -195,6 +218,7 @@ class SeqDynamicWakes(FarmOrder):
         fdata,
         tdata,
         downwind_index,
+        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -212,6 +236,8 @@ class SeqDynamicWakes(FarmOrder):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------
@@ -255,7 +281,7 @@ class SeqDynamicWakes(FarmOrder):
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             wd = res[FV.WD][0, :, 0]
             if FV.YAWM in fdata:
-                wd += self._get_yaw_alpha(algo, fdata, N, downwind_index)
+                wd += self._get_yaw_alpha(algo, mdata, fdata, hpdata, N, downwind_index, wmodel)
             self._traces_v[:N, downwind_index, :2] = wd2uv(
                 wd, res[FV.WS][0, :, 0]
             )

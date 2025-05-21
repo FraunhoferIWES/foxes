@@ -313,6 +313,7 @@ class Timelines(WakeFrame):
         fdata,
         tdata,
         downwind_index,
+        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -330,6 +331,8 @@ class Timelines(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------

@@ -239,6 +239,7 @@ class YawedWakes(WakeFrame):
         fdata,
         tdata,
         downwind_index,
+        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -256,6 +257,8 @@ class YawedWakes(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------
@@ -271,6 +274,7 @@ class YawedWakes(WakeFrame):
             fdata,
             tdata,
             downwind_index,
+            wmodel,
         )
 
         # take rotor average:

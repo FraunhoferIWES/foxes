@@ -198,7 +198,7 @@ class Streamlines2D(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=config.dtype_double)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self.get_wake_coos(algo, mdata, fdata, tdata, ti)[
+            coosx[:, ti, :] = self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], ti)[
                 :, :, 0, 0
             ]
 
@@ -217,6 +217,7 @@ class Streamlines2D(WakeFrame):
         fdata,
         tdata,
         downwind_index,
+        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -234,6 +235,8 @@ class Streamlines2D(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
+        wmodel: foxes.core.WakeModel
+            The wake model
 
         Returns
         -------

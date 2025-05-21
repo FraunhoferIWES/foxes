@@ -132,7 +132,7 @@ class PartialTopHat(PartialCentre):
         """
         self.check_wmodel(wmodel, error=True)
 
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index, wmodel)
         x = wcoos[:, :, 0, 0]
         yz = wcoos[:, :, 0, 1:3]
         del wcoos
