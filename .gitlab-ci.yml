@@ -38,7 +38,7 @@ test:
   image: python:3.13
   stage: test
   tags:
-    - asprunner
+    - asprunner, oldenburg
   script:
     - pip install .[test] --upgrade
     - pwd
