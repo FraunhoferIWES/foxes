@@ -27,18 +27,16 @@ stages:
 #    - .cache/pip
 #    - venv/
 
-#before_script:
+before_script:
 #  - python --version
 #  - pip install virtualenv
 #  - virtualenv venv
 #  - source venv/bin/activate
-#  - pip install --upgrade pip
+  - pip install --upgrade pip
   
 test:
   image: python:3.13
   stage: test
-  tags:
-    - asprunner, oldenburg
   script:
     - pip install .[test] --upgrade
     - pwd
