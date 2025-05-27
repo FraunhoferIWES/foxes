@@ -5,10 +5,7 @@ from foxes.config import config
 from foxes.core.wake_deflection import WakeDeflection
 import foxes.constants as FC
 import foxes.variables as FV
-from foxes.models.wake_frames import (
-    RotorWD,
-    FarmOrder,
-)
+
 
 class JimenezDeflection(WakeDeflection):
     """
@@ -87,16 +84,47 @@ class JimenezDeflection(WakeDeflection):
         if FV.YAWM not in fdata:
             return coos
 
-        if isinstance(wframe, (RotorWD, FarmOrder)):
+        # take rotor average:
+        xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
+        x = xy[:, :, 0]
+        y = xy[:, :, 1]
 
-            # take rotor average:
-            xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
-            x = xy[:, :, 0]
-            y = xy[:, :, 1]
+        # get ct:
+        ct = self.get_data(
+            FV.CT,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=True,
+        )
 
-            # get ct:
-            ct = self.get_data(
-                FV.CT,
+        # get gamma:
+        gamma = self.get_data(
+            FV.YAWM,
+            FC.STATE_TARGET,
+            lookup="w",
+            algo=algo,
+            fdata=fdata,
+            tdata=tdata,
+            downwind_index=downwind_index,
+            upcast=True,
+        )
+
+        sel = (x > 0) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        n_sel = np.sum(sel)
+        if n_sel > 0:
+
+            # apply selection:
+            gamma = gamma[sel] * np.pi / 180
+            ct = ct[sel]
+            x = x[sel]
+
+            # get D:
+            D = self.get_data(
+                FV.D,
                 FC.STATE_TARGET,
                 lookup="w",
                 algo=algo,
@@ -104,64 +132,28 @@ class JimenezDeflection(WakeDeflection):
                 tdata=tdata,
                 downwind_index=downwind_index,
                 upcast=True,
+                selection=sel,
             )
 
-            # get gamma:
-            gamma = self.get_data(
-                FV.YAWM,
-                FC.STATE_TARGET,
-                lookup="w",
-                algo=algo,
-                fdata=fdata,
-                tdata=tdata,
-                downwind_index=downwind_index,
-                upcast=True,
-            )
+            xmax = np.max(x)
+            n_x = int(xmax/self.step_x)
+            if xmax > n_x * self.step_x:
+                n_x += 1
 
-            sel = (x > 0) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
-            n_sel = np.sum(sel)
-            if n_sel > 0:
+            delx = np.arange(n_x + 1) * self.step_x
+            delx = np.minimum(delx[None, :], x[:, None])
 
-                # apply selection:
-                gamma = gamma[sel] * np.pi / 180
-                ct = ct[sel]
-                x = x[sel]
+            dx = delx[:, 1:] - delx[:, :-1]
+            delx = delx[:, :-1]
 
-                # get D:
-                D = self.get_data(
-                    FV.D,
-                    FC.STATE_TARGET,
-                    lookup="w",
-                    algo=algo,
-                    fdata=fdata,
-                    tdata=tdata,
-                    downwind_index=downwind_index,
-                    upcast=True,
-                    selection=sel,
-                )
+            alpha = -np.cos(gamma[:, None])**2 * np.sin(gamma[:, None]) * ct[:, None]/2 / (
+                1 + self.beta * delx / D[:, None]
+            )**2
+            del gamma, ct, delx, D
 
-                alpha0 = -np.cos(gamma)**2 * np.sin(gamma) * ct/2
-                delx = np.zeros_like(x)
-                dely = np.zeros_like(x)
-                sel2 = (delx + self.step_x <= x)
-                while np.any(sel2):
+            y[sel] += np.sum(np.tan(alpha) * dx, axis=-1)
+            coos[..., 1] = y[:, :, None]
 
-                    dely[sel2] += np.tan(
-                        alpha0[sel2] / (
-                            1 + self.beta * (x[sel2] + delx[sel2]) / D[sel2]
-                        )**2
-                    ) * self.step_x
-
-                    delx[sel2] += self.step_x
-                    sel2 = (delx + self.step_x <= x)
-
-                y[sel] += dely
-                coos[..., 1] = y[:, :, None]
-
-            return coos
-            
-        else:
-            return super().update_coos(algo, mdata, fdata, tdata,
-                                downwind_index, wframe, wmodel, coos)
+        return coos
 
     
