@@ -19,6 +19,7 @@ from .farm_controller import FarmController
 from .turbine import Turbine
 from .partial_wakes_model import PartialWakesModel
 from .wake_frame import WakeFrame
+from .wake_deflection import WakeDeflection
 from .wake_model import WakeModel, TurbineInductionModel, WakeK
 from .wake_superposition import WakeSuperposition
 from .vertical_profile import VerticalProfile

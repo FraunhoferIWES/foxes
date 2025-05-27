@@ -17,6 +17,7 @@ from foxes.core import (
     AxialInductionModel,
     TurbineInductionModel,
     GroundModel,
+    WakeDeflection,
 )
 
 
@@ -62,6 +63,9 @@ class ModelBook:
     ground_models: foxes.utils.FDict
         The ground models. Keys: model name str,
         values: foxes.core.GroundModel
+    wake_deflections: foxes.utils.FDict
+        The wake deflection models. Keys: model name str,
+        values: foxes.core.WakeDeflection
     sources: foxes.utils.FDict
         All sources dict
     base_classes: foxes.utils.FDict
@@ -231,14 +235,19 @@ class ModelBook:
             hints={"n2": "(Number of points in square grid)"},
         )
 
+
+        self.wake_deflections = FDict(
+            name="wake_deflections",
+            no_deflection=fm.wake_deflections.NoDeflection(),
+            Bastankhah2016=fm.wake_deflections.Bastankhah2016Deflection(),
+            Jimenez=fm.wake_deflections.JimenezDeflection(),
+        )
+
+
         self.wake_frames = FDict(
             name="wake_frames",
-            rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
+            rotor_wd=fm.wake_frames.RotorWD(),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
-        )
-        self.wake_frames.add_k_factory(
-            fm.wake_frames.YawedWakes,
-            "yawed_[wake_k]",
         )
         self.wake_frames.add_factory(
             fm.wake_frames.Streamlines2D,
@@ -256,6 +265,7 @@ class ModelBook:
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
         self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
         self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
+        
 
         def _todt(x):
             if x[-1] == "s":
@@ -517,6 +527,7 @@ class ModelBook:
             farm_controllers=self.farm_controllers,
             partial_wakes=self.partial_wakes,
             wake_frames=self.wake_frames,
+            wake_deflections=self.wake_deflections,
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
@@ -532,6 +543,7 @@ class ModelBook:
             farm_controllers=FarmController,
             partial_wakes=PartialWakesModel,
             wake_frames=WakeFrame,
+            wake_deflections=WakeDeflection,
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
             axial_induction=AxialInductionModel,
@@ -563,16 +575,19 @@ class ModelBook:
             if subset is None or k in subset:
                 print(k)
                 print("-" * len(k))
-                if len(ms):
-                    for mname in sorted(list(ms.keys())):
-                        if search is None or search in mname:
-                            print(f"{mname}: {ms[mname]}")
-                    if isinstance(ms, FDict):
-                        for f in ms.factories:
-                            if search is None or search in f.name_template:
+                any = False
+                for mname in sorted(list(ms.keys())):
+                    if search is None or search in mname:
+                        print(f"{mname}: {ms[mname]}")
+                        any = True
+                if isinstance(ms, FDict):
+                    for f in ms.factories:
+                        if search is None or search in f.name_template:
+                            if any:
                                 print()
-                                print(f)
-                else:
+                            print(f)
+                            any = True
+                if not any:
                     print("(none)")
                 print()
 

@@ -32,6 +32,8 @@ class Downwind(Algorithm):
     partial_wakes: dict
         The partial wakes mapping. Key: wake model name,
         value: foxes.core.PartialWakesModel
+    deflection: foxes.core.WakeDeflection
+        The wake deflection model
     ground_models: dict
         The ground models mapping. Key: wake model name,
         value: foxes.core.GroundModel
@@ -70,6 +72,7 @@ class Downwind(Algorithm):
         wake_models,
         rotor_model="centre",
         wake_frame="rotor_wd",
+        wake_deflection="no_deflection",
         partial_wakes=None,
         ground_models=None,
         farm_controller="basic_ctrl",
@@ -94,6 +97,8 @@ class Downwind(Algorithm):
         wake_frame: str
             The wake frame. Will be looked up in the
             model book
+        deflection: foxes.core.WakeDeflection, optional
+            The wake deflection model
         partial_wakes: dict, list or str, optional
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
@@ -122,6 +127,9 @@ class Downwind(Algorithm):
 
         self.__wake_frame = self.mbook.wake_frames.get_item(wake_frame)
         self.wake_frame.name = wake_frame
+
+        self.__wake_deflection = self.mbook.wake_deflections.get_item(wake_deflection)
+        self.wake_deflection.name = wake_deflection
 
         self.__wake_models = {}
         for w in wake_models:
@@ -252,6 +260,19 @@ class Downwind(Algorithm):
         return self.__wake_frame
 
     @property
+    def wake_deflection(self):
+        """
+        The wake deflection
+
+        Returns
+        -------
+        m: foxes.core.WakeDeflection
+            The wake deflection model
+
+        """
+        return self.__wake_deflection
+    
+    @property
     def partial_wakes(self):
         """
         The partial wakes models
@@ -334,10 +355,11 @@ class Downwind(Algorithm):
             if n_points is not None:
                 print(f"  n_points : {n_points}")
             print(deco)
-            print(f"  states   : {self.states}")
-            print(f"  rotor    : {self.rotor_model}")
+            print(f"  states    : {self.states}")
+            print(f"  rotor     : {self.rotor_model}")
             print(f"  controller: {self.farm_controller}")
             print(f"  wake frame: {self.wake_frame}")
+            print(f"  deflection: {self.wake_deflection}")
             print(deco)
             print(f"  wakes:")
             for i, w in enumerate(self.wake_models.values()):
@@ -402,6 +424,7 @@ class Downwind(Algorithm):
             self.states,
             self.farm_controller,
             self.rotor_model,
+            self.wake_deflection,
             self.wake_frame,
         ]
         mdls += list(self.wake_models.values())

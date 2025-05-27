@@ -337,6 +337,7 @@ python_apigen_modules = {
     "foxes.models.vertical_profiles": "_foxes/models/vertical_profiles/",
     "foxes.models.axial_induction": "_foxes/models/axial_induction",
     "foxes.models.ground_models": "_foxes/models/ground_models",
+    "foxes.models.wake_deflections": "_foxes/models/wake_deflections",
     "foxes.models.wake_frames": "_foxes/models/wake_frames/",
     "foxes.models.wake_models": "_foxes/models/wake_models/",
     "foxes.models.wake_models.induction": "_foxes/models/wake_models/induction/",

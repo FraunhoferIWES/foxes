@@ -1,49 +1,53 @@
+
 import numpy as np
 
-from foxes.core import WakeFrame, WakeK, TData
+from foxes.config import config
+from foxes.core.wake_deflection import WakeDeflection
+from foxes.core.wake_model import WakeK
 from foxes.models.wake_models.wind.bastankhah16 import (
     Bastankhah2016Model,
     Bastankhah2016,
 )
-from foxes.config import config
-import foxes.variables as FV
 import foxes.constants as FC
+import foxes.variables as FV
 
-from .rotor_wd import RotorWD
 
-
-class YawDeflectionJimenez(WakeFrame):
+class Bastankhah2016Deflection(WakeDeflection):
     """
     Bend the wakes for yawed turbines, based on the
-    Jimenez model
+    Bastankhah 2016 wake model
 
     Notes
     -----
     Reference:
-    "Application of a LES technique to characterize the wake deflection of a wind turbine in yaw"
-    A. Jimenez, A. Crespo, E. Migoya
-    https://doi.org/10.1002/we.380
+    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
+    Majid Bastankhah, Fernando Porté-Agel
+    https://doi.org/10.1017/jfm.2016.595
 
     Attributes
     ----------
-    base_frame: foxes.core.WakeFrame
-        The wake frame from which to start
+    model: Bastankhah2016Model
+        The model for computing common data
+    alpha: float
+        model parameter used to determine onset of far wake region,
+        if not found in wake model
+    beta: float
+        model parameter used to determine onset of far wake region,
+        if not found in wake model
     wake_k: dict
         Parameters for the WakeK class, if not found in wake model
     induction: foxes.core.AxialInductionModel
         The induction model, if not found in wake model
 
-    :group: models.wake_frames
+    :group: models.wake_deflections
 
     """
 
     def __init__(
         self,
-        base_frame=RotorWD(),
         alpha=0.58,
         beta=0.07,
-        induction=None,
-        max_length_km=30,
+        induction="Madsen",
         **wake_k,
     ):
         """
@@ -51,25 +55,23 @@ class YawDeflectionJimenez(WakeFrame):
 
         Parameters
         ----------
-        base_frame: foxes.core.WakeFrame
-            The wake frame from which to start
         alpha: float
             model parameter used to determine onset of far wake region,
             if not found in wake model
         beta: float
             model parameter used to determine onset of far wake region,
             if not found in wake model
-        induction: foxes.core.AxialInductionModel or str, optional
+        induction: foxes.core.AxialInductionModel or str
             The induction model, if not found in wake model
         wake_k: dict, optional
             Parameters for the WakeK class, if not found in wake model
-        max_length_km: float
-            The maximal wake length in km
 
         """
-        super().__init__(max_length_km=max_length_km)
+        super().__init__()
 
-        self.base_frame = base_frame
+        self.model = None
+        self.alpha = alpha
+        self.beta = beta
         self.induction = induction
         self.wake_k = None
         self._wake_k_pars = wake_k
@@ -92,8 +94,8 @@ class YawDeflectionJimenez(WakeFrame):
             Names of all sub models
 
         """
-        return [self.wake_k, self.base_frame]
-
+        return [self.wake_k, self.model]
+    
     def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
@@ -109,49 +111,28 @@ class YawDeflectionJimenez(WakeFrame):
 
         """
         if not self.initialized:
+            for w in algo.wake_models.values():
+                if isinstance(w, Bastankhah2016):
+                    if not w.initialized:
+                        w.initialize(algo, verbosity, force)
+                    self.model = w.model
+                    self.wake_k = w.wake_k
+                    break
+            if self.model is None:
+                self.model = Bastankhah2016Model(
+                    alpha=self.alpha, beta=self.beta, induction=self.induction
+                )
             if self.wake_k is None:
                 wake_k = WakeK(**self._wake_k_pars)
                 if not wake_k.all_none:
                     self.wake_k = wake_k
                 else:
                     for w in algo.wake_models.values():
-                        if self.wake_k is None and hasattr(w, "wake_k"):
+                        if hasattr(w, "wake_k"):
                             self.wake_k = w.wake_k
                             break
-            if isinstance(self.induction, str):
-                self.induction = algo.mbook.axial_induction[self.induction]
-            else:
-                for w in algo.wake_models.values():
-                    if self.induction is None and hasattr(w, "induction"):
-                        self.induction = w.induction   
-                        break     
-            assert self.induction is not None, f"{self.name}: Expecting induction model, not found in wake models"
 
         super().initialize(algo, verbosity, force)
-
-    def calc_order(self, algo, mdata, fdata):
-        """
-        Calculates the order of turbine evaluation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-
-        Returns
-        -------
-        order: numpy.ndarray
-            The turbine order, shape: (n_states, n_turbines)
-
-        """
-        return self.base_frame.calc_order(algo, mdata, fdata)
 
     def _update_y(self, algo, mdata, fdata, tdata, downwind_index, x, y):
         """
@@ -171,41 +152,6 @@ class YawDeflectionJimenez(WakeFrame):
             accept_nan=False,
         )
         gamma = gamma * np.pi / 180
-
-        # get ct:
-        ct = self.get_data(
-            FV.CT,
-            FC.STATE_TARGET,
-            lookup="w",
-            algo=algo,
-            fdata=fdata,
-            tdata=tdata,
-            downwind_index=downwind_index,
-            upcast=True,
-        )
-
-        sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8) & (x >= 0)
-        if np.any(sel):
-
-            # apply selection:
-            gamma = gamma[sel]
-            ct = ct[sel]
-            x = x[sel]
-            n = len(x)
-
-            # compute beta:
-            a = self.induction.ct2a(ct)
-            beta = (1 - a) / (1 - 2 * a)
-            del a
-
-            # compute delta y:
-            #alpha0 = np.cos(gamma)**2 * np.sin(gamma) * ct/2 
-            #dalpha_dx = -2*alpha0*beta/D/(1 + beta*x/D)**3
-            #dsinalpha_dx = dalpha_dx*cos(alpha)
-
-
-
-
 
         # get k:
         k = self.wake_k(
@@ -253,17 +199,19 @@ class YawDeflectionJimenez(WakeFrame):
             # apply deflection:
             y[st_sel] -= ydef
 
-    def get_wake_coos(
+    def update_coos(
         self,
-        algo,
+        algo, 
         mdata,
-        fdata,
-        tdata,
-        downwind_index,
-        wmodel,
+        fdata, 
+        tdata, 
+        downwind_index, 
+        wframe, 
+        wmodel, 
+        coos,
     ):
         """
-        Calculate wake coordinates of rotor points.
+        Updates the wake coordinates
 
         Parameters
         ----------
@@ -278,81 +226,23 @@ class YawDeflectionJimenez(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
+        wframe: foxes.core.WakeFrame
+            The wake frame
         wmodel: foxes.core.WakeModel
             The wake model
-
-        Returns
-        -------
-        wake_coos: numpy.ndarray
+        coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        # get unyawed results:
-        xyz = self.base_frame.get_wake_coos(
-            algo,
-            mdata,
-            fdata,
-            tdata,
-            downwind_index,
-        )
-
         # take rotor average:
-        xy = np.einsum("stpd,p->std", xyz[..., :2], tdata[FC.TWEIGHTS])
+        xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
         x = xy[:, :, 0]
         y = xy[:, :, 1]
 
         # apply deflection:
         self._update_y(algo, mdata, fdata, tdata, downwind_index, x, y)
-        xyz[..., 1] = y[:, :, None]
+        coos[..., 1] = y[:, :, None]
 
-        return xyz
-
-    def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
-        """
-        Gets the points along the centreline for given
-        values of x.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        downwind_index: int
-            The index in the downwind order
-        x: numpy.ndarray
-            The wake frame x coordinates, shape: (n_states, n_points)
-
-        Returns
-        -------
-        points: numpy.ndarray
-            The centreline points, shape: (n_states, n_points, 3)
-
-        """
-        points = self.base_frame.get_centreline_points(
-            algo, mdata, fdata, downwind_index, x
-        )
-        tdata = TData.from_points(points)
-
-        nx = np.zeros_like(points)
-        nx[:, 0] = points[:, 1] - points[:, 0]
-        nx[:, -1] = points[:, -1] - points[:, -2]
-        nx[:, 1:-1] = 0.5 * (points[:, 1:-1] - points[:, :-2]) + 0.5 * (
-            points[:, 2:] - points[:, 1:-1]
-        )
-        nx /= np.linalg.norm(nx, axis=-1)[:, :, None]
-
-        nz = np.zeros_like(nx)
-        nz[:, :, 2] = 1
-        ny = np.cross(nz, nx, axis=-1)
-        del nx, nz
-
-        y = np.zeros_like(x)
-        self._update_y(algo, mdata, fdata, tdata, downwind_index, x, y)
-
-        points += y[:, :, None] * ny
-
-        return points
+        return coos
+    
