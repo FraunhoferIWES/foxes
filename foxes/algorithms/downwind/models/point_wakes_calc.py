@@ -123,7 +123,7 @@ class PointWakesCalculation(PointDataModel):
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)
 
-            if len(set(self.pvars).intersection(wdeltas.keys())):
+            if True:#len(set(self.pvars).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):

@@ -132,7 +132,7 @@ if __name__ == "__main__":
         o = foxes.output.FlowPlots2D(algo, farm_results)
         g = o.gen_states_fig_yz(
             args.var,
-            resolution=10,
+            resolution=5,
             x=750,
             ymin=-200,
             ymax=200,

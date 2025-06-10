@@ -21,7 +21,7 @@ from .partial_wakes_model import PartialWakesModel
 from .wake_frame import WakeFrame
 from .wake_deflection import WakeDeflection
 from .wake_model import WakeModel, TurbineInductionModel, WakeK
-from .wake_superposition import WakeSuperposition
+from .wake_superposition import WakeSuperposition, WindVectorWakeSuperposition
 from .vertical_profile import VerticalProfile
 from .axial_induction_model import AxialInductionModel
 from .ground_model import GroundModel

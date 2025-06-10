@@ -199,7 +199,7 @@ class Bastankhah2016Deflection(WakeDeflection):
             # apply deflection:
             y[st_sel] -= ydef
 
-    def update_coos(
+    def calc_deflection(
         self,
         algo, 
         mdata,
@@ -207,11 +207,10 @@ class Bastankhah2016Deflection(WakeDeflection):
         tdata, 
         downwind_index, 
         wframe, 
-        wmodel, 
         coos,
     ):
         """
-        Updates the wake coordinates
+        Calculates the wake deflection.
 
         Parameters
         ----------
@@ -228,13 +227,22 @@ class Bastankhah2016Deflection(WakeDeflection):
             in the downwind order
         wframe: foxes.core.WakeFrame
             The wake frame
-        wmodel: foxes.core.WakeModel
-            The wake model
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
+        Returns
+        -------
+        coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
+
         """
+        
         # take rotor average:
         xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
         x = xy[:, :, 0]
@@ -244,5 +252,5 @@ class Bastankhah2016Deflection(WakeDeflection):
         self._update_y(algo, mdata, fdata, tdata, downwind_index, x, y)
         coos[..., 1] = y[:, :, None]
 
-        return coos
+        return coos, None
     

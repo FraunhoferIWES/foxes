@@ -20,7 +20,7 @@ class NoDeflection(WakeDeflection):
 
     """
 
-    def update_coos(
+    def calc_deflection(
         self,
         algo, 
         mdata,
@@ -28,11 +28,10 @@ class NoDeflection(WakeDeflection):
         tdata, 
         downwind_index, 
         wframe, 
-        wmodel, 
         coos,
     ):
         """
-        Updates the wake coordinates
+        Calculates the wake deflection.
 
         Parameters
         ----------
@@ -49,12 +48,21 @@ class NoDeflection(WakeDeflection):
             in the downwind order
         wframe: foxes.core.WakeFrame
             The wake frame
-        wmodel: foxes.core.WakeModel
-            The wake model
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
+        Returns
+        -------
+        coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
+
         """
-        return coos
+        
+        return coos, None
     

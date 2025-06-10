@@ -218,8 +218,8 @@ class GroundModel(Model):
             The wake model
 
         """
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index, wmodel)
-        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
+        wcoos, delwd = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, delwd, wake_deltas)
 
     def finalize_point_wakes(
         self,

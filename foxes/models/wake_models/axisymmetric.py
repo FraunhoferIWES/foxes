@@ -24,6 +24,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         fdata,
         tdata,
         downwind_index,
+        dwd_defl,
         x,
         r,
     ):
@@ -42,6 +43,10 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The target point data
         downwind_index: int
             The index in the downwind order
+        dwd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets)
         x: numpy.ndarray
             The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
@@ -67,6 +72,7 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
         fdata,
         tdata,
         downwind_index,
+        dwd_defl,
         x,
         yz,
     ):
@@ -85,6 +91,10 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
             The target point data
         downwind_index: int
             The index in the downwind order
+        dwd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets)
         x: numpy.ndarray
             The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
@@ -102,4 +112,5 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
 
         """
         r = np.linalg.norm(yz, axis=-1)
-        return self.calc_wakes_x_r(algo, mdata, fdata, tdata, downwind_index, x, r)
+        return self.calc_wakes_x_r(
+            algo, mdata, fdata, tdata, downwind_index, dwd_defl, x, r)

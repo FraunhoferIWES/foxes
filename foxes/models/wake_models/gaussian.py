@@ -2,7 +2,7 @@ import numpy as np
 from abc import abstractmethod
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
-
+import foxes.variables as FV
 
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
@@ -60,6 +60,7 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         fdata,
         tdata,
         downwind_index,
+        dwd_defl,
         x,
         r,
     ):
@@ -78,6 +79,10 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The target point data
         downwind_index: int
             The index in the downwind order
+        dwd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets)
         x: numpy.ndarray
             The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
@@ -102,5 +107,12 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         for v in amsi.keys():
             ampld, sigma = amsi[v]
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
+        
+        if dwd_defl is not None:
+            if FV.WD not in wdeltas:
+                wdeltas[FV.WD] = np.zeros_like(rsel)
+                wdeltas[FV.WD][:] = dwd_defl[st_sel, None]
+            else:
+                wdeltas[FV.WD] += dwd_defl[st_sel, None]
 
         return wdeltas, st_sel

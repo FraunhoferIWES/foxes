@@ -54,6 +54,11 @@ WD = "WD"
 :group: foxes.variables
 """
 
+UV = "UV"
+""" The 2D wind vector in m/s
+:group: foxes.variables
+"""
+
 TI = "TI"
 """ The turbulence intensity
 :group: foxes.variables
@@ -146,6 +151,11 @@ AMB_WS = "AMB_WS"
 
 AMB_WD = "AMB_WD"
 """ The ambient wind direction in degrees
+:group: foxes.variables
+"""
+
+AMB_UV = "AMB_UV"
+""" The ambient 2D wind vector in m/s
 :group: foxes.variables
 """
 

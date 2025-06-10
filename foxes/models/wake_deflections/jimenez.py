@@ -45,7 +45,7 @@ class JimenezDeflection(WakeDeflection):
         self.beta = beta
         self.step_x = step_x
 
-    def update_coos(
+    def calc_deflection(
         self,
         algo, 
         mdata,
@@ -53,11 +53,10 @@ class JimenezDeflection(WakeDeflection):
         tdata, 
         downwind_index, 
         wframe, 
-        wmodel, 
         coos,
     ):
         """
-        Updates the wake coordinates
+        Calculates the wake deflection.
 
         Parameters
         ----------
@@ -74,20 +73,30 @@ class JimenezDeflection(WakeDeflection):
             in the downwind order
         wframe: foxes.core.WakeFrame
             The wake frame
-        wmodel: foxes.core.WakeModel
-            The wake model
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
+        Returns
+        -------
+        coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
+
         """
+
         if FV.YAWM not in fdata:
-            return coos
+            return coos, None
 
         # take rotor average:
-        xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
-        x = xy[:, :, 0]
-        y = xy[:, :, 1]
+        xyz = np.einsum("stpd,p->std", coos, tdata[FC.TWEIGHTS])
+        x = xyz[:, :, 0]
+        y = xyz[:, :, 1]
+        z = xyz[:, :, 2]
 
         # get ct:
         ct = self.get_data(
@@ -113,16 +122,17 @@ class JimenezDeflection(WakeDeflection):
             upcast=True,
         )
 
-        sel = (x > 0) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        sel = (x > 1e-8) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        delwd = np.zeros_like(coos[..., 0])
         n_sel = np.sum(sel)
         if n_sel > 0:
 
             # apply selection:
-            gamma = gamma[sel] * np.pi / 180
+            gamma = np.deg2rad(gamma[sel])
             ct = ct[sel]
             x = x[sel]
 
-            # get D:
+            # get rotor diameter:
             D = self.get_data(
                 FV.D,
                 FC.STATE_TARGET,
@@ -133,27 +143,29 @@ class JimenezDeflection(WakeDeflection):
                 downwind_index=downwind_index,
                 upcast=True,
                 selection=sel,
-            )
+            )[:, None]
 
+            # define x path:
             xmax = np.max(x)
             n_x = int(xmax/self.step_x)
             if xmax > n_x * self.step_x:
                 n_x += 1
-
             delx = np.arange(n_x + 1) * self.step_x
             delx = np.minimum(delx[None, :], x[:, None])
-
             dx = delx[:, 1:] - delx[:, :-1]
             delx = delx[:, :-1]
 
-            alpha = -np.cos(gamma[:, None])**2 * np.sin(gamma[:, None]) * ct[:, None]/2 / (
-                1 + self.beta * delx / D[:, None]
-            )**2
-            del gamma, ct, delx, D
-
-            y[sel] += np.sum(np.tan(alpha) * dx, axis=-1)
+            # integrate deflection of y along the x path:
+            alpha0 = -np.cos(gamma[:, None])**2 * np.sin(gamma[:, None]) * ct[:, None]/2
+            y[sel] += np.sum(np.tan(
+                    alpha0 / (1 + self.beta * delx / D)**2
+                ) * dx, axis=-1)
             coos[..., 1] = y[:, :, None]
 
-        return coos
+            # delta wd at evaluation points, if within wake radius:
+            r2 = (y[sel, None]**2 + z[sel, None]**2) / D**2
+            WD2 = (1 + self.beta * x[:, None] / D)**2
+            delwd[sel] = np.where(r2 <= WD2 / 4, np.rad2deg(alpha0 / WD2), 0)
 
+        return coos, delwd
     

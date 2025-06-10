@@ -3,6 +3,7 @@ import numpy as np
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 from foxes.utils.two_circles import calc_area
 from foxes.config import config
+from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -101,8 +102,6 @@ class PartialAxiwake(PartialCentre):
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         """
         # check:
@@ -125,7 +124,8 @@ class PartialAxiwake(PartialCentre):
         )
 
         # calc coordinates to rotor centres:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index, wmodel)
+        wcoos, delwd = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        delwd = delwd[:, :, 0] if delwd is not None else None
 
         # prepare x and r coordinates:
         x = wcoos[..., 0, 0]
@@ -196,27 +196,44 @@ class PartialAxiwake(PartialCentre):
 
         # evaluate wake model:
         wdeltas, st_sel = wmodel.calc_wakes_x_r(
-            algo, mdata, fdata, tdata, downwind_index, x, r
+            algo, mdata, fdata, tdata, downwind_index, delwd, x, r
         )
 
-        for v, wdel in wdeltas.items():
-            d = np.einsum("sn,sn->s", wdel, weights[st_sel])
-
-            try:
-                superp = wmodel.superp[v]
-            except KeyError:
-                raise KeyError(
-                    f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {sorted(list(wmodel.superp.keys()))}"
-                )
-
-            wake_deltas[v] = superp.add_wake(
-                algo,
-                mdata,
-                fdata,
-                tdata,
-                downwind_index,
-                st_sel,
-                v,
-                wake_deltas[v],
-                d[:, None],
+        # run superposition models:
+        if wmodel.has_vector_wind_superp:
+            wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
+            duv = np.einsum('snd,sn->sd', wdeltas[FV.UV], weights[st_sel])
+            wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
+                algo, mdata, fdata, tdata, downwind_index, st_sel, wake_deltas[FV.UV], duv[:, None]
             )
+            del duv
+    
+        elif FV.WD in wdeltas:
+            raise KeyError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition model in wake model '{wmodel.name}'")
+        
+        elif FV.UV in wdeltas:
+            raise AssertionError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition")
+
+        for v, wdel in wdeltas.items():
+            if v != FV.UV:
+                try:
+                    superp = wmodel.superp[v]
+                except KeyError:
+                    s = {v: m.name for v, m in wmodel.superp.items()}
+                    raise KeyError(
+                        f"Model '{self.name}': Missing wake superposition entry for variable '{v}' in wake model '{wmodel.name}', found {s}"
+                    )
+
+                d = np.einsum("sn,sn->s", wdel, weights[st_sel])
+                
+                wake_deltas[v] = superp.add_wake(
+                    algo,
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
+                    st_sel,
+                    v,
+                    wake_deltas[v],
+                    d[:, None],
+                )

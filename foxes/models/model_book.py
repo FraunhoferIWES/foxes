@@ -346,6 +346,7 @@ class ModelBook:
             ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
             ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
+            vector=fm.wake_superpositions.WindVectorLinear(scale_amb=False),
         )
 
         self.axial_induction = FDict(name="induction_models")
@@ -366,7 +367,7 @@ class ModelBook:
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.2, induction="Madsen"),
-            superposition=lambda s: f"ws_{s}",
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
             hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
         self.wake_models.add_k_factory(

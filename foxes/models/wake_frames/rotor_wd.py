@@ -72,7 +72,6 @@ class RotorWD(WakeFrame):
         fdata,
         tdata,
         downwind_index,
-        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -90,14 +89,16 @@ class RotorWD(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
 
         """
         n_states = tdata.n_states
@@ -119,9 +120,8 @@ class RotorWD(WakeFrame):
 
         coos = np.einsum("stpd,sad->stpa", delta, nax)
 
-        algo.wake_deflection.update_coos(algo, mdata, fdata, tdata, downwind_index, self, wmodel, coos)
-
-        return coos
+        return algo.wake_deflection.calc_deflection(
+            algo, mdata, fdata, tdata, downwind_index, self, coos)
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

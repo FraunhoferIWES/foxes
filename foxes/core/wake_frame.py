@@ -77,7 +77,6 @@ class WakeFrame(Model):
         fdata,
         tdata,
         downwind_index,
-        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -95,14 +94,16 @@ class WakeFrame(Model):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         Returns
         -------
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
 
         """
         pass

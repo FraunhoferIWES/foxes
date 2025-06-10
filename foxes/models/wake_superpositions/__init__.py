@@ -2,6 +2,7 @@
 Wake superposition models.
 """
 
+from .wind_vector import WindVectorLinear
 from .ws_linear import WSLinear, WSLinearLocal
 from .ws_quadratic import WSQuadratic, WSQuadraticLocal
 from .ws_pow import WSPow, WSPowLocal

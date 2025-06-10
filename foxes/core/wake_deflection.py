@@ -10,7 +10,7 @@ class WakeDeflection(Model):
 
     """
 
-    def update_coos(
+    def calc_deflection(
         self,
         algo, 
         mdata,
@@ -18,11 +18,10 @@ class WakeDeflection(Model):
         tdata, 
         downwind_index, 
         wframe, 
-        wmodel, 
         coos,
     ):
         """
-        Updates the wake coordinates
+        Calculates the wake deflection.
 
         Parameters
         ----------
@@ -39,14 +38,22 @@ class WakeDeflection(Model):
             in the downwind order
         wframe: foxes.core.WakeFrame
             The wake frame
-        wmodel: foxes.core.WakeModel
-            The wake model
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
+        Returns
+        -------
+        coos: numpy.ndarray
+            The wake frame coordinates of the evaluation
+            points, shape: (n_states, n_targets, n_tpoints, 3)
+        delta_wd_defl: numpy.ndarray or None
+            The wind direction change at the target points 
+            in radiants due to wake deflection, 
+            shape: (n_states, n_targets, n_tpoints)
+
         """
-        raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for wake frame '{wframe.name}' and wake model '{wmodel.name}'")
+        raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for wake frame '{wframe.name}'")
 
     @classmethod
     def new(cls, wframe_type, *args, **kwargs):
