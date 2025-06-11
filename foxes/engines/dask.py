@@ -252,7 +252,7 @@ def _run_as_ufunc(
                 oshape.append(ldata[i].shape[dims.index(l)])
                 break
         if len(oshape) != li + 1:
-            raise ValueError(f"Failed to find loop dimension")
+            raise ValueError("Failed to find loop dimension")
 
     # add zero output data arrays:
     odims = {v: tuple(out_coords) for v in out_vars}

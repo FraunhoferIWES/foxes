@@ -75,7 +75,7 @@ class SingleStateStates(States):
             and not len(profiles)
         ):
             raise KeyError(
-                f"Expecting at least one parameter: ws, wd, ti, rho, profiles"
+                "Expecting at least one parameter: ws, wd, ti, rho, profiles"
             )
 
     def sub_models(self):

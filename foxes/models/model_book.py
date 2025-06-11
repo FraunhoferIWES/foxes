@@ -471,9 +471,9 @@ class ModelBook:
             hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
         )
 
-        self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models["RHB"] = fm.wake_models.induction.RankineHalfBody()
 
-        self.wake_models[f"VortexSheet"] = fm.wake_models.induction.VortexSheet()
+        self.wake_models["VortexSheet"] = fm.wake_models.induction.VortexSheet()
         self.wake_models.add_factory(
             fm.wake_models.induction.VortexSheet,
             "VortexSheet_<superposition>",
@@ -481,7 +481,7 @@ class ModelBook:
             hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
 
-        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
+        self.wake_models["Rathmann"] = fm.wake_models.induction.Rathmann()
         self.wake_models.add_factory(
             fm.wake_models.induction.Rathmann,
             "Rathmann_<superposition>",
@@ -489,10 +489,8 @@ class ModelBook:
             hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
         )
 
-        self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models[f"SelfSimilar2020"] = (
-            fm.wake_models.induction.SelfSimilar2020()
-        )
+        self.wake_models["SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
+        self.wake_models["SelfSimilar2020"] = fm.wake_models.induction.SelfSimilar2020()
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar,
             "SelfSimilar_<superposition>",

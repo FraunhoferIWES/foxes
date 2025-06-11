@@ -62,7 +62,7 @@ class IECTIWake(TopHatWakeModel):
         else:
             if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
                 raise KeyError(
-                    f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
+                    "Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
                 )
             self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 

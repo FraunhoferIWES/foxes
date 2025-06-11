@@ -114,7 +114,7 @@ class Iterative(Downwind):
 
         """
         if self.initialized:
-            raise ValueError(f"Attempt to set_urelax after initialization")
+            raise ValueError("Attempt to set_urelax after initialization")
         if self._urelax is None:
             self._urelax = Dict(
                 first={},

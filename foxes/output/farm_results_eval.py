@@ -475,7 +475,7 @@ class FarmResultsEval(Output):
             duration_hours = 8760
         elif hours is None:
             raise ValueError(
-                f"Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
+                "Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
             )
         else:
             duration_hours = hours
@@ -654,7 +654,7 @@ class FarmResultsEval(Output):
         else:
             hax = ax
 
-        hax.set_xlabel(f"State")
+        hax.set_xlabel("State")
         hax.set_ylabel(variable)
         cc = cycler(color="bgrcmyk")
 

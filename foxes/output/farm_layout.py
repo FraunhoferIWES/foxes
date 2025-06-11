@@ -67,10 +67,10 @@ class FarmLayoutOutput(Output):
         self.D = D
 
         if from_results and farm_results is None:
-            raise ValueError(f"Missing farm_results for switch from_results.")
+            raise ValueError("Missing farm_results for switch from_results.")
 
         if from_results and results_state is None:
-            raise ValueError(f"Please specify results_state for switch from_results.")
+            raise ValueError("Please specify results_state for switch from_results.")
 
     def get_layout_data(self):
         """

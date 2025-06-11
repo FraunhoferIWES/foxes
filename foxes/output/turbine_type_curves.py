@@ -1,4 +1,3 @@
-from tabnanny import verbose
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -187,7 +186,7 @@ class TurbineTypeCurves(Output):
 
             if y_labels[i] is None:
                 if v == FV.P:
-                    l = f"Power [kW]"
+                    l = "Power [kW]"
                 elif v == FV.CT:
                     l = "ct [-]"
                 else:

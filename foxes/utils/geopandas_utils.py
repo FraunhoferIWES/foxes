@@ -190,7 +190,7 @@ def read_shp_polygons(
     names = pnames if names is None else names
     for name in names:
         if name == name:  # exclude nan values
-            if not name in pnames:
+            if name not in pnames:
                 raise KeyError(
                     f"Name '{name}' not found in file '{fname}'. Names: {pnames}"
                 )

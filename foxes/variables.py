@@ -330,12 +330,12 @@ ROUND_DIGITS = {
     WEIBULL_A: 3,
     WEIBULL_k: 3,
     YAW: 3,
-    YAWM: 3
+    YAWM: 3,
 }
-ROUND_DIGITS.update({
-    var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys()
-    if v in ROUND_DIGITS    
-})
+ROUND_DIGITS.update(
+    {var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys() if v in ROUND_DIGITS}
+)
+
 
 def get_default_digits(variable):
     """

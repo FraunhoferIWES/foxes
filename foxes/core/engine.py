@@ -73,7 +73,7 @@ class Engine(ABC):
 
     def __enter__(self):
         if self.__entered:
-            raise ValueError(f"Enter called for already entered engine")
+            raise ValueError("Enter called for already entered engine")
         self.__entered = True
         if not self.initialized:
             self.initialize()
@@ -81,7 +81,7 @@ class Engine(ABC):
 
     def __exit__(self, *exit_args):
         if not self.__entered:
-            raise ValueError(f"Exit called for not entered engine")
+            raise ValueError("Exit called for not entered engine")
         self.__entered = False
         if self.initialized:
             self.finalize(*exit_args)

@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from foxes.algorithms.sequential import SequentialPlugin
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D

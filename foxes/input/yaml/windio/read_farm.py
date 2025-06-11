@@ -77,7 +77,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
                 return FV.REWS if wse == 1 else (FV.REWS2 if wse == 2 else FV.REWS3)
 
             _print(f"            Creating model '{tname}'", level=3)
-            _print(f"              Turbine type class: PCtFomTwo", level=3)
+            _print("              Turbine type class: PCtFomTwo", level=3)
             mbook.turbine_types[tname] = TurbineType.new(
                 ttype_type="PCtFromTwo",
                 data_source_P=data_P,
@@ -111,7 +111,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             data_ct = pd.DataFrame(data={"ws": ws_ct, "ct": ct})
 
             _print(f"            Creating model '{tname}'", level=3)
-            _print(f"              Turbine type class: CpCtFromTwo", level=3)
+            _print("              Turbine type class: CpCtFromTwo", level=3)
             mbook.turbine_types[tname] = TurbineType.new(
                 ttype_type="CpCtFromTwo",
                 data_source_cp=data_cp,
@@ -126,7 +126,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             _print("               ", mbook.turbine_types[tname], level=3)
 
         else:
-            raise KeyError(f"Expecting either 'power_curve' or 'Cp_curve'")
+            raise KeyError("Expecting either 'power_curve' or 'Cp_curve'")
 
     return ttypes
 
@@ -157,7 +157,7 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     cdict = Dict(ldict["coordinates"], name="coordinates")
     tmap = ldict.get_item("turbine_types", None)
     if verbosity > 2:
-        print(f"          Turbine type map:", tmap)
+        print("          Turbine type map:", tmap)
     for i, xy in enumerate(zip(cdict["x"], cdict["y"])):
         tt = ttypes[tmap[i] if tmap is not None else 0]
         farm.add_turbine(

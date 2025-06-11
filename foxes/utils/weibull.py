@@ -1,9 +1,10 @@
 import numpy as np
 
+
 def weibull_weights(ws, ws_deltas, A, k):
     """
     Computes the weibull weights for given wind speeds
-    
+
     Parameters
     ----------
     ws: numpy.ndarray
@@ -19,9 +20,9 @@ def weibull_weights(ws, ws_deltas, A, k):
     -------
     weights: numpy.ndarray
         The weights, same shape as ws
-    
+
     :group: utils
 
     """
     wsA = ws / A
-    return ws_deltas * ( k / A * wsA ** (k - 1) * np.exp(-(wsA**k)) )
+    return ws_deltas * (k / A * wsA ** (k - 1) * np.exp(-(wsA**k)))

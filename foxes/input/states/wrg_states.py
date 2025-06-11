@@ -132,7 +132,7 @@ class WRGStates(States):
         self._y = p0[1] + np.arange(ny) * res
         self._y = self._y[sy]
         if len(self._x) < 2 or len(self._y) < 2:
-            raise ValueError(f"No overlap between data bounds and farm bounds")
+            raise ValueError("No overlap between data bounds and farm bounds")
         p0[0] = np.min(self._x)
         p0[1] = np.min(self._y)
         p1[0] = np.max(self._x)
@@ -294,10 +294,10 @@ class WRGStates(States):
         )
 
         tdata[FV.WEIGHT] *= weibull_weights(
-            ws=out[FV.WS], 
+            ws=out[FV.WS],
             ws_deltas=wsd[:, None, None],
-            A=A, 
-            k=k, 
+            A=A,
+            k=k,
         )
 
         return out

@@ -361,15 +361,15 @@ class Downwind(Algorithm):
             print(f"  wake frame: {self.wake_frame}")
             print(f"  deflection: {self.wake_deflection}")
             print(deco)
-            print(f"  wakes:")
+            print("  wakes:")
             for i, w in enumerate(self.wake_models.values()):
                 print(f"    {i}) {w.name}: {w}")
             print(deco)
-            print(f"  partial wakes:")
+            print("  partial wakes:")
             for i, (w, p) in enumerate(self.partial_wakes.items()):
                 print(f"    {i}) {w}: {p.name}, {p}")
             print(deco)
-            print(f"  turbine models:")
+            print("  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
                 print(f"    {i}) {m.name}: {m} [pre-rotor]")
             for i, m in enumerate(self.farm_controller.post_rotor_models.models):
@@ -386,7 +386,7 @@ class Downwind(Algorithm):
         if self.verbosity > 0:
             deco = "-" * 50
             print(f"\n{deco}")
-            print(f"  Model oder")
+            print("  Model oder")
             print(f"{deco}")
 
             for i, m in enumerate(mlist.models):
@@ -596,8 +596,8 @@ class Downwind(Algorithm):
         # get input model data:
         model_data = self.get_models_data()
         self.print("\nInput data:\n\n", model_data, "\n")
-        self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
-        self.print(f"\nOutput variables:", ", ".join(outputs))
+        self.print("\nFarm variables:", ", ".join(self.farm_vars))
+        self.print("\nOutput variables:", ", ".join(outputs))
 
         # run main calculation:
         farm_results = super().calc_farm(
@@ -802,7 +802,7 @@ class Downwind(Algorithm):
         if persist_mdata:
             model_data = model_data.persist()
         self.print("\nInput data:\n\n", model_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+        self.print("\nOutput farm variables:", ", ".join(self.farm_vars))
 
         # chunk farm results:
         self.print("\nInput farm data:\n\n", farm_results, "\n")
@@ -821,7 +821,7 @@ class Downwind(Algorithm):
 
         # check vars:
         ovars = mlist.output_point_vars(self) if outputs is None else outputs
-        self.print(f"\nOutput point variables:", ", ".join(ovars))
+        self.print("\nOutput point variables:", ", ".join(ovars))
 
         # calculate:
         point_results = super().calc_points(
