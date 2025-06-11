@@ -77,7 +77,7 @@ class Model(ABC):
 
         Returns
         -------
-        bool :
+        bool:
             True if the model has been initialized.
 
         """
