@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from xarray import Dataset
 
-from foxes.core import MData, FData, TData
+from .data import MData, FData, TData
 from foxes.utils import new_instance
 from foxes.config import config
 import foxes.constants as FC
