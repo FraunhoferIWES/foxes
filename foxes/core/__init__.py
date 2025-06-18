@@ -39,6 +39,7 @@ from .point_data_model import PointDataModel as PointDataModel
 from .point_data_model import PointDataModelList as PointDataModelList
 
 from .wake_model import WakeModel as WakeModel
+from .wake_model import SingleTurbineWakeModel as SingleTurbineWakeModel
 from .wake_model import TurbineInductionModel as TurbineInductionModel
 from .wake_model import WakeK as WakeK
 
