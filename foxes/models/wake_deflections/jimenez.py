@@ -20,6 +20,10 @@ class JimenezDeflection(WakeDeflection):
 
     Attributes
     ----------
+    rotate: bool
+        If True, rotate local wind vector at evaluation points.
+        If False, multiply wind speed with cos(angle) instead.
+        If None, do not modify the wind vector, only the path.
     beta: float
         The beta coefficient of the Jimenez model
     step_x: float
@@ -29,12 +33,16 @@ class JimenezDeflection(WakeDeflection):
 
     """
 
-    def __init__(self, beta=0.1, step_x=10.):
+    def __init__(self, rotate=True, beta=0.1, step_x=10.):
         """
         Constructor.
         
         Parameters
         ----------
+        rotate: bool, optional
+            If True, rotate local wind vector at evaluation points.
+            If False, multiply wind speed with cos(angle) instead.
+            If None, do not modify the wind vector, only the path.
         beta: float
             The beta coefficient of the Jimenez model
         step_x: float
@@ -42,6 +50,7 @@ class JimenezDeflection(WakeDeflection):
         
         """
         super().__init__()
+        self.rotate = rotate
         self.beta = beta
         self.step_x = step_x
 
@@ -57,6 +66,9 @@ class JimenezDeflection(WakeDeflection):
     ):
         """
         Calculates the wake deflection.
+
+        This function optionally adds FC.WDEFL_ROT_ANGLE or
+        FC.WDEFL_DWS_FACTOR to the tdata.
 
         Parameters
         ----------
@@ -82,10 +94,6 @@ class JimenezDeflection(WakeDeflection):
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        delta_wd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets, n_tpoints)
 
         """
 
@@ -162,10 +170,18 @@ class JimenezDeflection(WakeDeflection):
                 ) * dx, axis=-1)
             coos[..., 1] = y[:, :, None]
 
-            # delta wd at evaluation points, if within wake radius:
-            r2 = (y[sel, None]**2 + z[sel, None]**2) / D**2
-            WD2 = (1 + self.beta * x[:, None] / D)**2
-            delwd[sel] = np.where(r2 <= WD2 / 4, np.rad2deg(alpha0 / WD2), 0)
+            # calculate wind vector modification at evaluation points:
+            if self.rotate is not None:
 
-        return coos, delwd
+                # delta wd at evaluation points, if within wake radius:
+                r2 = (y[sel, None]**2 + z[sel, None]**2) / D**2
+                WD2 = (1 + self.beta * x[:, None] / D)**2
+                delwd[sel] = np.where(r2 <= WD2 / 4, alpha0 / WD2, 0)
+
+                if self.rotate:
+                    tdata[FC.WDEFL_ROT_ANGLE] = np.rad2deg(delwd)
+                else:
+                    tdata[FC.WDEFL_DWS_FACTOR] = np.cos(delwd)
+
+        return coos
     

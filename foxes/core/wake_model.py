@@ -81,7 +81,6 @@ class WakeModel(Model):
         tdata,
         downwind_index,
         wake_coos,
-        delta_wd_defl,
         wake_deltas,
     ):
         """
@@ -104,10 +103,6 @@ class WakeModel(Model):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        delta_wd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape

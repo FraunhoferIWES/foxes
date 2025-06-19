@@ -240,9 +240,32 @@ class ModelBook:
             name="wake_deflections",
             no_deflection=fm.wake_deflections.NoDeflection(),
             Bastankhah2016=fm.wake_deflections.Bastankhah2016Deflection(),
-            Jimenez=fm.wake_deflections.JimenezDeflection(),
+            Jimenez=fm.wake_deflections.JimenezDeflection(rotate=True),
+            JimenezProj=fm.wake_deflections.JimenezDeflection(rotate=False),
+            JimenezPath=fm.wake_deflections.JimenezDeflection(rotate=None),
         )
 
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "Jimenez_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=True),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "JimenezProj_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=False),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "JimenezPath_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=None),
+        )
 
         self.wake_frames = FDict(
             name="wake_frames",

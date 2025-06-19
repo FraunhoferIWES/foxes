@@ -104,6 +104,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             wd0 = tdata[FV.AMB_WD][st_sel]
             dws = scale * wdeltas.pop(FV.WS)
             dwd = wdeltas.pop(FV.WD, 0)
+            print("HERE WVEC",wd0.shape, dwd.shape, ws0.shape, dws.shape)
             wdeltas[FV.UV] = wd2uv(wd0 + dwd, ws0 + dws) - tdata[FV.AMB_UV][st_sel]
 
         return wdeltas

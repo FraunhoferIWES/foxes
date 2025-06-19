@@ -124,8 +124,7 @@ class PartialAxiwake(PartialCentre):
         )
 
         # calc coordinates to rotor centres:
-        wcoos, delwd = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-        delwd = delwd[:, :, 0] if delwd is not None else None
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
 
         # prepare x and r coordinates:
         x = wcoos[..., 0, 0]
@@ -196,8 +195,9 @@ class PartialAxiwake(PartialCentre):
 
         # evaluate wake model:
         wdeltas, st_sel = wmodel.calc_wakes_x_r(
-            algo, mdata, fdata, tdata, downwind_index, delwd, x, r
+            algo, mdata, fdata, tdata, downwind_index, x, r
         )
+        print("HERE AXIW",{v:d.shape for v,d in tdata.items()}, {v:d.shape for v,d in  wdeltas.items()})
 
         # run superposition models:
         if wmodel.has_vector_wind_superp:

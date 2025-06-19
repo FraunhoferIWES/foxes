@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 import foxes.variables as FV
+import foxes.constants as FC
 
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
@@ -60,7 +61,6 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         fdata,
         tdata,
         downwind_index,
-        dwd_defl,
         x,
         r,
     ):
@@ -79,10 +79,6 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             The target point data
         downwind_index: int
             The index in the downwind order
-        dwd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets)
         x: numpy.ndarray
             The x values, shape: (n_states, n_targets)
         r: numpy.ndarray
@@ -99,20 +95,33 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             is non-zero, shape: (n_states, n_targets)
 
         """
+        # compute amplitude and sigma:
         amsi, st_sel = self.calc_amplitude_sigma(
             algo, mdata, fdata, tdata, downwind_index, x
         )
+
+        # evaluate the Gaussian function:
         wdeltas = {}
         rsel = r[st_sel]
         for v in amsi.keys():
             ampld, sigma = amsi[v]
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
         
-        if dwd_defl is not None:
+        # wake deflection causes wind vector rotation:
+        if FC.WDEFL_ROT_ANGLE in tdata:
+            dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
             if FV.WD not in wdeltas:
                 wdeltas[FV.WD] = np.zeros_like(rsel)
-                wdeltas[FV.WD][:] = dwd_defl[st_sel, None]
+                wdeltas[FV.WD][:] = dwd_defl[st_sel]
             else:
-                wdeltas[FV.WD] += dwd_defl[st_sel, None]
-
+                wdeltas[FV.WD] += dwd_defl[st_sel]
+        
+        # wake deflection causes wind speed reduction:
+        if FC.WDEFL_DWS_FACTOR in tdata:
+            dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
+            if FV.WS not in wdeltas:
+                raise AssertionError(f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}")
+            else:
+                wdeltas[FV.WS] *= dws_defl[st_sel]
+        
         return wdeltas, st_sel

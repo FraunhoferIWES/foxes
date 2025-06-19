@@ -1,4 +1,4 @@
-from foxes.core import PartialWakesModel
+from foxes.core import PartialWakesModel, TData
 import foxes.constants as FC
 
 
@@ -39,6 +39,35 @@ class RotorPoints(PartialWakesModel):
             algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata),
         )
 
+    def map_rotor_results(self, algo, mdata, fdata, tdata, variable, rotor_res):
+        """
+        Map ambient rotor point results onto target points.
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        variable: str
+            The variable name to map
+        rotor_res: numpy.ndarray
+            The results at rotor points, shape: 
+            (n_states, n_turbines, n_rotor_points)
+        
+        Returns
+        -------
+        res: numpy.ndarray
+            The mapped results at target points, shape:
+            (n_states, n_targets, n_tpoints)
+
+        """
+        return rotor_res
+    
     def finalize_wakes(
         self,
         algo,

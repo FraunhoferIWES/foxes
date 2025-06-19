@@ -69,13 +69,11 @@ class FarmWakesCalculation(FarmDataModel):
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
-                tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
-                pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
+                pwake2tdata[pwake.name] = pwake.get_initial_tdata(algo, mdata, fdata, amb_res)
 
         def _get_wdata(tdatap, amb_res, wdeltas, variables, s):
             """Helper function for wake data extraction"""
             tdata = tdatap.get_slice(variables, s)
-            tdata.update({FV.var2amb[v]: d[s] for v, d in amb_res.items() if v in FV.var2amb})
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 

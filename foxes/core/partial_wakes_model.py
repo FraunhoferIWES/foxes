@@ -1,9 +1,13 @@
 from abc import abstractmethod
+import numpy as np
 
-from foxes.utils import new_instance
+from foxes.utils import new_instance, wd2uv, uv2wd
+from foxes.config import config
+import foxes.variables as FV
+import foxes.constants as FC
 
 from .model import Model
-
+from .data import TData
 
 class PartialWakesModel(Model):
     """
@@ -68,6 +72,100 @@ class PartialWakesModel(Model):
         """
         pass
 
+    def get_initial_tdata(self, algo, mdata, fdata, amb_res):
+        """
+        Creates the initial target data object
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        amb_res: dict
+            The ambient results at rotor points,
+            key: variable name, value: numpy.ndarray
+            of shape: (n_states, n_turbines, n_rotor_points)
+
+        Returns
+        -------
+        tdata: foxes.core.TData
+            The target point data for the wake points
+
+        """
+        tpoints, tweights = self.get_wake_points(algo, mdata, fdata)
+        tdata = TData.from_tpoints(tpoints, tweights)
+
+        # translate WS, WD to UV data:
+        if FV.WD in amb_res or FV.WS in amb_res:
+            assert FV.WD in amb_res and FV.WS in amb_res, \
+                "Require both wind direction and speed in ambient results."
+            uv = wd2uv(amb_res.pop(FV.WD), amb_res.pop(FV.WS))
+            amb_res[FV.U] = uv[..., 0]
+            amb_res[FV.V] = uv[..., 1]
+
+        # map rotor point results onto target points:
+        for v, d in amb_res.items():
+            w = FV.var2amb.get(v, v)
+            print("PWKS ADDING",v,w,d.shape,(tdata.n_states, tdata.n_targets, tdata.n_tpoints), self.map_rotor_results)
+            tdata.add(
+                w, 
+                self.map_rotor_results(algo, mdata, fdata, tdata, v, d), 
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            ) 
+        print("HERE PWKS",{v:d.shape for v, d in tdata.items()})
+        quit()
+        
+        # back translate UV to WD, WS:
+        if FV.AMB_U in tdata:
+            uv = np.stack([tdata.pop(FV.AMB_U), tdata.pop(FV.AMB_V)], axis=-1)
+            tdata.add(FV.AMB_WD, uv2wd(uv), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
+            tdata.add(FV.AMB_WS, np.linalg.norm(uv, axis=-1), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
+
+        print("HERE PWKS",{v:d.shape for v, d in tdata.items()})
+
+        return tdata
+    
+    def map_rotor_results(self, algo, mdata, fdata, tdata, variable, rotor_res):
+        """
+        Map ambient rotor point results onto target points.
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        variable: str
+            The variable name to map
+        rotor_res: numpy.ndarray
+            The results at rotor points, shape: 
+            (n_states, n_turbines, n_rotor_points)
+        
+        Returns
+        -------
+        res: numpy.ndarray
+            The mapped results at target points, shape:
+            (n_states, n_targets, n_tpoints)
+
+        """
+        if len(rotor_res.shape) > 2 and rotor_res.shape[:2] == (tdata.n_states, tdata.n_targets):
+            q = np.zeros((tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=config.dtype_double)
+            if rotor_res.shape[2] == 1:
+                q[:] = rotor_res
+            else:
+                print("HERE PWKS", variable, rotor_res.shape, tdata[FC.TWEIGHTS].shape)
+                q[:] = np.einsum('str,r->st', rotor_res, tdata[FC.TWEIGHTS])[:, :, None]
+            return q
+        else:
+            raise ValueError(f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results.")
+        
     def new_wake_deltas(self, algo, mdata, fdata, tdata, wmodel):
         """
         Creates new initial wake deltas, filled
@@ -77,11 +175,11 @@ class PartialWakesModel(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
         wmodel: foxes.core.WakeModel
             The wake model

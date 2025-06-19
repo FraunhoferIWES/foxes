@@ -59,6 +59,16 @@ UV = "UV"
 :group: foxes.variables
 """
 
+U = "U"
+""" The first horizontal wind vector component in m/s
+:group: foxes.variables
+"""
+
+V = "V"
+""" The second horizontal wind vector component in m/s
+:group: foxes.variables
+"""
+
 TI = "TI"
 """ The turbulence intensity
 :group: foxes.variables
@@ -159,6 +169,16 @@ AMB_UV = "AMB_UV"
 :group: foxes.variables
 """
 
+AMB_U = "AMB_U"
+""" The first horizontal ambient wind vector component in m/s
+:group: foxes.variables
+"""
+
+AMB_V = "AMB_V"
+""" The second horizontal ambient wind vector component in m/s
+:group: foxes.variables
+"""
+
 AMB_TI = "AMB_TI"
 """ The ambient turbulence intensity
 :group: foxes.variables
@@ -254,6 +274,9 @@ var2amb = {
         WEIBULL_k,
         YLD,
         CAP,
+        UV,
+        U,
+        V,
     ]
 }
 """ Mapping from variable to the corresponding

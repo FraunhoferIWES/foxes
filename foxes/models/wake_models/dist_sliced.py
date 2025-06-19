@@ -61,7 +61,6 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
         fdata,
         tdata,
         downwind_index,
-        dwd_defl,
         x,
         yz,
     ):
@@ -80,10 +79,6 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             The target point data
         downwind_index: int
             The index in the downwind order
-        dwd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets)
         x: numpy.ndarray
             The x values, shape: (n_states, n_targets)
         yz: numpy.ndarray
@@ -110,7 +105,6 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
         tdata,
         downwind_index,
         wake_coos,
-        delta_wd_defl,
         wake_deltas,
     ):
         """
@@ -133,22 +127,17 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
         wake_coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        delta_wd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets, n_tpoints)
         wake_deltas: dict
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
 
         """
-        dwd = delta_wd_defl[:, :, 0] if delta_wd_defl is not None else None
         x = wake_coos[:, :, 0, 0]
         yz = wake_coos[..., 1:3]
 
         wdeltas, st_sel = self.calc_wakes_x_yz(
-            algo, mdata, fdata, tdata, downwind_index, dwd, x, yz
+            algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
         if self.has_vector_wind_superp:

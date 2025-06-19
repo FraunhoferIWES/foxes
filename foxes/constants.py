@@ -146,6 +146,17 @@ BLOCK_CONVERGENCE = "block_convergence"
 """
 
 
+WDEFL_ROT_ANGLE = "wake_deflection_rotation_angle"
+"""Identifier for the wake deflection rotation angle data
+:group: foxes.constants
+"""
+
+WDEFL_DWS_FACTOR = "wake_deflection_deltaws_factor"
+"""Identifier for the wake deflection delta wind speed factor data
+:group: foxes.constants
+"""
+
+
 KAPPA = 0.41
 """ The Von Karman constant
 :group: foxes.constants

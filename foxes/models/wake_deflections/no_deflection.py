@@ -33,6 +33,9 @@ class NoDeflection(WakeDeflection):
         """
         Calculates the wake deflection.
 
+        This function optionally adds FC.WDEFL_ROT_ANGLE or
+        FC.WDEFL_DWS_FACTOR to the tdata.
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -57,12 +60,8 @@ class NoDeflection(WakeDeflection):
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
-        delta_wd_defl: numpy.ndarray or None
-            The wind direction change at the target points 
-            in radiants due to wake deflection, 
-            shape: (n_states, n_targets, n_tpoints)
 
         """
         
-        return coos, None
+        return coos
     
