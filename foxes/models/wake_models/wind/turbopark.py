@@ -63,7 +63,7 @@ class TurbOParkWake(GaussianWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition})
+        super().__init__(wind_superposition=superposition)
 
         self.sbeta_factor = sbeta_factor
         self.c1 = c1
@@ -76,7 +76,7 @@ class TurbOParkWake(GaussianWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += f"({self.wind_superposition}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
 

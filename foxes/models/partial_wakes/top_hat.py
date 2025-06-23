@@ -126,13 +126,11 @@ class PartialTopHat(PartialCentre):
             The wake deltas. Key: variable name,
             value: numpy.ndarray with shape
             (n_states, n_targets, n_tpoints, ...)
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         """
         self.check_wmodel(wmodel, error=True)
 
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index, wmodel)
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         x = wcoos[:, :, 0, 0]
         yz = wcoos[:, :, 0, 1:3]
         del wcoos
@@ -182,6 +180,22 @@ class PartialTopHat(PartialCentre):
 
                 weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
 
+                # run superposition models:
+                if wmodel.has_vector_wind_superp:
+                    clwe = {v: d[:, None] for v, d in clw.items()}
+                    wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, clwe, st_sel)
+                    duv = np.einsum('sd,s->sd', clwe[FV.UV][:, 0], weights)
+                    wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
+                        algo, mdata, fdata, tdata, downwind_index, st_sel, wake_deltas[FV.UV], duv[:, None]
+                    )
+                    del clwe
+            
+                elif FV.WD in wake_deltas:
+                    raise KeyError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition model in wake model '{wmodel.name}'")
+                
+                elif FV.UV in wake_deltas:
+                    raise AssertionError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition")
+                
                 for v, d in clw.items():
                     try:
                         superp = wmodel.superp[v]

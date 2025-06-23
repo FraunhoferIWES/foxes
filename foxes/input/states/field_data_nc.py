@@ -830,7 +830,7 @@ class FieldDataNC(States):
             if v != FV.WEIGHT and v not in out:
                 if v in self._dkys:
                     out[v] = data[..., self._dkys[v]]
-                else:
+                elif v in self.fixed_vars:
                     out[v] = np.full(
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )

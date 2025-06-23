@@ -22,7 +22,7 @@ from .geopandas_utils import read_shp_polygons as read_shp_polygons
 from .geopandas_utils import shp2geom2d as shp2geom2d
 
 from .load import import_module as import_module
-from .load import load_module as import_module
+from .load import load_module as load_module
 
 from .pandas_utils import PandasFileHelper as PandasFileHelper
 from .xarray_utils import write_nc as write_nc

@@ -31,7 +31,7 @@ class JensenWake(TopHatWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition}, induction=induction)
+        super().__init__(wind_superposition=superposition, induction=induction)
         self.wake_k = WakeK(**wake_k)
 
     def __repr__(self):
@@ -39,7 +39,7 @@ class JensenWake(TopHatWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += f"({self.wind_superposition}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
 

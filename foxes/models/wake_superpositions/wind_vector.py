@@ -86,6 +86,8 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             value: numpy.ndarray, now respecting has_uv flag
 
         """
+        if FV.AMB_UV not in tdata:
+            tdata[FV.AMB_UV] = wd2uv(tdata[FV.AMB_WD], tdata[FV.AMB_WS])
         if not FV.UV in wdeltas:
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
@@ -98,13 +100,10 @@ class WindVectorLinear(WindVectorWakeSuperposition):
                 upcast=False,
                 selection=st_sel,
             )
-            if FV.AMB_UV not in tdata:
-                tdata[FV.AMB_UV] = wd2uv(tdata[FV.AMB_WD], tdata[FV.AMB_WS])
             ws0 = tdata[FV.AMB_WS][st_sel]
             wd0 = tdata[FV.AMB_WD][st_sel]
             dws = scale * wdeltas.pop(FV.WS)
             dwd = wdeltas.pop(FV.WD, 0)
-            print("HERE WVEC",wd0.shape, dwd.shape, ws0.shape, dws.shape)
             wdeltas[FV.UV] = wd2uv(wd0 + dwd, ws0 + dws) - tdata[FV.AMB_UV][st_sel]
 
         return wdeltas
@@ -213,7 +212,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_delta_uv,
     ):
         """
@@ -228,9 +227,8 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: numpy.ndarray, optional
-            The ambient wind vector results at targets,
-            shape: (n_states, n_targets, n_tpoints, 2)
+        tdata: foxes.core.TData
+            The target point data
         wake_delta_uv: numpy.ndarray
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)
@@ -247,10 +245,11 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
-        wd0 = amb_results[FV.WD]
-        ws0 = amb_results[FV.WS]
-        uv = wd2uv(wd0, ws0) + wake_delta_uv
-        dwd = delta_wd(wd0, uv2wd(uv))
-        dws = np.linalg.norm(uv, axis=-1) - ws0
+        if FV.AMB_UV not in tdata:
+            tdata[FV.AMB_UV] = wd2uv(tdata[FV.AMB_WD], tdata[FV.AMB_WS])
+
+        uv = tdata[FV.AMB_UV] + wake_delta_uv
+        dwd = delta_wd(tdata[FV.AMB_WD], uv2wd(uv))
+        dws = np.linalg.norm(uv, axis=-1) - tdata[FV.AMB_WS]
 
         return dws, dwd        

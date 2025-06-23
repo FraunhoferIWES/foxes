@@ -116,7 +116,7 @@ class WakeModel(Model):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_deltas,
     ):
         """
@@ -132,10 +132,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        tdata: foxes.core.TData
+            The target point data
         wake_deltas: dict
             The wake deltas object at the selected target
             turbines. Key: variable str, value: numpy.ndarray
@@ -258,13 +256,14 @@ class SingleTurbineWakeModel(WakeModel):
             v: algo.mbook.wake_superpositions[s] for v, s in self.other_superpositions.items()
         }
 
-        self.vec_superp = algo.mbook.wake_superpositions[self.wind_superposition]
-        self.__has_vector_superp = isinstance(self.vec_superp, WindVectorWakeSuperposition)
-        if self.__has_vector_superp:
-            self._has_uv = True
-        else:
-            self.superp[FV.WS] = self.vec_superp
-            self.vec_superp = None
+        if self.wind_superposition is not None:
+            self.vec_superp = algo.mbook.wake_superpositions[self.wind_superposition]
+            self.__has_vector_superp = isinstance(self.vec_superp, WindVectorWakeSuperposition)
+            if self.__has_vector_superp:
+                self._has_uv = True
+            else:
+                self.superp[FV.WS] = self.vec_superp
+                self.vec_superp = None
             
         super().initialize(algo, verbosity, force)
 
@@ -273,7 +272,7 @@ class SingleTurbineWakeModel(WakeModel):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_deltas,
     ):
         """
@@ -289,10 +288,8 @@ class SingleTurbineWakeModel(WakeModel):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        tdata: foxes.core.TData
+            The target point data
         wake_deltas: dict
             The wake deltas object at the selected target
             turbines. Key: variable str, value: numpy.ndarray
@@ -303,16 +300,16 @@ class SingleTurbineWakeModel(WakeModel):
             if v != FV.UV:
                 try:
                     wake_deltas[v] = self.superp[v].calc_final_wake_delta(
-                        algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
+                        algo, mdata, fdata, tdata, v, wake_deltas[v]
                     )
                 except KeyError:
                     raise KeyError(f"Wake model '{self.name}': Variable '{v}' appears to be modified, missing superposition model")
 
         if self.has_vector_wind_superp:
             dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
-                    algo, mdata, fdata, amb_results, wake_deltas.pop(FV.UV)
+                    algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
                 )
-            
+
             wake_deltas[FV.WS] = dws
             wake_deltas[FV.WD] = dwd
             

@@ -197,10 +197,9 @@ class PartialAxiwake(PartialCentre):
         wdeltas, st_sel = wmodel.calc_wakes_x_r(
             algo, mdata, fdata, tdata, downwind_index, x, r
         )
-        print("HERE AXIW",{v:d.shape for v,d in tdata.items()}, {v:d.shape for v,d in  wdeltas.items()})
 
         # run superposition models:
-        if wmodel.has_vector_wind_superp:
+        if wmodel.has_vector_wind_superp and FV.WS in wdeltas:
             wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
             duv = np.einsum('snd,sn->sd', wdeltas[FV.UV], weights[st_sel])
             wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(

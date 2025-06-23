@@ -87,7 +87,6 @@ class PartialSegregated(PartialWakesModel):
         mdata,
         fdata,
         tdata,
-        amb_res,
         rpoint_weights,
         wake_deltas,
         wmodel,
@@ -109,11 +108,6 @@ class PartialSegregated(PartialWakesModel):
             The farm data
         tdata: foxes.core.Data
             The target point data
-        amb_res: dict
-            The ambient results at the target points
-            of all rotors. Key: variable name, value
-            np.ndarray of shape:
-            (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
@@ -138,25 +132,8 @@ class PartialSegregated(PartialWakesModel):
         gweights = tdata[FC.TWEIGHTS]
 
         wdel = {v: d[:, downwind_index, None].copy() for v, d in wake_deltas.items()}
-
-        if n_rotor_points == tdata.n_tpoints:
-            ares = {
-                v: d[:, downwind_index, None] if d.shape[1] > 1 else d[:, 0, None]
-                for v, d in amb_res.items()
-            }
-        else:
-            ares = {}
-            for v, d in amb_res.items():
-                ares[v] = np.zeros(
-                    (n_states, 1, tdata.n_tpoints), dtype=config.dtype_double
-                )
-                ares[v][:] = np.einsum(
-                    "sp,p->s",
-                    d[:, downwind_index] if d.shape[1] > 1 else d[:, 0],
-                    rpoint_weights,
-                )[:, None, None]
-
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
+        htdata = tdata.get_slice([FC.TURBINE], np.s_[downwind_index])
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, htdata, wdel)
 
         for v in wdel.keys():
             hdel = np.zeros((n_states, n_rotor_points), dtype=config.dtype_double)

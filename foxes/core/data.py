@@ -28,9 +28,9 @@ class Data(Dict):
 
     def __init__(
         self,
-        data,
-        dims,
-        loop_dims,
+        data={},
+        dims={},
+        loop_dims=[FC.STATE],
         states_i0=None,
         name="data",
     ):
@@ -240,9 +240,16 @@ class Data(Dict):
                 )
         else:
             states_i0 = None
-        return type(self)(
-            data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
-        )
+
+        cls = type(self)
+        if issubclass(cls, Data):
+            return cls(
+                data, dims, name=name, states_i0=states_i0
+            )
+        else:
+            return cls(
+                data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
+            )
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
@@ -360,7 +367,7 @@ class FData(Data):
             Arguments for the base class
 
         """
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE], name=name, **kwargs)
 
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
@@ -453,7 +460,7 @@ class TData(Data):
             Arguments for the base class
 
         """
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
 
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
@@ -636,7 +643,7 @@ class TData(Data):
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return cls(
-            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+            data=data, dims=dims, name=name, **kwargs
         )
 
     @classmethod
@@ -695,7 +702,7 @@ class TData(Data):
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
         return cls(
-            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
+            data=data, dims=dims, name=name, **kwargs
         )
 
     @classmethod

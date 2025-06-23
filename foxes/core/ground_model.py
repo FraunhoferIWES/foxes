@@ -91,7 +91,6 @@ class GroundModel(Model):
         mdata,
         fdata,
         tdata,
-        amb_res,
         rpoint_weights,
         wake_deltas,
         wmodel,
@@ -114,11 +113,6 @@ class GroundModel(Model):
             The farm data
         tdata: foxes.core.Data
             The target point data
-        amb_res: dict
-            The ambient results at the target points
-            of all rotors. Key: variable name, value
-            np.ndarray of shape:
-            (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
@@ -143,7 +137,6 @@ class GroundModel(Model):
             mdata,
             fdata,
             tdata,
-            amb_res,
             rpoint_weights,
             wake_deltas,
             wmodel,
@@ -226,7 +219,7 @@ class GroundModel(Model):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_deltas,
         wmodel,
     ):
@@ -243,17 +236,15 @@ class GroundModel(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        tdata: foxes.core.TData
+            The target point data
         wake_deltas: dict
             The wake deltas object at the selected target
             turbines. Key: variable str, value: numpy.ndarray
             with shape (n_states, n_targets, n_tpoints)
 
         """
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, amb_results, wake_deltas)
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, tdata, wake_deltas)
 
     @classmethod
     def new(cls, ground_type, *args, **kwargs):

@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.config import config
 from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -45,16 +46,15 @@ class VortexSheet(TurbineInductionModel):
             Calculate only the pre-rotor region
 
         """
-        super().__init__()
+        super().__init__(wind_superposition=superposition)
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
-        self._superp_name = superposition
 
     def __repr__(self):
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
-        return f"{type(self).__name__}({self._superp_name}, induction={iname})"
+        return f"{type(self).__name__}({self.wind_superposition}, induction={iname})"
 
     def sub_models(self):
         """
@@ -66,7 +66,7 @@ class VortexSheet(TurbineInductionModel):
             All sub models
 
         """
-        return [self._superp, self.induction]
+        return super().sub_models() + [self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -82,35 +82,44 @@ class VortexSheet(TurbineInductionModel):
             Overwrite existing data
 
         """
-        self._superp = algo.mbook.wake_superpositions[self._superp_name]
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
-        Initialize wake delta storage.
-
-        They are added on the fly to the wake_deltas dict.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
-            The evaluation point data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
         wake_deltas: dict
-            The wake deltas storage, add wake deltas
-            on the fly. Keys: Variable name str, for which the
-            wake delta applies, values: numpy.ndarray with
-            shape (n_states, n_points, ...)
+            Key: variable name, value: The zero filled
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
+        if self.has_uv:
+            duv = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2), 
+                dtype=config.dtype_double,
+            )
+            return {FV.UV: duv}
+        else:
+            dws = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                dtype=config.dtype_double,
+            )
+            return {FV.WS: dws}
 
     def contribute(
         self,
@@ -186,20 +195,37 @@ class VortexSheet(TurbineInductionModel):
         R_sel = D[sp_sel] / 2
         xi = r_sph_sel / R_sel
 
+        def add_wake(sp_sel, wake_deltas, blockage):
+            """adds to wake deltas"""
+            if self.has_vector_wind_superp:
+                wdeltas = {FV.WS: blockage}
+                self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, sp_sel)
+                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                    algo,
+                    mdata, 
+                    fdata, 
+                    tdata, 
+                    downwind_index, 
+                    sp_sel,
+                    wake_deltas[FV.UV],
+                    wdeltas.pop(FV.UV),
+                )
+            else:
+                self.superp[FV.WS].add_wake(
+                    algo,
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
+                    sp_sel,
+                    FV.WS,
+                    wake_deltas[FV.WS],
+                    blockage,
+                )    
+
         if np.any(sp_sel):
             blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
-
-            self._superp.add_wake(
-                algo,
-                mdata,
-                fdata,
-                tdata,
-                downwind_index,
-                sp_sel,
-                FV.WS,
-                wake_deltas[FV.WS],
-                -blockage,
-            )
+            add_wake(sp_sel, wake_deltas, -blockage)
 
         if not self.pre_rotor_only:
             sp_sel = (
@@ -211,51 +237,6 @@ class VortexSheet(TurbineInductionModel):
             xi = r_sph_sel / R_sel
             if np.any(sp_sel):
                 blockage = self.induction.ct2a(ct_sel) * (1 + -xi / np.sqrt(1 + xi**2))
-                self._superp.add_wake(
-                    algo,
-                    mdata,
-                    fdata,
-                    tdata,
-                    downwind_index,
-                    sp_sel,
-                    FV.WS,
-                    wake_deltas[FV.WS],
-                    blockage,
-                )
+                add_wake(sp_sel, wake_deltas, blockage)
 
         return wake_deltas
-
-    def finalize_wake_deltas(
-        self,
-        algo,
-        mdata,
-        fdata,
-        amb_results,
-        wake_deltas,
-    ):
-        """
-        Finalize the wake calculation.
-
-        Modifies wake_deltas on the fly.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-        wake_deltas: dict
-            The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_targets, n_tpoints)
-
-        """
-        wake_deltas[FV.WS] = self._superp.calc_final_wake_delta(
-            algo, mdata, fdata, FV.WS, amb_results[FV.WS], wake_deltas[FV.WS]
-        )

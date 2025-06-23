@@ -74,8 +74,8 @@ class WakeSuperposition(Model):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -90,11 +90,10 @@ class WakeSuperposition(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -139,7 +138,7 @@ class WindVectorWakeSuperposition(Model):
     :group: core
 
     """
-
+    
     @abstractmethod
     def add_wake_vector(
         self,
@@ -193,7 +192,7 @@ class WindVectorWakeSuperposition(Model):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_delta_uv,
     ):
         """
@@ -208,9 +207,8 @@ class WindVectorWakeSuperposition(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: numpy.ndarray, optional
-            The ambient wind vector results at targets,
-            shape: (n_states, n_targets, n_tpoints, 2)
+        tdata: foxes.core.TData
+            The target point data
         wake_delta_uv: numpy.ndarray
             The original wind vector wake deltas, shape:
             (n_states, n_targets, n_tpoints, 2)

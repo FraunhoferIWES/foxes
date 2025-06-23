@@ -72,7 +72,15 @@ class PartialWakesModel(Model):
         """
         pass
 
-    def get_initial_tdata(self, algo, mdata, fdata, amb_res):
+    def get_initial_tdata(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        amb_rotor_res, 
+        rotor_weights,
+        wmodels,
+    ):
         """
         Creates the initial target data object
 
@@ -84,10 +92,14 @@ class PartialWakesModel(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_res: dict
+        amb_rotor_res: dict
             The ambient results at rotor points,
             key: variable name, value: numpy.ndarray
             of shape: (n_states, n_turbines, n_rotor_points)
+        rotor_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
+        wmodels: list of foxes.core.WakeModel
+            The wake models for this partial wake model
 
         Returns
         -------
@@ -98,37 +110,51 @@ class PartialWakesModel(Model):
         tpoints, tweights = self.get_wake_points(algo, mdata, fdata)
         tdata = TData.from_tpoints(tpoints, tweights)
 
-        # translate WS, WD to UV data:
-        if FV.WD in amb_res or FV.WS in amb_res:
-            assert FV.WD in amb_res and FV.WS in amb_res, \
-                "Require both wind direction and speed in ambient results."
-            uv = wd2uv(amb_res.pop(FV.WD), amb_res.pop(FV.WS))
-            amb_res[FV.U] = uv[..., 0]
-            amb_res[FV.V] = uv[..., 1]
-
-        # map rotor point results onto target points:
-        for v, d in amb_res.items():
-            w = FV.var2amb.get(v, v)
-            print("PWKS ADDING",v,w,d.shape,(tdata.n_states, tdata.n_targets, tdata.n_tpoints), self.map_rotor_results)
-            tdata.add(
-                w, 
-                self.map_rotor_results(algo, mdata, fdata, tdata, v, d), 
-                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-            ) 
-        print("HERE PWKS",{v:d.shape for v, d in tdata.items()})
-        quit()
-        
-        # back translate UV to WD, WS:
-        if FV.AMB_U in tdata:
-            uv = np.stack([tdata.pop(FV.AMB_U), tdata.pop(FV.AMB_V)], axis=-1)
+        # map wind data:
+        if FV.WD in amb_rotor_res or FV.WS in amb_rotor_res:
+            assert FV.WD in amb_rotor_res and FV.WS in amb_rotor_res, \
+                "Require both wind direction and speed in ambient rotor results."
+            uv = wd2uv(amb_rotor_res[FV.WD], amb_rotor_res[FV.WS])
+            uv = np.stack(
+                [
+                    self.map_rotor_results(
+                        algo, mdata, fdata, tdata, FV.U, uv[..., 0], rotor_weights
+                    ),
+                    self.map_rotor_results(
+                        algo, mdata, fdata, tdata, FV.V, uv[..., 1], rotor_weights
+                    )
+                ], 
+                axis=-1,
+            )
             tdata.add(FV.AMB_WD, uv2wd(uv), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
             tdata.add(FV.AMB_WS, np.linalg.norm(uv, axis=-1), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
+            for wmodel in wmodels:
+                if wmodel.has_uv:
+                    tdata.add(FV.AMB_UV, uv, dims=(FC.STATE, FC.TARGET, FC.TPOINT, FC.XY))
+                    break
 
-        print("HERE PWKS",{v:d.shape for v, d in tdata.items()})
+        # map rotor point results onto target points:
+        for v, d in amb_rotor_res.items():
+            if v not in [FV.WS, FV.WD, FV.U, FV.V, FV.UV]:
+                w = FV.var2amb.get(v, v)
+                tdata.add(
+                    w, 
+                    self.map_rotor_results(algo, mdata, fdata, tdata, v, d, rotor_weights), 
+                    dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+                ) 
 
         return tdata
     
-    def map_rotor_results(self, algo, mdata, fdata, tdata, variable, rotor_res):
+    def map_rotor_results(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        tdata, 
+        variable, 
+        rotor_res,
+        rotor_weights,
+    ):
         """
         Map ambient rotor point results onto target points.
         
@@ -147,7 +173,9 @@ class PartialWakesModel(Model):
         rotor_res: numpy.ndarray
             The results at rotor points, shape: 
             (n_states, n_turbines, n_rotor_points)
-        
+        rotor_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
+
         Returns
         -------
         res: numpy.ndarray
@@ -160,8 +188,7 @@ class PartialWakesModel(Model):
             if rotor_res.shape[2] == 1:
                 q[:] = rotor_res
             else:
-                print("HERE PWKS", variable, rotor_res.shape, tdata[FC.TWEIGHTS].shape)
-                q[:] = np.einsum('str,r->st', rotor_res, tdata[FC.TWEIGHTS])[:, :, None]
+                q[:] = np.einsum('str,r->st', rotor_res, rotor_weights)[:, :, None]
             return q
         else:
             raise ValueError(f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results.")
@@ -228,8 +255,8 @@ class PartialWakesModel(Model):
             The wake model
             
         """
-        wcoos, delwd = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
-        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, delwd, wake_deltas)
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
     @abstractmethod
     def finalize_wakes(
@@ -238,7 +265,6 @@ class PartialWakesModel(Model):
         mdata,
         fdata,
         tdata,
-        amb_res,
         rpoint_weights,
         wake_deltas,
         wmodel,
@@ -260,11 +286,6 @@ class PartialWakesModel(Model):
             The farm data
         tdata: foxes.core.Data
             The target point data
-        amb_res: dict
-            The ambient results at the target points
-            of all rotors. Key: variable name, value
-            np.ndarray of shape:
-            (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict

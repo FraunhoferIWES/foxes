@@ -77,7 +77,7 @@ class Bastankhah2014(GaussianWakeModel):
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        return super().sub_models() + [self.wake_k, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """

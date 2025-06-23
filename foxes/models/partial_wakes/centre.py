@@ -1,7 +1,6 @@
 import numpy as np
 
 import foxes.variables as FV
-import foxes.constants as FC
 from foxes.config import config
 
 from .rotor_points import RotorPoints
@@ -41,7 +40,16 @@ class PartialCentre(RotorPoints):
         """
         return fdata[FV.TXYH][:, :, None], np.ones(1, dtype=config.dtype_double)
 
-    def map_rotor_results(self, algo, mdata, fdata, tdata, variable, rotor_res):
+    def map_rotor_results(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        tdata, 
+        variable, 
+        rotor_res,
+        rotor_weights,
+    ):
         """
         Map ambient rotor point results onto target points.
         
@@ -60,7 +68,9 @@ class PartialCentre(RotorPoints):
         rotor_res: numpy.ndarray
             The results at rotor points, shape: 
             (n_states, n_turbines, n_rotor_points)
-        
+        rotor_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
+
         Returns
         -------
         res: numpy.ndarray
@@ -72,7 +82,7 @@ class PartialCentre(RotorPoints):
             return np.einsum(
                 "str,r->st",
                 rotor_res,
-                tdata[FC.TWEIGHTS],
+                rotor_weights,
             )[:, :, None]
         else:
             return rotor_res

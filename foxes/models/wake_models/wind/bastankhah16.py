@@ -447,7 +447,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition})
+        super().__init__(wind_superposition=superposition)
 
         self.model = None
         self.alpha = alpha
@@ -460,7 +460,7 @@ class Bastankhah2016(DistSlicedWakeModel):
     def __repr__(self):
         iname = self.induction
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += f"({self.wind_superposition}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
 
@@ -474,7 +474,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             Names of all sub models
 
         """
-        return [self.wake_k, self.model]
+        return super().sub_models() + [self.wake_k, self.model]
 
     def initialize(self, algo, verbosity=0, force=False):
         """

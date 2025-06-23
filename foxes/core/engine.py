@@ -387,7 +387,6 @@ class Engine(ABC):
             mdata=mdata,
             s_states=s_states,
             callback=cb,
-            loop_dims=[FC.STATE],
             states_i0=i0_states,
             copy=True,
         )
@@ -411,7 +410,6 @@ class Engine(ABC):
                 s_states=s_states,
                 s_targets=s_targets,
                 callback=cb,
-                loop_dims=[FC.STATE, FC.TARGET],
                 states_i0=i0_states,
                 copy=True,
             )

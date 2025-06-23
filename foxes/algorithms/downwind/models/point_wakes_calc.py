@@ -1,4 +1,6 @@
-from foxes.core import PointDataModel
+from foxes.core import PointDataModel, TData
+import foxes.variables as FV
+import foxes.constants as FC
 
 
 class PointWakesCalculation(PointDataModel):
@@ -68,6 +70,8 @@ class PointWakesCalculation(PointDataModel):
         """
         super().initialize(algo, verbosity, force)
         self.pvars = algo.states.output_point_vars(algo)
+        if FV.WS in self.pvars and FV.WD in self.pvars and FV.UV not in self.pvars:
+            self.pvars += [FV.UV]
 
     def output_point_vars(self, algo):
         """
@@ -114,7 +118,7 @@ class PointWakesCalculation(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-        res = {}
+        
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
@@ -122,8 +126,8 @@ class PointWakesCalculation(PointDataModel):
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)
-
-            if True:#len(set(self.pvars).intersection(wdeltas.keys())):
+            
+            if len(set(self.pvars).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
@@ -135,18 +139,11 @@ class PointWakesCalculation(PointDataModel):
                         algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel
                     )
 
-                for v in self.pvars:
-                    if v not in res and v in tdata:
-                        res[v] = tdata[v].copy()
+                gmodel.finalize_point_wakes(algo, mdata, fdata, tdata, wdeltas, wmodel)
 
-                gmodel.finalize_point_wakes(algo, mdata, fdata, res, wdeltas, wmodel)
-
-                for v in res.keys():
+                for v in tdata.keys():
                     if v in wdeltas:
-                        res[v] += wdeltas[v]
-
-        for v in res.keys():
-            tdata[v] = res[v]
+                        tdata[v] += wdeltas[v]
 
         if self.emodels is not None:
             self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)

@@ -54,6 +54,12 @@ class JimenezDeflection(WakeDeflection):
         self.beta = beta
         self.step_x = step_x
 
+    def __repr__(self):
+        s = f"{type(self).__name__}("
+        s += f"rotate={self.rotate}, beta={self.beta}, step_x={self.step_x}"
+        s += ")"
+        return s
+    
     def calc_deflection(
         self,
         algo, 

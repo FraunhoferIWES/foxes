@@ -140,7 +140,7 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
-        if self.has_vector_wind_superp:
+        if self.has_vector_wind_superp and FV.WS in wdeltas:
             self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
             wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
                 algo,
