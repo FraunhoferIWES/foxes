@@ -6,6 +6,7 @@ import foxes.variables as FV
 from .model import Model
 from .wake_superposition import WindVectorWakeSuperposition
 
+
 class WakeModel(Model):
     """
     Abstract base class for wake models.
@@ -46,7 +47,25 @@ class WakeModel(Model):
         
         """
         return self._has_uv
-    
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if algo.wake_deflection.has_uv:
+            self._has_uv = True
+        super().initialize(algo, verbosity, force)
+
     @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
@@ -305,7 +324,8 @@ class SingleTurbineWakeModel(WakeModel):
                 except KeyError:
                     raise KeyError(f"Wake model '{self.name}': Variable '{v}' appears to be modified, missing superposition model")
 
-        if self.has_vector_wind_superp:
+        if FV.UV in wake_deltas:
+            assert self.has_vector_wind_superp, f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
             dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
                     algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
                 )

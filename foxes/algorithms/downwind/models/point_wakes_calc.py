@@ -70,8 +70,6 @@ class PointWakesCalculation(PointDataModel):
         """
         super().initialize(algo, verbosity, force)
         self.pvars = algo.states.output_point_vars(algo)
-        if FV.WS in self.pvars and FV.WD in self.pvars and FV.UV not in self.pvars:
-            self.pvars += [FV.UV]
 
     def output_point_vars(self, algo):
         """
@@ -122,12 +120,13 @@ class PointWakesCalculation(PointDataModel):
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
+        pvrs = self.pvars + [FV.UV]
         for wmodel in wmodels:
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)
             
-            if len(set(self.pvars).intersection(wdeltas.keys())):
+            if len(set(pvrs).intersection(wdeltas.keys())):
 
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):

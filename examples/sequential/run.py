@@ -25,7 +25,7 @@ if __name__ == "__main__":
         default=4,
     )
     parser.add_argument(
-        "-d", "--debug", help="Switch on wake debugging", action="store_true"
+        "--debug", help="Switch on wake debugging", action="store_true"
     )
     parser.add_argument(
         "-S",
@@ -83,6 +83,7 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
@@ -150,6 +151,7 @@ if __name__ == "__main__":
             rotor_model=args.rotor,
             wake_models=args.wakes,
             wake_frame=args.frame,
+            wake_deflection=args.deflection,
             partial_wakes=args.pwakes,
             mbook=mbook,
             verbosity=0,

@@ -10,6 +10,19 @@ class WakeDeflection(Model):
 
     """
 
+    @property
+    def has_uv(self):
+        """
+        This model uses wind vector data
+        
+        Returns
+        -------
+        hasuv: bool
+            Flag for wind vector data
+        
+        """
+        return False
+    
     def calc_deflection(
         self,
         algo, 

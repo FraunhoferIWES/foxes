@@ -181,21 +181,28 @@ class PartialTopHat(PartialCentre):
                 weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
 
                 # run superposition models:
-                if wmodel.has_vector_wind_superp:
-                    clwe = {v: d[:, None] for v, d in clw.items()}
-                    wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, clwe, st_sel)
-                    duv = np.einsum('sd,s->sd', clwe[FV.UV][:, 0], weights)
+                if wmodel.has_uv:
+                    assert wmodel.has_vector_wind_superp, f"{self.name}: Expecting vector wind superposition in wake model '{wmodel.name}', got '{wmodel.wind_superposition}'"
+                    if FV.UV in clw:
+                        duv = clw.pop(FV.UV)
+                    else:
+                        clwe = {v: d[:, None] for v, d in clw.items()}
+                        wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, clwe, st_sel)
+                        duv = np.einsum('sd,s->sd', clwe.pop(FV.UV)[:, 0], weights)
+                        del clwe, clw[FV.WS]
+                        if FV.WD in clw:
+                            del clw[FV.WD]
                     wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
-                        algo, mdata, fdata, tdata, downwind_index, st_sel, wake_deltas[FV.UV], duv[:, None]
+                        algo, 
+                        mdata, 
+                        fdata, 
+                        tdata, 
+                        downwind_index, 
+                        st_sel, 
+                        wake_deltas[FV.UV], 
+                        duv[:, None],
                     )
-                    del clwe
             
-                elif FV.WD in wake_deltas:
-                    raise KeyError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition model in wake model '{wmodel.name}'")
-                
-                elif FV.UV in wake_deltas:
-                    raise AssertionError(f"Model '{self.name}': Found variable '{FV.WD}' in wake deltas, but no wind vector superposition")
-                
                 for v, d in clw.items():
                     try:
                         superp = wmodel.superp[v]

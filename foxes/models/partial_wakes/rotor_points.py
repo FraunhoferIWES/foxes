@@ -1,6 +1,6 @@
 from foxes.core import PartialWakesModel
 import foxes.constants as FC
-import foxes.variables as FV
+
 
 class RotorPoints(PartialWakesModel):
     """

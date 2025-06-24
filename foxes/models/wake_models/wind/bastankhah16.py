@@ -621,4 +621,21 @@ class Bastankhah2016(DistSlicedWakeModel):
                     * np.exp(-0.5 * (z / sigma_z) ** 2)
                 )
 
+        # wake deflection causes wind vector rotation:
+        if FC.WDEFL_ROT_ANGLE in tdata:
+            dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
+            if FV.WD not in wdeltas:
+                wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
+                wdeltas[FV.WD][:] = dwd_defl[st_sel]
+            else:
+                wdeltas[FV.WD] += dwd_defl[st_sel]
+        
+        # wake deflection causes wind speed reduction:
+        if FC.WDEFL_DWS_FACTOR in tdata:
+            dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
+            if FV.WS not in wdeltas:
+                raise AssertionError(f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}")
+            else:
+                wdeltas[FV.WS] *= dws_defl[st_sel]
+                
         return wdeltas, st_sel

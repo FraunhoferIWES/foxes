@@ -131,6 +131,9 @@ dmypy.json
 # uv
 uv.lock
 
+# ruff
+*.ruff*
+
 # foxes
 dask-worker-space/
 veri_*

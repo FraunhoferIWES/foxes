@@ -109,19 +109,18 @@ class GaussianWakeModel(AxisymmetricWakeModel):
         
         # wake deflection causes wind vector rotation:
         if FC.WDEFL_ROT_ANGLE in tdata:
+            assert FV.WS in wdeltas, f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
             dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
             if FV.WD not in wdeltas:
-                wdeltas[FV.WD] = np.zeros_like(rsel)
+                wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
                 wdeltas[FV.WD][:] = dwd_defl[st_sel]
             else:
                 wdeltas[FV.WD] += dwd_defl[st_sel]
         
         # wake deflection causes wind speed reduction:
         if FC.WDEFL_DWS_FACTOR in tdata:
+            assert FV.WS in wdeltas, f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
             dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
-            if FV.WS not in wdeltas:
-                raise AssertionError(f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}")
-            else:
-                wdeltas[FV.WS] *= dws_defl[st_sel]
+            wdeltas[FV.WS] *= dws_defl[st_sel]
         
         return wdeltas, st_sel

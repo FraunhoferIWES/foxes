@@ -103,7 +103,6 @@ class FarmOrder(WakeFrame):
         fdata,
         tdata,
         downwind_index,
-        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -121,8 +120,6 @@ class FarmOrder(WakeFrame):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         Returns
         -------
@@ -131,7 +128,7 @@ class FarmOrder(WakeFrame):
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        return self.base_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index, wmodel)
+        return self.base_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

@@ -187,7 +187,7 @@ class Bastankhah2014(GaussianWakeModel):
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -0.9999)
 
         # case no targets:
         else:

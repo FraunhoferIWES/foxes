@@ -207,7 +207,8 @@ class Rathmann(TurbineInductionModel):
         
         def add_wake(sp_sel, wake_deltas, blockage):
             """adds to wake deltas"""
-            if self.has_vector_wind_superp:
+            if self.has_uv:
+                assert self.has_vector_wind_superp, f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
                 wdeltas = {FV.WS: blockage}
                 self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, sp_sel)
                 wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(

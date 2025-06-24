@@ -157,7 +157,7 @@ class SeqDynamicWakes(FarmOrder):
         """
         return super().calc_order(algo, mdata, fdata)
 
-    def _get_yaw_alpha(self, algo, mdata, fdata, tdata, N, downwind_index, wmodel):
+    def _get_yaw_alpha(self, algo, mdata, fdata, tdata, N, downwind_index):
         """ Helper function for computing wind vector rotation angles
         at the current trace points due to yawed rotor """
 
@@ -191,9 +191,9 @@ class SeqDynamicWakes(FarmOrder):
                 
                 # calculate sigma:
                 # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
-                a = wmodel.induction.ct2a(ct[None, sel])[0]
-                beta = (1 - a) / (1 - 2 * a)
-                delta = 2 * (k * x[sel] / D + wmodel.sbeta_factor * np.sqrt(beta))
+                #a = wmodel.induction.ct2a(ct[None, sel])[0]
+                #beta = (1 - a) / (1 - 2 * a)
+                delta = 2 * (k * x[sel] / D + 0.1 * np.sqrt(beta))
                 print("HERE SEQDW",k.shape,beta.shape,delta.shape)
                 del beta, a
 
@@ -206,7 +206,7 @@ class SeqDynamicWakes(FarmOrder):
 
 
             #a = self.induction.ct2a(ct)
-            #beta = 0.1#(1 - a) / (1 - 2 * a)
+            beta = 0.1#(1 - a) / (1 - 2 * a)
             alpha[sel] = -180 / np.pi * np.cos(gamma)**2 * np.sin(gamma) * ct/2 / delta**2
 
         return alpha
@@ -218,7 +218,6 @@ class SeqDynamicWakes(FarmOrder):
         fdata,
         tdata,
         downwind_index,
-        wmodel,
     ):
         """
         Calculate wake coordinates of rotor points.
@@ -236,8 +235,6 @@ class SeqDynamicWakes(FarmOrder):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wmodel: foxes.core.WakeModel
-            The wake model
 
         Returns
         -------
@@ -281,7 +278,7 @@ class SeqDynamicWakes(FarmOrder):
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             wd = res[FV.WD][0, :, 0]
             if FV.YAWM in fdata:
-                wd += self._get_yaw_alpha(algo, mdata, fdata, hpdata, N, downwind_index, wmodel)
+                wd += self._get_yaw_alpha(algo, mdata, fdata, hpdata, N, downwind_index)
             self._traces_v[:N, downwind_index, :2] = wd2uv(
                 wd, res[FV.WS][0, :, 0]
             )

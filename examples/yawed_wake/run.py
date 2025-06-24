@@ -47,6 +47,9 @@ if __name__ == "__main__":
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
@@ -97,7 +100,8 @@ if __name__ == "__main__":
     )
 
     # create algorithm
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
         farm,
         states=states,
         rotor_model=args.rotor,
@@ -121,7 +125,7 @@ if __name__ == "__main__":
         print("\nHorizontal flow figure output:")
         o = foxes.output.FlowPlots2D(algo, farm_results)
         g = o.gen_states_fig_xy(
-            args.var, resolution=10, xmin=-100, xmax=3000, rotor_color="red"
+            args.var, resolution=10, xmin=-500, xmax=3000, rotor_color="red"
         )
         fig = next(g)
         plt.show()
