@@ -67,6 +67,49 @@ class WakeDeflection(Model):
         """
         raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for wake frame '{wframe.name}'")
 
+    def get_yaw_alpha_seq(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        tdata, 
+        downwind_index,
+        x,
+    ):
+        """ 
+        Computes sequential wind vector rotation angles.
+
+        Wind vector rotation angles are computed at the 
+        current trace points due to a yawed rotor
+        for sequential runs.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwind order
+        x: numpy.ndarray
+            The distance from the wake causing rotor
+            for the first n_times subsequent time steps,
+            shape: (n_times,)
+        
+        Returns
+        -------
+        alpha: numpy.ndarray
+            The delta WD result at the x locations,
+            shape: (n_times,)
+        
+        """
+        raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for sequential runs")
+    
     @classmethod
     def new(cls, wframe_type, *args, **kwargs):
         """

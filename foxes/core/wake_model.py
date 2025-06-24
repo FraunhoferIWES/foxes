@@ -22,6 +22,19 @@ class WakeModel(Model):
         self._has_uv = False
 
     @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return False
+    
+    @property
     def affects_downwind(self):
         """
         Flag for downwind or upwind effects
@@ -62,7 +75,7 @@ class WakeModel(Model):
             Overwrite existing data
 
         """
-        if algo.wake_deflection.has_uv:
+        if self.affects_ws and algo.wake_deflection.has_uv:
             self._has_uv = True
         super().initialize(algo, verbosity, force)
 

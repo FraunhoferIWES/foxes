@@ -464,6 +464,19 @@ class Bastankhah2016(DistSlicedWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -637,5 +650,5 @@ class Bastankhah2016(DistSlicedWakeModel):
                 raise AssertionError(f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}")
             else:
                 wdeltas[FV.WS] *= dws_defl[st_sel]
-                
+
         return wdeltas, st_sel

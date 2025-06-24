@@ -69,6 +69,19 @@ class SelfSimilar(TurbineInductionModel):
         )
         return f"{type(self).__name__}({self.wind_superposition}, induction={iname}, gamma={self.gamma})"
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -220,7 +233,8 @@ class SelfSimilar(TurbineInductionModel):
 
         def add_wake(sp_sel, wake_deltas, blockage):
             """adds to wake deltas"""
-            if self.has_vector_wind_superp:
+            if self.has_uv:
+                assert self.has_vector_wind_superp, f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
                 wdeltas = {FV.WS: blockage}
                 self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, sp_sel)
                 wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(

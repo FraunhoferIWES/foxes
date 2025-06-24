@@ -157,60 +157,6 @@ class SeqDynamicWakes(FarmOrder):
         """
         return super().calc_order(algo, mdata, fdata)
 
-    def _get_yaw_alpha(self, algo, mdata, fdata, tdata, N, downwind_index):
-        """ Helper function for computing wind vector rotation angles
-        at the current trace points due to yawed rotor """
-
-        def _get_data(var):
-            data = algo.farm_results_downwind[var].to_numpy()[:N, downwind_index]
-            data[-1] = fdata[var][0, downwind_index]
-            return data
-
-        gamma = _get_data(FV.YAWM)
-        ct = _get_data(FV.CT)
-        alpha = np.zeros_like(gamma)
-
-        sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8)
-        if np.any(sel):
-
-            x = self._traces_l[:N, downwind_index]
-            D = _get_data(FV.D)[sel]
-            if isinstance(wmodel, TopHatWakeModel):
-                delta = 2 * wmodel.calc_wake_radius(
-                    algo, mdata, fdata, tdata, downwind_index, x[None, :], ct[None, :]
-                )[0, sel] / D
-            elif hasattr(wmodel, "wake_k"):
-                k = wmodel.wake_k(
-                    FC.STATE_TARGET,
-                    algo=algo,
-                    fdata=fdata,
-                    tdata=tdata,
-                    downwind_index=downwind_index,
-                    upcast=True,
-                )[0, sel]
-                
-                # calculate sigma:
-                # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
-                #a = wmodel.induction.ct2a(ct[None, sel])[0]
-                #beta = (1 - a) / (1 - 2 * a)
-                delta = 2 * (k * x[sel] / D + 0.1 * np.sqrt(beta))
-                print("HERE SEQDW",k.shape,beta.shape,delta.shape)
-                del beta, a
-
-            gamma = gamma[sel] * np.pi / 180
-            ct = ct[sel]
-            #x = self._traces_l[:N, downwind_index][sel]
-            #D = D[sel]
-
-            #D = _get_data(FV.D)[sel]
-
-
-            #a = self.induction.ct2a(ct)
-            beta = 0.1#(1 - a) / (1 - 2 * a)
-            alpha[sel] = -180 / np.pi * np.cos(gamma)**2 * np.sin(gamma) * ct/2 / delta**2
-
-        return alpha
-
     def get_wake_coos(
         self,
         algo,
@@ -278,7 +224,12 @@ class SeqDynamicWakes(FarmOrder):
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
             wd = res[FV.WD][0, :, 0]
             if FV.YAWM in fdata:
-                wd += self._get_yaw_alpha(algo, mdata, fdata, hpdata, N, downwind_index)
+                wddef = algo.wake_deflection.get_yaw_alpha_seq(
+                    algo, mdata, fdata, hpdata, downwind_index, 
+                    self._traces_l[:N, downwind_index])
+                if wddef is not None:
+                    wd += wddef
+                del wddef
             self._traces_v[:N, downwind_index, :2] = wd2uv(
                 wd, res[FV.WS][0, :, 0]
             )

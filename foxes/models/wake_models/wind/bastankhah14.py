@@ -67,6 +67,19 @@ class Bastankhah2014(GaussianWakeModel):
         s += self.wake_k.repr() + ")"
         return s
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
+    
     def sub_models(self):
         """
         List of all sub-models

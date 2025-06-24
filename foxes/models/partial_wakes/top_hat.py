@@ -181,7 +181,7 @@ class PartialTopHat(PartialCentre):
                 weights = calc_area(D / 2, wr, R) / (np.pi * (D / 2) ** 2)
 
                 # run superposition models:
-                if wmodel.has_uv:
+                if wmodel.affects_ws and wmodel.has_uv:
                     assert wmodel.has_vector_wind_superp, f"{self.name}: Expecting vector wind superposition in wake model '{wmodel.name}', got '{wmodel.wind_superposition}'"
                     if FV.UV in clw:
                         duv = clw.pop(FV.UV)

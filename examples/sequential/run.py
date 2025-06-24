@@ -83,7 +83,10 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
+    parser.add_argument(
+        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+    )
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
@@ -110,18 +113,24 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
-    # set turbines in yaw
+    # optionally set turbines in yaw:
     N = 3
-    yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
-    yawm[:, :N] = 30
-    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
-    mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+    if args.yawm is None:
+        ymodels = []
+        fixv = {}
+    else:
+        yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
+        yawm[:, :N] = args.yawm
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+        ymodels = ["set_yawm"]
+        fixv = {FV.WD: 270}
 
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        fixed_vars={FV.WD:270},
-        var2col={FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
+        fixed_vars=fixv,
+        var2col={FV.WD: "WD", FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
         states_sel=range(240, 240 + args.n_states),
     )
 
@@ -131,7 +140,7 @@ if __name__ == "__main__":
         xy_base=np.array([0.0, 0.0]),
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
-        turbine_models=["set_yawm"] + args.tmodels + [ttype.name],
+        turbine_models=ymodels + args.tmodels + [ttype.name],
     )
 
     if not args.nofig and args.show_layout:

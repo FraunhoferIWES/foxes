@@ -140,9 +140,11 @@ class DistSlicedWakeModel(SingleTurbineWakeModel):
             algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
-        if self.has_uv and FV.WS in wdeltas:
+        if self.affects_ws and self.has_uv:
             assert self.has_vector_wind_superp, f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
-            self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
+            if not FV.UV in wdeltas:
+                self.vec_superp.wdeltas_ws2uv(
+                    algo, fdata, tdata, downwind_index, wdeltas, st_sel)
             wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
                 algo,
                 mdata, 

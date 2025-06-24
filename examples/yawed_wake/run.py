@@ -34,10 +34,10 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear_ka02", "CrespoHernandez_quadratic_ka04"],
+        default=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic_ambka04"],
         nargs="+",
     )
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Bastankhah2016")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"

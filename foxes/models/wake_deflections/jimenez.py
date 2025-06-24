@@ -3,6 +3,7 @@ import numpy as np
 
 from foxes.config import config
 from foxes.core.wake_deflection import WakeDeflection
+from foxes.algorithms import Sequential
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -71,7 +72,7 @@ class JimenezDeflection(WakeDeflection):
             Flag for wind vector data
         
         """
-        return True
+        return self.rotate is not None and self.rotate
     
     def calc_deflection(
         self,
@@ -204,3 +205,70 @@ class JimenezDeflection(WakeDeflection):
 
         return coos
     
+    def get_yaw_alpha_seq(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        tdata, 
+        downwind_index,
+        x,
+    ):
+        """ 
+        Computes sequential wind vector rotation angles.
+
+        Wind vector rotation angles are computed at the 
+        current trace points due to a yawed rotor
+        for sequential runs.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        downwind_index: int
+            The index of the wake causing turbine
+            in the downwind order
+        x: numpy.ndarray
+            The distance from the wake causing rotor
+            for the first n_times subsequent time steps,
+            shape: (n_times,)
+        
+        Returns
+        -------
+        alpha: numpy.ndarray
+            The delta WD result at the x locations,
+            shape: (n_times,)
+        
+        """
+        assert isinstance(algo, Sequential), f"Wake deflection '{self.name}' requires Sequential algorithm, got '{type(algo).__name__}'"
+
+        n_times = len(x)
+        def _get_data(var):
+            data = algo.farm_results_downwind[var].to_numpy()[:n_times, downwind_index]
+            data[-1] = fdata[var][0, downwind_index]
+            return data
+
+        gamma = _get_data(FV.YAWM)
+        ct = _get_data(FV.CT)
+        alpha = np.zeros_like(gamma)
+
+        sel = (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        if np.any(sel):
+
+            D = _get_data(FV.D)[sel]
+            gamma = np.deg2rad(gamma[sel])
+            ct = ct[sel]
+
+            alpha[sel] = np.rad2deg(
+                -np.cos(gamma)**2 * np.sin(gamma) * ct/2 / (
+                    1 + self.beta * x / D
+                )**2
+            )
+
+        return alpha
