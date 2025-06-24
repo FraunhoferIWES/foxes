@@ -81,6 +81,10 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="dyn_wakes")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
+    parser.add_argument(
+        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+    )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
@@ -120,6 +124,19 @@ if __name__ == "__main__":
         max_length_km=8
     )
 
+    # optionally set turbines in yaw:
+    N = int(args.n_turbines**0.5)
+    if args.yawm is None:
+        ymodels = []
+        fixv = {}
+    else:
+        yawm = np.zeros((1, N*N), dtype=np.float64)
+        yawm[:, :N] = args.yawm
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+        ymodels = ["set_yawm"]
+        fixv = {FV.WD: 270}
+
     if args.background0:
         States = foxes.input.states.Timeseries
         kwargs = {}
@@ -146,13 +163,12 @@ if __name__ == "__main__":
     )
 
     farm = foxes.WindFarm()
-    N = int(args.n_turbines**0.5)
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base=np.array([0.0, 0.0]),
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
+        turbine_models=ymodels + args.tmodels + [ttype.name],
     )
 
     if not args.nofig and args.show_layout:
@@ -174,6 +190,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
+        wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
         max_it=args.max_it,
@@ -261,6 +278,7 @@ if __name__ == "__main__":
             title=None,
             animated=True,
             precalc=True,
+            rotor_color="red",
         )
         next(ofg)
 

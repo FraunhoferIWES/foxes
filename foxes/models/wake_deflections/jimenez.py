@@ -147,7 +147,7 @@ class JimenezDeflection(WakeDeflection):
             upcast=True,
         )
 
-        sel = (x > 1e-8) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
+        sel = (x > 1e-8) & (x < 1e10) & (ct > 1e-8) & (np.abs(gamma) > 1e-8)
         delwd = np.zeros_like(coos[..., 0])
         n_sel = np.sum(sel)
         if n_sel > 0:

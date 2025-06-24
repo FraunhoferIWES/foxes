@@ -181,6 +181,7 @@ def get_fig(
         hax.invert_yaxis()
 
     # add rotor position:
+    imr = []
     if show_rotor_dict is not None:
         D = show_rotor_dict["D"]
         coords = np.zeros(shape=(2, len(D)))  # array to hold change to turbine coords
@@ -211,12 +212,13 @@ def get_fig(
             turb_x2 = x[t] - coords[0, t]
             turb_y1 = y[t] + coords[1, t]
             turb_y2 = y[t] - coords[1, t]
-            hax.plot(
+            imr += hax.plot(
                 [turb_x1, turb_x2],
                 [turb_y1, turb_y2],
                 color=c,
                 linestyle="-",
                 linewidth=1,
+                animated=animated,
             )
 
     if add_bar:
@@ -233,7 +235,7 @@ def get_fig(
     if ret_state:
         out.append(si)
     if ret_im:
-        out.append([i for i in [im, qv, ttl] if i is not None])
+        out.append([i for i in [im, qv, ttl] if i is not None] + imr)
     if ret_state or ret_im:
         out = tuple(out)
 
