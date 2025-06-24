@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from foxes.utils import new_instance
 from .model import Model
 
@@ -23,6 +25,7 @@ class WakeDeflection(Model):
         """
         return False
     
+    @abstractmethod
     def calc_deflection(
         self,
         algo, 
@@ -30,7 +33,6 @@ class WakeDeflection(Model):
         fdata, 
         tdata, 
         downwind_index, 
-        wframe, 
         coos,
     ):
         """
@@ -52,8 +54,6 @@ class WakeDeflection(Model):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wframe: foxes.core.WakeFrame
-            The wake frame
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)
@@ -65,7 +65,7 @@ class WakeDeflection(Model):
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for wake frame '{wframe.name}'")
+        pass
 
     def get_yaw_alpha_seq(
         self, 

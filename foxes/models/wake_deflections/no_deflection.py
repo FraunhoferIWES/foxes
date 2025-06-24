@@ -27,7 +27,6 @@ class NoDeflection(WakeDeflection):
         fdata, 
         tdata, 
         downwind_index, 
-        wframe, 
         coos,
     ):
         """
@@ -49,8 +48,6 @@ class NoDeflection(WakeDeflection):
         downwind_index: int
             The index of the wake causing turbine
             in the downwind order
-        wframe: foxes.core.WakeFrame
-            The wake frame
         coos: numpy.ndarray
             The wake frame coordinates of the evaluation
             points, shape: (n_states, n_targets, n_tpoints, 3)

@@ -117,7 +117,7 @@ class RotorWD(WakeFrame):
         coos = np.einsum("stpd,sad->stpa", delta, nax)
 
         return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, self, coos)
+            algo, mdata, fdata, tdata, downwind_index, coos)
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

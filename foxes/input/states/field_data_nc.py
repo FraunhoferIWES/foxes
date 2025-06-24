@@ -459,6 +459,11 @@ class FieldDataNC(States):
                 self.__inds = pd.to_datetime(
                     self.__inds, format=self.time_format
                 ).to_numpy()
+        
+        # given data is already Dataset:
+        else:
+            self.__inds = self.data_source[self.states_coord].to_numpy()
+            self._N = len(self.__inds)
 
         # ensure WD and WS get the first two slots of data:
         self._dkys = {}

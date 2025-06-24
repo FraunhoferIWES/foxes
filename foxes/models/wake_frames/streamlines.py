@@ -242,8 +242,11 @@ class Streamlines2D(WakeFrame):
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        return self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
+        coos = self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
 
+        return algo.wake_deflection.calc_deflection(
+            algo, mdata, fdata, tdata, downwind_index, coos)
+    
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given
