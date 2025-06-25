@@ -1,15 +1,5 @@
 
-import numpy as np
-
-from foxes.config import config
 from foxes.core.wake_deflection import WakeDeflection
-from foxes.core.wake_model import WakeK
-from foxes.models.wake_models.wind.bastankhah16 import (
-    Bastankhah2016Model,
-    Bastankhah2016,
-)
-import foxes.constants as FC
-import foxes.variables as FV
 
 
 class NoDeflection(WakeDeflection):

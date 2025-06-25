@@ -10,6 +10,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
 * :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
+* :ref:`Wake deflections`: Bend the wakes for rotors with yaw misalignment. This effect is added to the wake frame path.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
 * :ref:`Ground models`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
@@ -170,6 +171,10 @@ model parameters from that instance.  For other wake models, the parameters can 
 of the :ref:`YawedWakes<foxes.models.wake_frames.YawedWakes>` class with the desired constructor call, or the defaults will 
 be taken. The `k` wake growth parameter is either specified by the rules described above in the :ref:`Wake models` section, or it will be
 picked automatically from the first wake model in the wake model list given to the algorithm.
+
+Wake deflections
+----------------
+For rotors with yaw misalignment, the wake is bent on a curfed 
 
 Partial wakes
 -------------

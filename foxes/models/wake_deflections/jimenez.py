@@ -1,7 +1,6 @@
 
 import numpy as np
 
-from foxes.config import config
 from foxes.core.wake_deflection import WakeDeflection
 from foxes.algorithms import Sequential
 import foxes.constants as FC
