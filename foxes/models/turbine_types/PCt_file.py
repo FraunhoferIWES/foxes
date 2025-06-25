@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper

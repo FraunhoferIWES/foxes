@@ -5,6 +5,7 @@ from foxes.utils import wd2uv
 from foxes.core.data import TData
 from foxes.config import config
 from foxes.algorithms.sequential import Sequential
+from foxes.models.wake_models import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -23,12 +24,20 @@ class SeqDynamicWakes(FarmOrder):
     dt_min: float, optional
         The delta t value in minutes,
         if not from timeseries data
+    induction: foxes.core.AxialInductionModel
+        The induction model
 
     :group: models.wake_frames.sequential
 
     """
 
-    def __init__(self, cl_ipars={}, dt_min=None, **kwargs):
+    def __init__(
+            self, 
+            cl_ipars={}, 
+            dt_min=None, 
+            induction="Madsen",
+            **kwargs
+        ):
         """
         Constructor.
 
@@ -40,6 +49,8 @@ class SeqDynamicWakes(FarmOrder):
         dt_min: float, optional
             The delta t value in minutes,
             if not from timeseries data
+        induction: foxes.core.AxialInductionModel or str
+            The induction model
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -47,10 +58,26 @@ class SeqDynamicWakes(FarmOrder):
         super().__init__(**kwargs)
         self.cl_ipars = cl_ipars
         self.dt_min = dt_min
+        self.induction = induction
 
     def __repr__(self):
-        return f"{type(self).__name__}(dt_min={self.dt_min})"
+        iname = (
+            self.induction if isinstance(self.induction, str) else self.induction.name
+        )
+        return f"{type(self).__name__}(dt_min={self.dt_min}, induction={iname})"
 
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            All sub models
+
+        """
+        return [self.induction]
+    
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -63,7 +90,11 @@ class SeqDynamicWakes(FarmOrder):
             The verbosity level, 0 = silent
 
         """
+        if isinstance(self.induction, str):
+            self.induction = algo.mbook.axial_induction[self.induction]
+
         super().initialize(algo, verbosity)
+
         if not isinstance(algo, Sequential):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Sequential.__name__}"
@@ -183,7 +214,7 @@ class SeqDynamicWakes(FarmOrder):
                     dxyz, axis=-1
                 )
                 del dxyz
-
+                
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
             svrs = algo.states.output_point_vars(algo)
@@ -191,10 +222,18 @@ class SeqDynamicWakes(FarmOrder):
                 points=self._traces_p[None, :N, downwind_index], variables=svrs
             )
             res = algo.states.calculate(algo, mdata, fdata, hpdata)
+            wd = res[FV.WD][0, :, 0]
+            if FV.YAWM in fdata:
+                wddef = algo.wake_deflection.get_yaw_alpha_seq(
+                    algo, mdata, fdata, hpdata, downwind_index, 
+                    self._traces_l[:N, downwind_index])
+                if wddef is not None:
+                    wd += wddef
+                del wddef
             self._traces_v[:N, downwind_index, :2] = wd2uv(
-                res[FV.WD][0, :, 0], res[FV.WS][0, :, 0]
+                wd, res[FV.WS][0, :, 0]
             )
-            del hpdata, res, svrs
+            del hpdata, res, svrs, wd
 
         # find nearest wake point:
         dists = cdist(points[0], self._traces_p[:N, downwind_index])

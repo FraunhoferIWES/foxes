@@ -166,12 +166,12 @@ def _get_WeibullSectors(
     :group: input.yaml.windio
     """
     if (
-        FV.WEIBULL_A in fields and 
-        FV.WEIBULL_k in fields and 
-        "sector_probability" in fields and
-        len(dims[FV.WEIBULL_A]) == 1 and
-        len(dims[FV.WEIBULL_k]) == 1 and
-        len(dims["sector_probability"]) == 1
+        FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+        and len(dims[FV.WEIBULL_A]) == 1
+        and len(dims[FV.WEIBULL_k]) == 1
+        and len(dims["sector_probability"]) == 1
     ):
         if verbosity > 2:
             print("        selecting class 'WeibullSectors'")
@@ -186,7 +186,7 @@ def _get_WeibullSectors(
                 fix[v] = d
             elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
-        fix.update({v: d for v, d in fixval.items() if v not in data}) 
+        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         if FV.WD in coords:
             data[FV.WD] = coords[FV.WD]

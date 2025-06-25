@@ -19,6 +19,7 @@ This package contains all concrete model classes.
         :ref:`foxes.models.vertical_profiles`    Vertical profiles, for atmospheric input.
         :ref:`foxes.models.axial_induction`      Axial induction models, computing axial induction factors.
         :ref:`foxes.models.wake_frames`          Wake frames, defining the wake propagation.
+        :ref:`foxes.models.wake_deflections`     Wake deflection models, bending the wake path
         :ref:`foxes.models.wake_models`          Wake models, computing variable changes due to wakes.
         :ref:`foxes.models.wake_superpositions`  Wake superposition models, evaluating multiple wakes deltas.
         =======================================  ============================================================
@@ -100,6 +101,13 @@ The :ref:`Wake frames`:. They define the curves along which the wakes
 propagate.
 
     .. python-apigen-group:: models.wake_frames
+
+foxes.models.wake_deflections
+-----------------------------
+The :ref:`Wake deflections`:. These models bend the wake, e.g. in the
+presence of yawed rotors.
+
+    .. python-apigen-group:: models.wake_deflections
 
 foxes.models.wake_models
 ------------------------

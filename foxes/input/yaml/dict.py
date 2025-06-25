@@ -97,7 +97,7 @@ def read_dict(
     else:
         assert (
             algo is None
-        ), f"Cannot handle both the algo and the states argument, please drop one"
+        ), "Cannot handle both the algo and the states argument, please drop one"
 
     # create model book:
     if mbook is None:
@@ -121,7 +121,7 @@ def read_dict(
     else:
         assert (
             algo is None
-        ), f"Cannot handle both the algo and the mbook argument, please drop one"
+        ), "Cannot handle both the algo and the mbook argument, please drop one"
 
     # create farm:
     if farm is None:
@@ -143,7 +143,7 @@ def read_dict(
     else:
         assert (
             algo is None
-        ), f"Cannot handle both the algo and the farm argument, please drop one"
+        ), "Cannot handle both the algo and the farm argument, please drop one"
 
     # create engine:
     engine = None

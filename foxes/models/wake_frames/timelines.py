@@ -92,7 +92,7 @@ class Timelines(WakeFrame):
         del mdict, mdims, data
 
         # prepare fdata:
-        fdata = FData({}, {}, loop_dims=[FC.STATE])
+        fdata = FData()
 
         # prepare tdata:
         n_states = states.size()
@@ -430,7 +430,10 @@ class Timelines(WakeFrame):
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
+        return algo.wake_deflection.calc_deflection(
+            algo, mdata, fdata, tdata, downwind_index, 
+            wcoos.reshape(n_states, n_targets, n_tpoints, 3)
+        )
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """

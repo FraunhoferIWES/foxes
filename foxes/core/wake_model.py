@@ -1,11 +1,10 @@
 from abc import abstractmethod
-import numpy as np
 
 from foxes.utils import new_instance
 import foxes.variables as FV
-import foxes.constants as FC
 
 from .model import Model
+from .wake_superposition import WindVectorWakeSuperposition
 
 
 class WakeModel(Model):
@@ -15,7 +14,26 @@ class WakeModel(Model):
     :group: core
 
     """
+    def __init__(self):
+        """
+        Constructor.
+        """
+        super().__init__()
+        self._has_uv = False
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return False
+    
     @property
     def affects_downwind(self):
         """
@@ -29,7 +47,39 @@ class WakeModel(Model):
 
         """
         return True
+    
+    @property
+    def has_uv(self):
+        """
+        This model uses wind vector data
+        
+        Returns
+        -------
+        hasuv: bool
+            Flag for wind vector data
+        
+        """
+        return self._has_uv
 
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        if self.affects_ws and algo.wake_deflection.has_uv:
+            self._has_uv = True
+        super().initialize(algo, verbosity, force)
+
+    @abstractmethod
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
         Creates new empty wake delta arrays.
@@ -52,7 +102,7 @@ class WakeModel(Model):
             wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
+        pass
 
     @abstractmethod
     def contribute(
@@ -98,7 +148,7 @@ class WakeModel(Model):
         algo,
         mdata,
         fdata,
-        amb_results,
+        tdata,
         wake_deltas,
     ):
         """
@@ -114,10 +164,8 @@ class WakeModel(Model):
             The model data
         fdata: foxes.core.FData
             The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        tdata: foxes.core.TData
+            The target point data
         wake_deltas: dict
             The wake deltas object at the selected target
             turbines. Key: variable str, value: numpy.ndarray
@@ -144,7 +192,162 @@ class WakeModel(Model):
         return new_instance(cls, wmodel_type, *args, **kwargs)
 
 
-class TurbineInductionModel(WakeModel):
+class SingleTurbineWakeModel(WakeModel):
+    """
+    Abstract base class for wake models that represent
+    a single turbine wake
+
+    Single turbine wake models depend on superposition models.
+
+    Attributes
+    ----------
+    wind_superposition: str
+        The wind superposition model name (vector or compenent model),
+        will be looked up in model book
+    other_superpositions: dict
+        The superpositions for other than (ws, wd) variables. 
+        Key: variable name str, value: The wake superposition 
+        model name, will be looked up in model book
+    vec_superp: foxes.core.WindVectorWakeSuperposition or None
+        The wind vector wake superposition model
+    superp: dict
+        The superposition dict, key: variable name str,
+        value: `foxes.core.WakeSuperposition`
+
+    :group: models.wake_models
+
+    """
+
+    def __init__(self, wind_superposition=None, other_superpositions={}):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        wind_superposition: str, optional
+            The wind superposition model name (vector or compenent model),
+            will be looked up in model book
+        other_superpositions: dict
+            The superpositions for other than (ws, wd) variables. 
+            Key: variable name str, value: The wake superposition 
+            model name, will be looked up in model book
+
+        """
+        super().__init__()
+        self.wind_superposition = wind_superposition
+        self.other_superpositions = other_superpositions
+        self.vec_superp = None
+        self.superp = {}
+
+        for v in [FV.WS, FV.WD]:
+            assert v not in other_superpositions, f"Wake model '{self.name}': Found variable '{v}' among 'other_superposition' keyword, use 'wind_superposition' instead"
+
+        self.__has_vector_superp = False
+
+    @property
+    def has_vector_wind_superp(self):
+        """
+        This model uses a wind vector superposition
+        
+        Returns
+        -------
+        hasv: bool
+            Flag for wind vector superposition
+        
+        """
+        return self.__has_vector_superp
+    
+    def sub_models(self):
+        """
+        List of all sub-models
+
+        Returns
+        -------
+        smdls: list of foxes.core.Model
+            Names of all sub models
+
+        """
+        w = [self.vec_superp] if self.vec_superp is not None else []
+        return w + list(self.superp.values())
+
+    def initialize(self, algo, verbosity=0, force=False):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
+
+        """
+        self.superp = {
+            v: algo.mbook.wake_superpositions[s] for v, s in self.other_superpositions.items()
+        }
+
+        if self.wind_superposition is not None:
+            self.vec_superp = algo.mbook.wake_superpositions[self.wind_superposition]
+            self.__has_vector_superp = isinstance(self.vec_superp, WindVectorWakeSuperposition)
+            if self.__has_vector_superp:
+                self._has_uv = True
+            else:
+                self.superp[FV.WS] = self.vec_superp
+                self.vec_superp = None
+            
+        super().initialize(algo, verbosity, force)
+
+    def finalize_wake_deltas(
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        wake_deltas,
+    ):
+        """
+        Finalize the wake calculation.
+
+        Modifies wake_deltas on the fly.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        wake_deltas: dict
+            The wake deltas object at the selected target
+            turbines. Key: variable str, value: numpy.ndarray
+            with shape (n_states, n_targets, n_tpoints)
+
+        """
+        for v in wake_deltas.keys():
+            if v != FV.UV:
+                try:
+                    wake_deltas[v] = self.superp[v].calc_final_wake_delta(
+                        algo, mdata, fdata, tdata, v, wake_deltas[v]
+                    )
+                except KeyError:
+                    raise KeyError(f"Wake model '{self.name}': Variable '{v}' appears to be modified, missing superposition model")
+
+        if FV.UV in wake_deltas:
+            assert self.has_vector_wind_superp, f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
+            dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
+                    algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
+                )
+
+            wake_deltas[FV.WS] = dws
+            wake_deltas[FV.WD] = dwd
+            
+
+class TurbineInductionModel(SingleTurbineWakeModel):
     """
     Abstract base class for turbine induction models.
 

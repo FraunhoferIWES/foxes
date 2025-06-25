@@ -131,8 +131,8 @@ class WSProduct(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -147,11 +147,10 @@ class WSProduct(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -164,6 +163,7 @@ class WSProduct(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = amb_results * (wake_delta - 1)
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)

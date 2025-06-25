@@ -39,13 +39,52 @@ class RotorPoints(PartialWakesModel):
             algo.get_from_chunk_store(FC.ROTOR_WEIGHTS, mdata=mdata),
         )
 
+    def map_rotor_results(
+        self, 
+        algo, 
+        mdata, 
+        fdata, 
+        tdata, 
+        variable, 
+        rotor_res,
+        rotor_weights,
+    ):
+        """
+        Map ambient rotor point results onto target points.
+        
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+        variable: str
+            The variable name to map
+        rotor_res: numpy.ndarray
+            The results at rotor points, shape: 
+            (n_states, n_turbines, n_rotor_points)
+        rotor_weights: numpy.ndarray
+            The rotor point weights, shape: (n_rotor_points,)
+
+        Returns
+        -------
+        res: numpy.ndarray
+            The mapped results at target points, shape:
+            (n_states, n_targets, n_tpoints)
+
+        """
+        return rotor_res
+    
     def finalize_wakes(
         self,
         algo,
         mdata,
         fdata,
         tdata,
-        amb_res,
         rpoint_weights,
         wake_deltas,
         wmodel,
@@ -67,11 +106,6 @@ class RotorPoints(PartialWakesModel):
             The farm data
         tdata: foxes.core.Data
             The target point data
-        amb_res: dict
-            The ambient results at the target points
-            of all rotors. Key: variable name, value
-            np.ndarray of shape:
-            (n_states, n_turbines, n_rotor_points)
         rpoint_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
         wake_deltas: dict
@@ -91,14 +125,10 @@ class RotorPoints(PartialWakesModel):
             of shape (n_states, n_rotor_points)
 
         """
-        ares = {
-            v: d[:, downwind_index, None] if d.shape[1] > 1 else d[:, 0, None]
-            for v, d in amb_res.items()
-        }
         wdel = {
             v: d[:, downwind_index, None].copy() if d.shape[1] > 1 else d[:, 0, None]
             for v, d in wake_deltas.items()
         }
-        wmodel.finalize_wake_deltas(algo, mdata, fdata, ares, wdel)
+        wmodel.finalize_wake_deltas(algo, mdata, fdata, tdata, wdel)
 
         return {v: d[:, 0] for v, d in wdel.items()}

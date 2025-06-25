@@ -459,6 +459,11 @@ class FieldDataNC(States):
                 self.__inds = pd.to_datetime(
                     self.__inds, format=self.time_format
                 ).to_numpy()
+        
+        # given data is already Dataset:
+        else:
+            self.__inds = self.data_source[self.states_coord].to_numpy()
+            self._N = len(self.__inds)
 
         # ensure WD and WS get the first two slots of data:
         self._dkys = {}
@@ -830,7 +835,7 @@ class FieldDataNC(States):
             if v != FV.WEIGHT and v not in out:
                 if v in self._dkys:
                     out[v] = data[..., self._dkys[v]]
-                else:
+                elif v in self.fixed_vars:
                     out[v] = np.full(
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )

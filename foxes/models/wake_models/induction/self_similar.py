@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.config import config
 from foxes.core import TurbineInductionModel
 import foxes.variables as FV
 import foxes.constants as FC
@@ -9,9 +10,6 @@ class SelfSimilar(TurbineInductionModel):
     """
     The self-similar induction wake model
     from Troldborg and Meyer Forsting
-
-    The individual wake effects are superposed linearly,
-    without invoking a wake superposition model.
 
     Notes
     -----
@@ -60,18 +58,30 @@ class SelfSimilar(TurbineInductionModel):
             Calculate only the pre-rotor region
 
         """
-        super().__init__()
+        super().__init__(wind_superposition=superposition)
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
         self.gamma = gamma
-        self._superp_name = superposition
 
     def __repr__(self):
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
-        return f"{type(self).__name__}({self._superp_name}, induction={iname}, gamma={self.gamma})"
+        return f"{type(self).__name__}({self.wind_superposition}, induction={iname}, gamma={self.gamma})"
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -82,7 +92,7 @@ class SelfSimilar(TurbineInductionModel):
             All sub models
 
         """
-        return [self._superp, self.induction]
+        return super().sub_models() + [self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -98,7 +108,6 @@ class SelfSimilar(TurbineInductionModel):
             Overwrite existing data
 
         """
-        self._superp = algo.mbook.wake_superpositions[self._superp_name]
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
@@ -122,10 +131,21 @@ class SelfSimilar(TurbineInductionModel):
         -------
         wake_deltas: dict
             Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        return {FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0])}
+        if self.has_uv:
+            duv = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2), 
+                dtype=config.dtype_double,
+            )
+            return {FV.UV: duv}
+        else:
+            dws = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                dtype=config.dtype_double,
+            )
+            return {FV.WS: dws}
 
     def _mu(self, x_R):
         """Helper function: define mu (eqn 11 from [1])"""
@@ -211,35 +231,24 @@ class SelfSimilar(TurbineInductionModel):
         x_R = np.round(wake_coos[..., 0] / R, 12)
         r_R = np.linalg.norm(wake_coos[..., 1:3], axis=-1) / R
 
-        # select values
-        sp_sel = (ct > 1e-8) & (x_R <= 0)  # upstream
-        if np.any(sp_sel):
-            # velocity eqn 10 from [1]
-            xr = x_R[sp_sel]
-            blockage = self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
-
-            self._superp.add_wake(
-                algo,
-                mdata,
-                fdata,
-                tdata,
-                downwind_index,
-                sp_sel,
-                FV.WS,
-                wake_deltas[FV.WS],
-                -blockage,
-            )
-
-        # set area behind to mirrored value EXCEPT for area behind turbine
-        if not self.pre_rotor_only:
-            sp_sel = (ct > 1e-8) & (x_R > 0) & (r_R > 1)
-            if np.any(sp_sel):
-                # velocity eqn 10 from [1]
-                xr = x_R[sp_sel]
-                blockage = self._a(ct[sp_sel], -xr) * self._rad_fn(-xr, r_R[sp_sel])
-
-                # wdelta[sp_sel] += blockage
-                self._superp.add_wake(
+        def add_wake(sp_sel, wake_deltas, blockage):
+            """adds to wake deltas"""
+            if self.has_uv:
+                assert self.has_vector_wind_superp, f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
+                wdeltas = {FV.WS: blockage}
+                self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, sp_sel)
+                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                    algo,
+                    mdata, 
+                    fdata, 
+                    tdata, 
+                    downwind_index, 
+                    sp_sel,
+                    wake_deltas[FV.UV],
+                    wdeltas.pop(FV.UV),
+                )
+            else:
+                self.superp[FV.WS].add_wake(
                     algo,
                     mdata,
                     fdata,
@@ -249,41 +258,25 @@ class SelfSimilar(TurbineInductionModel):
                     FV.WS,
                     wake_deltas[FV.WS],
                     blockage,
-                )
+                )    
+
+        # select values
+        sp_sel = (ct > 1e-8) & (x_R <= 0)  # upstream
+        if np.any(sp_sel):
+            # velocity eqn 10 from [1]
+            xr = x_R[sp_sel]
+            blockage = self._a(ct[sp_sel], xr) * self._rad_fn(xr, r_R[sp_sel])
+
+            add_wake(sp_sel, wake_deltas, -blockage)
+
+        # set area behind to mirrored value EXCEPT for area behind turbine
+        if not self.pre_rotor_only:
+            sp_sel = (ct > 1e-8) & (x_R > 0) & (r_R > 1)
+            if np.any(sp_sel):
+                # velocity eqn 10 from [1]
+                xr = x_R[sp_sel]
+                blockage = self._a(ct[sp_sel], -xr) * self._rad_fn(-xr, r_R[sp_sel])
+
+                add_wake(sp_sel, wake_deltas, blockage)
 
         return wake_deltas
-
-    def finalize_wake_deltas(
-        self,
-        algo,
-        mdata,
-        fdata,
-        amb_results,
-        wake_deltas,
-    ):
-        """
-        Finalize the wake calculation.
-
-        Modifies wake_deltas on the fly.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-        wake_deltas: dict
-            The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_targets, n_tpoints)
-
-        """
-        wake_deltas[FV.WS] = self._superp.calc_final_wake_delta(
-            algo, mdata, fdata, FV.WS, amb_results[FV.WS], wake_deltas[FV.WS]
-        )

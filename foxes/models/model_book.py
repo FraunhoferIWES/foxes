@@ -17,6 +17,7 @@ from foxes.core import (
     AxialInductionModel,
     TurbineInductionModel,
     GroundModel,
+    WakeDeflection,
 )
 
 
@@ -62,6 +63,9 @@ class ModelBook:
     ground_models: foxes.utils.FDict
         The ground models. Keys: model name str,
         values: foxes.core.GroundModel
+    wake_deflections: foxes.utils.FDict
+        The wake deflection models. Keys: model name str,
+        values: foxes.core.WakeDeflection
     sources: foxes.utils.FDict
         All sources dict
     base_classes: foxes.utils.FDict
@@ -231,14 +235,42 @@ class ModelBook:
             hints={"n2": "(Number of points in square grid)"},
         )
 
+
+        self.wake_deflections = FDict(
+            name="wake_deflections",
+            no_deflection=fm.wake_deflections.NoDeflection(),
+            Bastankhah2016=fm.wake_deflections.Bastankhah2016Deflection(),
+            Jimenez=fm.wake_deflections.JimenezDeflection(rotate=True),
+            JimenezProj=fm.wake_deflections.JimenezDeflection(rotate=False),
+            JimenezPath=fm.wake_deflections.JimenezDeflection(rotate=None),
+        )
+
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "Jimenez_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=True),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "JimenezProj_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=False),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "JimenezPath_b<beta>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=None),
+        )
+
         self.wake_frames = FDict(
             name="wake_frames",
-            rotor_wd=fm.wake_frames.RotorWD(var_wd=FV.WD),
+            rotor_wd=fm.wake_frames.RotorWD(),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
-        )
-        self.wake_frames.add_k_factory(
-            fm.wake_frames.YawedWakes,
-            "yawed_[wake_k]",
         )
         self.wake_frames.add_factory(
             fm.wake_frames.Streamlines2D,
@@ -256,6 +288,7 @@ class ModelBook:
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()
         self.wake_frames["dyn_wakes"] = fm.wake_frames.DynamicWakes()
         self.wake_frames["seq_dyn_wakes"] = fm.wake_frames.SeqDynamicWakes()
+        
 
         def _todt(x):
             if x[-1] == "s":
@@ -336,6 +369,8 @@ class ModelBook:
             ti_cubic=fm.wake_superpositions.TIPow(pow=3, superp_to_amb="quadratic"),
             ti_quartic=fm.wake_superpositions.TIPow(pow=4, superp_to_amb="quadratic"),
             ti_max=fm.wake_superpositions.TIMax(superp_to_amb="quadratic"),
+            vector=fm.wake_superpositions.WindVectorLinear(scale_amb=False),
+            vector_amb=fm.wake_superpositions.WindVectorLinear(scale_amb=True),
         )
 
         self.axial_induction = FDict(name="induction_models")
@@ -348,76 +383,76 @@ class ModelBook:
             fm.wake_models.wind.JensenWake,
             "Jensen_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.2, induction="Madsen"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014B_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.2, induction="Betz"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.25, induction="Madsen"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah025B_<superposition>_[wake_k]",
             kwargs=dict(sbeta_factor=0.25, induction="Betz"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016_<superposition>_[wake_k]",
             kwargs=dict(induction="Madsen"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2016,
             "Bastankhah2016B_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOPark_<superposition>_[wake_k]",
             kwargs=dict(induction="Madsen"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOParkB_<superposition>_[wake_k]",
             kwargs=dict(induction="Betz"),
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWakeIX,
             "TurbOParkIX_<superposition>_[wake_k]_dx<dx>",
-            superposition=lambda s: f"ws_{s}",
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
             dx=lambda x: float(x),
             hints={
-                "superposition": "(Superposition, e.g. linear for ws_linear)",
+                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)",
                 "dx": "(Integration step in m)",
             },
         )
@@ -460,39 +495,37 @@ class ModelBook:
             hints={"superposition": "(Superposition, e.g. linear for ti_linear)"},
         )
 
-        self.wake_models[f"RHB"] = fm.wake_models.induction.RankineHalfBody()
+        self.wake_models["RHB"] = fm.wake_models.induction.RankineHalfBody()
 
-        self.wake_models[f"VortexSheet"] = fm.wake_models.induction.VortexSheet()
+        self.wake_models["VortexSheet"] = fm.wake_models.induction.VortexSheet()
         self.wake_models.add_factory(
             fm.wake_models.induction.VortexSheet,
             "VortexSheet_<superposition>",
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
-        self.wake_models[f"Rathmann"] = fm.wake_models.induction.Rathmann()
+        self.wake_models["Rathmann"] = fm.wake_models.induction.Rathmann()
         self.wake_models.add_factory(
             fm.wake_models.induction.Rathmann,
             "Rathmann_<superposition>",
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
-        self.wake_models[f"SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
-        self.wake_models[f"SelfSimilar2020"] = (
-            fm.wake_models.induction.SelfSimilar2020()
-        )
+        self.wake_models["SelfSimilar"] = fm.wake_models.induction.SelfSimilar()
+        self.wake_models["SelfSimilar2020"] = fm.wake_models.induction.SelfSimilar2020()
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar,
             "SelfSimilar_<superposition>",
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
         self.wake_models.add_factory(
             fm.wake_models.induction.SelfSimilar2020,
             "SelfSimilar2020_<superposition>",
-            superposition=lambda s: f"ws_{s}",
-            hints={"superposition": "(Superposition, e.g. linear for ws_linear)"},
+            superposition=lambda s: f"ws_{s}" if f"ws_{s}" in self.wake_superpositions else s,
+            hints={"superposition": "(Superposition, e.g. linear for ws_linear, or vector)"},
         )
 
         self.ground_models = FDict(name="ground_models")
@@ -517,6 +550,7 @@ class ModelBook:
             farm_controllers=self.farm_controllers,
             partial_wakes=self.partial_wakes,
             wake_frames=self.wake_frames,
+            wake_deflections=self.wake_deflections,
             wake_superpositions=self.wake_superpositions,
             wake_models=self.wake_models,
             axial_induction=self.axial_induction,
@@ -532,6 +566,7 @@ class ModelBook:
             farm_controllers=FarmController,
             partial_wakes=PartialWakesModel,
             wake_frames=WakeFrame,
+            wake_deflections=WakeDeflection,
             wake_superpositions=WakeSuperposition,
             wake_models=WakeModel,
             axial_induction=AxialInductionModel,
@@ -563,16 +598,19 @@ class ModelBook:
             if subset is None or k in subset:
                 print(k)
                 print("-" * len(k))
-                if len(ms):
-                    for mname in sorted(list(ms.keys())):
-                        if search is None or search in mname:
-                            print(f"{mname}: {ms[mname]}")
-                    if isinstance(ms, FDict):
-                        for f in ms.factories:
-                            if search is None or search in f.name_template:
+                any = False
+                for mname in sorted(list(ms.keys())):
+                    if search is None or search in mname:
+                        print(f"{mname}: {ms[mname]}")
+                        any = True
+                if isinstance(ms, FDict):
+                    for f in ms.factories:
+                        if search is None or search in f.name_template:
+                            if any:
                                 print()
-                                print(f)
-                else:
+                            print(f)
+                            any = True
+                if not any:
                     print("(none)")
                 print()
 

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from xarray import Dataset
 
-from foxes.core import MData, FData, TData
+from .data import MData, FData, TData
 from foxes.utils import new_instance
 from foxes.config import config
 import foxes.constants as FC
@@ -73,7 +73,7 @@ class Engine(ABC):
 
     def __enter__(self):
         if self.__entered:
-            raise ValueError(f"Enter called for already entered engine")
+            raise ValueError("Enter called for already entered engine")
         self.__entered = True
         if not self.initialized:
             self.initialize()
@@ -81,7 +81,7 @@ class Engine(ABC):
 
     def __exit__(self, *exit_args):
         if not self.__entered:
-            raise ValueError(f"Exit called for not entered engine")
+            raise ValueError("Exit called for not entered engine")
         self.__entered = False
         if self.initialized:
             self.finalize(*exit_args)
@@ -387,7 +387,6 @@ class Engine(ABC):
             mdata=mdata,
             s_states=s_states,
             callback=cb,
-            loop_dims=[FC.STATE],
             states_i0=i0_states,
             copy=True,
         )
@@ -411,7 +410,6 @@ class Engine(ABC):
                 s_states=s_states,
                 s_targets=s_targets,
                 callback=cb,
-                loop_dims=[FC.STATE, FC.TARGET],
                 states_i0=i0_states,
                 copy=True,
             )

@@ -2,7 +2,6 @@ from abc import abstractmethod
 
 from .point_data_model import PointDataModel, PointDataModelList
 from foxes.utils import new_instance
-import foxes.variables as FV
 import foxes.constants as FC
 
 
@@ -114,7 +113,7 @@ class States(PointDataModel):
         elif isinstance(s, ExtendedStates):
             if s.states is not self:
                 raise ValueError(
-                    f"Cannot add extended states, since not based on same states"
+                    "Cannot add extended states, since not based on same states"
                 )
             return ExtendedStates(self, s.pmodels.models[1:])
         else:
@@ -268,7 +267,7 @@ class ExtendedStates(States):
         elif isinstance(m, ExtendedStates):
             if m.states is not self.states:
                 raise ValueError(
-                    f"Cannot add extended states, since not based on same states"
+                    "Cannot add extended states, since not based on same states"
                 )
             return ExtendedStates(self.states, models + m.pmodels.models[1:])
         else:

@@ -25,7 +25,7 @@ if __name__ == "__main__":
         default=4,
     )
     parser.add_argument(
-        "-d", "--debug", help="Switch on wake debugging", action="store_true"
+        "--debug", help="Switch on wake debugging", action="store_true"
     )
     parser.add_argument(
         "-S",
@@ -83,6 +83,10 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
+    parser.add_argument(
+        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+    )
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
     )
@@ -109,21 +113,32 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
+    # optionally set turbines in yaw:
+    N = 3
+    if args.yawm is None:
+        ymodels = []
+    else:
+        yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
+        yawm[:, :N] = args.yawm
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+        ymodels = ["set_yawm"]
+
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        var2col={FV.WS: "WS", FV.WD: "WD", FV.TI: "TI", FV.RHO: "RHO"},
+        #fixed_vars={FV.WD: 270},
+        var2col={FV.WD: "WD", FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
         states_sel=range(240, 240 + args.n_states),
     )
 
     farm = foxes.WindFarm()
-    N = 3
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base=np.array([0.0, 0.0]),
         step_vectors=np.array([[1000.0, 0], [0, 800.0]]),
         steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
+        turbine_models=ymodels + args.tmodels + [ttype.name],
     )
 
     if not args.nofig and args.show_layout:
@@ -143,6 +158,7 @@ if __name__ == "__main__":
             rotor_model=args.rotor,
             wake_models=args.wakes,
             wake_frame=args.frame,
+            wake_deflection=args.deflection,
             partial_wakes=args.pwakes,
             mbook=mbook,
             verbosity=0,
@@ -157,14 +173,15 @@ if __name__ == "__main__":
                 levels=None,
                 quiver_pars=dict(scale=0.01),
                 quiver_n=307,
-                xmin=-5000,
-                ymin=-5000,
-                xmax=7000,
-                ymax=7000,
+                xmin=-1000,
+                ymin=-1000,
+                xmax=4000,
+                ymax=3000,
                 vmin=0,
                 vmax=args.max_variable,
                 title=None,
                 animated=True,
+                rotor_color="red",
             )
             algo.plugins.append(anigen)
 

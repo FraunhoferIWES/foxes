@@ -34,18 +34,22 @@ if __name__ == "__main__":
         "-w",
         "--wakes",
         help="The wake models",
-        default=["Bastankhah2016_linear_ka02", "CrespoHernandez_quadratic_ka04"],
+        default=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic_ambka04"],
         nargs="+",
     )
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
     )
-    parser.add_argument("-f", "--frame", help="The wake frame", default="yawed")
+    parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
     )
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
+    parser.add_argument(
+        "-it", "--iterative", help="Use iterative algorithm", action="store_true"
+    )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
@@ -96,12 +100,14 @@ if __name__ == "__main__":
     )
 
     # create algorithm
-    algo = foxes.algorithms.Downwind(
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
         farm,
         states=states,
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.frame,
+        wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
         engine=args.engine,
@@ -119,7 +125,7 @@ if __name__ == "__main__":
         print("\nHorizontal flow figure output:")
         o = foxes.output.FlowPlots2D(algo, farm_results)
         g = o.gen_states_fig_xy(
-            args.var, resolution=10, xmin=-100, xmax=3000, rotor_color="red"
+            args.var, resolution=10, xmin=-500, xmax=3000, rotor_color="red"
         )
         fig = next(g)
         plt.show()
@@ -130,7 +136,7 @@ if __name__ == "__main__":
         o = foxes.output.FlowPlots2D(algo, farm_results)
         g = o.gen_states_fig_yz(
             args.var,
-            resolution=10,
+            resolution=5,
             x=750,
             ymin=-200,
             ymax=200,

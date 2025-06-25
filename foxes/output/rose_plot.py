@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from xarray import Dataset
-from matplotlib.cm import ScalarMappable
 from matplotlib.projections.polar import PolarAxes
 from matplotlib.lines import Line2D
 
@@ -58,7 +57,7 @@ class RosePlotOutput(Output):
             self.results = farm_results
             self._rtype = FC.TURBINE
         else:
-            raise KeyError(f"Require either farm_results or point_results")
+            raise KeyError("Require either farm_results or point_results")
 
     @classmethod
     def get_data_info(cls, dname):

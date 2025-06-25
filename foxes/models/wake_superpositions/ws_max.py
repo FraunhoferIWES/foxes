@@ -143,8 +143,8 @@ class WSMax(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -159,11 +159,10 @@ class WSMax(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -176,6 +175,7 @@ class WSMax(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = -wake_delta
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)
@@ -302,8 +302,8 @@ class WSMaxLocal(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -318,11 +318,10 @@ class WSMaxLocal(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -335,6 +334,7 @@ class WSMaxLocal(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = -wake_delta * amb_results
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)

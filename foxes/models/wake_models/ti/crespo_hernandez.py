@@ -98,7 +98,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.TI: superposition}, induction=induction)
+        super().__init__(other_superpositions={FV.TI: superposition}, induction=induction)
 
         self.a_near = a_near
         self.a_far = a_far
@@ -115,7 +115,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}, "
+        s += f"({self.other_superpositions[FV.TI]}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
 
@@ -129,7 +129,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             All sub models
 
         """
-        return [self.wake_k]
+        return super().sub_models() + [self.wake_k]
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """

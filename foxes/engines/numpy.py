@@ -1,6 +1,5 @@
 from tqdm import tqdm
 from xarray import Dataset
-from tqdm import tqdm
 
 from foxes.core import Engine
 import foxes.constants as FC

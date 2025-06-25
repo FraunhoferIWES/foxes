@@ -22,7 +22,7 @@ class Bastankhah2014(GaussianWakeModel):
     ----------
     sbeta_factor: float
         Factor multiplying sbeta
-    induction: foxes.core.AxialInductionModel or str
+    induction: foxes.core.AxialInductionModel
         The induction model
     wake_k: foxes.core.WakeK
         Handler for the wake growth parameter k
@@ -31,7 +31,13 @@ class Bastankhah2014(GaussianWakeModel):
 
     """
 
-    def __init__(self, superposition, sbeta_factor=0.2, induction="Madsen", **wake_k):
+    def __init__(
+        self, 
+        superposition,
+        sbeta_factor=0.2, 
+        induction="Madsen", 
+        **wake_k,
+    ):
         """
         Constructor.
 
@@ -47,8 +53,7 @@ class Bastankhah2014(GaussianWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition})
-
+        super().__init__(wind_superposition=superposition)
         self.sbeta_factor = sbeta_factor
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
@@ -58,10 +63,23 @@ class Bastankhah2014(GaussianWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += f"({self.wind_superposition}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
 
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
+    
     def sub_models(self):
         """
         List of all sub-models
@@ -72,7 +90,7 @@ class Bastankhah2014(GaussianWakeModel):
             All sub models
 
         """
-        return [self.wake_k, self.induction]
+        return super().sub_models() + [self.wake_k, self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -182,7 +200,7 @@ class Bastankhah2014(GaussianWakeModel):
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
-            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -1)
+            ampld = np.maximum(-2 * self.induction.ct2a(ct_eff), -0.9999)
 
         # case no targets:
         else:

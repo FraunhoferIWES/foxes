@@ -8,9 +8,6 @@ class SelfSimilar2020(SelfSimilar):
     The self-similar 2020 induction wake model
     from Troldborg and Meyer Forsting
 
-    The individual wake effects are superposed linearly,
-    without invoking a wake superposition model.
-
     Notes
     -----
     References:

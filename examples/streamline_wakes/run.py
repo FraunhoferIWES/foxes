@@ -25,7 +25,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
-    parser.add_argument("-sc", "--scheduler", help="The scheduler choice", default=None)
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
+    parser.add_argument(
+        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+    )
     parser.add_argument(
         "-w",
         "--wakes",
@@ -45,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-lm",
         "--load_mode",
-        help="Do load mode",
+        help="Dataset load mode",
         default="preload",
     )
     parser.add_argument("-e", "--engine", help="The engine", default="process")
@@ -75,6 +78,17 @@ if __name__ == "__main__":
     ttype = foxes.models.turbine_types.PCtFile(args.turbine_file)
     mbook.turbine_types[ttype.name] = ttype
 
+    # optionally set turbines in yaw:
+    N = int(args.n_turbines**0.5)
+    if args.yawm is None:
+        ymodels = []
+    else:
+        yawm = np.zeros((1, N*N), dtype=np.float64)
+        yawm[:, :N] = args.yawm
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
+        ymodels = ["set_yawm"]
+
     states = foxes.input.states.FieldDataNC(
         args.file_pattern,
         states_coord="state",
@@ -90,13 +104,12 @@ if __name__ == "__main__":
     )
 
     farm = foxes.WindFarm()
-    N = int(args.n_turbines**0.5)
     foxes.input.farm_layout.add_grid(
         farm,
         xy_base=np.array([500.0, 500.0]),
         step_vectors=np.array([[500.0, 0], [0, 500.0]]),
         steps=(N, N),
-        turbine_models=args.tmodels + [ttype.name],
+        turbine_models=ymodels + args.tmodels + [ttype.name],
     )
 
     algo = foxes.algorithms.Downwind(
@@ -105,6 +118,7 @@ if __name__ == "__main__":
         rotor_model=args.rotor,
         wake_models=args.wakes,
         wake_frame=args.wake_frame,
+        wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
         engine=args.engine,
@@ -136,6 +150,7 @@ if __name__ == "__main__":
             xmax=2500,
             ymin=0,
             ymax=2500,
+            rotor_color="red",
         ):
             plt.show()
             plt.close(fig)

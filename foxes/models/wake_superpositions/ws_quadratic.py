@@ -140,8 +140,8 @@ class WSQuadratic(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -156,11 +156,10 @@ class WSQuadratic(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -173,6 +172,7 @@ class WSQuadratic(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = -np.sqrt(wake_delta)
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)
@@ -296,8 +296,8 @@ class WSQuadraticLocal(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -312,11 +312,10 @@ class WSQuadraticLocal(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -329,6 +328,7 @@ class WSQuadraticLocal(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = -np.sqrt(wake_delta) * amb_results
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)

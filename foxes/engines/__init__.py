@@ -1,17 +1,16 @@
-from .pool import PoolEngine
-from .multiprocess import MultiprocessEngine
-from .numpy import NumpyEngine
-from .single import SingleChunkEngine
-from .futures import ThreadsEngine, ProcessEngine
-from .mpi import MPIEngine
-from .ray import RayEngine
+from .pool import PoolEngine as PoolEngine
+from .multiprocess import MultiprocessEngine as MultiprocessEngine
+from .numpy import NumpyEngine as NumpyEngine
+from .single import SingleChunkEngine as SingleChunkEngine
+from .mpi import MPIEngine as MPIEngine
+from .ray import RayEngine as RayEngine
+from .default import DefaultEngine as DefaultEngine
 
-from .dask import (
-    DaskBaseEngine,
-    XArrayEngine,
-    DaskEngine,
-    LocalClusterEngine,
-    SlurmClusterEngine,
-)
+from .futures import ThreadsEngine as ThreadsEngine
+from .futures import ProcessEngine as ProcessEngine
 
-from .default import DefaultEngine
+from .dask import DaskBaseEngine as DaskBaseEngine
+from .dask import XArrayEngine as XArrayEngine
+from .dask import DaskEngine as DaskEngine
+from .dask import LocalClusterEngine as LocalClusterEngine
+from .dask import SlurmClusterEngine as SlurmClusterEngine

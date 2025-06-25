@@ -102,4 +102,5 @@ class AxisymmetricWakeModel(DistSlicedWakeModel):
 
         """
         r = np.linalg.norm(yz, axis=-1)
-        return self.calc_wakes_x_r(algo, mdata, fdata, tdata, downwind_index, x, r)
+        return self.calc_wakes_x_r(
+            algo, mdata, fdata, tdata, downwind_index, x, r)

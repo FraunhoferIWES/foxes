@@ -54,6 +54,21 @@ WD = "WD"
 :group: foxes.variables
 """
 
+UV = "UV"
+""" The 2D wind vector in m/s
+:group: foxes.variables
+"""
+
+U = "U"
+""" The first horizontal wind vector component in m/s
+:group: foxes.variables
+"""
+
+V = "V"
+""" The second horizontal wind vector component in m/s
+:group: foxes.variables
+"""
+
 TI = "TI"
 """ The turbulence intensity
 :group: foxes.variables
@@ -146,6 +161,21 @@ AMB_WS = "AMB_WS"
 
 AMB_WD = "AMB_WD"
 """ The ambient wind direction in degrees
+:group: foxes.variables
+"""
+
+AMB_UV = "AMB_UV"
+""" The ambient 2D wind vector in m/s
+:group: foxes.variables
+"""
+
+AMB_U = "AMB_U"
+""" The first horizontal ambient wind vector component in m/s
+:group: foxes.variables
+"""
+
+AMB_V = "AMB_V"
+""" The second horizontal ambient wind vector component in m/s
 :group: foxes.variables
 """
 
@@ -244,6 +274,9 @@ var2amb = {
         WEIBULL_k,
         YLD,
         CAP,
+        UV,
+        U,
+        V,
     ]
 }
 """ Mapping from variable to the corresponding
@@ -320,12 +353,12 @@ ROUND_DIGITS = {
     WEIBULL_A: 3,
     WEIBULL_k: 3,
     YAW: 3,
-    YAWM: 3
+    YAWM: 3,
 }
-ROUND_DIGITS.update({
-    var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys()
-    if v in ROUND_DIGITS    
-})
+ROUND_DIGITS.update(
+    {var2amb[v]: ROUND_DIGITS[v] for v in var2amb.keys() if v in ROUND_DIGITS}
+)
+
 
 def get_default_digits(variable):
     """
