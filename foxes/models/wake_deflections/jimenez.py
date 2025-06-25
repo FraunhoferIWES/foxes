@@ -114,7 +114,7 @@ class JimenezDeflection(WakeDeflection):
         """
 
         if FV.YAWM not in fdata:
-            return coos, None
+            return coos
 
         # take rotor average:
         xyz = np.einsum("stpd,p->std", coos, tdata[FC.TWEIGHTS])
