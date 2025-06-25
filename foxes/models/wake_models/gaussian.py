@@ -5,6 +5,7 @@ from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class GaussianWakeModel(AxisymmetricWakeModel):
     """
     Abstract base class for Gaussian wake models.
@@ -108,7 +109,6 @@ class GaussianWakeModel(AxisymmetricWakeModel):
             wdeltas[v] = ampld[:, None] * np.exp(-0.5 * (rsel / sigma[:, None]) ** 2)
 
         if self.affects_ws and FV.WS in wdeltas:
-        
             # wake deflection causes wind vector rotation:
             if FC.WDEFL_ROT_ANGLE in tdata:
                 dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
@@ -117,10 +117,10 @@ class GaussianWakeModel(AxisymmetricWakeModel):
                     wdeltas[FV.WD][:] = dwd_defl[st_sel]
                 else:
                     wdeltas[FV.WD] += dwd_defl[st_sel]
-            
+
             # wake deflection causes wind speed reduction:
             if FC.WDEFL_DWS_FACTOR in tdata:
                 dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
                 wdeltas[FV.WS] *= dws_defl[st_sel]
-        
+
         return wdeltas, st_sel

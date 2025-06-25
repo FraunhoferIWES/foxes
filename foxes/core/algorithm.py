@@ -472,7 +472,6 @@ class Algorithm(Model):
         n_targets = int(tdata.n_targets if tdata is not None else 0)
 
         if prev_s > 0 or prev_t > 0:
-
             inds = np.array(
                 [
                     [

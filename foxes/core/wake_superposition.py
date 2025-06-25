@@ -129,16 +129,16 @@ class WakeSuperposition(Model):
 class WindVectorWakeSuperposition(Model):
     """
     Base class for wind vector superposition.
-    
+
     Note that it is a matter of the wake model
     if superposition models are used, or if the
     wake model computes the total wake result by
     other means.
-    
+
     :group: core
 
     """
-    
+
     @abstractmethod
     def add_wake_vector(
         self,
@@ -216,11 +216,11 @@ class WindVectorWakeSuperposition(Model):
         Returns
         -------
         final_wake_delta_ws: numpy.ndarray
-            The final wind speed wake delta, which will be added to 
+            The final wind speed wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
         final_wake_delta_wd: numpy.ndarray
-            The final wind direction wake delta, which will be added to 
+            The final wind direction wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
 
@@ -243,4 +243,3 @@ class WindVectorWakeSuperposition(Model):
 
         """
         return new_instance(cls, superp_type, *args, **kwargs)
-    

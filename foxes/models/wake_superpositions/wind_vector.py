@@ -60,7 +60,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
     def wdeltas_ws2uv(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
         """
         Transform results from wind speed to wind vector data
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -78,7 +78,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         st_sel: numpy.ndarray of bool
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        
+
         Returns
         -------
         wdeltas: dict
@@ -89,7 +89,9 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         if FV.AMB_UV not in tdata:
             tdata[FV.AMB_UV] = wd2uv(tdata[FV.AMB_WD], tdata[FV.AMB_WS])
         if FV.UV not in wdeltas:
-            assert FV.WS in wdeltas, f"{self.name}: Expecting '{FV.WS}' in wdeltas, got {list(wdeltas.keys())}"
+            assert FV.WS in wdeltas, (
+                f"{self.name}: Expecting '{FV.WS}' in wdeltas, got {list(wdeltas.keys())}"
+            )
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
                 FC.STATE_TARGET_TPOINT,
@@ -108,11 +110,11 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             wdeltas[FV.UV] = wd2uv(wd0 + dwd, ws0 + dws) - tdata[FV.AMB_UV][st_sel]
 
         return wdeltas
-    
+
     def wdeltas_uv2ws(self, algo, fdata, tdata, downwind_index, wdeltas, st_sel):
         """
         Transform results from wind vector to wind speed data
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -130,14 +132,14 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         st_sel: numpy.ndarray of bool
             The state-target selection, for which the wake
             is non-zero, shape: (n_states, n_targets)
-        
+
         Returns
         -------
         wdeltas: dict
             The wake deltas. Key: variable name str,
             value: numpy.ndarray, now respecting has_uv flag
 
-        """     
+        """
         if FV.UV in wdeltas:
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
@@ -155,9 +157,9 @@ class WindVectorLinear(WindVectorWakeSuperposition):
             uv = tdata[FV.AMB_UV][st_sel] + wdeltas.pop(FV.UV)
             wdeltas[FV.WD] = delta_wd(wd0, uv2wd(uv))
             wdeltas[FV.WS] = (np.linalg.norm(uv, axis=-1) - ws0) / scale
-        
+
         return wdeltas
-    
+
     def add_wake_vector(
         self,
         algo,
@@ -205,7 +207,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
         if np.any(st_sel):
             wake_delta_uv[st_sel] += wake_model_result_uv
-        
+
         return wake_delta_uv
 
     def calc_final_wake_delta_uv(
@@ -237,11 +239,11 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         Returns
         -------
         final_wake_delta_ws: numpy.ndarray
-            The final wind speed wake delta, which will be added to 
+            The final wind speed wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
         final_wake_delta_wd: numpy.ndarray
-            The final wind direction wake delta, which will be added to 
+            The final wind direction wake delta, which will be added to
             the ambient results by simple plus operation. Shape:
             (n_states, n_targets, n_tpoints)
 
@@ -253,4 +255,4 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         dwd = delta_wd(tdata[FV.AMB_WD], uv2wd(uv))
         dws = np.linalg.norm(uv, axis=-1) - tdata[FV.AMB_WS]
 
-        return dws, dwd        
+        return dws, dwd

@@ -354,7 +354,7 @@ class TurbOParkWakeIX(GaussianWakeModel):
 
         """
         return True
-    
+
     def sub_models(self):
         """
         List of all sub-models

@@ -107,7 +107,6 @@ class Timelines(WakeFrame):
         self.timelines_data = {"dxy": (("height", FC.STATE, "dir"), [])}
         weight_data = None
         for h in heights:
-
             if verbosity > 0:
                 print(f"  Height: {h} m")
 
@@ -431,8 +430,12 @@ class Timelines(WakeFrame):
         )
 
         return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, 
-            wcoos.reshape(n_states, n_targets, n_tpoints, 3)
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            downwind_index,
+            wcoos.reshape(n_states, n_targets, n_tpoints, 3),
         )
 
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):

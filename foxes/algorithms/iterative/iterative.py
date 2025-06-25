@@ -219,7 +219,6 @@ class Iterative(Downwind):
 
             # do not rotate back from downwind order:
             if not self._final_run:
-
                 # add under-relaxation during wake calculation:
                 urelax = None
                 if self._urelax is not None and len(self._urelax["pre_wake"]):

@@ -243,9 +243,7 @@ class Data(Dict):
 
         cls = type(self)
         if issubclass(cls, Data):
-            return cls(
-                data, dims, name=name, states_i0=states_i0
-            )
+            return cls(data, dims, name=name, states_i0=states_i0)
         else:
             return cls(
                 data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
@@ -642,9 +640,7 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(
-            data=data, dims=dims, name=name, **kwargs
-        )
+        return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
     def from_tpoints(
@@ -701,9 +697,7 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(
-            data=data, dims=dims, name=name, **kwargs
-        )
+        return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
     def from_dataset(
@@ -771,7 +765,7 @@ class TData(Data):
                             FC.TPOINT,
                         ):
                             raise ValueError(
-                                f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
+                                f"Expecting coordinates '{(FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
                             )
                         else:
                             data[v] = d[:, s_targets]

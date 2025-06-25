@@ -42,7 +42,7 @@ class ReaderWRG:
                 int(self._res),
             )
 
-        def cols_sel(name, secs): 
+        def cols_sel(name, secs):
             """little helper to create column names"""
             return [f"{name}_{i}" for i in range(secs)]
 

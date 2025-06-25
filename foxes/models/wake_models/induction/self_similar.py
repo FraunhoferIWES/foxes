@@ -81,7 +81,7 @@ class SelfSimilar(TurbineInductionModel):
 
         """
         return True
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -136,13 +136,13 @@ class SelfSimilar(TurbineInductionModel):
         """
         if self.has_uv:
             duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2), 
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
             dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}
@@ -234,15 +234,19 @@ class SelfSimilar(TurbineInductionModel):
         def add_wake(sp_sel, wake_deltas, blockage):
             """adds to wake deltas"""
             if self.has_uv:
-                assert self.has_vector_wind_superp, f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
+                assert self.has_vector_wind_superp, (
+                    f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
+                )
                 wdeltas = {FV.WS: blockage}
-                self.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, sp_sel)
+                self.vec_superp.wdeltas_ws2uv(
+                    algo, fdata, tdata, downwind_index, wdeltas, sp_sel
+                )
                 wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
                     algo,
-                    mdata, 
-                    fdata, 
-                    tdata, 
-                    downwind_index, 
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
                     sp_sel,
                     wake_deltas[FV.UV],
                     wdeltas.pop(FV.UV),
@@ -258,7 +262,7 @@ class SelfSimilar(TurbineInductionModel):
                     FV.WS,
                     wake_deltas[FV.WS],
                     blockage,
-                )    
+                )
 
         # select values
         sp_sel = (ct > 1e-8) & (x_R <= 0)  # upstream

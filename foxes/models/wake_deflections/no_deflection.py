@@ -1,4 +1,3 @@
-
 from foxes.core.wake_deflection import WakeDeflection
 
 
@@ -12,11 +11,11 @@ class NoDeflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo, 
+        algo,
         mdata,
-        fdata, 
-        tdata, 
-        downwind_index, 
+        fdata,
+        tdata,
+        downwind_index,
         coos,
     ):
         """
@@ -50,20 +49,20 @@ class NoDeflection(WakeDeflection):
 
         """
         return coos
-    
+
     def get_yaw_alpha_seq(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
         downwind_index,
         x,
     ):
-        """ 
+        """
         Computes sequential wind vector rotation angles.
 
-        Wind vector rotation angles are computed at the 
+        Wind vector rotation angles are computed at the
         current trace points due to a yawed rotor
         for sequential runs.
 
@@ -84,13 +83,12 @@ class NoDeflection(WakeDeflection):
             The distance from the wake causing rotor
             for the first n_times subsequent time steps,
             shape: (n_times,)
-        
+
         Returns
         -------
         alpha: numpy.ndarray
             The delta WD result at the x locations,
             shape: (n_times,)
-        
+
         """
         return None
-    

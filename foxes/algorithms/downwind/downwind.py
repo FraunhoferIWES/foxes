@@ -271,7 +271,7 @@ class Downwind(Algorithm):
 
         """
         return self.__wake_deflection
-    
+
     @property
     def partial_wakes(self):
         """
@@ -374,7 +374,7 @@ class Downwind(Algorithm):
                 print(f"    {i}) {m.name}: {m} [pre-rotor]")
             for i, m in enumerate(self.farm_controller.post_rotor_models.models):
                 print(
-                    f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
+                    f"    {i + len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
                 )
             print(deco)
             print()

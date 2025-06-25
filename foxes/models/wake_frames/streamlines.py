@@ -67,7 +67,6 @@ class Streamlines2D(WakeFrame):
         # calc data: x, y, z, wd
         data = np.zeros((n_states, n_turbines, N, 4), dtype=config.dtype_double)
         for i in range(N):
-
             # set streamline start point data (rotor centre):
             if i == 0:
                 data[:, :, i, :3] = fdata[FV.TXYH]
@@ -75,7 +74,6 @@ class Streamlines2D(WakeFrame):
 
             # compute next step:
             else:
-
                 # calculate next point:
                 xyz = data[:, :, i - 1, :3]
                 n = wd2uv(data[:, :, i - 1, 3])
@@ -198,9 +196,9 @@ class Streamlines2D(WakeFrame):
         # n_states, n_turbines_source, n_turbines_target
         coosx = np.zeros((n_states, n_turbines, n_turbines), dtype=config.dtype_double)
         for ti in range(n_turbines):
-            coosx[:, ti, :] = self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], ti)[
-                :, :, 0, 0
-            ]
+            coosx[:, ti, :] = self._calc_coos(
+                algo, mdata, fdata, tdata[FC.TARGETS], ti
+            )[:, :, 0, 0]
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -243,10 +241,11 @@ class Streamlines2D(WakeFrame):
 
         """
         coos = self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
-        
+
         return algo.wake_deflection.calc_deflection(
-            algo, mdata, fdata, tdata, downwind_index, coos)
-    
+            algo, mdata, fdata, tdata, downwind_index, coos
+        )
+
     def get_centreline_points(self, algo, mdata, fdata, downwind_index, x):
         """
         Gets the points along the centreline for given

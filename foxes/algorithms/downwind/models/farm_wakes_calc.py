@@ -70,7 +70,8 @@ class FarmWakesCalculation(FarmDataModel):
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
                 wmodels = [
-                    wm for wn, wm in algo.wake_models.items() 
+                    wm
+                    for wn, wm in algo.wake_models.items()
                     if algo.partial_wakes[wn] is pwake
                 ]
                 pwake2tdata[pwake.name] = pwake.get_initial_tdata(
@@ -83,9 +84,7 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(
-            gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake
-        ):
+        def _evaluate(gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake):
             """Helper function for data evaluation at turbines"""
             wres = gmodel.finalize_farm_wakes(
                 algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake

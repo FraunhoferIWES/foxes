@@ -30,13 +30,7 @@ class SeqDynamicWakes(FarmOrder):
 
     """
 
-    def __init__(
-            self, 
-            cl_ipars={}, 
-            dt_min=None, 
-            induction="Madsen",
-            **kwargs
-        ):
+    def __init__(self, cl_ipars={}, dt_min=None, induction="Madsen", **kwargs):
         """
         Constructor.
 
@@ -76,7 +70,7 @@ class SeqDynamicWakes(FarmOrder):
 
         """
         return [self.induction]
-    
+
     def initialize(self, algo, verbosity=0):
         """
         Initializes the model.
@@ -198,7 +192,6 @@ class SeqDynamicWakes(FarmOrder):
         N = counter + 1
 
         if np.isnan(self._traces_l[counter, downwind_index]):
-
             # new wake starts at turbine:
             self._traces_p[counter, downwind_index][:] = fdata[FV.TXYH][
                 0, downwind_index
@@ -213,7 +206,7 @@ class SeqDynamicWakes(FarmOrder):
                     dxyz, axis=-1
                 )
                 del dxyz
-                
+
             # compute wind vectors at wake traces:
             # TODO: dz from U_z is missing here
             svrs = algo.states.output_point_vars(algo)
@@ -224,14 +217,17 @@ class SeqDynamicWakes(FarmOrder):
             wd = res[FV.WD][0, :, 0]
             if FV.YAWM in fdata:
                 wddef = algo.wake_deflection.get_yaw_alpha_seq(
-                    algo, mdata, fdata, hpdata, downwind_index, 
-                    self._traces_l[:N, downwind_index])
+                    algo,
+                    mdata,
+                    fdata,
+                    hpdata,
+                    downwind_index,
+                    self._traces_l[:N, downwind_index],
+                )
                 if wddef is not None:
                     wd += wddef
                 del wddef
-            self._traces_v[:N, downwind_index, :2] = wd2uv(
-                wd, res[FV.WS][0, :, 0]
-            )
+            self._traces_v[:N, downwind_index, :2] = wd2uv(wd, res[FV.WS][0, :, 0])
             del hpdata, res, svrs, wd
 
         # find nearest wake point:

@@ -7,7 +7,6 @@ import foxes.variables as FV
 
 
 def calc(mbook, farm, states, wakes, points, args):
-
     algo = foxes.algorithms.Downwind(
         farm,
         states,

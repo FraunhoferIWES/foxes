@@ -55,7 +55,7 @@ class JensenWake(TopHatWakeModel):
 
         """
         return True
-    
+
     def calc_wake_radius(
         self,
         algo,

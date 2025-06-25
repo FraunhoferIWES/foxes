@@ -162,7 +162,7 @@ if __name__ == "__main__":
         o = foxes.output.FarmResultsEval(farm_results)
         P0 = o.calc_mean_farm_power(ambient=True)
         P = o.calc_mean_farm_power()
-        print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+        print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
 
         o1 = foxes.output.StateTurbineMap(farm_results)
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         o = foxes.output.FarmResultsEval(farm_results)
         P0 = o.calc_mean_farm_power(ambient=True)
         P = o.calc_mean_farm_power()
-        print(f"\nFarm power: {P/1000:.1f} MW, Efficiency = {P/P0*100:.2f} %")
+        print(f"\nFarm power: {P / 1000:.1f} MW, Efficiency = {P / P0 * 100:.2f} %")
 
         if not args.nofig:
             o0 = foxes.output.StateTurbineMap(farm_results)

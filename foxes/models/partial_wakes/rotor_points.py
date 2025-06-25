@@ -40,18 +40,18 @@ class RotorPoints(PartialWakesModel):
         )
 
     def map_rotor_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        variable, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        variable,
         rotor_res,
         rotor_weights,
     ):
         """
         Map ambient rotor point results onto target points.
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -65,7 +65,7 @@ class RotorPoints(PartialWakesModel):
         variable: str
             The variable name to map
         rotor_res: numpy.ndarray
-            The results at rotor points, shape: 
+            The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points)
         rotor_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
@@ -78,7 +78,7 @@ class RotorPoints(PartialWakesModel):
 
         """
         return rotor_res
-    
+
     def finalize_wakes(
         self,
         algo,

@@ -476,7 +476,7 @@ class Bastankhah2016(DistSlicedWakeModel):
 
         """
         return True
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -642,12 +642,14 @@ class Bastankhah2016(DistSlicedWakeModel):
                 wdeltas[FV.WD][:] = dwd_defl[st_sel]
             else:
                 wdeltas[FV.WD] += dwd_defl[st_sel]
-        
+
         # wake deflection causes wind speed reduction:
         if FC.WDEFL_DWS_FACTOR in tdata:
             dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
             if FV.WS not in wdeltas:
-                raise AssertionError(f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}")
+                raise AssertionError(
+                    f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
+                )
             else:
                 wdeltas[FV.WS] *= dws_defl[st_sel]
 

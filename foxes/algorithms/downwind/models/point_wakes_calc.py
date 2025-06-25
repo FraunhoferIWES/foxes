@@ -115,7 +115,7 @@ class PointWakesCalculation(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-        
+
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
@@ -124,9 +124,8 @@ class PointWakesCalculation(PointDataModel):
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)
-            
-            if len(set(pvrs).intersection(wdeltas.keys())):
 
+            if len(set(pvrs).intersection(wdeltas.keys())):
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
                         gmodel.contribute_to_point_wakes(

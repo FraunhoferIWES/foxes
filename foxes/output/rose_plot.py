@@ -295,7 +295,8 @@ class RosePlotOutput(Output):
 
         llines = [Line2D([0], [0], color=c, lw=10) for c in np.flip(color_list, axis=0)]
         lleg = [
-            f"[{ws_bins[i]:.1f}, {ws_bins[i+1]:.1f})" for i in range(n_wsb - 1, -1, -1)
+            f"[{ws_bins[i]:.1f}, {ws_bins[i + 1]:.1f})"
+            for i in range(n_wsb - 1, -1, -1)
         ]
         lpars = dict(
             loc="upper left",

@@ -37,7 +37,9 @@ if __name__ == "__main__":
         default=["TurbOPark_vector_ambka004", "CrespoHernandez_quadratic_ambka04"],
         nargs="+",
     )
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
+    parser.add_argument(
+        "-d", "--deflection", help="The wake deflection", default="Jimenez"
+    )
     parser.add_argument("-r", "--rotor", help="The rotor model", default="centre")
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default=None, nargs="+"
@@ -196,7 +198,7 @@ if __name__ == "__main__":
     # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    print(f"\nFarm power        : {P / 1000:.1f} MW")
+    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")

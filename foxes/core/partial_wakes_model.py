@@ -9,6 +9,7 @@ import foxes.constants as FC
 from .model import Model
 from .data import TData
 
+
 class PartialWakesModel(Model):
     """
     Abstract base class for partial wakes models.
@@ -73,11 +74,11 @@ class PartialWakesModel(Model):
         pass
 
     def get_initial_tdata(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        amb_rotor_res, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        amb_rotor_res,
         rotor_weights,
         wmodels,
     ):
@@ -112,8 +113,9 @@ class PartialWakesModel(Model):
 
         # map wind data:
         if FV.WD in amb_rotor_res or FV.WS in amb_rotor_res:
-            assert FV.WD in amb_rotor_res and FV.WS in amb_rotor_res, \
+            assert FV.WD in amb_rotor_res and FV.WS in amb_rotor_res, (
                 "Require both wind direction and speed in ambient rotor results."
+            )
             uv = wd2uv(amb_rotor_res[FV.WD], amb_rotor_res[FV.WS])
             uv = np.stack(
                 [
@@ -122,15 +124,21 @@ class PartialWakesModel(Model):
                     ),
                     self.map_rotor_results(
                         algo, mdata, fdata, tdata, FV.V, uv[..., 1], rotor_weights
-                    )
-                ], 
+                    ),
+                ],
                 axis=-1,
             )
             tdata.add(FV.AMB_WD, uv2wd(uv), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
-            tdata.add(FV.AMB_WS, np.linalg.norm(uv, axis=-1), dims=(FC.STATE, FC.TARGET, FC.TPOINT))
+            tdata.add(
+                FV.AMB_WS,
+                np.linalg.norm(uv, axis=-1),
+                dims=(FC.STATE, FC.TARGET, FC.TPOINT),
+            )
             for wmodel in wmodels:
                 if wmodel.has_uv:
-                    tdata.add(FV.AMB_UV, uv, dims=(FC.STATE, FC.TARGET, FC.TPOINT, FC.XY))
+                    tdata.add(
+                        FV.AMB_UV, uv, dims=(FC.STATE, FC.TARGET, FC.TPOINT, FC.XY)
+                    )
                     break
 
         # map rotor point results onto target points:
@@ -138,26 +146,28 @@ class PartialWakesModel(Model):
             if v not in [FV.WS, FV.WD, FV.U, FV.V, FV.UV]:
                 w = FV.var2amb.get(v, v)
                 tdata.add(
-                    w, 
-                    self.map_rotor_results(algo, mdata, fdata, tdata, v, d, rotor_weights), 
+                    w,
+                    self.map_rotor_results(
+                        algo, mdata, fdata, tdata, v, d, rotor_weights
+                    ),
                     dims=(FC.STATE, FC.TARGET, FC.TPOINT),
-                ) 
+                )
 
         return tdata
-    
+
     def map_rotor_results(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
-        variable, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
+        variable,
         rotor_res,
         rotor_weights,
     ):
         """
         Map ambient rotor point results onto target points.
-        
+
         Parameters
         ----------
         algo: foxes.core.Algorithm
@@ -171,7 +181,7 @@ class PartialWakesModel(Model):
         variable: str
             The variable name to map
         rotor_res: numpy.ndarray
-            The results at rotor points, shape: 
+            The results at rotor points, shape:
             (n_states, n_turbines, n_rotor_points)
         rotor_weights: numpy.ndarray
             The rotor point weights, shape: (n_rotor_points,)
@@ -183,16 +193,24 @@ class PartialWakesModel(Model):
             (n_states, n_targets, n_tpoints)
 
         """
-        if len(rotor_res.shape) > 2 and rotor_res.shape[:2] == (tdata.n_states, tdata.n_targets):
-            q = np.zeros((tdata.n_states, tdata.n_targets, tdata.n_tpoints), dtype=config.dtype_double)
+        if len(rotor_res.shape) > 2 and rotor_res.shape[:2] == (
+            tdata.n_states,
+            tdata.n_targets,
+        ):
+            q = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                dtype=config.dtype_double,
+            )
             if rotor_res.shape[2] == 1:
                 q[:] = rotor_res
             else:
-                q[:] = np.einsum('str,r->st', rotor_res, rotor_weights)[:, :, None]
+                q[:] = np.einsum("str,r->st", rotor_res, rotor_weights)[:, :, None]
             return q
         else:
-            raise ValueError(f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results.")
-        
+            raise ValueError(
+                f"Partial wakes '{self.name}': Incompatible shape '{rotor_res.shape}' for variable '{variable}' in rotor results."
+            )
+
     def new_wake_deltas(self, algo, mdata, fdata, tdata, wmodel):
         """
         Creates new initial wake deltas, filled
@@ -253,7 +271,7 @@ class PartialWakesModel(Model):
             (n_states, n_targets, n_tpoints, ...)
         wmodel: foxes.core.WakeModel
             The wake model
-            
+
         """
         wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)

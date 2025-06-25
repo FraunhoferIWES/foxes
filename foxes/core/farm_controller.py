@@ -171,7 +171,7 @@ class FarmController(FarmDataModel):
         for ti, t in enumerate(algo.farm.turbines):
             if tmis[ti] != len(models[ti]):
                 raise ValueError(
-                    f"Turbine {ti}, {t.name}: Could not find turbine model order that includes all {mtype} turbine models, missing {t.models[tmis[ti]:]}"
+                    f"Turbine {ti}, {t.name}: Could not find turbine model order that includes all {mtype} turbine models, missing {t.models[tmis[ti] :]}"
                 )
 
         return [m.name for m in tmodels], tmsels
@@ -253,7 +253,7 @@ class FarmController(FarmDataModel):
                         prer = m.pre_rotor
                     elif not prer and m.pre_rotor:
                         raise ValueError(
-                            f"Turbine {ti}, {t.name}: Model is classified as pre-rotor, but following the post-rotor model '{t.models[mi-1]}'"
+                            f"Turbine {ti}, {t.name}: Model is classified as pre-rotor, but following the post-rotor model '{t.models[mi - 1]}'"
                         )
                     if m.pre_rotor:
                         prer_models[ti].append(m)

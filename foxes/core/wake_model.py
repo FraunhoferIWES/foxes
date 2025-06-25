@@ -14,6 +14,7 @@ class WakeModel(Model):
     :group: core
 
     """
+
     def __init__(self):
         """
         Constructor.
@@ -33,7 +34,7 @@ class WakeModel(Model):
 
         """
         return False
-    
+
     @property
     def affects_downwind(self):
         """
@@ -47,17 +48,17 @@ class WakeModel(Model):
 
         """
         return True
-    
+
     @property
     def has_uv(self):
         """
         This model uses wind vector data
-        
+
         Returns
         -------
         hasuv: bool
             Flag for wind vector data
-        
+
         """
         return self._has_uv
 
@@ -205,8 +206,8 @@ class SingleTurbineWakeModel(WakeModel):
         The wind superposition model name (vector or compenent model),
         will be looked up in model book
     other_superpositions: dict
-        The superpositions for other than (ws, wd) variables. 
-        Key: variable name str, value: The wake superposition 
+        The superpositions for other than (ws, wd) variables.
+        Key: variable name str, value: The wake superposition
         model name, will be looked up in model book
     vec_superp: foxes.core.WindVectorWakeSuperposition or None
         The wind vector wake superposition model
@@ -228,8 +229,8 @@ class SingleTurbineWakeModel(WakeModel):
             The wind superposition model name (vector or compenent model),
             will be looked up in model book
         other_superpositions: dict
-            The superpositions for other than (ws, wd) variables. 
-            Key: variable name str, value: The wake superposition 
+            The superpositions for other than (ws, wd) variables.
+            Key: variable name str, value: The wake superposition
             model name, will be looked up in model book
 
         """
@@ -240,7 +241,9 @@ class SingleTurbineWakeModel(WakeModel):
         self.superp = {}
 
         for v in [FV.WS, FV.WD]:
-            assert v not in other_superpositions, f"Wake model '{self.name}': Found variable '{v}' among 'other_superposition' keyword, use 'wind_superposition' instead"
+            assert v not in other_superpositions, (
+                f"Wake model '{self.name}': Found variable '{v}' among 'other_superposition' keyword, use 'wind_superposition' instead"
+            )
 
         self.__has_vector_superp = False
 
@@ -248,15 +251,15 @@ class SingleTurbineWakeModel(WakeModel):
     def has_vector_wind_superp(self):
         """
         This model uses a wind vector superposition
-        
+
         Returns
         -------
         hasv: bool
             Flag for wind vector superposition
-        
+
         """
         return self.__has_vector_superp
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -285,18 +288,21 @@ class SingleTurbineWakeModel(WakeModel):
 
         """
         self.superp = {
-            v: algo.mbook.wake_superpositions[s] for v, s in self.other_superpositions.items()
+            v: algo.mbook.wake_superpositions[s]
+            for v, s in self.other_superpositions.items()
         }
 
         if self.wind_superposition is not None:
             self.vec_superp = algo.mbook.wake_superpositions[self.wind_superposition]
-            self.__has_vector_superp = isinstance(self.vec_superp, WindVectorWakeSuperposition)
+            self.__has_vector_superp = isinstance(
+                self.vec_superp, WindVectorWakeSuperposition
+            )
             if self.__has_vector_superp:
                 self._has_uv = True
             else:
                 self.superp[FV.WS] = self.vec_superp
                 self.vec_superp = None
-            
+
         super().initialize(algo, verbosity, force)
 
     def finalize_wake_deltas(
@@ -335,17 +341,21 @@ class SingleTurbineWakeModel(WakeModel):
                         algo, mdata, fdata, tdata, v, wake_deltas[v]
                     )
                 except KeyError:
-                    raise KeyError(f"Wake model '{self.name}': Variable '{v}' appears to be modified, missing superposition model")
+                    raise KeyError(
+                        f"Wake model '{self.name}': Variable '{v}' appears to be modified, missing superposition model"
+                    )
 
         if FV.UV in wake_deltas:
-            assert self.has_vector_wind_superp, f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
+            assert self.has_vector_wind_superp, (
+                f"{self.name}: Expecting wind vector superposition, got '{self.wind_superposition}'"
+            )
             dws, dwd = self.vec_superp.calc_final_wake_delta_uv(
-                    algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
-                )
+                algo, mdata, fdata, tdata, wake_deltas.pop(FV.UV)
+            )
 
             wake_deltas[FV.WS] = dws
             wake_deltas[FV.WD] = dwd
-            
+
 
 class TurbineInductionModel(SingleTurbineWakeModel):
     """

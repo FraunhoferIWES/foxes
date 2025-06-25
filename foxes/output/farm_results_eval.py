@@ -66,9 +66,9 @@ class FarmResultsEval(Output):
             if isinstance(v, str):
                 vdata = self.results[v].to_numpy()
                 nns = np.sum(np.isnan(vdata))
-                assert (
-                    nns == 0
-                ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                assert nns == 0, (
+                    f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                )
                 fields.append(vdata)
             else:
                 fields.append(v)
@@ -142,9 +142,9 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 rdata[v] = self.weinsum("t", vdata)
@@ -191,9 +191,9 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 rdata[v] = self.weinsum("s", vdata)
@@ -244,9 +244,9 @@ class FarmResultsEval(Output):
         for v, op in turbines_op.items():
             vdata = sdata[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 if states_op[v] == "weights":

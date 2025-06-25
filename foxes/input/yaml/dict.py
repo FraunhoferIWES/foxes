@@ -95,9 +95,9 @@ def read_dict(
         else:
             states = algo.states
     else:
-        assert (
-            algo is None
-        ), "Cannot handle both the algo and the states argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the states argument, please drop one"
+        )
 
     # create model book:
     if mbook is None:
@@ -119,9 +119,9 @@ def read_dict(
         else:
             mbook = algo.mbook
     else:
-        assert (
-            algo is None
-        ), "Cannot handle both the algo and the mbook argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the mbook argument, please drop one"
+        )
 
     # create farm:
     if farm is None:
@@ -141,9 +141,9 @@ def read_dict(
         else:
             farm = algo.farm
     else:
-        assert (
-            algo is None
-        ), "Cannot handle both the algo and the farm argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the farm argument, please drop one"
+        )
 
     # create engine:
     engine = None
@@ -321,12 +321,12 @@ def run_obj_function(
 
         def _set_label(rlabels, k, r):
             if k not in ["", "none", "None", "_", "__"]:
-                assert (
-                    k[0] == "$"
-                ), f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
-                assert (
-                    "[" not in k and "]" not in k and "," not in k
-                ), f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                assert k[0] == "$", (
+                    f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
+                )
+                assert "[" not in k and "]" not in k and "," not in k, (
+                    f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                )
                 _print(f"    result label {k}: {type(r).__name__}")
                 rlabels[k] = r
 

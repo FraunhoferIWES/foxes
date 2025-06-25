@@ -188,7 +188,6 @@ class Sequential(Iterative):
         """Run calculation for current step, then iterate to next"""
 
         if self._i < len(self._inds):
-
             self._counter = self._i
             self.states._counter = self._i
             self.states._size = 1

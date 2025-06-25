@@ -98,7 +98,6 @@ def run_tutorial(path, nofig):
 
 
 def run(args):
-
     incld = args.include
     excld = args.exclude
 

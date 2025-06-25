@@ -43,5 +43,7 @@ from .wake_model import SingleTurbineWakeModel as SingleTurbineWakeModel
 from .wake_model import TurbineInductionModel as TurbineInductionModel
 from .wake_model import WakeK as WakeK
 
-from .wake_superposition import WakeSuperposition as WakeSuperposition 
-from .wake_superposition import WindVectorWakeSuperposition as WindVectorWakeSuperposition
+from .wake_superposition import WakeSuperposition as WakeSuperposition
+from .wake_superposition import (
+    WindVectorWakeSuperposition as WindVectorWakeSuperposition,
+)

@@ -98,7 +98,9 @@ class CrespoHernandezTIWake(TopHatWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(other_superpositions={FV.TI: superposition}, induction=induction)
+        super().__init__(
+            other_superpositions={FV.TI: superposition}, induction=induction
+        )
 
         self.a_near = a_near
         self.a_far = a_far

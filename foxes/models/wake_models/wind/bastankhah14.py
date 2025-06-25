@@ -32,10 +32,10 @@ class Bastankhah2014(GaussianWakeModel):
     """
 
     def __init__(
-        self, 
+        self,
         superposition,
-        sbeta_factor=0.2, 
-        induction="Madsen", 
+        sbeta_factor=0.2,
+        induction="Madsen",
         **wake_k,
     ):
         """
@@ -79,7 +79,7 @@ class Bastankhah2014(GaussianWakeModel):
 
         """
         return True
-    
+
     def sub_models(self):
         """
         List of all sub-models

@@ -77,9 +77,9 @@ class Dict(dict):
         """
         try:
             if len(deflt):
-                assert (
-                    len(deflt) == 1
-                ), f"Expecting a single default entry, got {len(deflt)}"
+                assert len(deflt) == 1, (
+                    f"Expecting a single default entry, got {len(deflt)}"
+                )
                 data = self.get(key, deflt[0])
             else:
                 data = self[key]

@@ -16,23 +16,23 @@ class WakeDeflection(Model):
     def has_uv(self):
         """
         This model uses wind vector data
-        
+
         Returns
         -------
         hasuv: bool
             Flag for wind vector data
-        
+
         """
         return False
-    
+
     @abstractmethod
     def calc_deflection(
         self,
-        algo, 
+        algo,
         mdata,
-        fdata, 
-        tdata, 
-        downwind_index, 
+        fdata,
+        tdata,
+        downwind_index,
         coos,
     ):
         """
@@ -68,18 +68,18 @@ class WakeDeflection(Model):
         pass
 
     def get_yaw_alpha_seq(
-        self, 
-        algo, 
-        mdata, 
-        fdata, 
-        tdata, 
+        self,
+        algo,
+        mdata,
+        fdata,
+        tdata,
         downwind_index,
         x,
     ):
-        """ 
+        """
         Computes sequential wind vector rotation angles.
 
-        Wind vector rotation angles are computed at the 
+        Wind vector rotation angles are computed at the
         current trace points due to a yawed rotor
         for sequential runs.
 
@@ -100,16 +100,18 @@ class WakeDeflection(Model):
             The distance from the wake causing rotor
             for the first n_times subsequent time steps,
             shape: (n_times,)
-        
+
         Returns
         -------
         alpha: numpy.ndarray
             The delta WD result at the x locations,
             shape: (n_times,)
-        
+
         """
-        raise NotImplementedError(f"Wake deflection '{self.name}' not implemented for sequential runs")
-    
+        raise NotImplementedError(
+            f"Wake deflection '{self.name}' not implemented for sequential runs"
+        )
+
     @classmethod
     def new(cls, wframe_type, *args, **kwargs):
         """

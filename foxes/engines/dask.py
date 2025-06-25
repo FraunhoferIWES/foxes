@@ -451,7 +451,6 @@ class XArrayEngine(DaskBaseEngine):
             if d is not None
         ]
         for ds in data:
-
             hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
             ldata += [ds[v] for v in hvarsl]
             ldims += [ds[v].dims for v in hvarsl]

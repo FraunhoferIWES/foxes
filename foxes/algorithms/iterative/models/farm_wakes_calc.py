@@ -100,7 +100,8 @@ class FarmWakesCalculation(FarmDataModel):
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
                 wmodels = [
-                    wm for wn, wm in algo.wake_models.items() 
+                    wm
+                    for wn, wm in algo.wake_models.items()
                     if algo.partial_wakes[wn] is pwake
                 ]
                 pwake2tdata[pwake.name] = pwake.get_initial_tdata(
@@ -122,7 +123,6 @@ class FarmWakesCalculation(FarmDataModel):
             wdeltas = pwake.new_wake_deltas(algo, mdata, fdata, tdatap, wmodel)
 
             for oi in range(n_turbines):
-
                 if oi > 0:
                     tdata, wdelta = _get_wdata(
                         tdatap, wdeltas, [FC.STATE, FC.TARGET], np.s_[:, :oi]

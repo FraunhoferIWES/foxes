@@ -81,9 +81,15 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="dyn_wakes")
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
     parser.add_argument(
-        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+        "-d", "--deflection", help="The wake deflection", default="no_deflection"
+    )
+    parser.add_argument(
+        "-y",
+        "--yawm",
+        help="The uniform yaw misalignment value",
+        type=float,
+        default=None,
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"
@@ -129,9 +135,11 @@ if __name__ == "__main__":
     if args.yawm is None:
         ymodels = []
     else:
-        yawm = np.zeros((1, N*N), dtype=np.float64)
+        yawm = np.zeros((1, N * N), dtype=np.float64)
         yawm[:, :N] = args.yawm
-        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(
+            pre_rotor=True
+        )
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
 
@@ -235,9 +243,9 @@ if __name__ == "__main__":
     # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    print(f"\nFarm power        : {P / 1000:.1f} MW")
+    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
 
     engine.finalize()
 

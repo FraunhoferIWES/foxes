@@ -106,11 +106,10 @@ class PandasFileHelper:
             elif sfx == "h5":
                 f = pd.read_hdf
             elif sfx == "nc":
+
                 def f(fname, **pars):
                     """little helper to read netcdf files"""
-                    return xarray.open_dataset(
-                        fname, **pars
-                    ).to_dataframe()
+                    return xarray.open_dataset(fname, **pars).to_dataframe()
 
             if f is not None:
                 pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])

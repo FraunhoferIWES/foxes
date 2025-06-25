@@ -91,17 +91,17 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         """
         if self.has_uv:
             duv = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2), 
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
                 dtype=config.dtype_double,
             )
             return {FV.UV: duv}
         else:
             dws = np.zeros(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
                 dtype=config.dtype_double,
             )
             return {FV.WS: dws}
-        
+
     @abstractmethod
     def calc_wake_radius(
         self,
@@ -261,7 +261,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
                 wdeltas[v] = np.where(isin, wdel[:, None], 0.0)
 
         if self.affects_ws and FV.WS in wdeltas:
-
             # wake deflection causes wind vector rotation:
             if FC.WDEFL_ROT_ANGLE in tdata:
                 dwd_defl = tdata[FC.WDEFL_ROT_ANGLE]
@@ -270,7 +269,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
                     wdeltas[FV.WD][:] = dwd_defl[st_sel]
                 else:
                     wdeltas[FV.WD] += dwd_defl[st_sel]
-            
+
             # wake deflection causes wind speed reduction:
             if FC.WDEFL_DWS_FACTOR in tdata:
                 dws_defl = tdata[FC.WDEFL_DWS_FACTOR]

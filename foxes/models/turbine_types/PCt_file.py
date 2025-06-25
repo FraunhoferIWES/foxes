@@ -231,7 +231,6 @@ class PCtFile(TurbineType):
 
         """
         if modify_ct or modify_P:
-
             ws = self.data_ws
             ct = self.data_ct
             P = self.data_P

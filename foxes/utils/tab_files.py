@@ -63,7 +63,6 @@ def read_tab_file(fname, normalize=True):
 
 
 if __name__ == "__main__":
-
     import argparse
 
     parser = argparse.ArgumentParser()

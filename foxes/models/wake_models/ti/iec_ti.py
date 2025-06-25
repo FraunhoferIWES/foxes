@@ -53,7 +53,9 @@ class IECTIWake(TopHatWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(other_superpositions={FV.TI: superposition}, induction=induction)
+        super().__init__(
+            other_superpositions={FV.TI: superposition}, induction=induction
+        )
         self.iec_type = iec_type
         self.wake_k = None
 
@@ -87,9 +89,7 @@ class IECTIWake(TopHatWakeModel):
             All sub models
 
         """
-        return super().sub_models() + (
-            [self.wake_k] if self.wake_k is not None else []
-        )
+        return super().sub_models() + ([self.wake_k] if self.wake_k is not None else [])
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """

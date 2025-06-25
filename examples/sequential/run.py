@@ -24,9 +24,7 @@ if __name__ == "__main__":
         type=int,
         default=4,
     )
-    parser.add_argument(
-        "--debug", help="Switch on wake debugging", action="store_true"
-    )
+    parser.add_argument("--debug", help="Switch on wake debugging", action="store_true")
     parser.add_argument(
         "-S",
         "--n_states",
@@ -83,9 +81,15 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument("-e", "--engine", help="The engine", default="NumpyEngine")
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
     parser.add_argument(
-        "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
+        "-d", "--deflection", help="The wake deflection", default="no_deflection"
+    )
+    parser.add_argument(
+        "-y",
+        "--yawm",
+        help="The uniform yaw misalignment value",
+        type=float,
+        default=None,
     )
     parser.add_argument(
         "-n", "--n_cpus", help="The number of cpus", default=None, type=int
@@ -118,16 +122,18 @@ if __name__ == "__main__":
     if args.yawm is None:
         ymodels = []
     else:
-        yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
+        yawm = np.zeros((args.n_states, N * N), dtype=np.float64)
         yawm[:, :N] = args.yawm
-        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
+        mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(
+            pre_rotor=True
+        )
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
 
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        #fixed_vars={FV.WD: 270},
+        # fixed_vars={FV.WD: 270},
         var2col={FV.WD: "WD", FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
         states_sel=range(240, 240 + args.n_states),
     )

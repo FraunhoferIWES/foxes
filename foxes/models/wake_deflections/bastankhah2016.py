@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from foxes.config import config
@@ -95,7 +94,7 @@ class Bastankhah2016Deflection(WakeDeflection):
 
         """
         return [self.wake_k, self.model]
-    
+
     def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
@@ -201,11 +200,11 @@ class Bastankhah2016Deflection(WakeDeflection):
 
     def calc_deflection(
         self,
-        algo, 
+        algo,
         mdata,
-        fdata, 
-        tdata, 
-        downwind_index, 
+        fdata,
+        tdata,
+        downwind_index,
         coos,
     ):
         """
@@ -238,7 +237,7 @@ class Bastankhah2016Deflection(WakeDeflection):
             points, shape: (n_states, n_targets, n_tpoints, 3)
 
         """
-        
+
         # take rotor average:
         xy = np.einsum("stpd,p->std", coos[..., :2], tdata[FC.TWEIGHTS])
         x = xy[:, :, 0]
@@ -249,4 +248,3 @@ class Bastankhah2016Deflection(WakeDeflection):
         coos[..., 1] = y[:, :, None]
 
         return coos
-    

@@ -1,7 +1,6 @@
 import foxes
 
 if __name__ == "__main__":
-
     states = foxes.input.states.Timeseries(
         "timeseries_3000.csv.gz", ["WS", "WD", "TI", "RHO"]
     )

@@ -114,7 +114,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         fig = ax.get_figure()
         gdata = None
         while len(self._data):
-
             fres, d = self._data.pop(0)
 
             if d[2] is not None:

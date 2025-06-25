@@ -302,9 +302,9 @@ class Engine(ABC):
                 chunk_sizes_targets[-extra:] += 1
 
             s = np.sum(chunk_sizes_targets)
-            assert (
-                s == n_targets
-            ), f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+            assert s == n_targets, (
+                f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+            )
 
         chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
         extra = n_states - n_chunks_states * chunk_size_states
@@ -312,9 +312,9 @@ class Engine(ABC):
             chunk_sizes_states[-extra:] += 1
 
         s = np.sum(chunk_sizes_states)
-        assert (
-            s == n_states
-        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
+        assert s == n_states, (
+            f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
+        )
 
         return chunk_sizes_states, chunk_sizes_targets
 

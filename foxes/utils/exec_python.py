@@ -1,7 +1,7 @@
-import numpy as np # noqa: F401
-import pandas as pd # noqa: F401
-import xarray as xr # noqa: F401
-import matplotlib.pyplot as plt # noqa: F401
+import numpy as np  # noqa: F401
+import pandas as pd  # noqa: F401
+import xarray as xr  # noqa: F401
+import matplotlib.pyplot as plt  # noqa: F401
 
 
 def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):

@@ -62,7 +62,7 @@ class RankineHalfBody(TurbineInductionModel):
 
         """
         return True
-    
+
     def sub_models(self):
         """
         List of all sub-models
@@ -116,11 +116,11 @@ class RankineHalfBody(TurbineInductionModel):
 
         """
         duv = np.zeros(
-            (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2), 
+            (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
             dtype=config.dtype_double,
         )
         return {FV.UV: duv}
-        
+
     def contribute(
         self,
         algo,

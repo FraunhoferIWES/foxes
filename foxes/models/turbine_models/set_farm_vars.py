@@ -270,7 +270,6 @@ class SetFarmVars(TurbineModel):
         """
         i0 = mdata.states_i0(counter=True)
         if not self.once or i0 not in self.__once_done:
-
             if self.pre_rotor:
                 order = np.s_[:]
                 ssel = np.s_[:]
