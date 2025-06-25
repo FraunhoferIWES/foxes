@@ -66,9 +66,11 @@ class DataBook:
         except AttributeError:
             contents = list(resources.contents(package))
 
-        check_f = lambda f: any(
-            [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
-        )
+        def check_f(f): 
+            """little helper function to check file endings"""
+            return any(
+                [len(f) > len(s) and f[-len(s) :] == s for s in file_sfx]
+            )
         contents = [f for f in contents if check_f(f)]
 
         try:

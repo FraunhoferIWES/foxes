@@ -471,7 +471,7 @@ class FarmResultsEval(Output):
             duration = times[-1] - times[0] + delta_t
             duration_seconds = np.int64(duration.astype(np.int64) / 1e9)
             duration_hours = duration_seconds / 3600
-        elif hours is None and annual == True:
+        elif hours is None and annual:
             duration_hours = 8760
         elif hours is None:
             raise ValueError(

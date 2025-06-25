@@ -1,6 +1,5 @@
-from foxes.core import PointDataModel, TData
+from foxes.core import PointDataModel
 import foxes.variables as FV
-import foxes.constants as FC
 
 
 class PointWakesCalculation(PointDataModel):

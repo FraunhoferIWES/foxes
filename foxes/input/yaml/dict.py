@@ -75,13 +75,13 @@ def read_dict(
             print(*args, **kwargs)
 
     # set working directory:
-    l = 0
+    ld = 0
     for c, d in zip(
         [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], [work_dir, input_dir, output_dir]
     ):
         if d is not None:
             config[c] = d
-            l = max(l, len(str(d)))
+            ld = max(ld, len(str(d)))
     _print("\n--------------------- Reading foxes parameter dict ---------------------")
     _print("Working directory  :", config.work_dir)
     _print("Input directory    :", config.input_dir)
@@ -129,8 +129,8 @@ def read_dict(
             _print("Creating wind farm")
             fdict = idict.get_item("wind_farm")
             lyts = [
-                Dict(l, name=f"{fdict.name}.layout{i}")
-                for i, l in enumerate(fdict.pop_item("layouts"))
+                Dict(lo, name=f"{fdict.name}.layout{i}")
+                for i, lo in enumerate(fdict.pop_item("layouts"))
             ]
             farm = WindFarm(**fdict)
             for lyt in lyts:

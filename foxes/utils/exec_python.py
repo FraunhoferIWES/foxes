@@ -1,7 +1,7 @@
-import numpy as np
-import pandas as pd
-import xarray as xr
-import matplotlib.pyplot as plt
+import numpy as np # noqa: F401
+import pandas as pd # noqa: F401
+import xarray as xr # noqa: F401
+import matplotlib.pyplot as plt # noqa: F401
 
 
 def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
@@ -38,7 +38,7 @@ def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
         L = len(indicator)
         if len(s) > L and s[:L] == indicator:
             a = s[L:]
-            if not indicator in a:
+            if indicator not in a:
                 exec(a, globals, locals)
             else:
                 ilist = a.split(indicator)

@@ -179,7 +179,7 @@ def read_shp_polygons(
     utmz = None
     utml = None
     apply_utm = False
-    if isinstance(to_utm, str) or to_utm == True:
+    if isinstance(to_utm, str) or to_utm:
         apply_utm = True
         check_import_utm()
         utmz = int(to_utm[:-1]) if isinstance(to_utm, str) else None

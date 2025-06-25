@@ -145,8 +145,6 @@ class NumpyEngine(Engine):
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-                i = chunki_states * n_chunks_targets + chunki_points
-
                 # get this chunk's data:
                 data = self.get_chunk_input_data(
                     algo=algo,

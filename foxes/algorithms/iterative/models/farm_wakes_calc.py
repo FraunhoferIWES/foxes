@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 
-from foxes.core import FarmDataModel, TData
+from foxes.core import FarmDataModel
 import foxes.constants as FC
 import foxes.variables as FV
 

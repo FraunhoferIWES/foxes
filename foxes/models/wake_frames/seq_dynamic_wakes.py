@@ -5,7 +5,6 @@ from foxes.utils import wd2uv
 from foxes.core.data import TData
 from foxes.config import config
 from foxes.algorithms.sequential import Sequential
-from foxes.models.wake_models import TopHatWakeModel
 import foxes.variables as FV
 import foxes.constants as FC
 

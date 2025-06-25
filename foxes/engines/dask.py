@@ -246,10 +246,10 @@ def _run_as_ufunc(
 
     # deduce output shape:
     oshape = []
-    for li, l in enumerate(out_coords):
+    for li, ld in enumerate(out_coords):
         for i, dims in enumerate(ldims):
-            if l in dims:
-                oshape.append(ldata[i].shape[dims.index(l)])
+            if ld in dims:
+                oshape.append(ldata[i].shape[dims.index(ld)])
                 break
         if len(oshape) != li + 1:
             raise ValueError("Failed to find loop dimension")

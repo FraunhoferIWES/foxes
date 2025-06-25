@@ -631,7 +631,9 @@ class MultiHeightNCStates(MultiHeightStates):
         self._inds = data.coords[self.state_coord].to_numpy()
 
         if self._format_times_func == "default":
-            format_times_func = lambda t: t.astype("datetime64[ns]")
+            def format_times_func(t):
+                """little helper function to convert times to datetime64"""
+                return t.astype("datetime64[ns]")
         else:
             format_times_func = self._format_times_func
         if format_times_func is not None:

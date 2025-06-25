@@ -606,23 +606,6 @@ class FieldDataNC(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self.__inds
 
-    def output_point_vars(self, algo):
-        """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        output_vars: list of str
-            The output variable names
-
-        """
-        return self.ovars
-
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.

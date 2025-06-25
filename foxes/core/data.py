@@ -153,8 +153,8 @@ class Data(Dict):
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:
             if len(dims) != len(data.shape):
-                for li, l in enumerate(self.loop_dims):
-                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
+                for li, ld in enumerate(self.loop_dims):
+                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != ld):
                         self[name] = np.squeeze(data, axis=li)
             for ci, c in enumerate(dims):
                 if c not in self.sizes or self.sizes[c] == 1:

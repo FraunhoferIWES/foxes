@@ -211,7 +211,7 @@ def read_farm(wio_dict, mbook, verbosity):
     if isinstance(wfarm, dict):
         layouts = Dict(wfarm, name=wio_farm.name + ".layouts")
     else:
-        layouts = {str(i): l for i, l in enumerate(wfarm)}
+        layouts = {str(i): lf for i, lf in enumerate(wfarm)}
         layouts = Dict(layouts, name=wio_farm.name + ".layouts")
     if verbosity > 2:
         print("    Reading layouts")

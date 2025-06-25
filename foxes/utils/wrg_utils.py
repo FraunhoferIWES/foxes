@@ -42,7 +42,9 @@ class ReaderWRG:
                 int(self._res),
             )
 
-        cols_sel = lambda name, secs: [f"{name}_{i}" for i in range(secs)]
+        def cols_sel(name, secs): 
+            """little helper to create column names"""
+            return [f"{name}_{i}" for i in range(secs)]
 
         cols = [0] * (8 + 3 * self._n_sectors)
         cols[0] = "utmx"

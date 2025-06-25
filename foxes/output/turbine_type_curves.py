@@ -181,19 +181,19 @@ class TurbineTypeCurves(Output):
             t = f"{vv}, {turbine_type}" if titles[i] is None else titles[i]
             ax.set_title(t)
 
-            l = "Wind speed [m/s]" if x_label is None else x_label
-            ax.set_xlabel(l)
+            lb = "Wind speed [m/s]" if x_label is None else x_label
+            ax.set_xlabel(lb)
 
             if y_labels[i] is None:
                 if v == FV.P:
-                    l = "Power [kW]"
+                    lb = "Power [kW]"
                 elif v == FV.CT:
-                    l = "ct [-]"
+                    lb = "ct [-]"
                 else:
-                    l = v
+                    lb = v
             else:
-                l = y_labels[i]
-            ax.set_ylabel(l)
+                lb = y_labels[i]
+            ax.set_ylabel(lb)
 
             ax.grid()
 
