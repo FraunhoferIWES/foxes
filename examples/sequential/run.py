@@ -117,19 +117,17 @@ if __name__ == "__main__":
     N = 3
     if args.yawm is None:
         ymodels = []
-        fixv = {}
     else:
         yawm = np.zeros((args.n_states, N*N), dtype=np.float64)
         yawm[:, :N] = args.yawm
         mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
-        fixv = {FV.WD: 270}
 
     states = foxes.input.states.Timeseries(
         data_source="timeseries_3000.csv.gz",
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
-        fixed_vars=fixv,
+        #fixed_vars={FV.WD: 270},
         var2col={FV.WD: "WD", FV.WS: "WS", FV.TI: "TI", FV.RHO: "RHO"},
         states_sel=range(240, 240 + args.n_states),
     )
@@ -183,6 +181,7 @@ if __name__ == "__main__":
                 vmax=args.max_variable,
                 title=None,
                 animated=True,
+                rotor_color="red",
             )
             algo.plugins.append(anigen)
 
