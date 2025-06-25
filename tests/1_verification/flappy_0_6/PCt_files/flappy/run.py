@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import time
 import argparse
 from pathlib import Path
@@ -34,8 +33,8 @@ if __name__ == "__main__":
 
     # load model book:
     mbook = fl.ModelBook()
-    mbook.turbine_models[f"ws_P"] = fl.models.Ws2P(P_curve_file=tPfile)
-    mbook.turbine_models[f"ws_Ct"] = fl.models.Ws2Ct(ct_curve_file=tCtfile)
+    mbook.turbine_models["ws_P"] = fl.models.Ws2P(P_curve_file=tPfile)
+    mbook.turbine_models["ws_Ct"] = fl.models.Ws2Ct(ct_curve_file=tCtfile)
 
     # create wind farm:
     farm = fl.WindFarm()
