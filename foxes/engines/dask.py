@@ -222,19 +222,28 @@ def _run_as_ufunc(
         if i == 0:
             data.append(
                 MData(
-                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                    data=hdata,
+                    dims=hdims,
+                    # loop_dims=loop_dims,
+                    states_i0=state_inds[0],
                 )
             )
         elif i == 1:
             data.append(
                 FData(
-                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                    data=hdata,
+                    dims=hdims,
+                    # loop_dims=loop_dims,
+                    states_i0=state_inds[0],
                 )
             )
         elif i == 2:
             data.append(
                 TData(
-                    data=hdata, dims=hdims, loop_dims=loop_dims, states_i0=state_inds[0]
+                    data=hdata,
+                    dims=hdims,
+                    # loop_dims=loop_dims,
+                    states_i0=state_inds[0],
                 )
             )
         else:
@@ -267,14 +276,31 @@ def _run_as_ufunc(
     }
 
     if len(data) == 1:
-        data.append(FData(odata, odims, loop_dims, states_i0=state_inds[0]))
+        data.append(
+            FData(
+                odata,
+                odims,
+                # loop_dims,
+                states_i0=state_inds[0],
+            )
+        )
     else:
         odata.update(data[-1])
         odims.update(data[-1].dims)
         if len(data) == 2:
-            data[-1] = FData(odata, odims, loop_dims, states_i0=state_inds[0])
+            data[-1] = FData(
+                odata,
+                odims,
+                # loop_dims,
+                states_i0=state_inds[0],
+            )
         else:
-            data[-1] = TData(odata, odims, loop_dims, states_i0=state_inds[0])
+            data[-1] = TData(
+                odata,
+                odims,
+                # loop_dims,
+                states_i0=state_inds[0],
+            )
     del odims, odata
 
     # link chunk state indices from mdata to fdata and tdata:
@@ -733,7 +759,7 @@ def _run_on_cluster(
     mdata = MData(
         data={names[i]: data[i] for i in range(mdata_size)},
         dims={names[i]: dims[i] for i in range(mdata_size)},
-        loop_dims=loop_dims[0],
+        # loop_dims=loop_dims[0],
         states_i0=i0_states,
     )
 
@@ -741,7 +767,7 @@ def _run_on_cluster(
     fdata = FData(
         data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
         dims={names[i]: dims[i] for i in range(mdata_size, fdata_end)},
-        loop_dims=loop_dims[1],
+        # loop_dims=loop_dims[1],
         states_i0=i0_states,
     )
 
@@ -750,7 +776,7 @@ def _run_on_cluster(
         tdata = TData(
             data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
             dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
-            loop_dims=loop_dims[2],
+            # loop_dims=loop_dims[2],
             states_i0=i0_states,
         )
 

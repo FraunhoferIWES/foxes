@@ -13,9 +13,9 @@ class JimenezDeflection(WakeDeflection):
     Notes
     -----
     Reference:
-    "Experimental and theoretical study of wind turbine wakes in yawed conditions"
-    Majid Bastankhah, Fernando Porté-Agel
-    https://doi.org/10.1017/jfm.2016.595
+    Jiménez, Á., Crespo, A. and Migoya, E. (2010), Application of a LES technique to characterize
+    the wake deflection of a wind turbine in yaw. Wind Energ., 13: 559-572. doi:10.1002/we.380
+
 
     Attributes
     ----------

@@ -253,6 +253,18 @@ class ModelBook:
         )
         self.wake_deflections.add_factory(
             fm.wake_deflections.JimenezDeflection,
+            "Jimenez_b<beta>_dx<dx>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            dx=lambda dx: float(dx),
+            var2arg={"dx": "step_x"},
+            hints={
+                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
+                "dx": "(The step size in m for integration along wake path, e.g. 10)",
+            },
+            kwargs=dict(rotate=True),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
             "JimenezProj_b<beta>",
             beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
@@ -260,9 +272,33 @@ class ModelBook:
         )
         self.wake_deflections.add_factory(
             fm.wake_deflections.JimenezDeflection,
+            "JimenezProj_b<beta>_dx<dx>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            dx=lambda dx: float(dx),
+            var2arg={"dx": "step_x"},
+            hints={
+                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
+                "dx": "(The step size in m for integration along wake path, e.g. 10)",
+            },
+            kwargs=dict(rotate=False),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
             "JimenezPath_b<beta>",
             beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
             hints={"beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)"},
+            kwargs=dict(rotate=None),
+        )
+        self.wake_deflections.add_factory(
+            fm.wake_deflections.JimenezDeflection,
+            "JimenezPath_b<beta>_dx<dx>",
+            beta=lambda x: float(f"0.{x[1:]}" if x[0] == "0" else float(x)),
+            dx=lambda dx: float(dx),
+            var2arg={"dx": "step_x"},
+            hints={
+                "beta": "(The Jimenez beta coefficient, e.g. 01 for 0.1)",
+                "dx": "(The step size in m for integration along wake path, e.g. 10)",
+            },
             kwargs=dict(rotate=None),
         )
 

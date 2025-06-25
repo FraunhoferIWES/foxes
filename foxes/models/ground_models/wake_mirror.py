@@ -131,9 +131,7 @@ class WakeMirror(GroundModel):
         hh = fdata[FV.H][:, downwind_index].copy()
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index, wmodel
-        )
+        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
@@ -142,7 +140,7 @@ class WakeMirror(GroundModel):
             fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
             wcoos = algo.wake_frame.get_wake_coos(
-                algo, mdata, fdata, tdata, downwind_index, wmodel
+                algo, mdata, fdata, tdata, downwind_index
             )
             wmodel.contribute(
                 algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas

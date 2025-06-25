@@ -32,11 +32,10 @@ class WindVectorLinear(WindVectorWakeSuperposition):
 
         """
         super().__init__()
-
         self.scale_amb = scale_amb
 
     def __repr__(self):
-        a = f"scale_amb={self.scale_amb}, lim_low={self.lim_low}, lim_high={self.lim_high}"
+        a = f"scale_amb={self.scale_amb}"
         return f"{type(self).__name__}({a})"
 
     def input_farm_vars(self, algo):
