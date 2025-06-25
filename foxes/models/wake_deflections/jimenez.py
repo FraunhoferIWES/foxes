@@ -185,6 +185,7 @@ class JimenezDeflection(WakeDeflection):
             y[sel] += np.sum(np.tan(
                     alpha0 / (1 + self.beta * delx / D)**2
                 ) * dx, axis=-1)
+            del delx, dx
             coos[..., 1] = y[:, :, None]
 
             # calculate wind vector modification at evaluation points:
