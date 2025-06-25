@@ -89,6 +89,7 @@ class WindVectorLinear(WindVectorWakeSuperposition):
         if FV.AMB_UV not in tdata:
             tdata[FV.AMB_UV] = wd2uv(tdata[FV.AMB_WD], tdata[FV.AMB_WS])
         if not FV.UV in wdeltas:
+            assert FV.WS in wdeltas, f"{self.name}: Expecting '{FV.WS}' in wdeltas, got {list(wdeltas.keys())}"
             scale = self.get_data(
                 FV.AMB_REWS if self.scale_amb else FV.REWS,
                 FC.STATE_TARGET_TPOINT,

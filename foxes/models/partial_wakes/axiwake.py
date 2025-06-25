@@ -201,20 +201,21 @@ class PartialAxiwake(PartialCentre):
         # run superposition models:
         if wmodel.affects_ws and wmodel.has_uv:
             assert wmodel.has_vector_wind_superp, f"{self.name}: Expecting vector wind superposition in wake model '{wmodel.name}', got '{wmodel.wind_superposition}'"
-            if FV.UV not in wdeltas:
-                wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
-            duv = np.einsum('snd,sn->sd', wdeltas.pop(FV.UV), weights[st_sel])
-            wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
-                algo, 
-                mdata, 
-                fdata, 
-                tdata, 
-                downwind_index, 
-                st_sel, 
-                wake_deltas[FV.UV], 
-                duv[:, None],
-            )
-            del duv
+            if FV.WS in wdeltas or FV.UV in wdeltas:
+                if FV.UV not in wdeltas:
+                    wmodel.vec_superp.wdeltas_ws2uv(algo, fdata, tdata, downwind_index, wdeltas, st_sel)
+                duv = np.einsum('snd,sn->sd', wdeltas.pop(FV.UV), weights[st_sel])
+                wake_deltas[FV.UV] = wmodel.vec_superp.add_wake_vector(
+                    algo, 
+                    mdata, 
+                    fdata, 
+                    tdata, 
+                    downwind_index, 
+                    st_sel, 
+                    wake_deltas[FV.UV], 
+                    duv[:, None],
+                )
+                del duv
             for v in [FV.WS, FV.WD, FV.UV]:
                 if v in wdeltas:
                     del wdeltas[v]

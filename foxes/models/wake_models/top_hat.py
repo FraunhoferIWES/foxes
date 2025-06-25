@@ -260,11 +260,10 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             for v, wdel in cl_del.items():
                 wdeltas[v] = np.where(isin, wdel[:, None], 0.0)
 
-        if self.affects_ws:
+        if self.affects_ws and FV.WS in wdeltas:
 
             # wake deflection causes wind vector rotation:
             if FC.WDEFL_ROT_ANGLE in tdata:
-                assert FV.WS in wdeltas, f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
                 dwd_defl = tdata[FC.WDEFL_ROT_ANGLE]
                 if FV.WD not in wdeltas:
                     wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
@@ -274,7 +273,6 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             
             # wake deflection causes wind speed reduction:
             if FC.WDEFL_DWS_FACTOR in tdata:
-                assert FV.WS in wdeltas, f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
                 dws_defl = tdata[FC.WDEFL_DWS_FACTOR]
                 wdeltas[FV.WS] *= dws_defl[st_sel]
 

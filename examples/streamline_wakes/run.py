@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--pwakes", help="The partial wakes models", default="centre", nargs="+"
     )
-    parser.add_argument("-d", "--deflection", help="The wake deflection", default="Jimenez")
+    parser.add_argument("-d", "--deflection", help="The wake deflection", default="no_deflection")
     parser.add_argument(
         "-y", "--yawm", help="The uniform yaw misalignment value", type=float, default=None
     )
@@ -82,14 +82,12 @@ if __name__ == "__main__":
     N = int(args.n_turbines**0.5)
     if args.yawm is None:
         ymodels = []
-        fixv = {}
     else:
         yawm = np.zeros((1, N*N), dtype=np.float64)
         yawm[:, :N] = args.yawm
         mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
-        fixv = {FV.WD: 270}
 
     states = foxes.input.states.FieldDataNC(
         args.file_pattern,

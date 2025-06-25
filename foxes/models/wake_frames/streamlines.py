@@ -243,7 +243,7 @@ class Streamlines2D(WakeFrame):
 
         """
         coos = self._calc_coos(algo, mdata, fdata, tdata[FC.TARGETS], downwind_index)
-
+        
         return algo.wake_deflection.calc_deflection(
             algo, mdata, fdata, tdata, downwind_index, coos)
     

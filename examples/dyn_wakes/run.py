@@ -128,14 +128,12 @@ if __name__ == "__main__":
     N = int(args.n_turbines**0.5)
     if args.yawm is None:
         ymodels = []
-        fixv = {}
     else:
         yawm = np.zeros((1, N*N), dtype=np.float64)
         yawm[:, :N] = args.yawm
         mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
-        fixv = {FV.WD: 270}
 
     if args.background0:
         States = foxes.input.states.Timeseries
