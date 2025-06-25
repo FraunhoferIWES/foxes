@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
         else:
             raise ValueError(
-                f"Please either give one rotor, or one pwake, or same number of both"
+                "Please either give one rotor, or one pwake, or same number of both"
             )
 
     if args.title is not None:

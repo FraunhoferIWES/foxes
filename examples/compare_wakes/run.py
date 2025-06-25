@@ -232,7 +232,7 @@ if __name__ == "__main__":
                 ax.plot(xlist / D, results[0], label=wake)
                 ax.set_ylabel(args.var)
 
-            ax.set_title(f"y = 0")
+            ax.set_title("y = 0")
             ax.set_xlabel("x/D")
             ax.legend(loc="best")
             ax.grid()
