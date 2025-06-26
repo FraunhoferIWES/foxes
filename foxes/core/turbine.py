@@ -1,5 +1,5 @@
 import numpy as np
-
+from copy import deepcopy
 
 class Turbine:
     """
@@ -71,7 +71,7 @@ class Turbine:
         self.index = index
         self.name = name
         self.xy = np.array(xy)
-        self.models = turbine_models
+        self.models = deepcopy(turbine_models)
         self.D = D
         self.H = H
 
