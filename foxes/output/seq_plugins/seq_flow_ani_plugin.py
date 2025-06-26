@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from foxes.algorithms.sequential import SequentialPlugin
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D
@@ -116,7 +114,6 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         fig = ax.get_figure()
         gdata = None
         while len(self._data):
-
             fres, d = self._data.pop(0)
 
             if d[2] is not None:

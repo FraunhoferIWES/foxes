@@ -2,20 +2,13 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.3
-    Input states `WRGStates`, representing wind resource grid data, ie, a regular grid of wind roses. 
-    This required a change of the treatment of statistical weights of the states, such that they 
-    may now depend on the evaluation point.
+.. versionadded:: 1.4
+    This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame of previous versions. 
+    Now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes, see :ref:`Dynamic wake deflection`.
+    The wake deflection model is selected through the parameter `wake_deflection` or the algorithm and then applies to all wakes.
 
-.. versionadded:: 1.2
-    Running *foxes* from :ref:`Input parameter files <Input parameter files>` in *yaml* format,
-    simply by `foxes_yaml imputs.yaml` or `foxes_windio inputs.yaml` - no Python script needed.
-
-.. versionchanged:: 1.0
-    User-selectable :ref:`Parallelization` via the new `Engines`, replacing `Runners`. 
-    The default is now based on `concurrent.futures <https://docs.python.org/3/library/concurrent.futures.html>`_ and comes with a speedup. 
-    Also `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ is now supported, for simplified
-    multi-node computations.
+.. versionadded:: 1.4
+    The `Jimenez` wake deflection model, which optionally rotates the waked wind vector along the bent wake path.
 
 Welcome to FOXES
 ================

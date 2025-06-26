@@ -1,6 +1,5 @@
 from tqdm import tqdm
 from xarray import Dataset
-from tqdm import tqdm
 
 from foxes.core import Engine
 import foxes.constants as FC
@@ -145,8 +144,6 @@ class NumpyEngine(Engine):
             i0_targets = 0
             for chunki_points in range(n_chunks_targets):
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                i = chunki_states * n_chunks_targets + chunki_points
 
                 # get this chunk's data:
                 data = self.get_chunk_input_data(

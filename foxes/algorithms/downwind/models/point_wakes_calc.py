@@ -1,4 +1,5 @@
 from foxes.core import PointDataModel
+import foxes.variables as FV
 
 
 class PointWakesCalculation(PointDataModel):
@@ -114,17 +115,17 @@ class PointWakesCalculation(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
-        res = {}
+
         wmodels = (
             algo.wake_models.values() if self.wake_models is None else self.wake_models
         )
+        pvrs = self.pvars + [FV.UV]
         for wmodel in wmodels:
             gmodel = algo.ground_models[wmodel.name]
 
             wdeltas = gmodel.new_point_wake_deltas(algo, mdata, fdata, tdata, wmodel)
 
-            if len(set(self.pvars).intersection(wdeltas.keys())):
-
+            if len(set(pvrs).intersection(wdeltas.keys())):
                 if downwind_index is None:
                     for oi in range(fdata.n_turbines):
                         gmodel.contribute_to_point_wakes(
@@ -135,18 +136,11 @@ class PointWakesCalculation(PointDataModel):
                         algo, mdata, fdata, tdata, downwind_index, wdeltas, wmodel
                     )
 
-                for v in self.pvars:
-                    if v not in res and v in tdata:
-                        res[v] = tdata[v].copy()
+                gmodel.finalize_point_wakes(algo, mdata, fdata, tdata, wdeltas, wmodel)
 
-                gmodel.finalize_point_wakes(algo, mdata, fdata, res, wdeltas, wmodel)
-
-                for v in res.keys():
+                for v in tdata.keys():
                     if v in wdeltas:
-                        res[v] += wdeltas[v]
-
-        for v in res.keys():
-            tdata[v] = res[v]
+                        tdata[v] += wdeltas[v]
 
         if self.emodels is not None:
             self.emodels.calculate(algo, mdata, fdata, tdata, self.emodels_cpars)

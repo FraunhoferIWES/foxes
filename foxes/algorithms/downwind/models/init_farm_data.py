@@ -86,7 +86,6 @@ class InitFarmData(FarmDataModel):
         # set X, Y, H, D:
         fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
         for ti, t in enumerate(algo.farm.turbines):
-
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
             else:

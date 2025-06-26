@@ -77,7 +77,7 @@ class Model(ABC):
 
         Returns
         -------
-        bool :
+        bool:
             True if the model has been initialized.
 
         """
@@ -424,8 +424,8 @@ class Model(ABC):
             # lookup mdata:
             elif s == "m" and mdata is not None and variable in mdata:
                 a, d = _filter_dims(mdata)
-                l = len(d)
-                if l <= len(dims) and d == dims[:l]:
+                ld = len(d)
+                if ld <= len(dims) and d == dims[:ld]:
                     out = _match_shape(mdata[variable])
 
             # lookup fdata:
@@ -448,8 +448,8 @@ class Model(ABC):
                 and variable in tdata
             ):
                 a, d = _filter_dims(tdata)
-                l = len(d)
-                if l <= len(dims) and d == dims[:l]:
+                ld = len(ld)
+                if ld <= len(dims) and d == dims[:ld]:
                     out = _match_shape(tdata[variable])
 
             # lookup wake modelling data:

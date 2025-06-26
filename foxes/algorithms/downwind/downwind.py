@@ -32,6 +32,8 @@ class Downwind(Algorithm):
     partial_wakes: dict
         The partial wakes mapping. Key: wake model name,
         value: foxes.core.PartialWakesModel
+    deflection: foxes.core.WakeDeflection
+        The wake deflection model
     ground_models: dict
         The ground models mapping. Key: wake model name,
         value: foxes.core.GroundModel
@@ -70,6 +72,7 @@ class Downwind(Algorithm):
         wake_models,
         rotor_model="centre",
         wake_frame="rotor_wd",
+        wake_deflection="no_deflection",
         partial_wakes=None,
         ground_models=None,
         farm_controller="basic_ctrl",
@@ -94,6 +97,8 @@ class Downwind(Algorithm):
         wake_frame: str
             The wake frame. Will be looked up in the
             model book
+        deflection: foxes.core.WakeDeflection, optional
+            The wake deflection model
         partial_wakes: dict, list or str, optional
             The partial wakes mapping. Key: wake model name,
             value: partial wake model name
@@ -122,6 +127,9 @@ class Downwind(Algorithm):
 
         self.__wake_frame = self.mbook.wake_frames.get_item(wake_frame)
         self.wake_frame.name = wake_frame
+
+        self.__wake_deflection = self.mbook.wake_deflections.get_item(wake_deflection)
+        self.wake_deflection.name = wake_deflection
 
         self.__wake_models = {}
         for w in wake_models:
@@ -252,6 +260,19 @@ class Downwind(Algorithm):
         return self.__wake_frame
 
     @property
+    def wake_deflection(self):
+        """
+        The wake deflection
+
+        Returns
+        -------
+        m: foxes.core.WakeDeflection
+            The wake deflection model
+
+        """
+        return self.__wake_deflection
+
+    @property
     def partial_wakes(self):
         """
         The partial wakes models
@@ -310,6 +331,15 @@ class Downwind(Algorithm):
         """
         return getattr(mdls, name)
 
+    def update_n_turbines(self):
+        """
+        Reset the number of turbines,
+        according to self.farm
+        """
+        if self.n_turbines != self.farm.n_turbines:
+            super().update_n_turbines()
+            self.farm_controller.find_turbine_types(self)
+
     def print_deco(self, func_name=None, n_points=None):
         """
         Helper function for printing model names
@@ -334,25 +364,26 @@ class Downwind(Algorithm):
             if n_points is not None:
                 print(f"  n_points : {n_points}")
             print(deco)
-            print(f"  states   : {self.states}")
-            print(f"  rotor    : {self.rotor_model}")
+            print(f"  states    : {self.states}")
+            print(f"  rotor     : {self.rotor_model}")
             print(f"  controller: {self.farm_controller}")
             print(f"  wake frame: {self.wake_frame}")
+            print(f"  deflection: {self.wake_deflection}")
             print(deco)
-            print(f"  wakes:")
+            print("  wakes:")
             for i, w in enumerate(self.wake_models.values()):
                 print(f"    {i}) {w.name}: {w}")
             print(deco)
-            print(f"  partial wakes:")
+            print("  partial wakes:")
             for i, (w, p) in enumerate(self.partial_wakes.items()):
                 print(f"    {i}) {w}: {p.name}, {p}")
             print(deco)
-            print(f"  turbine models:")
+            print("  turbine models:")
             for i, m in enumerate(self.farm_controller.pre_rotor_models.models):
                 print(f"    {i}) {m.name}: {m} [pre-rotor]")
             for i, m in enumerate(self.farm_controller.post_rotor_models.models):
                 print(
-                    f"    {i+len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
+                    f"    {i + len(self.farm_controller.pre_rotor_models.models)}) {m.name}: {m}"
                 )
             print(deco)
             print()
@@ -364,7 +395,7 @@ class Downwind(Algorithm):
         if self.verbosity > 0:
             deco = "-" * 50
             print(f"\n{deco}")
-            print(f"  Model oder")
+            print("  Model oder")
             print(f"{deco}")
 
             for i, m in enumerate(mlist.models):
@@ -402,6 +433,7 @@ class Downwind(Algorithm):
             self.states,
             self.farm_controller,
             self.rotor_model,
+            self.wake_deflection,
             self.wake_frame,
         ]
         mdls += list(self.wake_models.values())
@@ -463,7 +495,7 @@ class Downwind(Algorithm):
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
         # 6) reorder back to state-turbine dimensions:
-        if outputs != False:
+        if not isinstance(outputs, bool) or outputs:
             mlist.models.append(self.get_model("ReorderFarmOutput")(outputs))
             calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
 
@@ -573,8 +605,8 @@ class Downwind(Algorithm):
         # get input model data:
         model_data = self.get_models_data()
         self.print("\nInput data:\n\n", model_data, "\n")
-        self.print(f"\nFarm variables:", ", ".join(self.farm_vars))
-        self.print(f"\nOutput variables:", ", ".join(outputs))
+        self.print("\nFarm variables:", ", ".join(self.farm_vars))
+        self.print("\nOutput variables:", ", ".join(outputs))
 
         # run main calculation:
         farm_results = super().calc_farm(
@@ -779,7 +811,7 @@ class Downwind(Algorithm):
         if persist_mdata:
             model_data = model_data.persist()
         self.print("\nInput data:\n\n", model_data, "\n")
-        self.print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+        self.print("\nOutput farm variables:", ", ".join(self.farm_vars))
 
         # chunk farm results:
         self.print("\nInput farm data:\n\n", farm_results, "\n")
@@ -798,7 +830,7 @@ class Downwind(Algorithm):
 
         # check vars:
         ovars = mlist.output_point_vars(self) if outputs is None else outputs
-        self.print(f"\nOutput point variables:", ", ".join(ovars))
+        self.print("\nOutput point variables:", ", ".join(ovars))
 
         # calculate:
         point_results = super().calc_points(

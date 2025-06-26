@@ -2,14 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are:
-
-- `Python 3.8`
-- `Python 3.9`
-- `Python 3.10`
-- `Python 3.11`
-- `Python 3.12`
-- `Python 3.13`
+The supported Python versions are `Python 3.8`...`3.13`.
 
 ## TLDR; Quick installation guide
 

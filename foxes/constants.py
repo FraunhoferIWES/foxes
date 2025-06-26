@@ -1,3 +1,8 @@
+XY = "xy"
+""" The vector (x, y)
+:group: foxes.variables
+"""
+
 XYH = "xyh"
 """ The vector (x, y, height)
 :group: foxes.variables
@@ -142,6 +147,17 @@ ITYPE = "ITYPE"
 
 BLOCK_CONVERGENCE = "block_convergence"
 """Identifier for convergence blocking signal
+:group: foxes.constants
+"""
+
+
+WDEFL_ROT_ANGLE = "wake_deflection_rotation_angle"
+"""Identifier for the wake deflection rotation angle data
+:group: foxes.constants
+"""
+
+WDEFL_DWS_FACTOR = "wake_deflection_deltaws_factor"
+"""Identifier for the wake deflection delta wind speed factor data
 :group: foxes.constants
 """
 

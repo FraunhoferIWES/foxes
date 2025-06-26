@@ -140,8 +140,8 @@ class WSLinear(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -156,11 +156,10 @@ class WSLinear(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -175,9 +174,9 @@ class WSLinear(WakeSuperposition):
         """
         w = wake_delta
         if self.lim_low is not None:
-            w = np.maximum(w, self.lim_low - amb_results)
+            w = np.maximum(w, self.lim_low - tdata[FV.var2amb[variable]])
         if self.lim_high is not None:
-            w = np.minimum(w, self.lim_high - amb_results)
+            w = np.minimum(w, self.lim_high - tdata[FV.var2amb[variable]])
         return w
 
 
@@ -296,8 +295,8 @@ class WSLinearLocal(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -312,11 +311,10 @@ class WSLinearLocal(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -329,6 +327,7 @@ class WSLinearLocal(WakeSuperposition):
             (n_states, n_targets, n_tpoints)
 
         """
+        amb_results = tdata[FV.var2amb[variable]]
         w = wake_delta * amb_results
         if self.lim_low is not None:
             w = np.maximum(w, self.lim_low - amb_results)

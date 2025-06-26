@@ -742,3 +742,19 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed with `xarray.Dataset` input instead of file for `FieldDataNC` states
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.3](https://github.com/FraunhoferIWES/foxes/commits/v1.3)
+
+## v1.4
+
+- Core:
+  - This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame, such that now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes. The wake deflection model is selected through the parameter `wake_deflection` or the algorithm and then applies to all wakes.
+  - Wake models, wake deflections or wake superpositions can now induce a horizontal rotation of the waked wind vector. This is realized by inhternally switching from a `(WS, WD)` description to a `UV` vector, and vice-versa at the end of calculations.
+  - A new abstract class `WindVectorWakeSuperposition` was instroduced for the purpose of handling `UV` wind wake effects.
+- Inputs:
+  - New states `WeibullSectors`, reading and interpreting spatially homogeneous Weibull scale and shape parameters for wind direction sectors, from csv or nc files
+- Models:
+  - New wake deflection model `Bastankhah2016Deflection`, replacing the previous `YawedWakes` wake frame. Notice that this model does not modify the wind speed deficit or the wind direction in the wake, it only changes the wake path. Meant to be used together with the `Bastankhah2016` wake model.
+  - New wake deflection model `JimenezDeflection`, which bends the wake and optionally also rotates the waked wind vector along the path. If that option is chosen, this model requires a vector type superposition of the wind deficit.
+  - New wake deflection model `NoDeflection`, which switches off wake bending and should be used if no yaw misalignment occurs in the simulation (default).
+  - New wake superposition model `WindVectorLinear`, realizing linear vector type wind vector superposition.
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4](https://github.com/FraunhoferIWES/foxes/commits/v1.4)

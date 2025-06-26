@@ -102,8 +102,8 @@ class TIPow(WakeSuperposition):
         algo,
         mdata,
         fdata,
+        tdata,
         variable,
-        amb_results,
         wake_delta,
     ):
         """
@@ -118,11 +118,10 @@ class TIPow(WakeSuperposition):
             The model data
         fdata: foxes.core.FData
             The farm data
+        tdata: foxes.core.TData
+            The target point data
         variable: str
             The variable name for which the wake deltas applies
-        amb_results: numpy.ndarray
-            The ambient results at targets,
-            shape: (n_states, n_targets, n_tpoints)
         wake_delta: numpy.ndarray
             The wake deltas at targets, shape:
             (n_states, n_targets, n_tpoints)
@@ -141,6 +140,7 @@ class TIPow(WakeSuperposition):
 
         # quadratic superposition to ambient:
         elif self.superp_to_amb == "quadratic":
+            amb_results = tdata[FV.var2amb[variable]]
             return np.sqrt(wake_delta ** (2 / self.pow) + amb_results**2) - amb_results
 
         # unknown ti delta:

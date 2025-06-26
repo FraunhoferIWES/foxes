@@ -260,7 +260,6 @@ class OnePointFlowStates(States):
             self.timelines_data = data.pop("data")
 
     def calc_states_indices(self, algo, mdata, points, hi, ref_xy):
-
         n_states, n_points = points.shape[:2]
         dxy = self.timelines_data["dxy"].to_numpy()[hi]
 
@@ -301,7 +300,6 @@ class OnePointFlowStates(States):
         sel = np.isnan(coeffs)
         tshift = 0
         while np.any(sel):
-
             trs = trace_si[sel]
             hdxy = -dxy[trs]
             trace_p[sel] += hdxy
@@ -326,7 +324,6 @@ class OnePointFlowStates(States):
             sel &= trace_si < algo.n_states
             tshift = 1
             while np.any(sel):
-
                 trs = trace_si[sel]
                 hdxy = dxy[trs]
                 trace_p[sel] += hdxy
@@ -420,7 +417,6 @@ class OnePointFlowStates(States):
 
         # interpolate to heights:
         if n_heights > 1:
-
             ar_states = np.arange(n_states)
             ar_points = np.arange(n_points)
 

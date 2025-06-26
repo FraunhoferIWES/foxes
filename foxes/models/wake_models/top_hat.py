@@ -2,6 +2,7 @@ import numpy as np
 from abc import abstractmethod
 
 from foxes.models.wake_models.axisymmetric import AxisymmetricWakeModel
+from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -19,21 +20,21 @@ class TopHatWakeModel(AxisymmetricWakeModel):
 
     """
 
-    def __init__(self, superpositions, induction="Betz"):
+    def __init__(self, *args, induction="Betz", **kwargs):
         """
         Constructor.
 
         Parameters
         ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
+        args: tuple, optional
+            Additional parameters for the base class
         induction: foxes.core.AxialInductionModel or str
             The induction model
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__(superpositions)
+        super().__init__(*args, **kwargs)
         self.induction = induction
 
     def sub_models(self):
@@ -46,7 +47,7 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             All sub models
 
         """
-        return [self.induction]
+        return super().sub_models() + [self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -65,6 +66,41 @@ class TopHatWakeModel(AxisymmetricWakeModel):
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
         super().initialize(algo, verbosity, force)
+
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
+        """
+        Creates new empty wake delta arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
+        wake_deltas: dict
+            Key: variable name, value: The zero filled
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
+
+        """
+        if self.has_uv:
+            duv = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+                dtype=config.dtype_double,
+            )
+            return {FV.UV: duv}
+        else:
+            dws = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                dtype=config.dtype_double,
+            )
+            return {FV.WS: dws}
 
     @abstractmethod
     def calc_wake_radius(
@@ -223,5 +259,20 @@ class TopHatWakeModel(AxisymmetricWakeModel):
             isin = r < wake_r[:, None]
             for v, wdel in cl_del.items():
                 wdeltas[v] = np.where(isin, wdel[:, None], 0.0)
+
+        if self.affects_ws and FV.WS in wdeltas:
+            # wake deflection causes wind vector rotation:
+            if FC.WDEFL_ROT_ANGLE in tdata:
+                dwd_defl = tdata[FC.WDEFL_ROT_ANGLE]
+                if FV.WD not in wdeltas:
+                    wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
+                    wdeltas[FV.WD][:] = dwd_defl[st_sel]
+                else:
+                    wdeltas[FV.WD] += dwd_defl[st_sel]
+
+            # wake deflection causes wind speed reduction:
+            if FC.WDEFL_DWS_FACTOR in tdata:
+                dws_defl = tdata[FC.WDEFL_DWS_FACTOR]
+                wdeltas[FV.WS] *= dws_defl[st_sel]
 
         return wdeltas, st_sel

@@ -54,17 +54,17 @@ def run_tutorial(path, nofig):
                 print("Path:", os.getcwd())
 
                 if not os.path.isfile("README.md"):
-                    print(f"\nFILE 'README.md' NOT FOUND\n")
+                    print("\nFILE 'README.md' NOT FOUND\n")
                     return 0
 
                 if not os.path.isfile("run.py"):
-                    print(f"\nFILE run.py NOT FOUND\n")
+                    print("\nFILE run.py NOT FOUND\n")
                     return 0
 
                 commands = []
                 with open("README.md") as f:
                     for line in f:
-                        if not "-h" in line:
+                        if "-h" not in line:
                             line = line.replace('"', "")
                             s = line.strip().split(" ")
                             if "run.py" in s:
@@ -74,7 +74,7 @@ def run_tutorial(path, nofig):
                                     commands[-1] += ["--nofig"]
 
                 if len(commands) == 0:
-                    print(f"\nNO COMMAND FOUND IN README.md\n")
+                    print("\nNO COMMAND FOUND IN README.md\n")
                     return 0
 
                 for cmd in commands:
@@ -98,7 +98,6 @@ def run_tutorial(path, nofig):
 
 
 def run(args):
-
     incld = args.include
     excld = args.exclude
 
@@ -108,7 +107,7 @@ def run(args):
         for d in sorted(w[1]):
             tdir = os.path.join(w[0], d)
 
-            if args.incopt or args.forceopt or not "optimization" in tdir:
+            if args.incopt or args.forceopt or "optimization" not in tdir:
                 ok = True
                 for k in excld:
                     if k in tdir:
@@ -116,10 +115,10 @@ def run(args):
                         break
                 if ok and incld is not None:
                     for k in incld:
-                        if not k in tdir:
+                        if k not in tdir:
                             ok = False
                             break
-                if args.forceopt and not "optimization" in tdir:
+                if args.forceopt and "optimization" not in tdir:
                     ok = False
 
                 if ok:

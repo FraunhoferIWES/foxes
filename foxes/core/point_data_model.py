@@ -98,8 +98,7 @@ class PointDataModel(DataCalcModel):
 
     def run_calculation(self, algo, *data, out_vars, **calc_pars):
         """
-        Starts the model calculation in parallel, via
-        xarray's `apply_ufunc`.
+        Starts the model calculation in parallel.
 
         Typically this function is called by algorithms.
 
@@ -149,7 +148,7 @@ class PointDataModelList(PointDataModel):
 
     By using the PointDataModelList the models'
     `calculate` functions are called together
-    under one common call of xarray's `apply_ufunc`.
+    under one common call by the engine.
 
     Attributes
     ----------

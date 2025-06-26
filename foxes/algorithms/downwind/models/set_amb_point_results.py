@@ -60,7 +60,7 @@ class SetAmbPointResults(PointDataModel):
         """
         return [FV.var2amb[v] for v in self.vars] + [FV.WEIGHT]
 
-    def calculate(self, algo, mdata, fdata, pdata):
+    def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
 
@@ -71,11 +71,11 @@ class SetAmbPointResults(PointDataModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
+        mdata: foxes.core.MData
             The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
-        pdata: foxes.core.Data
+        tdata: foxes.core.TData
             The point data
 
         Returns
@@ -86,5 +86,5 @@ class SetAmbPointResults(PointDataModel):
 
         """
         for v in self.vars:
-            pdata[FV.var2amb[v]] = pdata[v].copy()
-        return {v: pdata[v] for v in self.output_point_vars(algo)}
+            tdata.add(FV.var2amb[v], tdata[v].copy(), tdata.dims[v])
+        return {v: tdata[v] for v in self.output_point_vars(algo)}

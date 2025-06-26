@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from xarray import Dataset
 
-from foxes.core import MData, FData, TData
+from .data import MData, FData, TData
 from foxes.utils import new_instance
 from foxes.config import config
 import foxes.constants as FC
@@ -73,7 +73,7 @@ class Engine(ABC):
 
     def __enter__(self):
         if self.__entered:
-            raise ValueError(f"Enter called for already entered engine")
+            raise ValueError("Enter called for already entered engine")
         self.__entered = True
         if not self.initialized:
             self.initialize()
@@ -81,7 +81,7 @@ class Engine(ABC):
 
     def __exit__(self, *exit_args):
         if not self.__entered:
-            raise ValueError(f"Exit called for not entered engine")
+            raise ValueError("Exit called for not entered engine")
         self.__entered = False
         if self.initialized:
             self.finalize(*exit_args)
@@ -302,9 +302,9 @@ class Engine(ABC):
                 chunk_sizes_targets[-extra:] += 1
 
             s = np.sum(chunk_sizes_targets)
-            assert (
-                s == n_targets
-            ), f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+            assert s == n_targets, (
+                f"Targets count mismatch: Expecting {n_targets}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_targets]}"
+            )
 
         chunk_sizes_states = np.full(n_chunks_states, chunk_size_states)
         extra = n_states - n_chunks_states * chunk_size_states
@@ -312,9 +312,9 @@ class Engine(ABC):
             chunk_sizes_states[-extra:] += 1
 
         s = np.sum(chunk_sizes_states)
-        assert (
-            s == n_states
-        ), f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
+        assert s == n_states, (
+            f"States count mismatch: Expecting {n_states}, chunks sum is {s}. Chunks: {[int(c) for c in chunk_sizes_states]}"
+        )
 
         return chunk_sizes_states, chunk_sizes_targets
 
@@ -387,7 +387,6 @@ class Engine(ABC):
             mdata=mdata,
             s_states=s_states,
             callback=cb,
-            loop_dims=[FC.STATE],
             states_i0=i0_states,
             copy=True,
         )
@@ -411,7 +410,6 @@ class Engine(ABC):
                 s_states=s_states,
                 s_targets=s_targets,
                 callback=cb,
-                loop_dims=[FC.STATE, FC.TARGET],
                 states_i0=i0_states,
                 copy=True,
             )

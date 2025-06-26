@@ -2,24 +2,26 @@
 Output tools and functions.
 """
 
-from .round import round_defaults
-from .output import Output
-from .farm_layout import FarmLayoutOutput
-from .farm_results_eval import FarmResultsEval
-from .rose_plot import RosePlotOutput, StatesRosePlotOutput, WindRoseBinPlot
-from .results_writer import ResultsWriter
-from .state_turbine_map import StateTurbineMap
-from .turbine_type_curves import TurbineTypeCurves
-from .animation import Animator
-from .calc_points import PointCalculator
-from .slice_data import SliceData
-from .slices_data import SlicesData
-from .rotor_point_plots import RotorPointPlot
-from .state_turbine_table import StateTurbineTable
-from .plt import plt
+from .output import Output as Output
+from .farm_layout import FarmLayoutOutput as FarmLayoutOutput
+from .farm_results_eval import FarmResultsEval as FarmResultsEval
+from .rose_plot import RosePlotOutput as RosePlotOutput
+from .rose_plot import StatesRosePlotOutput as StatesRosePlotOutput
+from .rose_plot import WindRoseBinPlot as WindRoseBinPlot
+from .results_writer import ResultsWriter as ResultsWriter
+from .state_turbine_map import StateTurbineMap as StateTurbineMap
+from .turbine_type_curves import TurbineTypeCurves as TurbineTypeCurves
+from .animation import Animator as Animator
+from .calc_points import PointCalculator as PointCalculator
+from .slice_data import SliceData as SliceData
+from .slices_data import SlicesData as SlicesData
+from .rotor_point_plots import RotorPointPlot as RotorPointPlot
+from .state_turbine_table import StateTurbineTable as StateTurbineTable
+from .plt import plt as plt
 
-from .flow_plots_2d import FlowPlots2D
-from .seq_plugins import SeqFlowAnimationPlugin, SeqWakeDebugPlugin
+from .flow_plots_2d import FlowPlots2D as FlowPlots2D
+from .seq_plugins import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
+from .seq_plugins import SeqWakeDebugPlugin as SeqWakeDebugPlugin
 
-from . import grids
-from . import seq_plugins
+from . import grids as grids
+from . import seq_plugins as seq_plugins

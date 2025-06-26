@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 
-from foxes.core import FarmDataModel, TData
+from foxes.core import FarmDataModel
 import foxes.constants as FC
 import foxes.variables as FV
 
@@ -69,8 +69,14 @@ class FarmWakesCalculation(FarmDataModel):
         for wname, wmodel in algo.wake_models.items():
             pwake = algo.partial_wakes[wname]
             if pwake.name not in pwake2tdata:
-                tpoints, tweights = pwake.get_wake_points(algo, mdata, fdata)
-                pwake2tdata[pwake.name] = TData.from_tpoints(tpoints, tweights)
+                wmodels = [
+                    wm
+                    for wn, wm in algo.wake_models.items()
+                    if algo.partial_wakes[wn] is pwake
+                ]
+                pwake2tdata[pwake.name] = pwake.get_initial_tdata(
+                    algo, mdata, fdata, amb_res, rwghts, wmodels
+                )
 
         def _get_wdata(tdatap, wdeltas, variables, s):
             """Helper function for wake data extraction"""
@@ -78,12 +84,10 @@ class FarmWakesCalculation(FarmDataModel):
             wdelta = {v: d[s] for v, d in wdeltas.items()}
             return tdata, wdelta
 
-        def _evaluate(
-            gmodel, tdata, amb_res, rwghts, wake_res, wdeltas, oi, wmodel, pwake
-        ):
+        def _evaluate(gmodel, tdata, rwghts, wake_res, wdeltas, oi, wmodel, pwake):
             """Helper function for data evaluation at turbines"""
             wres = gmodel.finalize_farm_wakes(
-                algo, mdata, fdata, tdata, amb_res, rwghts, wdeltas, wmodel, oi, pwake
+                algo, mdata, fdata, tdata, rwghts, wdeltas, wmodel, oi, pwake
             )
 
             hres = {
@@ -124,7 +128,6 @@ class FarmWakesCalculation(FarmDataModel):
                         _evaluate(
                             gmodel,
                             tdatap,
-                            amb_res,
                             rwghts,
                             wake_res,
                             wdeltas,
@@ -149,7 +152,6 @@ class FarmWakesCalculation(FarmDataModel):
                         _evaluate(
                             gmodel,
                             tdatap,
-                            amb_res,
                             rwghts,
                             wake_res,
                             wdeltas,

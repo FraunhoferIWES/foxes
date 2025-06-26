@@ -36,7 +36,7 @@ class MultiHeightStates(States):
     fixed_vars: dict, optional
         Fixed uniform variable values, instead of
         reading from data
-    pd_read_pars: dict, optional
+    read_pars: dict, optional
         pandas file reading parameters
     states_sel: slice or range or list of int
         States subset selection
@@ -58,7 +58,7 @@ class MultiHeightStates(States):
         heights,
         var2col={},
         fixed_vars={},
-        pd_read_pars={},
+        read_pars={},
         states_sel=None,
         states_loc=None,
         **ipars,
@@ -79,7 +79,7 @@ class MultiHeightStates(States):
         fixed_vars: dict, optional
             Fixed uniform variable values, instead of
             reading from data
-        pd_read_pars: dict, optional
+        read_pars: dict, optional
             pandas file reading parameters
         states_sel: slice or range or list of int, optional
             States subset selection
@@ -93,7 +93,7 @@ class MultiHeightStates(States):
 
         self.ovars = list(output_vars)
         self.heights = np.array(heights, dtype=config.dtype_double)
-        self.rpars = pd_read_pars
+        self.rpars = read_pars
         self.var2col = var2col
         self.fixed_vars = fixed_vars
         self.ipars = ipars
@@ -572,7 +572,7 @@ class MultiHeightNCStates(MultiHeightStates):
             data_source,
             *args,
             heights=[],
-            pd_read_pars=None,
+            read_pars=None,
             **kwargs,
         )
         self.state_coord = state_coord
@@ -631,7 +631,10 @@ class MultiHeightNCStates(MultiHeightStates):
         self._inds = data.coords[self.state_coord].to_numpy()
 
         if self._format_times_func == "default":
-            format_times_func = lambda t: t.astype("datetime64[ns]")
+
+            def format_times_func(t):
+                """little helper function to convert times to datetime64"""
+                return t.astype("datetime64[ns]")
         else:
             format_times_func = self._format_times_func
         if format_times_func is not None:

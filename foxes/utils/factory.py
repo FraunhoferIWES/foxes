@@ -526,9 +526,7 @@ class WakeKFactory:
                 s += f"\n  {v} from {list(f0.options[v])}"
             else:
                 s += f"\n  {v}={f0.hints.get(v, '(value)')}"
-        s += (
-            f"\n  [wake_k]=(None or k<k> or ka<ka> or ka<ka>_kb<kb>, e.g. 004 for 0.04)"
-        )
+        s += "\n  [wake_k]=(None or k<k> or ka<ka> or ka<ka>_kb<kb>, e.g. 004 for 0.04)"
         return s
 
 

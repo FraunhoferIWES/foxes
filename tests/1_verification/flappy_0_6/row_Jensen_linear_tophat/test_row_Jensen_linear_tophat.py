@@ -45,7 +45,6 @@ def test():
     )
 
     with foxes.Engine.new("threads", chunk_size_states=c):
-
         algo = foxes.algorithms.Downwind(
             farm,
             states,

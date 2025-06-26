@@ -1,9 +1,12 @@
 from abc import abstractmethod
+import numpy as np
 
-from foxes.core import WakeModel
+from foxes.core import SingleTurbineWakeModel
+from foxes.config import config
+import foxes.variables as FV
 
 
-class DistSlicedWakeModel(WakeModel):
+class DistSlicedWakeModel(SingleTurbineWakeModel):
     """
     Abstract base class for wake models for which
     the x-denpendency can be separated from the
@@ -12,65 +15,44 @@ class DistSlicedWakeModel(WakeModel):
     The multi-yz ability is used by the `PartialDistSlicedWake`
     partial wakes model.
 
-    Attributes
-    ----------
-    superpositions: dict
-        The superpositions. Key: variable name str,
-        value: The wake superposition model name,
-        will be looked up in model book
-    superp: dict
-        The superposition dict, key: variable name str,
-        value: `foxes.core.WakeSuperposition`
-
     :group: models.wake_models
 
     """
 
-    def __init__(self, superpositions):
+    def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """
-        Constructor.
-
-        Parameters
-        ----------
-        superpositions: dict
-            The superpositions. Key: variable name str,
-            value: The wake superposition model name,
-            will be looked up in model book
-
-        """
-        super().__init__()
-        self.superpositions = superpositions
-
-    def sub_models(self):
-        """
-        List of all sub-models
-
-        Returns
-        -------
-        smdls: list of foxes.core.Model
-            Names of all sub models
-
-        """
-        return list(self.superp.values())
-
-    def initialize(self, algo, verbosity=0, force=False):
-        """
-        Initializes the model.
+        Creates new empty wake delta arrays.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-        force: bool
-            Overwrite existing data
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
+        wake_deltas: dict
+            Key: variable name, value: The zero filled
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        self.superp = {
-            v: algo.mbook.wake_superpositions[s] for v, s in self.superpositions.items()
-        }
-        super().initialize(algo, verbosity, force)
+        if self.has_uv:
+            duv = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+                dtype=config.dtype_double,
+            )
+            return {FV.UV: duv}
+        else:
+            dws = np.zeros(
+                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                dtype=config.dtype_double,
+            )
+            return {FV.WS: dws}
 
     @abstractmethod
     def calc_wakes_x_yz(
@@ -159,6 +141,26 @@ class DistSlicedWakeModel(WakeModel):
             algo, mdata, fdata, tdata, downwind_index, x, yz
         )
 
+        if self.affects_ws and self.has_uv:
+            assert self.has_vector_wind_superp, (
+                f"Wake model {self.name}: Missing vector wind superposition, got '{self.wind_superposition}'"
+            )
+            if FV.UV in wdeltas or FV.WS in wdeltas:
+                if FV.UV not in wdeltas:
+                    self.vec_superp.wdeltas_ws2uv(
+                        algo, fdata, tdata, downwind_index, wdeltas, st_sel
+                    )
+                wake_deltas[FV.UV] = self.vec_superp.add_wake_vector(
+                    algo,
+                    mdata,
+                    fdata,
+                    tdata,
+                    downwind_index,
+                    st_sel,
+                    wake_deltas[FV.UV],
+                    wdeltas.pop(FV.UV),
+                )
+
         for v, hdel in wdeltas.items():
             try:
                 superp = self.superp[v]
@@ -177,40 +179,4 @@ class DistSlicedWakeModel(WakeModel):
                 v,
                 wake_deltas[v],
                 hdel,
-            )
-
-    def finalize_wake_deltas(
-        self,
-        algo,
-        mdata,
-        fdata,
-        amb_results,
-        wake_deltas,
-    ):
-        """
-        Finalize the wake calculation.
-
-        Modifies wake_deltas on the fly.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-        wake_deltas: dict
-            The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_targets, n_tpoints)
-
-        """
-        for v, s in self.superp.items():
-            wake_deltas[v] = s.calc_final_wake_delta(
-                algo, mdata, fdata, v, amb_results[v], wake_deltas[v]
             )

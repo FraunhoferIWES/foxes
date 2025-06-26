@@ -22,7 +22,7 @@ from foxes import __version__
 # -- Project information -----------------------------------------------------
 
 project = "foxes"
-copyright = "2024, Fraunhofer IWES"
+copyright = "2025, Fraunhofer IWES"
 author = "Fraunhofer IWES"
 
 # The short X.Y version
@@ -67,9 +67,8 @@ intersphinx_mapping = {
 # autosummary_generate = False
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
 #
-source_suffix = [".rst", ".md"]
+source_suffix = {'.rst': 'restructuredtext', '.md': 'restructuredtext'}
 
 # The master toctree document.
 master_doc = "index"
@@ -337,6 +336,7 @@ python_apigen_modules = {
     "foxes.models.vertical_profiles": "_foxes/models/vertical_profiles/",
     "foxes.models.axial_induction": "_foxes/models/axial_induction",
     "foxes.models.ground_models": "_foxes/models/ground_models",
+    "foxes.models.wake_deflections": "_foxes/models/wake_deflections",
     "foxes.models.wake_frames": "_foxes/models/wake_frames/",
     "foxes.models.wake_models": "_foxes/models/wake_models/",
     "foxes.models.wake_models.induction": "_foxes/models/wake_models/induction/",

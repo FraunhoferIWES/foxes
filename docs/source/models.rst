@@ -10,6 +10,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Turbine types`: Define rotor diameter and hub height, and provide thrust coefficient and power yield depending on rotor equivalent quantities. 
 * :ref:`Wake models`: Compute wake deltas for flow quantities in the wake of a turbine.
 * :ref:`Wake frames`: Determine the path of wake propagation and the local coordinate system that follows the centreline of the wake.
+* :ref:`Wake deflections`: Bend the wakes for rotors with yaw misalignment. This effect is added to the wake frame path.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
 * :ref:`Ground models`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
@@ -158,18 +159,36 @@ The available wake frame classes are listed
 contains many pre-defined wake frames, for example:
 
 * `rotor_wd`: Straight wakes, following the wind direction measured at the centre of the wake causing rotor.
-* `yawed_[wake_k]`: Wake bending due to yaw misalignment of the rotor, as represented by the `YAWM` variable. See :ref:`Yawed rotor wakes`.  
 * `streamlines_<step>`: Streamline (or streaklines) following steady-state wakes, for a virtual time step of `step` seconds. See :ref:`Heterogeneous flow`.
 * `dyn_wakes`, `dyn_wakes_<length>`: Dynamic flow following wakes for inhomogeneous wind data, optionally with maximal wake length `length`, e.g. `length=8km` or `length=4321m`, or other values with one of those two units. See :ref:`Dynamic Wakes 1`.
 * `timelines`, `timelines_<dt>`: Dynamic flow following wakes for spatially homogeneous wind data, optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`Dynamic Wakes 2`.
 * `seq_dyn_wakes`, `seq_dyn_wakes_<dt>`: Sequential state evaluation (caution: slow, no state chunking), optionally with time step `dt`, e.g. `dt=10s` or `dt=1min`, or other values with one of those two units. See :ref:`Dynamic Wakes 3`.
 
-The `yawed` wake frame is based on the wind deficit model by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_,
-and when it is combined with the corresponding wake model `Bastankhah2016_<superposition>_[wake_k]` it picks up all
-model parameters from that instance.  For other wake models, the parameters can either be specified by adding a new instance
-of the :ref:`YawedWakes<foxes.models.wake_frames.YawedWakes>` class with the desired constructor call, or the defaults will 
-be taken. The `k` wake growth parameter is either specified by the rules described above in the :ref:`Wake models` section, or it will be
-picked automatically from the first wake model in the wake model list given to the algorithm.
+Wake deflections
+----------------
+For rotors with yaw misalignment the wake is bent and follows a curved path. This is modelled by `WakeDeflection` models, which 
+
+* modify the wake path from the wake frame,
+* optionally rotate the waked wind vector along the path,
+* or, alternatively (and also optionally), they modify the wind deficit along the curved path.
+
+Currently, these are the implemented wake deflection model classes:
+
+* :ref:`NoDeflection<foxes.models.wake_deflections.NoDeflection>`: Ignores wake deflection effects (default). Should be used if no yaw misalignment is present.
+* :ref:`Bastankhah2016Deflection<foxes.models.wake_deflections.Bastankhah2016Deflection>`: Extracted from the wake model paper by `Bastankhah and Porté-Agel from 2016 <https://doi.org/10.1017/jfm.2016.595>`_, recommended in combination with the corresponding wake model. Only the wake path is modified by this model.
+* :ref:`JimenezDeflection<foxes.models.wake_deflections.JimenezDeflection>`: Bends any wake according to `Jimenez et al. <https://onlinelibrary.wiley.com/doi/epdf/10.1002/we.380>`_, and optionally also rotates the wind vector within the wake.
+
+The `JimenezDeflection` model has three pre-configured versions in the model book:
+
+* `Jimenez`: Modifies the wake path and rotates the waked horizontal wind vector along the path.
+* `JimenezProj`: Modifies the wake path and alters the wind deficit within the wake by projection, but does not rotate the vector.
+* `JimenezPath`: Modifies the wake path but does not modifiy the wind vector delta within the wake.
+
+All versions allow for non-standard values of the model parameter `beta`, for example by `Jimenez_b012` for `beta = 0.12` instead of the default `beta = 0.1`.
+
+The `Bastankhah2016Deflection` is called `Bastankhah2016` in the model book, and the `NoDeflection` model `no_deflection`.
+
+For an example in the context on dynamic wakes, see :ref:`Dynamic wake deflection`.
 
 Partial wakes
 -------------

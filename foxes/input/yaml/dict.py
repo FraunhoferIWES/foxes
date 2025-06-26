@@ -75,13 +75,13 @@ def read_dict(
             print(*args, **kwargs)
 
     # set working directory:
-    l = 0
+    ld = 0
     for c, d in zip(
         [FC.WORK_DIR, FC.INPUT_DIR, FC.OUTPUT_DIR], [work_dir, input_dir, output_dir]
     ):
         if d is not None:
             config[c] = d
-            l = max(l, len(str(d)))
+            ld = max(ld, len(str(d)))
     _print("\n--------------------- Reading foxes parameter dict ---------------------")
     _print("Working directory  :", config.work_dir)
     _print("Input directory    :", config.input_dir)
@@ -95,9 +95,9 @@ def read_dict(
         else:
             states = algo.states
     else:
-        assert (
-            algo is None
-        ), f"Cannot handle both the algo and the states argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the states argument, please drop one"
+        )
 
     # create model book:
     if mbook is None:
@@ -119,9 +119,9 @@ def read_dict(
         else:
             mbook = algo.mbook
     else:
-        assert (
-            algo is None
-        ), f"Cannot handle both the algo and the mbook argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the mbook argument, please drop one"
+        )
 
     # create farm:
     if farm is None:
@@ -129,8 +129,8 @@ def read_dict(
             _print("Creating wind farm")
             fdict = idict.get_item("wind_farm")
             lyts = [
-                Dict(l, name=f"{fdict.name}.layout{i}")
-                for i, l in enumerate(fdict.pop_item("layouts"))
+                Dict(lo, name=f"{fdict.name}.layout{i}")
+                for i, lo in enumerate(fdict.pop_item("layouts"))
             ]
             farm = WindFarm(**fdict)
             for lyt in lyts:
@@ -141,9 +141,9 @@ def read_dict(
         else:
             farm = algo.farm
     else:
-        assert (
-            algo is None
-        ), f"Cannot handle both the algo and the farm argument, please drop one"
+        assert algo is None, (
+            "Cannot handle both the algo and the farm argument, please drop one"
+        )
 
     # create engine:
     engine = None
@@ -321,12 +321,12 @@ def run_obj_function(
 
         def _set_label(rlabels, k, r):
             if k not in ["", "none", "None", "_", "__"]:
-                assert (
-                    k[0] == "$"
-                ), f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
-                assert (
-                    "[" not in k and "]" not in k and "," not in k
-                ), f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                assert k[0] == "$", (
+                    f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
+                )
+                assert "[" not in k and "]" not in k and "," not in k, (
+                    f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                )
                 _print(f"    result label {k}: {type(r).__name__}")
                 rlabels[k] = r
 

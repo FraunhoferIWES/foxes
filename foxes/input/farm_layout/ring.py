@@ -49,7 +49,6 @@ def add_ring(
     da = 360 / n_turbines
 
     for i in range(n_turbines):
-
         n = wd2wdvec(a)[0]
 
         farm.add_turbine(

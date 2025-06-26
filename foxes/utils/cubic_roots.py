@@ -104,7 +104,7 @@ def test_cubic_roots(roots, a0, a1, a2, a3=None, tol=1.0e-12):
         c2 = a2[n]
         c3 = a3[n]
 
-        print(f"Polynomial {n}: a = {(c0,c1,c2,c3)}")
+        print(f"Polynomial {n}: a = {(c0, c1, c2, c3)}")
 
         rts = np.unique(roots[n])
         rts = rts[~np.isnan(rts)]

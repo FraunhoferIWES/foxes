@@ -159,6 +159,55 @@ def _get_MultiHeightNCTimeseries(
     return False
 
 
+def _get_WeibullSectors(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate Weibull sector parameters
+    :group: input.yaml.windio
+    """
+    if (
+        FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+        and len(dims[FV.WEIBULL_A]) == 1
+        and len(dims[FV.WEIBULL_k]) == 1
+        and len(dims["sector_probability"]) == 1
+    ):
+        if verbosity > 2:
+            print("        selecting class 'WeibullSectors'")
+
+        data = {}
+        fix = {}
+        c = dims[FV.WEIBULL_A][0]
+        for v, d in fields.items():
+            if dims[v] == (c,):
+                data[v] = d
+            elif len(dims[v]) == 0:
+                fix[v] = d
+            elif verbosity > 2:
+                print(f"        ignoring field '{v}' with dims {dims[v]}")
+        fix.update({v: d for v, d in fixval.items() if v not in data})
+
+        if FV.WD in coords:
+            data[FV.WD] = coords[FV.WD]
+
+        sdata = pd.DataFrame(index=range(len(fields[FV.WEIBULL_A])), data=data)
+        sdata.index.name = "sector"
+        states_dict.update(
+            dict(
+                states_type="WeibullSectors",
+                data_source=sdata,
+                ws_bins=coords.get(FV.WS, np.arange(30)),
+                output_vars=ovars,
+                var2ncvar={FV.WEIGHT: "sector_probability"},
+                fixed_vars=fix,
+                profiles=profiles,
+            )
+        )
+        return True
+    return False
+
+
 def get_states(coords, fields, dims, verbosity=1):
     """
     Reads states parameters from windio input
@@ -198,6 +247,9 @@ def get_states(coords, fields, dims, verbosity=1):
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_MultiHeightNCTimeseries(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_WeibullSectors(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
     ):

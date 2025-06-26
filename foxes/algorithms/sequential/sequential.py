@@ -154,7 +154,7 @@ class Sequential(Iterative):
             if self._verbo0 > 0:
                 print("\nInput data:\n")
                 print(self._model_data)
-                print(f"\nOutput farm variables:", ", ".join(self.farm_vars))
+                print("\nOutput farm variables:", ", ".join(self.farm_vars))
                 print()
 
             sts = self._model_data[FC.STATE].to_numpy()
@@ -188,7 +188,6 @@ class Sequential(Iterative):
         """Run calculation for current step, then iterate to next"""
 
         if self._i < len(self._inds):
-
             self._counter = self._i
             self.states._counter = self._i
             self.states._size = 1
@@ -401,7 +400,7 @@ class Sequential(Iterative):
 
         """
         if not self.iterating:
-            raise ValueError(f"calc_farm call is only allowed during iterations")
+            raise ValueError("calc_farm call is only allowed during iterations")
         return self.cur_farm_results
 
     def calc_points(
@@ -433,6 +432,6 @@ class Sequential(Iterative):
 
         """
         if not self.iterating:
-            raise ValueError(f"calc_points call is only allowed during iterations")
+            raise ValueError("calc_points call is only allowed during iterations")
 
         return super().calc_points(farm_results, points, finalize=False, **kwargs)

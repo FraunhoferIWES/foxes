@@ -161,7 +161,10 @@ class DynamicWakes(WakeFrame):
             for v in algo.states.output_point_vars(algo)
         }
         key = f"{self.DATA}_{downwind_index}"
-        ukey_fun = lambda fr, to: f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
+
+        def ukey_fun(fr, to):
+            """helper function to create update key"""
+            return f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
 
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
@@ -274,7 +277,6 @@ class DynamicWakes(WakeFrame):
                         # compute single state wake propagation:
                         isnan0 = np.isnan(hdata)
                         for si in range(n_states):
-
                             s = slice(si, si + 1, None)
                             hmdata = mdata.get_slice(FC.STATE, s)
                             hfdata = fdata.get_slice(FC.STATE, s)
@@ -429,4 +431,11 @@ class DynamicWakes(WakeFrame):
             (FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        return wcoos.reshape(n_states, n_targets, n_tpoints, 3)
+        return algo.wake_deflection.calc_deflection(
+            algo,
+            mdata,
+            fdata,
+            tdata,
+            downwind_index,
+            wcoos.reshape(n_states, n_targets, n_tpoints, 3),
+        )

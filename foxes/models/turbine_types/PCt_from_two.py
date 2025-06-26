@@ -263,7 +263,6 @@ class PCtFromTwo(TurbineType):
 
         """
         if modify_ct:
-
             ws = self._data_ws_ct
             ct = self._data_ct
 
@@ -291,7 +290,6 @@ class PCtFromTwo(TurbineType):
                 self._data_ct = np.concatenate([new_ct[:-1], ct], axis=0)
 
         if modify_P:
-
             ws = self._data_ws_P
             P = self._data_P
 

@@ -43,7 +43,7 @@ def read_windio(wio_dict, verbosity=1):
     if not isinstance(wio_dict, Dict):
         wio_dict = Dict(wio_dict, name="windio")
 
-    _print(f"Reading windio data")
+    _print("Reading windio data")
     _print("  Name:", wio_dict.pop_item("name", None))
     _print("  Contents:", [k for k in wio_dict.keys()])
 

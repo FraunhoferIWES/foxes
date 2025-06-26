@@ -303,7 +303,7 @@ class FieldDataNC(States):
                 d = data[..., i]
                 nn = np.sum(np.isnan(d))
                 print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100*nn/len(d.flat):.2f}%)"
+                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
                 )
 
         return sts, h, y, x, data, weights
@@ -352,7 +352,6 @@ class FieldDataNC(States):
         # pre-load file reading:
         coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
         if not isinstance(self.data_source, xr.Dataset):
-
             # check variables:
             for v in self.ovars:
                 if v == FV.WEIGHT and self.weight_ncvar is None:
@@ -422,7 +421,6 @@ class FieldDataNC(States):
             )
 
             if self.load_mode in ["preload", "lazy"]:
-
                 if self.load_mode == "lazy":
                     try:
                         self.__data_source = [ds.chunk() for ds in self.__data_source]
@@ -459,6 +457,11 @@ class FieldDataNC(States):
                 self.__inds = pd.to_datetime(
                     self.__inds, format=self.time_format
                 ).to_numpy()
+
+        # given data is already Dataset:
+        else:
+            self.__inds = self.data_source[self.states_coord].to_numpy()
+            self._N = len(self.__inds)
 
         # ensure WD and WS get the first two slots of data:
         self._dkys = {}
@@ -601,23 +604,6 @@ class FieldDataNC(States):
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self.__inds
 
-    def output_point_vars(self, algo):
-        """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        output_vars: list of str
-            The output variable names
-
-        """
-        return self.ovars
-
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -706,9 +692,9 @@ class FieldDataNC(States):
                         i0 += b - a
                     j0 = j1
 
-            assert (
-                i0 == i1
-            ), f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+            assert i0 == i1, (
+                f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
+            )
 
             data = xr.concat(data, dim=self.states_coord)
             __, h, y, x, data, weights = self._get_data(data, coords, verbosity=0)
@@ -830,7 +816,7 @@ class FieldDataNC(States):
             if v != FV.WEIGHT and v not in out:
                 if v in self._dkys:
                     out[v] = data[..., self._dkys[v]]
-                else:
+                elif v in self.fixed_vars:
                     out[v] = np.full(
                         (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
                     )

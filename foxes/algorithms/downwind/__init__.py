@@ -1,3 +1,3 @@
-from .downwind import Downwind
+from .downwind import Downwind as Downwind
 
-from . import models
+from . import models as models

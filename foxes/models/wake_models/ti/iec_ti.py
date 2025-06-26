@@ -53,7 +53,9 @@ class IECTIWake(TopHatWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.TI: superposition}, induction=induction)
+        super().__init__(
+            other_superpositions={FV.TI: superposition}, induction=induction
+        )
         self.iec_type = iec_type
         self.wake_k = None
 
@@ -62,7 +64,7 @@ class IECTIWake(TopHatWakeModel):
         else:
             if "k" in wake_k or "ka" in wake_k or "kb" in wake_k:
                 raise KeyError(
-                    f"Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
+                    "Can handle 'opening_angle' or ('k', 'ka', 'kb') parameters, not both"
                 )
             self._k = float(np.tan(np.deg2rad(opening_angle / 2.0)))
 
@@ -71,7 +73,7 @@ class IECTIWake(TopHatWakeModel):
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.TI]}, induction={iname}"
+        s += f"({self.other_superpositions[FV.TI]}, induction={iname}"
         if self.wake_k is not None:
             s += ", " + self.wake_k.repr()
         s += ")"
@@ -87,7 +89,7 @@ class IECTIWake(TopHatWakeModel):
             All sub models
 
         """
-        return [self.wake_k] if self.wake_k is not None else []
+        return super().sub_models() + ([self.wake_k] if self.wake_k is not None else [])
 
     def new_wake_deltas(self, algo, mdata, fdata, tdata):
         """

@@ -28,9 +28,9 @@ class Data(Dict):
 
     def __init__(
         self,
-        data,
-        dims,
-        loop_dims,
+        data={},
+        dims={},
+        loop_dims=[FC.STATE],
         states_i0=None,
         name="data",
     ):
@@ -153,13 +153,13 @@ class Data(Dict):
         # remove axes of size 1, added by dask for extra loop dimensions:
         if dims is not None:
             if len(dims) != len(data.shape):
-                for li, l in enumerate(self.loop_dims):
-                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != l):
+                for li, ld in enumerate(self.loop_dims):
+                    if data.shape[li] == 1 and (len(dims) < li + 1 or dims[li] != ld):
                         self[name] = np.squeeze(data, axis=li)
             for ci, c in enumerate(dims):
                 if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
-                elif self[name].shape[ci] == 1:
+                elif c != FC.TARGET and self[name].shape[ci] == 1:
                     pass
                 elif self.sizes[c] != self[name].shape[ci]:
                     raise ValueError(
@@ -240,9 +240,14 @@ class Data(Dict):
                 )
         else:
             states_i0 = None
-        return type(self)(
-            data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
-        )
+
+        cls = type(self)
+        if issubclass(cls, Data):
+            return cls(data, dims, name=name, states_i0=states_i0)
+        else:
+            return cls(
+                data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
+            )
 
     @classmethod
     def from_dataset(cls, ds, *args, callback=None, s_states=None, copy=True, **kwargs):
@@ -360,7 +365,7 @@ class FData(Data):
             Arguments for the base class
 
         """
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE], name=name, **kwargs)
 
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
@@ -453,7 +458,7 @@ class TData(Data):
             Arguments for the base class
 
         """
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(*args, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs)
 
     def _run_entry_checks(self, name, data, dims):
         """Run entry checks on new data"""
@@ -635,9 +640,7 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(
-            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
-        )
+        return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
     def from_tpoints(
@@ -694,9 +697,7 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
-        return cls(
-            data=data, dims=dims, loop_dims=[FC.STATE, FC.TARGET], name=name, **kwargs
-        )
+        return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
     def from_dataset(
@@ -764,7 +765,7 @@ class TData(Data):
                             FC.TPOINT,
                         ):
                             raise ValueError(
-                                f"Expecting coordinates '{ (FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
+                                f"Expecting coordinates '{(FC.STATE, FC.TARGET, FC.TPOINT)}' at positions 0-2 for data variable '{v}', got {dims[v]}"
                             )
                         else:
                             data[v] = d[:, s_targets]

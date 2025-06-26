@@ -1,7 +1,7 @@
 import numpy as np
 
+from foxes.config import config
 from foxes.core import TurbineInductionModel
-from foxes.utils import uv2wd, wd2uv, delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -9,9 +9,6 @@ import foxes.constants as FC
 class RankineHalfBody(TurbineInductionModel):
     """
     The Rankine half body induction wake model
-
-    The individual wake effects are superposed linearly,
-    without invoking a wake superposition model.
 
     Notes
     -----
@@ -30,24 +27,41 @@ class RankineHalfBody(TurbineInductionModel):
 
     """
 
-    def __init__(self, induction="Madsen"):
+    def __init__(self, superposition="vector", induction="Madsen"):
         """
         Constructor.
 
         Parameters
         ----------
+        superposition: str
+            The wind speed deficit superposition.
         induction: foxes.core.AxialInductionModel or str
             The induction model
 
         """
-        super().__init__()
+        super().__init__(wind_superposition=superposition, other_superpositions={})
         self.induction = induction
+
+        self._has_uv = True
 
     def __repr__(self):
         iname = (
             self.induction if isinstance(self.induction, str) else self.induction.name
         )
-        return f"{type(self).__name__}(induction={iname})"
+        return f"{type(self).__name__}({self.wind_superposition}, induction={iname})"
+
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
 
     def sub_models(self):
         """
@@ -59,7 +73,7 @@ class RankineHalfBody(TurbineInductionModel):
             All sub models
 
         """
-        return [self.induction]
+        return super().sub_models() + [self.induction]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -98,15 +112,14 @@ class RankineHalfBody(TurbineInductionModel):
         -------
         wake_deltas: dict
             Key: variable name, value: The zero filled
-            wake deltas, shape: (n_states, n_turbines, n_rpoints, ...)
+            wake deltas, shape: (n_states, n_targets, n_tpoints, ...)
 
         """
-        return {
-            FV.WS: np.zeros_like(tdata[FC.TARGETS][..., 0]),
-            FV.WD: np.zeros_like(tdata[FC.TARGETS][..., 0]),
-            "U": np.zeros_like(tdata[FC.TARGETS][..., 0]),
-            "V": np.zeros_like(tdata[FC.TARGETS][..., 0]),
-        }
+        duv = np.zeros(
+            (tdata.n_states, tdata.n_targets, tdata.n_tpoints, 2),
+            dtype=config.dtype_double,
+        )
+        return {FV.UV: duv}
 
     def contribute(
         self,
@@ -205,8 +218,7 @@ class RankineHalfBody(TurbineInductionModel):
 
             # calc velocity components
             vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
-            wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
-            wake_deltas["V"][st_sel] += vel_factor * xyz[:, 1]
+            wake_deltas[FV.UV][st_sel] += vel_factor[:, None] * xyz[:, :2]
 
         # set values inside body shape
         st_sel = (ct > 1e-8) & (RHB_shape >= -1) & (x >= xs) & (x <= 0)
@@ -217,57 +229,4 @@ class RankineHalfBody(TurbineInductionModel):
 
             # calc velocity components
             vel_factor = m[st_sel] / (4 * np.linalg.norm(xyz, axis=-1) ** 3)
-            wake_deltas["U"][st_sel] += vel_factor * xyz[:, 0]
-
-    def finalize_wake_deltas(
-        self,
-        algo,
-        mdata,
-        fdata,
-        amb_results,
-        wake_deltas,
-    ):
-        """
-        Finalize the wake calculation.
-
-        Modifies wake_deltas on the fly.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        amb_results: dict
-            The ambient results, key: variable name str,
-            values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-        wake_deltas: dict
-            The wake deltas object at the selected target
-            turbines. Key: variable str, value: numpy.ndarray
-            with shape (n_states, n_targets, n_tpoints)
-
-        """
-        # calc ambient wind vector:
-        ws0 = amb_results[FV.WS]
-        nx = wd2uv(amb_results[FV.WD])
-        wind_vec = nx * ws0[:, :, :, None]
-
-        # wake deltas are in wake frame, rotate back to global frame:
-        ny = np.stack((-nx[..., 1], nx[..., 0]), axis=-1)
-        delta_uv = (
-            wake_deltas["U"][:, :, :, None] * nx + wake_deltas["V"][:, :, :, None] * ny
-        )
-        del ws0, nx, ny
-
-        # add ambient result to wake deltas:
-        wind_vec += delta_uv
-        del delta_uv
-
-        # deduce WS and WD deltas:
-        new_wd = uv2wd(wind_vec)
-        new_ws = np.linalg.norm(wind_vec, axis=-1)
-        wake_deltas[FV.WS] += new_ws - amb_results[FV.WS]
-        wake_deltas[FV.WD] += delta_wd(amb_results[FV.WD], new_wd)
+            wake_deltas[FV.UV][st_sel, 0] += vel_factor * xyz[:, 0]

@@ -75,13 +75,14 @@ class WakeMirror(GroundModel):
         # assert(np.all(fdata[FV.H]==fdata[FV.TXYH[..., 2]]))
 
         # contribution from main wake:
-        wcoos = algo.wake_frame.get_wake_coos(algo, mdata, fdata, tdata, downwind_index)
+        wcoos = algo.wake_frame.get_wake_coos(
+            algo, mdata, fdata, tdata, downwind_index, wmodel
+        )
         wmodel.contribute(algo, mdata, fdata, tdata, downwind_index, wcoos, wake_deltas)
 
         # contribution from mirrors:
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
         for h in self.heights:
-
             fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
             pwake.contribute(
@@ -136,7 +137,6 @@ class WakeMirror(GroundModel):
         # contribution from mirrors:
         tdata[FC.TARGETS] = tdata[FC.TARGETS].copy()  # making sure this is no ref
         for h in self.heights:
-
             fdata[FV.TXYH][:, downwind_index, 2] = hh + 2 * (h - hh)
 
             wcoos = algo.wake_frame.get_wake_coos(

@@ -86,7 +86,7 @@ def add_from_csv(
     for i in data.index:
         s = 1 if turbine_base_name_count_shift else 0
         tname = (
-            f"{turbine_base_name}{i+s}" if col_name is None else data.loc[i, col_name]
+            f"{turbine_base_name}{i + s}" if col_name is None else data.loc[i, col_name]
         )
         txy = data.loc[i, [col_x, col_y]].values
 

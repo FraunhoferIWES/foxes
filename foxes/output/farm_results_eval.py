@@ -66,9 +66,9 @@ class FarmResultsEval(Output):
             if isinstance(v, str):
                 vdata = self.results[v].to_numpy()
                 nns = np.sum(np.isnan(vdata))
-                assert (
-                    nns == 0
-                ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                assert nns == 0, (
+                    f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+                )
                 fields.append(vdata)
             else:
                 fields.append(v)
@@ -142,9 +142,9 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 rdata[v] = self.weinsum("t", vdata)
@@ -191,9 +191,9 @@ class FarmResultsEval(Output):
         for v, op in vars_op.items():
             vdata = self.results[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 rdata[v] = self.weinsum("s", vdata)
@@ -244,9 +244,9 @@ class FarmResultsEval(Output):
         for v, op in turbines_op.items():
             vdata = sdata[v].to_numpy()
             nns = np.sum(np.isnan(vdata))
-            assert (
-                nns == 0
-            ), f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            assert nns == 0, (
+                f"Found {nns} nan values for variable '{v}' of shape {vdata.shape}"
+            )
 
             if op == "weights":
                 if states_op[v] == "weights":
@@ -471,11 +471,11 @@ class FarmResultsEval(Output):
             duration = times[-1] - times[0] + delta_t
             duration_seconds = np.int64(duration.astype(np.int64) / 1e9)
             duration_hours = duration_seconds / 3600
-        elif hours is None and annual == True:
+        elif hours is None and annual:
             duration_hours = 8760
         elif hours is None:
             raise ValueError(
-                f"Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
+                "Expecting parameter 'hours' for non-timeseries data, or 'annual=True'"
             )
         else:
             duration_hours = hours
@@ -654,7 +654,7 @@ class FarmResultsEval(Output):
         else:
             hax = ax
 
-        hax.set_xlabel(f"State")
+        hax.set_xlabel("State")
         hax.set_ylabel(variable)
         cc = cycler(color="bgrcmyk")
 

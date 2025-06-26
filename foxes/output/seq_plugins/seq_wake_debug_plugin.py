@@ -109,7 +109,6 @@ class SeqWakeDebugPlugin(SequentialPlugin):
 
         """
         while len(self._data):
-
             dt, pts, v = self._data.pop(0)
 
             N = len(pts)

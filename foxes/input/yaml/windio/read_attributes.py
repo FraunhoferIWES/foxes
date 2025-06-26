@@ -202,7 +202,7 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
     elif background_averaging in ["none", "None", None]:
         algo_dict["rotor_model"] = None
     elif background_averaging == "grid":
-        algo_dict["rotor_model"] = f"grid{nx*ny}"
+        algo_dict["rotor_model"] = f"grid{nx * ny}"
     else:
         algo_dict["rotor_model"] = background_averaging
 
@@ -215,7 +215,7 @@ def _read_rotor_averaging(rotor_averaging, algo_dict, verbosity):
             algo_dict["partial_wakes"] = "rotor_points"
         else:
             if grid == "grid":
-                algo_dict["partial_wakes"] = f"grid{nx*ny}"
+                algo_dict["partial_wakes"] = f"grid{nx * ny}"
             else:
                 algo_dict["partial_wakes"] = grid
     else:

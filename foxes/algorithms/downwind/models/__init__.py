@@ -1,6 +1,6 @@
-from .set_amb_farm_results import SetAmbFarmResults
-from .set_amb_point_results import SetAmbPointResults
-from .farm_wakes_calc import FarmWakesCalculation
-from .point_wakes_calc import PointWakesCalculation
-from .init_farm_data import InitFarmData
-from .reorder_farm_output import ReorderFarmOutput
+from .set_amb_farm_results import SetAmbFarmResults as SetAmbFarmResults
+from .set_amb_point_results import SetAmbPointResults as SetAmbPointResults
+from .farm_wakes_calc import FarmWakesCalculation as FarmWakesCalculation
+from .point_wakes_calc import PointWakesCalculation as PointWakesCalculation
+from .init_farm_data import InitFarmData as InitFarmData
+from .reorder_farm_output import ReorderFarmOutput as ReorderFarmOutput

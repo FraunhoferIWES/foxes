@@ -3,7 +3,7 @@ from scipy.interpolate import interpn
 
 from foxes.core.states import States
 from foxes.config import config, get_input_path
-from foxes.utils.wrg_utils import ReaderWRG
+from foxes.utils import ReaderWRG, weibull_weights
 from foxes.data import STATES
 import foxes.variables as FV
 import foxes.constants as FC
@@ -132,7 +132,7 @@ class WRGStates(States):
         self._y = p0[1] + np.arange(ny) * res
         self._y = self._y[sy]
         if len(self._x) < 2 or len(self._y) < 2:
-            raise ValueError(f"No overlap between data bounds and farm bounds")
+            raise ValueError("No overlap between data bounds and farm bounds")
         p0[0] = np.min(self._x)
         p0[1] = np.min(self._y)
         p1[0] = np.max(self._x)
@@ -293,9 +293,11 @@ class WRGStates(States):
             dims=(FC.STATE, FC.TARGET, FC.TPOINT),
         )
 
-        wsA = out[FV.WS] / A
-        tdata[FV.WEIGHT] *= wsd[:, None, None] * (
-            k / A * wsA ** (k - 1) * np.exp(-(wsA**k))
+        tdata[FV.WEIGHT] *= weibull_weights(
+            ws=out[FV.WS],
+            ws_deltas=wsd[:, None, None],
+            A=A,
+            k=k,
         )
 
         return out

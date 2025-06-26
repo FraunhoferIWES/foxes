@@ -147,9 +147,9 @@ if __name__ == "__main__":
     # power results
     P0 = o.calc_mean_farm_power(ambient=True)
     P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P/1000:.1f} MW")
-    print(f"Farm ambient power: {P0/1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency()*100:.2f} %")
+    print(f"\nFarm power        : {P / 1000:.1f} MW")
+    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
     print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
 
     # horizontal flow plot

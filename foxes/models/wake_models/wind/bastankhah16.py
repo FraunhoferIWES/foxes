@@ -447,7 +447,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             Parameters for the WakeK class
 
         """
-        super().__init__(superpositions={FV.WS: superposition})
+        super().__init__(wind_superposition=superposition)
 
         self.model = None
         self.alpha = alpha
@@ -460,9 +460,22 @@ class Bastankhah2016(DistSlicedWakeModel):
     def __repr__(self):
         iname = self.induction
         s = f"{type(self).__name__}"
-        s += f"({self.superpositions[FV.WS]}, induction={iname}, "
+        s += f"({self.wind_superposition}, induction={iname}, "
         s += self.wake_k.repr() + ")"
         return s
+
+    @property
+    def affects_ws(self):
+        """
+        Flag for wind speed wake models
+
+        Returns
+        -------
+        dws: bool
+            If True, this model affects wind speed
+
+        """
+        return True
 
     def sub_models(self):
         """
@@ -474,7 +487,7 @@ class Bastankhah2016(DistSlicedWakeModel):
             Names of all sub models
 
         """
-        return [self.wake_k, self.model]
+        return super().sub_models() + [self.wake_k, self.model]
 
     def initialize(self, algo, verbosity=0, force=False):
         """
@@ -620,5 +633,24 @@ class Bastankhah2016(DistSlicedWakeModel):
                     np.exp(-0.5 * (y / sigma_y) ** 2)
                     * np.exp(-0.5 * (z / sigma_z) ** 2)
                 )
+
+        # wake deflection causes wind vector rotation:
+        if FC.WDEFL_ROT_ANGLE in tdata:
+            dwd_defl = tdata.pop(FC.WDEFL_ROT_ANGLE)
+            if FV.WD not in wdeltas:
+                wdeltas[FV.WD] = np.zeros_like(wdeltas[FV.WS])
+                wdeltas[FV.WD][:] = dwd_defl[st_sel]
+            else:
+                wdeltas[FV.WD] += dwd_defl[st_sel]
+
+        # wake deflection causes wind speed reduction:
+        if FC.WDEFL_DWS_FACTOR in tdata:
+            dws_defl = tdata.pop(FC.WDEFL_DWS_FACTOR)
+            if FV.WS not in wdeltas:
+                raise AssertionError(
+                    f"Wake model '{self.name}': Expecting '{FV.WS}' in wdeltas, found {list(wdeltas.keys())}"
+                )
+            else:
+                wdeltas[FV.WS] *= dws_defl[st_sel]
 
         return wdeltas, st_sel
