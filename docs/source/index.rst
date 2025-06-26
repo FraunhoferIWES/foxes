@@ -3,8 +3,8 @@
     :align: center
 
 .. versionadded:: 1.4
-    This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame, 
-    such that now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes. 
+    This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame of previous versions. 
+    Now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes, see :ref:`Dynamic wake deflection`.
     The wake deflection model is selected through the parameter `wake_deflection` or the algorithm and then applies to all wakes.
 
 .. versionadded:: 1.4
