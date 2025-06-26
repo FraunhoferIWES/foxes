@@ -41,7 +41,8 @@ dependencies = [
     "scipy",
     "cycler",
     "tqdm",
-    "pyyaml"
+    "pyyaml",
+    "h5netcdf",
 ]
 
 [project.optional-dependencies]
@@ -49,14 +50,12 @@ opt = [
     "foxes-opt"
 ]
 dask = [
-    "h5netcdf",
     "dask",
     "distributed",
     "dask-jobqueue",
     "setuptools",
 ]
 eng = [
-    "h5netcdf",
     "multiprocess",
     "dask",
     "distributed",
@@ -66,7 +65,6 @@ eng = [
     "ray",
 ]
 eng0 = [
-    "h5netcdf",
     "multiprocess",
     "dask",
     "distributed",
@@ -77,7 +75,6 @@ eng0 = [
 test = [
     "flake8", 
     "pytest",
-    "h5netcdf",
 ]
 doc = [
     "setuptools",
