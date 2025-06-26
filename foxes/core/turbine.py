@@ -1,6 +1,7 @@
 import numpy as np
 from copy import deepcopy
 
+
 class Turbine:
     """
     An individual wind turbine.
