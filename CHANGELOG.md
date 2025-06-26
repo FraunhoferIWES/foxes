@@ -758,3 +758,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New wake superposition model `WindVectorLinear`, realizing linear vector type wind vector superposition.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4](https://github.com/FraunhoferIWES/foxes/commits/v1.4)
+
+## v1.4.1
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4.1](https://github.com/FraunhoferIWES/foxes/commits/v1.4.1)
