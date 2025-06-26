@@ -159,7 +159,7 @@ class Data(Dict):
             for ci, c in enumerate(dims):
                 if c not in self.sizes or self.sizes[c] == 1:
                     self.sizes[c] = self[name].shape[ci]
-                elif self[name].shape[ci] == 1:
+                elif c != FC.TARGET and self[name].shape[ci] == 1:
                     pass
                 elif self.sizes[c] != self[name].shape[ci]:
                     raise ValueError(

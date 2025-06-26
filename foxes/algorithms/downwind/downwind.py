@@ -331,6 +331,15 @@ class Downwind(Algorithm):
         """
         return getattr(mdls, name)
 
+    def update_n_turbines(self):
+        """
+        Reset the number of turbines,
+        according to self.farm
+        """
+        if self.n_turbines != self.farm.n_turbines:
+            super().update_n_turbines()
+            self.farm_controller.find_turbine_types(self)
+
     def print_deco(self, func_name=None, n_points=None):
         """
         Helper function for printing model names
