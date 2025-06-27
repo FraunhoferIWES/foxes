@@ -11,3 +11,4 @@ from .wsrho2PCt_from_two import WsRho2PCtFromTwo as WsRho2PCtFromTwo
 from .wsti2PCt_from_two import WsTI2PCtFromTwo as WsTI2PCtFromTwo
 from .lookup import FromLookupTable as FromLookupTable
 from .TBL_file import TBLFile as TBLFile
+from .direct_data import DirectDataType as DirectDataType
