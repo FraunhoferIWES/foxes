@@ -12,9 +12,7 @@ def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
     if "turbine_outputs" in wio_outs and wio_outs["turbine_outputs"].get_item(
         "report", True
     ):
-        turbine_outputs = Dict(
-            wio_outs["turbine_outputs"], name=wio_outs.name + ".turbine_outputs"
-        )
+        turbine_outputs = wio_outs["turbine_outputs"]
         turbine_nc_filename = turbine_outputs.pop_item(
             "turbine_nc_filename", "turbine_outputs.nc"
         )
@@ -27,6 +25,7 @@ def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
         vmap = Dict(
             power=FV.P,
             rotor_effective_velocity=FV.REWS,
+            _name="vmap",
         )
         ivmap = {d: k for k, d in vmap.items()}
         ivmap.update(
@@ -56,7 +55,7 @@ def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
                         verbosity=verbosity,
                     )
                 ],
-                name=f"outputs.output{len(olist)}.StateTurbineTable",
+                _name=f"outputs.{len(olist)}.StateTurbineTable",
             )
         )
 
@@ -64,13 +63,11 @@ def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
 def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
     """Reads the flow field request"""
     if "flow_field" in wio_outs and wio_outs["flow_field"].get_item("report", True):
-        flow_field = Dict(wio_outs["flow_field"], name=wio_outs.name + ".flow_field")
+        flow_field = wio_outs["flow_field"]
         flow_nc_filename = flow_field.pop_item("flow_nc_filename", "flow_field.nc")
         output_variables = flow_field.pop_item("output_variables")
 
-        z_planes = Dict(
-            flow_field.pop_item("z_planes"), name=flow_field.name + ".z_planes"
-        )
+        z_planes = flow_field.pop_item("z_planes")
         z_sampling = z_planes["z_sampling"]
         xy_sampling = z_planes["xy_sampling"]
 
@@ -85,6 +82,7 @@ def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
         vmap = Dict(
             wind_speed=FV.WS,
             wind_direction=FV.WD,
+            _name="vmap",
         )
 
         z_list = []
@@ -147,7 +145,7 @@ def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
                             verbosity=verbosity,
                         )
                     ],
-                    name=f"outputs.output{len(olist)}.SliceData",
+                    _name=f"outputs.output{len(olist)}.SliceData",
                 )
             )
         else:
@@ -188,7 +186,7 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
 
     # read subset:
     cases_run = Dict(
-        wio_outs.pop_item("cases_run", {}), name=wio_outs.name + ".cases_run"
+        wio_outs.pop_item("cases_run", {}), _name=wio_outs.name + ".cases_run"
     )
     if cases_run.pop_item("all_occurences"):
         states_isel = None

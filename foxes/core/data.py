@@ -53,7 +53,7 @@ class Data(Dict):
             The data container name
 
         """
-        super().__init__(name=name)
+        super().__init__(_name=name)
 
         self.update(data)
         self.dims = dims

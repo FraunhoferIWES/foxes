@@ -110,7 +110,7 @@ def read_dict(
                     t = mbook.sources.get_item(s)
                     c = mbook.base_classes.get_item(s)
                     ms = [
-                        Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)
+                        Dict(m, _name=f"{mdict.name}.s.{i}") for i, m in enumerate(mlst)
                     ]
                     for m in ms:
                         mname = m.pop_item("name")
@@ -128,10 +128,7 @@ def read_dict(
         if algo is None:
             _print("Creating wind farm")
             fdict = idict.get_item("wind_farm")
-            lyts = [
-                Dict(lo, name=f"{fdict.name}.layout{i}")
-                for i, lo in enumerate(fdict.pop_item("layouts"))
-            ]
+            lyts = fdict.pop_item("layouts")
             farm = WindFarm(**fdict)
             for lyt in lyts:
                 add_fun = getattr(farm_layout, lyt.pop_item("function"))
@@ -387,12 +384,9 @@ def run_outputs(
             print(*args, **kwargs)
 
     out = []
-    rlabels = Dict(name="result_labels")
+    rlabels = Dict(_name="result_labels")
     if "outputs" in idict:
-        odicts = [
-            Dict(odict, name=f"{idict.name}.output{i}")
-            for i, odict in enumerate(idict["outputs"])
-        ]
+        odicts = idict["outputs"]
 
         for i, d in enumerate(odicts):
             if "output_type" in d:
@@ -401,10 +395,7 @@ def run_outputs(
                 d0 = dict(output_type=ocls)
                 d0.update(d)
 
-                flist = [
-                    Dict(f, name=f"{d.name}.function{j}")
-                    for j, f in enumerate(d.pop_item("functions"))
-                ]
+                flist = d.pop_item("functions")
 
                 o = get_output_obj(
                     ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
@@ -419,10 +410,7 @@ def run_outputs(
                 o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
                 d0.update(d)
-                flist = [
-                    Dict(f, name=f"{d.name}.function{j}")
-                    for j, f in enumerate(d.pop_item("functions"))
-                ]
+                flist = d.pop_item("functions")
 
             else:
                 raise KeyError(
@@ -480,7 +468,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
     algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
 
     # run farm calculation:
-    rdict = idict.get_item("calc_farm", Dict(name=idict.name + ".calc_farm"))
+    rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
     if rdict.pop_item("run", True):
         _print("Running calc_farm")
         farm_results = algo.calc_farm(**rdict)

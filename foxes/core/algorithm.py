@@ -63,8 +63,8 @@ class Algorithm(Model):
         self.__farm = farm
         self.__mbook = mbook
         self.__dbook = StaticData() if dbook is None else dbook
-        self.__idata_mem = Dict(name="idata_mem")
-        self.__chunk_store = Dict(name="chunk_store")
+        self.__idata_mem = Dict(_name="idata_mem")
+        self.__chunk_store = Dict(_name="chunk_store")
 
         if len(engine_pars):
             if "engine_type" in engine_pars:
@@ -558,7 +558,7 @@ class Algorithm(Model):
                     "n_states": n_states,
                     "n_targets": n_targets,
                 },
-                name=f"chunk_store_{i0}_{t0}",
+                _name=f"chunk_store_{i0}_{t0}",
             )
 
         self.chunk_store[key][name] = data.copy() if copy else data
@@ -638,11 +638,11 @@ class Algorithm(Model):
         """
         chunk_store = self.chunk_store
         if new_chunk_store is None:
-            self.__chunk_store = Dict(name="chunk_store")
+            self.__chunk_store = Dict(_name="chunk_store")
         elif isinstance(new_chunk_store, Dict):
             self.__chunk_store = new_chunk_store
         else:
-            self.__chunk_store = Dict(name="chunk_store")
+            self.__chunk_store = Dict(_name="chunk_store")
             self.__chunk_store.update(new_chunk_store)
         return chunk_store
 

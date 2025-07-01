@@ -41,29 +41,32 @@ def read_windio(wio_dict, verbosity=1):
             print(*args, **kwargs)
 
     if not isinstance(wio_dict, Dict):
-        wio_dict = Dict(wio_dict, name="windio")
+        tmp = Dict(_name="windio")
+        for k, d in wio_dict.items():
+            tmp[k] = d
+        wio_dict = tmp
 
     _print("Reading windio data")
     _print("  Name:", wio_dict.pop_item("name", None))
     _print("  Contents:", [k for k in wio_dict.keys()])
 
     idict = Dict(
-        wind_farm=Dict(name="wio2fxs.farm"),
+        wind_farm=Dict(_name="wio2fxs.farm"),
         algorithm=Dict(
             algo_type="Downwind",
             wake_models=[],
-            name="wio2fxs.algorithm",
+            _name="wio2fxs.algorithm",
             verbosity=verbosity - 3,
         ),
-        calc_farm=Dict(run=True, name="wio2fxs.calc_farm"),
-        name="wio2fxs",
+        calc_farm=Dict(run=True, _name="wio2fxs.calc_farm"),
+        _name="wio2fxs",
     )
 
     mbook = ModelBook()
     states = read_site(wio_dict, verbosity)
     farm = read_farm(wio_dict, mbook, verbosity)
 
-    wio_attrs = Dict(wio_dict["attributes"], name=wio_dict.name + ".attributes")
+    wio_attrs = wio_dict["attributes"]
     read_attributes(wio_attrs, idict, mbook, verbosity=verbosity)
 
     algo = Algorithm.new(
@@ -72,9 +75,7 @@ def read_windio(wio_dict, verbosity=1):
 
     odir = None
     if "model_outputs_specification" in wio_attrs:
-        outputs = Dict(
-            wio_attrs["model_outputs_specification"], name=wio_attrs.name + ".outputs"
-        )
+        outputs = wio_attrs["model_outputs_specification"]
         odir = read_outputs(outputs, idict, algo, verbosity=verbosity)
 
     return idict, algo, odir
@@ -171,7 +172,7 @@ def foxes_windio():
         conda_hint="",
     )
 
-    wio = Dict(yml_utils.load_yaml(wio_file), name="windio")
+    wio = Dict(yml_utils.load_yaml(wio_file), _name="windio")
     idict, algo, odir = read_windio(wio, verbosity=args.verbosity)
 
     if args.output_dir is not None:

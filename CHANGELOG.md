@@ -761,6 +761,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.4.1
 
+- Inputs:
+  - Updated `windio` inputs
 - Models:
   - New turbine type `DirectDataType`, for direct infusion of farm data at a turbine
   - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function

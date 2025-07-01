@@ -6,16 +6,11 @@ class Dict(dict):
     """
     A slightly enhanced dictionary.
 
-    Attributes
-    ----------
-    name: str
-        The dictionary name
-
     :group: utils
 
     """
 
-    def __init__(self, *args, name=None, **kwargs):
+    def __init__(self, *args, _name=None, **kwargs):
         """
         Constructor.
 
@@ -23,38 +18,28 @@ class Dict(dict):
         ----------
         *args: tuple, optional
             Arguments passed to `dict`
-        name: str, optional
+        _name: str, optional
             The dictionary name
         **kwargs: dict, optional
             Arguments passed to `dict`
 
         """
-        tmp = dict()
-        for a in args:
-            tmp.update(
-                {
-                    k: (
-                        Dict(d, name=f"{name}.{k}")
-                        if isinstance(d, dict) and not isinstance(d, Dict)
-                        else d
-                    )
-                    for k, d in a.items()
-                }
-            )
+        super().__init__()
+        self._name = _name if _name is not None else type(self).__name__
+        self.update(*args, **kwargs)
 
-        super().__init__(
-            **tmp,
-            **{
-                k: (
-                    Dict(d, name=k)
-                    if isinstance(d, dict) and not isinstance(d, Dict)
-                    else d
-                )
-                for k, d in kwargs.items()
-            },
-        )
+    @property
+    def name(self):
+        """
+        The dictionary name
 
-        self.name = name if name is not None else type(self).__name__
+        Returns
+        -------
+        name: str
+            The dictionary name
+
+        """
+        return self._name
 
     def get_item(self, key, *deflt, prnt=True):
         """
@@ -93,7 +78,7 @@ class Dict(dict):
             raise e
 
         if isinstance(data, dict) and not isinstance(data, Dict):
-            data = Dict(data, name=f"{self.name}.{key}")
+            data = Dict(data, _name=f"{self.name}.{key}")
 
         return data
 
@@ -121,6 +106,25 @@ class Dict(dict):
             del self[key]
         return data
 
+    def __setitem__(self, key, value):
+        if isinstance(value, list):
+            out = []
+            for i, x in enumerate(value):
+                if isinstance(x, dict) and not isinstance(x, Dict):
+                    nme = f"{self.name}.{key}"
+                    if len(value) > 1:
+                        nme += f".{i}"
+                    out.append(Dict(x, _name=nme))
+                else:
+                    out.append(x)
+            value = out
+        elif isinstance(value, dict) and not isinstance(value, Dict):
+            out = Dict(_name=f"{self.name}.{key}")
+            out.update(value)
+            value = out
+            
+        super().__setitem__(key, value)
+
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
@@ -128,6 +132,14 @@ class Dict(dict):
             k = ", ".join(sorted([f"{s}" for s in self.keys()]))
             e = f"{self.name}: Cannot find key '{key}'. Known keys: {k}"
             raise KeyError(e)
+
+    def update(self, *args, **kwargs):
+        """
+        Update the dictionary with the key/value pairs from other, overwriting existing keys.
+        """
+        other = dict(*args, **kwargs)
+        for k, v in other.items():
+            self[k] = v
 
     @classmethod
     def from_yaml(self, yml_file, verbosity=1):
@@ -158,7 +170,7 @@ class Dict(dict):
             data = safe_load(stream)
         if data is None:
             data = {}
-        dct = Dict(data, name=fpath.stem)
+        dct = Dict(data, _name=fpath.stem)
         _print(dct, level=2)
 
         return dct

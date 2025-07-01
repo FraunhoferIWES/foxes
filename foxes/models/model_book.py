@@ -85,11 +85,11 @@ class ModelBook:
             Path to power/ct curve file, for creation
             of default turbine type model
         """
-        self.point_models = FDict(name="point_models")
+        self.point_models = FDict(_name="point_models")
         self.point_models["tke2ti"] = fm.point_models.TKE2TI()
         self.point_models["ustar2ti"] = fm.point_models.Ustar2TI()
 
-        self.rotor_models = FDict(name="rotor_models")
+        self.rotor_models = FDict(_name="rotor_models")
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
 
         def _n2n(n2):
@@ -132,7 +132,7 @@ class ModelBook:
             hints={"n": "(Number of vertical levels)"},
         )
 
-        self.turbine_types = FDict(name="turbine_types")
+        self.turbine_types = FDict(_name="turbine_types")
         self.turbine_types["null_type"] = fm.turbine_types.NullType()
         self.turbine_types["NREL5MW"] = fm.turbine_types.PCtFile(
             "NREL-5MW-D126-H90.csv", rho=1.225
@@ -150,7 +150,7 @@ class ModelBook:
             self.turbine_types["Pct"] = fm.turbine_types.PCtFile(Pct_file)
 
         self.turbine_models = FDict(
-            name="turbine_models",
+            _name="turbine_models",
             kTI=fm.turbine_models.kTI(),
             kTI_amb=fm.turbine_models.kTI(ti_var=FV.AMB_TI),
             thrust2ct=fm.turbine_models.Thrust2Ct(),
@@ -203,7 +203,7 @@ class ModelBook:
         )
 
         self.farm_models = FDict(
-            name="farm_models",
+            _name="farm_models",
             **{
                 f"farm_{mname}": fm.farm_models.Turbine2FarmModel(m)
                 for mname, m in self.turbine_models.items()
@@ -211,12 +211,12 @@ class ModelBook:
         )
 
         self.farm_controllers = FDict(
-            name="farm_controllers",
+            _name="farm_controllers",
             basic_ctrl=fm.farm_controllers.BasicFarmController(),
         )
 
         self.partial_wakes = FDict(
-            name="partial_wakes",
+            _name="partial_wakes",
             rotor_points=fm.partial_wakes.RotorPoints(),
             top_hat=fm.partial_wakes.PartialTopHat(),
             centre=fm.partial_wakes.PartialCentre(),
@@ -236,7 +236,7 @@ class ModelBook:
         )
 
         self.wake_deflections = FDict(
-            name="wake_deflections",
+            _name="wake_deflections",
             no_deflection=fm.wake_deflections.NoDeflection(),
             Bastankhah2016=fm.wake_deflections.Bastankhah2016Deflection(),
             Jimenez=fm.wake_deflections.JimenezDeflection(rotate=True),
@@ -303,7 +303,7 @@ class ModelBook:
         )
 
         self.wake_frames = FDict(
-            name="wake_frames",
+            _name="wake_frames",
             rotor_wd=fm.wake_frames.RotorWD(),
             rotor_wd_farmo=fm.wake_frames.FarmOrder(),
         )
@@ -363,7 +363,7 @@ class ModelBook:
         )
 
         self.wake_superpositions = FDict(
-            name="wake_superpositions",
+            _name="wake_superpositions",
             ws_linear=fm.wake_superpositions.WSLinear(scale_amb=False),
             ws_linear_lim=fm.wake_superpositions.WSLinear(
                 scale_amb=False, lim_low=1e-4
@@ -407,11 +407,11 @@ class ModelBook:
             vector_amb=fm.wake_superpositions.WindVectorLinear(scale_amb=True),
         )
 
-        self.axial_induction = FDict(name="induction_models")
+        self.axial_induction = FDict(_name="induction_models")
         self.axial_induction["Betz"] = fm.axial_induction.BetzAxialInduction()
         self.axial_induction["Madsen"] = fm.axial_induction.MadsenAxialInduction()
 
-        self.wake_models = FDict(name="wake_models")
+        self.wake_models = FDict(_name="wake_models")
 
         self.wake_models.add_k_factory(
             fm.wake_models.wind.JensenWake,
@@ -616,7 +616,7 @@ class ModelBook:
             },
         )
 
-        self.ground_models = FDict(name="ground_models")
+        self.ground_models = FDict(_name="ground_models")
         self.ground_models["no_ground"] = fm.ground_models.NoGround()
         self.ground_models["ground_mirror"] = fm.ground_models.GroundMirror()
         self.ground_models.add_factory(
@@ -629,7 +629,7 @@ class ModelBook:
         )
 
         self.sources = FDict(
-            name="sources",
+            _name="sources",
             point_models=self.point_models,
             rotor_models=self.rotor_models,
             turbine_types=self.turbine_types,
@@ -645,7 +645,7 @@ class ModelBook:
             ground_models=self.ground_models,
         )
         self.base_classes = FDict(
-            name="base_classes",
+            _name="base_classes",
             point_models=PointDataModel,
             rotor_models=RotorModel,
             turbine_types=TurbineType,

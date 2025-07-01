@@ -284,32 +284,28 @@ def read_site(wio_dict, verbosity=1):
         if verbosity >= level:
             print(*args, **kwargs)
 
-    wio_site = Dict(wio_dict["site"], name=wio_dict.name + ".site")
+    wio_site = wio_dict["site"]
     _print("Reading site")
     _print("  Name:", wio_site.pop_item("name", None))
     _print("  Contents:", [k for k in wio_site.keys()])
     _print("  Ignoring boundaries", level=2)
 
     # read energy_resource:
-    energy_resource = Dict(
-        wio_site["energy_resource"], name=wio_site.name + ".energy_resource"
-    )
+    energy_resource = wio_site["energy_resource"]
     _print("  Reading energy_resource", level=2)
     _print("    Name:", energy_resource.pop_item("name", None), level=2)
     _print("    Contents:", [k for k in energy_resource.keys()], level=2)
 
     # read wind_resource:
-    wind_resource = Dict(
-        energy_resource["wind_resource"], name=energy_resource.name + ".wind_resource"
-    )
+    wind_resource = energy_resource["wind_resource"]
     _print("    Reading wind_resource", level=3)
     _print("      Name:", wind_resource.pop_item("name", None), level=3)
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
 
     # read fields
-    coords = Dict(name="coords")
-    fields = Dict(name="fields")
-    dims = Dict(name="dims")
+    coords = Dict(_name="coords")
+    fields = Dict(_name="fields")
+    dims = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
     if verbosity > 2:
