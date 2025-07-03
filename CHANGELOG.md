@@ -762,6 +762,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.4.1
 
 - Inputs:
+  - New states class `WeibullPointCloud`, representing Weibull sector data with support at arbitrary point locations
   - Updated `windio` inputs
 - Models:
   - New turbine type `DirectDataType`, for direct infusion of farm data at a turbine

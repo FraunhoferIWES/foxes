@@ -122,7 +122,7 @@ class Dict(dict):
             out = Dict(_name=f"{self.name}.{key}")
             out.update(value)
             value = out
-            
+
         super().__setitem__(key, value)
 
     def __getitem__(self, key):

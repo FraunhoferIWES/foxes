@@ -1,5 +1,5 @@
 from foxes.utils import Dict
-from foxes.core import WakeModel, WakeFrame, WakeDeflection
+from foxes.core import WakeModel, WakeDeflection
 import foxes.variables as FV
 
 
@@ -235,7 +235,7 @@ def _read_deflection(deflection, induction, algo_dict, mbook, verbosity):
             "None": "NoDeflection",
             "Batankhah2016": "Bastankhah2016Deflection",
             "Jimenez": "JimenezDeflection",
-            "JimenezVector": "JimenezDeflection"
+            "JimenezVector": "JimenezDeflection",
         },
         _name="defl_def_map",
     )
@@ -249,10 +249,14 @@ def _read_deflection(deflection, induction, algo_dict, mbook, verbosity):
     if wname == "Jimenez" and "rotate" not in defl_dict:
         defl_dict["rotate"] = False
     elif wname == "JimenezVector":
-        assert "rotate" not in defl_dict, f"Deflection model '{wname}' does not support 'rotate' parameter"
+        assert "rotate" not in defl_dict, (
+            f"Deflection model '{wname}' does not support 'rotate' parameter"
+        )
         defl_dict["rotate"] = True
     try:
-        mbook.wake_deflections[wname] = WakeDeflection.new(**defl_dict, induction=induction)
+        mbook.wake_deflections[wname] = WakeDeflection.new(
+            **defl_dict, induction=induction
+        )
     except TypeError:
         mbook.wake_deflections[wname] = WakeDeflection.new(**defl_dict)
     if verbosity > 2:

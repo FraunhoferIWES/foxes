@@ -38,7 +38,9 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             print(*args, **kwargs)
 
     if "turbine_types" not in wio_farm:
-        wio_farm["turbine_types"] = Dict({0: wio_farm["turbines"]}, _name="turbine_types")
+        wio_farm["turbine_types"] = Dict(
+            {0: wio_farm["turbines"]}, _name="turbine_types"
+        )
 
     ttypes = {}
     for k, wio_trbns in wio_farm["turbine_types"].items():

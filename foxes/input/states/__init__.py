@@ -26,4 +26,6 @@ from .one_point_flow import (
     OnePointFlowMultiHeightNCTimeseries as OnePointFlowMultiHeightNCTimeseries,
 )
 
+from .weibull_point_cloud import WeibullPointCloud as WeibullPointCloud
+
 from . import create as create

@@ -98,7 +98,7 @@ class StatesTable(States):
         self._N = None
         self._tvars = None
         self._profiles = None
-        self._data_source = data_source
+        self._data = data_source
 
     @property
     def data_source(self):
@@ -115,7 +115,7 @@ class StatesTable(States):
             raise ValueError(
                 f"States '{self.name}': Cannot access data_source while running"
             )
-        return self._data_source
+        return self._data
 
     def reset(self, algo=None, states_sel=None, states_loc=None, verbosity=0):
         """
@@ -210,13 +210,13 @@ class StatesTable(States):
         if isinstance(self.data_source, pd.DataFrame):
             data = self.data_source
         else:
-            self._data_source = get_input_path(self.data_source)
+            self._data = get_input_path(self.data_source)
             if not self.data_source.is_file():
                 if verbosity > 0:
                     print(
                         f"States '{self.name}': Reading static data '{self.data_source}' from context '{STATES}'"
                     )
-                self._data_source = algo.dbook.get_file_path(
+                self._data = algo.dbook.get_file_path(
                     STATES, self.data_source.name, check_raw=False
                 )
                 if verbosity > 0:
@@ -343,10 +343,10 @@ class StatesTable(States):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         data_stash[self.name] = dict(
-            data_source=self._data_source,
+            data_source=self._data,
             inds=self.__inds,
         )
-        del self._data_source, self.__inds
+        del self._data, self.__inds
 
     def unset_running(
         self,
@@ -378,7 +378,7 @@ class StatesTable(States):
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
         data = data_stash[self.name]
-        self._data_source = data.pop("data_source")
+        self._data = data.pop("data_source")
         self.__inds = data.pop("inds")
 
     def calculate(self, algo, mdata, fdata, tdata):
@@ -572,7 +572,7 @@ class TabStates(StatesTable):
 
             sel = weights > 0
 
-            self._data_source = pd.DataFrame(
+            self._data = pd.DataFrame(
                 index=np.arange(np.sum(sel)),
                 data={
                     FV.WS: ws[sel],
@@ -580,7 +580,7 @@ class TabStates(StatesTable):
                     FV.WEIGHT: weights[sel],
                 },
             )
-            self._data_source.index.name = FC.STATE
+            self._data.index.name = FC.STATE
 
         return super().load_data(algo, verbosity)
 
