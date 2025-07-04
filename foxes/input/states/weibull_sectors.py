@@ -161,12 +161,12 @@ class WeibullSectors(StatesTable):
             data = data.isel({cwd: np.s_[:-1]})
 
         # construct wind speed bins and bin deltas
-        wsn = self.var2ncvar.get(FV.WS, FV.WS)
+        cws = self.var2ncvar.get(FV.WS, FV.WS)
         if self.ws_bins is not None:
             wsb = self.ws_bins
             wss = 0.5 * (wsb[:-1] + wsb[1:])
-        elif wsn in data:
-            wss = data[wsn].to_numpy()
+        elif cws in data:
+            wss = data[cws].to_numpy()
             wsb = np.zeros((len(wss) + 1,), dtype=config.dtype_double)
             wsb[1:-1] = 0.5 * (wss[1:] + wss[:-1])
             wsb[0] = wss[0] - 0.5 * wsb[1]
@@ -174,7 +174,7 @@ class WeibullSectors(StatesTable):
             self.ws_bins = wsb
         else:
             raise ValueError(
-                f"States '{self.name}': Expecting ws_bins argument, since '{wsn}' not found in data"
+                f"States '{self.name}': Expecting ws_bins argument, since '{cws}' not found in data"
             )
         wsd = wsb[1:] - wsb[:-1]
         n_ws = len(wss)
@@ -183,8 +183,6 @@ class WeibullSectors(StatesTable):
         # prepare data binning
         if self._original_data is None:
             self._original_data = self.data_source
-        cws = self.var2ncvar.get(FV.WS, FV.WS)
-        cwd = self.var2ncvar.get(FV.WD, FV.WD)
         cpt = (
             self.var2ncvar.get(FC.POINT, FC.POINT) if point_coord is not None else None
         )
@@ -208,10 +206,10 @@ class WeibullSectors(StatesTable):
         }
         if cpt is None:
             self._data[FV.WD][:] = data[cwd].to_numpy()[:, None]
-            self._data[FV.WS][:] = wss[:, None]
+            self._data[FV.WS][:] = wss[None, :]
         else:
             self._data[FV.WD][:] = data[cwd].to_numpy()[:, None, None]
-            self._data[FV.WS][:] = wss[:, None, None]
+            self._data[FV.WS][:] = wss[None, :, None]
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT] + self._ovars:
             if v not in [FV.WS, FV.WD] and v not in self.fixed_vars:
                 w = self.var2ncvar.get(v, v)

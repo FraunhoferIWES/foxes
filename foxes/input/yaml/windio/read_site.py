@@ -197,11 +197,67 @@ def _get_WeibullSectors(
             dict(
                 states_type="WeibullSectors",
                 data_source=sdata,
-                ws_bins=coords.get(FV.WS, np.arange(30)),
+                ws_bins=np.arange(60)/2 if FV.WS not in sdata else None,
                 output_vars=ovars,
                 var2ncvar={FV.WEIGHT: "sector_probability"},
                 fixed_vars=fix,
                 profiles=profiles,
+            )
+        )
+        return True
+    return False
+
+
+def _get_WeibullPointCloud(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate Weibull sector parameters
+    :group: input.yaml.windio
+    """
+    if (
+        FV.WD in coords
+        and FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+        and FV.X in fields
+        and FV.Y in fields
+        and len(dims[FV.X]) == 1
+        and dims[FV.X] == dims[FV.Y]
+        and dims[FV.X][0] != FV.WD
+        and FV.WD in dims[FV.WEIBULL_A]
+        and FV.WD in dims[FV.WEIBULL_k]
+        and FV.WD in dims["sector_probability"]
+        and dims[FV.X][0] in dims[FV.WEIBULL_A]
+        and dims[FV.X][0] in dims[FV.WEIBULL_k]
+    ):
+        if verbosity > 2:
+            print("        selecting class 'WeibullPointCloud'")
+
+        data = {}
+        fix = {}
+        for v, d in fields.items():
+            if len(dims[v]) == 0:
+                fix[v] = d
+            elif v not in fixval:
+                data[v] = (dims[v], d)
+        fix.update({v: d for v, d in fixval.items() if v not in data})
+
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
+
+        states_dict.update(
+            dict(
+                states_type="WeibullPointCloud",
+                data_source=sdata,
+                output_vars=ovars,
+                var2ncvar={
+                    FV.WEIGHT: "sector_probability",
+                    FC.POINT: dims[FV.X][0],
+                },
+                fixed_vars=fix,
+                ws_bins=np.arange(60)/2 if FV.WS not in sdata else None,
             )
         )
         return True
@@ -235,7 +291,7 @@ def get_states(coords, fields, dims, verbosity=1):
         print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {FV.TI: 0.05, FV.RHO: 1.225}
+    fixval = {FV.RHO: 1.225}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
     states_dict = {}
@@ -247,6 +303,9 @@ def get_states(coords, fields, dims, verbosity=1):
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_MultiHeightNCTimeseries(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_WeibullPointCloud(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_WeibullSectors(
