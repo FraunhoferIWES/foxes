@@ -666,6 +666,7 @@ class FieldDataNC(States):
                 verbosity=0,
             )
             del ds
+            data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
         # case fly:
         elif self.load_mode == "fly":
