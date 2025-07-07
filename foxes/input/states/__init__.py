@@ -4,7 +4,7 @@ Atmospheric input states.
 
 from .single import SingleStateStates as SingleStateStates
 from .scan import ScanStates as ScanStates
-from .field_data_nc import FieldDataNC as FieldDataNC
+from .field_data import FieldData as FieldData
 from .wrg_states import WRGStates as WRGStates
 from .weibull_sectors import WeibullSectors as WeibullSectors
 

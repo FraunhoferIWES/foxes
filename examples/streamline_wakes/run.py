@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
 
-    states = foxes.input.states.FieldDataNC(
+    states = foxes.input.states.FieldData(
         args.file_pattern,
         states_coord="state",
         x_coord="x",

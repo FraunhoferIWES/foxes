@@ -40,7 +40,7 @@ def _read_nc_file(
         return data
 
 
-class FieldDataNC(States):
+class FieldData(States):
     """
     Heterogeneous ambient states on a regular
     horizontal grid in NetCDF format.
