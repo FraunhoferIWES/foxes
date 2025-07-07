@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
-from copy import copy
+from copy import copy, deepcopy
 from scipy.interpolate import interpn
 
 from foxes.core import States, get_engine
@@ -180,6 +180,8 @@ class FieldDataNC(States):
         self.var2ncvar = {
             v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
         }
+        if weight_ncvar is not None:
+            self.var2ncvar[FV.WEIGHT] = weight_ncvar
 
         self._N = None
 
@@ -202,10 +204,120 @@ class FieldDataNC(States):
                 f"States '{self.name}': Cannot access data_source while running for load mode '{self.load_mode}'"
             )
         return self.__data_source
+    
+    def _read_ds(
+        self, 
+        ds, 
+        states_coord, 
+        x_coord, 
+        y_coord, 
+        h_coord, 
+        variables, 
+        verbosity=0,
+    ):
+        """
+        Helper function for data extractionm from the original Dataset.
+        """
+        shp_s = (states_coord,)
+        shp_xy = (x_coord, y_coord)
+        shp_h = (h_coord,) if h_coord is not None else None
+        shp_xyh = (x_coord, y_coord, h_coord) if h_coord is not None else None
+        shp_sh = (states_coord, h_coord) if h_coord is not None else None
+        shp_sxy = (states_coord, x_coord, y_coord)
+        shp_sxyh = (states_coord, x_coord, y_coord, h_coord) if h_coord is not None else None
+        shps = [shp_s, shp_xy, shp_h, shp_xyh, shp_sh, shp_sxy, shp_sxyh]
+        shps = [s for s in shps if s is not None]
+        shpso = [sorted(s) for s in shps]
 
-    def _get_data(self, ds, coords, verbosity):
+        data = {}
+        for v in variables:
+            w = self.var2ncvar.get(v, v)
+            if v in self.fixed_vars:
+                continue
+            if w not in ds.data_vars:
+                raise KeyError(f"States '{self.name}': Missing data variable '{w}' in Dataset, got '{list(ds.data_vars.keys())}'")
+            
+            d = ds[w]
+            if d.dims in shps:
+                data[v] = (d.dims, d.to_numpy())
+            elif sorted(d.dims) in shpso:
+                s = shps[shpso.index(sorted(d.dims))]
+                i = [d.dims.index(c) for c in s]
+                data[v] = (s, np.moveaxis(d.to_numpy(), i, np.arange(len(i))))
+            else:
+                raise ValueError(f"States '{self.name}': Failed to map variable '{w}' with dimensions {d.dims} to expected dimensions {shps}")
+
+        s = ds[states_coord].to_numpy() if states_coord in ds else np.arange(ds.sizes[states_coord])
+        x = ds[x_coord].to_numpy()
+        y = ds[y_coord].to_numpy()
+        h = ds[h_coord].to_numpy() if h_coord is not None else None
+
+        if verbosity > 1 and data is not None:
+            print(f"\n{self.name}: Data ranges")
+            for v, d in data.items():
+                nn = np.sum(np.isnan(d))
+                print(
+                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
+                )
+
+        return s, x, y, h, data
+
+    def _get_data(
+        self, 
+        ds, 
+        states_coord, 
+        x_coord, 
+        y_coord, 
+        h_coord, 
+        variables, 
+        verbosity=0,
+    ):
         """
         Helper function for data extraction
+        """
+
+        s, x, y, h, data0 = self._read_ds(
+            ds,
+            states_coord, 
+            x_coord, 
+            y_coord, 
+            h_coord,
+            variables=variables,
+            verbosity=verbosity,
+        )
+
+        weights = None
+        if FV.WEIGHT in variables:
+            if FV.WEIGHT not in data0.data_vars:
+                raise KeyError(
+                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}"
+                )
+            if data0[FV.WEIGHT][0] == (states_coord,):
+                weights = data0.pop(FV.WEIGHT)[1]
+
+        vmap = {
+            states_coord: FC.STATE,
+            x_coord: self.var(FV.X),
+            y_coord: self.var(FV.Y),
+            h_coord: self.var(FV.H)
+        }
+
+        data = {} # dim: [DATA key, variables, data array]
+        for v, (dims, d) in data0.items():
+            if dims not in data:
+                i = len(data)
+                data[dims] = [self.var(f"data{i}"), [], []]
+            data[dims][1].append(v)
+            data[dims][2].append(d)
+        for dims in data.keys():
+            data[dims][2] = np.stack(data[dims][2], axis=-1)
+        data = {
+            tuple([vmap[c] for c in dims] + [self.var(f"vars{i}")]): d
+            for i, (dims, d) in enumerate(data.items())
+        }
+
+        return s, x, y, h, data, weights
+
         """
         for ci, c in enumerate(coords):
             found = False
@@ -284,6 +396,7 @@ class FieldDataNC(States):
                 self.fixed_vars[FV.WD],
                 dtype=config.dtype_double,
             )
+        """
 
         weights = None
         if self.weight_ncvar is not None:
@@ -407,8 +520,6 @@ class FieldDataNC(States):
                     )
             files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
             vars = list(self.var2ncvar.values())
-            if self.weight_ncvar is not None:
-                vars += [self.weight_ncvar]
             self.__data_source = get_engine().map(
                 _read_nc_file,
                 files,
@@ -463,42 +574,34 @@ class FieldDataNC(States):
             self.__inds = self.data_source[self.states_coord].to_numpy()
             self._N = len(self.__inds)
 
-        # ensure WD and WS get the first two slots of data:
-        self._dkys = {}
-        if FV.WS in self.ovars:
-            self._dkys[FV.WD] = 0
-        if FV.WS in self.var2ncvar:
-            self._dkys[FV.WS] = 1
-        for v in self.var2ncvar:
-            if v not in self._dkys:
-                self._dkys[v] = len(self._dkys)
-        self._n_dvars = len(self._dkys)
-
         idata = super().load_data(algo, verbosity)
 
         if self.load_mode == "preload":
-            self.X = self.var(FV.X)
-            self.Y = self.var(FV.Y)
-            self.H = self.var(FV.H)
-            self.VARS = self.var("vars")
-            self.DATA = self.var("data")
-            self.WEIGHT = self.var(FV.WEIGHT)
 
-            __, h, y, x, data, weights = self._get_data(
-                self.data_source, coords, verbosity
+            s, self._x, self._y, self._h, data, w = self._get_data(
+                self.data_source,
+                self.states_coord, 
+                self.x_coord, 
+                self.y_coord, 
+                self.h_coord,
+                variables=list(self.var2ncvar.keys()),
+                verbosity=verbosity,
             )
-            self._prl_coords = coords
 
-            coos = (FC.STATE, self.H, self.Y, self.X, self.VARS)
-            data = (coos, data)
+            idata["coords"][FC.STATE] = s
+            if w is not None:
+                idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
-            idata["coords"][self.H] = h
-            idata["coords"][self.Y] = y
-            idata["coords"][self.X] = x
-            idata["coords"][self.VARS] = list(self._dkys.keys())
-            idata["data_vars"][self.DATA] = data
-            if weights is not None:
-                idata["data_vars"][self.WEIGHT] = ((FC.STATE,), weights)
+            self._data_state_keys = []
+            self._data_nostate = {}
+            for dims, d in data.items():
+                if FC.STATE in dims:
+                    self._data_state_keys.append(d[0])
+                    idata["coords"][dims[-1]] = d[1]
+                    idata["data_vars"][d[0]] = (dims, d[2])
+                else:
+                    self._data_nostate[dims] = (d[1], d[2])
+            del data
 
         return idata
 
@@ -641,12 +744,15 @@ class FieldDataNC(States):
 
         # case preload:
         if self.load_mode == "preload":
-            x = mdata[self.X]
-            y = mdata[self.Y]
-            h = mdata[self.H]
-            data = mdata[self.DATA].copy()
-            weights = mdata.get(self.WEIGHT, None)
-            coords = self._prl_coords
+            x = self._x
+            y = self._y
+            h = self._h
+            weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
+            data = deepcopy(self._data_nostate)
+            for DATA in self._data_state_keys:
+                dims = mdata.dims[DATA]
+                vrs = mdata[dims[-1]].tolist()
+                data[dims] = (vrs, mdata[DATA].copy())
 
         # case lazy:
         elif self.load_mode == "lazy":
@@ -703,127 +809,134 @@ class FieldDataNC(States):
             raise KeyError(
                 f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
             )
-
-        n_h = len(h)
-        n_y = len(y)
-        n_x = len(x)
-
-        # translate WS, WD into U, V:
-        if FV.WD in self.ovars and FV.WS in self.ovars:
-            wd = data[..., self._dkys[FV.WD]]
-            ws = (
-                data[..., self._dkys[FV.WS]]
-                if FV.WS in self._dkys
-                else self.fixed_vars[FV.WS]
-            )
-            wdwsi = [self._dkys[FV.WD], self._dkys[FV.WS]]
-            data[..., wdwsi] = wd2uv(wd, ws, axis=-1)
-            del ws, wd
-
-        # prepare points:
-        sts = np.arange(n_states)
-        pts = np.append(
-            points, np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), axis=2
-        )
-        pts[:, :, 3] = sts[:, None]
-        pts = pts.reshape(n_states * n_pts, 4)
-        pts = np.flip(pts, axis=1)
-        gvars = (sts, h, y, x)
-
-        # reset None coordinate data, since that should not be interpolated:
-        for i, (c, g) in enumerate(zip(coords, gvars)):
-            if c is None:
-                pts[..., i] = g[0]
-
-        # interpolate nan values:
-        if self.interp_nans and np.any(np.isnan(data)):
-            df = pd.DataFrame(
-                index=pd.MultiIndex.from_product(
-                    gvars, names=["state", "height", "y", "x"]
-                ),
-                data={
-                    v: data[..., vi].reshape(n_states * n_h * n_y * n_x)
-                    for v, vi in self._dkys.items()
-                },
-            )
-            df.interpolate(
-                axis=0, method="linear", limit_direction="forward", inplace=True
-            )
-            df.interpolate(
-                axis=0, method="linear", limit_direction="backward", inplace=True
-            )
-            data = df.to_numpy().reshape(n_states, n_h, n_y, n_x, self._n_dvars)
-            del df
-
-        # interpolate:
-        try:
-            ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interpn_pars)
-            data = interpn(gvars, data, pts, **ipars).reshape(
-                n_states, n_pts, self._n_dvars
-            )
-        except ValueError as e:
-            print(f"\nStates '{self.name}': Interpolation error")
-            print("INPUT VARS: (state, heights, y, x)")
-            print(
-                "DATA BOUNDS:",
-                [float(np.min(d)) for d in gvars],
-                [float(np.max(d)) for d in gvars],
-            )
-            print(
-                "EVAL BOUNDS:",
-                [float(np.min(p)) for p in pts.T],
-                [float(np.max(p)) for p in pts.T],
-            )
-            print(
-                "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
-            )
-            raise e
-        del pts, x, y, h, gvars
-
-        # interpolate nan values:
-        if self.interp_nans and np.any(np.isnan(data)):
-            df = pd.DataFrame(
-                index=pd.MultiIndex.from_product(
-                    (sts, range(n_pts)), names=["state", "point"]
-                ),
-                data={
-                    v: data[:, :, vi].reshape(n_states * n_pts)
-                    for v, vi in self._dkys.items()
-                },
-            )
-            df["x"] = points[:, :, 0].reshape(n_states * n_pts)
-            df["y"] = points[:, :, 1].reshape(n_states * n_pts)
-            df = df.reset_index().set_index(["state", "x", "y"])
-            df.interpolate(
-                axis=0, method="linear", limit_direction="forward", inplace=True
-            )
-            df.interpolate(
-                axis=0, method="linear", limit_direction="backward", inplace=True
-            )
-            df = df.reset_index().drop(["x", "y"], axis=1).set_index(["state", "point"])
-            data = df.to_numpy().reshape(n_states, n_pts, self._n_dvars)
-            del df
-
-        # set output:
+        
+        # interpolate data to points:
         out = {}
-        if FV.WD in self.ovars and FV.WS in self.ovars:
-            uv = data[..., wdwsi]
-            out[FV.WS] = np.linalg.norm(uv, axis=-1)
-            out[FV.WD] = uv2wd(uv, axis=-1)
-            del uv
-        for v in self.ovars:
-            if v != FV.WEIGHT and v not in out:
-                if v in self._dkys:
-                    out[v] = data[..., self._dkys[v]]
-                elif v in self.fixed_vars:
-                    out[v] = np.full(
-                        (n_states, n_pts), self.fixed_vars[v], dtype=config.dtype_double
-                    )
+        gmap = {
+            FC.STATE: np.arange(n_states),
+            self.var(FV.X): x,
+            self.var(FV.Y): y,
+            self.var(FV.H): h,
+        }
+        for dims, (vrs, data) in data.items():
+
+            # translate (WD, WS) to (U, V):
+            if FV.WD in vrs or FV.WS in vrs:
+                assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
+                    f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
+                )
+                iwd = vrs.index(FV.WD)
+                iws = vrs.index(FV.WS)
+                ws = (
+                    data[..., iws]
+                    if FV.WS in vrs
+                    else self.fixed_vars[FV.WS]
+                )
+                data[..., [iwd, iws]] = wd2uv(data[..., iwd], ws, axis=-1)
+                del ws
+
+            # prepare grid:
+            idims = dims[:-1]
+            gvars = tuple([gmap[c] for c in idims])
+            
+            # prepare points:
+            n_vrs = len(vrs)
+            tdims = [n_states, n_pts, n_vrs]
+            if idims == (FC.STATE, self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
+                    points, 
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 4)
+            elif idims == (FC.STATE, self.var(FV.X), self.var(FV.Y)):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
+                    points[..., :2], 
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 3)
+            elif idims == (FC.STATE, self.var(FV.H)):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
+                    points[..., 2, None], 
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 2)
+            elif idims == (FC.STATE,):
+                pts = np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 1)
+                tdims = (n_states, 1, n_vrs)
+            elif idims == (self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
+                pts = points[0]
+                tdims = (1, n_pts, n_vrs)
+            elif idims == (self.var(FV.X), self.var(FV.Y)):
+                pts = points[0][:, :2]
+                tdims = (1, n_pts, n_vrs)
+            elif idims == (self.var(FV.H),):
+                pts = points[0][:, 2]
+                tdims = (1, n_pts, n_vrs)
+            else:
+                raise ValueError(f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}")
+
+            # interpolate:
+            try:
+                ipars = dict(bounds_error=True, fill_value=None)
+                ipars.update(self.interpn_pars)
+                data = interpn(gvars, data, pts, **ipars).reshape(tdims)
+            except ValueError as e:
+                print(f"\nStates '{self.name}': Interpolation error")
+                print("INPUT VARS: (state, heights, y, x)")
+                print(
+                    "DATA BOUNDS:",
+                    [float(np.min(d)) for d in gvars],
+                    [float(np.max(d)) for d in gvars],
+                )
+                print(
+                    "EVAL BOUNDS:",
+                    [float(np.min(p)) for p in pts.T],
+                    [float(np.max(p)) for p in pts.T],
+                )
+                print(
+                    "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
+                )
+                raise e
+            del pts, gvars
+
+            # translate (U, V) into (WD, WS):
+            if FV.WD in vrs:
+                uv = data[..., [iwd, iws]]
+                data[..., iwd] = uv2wd(uv)
+                data[..., iws] = np.linalg.norm(uv, axis=-1)
+                del uv
+            
+            # broadcast if needed:
+            if tdims != (n_states, n_pts, n_vrs):
+                tmp = data
+                data = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
+                data[:] = tmp
+                del tmp
+
+            # set output:
+            for i, v in enumerate(vrs):
+                if v in self.ovars:
+                    out[v] = data[..., i]
+
+        # set fixed variables:
+        for v, d in self.fixed_vars.items():
+            out[v] = np.full(
+                (n_states, n_pts), d, dtype=config.dtype_double
+            )
 
         # add weights:
         if weights is not None:
             tdata[FV.WEIGHT] = weights[:, None, None]
+        elif FV.WEIGHT in out:
+            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT).reshape(n_states, n_targets, n_tpoints)
         else:
             tdata[FV.WEIGHT] = np.full(
                 (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double

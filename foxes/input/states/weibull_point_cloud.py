@@ -159,7 +159,7 @@ class WeibullPointCloud(States):
 
         """
         # read Weibull data from Dataset
-        data = WeibullSectors._read_nc(self, algo, point_coord=FC.POINT, verbosity=0)
+        data = WeibullSectors._read_data(self, algo, point_coord=FC.POINT, verbosity=0)
 
         # read points
         cx = self.var2ncvar.get(FV.X, FV.X)

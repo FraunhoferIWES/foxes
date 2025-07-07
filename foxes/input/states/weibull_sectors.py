@@ -98,7 +98,7 @@ class WeibullSectors(StatesTable):
     def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_nc(self, algo, point_coord=None, verbosity=0):
+    def _read_data(self, algo, point_coord=None, verbosity=0):
         """
         Extracts data from file or Dataset.
 
@@ -307,7 +307,7 @@ class WeibullSectors(StatesTable):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        self._read_nc(algo, verbosity=0)
+        self._read_data(algo, verbosity=0)
 
         tmp = {}
         for v in self._data.data_vars.keys():
