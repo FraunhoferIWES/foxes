@@ -318,109 +318,6 @@ class FieldDataNC(States):
 
         return s, x, y, h, data, weights
 
-        """
-        for ci, c in enumerate(coords):
-            found = False
-            if c is not None:
-                for v in ds.data_vars.values():
-                    if c in v.dims:
-                        found = True
-                        break
-            if not found:
-                coords[ci] = None
-
-        dlst = []
-        for c in coords:
-            if c is not None:
-                dlst.append(np.atleast_1d(ds[c].to_numpy()))
-            else:
-                dlst.append(np.array([0], dtype=config.dtype_double))
-        sts, h, y, x = dlst
-        n_sts, n_h, n_y, n_x = [len(u) for u in dlst]
-
-        cor_shxy = (self.states_coord, self.h_coord, self.x_coord, self.y_coord)
-        cor_shyx = (self.states_coord, self.h_coord, self.y_coord, self.x_coord)
-        cor_sxy = (self.states_coord, self.x_coord, self.y_coord)
-        cor_syx = (self.states_coord, self.y_coord, self.x_coord)
-        cor_sh = (self.states_coord, self.h_coord)
-        cor_s = (self.states_coord,)
-        vars_shyx = []
-        vars_syx = []
-        vars_sh = []
-        vars_s = []
-        for v, ncv in self.var2ncvar.items():
-            if ds[ncv].dims == cor_shyx or ds[ncv].dims == cor_shxy:
-                vars_shyx.append(v)
-            elif ds[ncv].dims == cor_syx or ds[ncv].dims == cor_sxy:
-                vars_syx.append(v)
-            elif ds[ncv].dims == cor_sh:
-                vars_sh.append(v)
-            elif ds[ncv].dims == cor_s:
-                vars_s.append(v)
-            else:
-                expc = [
-                    c
-                    for c in [cor_shxy, cor_shyx, cor_sxy, cor_syx, cor_sh, cor_s]
-                    if None not in c
-                ]
-                raise ValueError(
-                    f"States '{self.name}': Wrong coordinates for variable '{ncv}': Found {ds[ncv].dims}, expecting one of {expc}"
-                )
-
-        data = np.zeros(
-            (n_sts, n_h, n_y, n_x, len(self.var2ncvar)), dtype=config.dtype_double
-        )
-        for v in vars_shyx:
-            ncv = self.var2ncvar[v]
-            if ds[ncv].dims == cor_shyx:
-                data[..., self._dkys[v]] = ds[ncv][:]
-            else:
-                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 2, 3)
-        for v in vars_syx:
-            ncv = self.var2ncvar[v]
-            if ds[ncv].dims == cor_syx:
-                data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None]
-            else:
-                data[..., self._dkys[v]] = np.swapaxes(ds[ncv].to_numpy(), 1, 2)[
-                    :, None
-                ]
-        for v in vars_sh:
-            ncv = self.var2ncvar[v]
-            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, :, None, None]
-        for v in vars_s:
-            ncv = self.var2ncvar[v]
-            data[..., self._dkys[v]] = ds[ncv].to_numpy()[:, None, None, None]
-        if FV.WD in self.fixed_vars:
-            data[..., self._dkys[FV.WD]] = np.full(
-                (n_sts, n_h, n_y, n_x),
-                self.fixed_vars[FV.WD],
-                dtype=config.dtype_double,
-            )
-        """
-
-        weights = None
-        if self.weight_ncvar is not None:
-            if self.weight_ncvar not in ds.data_vars:
-                raise KeyError(
-                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}"
-                )
-            if ds[self.weight_ncvar].dims != (self.states_coord,):
-                raise ValueError(
-                    f"States '{self.name}': Weights variable '{self.weight_ncvar}' has wrong dimensions. Expecting {(self.states_coord,)}, got {ds[self.weight_ncvar].dims}"
-                )
-            weights = ds[self.weight_ncvar].to_numpy()
-
-        if verbosity > 1:
-            print(f"\n{self.name}: Data ranges")
-            for v, i in self._dkys.items():
-                d = data[..., i]
-                nn = np.sum(np.isnan(d))
-                print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
-                )
-
-        return sts, h, y, x, data, weights
-
     def output_point_vars(self, algo):
         """
         The variables which are being modified by the model.
@@ -759,7 +656,15 @@ class FieldDataNC(States):
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
-            __, h, y, x, data, weights = self._get_data(ds, coords, verbosity=0)
+            __, x, y, h, data, weights = self._get_data(
+                ds,
+                self.states_coord, 
+                self.x_coord, 
+                self.y_coord, 
+                self.h_coord,
+                variables=list(self.var2ncvar.keys()),
+                verbosity=0,
+            )
             del ds
 
         # case fly:
@@ -803,7 +708,16 @@ class FieldDataNC(States):
             )
 
             data = xr.concat(data, dim=self.states_coord)
-            __, h, y, x, data, weights = self._get_data(data, coords, verbosity=0)
+            __, x, y, h, data, weights = self._get_data(
+                data,
+                self.states_coord, 
+                self.x_coord, 
+                self.y_coord, 
+                self.h_coord,
+                variables=list(self.var2ncvar.keys()),
+                verbosity=0,
+            )
+            data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
         else:
             raise KeyError(
