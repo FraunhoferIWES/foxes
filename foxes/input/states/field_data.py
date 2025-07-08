@@ -37,6 +37,9 @@ def _read_nc_file(
             data = data.isel(**isel)
         if sel is not None and len(sel):
             data = data.sel(**sel)
+        assert min(data.sizes.values()) > 0, (
+            f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
+        )
         return data
 
 
@@ -81,8 +84,6 @@ class FieldData(States):
         Fill value in case of exceeding bounds, if no bounds error
     time_format: str
         The datetime parsing format string
-    interp_nans: bool
-        Linearly interpolate nan values
     interpn_pars: dict, optional
         Additional parameters for scipy.interpolate.interpn
     bounds_extra_space: float or str
@@ -108,7 +109,6 @@ class FieldData(States):
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
         isel=None,
-        interp_nans=False,
         bounds_extra_space=1000,
         **interpn_pars,
     ):
@@ -151,8 +151,6 @@ class FieldData(States):
             Subset selection via xr.Dataset.sel()
         isel: dict, optional
             Subset selection via xr.Dataset.isel()
-        interp_nans: bool
-            Linearly interpolate nan values
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
@@ -174,19 +172,24 @@ class FieldData(States):
         self.sel = sel if sel is not None else {}
         self.isel = isel if isel is not None else {}
         self.interpn_pars = interpn_pars
-        self.interp_nans = interp_nans
         self.bounds_extra_space = bounds_extra_space
+        self.var2ncvar = var2ncvar
 
-        self.var2ncvar = {
-            v: var2ncvar.get(v, v) for v in output_vars if v not in fixed_vars
-        }
+        assert FV.WEIGHT not in output_vars, (
+            f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {output_vars}"
+        )
+        self.variables = [v for v in output_vars if v not in fixed_vars]
         if weight_ncvar is not None:
             self.var2ncvar[FV.WEIGHT] = weight_ncvar
+            self.variables.append(FV.WEIGHT)
+        elif FV.WEIGHT in var2ncvar:
+            raise KeyError(
+                f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
+            )
 
         self._N = None
-
+        self._inds = None
         self.__data_source = data_source
-        self.__inds = None
 
     @property
     def data_source(self):
@@ -216,7 +219,41 @@ class FieldData(States):
         verbosity=0,
     ):
         """
-        Helper function for data extractionm from the original Dataset.
+        Extract data from the original Dataset.
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The Dataset to read data from
+        states_coord: str
+            The states coordinate name in the data
+        x_coord: str
+            The x coordinate name in the data
+        y_coord: str
+            The y coordinate name in the data
+        h_coord: str or None
+            The height coordinate name in the data, or None
+        variables: list of str
+            The variables to extract from the Dataset
+        verbosity: int
+            The verbosity level, 0 = silent
+        
+        Returns
+        -------
+        s: numpy.ndarray
+            The states coordinate values
+        x: numpy.ndarray
+            The x coordinate values
+        y: numpy.ndarray
+            The y coordinate values
+        h: numpy.ndarray or None
+            The height coordinate values, or None if not available
+        data: dict
+            The extracted data, keys are variable names,
+            values are tuples (dims, data_array)
+            where dims is a tuple of dimension names and
+            data_array is a numpy.ndarray with the data values
+
         """
         shp_s = (states_coord,)
         shp_xy = (x_coord, y_coord)
@@ -229,6 +266,13 @@ class FieldData(States):
         shps = [s for s in shps if s is not None]
         shpso = [sorted(s) for s in shps]
 
+        cmap = {
+            states_coord: FC.STATE,
+            x_coord: FV.X,
+            y_coord: FV.Y,
+            h_coord: FV.H
+        }
+
         data = {}
         for v in variables:
             w = self.var2ncvar.get(v, v)
@@ -238,16 +282,18 @@ class FieldData(States):
                 raise KeyError(f"States '{self.name}': Missing data variable '{w}' in Dataset, got '{list(ds.data_vars.keys())}'")
             
             d = ds[w]
+            dims = tuple([cmap[c] for c in d.dims])
             if d.dims in shps:
-                data[v] = (d.dims, d.to_numpy())
+                data[v] = (dims, d.to_numpy())
             elif sorted(d.dims) in shpso:
                 s = shps[shpso.index(sorted(d.dims))]
                 i = [d.dims.index(c) for c in s]
+                s = tuple([cmap[c] for c in s])
                 data[v] = (s, np.moveaxis(d.to_numpy(), i, np.arange(len(i))))
             else:
                 raise ValueError(f"States '{self.name}': Failed to map variable '{w}' with dimensions {d.dims} to expected dimensions {shps}")
 
-        s = ds[states_coord].to_numpy() if states_coord in ds else np.arange(ds.sizes[states_coord])
+        s = ds[states_coord].to_numpy() if states_coord in ds else None
         x = ds[x_coord].to_numpy()
         y = ds[y_coord].to_numpy()
         h = ds[h_coord].to_numpy() if h_coord is not None else None
@@ -273,9 +319,44 @@ class FieldData(States):
         verbosity=0,
     ):
         """
-        Helper function for data extraction
-        """
+        Gets the data from the Dataset and prepares it for calculations.
 
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The Dataset to read data from
+        states_coord: str
+            The states coordinate name in the data
+        x_coord: str
+            The x coordinate name in the data
+        y_coord: str
+            The y coordinate name in the data
+        h_coord: str or None
+            The height coordinate name in the data, or None
+        variables: list of str
+            The variables to extract from the Dataset
+        verbosity: int
+            The verbosity level, 0 = silent 
+
+        Returns
+        -------
+        s: numpy.ndarray
+            The states coordinate values
+        x: numpy.ndarray
+            The x coordinate values
+        y: numpy.ndarray
+            The y coordinate values
+        h: numpy.ndarray or None
+            The height coordinate values, or None if not available
+        data: dict
+            The extracted data, keys are dimension tuples,
+            values are tuples (DATA key, variables, data_array)     
+            where DATA key is the name in the mdata object,
+            variables is a list of variable names, and
+            data_array is a numpy.ndarray with the data values,
+            the last dimension corresponds to the variables
+
+        """
         s, x, y, h, data0 = self._read_ds(
             ds,
             states_coord, 
@@ -288,18 +369,18 @@ class FieldData(States):
 
         weights = None
         if FV.WEIGHT in variables:
-            if FV.WEIGHT not in data0.data_vars:
+            if FV.WEIGHT not in data0:
                 raise KeyError(
-                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(ds.data_vars.keys()))}"
+                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(data0.keys()))}"
                 )
-            if data0[FV.WEIGHT][0] == (states_coord,):
+            elif data0[FV.WEIGHT][0] == (states_coord,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
         vmap = {
-            states_coord: FC.STATE,
-            x_coord: self.var(FV.X),
-            y_coord: self.var(FV.Y),
-            h_coord: self.var(FV.H)
+            FC.STATE: FC.STATE,
+            FV.X: self.var(FV.X),
+            FV.Y: self.var(FV.Y),
+            FV.H: self.var(FV.H)
         }
 
         data = {} # dim: [DATA key, variables, data array]
@@ -362,20 +443,6 @@ class FieldData(States):
         # pre-load file reading:
         coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
         if not isinstance(self.data_source, xr.Dataset):
-            # check variables:
-            for v in self.ovars:
-                if v == FV.WEIGHT and self.weight_ncvar is None:
-                    pass
-                elif v not in self.var2ncvar and v not in self.fixed_vars:
-                    raise ValueError(
-                        f"States '{self.name}': Variable '{v}' neither found in var2ncvar not in fixed_vars"
-                    )
-            if (FV.WS in self.ovars and FV.WD not in self.ovars) or (
-                FV.WS not in self.ovars and FV.WD in self.ovars
-            ):
-                raise KeyError(
-                    f"States '{self.name}': Missing '{FV.WS}' or '{FV.WD}' in output variables {self.ovars}"
-                )
 
             # check static data:
             fpath = get_input_path(self.data_source)
@@ -416,7 +483,7 @@ class FieldData(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
             files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
-            vars = list(self.var2ncvar.values())
+            vars = [self.var2ncvar.get(v, v) for v in self.variables]
             self.__data_source = get_engine().map(
                 _read_nc_file,
                 files,
@@ -446,15 +513,15 @@ class FieldData(States):
                 )
                 if self.load_mode == "preload":
                     self.__data_source.load()
-                self.__inds = self.__data_source[self.states_coord].to_numpy()
-                self._N = len(self.__inds)
+                self._inds = self.__data_source[self.states_coord].to_numpy()
+                self._N = len(self._inds)
 
             elif self.load_mode == "fly":
-                self.__inds = self.__data_source
+                self._inds = self.__data_source
                 self.__data_source = fpath
-                self._files_maxi = {f: len(inds) for f, inds in zip(files, self.__inds)}
-                self.__inds = np.concatenate(self.__inds, axis=0)
-                self._N = len(self.__inds)
+                self._files_maxi = {f: len(inds) for f, inds in zip(files, self._inds)}
+                self._inds = np.concatenate(self._inds, axis=0)
+                self._N = len(self._inds)
 
             else:
                 raise KeyError(
@@ -462,14 +529,14 @@ class FieldData(States):
                 )
 
             if self.time_format is not None:
-                self.__inds = pd.to_datetime(
-                    self.__inds, format=self.time_format
+                self._inds = pd.to_datetime(
+                    self._inds, format=self.time_format
                 ).to_numpy()
 
         # given data is already Dataset:
         else:
-            self.__inds = self.data_source[self.states_coord].to_numpy()
-            self._N = len(self.__inds)
+            self._inds = self.data_source[self.states_coord].to_numpy()
+            self._N = len(self._inds)
 
         idata = super().load_data(algo, verbosity)
 
@@ -481,11 +548,12 @@ class FieldData(States):
                 self.x_coord, 
                 self.y_coord, 
                 self.h_coord,
-                variables=list(self.var2ncvar.keys()),
+                variables=self.variables,
                 verbosity=verbosity,
             )
 
-            idata["coords"][FC.STATE] = s
+            if s is not None:
+                idata["coords"][FC.STATE] = s
             if w is not None:
                 idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
@@ -535,9 +603,9 @@ class FieldData(States):
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
         data_stash[self.name] = dict(
-            inds=self.__inds,
+            inds=self._inds,
         )
-        del self.__inds
+        del self._inds
 
         if self.load_mode == "preload":
             data_stash[self.name]["data_source"] = self.__data_source
@@ -573,7 +641,7 @@ class FieldData(States):
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
         data = data_stash[self.name]
-        self.__inds = data.pop("inds")
+        self._inds = data.pop("inds")
 
         if self.load_mode == "preload":
             self.__data_source = data.pop("data_source")
@@ -602,7 +670,7 @@ class FieldData(States):
         """
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot access index while running")
-        return self.__inds
+        return self._inds
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -662,7 +730,7 @@ class FieldData(States):
                 self.x_coord, 
                 self.y_coord, 
                 self.h_coord,
-                variables=list(self.var2ncvar.keys()),
+                variables=self.variables,
                 verbosity=0,
             )
             del ds
@@ -670,10 +738,7 @@ class FieldData(States):
 
         # case fly:
         elif self.load_mode == "fly":
-            vars = list(self.var2ncvar.values())
-            if self.weight_ncvar is not None:
-                vars += [self.weight_ncvar]
-
+            vars = [self.var2ncvar.get(v, v) for v in self.variables]
             i0 = mdata.states_i0(counter=True)
             i1 = i0 + n_states
             j0 = 0
@@ -715,7 +780,7 @@ class FieldData(States):
                 self.x_coord, 
                 self.y_coord, 
                 self.h_coord,
-                variables=list(self.var2ncvar.keys()),
+                variables=self.variables,
                 verbosity=0,
             )
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
@@ -782,10 +847,16 @@ class FieldData(States):
                 pts[..., 0] = np.arange(n_states)[:, None]
                 pts = pts.reshape(n_states * n_pts, 2)
             elif idims == (FC.STATE,):
-                pts = np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 1)
-                tdims = (n_states, 1, n_vrs)
+                if FV.WD in vrs:
+                    uv = data[..., [iwd, iws]]
+                    data[..., iwd] = uv2wd(uv)
+                    data[..., iws] = np.linalg.norm(uv, axis=-1)
+                    del uv
+                for i, v in enumerate(vrs):
+                    if v in self.ovars:
+                        out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
+                        out[v][:] = data[:, None, i]
+                continue
             elif idims == (self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
                 pts = points[0]
                 tdims = (1, n_pts, n_vrs)
@@ -805,7 +876,7 @@ class FieldData(States):
                 data = interpn(gvars, data, pts, **ipars).reshape(tdims)
             except ValueError as e:
                 print(f"\nStates '{self.name}': Interpolation error")
-                print("INPUT VARS: (state, heights, y, x)")
+                print("INPUT VARS: (state, x, y, height)")
                 print(
                     "DATA BOUNDS:",
                     [float(np.min(d)) for d in gvars],

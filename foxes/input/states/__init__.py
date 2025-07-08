@@ -27,6 +27,6 @@ from .one_point_flow import (
 )
 
 from .weibull_point_cloud import WeibullPointCloud as WeibullPointCloud
-from .weibull_grid import WeibullGrid as WeibullGrid
+from .weibull_field import WeibullField as WeibullField
 
 from . import create as create
