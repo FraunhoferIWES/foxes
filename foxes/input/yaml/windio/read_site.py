@@ -224,11 +224,7 @@ def _get_WeibullPointCloud(
         and len(dims[FV.X]) == 1
         and dims[FV.X] == dims[FV.Y]
         and dims[FV.X][0] != FV.WD
-        and FV.WD in dims[FV.WEIBULL_A]
-        and FV.WD in dims[FV.WEIBULL_k]
-        and FV.WD in dims["sector_probability"]
-        and dims[FV.X][0] in dims[FV.WEIBULL_A]
-        and dims[FV.X][0] in dims[FV.WEIBULL_k]
+        and dims[FV.X][0] in coords
     ):
         if verbosity > 2:
             print("        selecting class 'WeibullPointCloud'")
@@ -263,6 +259,55 @@ def _get_WeibullPointCloud(
         return True
     return False
 
+def _get_WeibullField(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate Weibull sector parameters
+    :group: input.yaml.windio
+    """
+    if (
+        FV.WD in coords
+        and FV.X in coords
+        and FV.Y in coords
+        and FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+    ):
+        if verbosity > 2:
+            print("        selecting class 'WeibullField'")
+
+        data = {}
+        fix = {}
+        for v, d in fields.items():
+            if len(dims[v]) == 0:
+                fix[v] = d
+            elif v not in fixval:
+                data[v] = (dims[v], d)
+        fix.update({v: d for v, d in fixval.items() if v not in data})
+
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
+
+        states_dict.update(
+            dict(
+                states_type="WeibullField",
+                data_source=sdata,
+                output_vars=ovars,
+                wd_coord=FV.WD,
+                x_coord=FV.X,
+                y_coord=FV.Y,
+                h_coord=FV.H if FV.H in sdata.coords else None,
+                weight_ncvar="sector_probability",
+                var2ncvar={},
+                fixed_vars=fix,
+                ws_bins=np.arange(60)/2 if FV.WS not in sdata.coords else None,
+                ws_coord=FV.WS if FV.WS in sdata.coords else None,
+            )
+        )
+        return True
+    return False
 
 def get_states(coords, fields, dims, verbosity=1):
     """
@@ -309,6 +354,9 @@ def get_states(coords, fields, dims, verbosity=1):
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
         or _get_WeibullSectors(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_WeibullField(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
     ):

@@ -96,7 +96,7 @@ class WeibullField(FieldData):
             **kwargs,
         )
         self.ws_bins = None if ws_bins is None else np.sort(np.asarray(ws_bins))
-        ws_coord = ws_coord
+        self.ws_coord = ws_coord
 
         assert ws_coord is None or ws_bins is None, (
             f"States '{self.name}': Cannot have both ws_coord '{ws_coord}' and ws_bins {ws_bins}"
@@ -127,36 +127,19 @@ class WeibullField(FieldData):
     def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _get_data(
-        self, 
-        ds, 
-        states_coord, 
-        x_coord, 
-        y_coord, 
-        h_coord, 
-        variables, 
-        verbosity=0,
-    ):
+    def _read_ds(self, ds, variables, verbosity=0):
         """
-        Gets the data from the Dataset and prepares it for calculations.
+        Extract data from the original Dataset.
 
         Parameters
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        states_coord: str
-            The states coordinate name in the data
-        x_coord: str
-            The x coordinate name in the data
-        y_coord: str
-            The y coordinate name in the data
-        h_coord: str or None
-            The height coordinate name in the data, or None
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
-            The verbosity level, 0 = silent 
-
+            The verbosity level, 0 = silent
+        
         Returns
         -------
         s: numpy.ndarray
@@ -168,28 +151,31 @@ class WeibullField(FieldData):
         h: numpy.ndarray or None
             The height coordinate values, or None if not available
         data: dict
-            The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)     
-            where DATA key is the name in the mdata object,
-            variables is a list of variable names, and
-            data_array is a numpy.ndarray with the data values,
-            the last dimension corresponds to the variables
-            
+            The extracted data, keys are variable names,
+            values are tuples (dims, data_array)
+            where dims is a tuple of dimension names and
+            data_array is a numpy.ndarray with the data values
+
         """
-        # extract original data
-        wd, x, y, h, data0 = self._read_ds(
-            ds,
-            states_coord, 
-            x_coord, 
-            y_coord, 
-            h_coord,
-            variables=variables,
-            verbosity=verbosity,
-        )
+        # check for ws_coord
+        if self.ws_coord is not None:
+            assert self.ws_coord in ds.coords, (
+                f"States '{self.name}': Expecting ws_coord '{self.ws_coord}' to be among data coordinates, got {list(ds.coords.keys())}"
+            )
+            for v, d in ds.data_vars.items():
+                if self.ws_coord in d.dims:
+                    raise NotImplementedError(
+                        f"States '{self.name}': Cannot handle variable '{v}' with dimension '{self.ws_coord}' in data, dims = {d.dims}"
+                    )
+        
+        # read data, using wd_coord as state coordinate
+        wd, x, y, h, data0 = super()._read_ds(
+            ds, variables, verbosity)
 
         # replace state by wd coordinate
         data0 = {
-            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d) for v, (dims, d) in data0.items()
+            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d) 
+            for v, (dims, d) in data0.items()
         }
 
         # check weights
@@ -289,28 +275,7 @@ class WeibullField(FieldData):
                 data[v] = (dims, d)
         data0 = data
 
-        vmap = {
-            FC.STATE: FC.STATE,
-            FV.X: self.var(FV.X),
-            FV.Y: self.var(FV.Y),
-            FV.H: self.var(FV.H)
-        }
-
-        data = {} # dim: [DATA key, variables, data array]
-        for v, (dims, d) in data0.items():
-            if dims not in data:
-                i = len(data)
-                data[dims] = [self.var(f"data{i}"), [], []]
-            data[dims][1].append(v)
-            data[dims][2].append(d)
-        for dims in data.keys():
-            data[dims][2] = np.stack(data[dims][2], axis=-1)
-        data = {
-            tuple([vmap[c] for c in dims] + [self.var(f"vars{i}")]): d
-            for i, (dims, d) in enumerate(data.items())
-        }
-
-        return None, x, y, h, data, None
+        return None, x, y, h, data
     
     def load_data(self, algo, verbosity=0):
         """

@@ -89,6 +89,8 @@ class FieldData(States):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
+    weight_factor: float
+        The factor to multiply the weights with
 
     :group: input.states
 
@@ -110,6 +112,7 @@ class FieldData(States):
         sel=None,
         isel=None,
         bounds_extra_space=1000,
+        weight_factor=None,
         **interpn_pars,
     ):
         """
@@ -154,6 +157,8 @@ class FieldData(States):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
+        weight_factor: float, optional
+            The factor to multiply the weights with
         interpn_pars: dict, optional
             Additional parameters for scipy.interpolate.interpn
 
@@ -174,6 +179,7 @@ class FieldData(States):
         self.interpn_pars = interpn_pars
         self.bounds_extra_space = bounds_extra_space
         self.var2ncvar = var2ncvar
+        self.weight_factor = weight_factor
 
         assert FV.WEIGHT not in output_vars, (
             f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {output_vars}"
@@ -208,16 +214,7 @@ class FieldData(States):
             )
         return self.__data_source
     
-    def _read_ds(
-        self, 
-        ds, 
-        states_coord, 
-        x_coord, 
-        y_coord, 
-        h_coord, 
-        variables, 
-        verbosity=0,
-    ):
+    def _read_ds(self, ds, variables, verbosity=0):
         """
         Extract data from the original Dataset.
 
@@ -225,14 +222,6 @@ class FieldData(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        states_coord: str
-            The states coordinate name in the data
-        x_coord: str
-            The x coordinate name in the data
-        y_coord: str
-            The y coordinate name in the data
-        h_coord: str or None
-            The height coordinate name in the data, or None
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
@@ -255,22 +244,22 @@ class FieldData(States):
             data_array is a numpy.ndarray with the data values
 
         """
-        shp_s = (states_coord,)
-        shp_xy = (x_coord, y_coord)
-        shp_h = (h_coord,) if h_coord is not None else None
-        shp_xyh = (x_coord, y_coord, h_coord) if h_coord is not None else None
-        shp_sh = (states_coord, h_coord) if h_coord is not None else None
-        shp_sxy = (states_coord, x_coord, y_coord)
-        shp_sxyh = (states_coord, x_coord, y_coord, h_coord) if h_coord is not None else None
+        shp_s = (self.states_coord,)
+        shp_xy = (self.x_coord, self.y_coord)
+        shp_h = (self.h_coord,) if self.h_coord is not None else None
+        shp_xyh = (self.x_coord, self.y_coord, self.h_coord) if self.h_coord is not None else None
+        shp_sh = (self.states_coord, self.h_coord) if self.h_coord is not None else None
+        shp_sxy = (self.states_coord, self.x_coord, self.y_coord)
+        shp_sxyh = (self.states_coord, self.x_coord, self.y_coord, self.h_coord) if self.h_coord is not None else None
         shps = [shp_s, shp_xy, shp_h, shp_xyh, shp_sh, shp_sxy, shp_sxyh]
         shps = [s for s in shps if s is not None]
         shpso = [sorted(s) for s in shps]
 
         cmap = {
-            states_coord: FC.STATE,
-            x_coord: FV.X,
-            y_coord: FV.Y,
-            h_coord: FV.H
+            self.states_coord: FC.STATE,
+            self.x_coord: FV.X,
+            self.y_coord: FV.Y,
+            self.h_coord: FV.H
         }
 
         data = {}
@@ -293,10 +282,13 @@ class FieldData(States):
             else:
                 raise ValueError(f"States '{self.name}': Failed to map variable '{w}' with dimensions {d.dims} to expected dimensions {shps}")
 
-        s = ds[states_coord].to_numpy() if states_coord in ds else None
-        x = ds[x_coord].to_numpy()
-        y = ds[y_coord].to_numpy()
-        h = ds[h_coord].to_numpy() if h_coord is not None else None
+        if self.weight_factor is not None and FV.WEIGHT in data:
+            data[FV.WEIGHT][1][:] *= self.weight_factor
+
+        s = ds[self.states_coord].to_numpy() if self.states_coord in ds else None
+        x = ds[self.x_coord].to_numpy()
+        y = ds[self.y_coord].to_numpy()
+        h = ds[self.h_coord].to_numpy() if self.h_coord is not None else None
 
         if verbosity > 1 and data is not None:
             print(f"\n{self.name}: Data ranges")
@@ -308,16 +300,7 @@ class FieldData(States):
 
         return s, x, y, h, data
 
-    def _get_data(
-        self, 
-        ds, 
-        states_coord, 
-        x_coord, 
-        y_coord, 
-        h_coord, 
-        variables, 
-        verbosity=0,
-    ):
+    def _get_data(self, ds, variables, verbosity=0):
         """
         Gets the data from the Dataset and prepares it for calculations.
 
@@ -325,14 +308,6 @@ class FieldData(States):
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
-        states_coord: str
-            The states coordinate name in the data
-        x_coord: str
-            The x coordinate name in the data
-        y_coord: str
-            The y coordinate name in the data
-        h_coord: str or None
-            The height coordinate name in the data, or None
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
@@ -357,15 +332,7 @@ class FieldData(States):
             the last dimension corresponds to the variables
 
         """
-        s, x, y, h, data0 = self._read_ds(
-            ds,
-            states_coord, 
-            x_coord, 
-            y_coord, 
-            h_coord,
-            variables=variables,
-            verbosity=verbosity,
-        )
+        s, x, y, h, data0 = self._read_ds(ds, variables, verbosity)
 
         weights = None
         if FV.WEIGHT in variables:
@@ -373,7 +340,7 @@ class FieldData(States):
                 raise KeyError(
                     f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(data0.keys()))}"
                 )
-            elif data0[FV.WEIGHT][0] == (states_coord,):
+            elif data0[FV.WEIGHT][0] == (self.states_coord,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
         vmap = {
@@ -543,14 +510,7 @@ class FieldData(States):
         if self.load_mode == "preload":
 
             s, self._x, self._y, self._h, data, w = self._get_data(
-                self.data_source,
-                self.states_coord, 
-                self.x_coord, 
-                self.y_coord, 
-                self.h_coord,
-                variables=self.variables,
-                verbosity=verbosity,
-            )
+                self.data_source, self.variables, verbosity)
 
             if s is not None:
                 idata["coords"][FC.STATE] = s
@@ -725,14 +685,7 @@ class FieldData(States):
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
             __, x, y, h, data, weights = self._get_data(
-                ds,
-                self.states_coord, 
-                self.x_coord, 
-                self.y_coord, 
-                self.h_coord,
-                variables=self.variables,
-                verbosity=0,
-            )
+                ds, self.variables, verbosity=0)
             del ds
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
@@ -775,14 +728,7 @@ class FieldData(States):
 
             data = xr.concat(data, dim=self.states_coord)
             __, x, y, h, data, weights = self._get_data(
-                data,
-                self.states_coord, 
-                self.x_coord, 
-                self.y_coord, 
-                self.h_coord,
-                variables=self.variables,
-                verbosity=0,
-            )
+                data, self.variables, verbosity=0)
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
 
         else:
