@@ -24,9 +24,9 @@ def _read_nc_file(
     """Helper function for nc file reading"""
     data = xr.open_dataset(fpath, engine=nc_engine)
     for c in coords:
-        if c is not None and c not in data:
+        if c is not None and c not in data.sizes:
             raise KeyError(
-                f"Missing coordinate '{c}' in file {fpath}, got: {list(data.coords.keys())}"
+                f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
             )
     if minimal:
         return data[coords[0]].to_numpy()
@@ -69,6 +69,8 @@ class FieldData(States):
         The y coordinate name in the data
     h_coord: str
         The height coordinate name in the data
+    weight_ncvar: str
+        Name of the weight data variable in the nc file(s)
     load_mode: str
         The load mode, choices: preload, lazy, fly.
         preload loads all data during initialization,
@@ -76,8 +78,6 @@ class FieldData(States):
         reads only states index and weights during initialization
         and then opens the relevant files again within
         the chunk calculation
-    weight_ncvar: str
-        Name of the weight data variable in the nc file(s)
     bounds_error: bool
         Flag for raising errors if bounds are exceeded
     fill_value: number
@@ -106,8 +106,8 @@ class FieldData(States):
         x_coord="UTMX",
         y_coord="UTMY",
         h_coord="height",
-        load_mode="preload",
         weight_ncvar=None,
+        load_mode="preload",
         time_format="%Y-%m-%d_%H:%M:%S",
         sel=None,
         isel=None,
@@ -139,6 +139,8 @@ class FieldData(States):
             The y coordinate name in the data
         h_coord: str, optional
             The height coordinate name in the data
+        weight_ncvar: str, optional
+            Name of the weight data variable in the nc file(s)
         load_mode: str
             The load mode, choices: preload, lazy, fly.
             preload loads all data during initialization,
@@ -146,8 +148,6 @@ class FieldData(States):
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculation
-        weight_ncvar: str, optional
-            Name of the weight data variable in the nc file(s)
         time_format: str
             The datetime parsing format string
         sel: dict, optional
@@ -165,9 +165,9 @@ class FieldData(States):
         """
         super().__init__()
 
-        self.states_coord = states_coord
         self.ovars = list(output_vars)
         self.fixed_vars = fixed_vars
+        self.states_coord = states_coord
         self.x_coord = x_coord
         self.y_coord = y_coord
         self.h_coord = h_coord
@@ -330,6 +330,9 @@ class FieldData(States):
             variables is a list of variable names, and
             data_array is a numpy.ndarray with the data values,
             the last dimension corresponds to the variables
+        weights: numpy.ndarray or None
+            The weights array, if only state dependent, otherwise
+            weights are among data. Shape: (n_states,)
 
         """
         s, x, y, h, data0 = self._read_ds(ds, variables, verbosity)
@@ -366,49 +369,8 @@ class FieldData(States):
 
         return s, x, y, h, data, weights
 
-    def output_point_vars(self, algo):
-        """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        output_vars: list of str
-            The output variable names
-
-        """
-        return self.ovars
-
-    def load_data(self, algo, verbosity=0):
-        """
-        Load and/or create all model data that is subject to chunking.
-
-        Such data should not be stored under self, for memory reasons. The
-        data returned here will automatically be chunked and then provided
-        as part of the mdata object during calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        Returns
-        -------
-        idata: dict
-            The dict has exactly two entries: `data_vars`,
-            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
-            and `coords`, a dict with entries `dim_name_str -> dim_array`
-
-        """
-
-        # pre-load file reading:
-        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
+    def _preload(self, algo, coords, bounds=False, verbosity=0):
+        """Helper function for preloading data."""
         if not isinstance(self.data_source, xr.Dataset):
 
             # check static data:
@@ -420,7 +382,7 @@ class FieldData(States):
                     )
 
             # find bounds:
-            if self.x_coord is not None and self.x_coord not in self.sel:
+            if bounds and self.x_coord is not None and self.x_coord not in self.sel:
                 xy_min, xy_max = algo.farm.get_xy_bounds(
                     extra_space=self.bounds_extra_space, algo=algo
                 )
@@ -461,7 +423,7 @@ class FieldData(States):
                 sel=self.sel,
                 minimal=self.load_mode == "fly",
             )
-
+    
             if self.load_mode in ["preload", "lazy"]:
                 if self.load_mode == "lazy":
                     try:
@@ -505,6 +467,35 @@ class FieldData(States):
             self._inds = self.data_source[self.states_coord].to_numpy()
             self._N = len(self._inds)
 
+        return self.__data_source
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        # preload data:
+        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
+        self._preload(algo, coords, bounds=True, verbosity=verbosity)
+
         idata = super().load_data(algo, verbosity)
 
         if self.load_mode == "preload":
@@ -514,6 +505,8 @@ class FieldData(States):
 
             if s is not None:
                 idata["coords"][FC.STATE] = s
+            else:
+                del idata["coords"][FC.STATE]
             if w is not None:
                 idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
 
@@ -529,7 +522,7 @@ class FieldData(States):
             del data
 
         return idata
-
+    
     def set_running(
         self,
         algo,
@@ -606,6 +599,23 @@ class FieldData(States):
         if self.load_mode == "preload":
             self.__data_source = data.pop("data_source")
 
+    def output_point_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        output_vars: list of str
+            The output variable names
+
+        """
+        return self.ovars
+    
     def size(self):
         """
         The total number of states.
@@ -631,47 +641,13 @@ class FieldData(States):
         if self.running:
             raise ValueError(f"States '{self.name}': Cannot access index while running")
         return self._inds
-
-    def calculate(self, algo, mdata, fdata, tdata):
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-
-        Returns
-        -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-
-        """
-        # prepare:
-        n_states = tdata.n_states
-        n_targets = tdata.n_targets
-        n_tpoints = tdata.n_tpoints
-        points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
-        n_pts = points.shape[1]
-        n_states = fdata.n_states
-        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
-
+    
+    def _prep_calc(self, mdata, coords, stored_data):
+        """Helper function to prepare for calculations."""
         # case preload:
+        n_states = mdata.n_states
         if self.load_mode == "preload":
-            x = self._x
-            y = self._y
-            h = self._h
+            gpts = stored_data
             weights = mdata[FV.WEIGHT] if FV.WEIGHT in mdata else None
             data = deepcopy(self._data_nostate)
             for DATA in self._data_state_keys:
@@ -684,10 +660,11 @@ class FieldData(States):
             i0 = mdata.states_i0(counter=True)
             s = slice(i0, i0 + n_states)
             ds = self.data_source.isel({self.states_coord: s}).load()
-            __, x, y, h, data, weights = self._get_data(
-                ds, self.variables, verbosity=0)
-            del ds
+            ds = self._get_data(ds, self.variables, verbosity=0)[1:]
+            gpts = ds[:-2]
+            data, weights = ds[-2:]
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
+            del ds
 
         # case fly:
         elif self.load_mode == "fly":
@@ -725,16 +702,62 @@ class FieldData(States):
             assert i0 == i1, (
                 f"States '{self.name}': Missing states for load_mode '{self.load_mode}': (i0, i1) = {(i0, i1)}"
             )
-
-            data = xr.concat(data, dim=self.states_coord)
-            __, x, y, h, data, weights = self._get_data(
-                data, self.variables, verbosity=0)
+            if len(data) == 1:
+                data = data[0]
+            else:
+                data = xr.concat(data, dim=self.states_coord, data_vars="minimal", coords="minimal", compat="override", join="exact", combine_attrs="drop")
+            d = self._get_data(
+                data, self.variables, verbosity=0)[1:]
+            gpts = d[:-2]
+            data, weights = d[-2:]
             data = {dims: (d[1], d[2]) for dims, d in data.items()}
+            del d
 
         else:
             raise KeyError(
                 f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
             )
+        
+        return gpts, data, weights
+
+    def calculate(self, algo, mdata, fdata, tdata):
+        """
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
+        results: dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
+
+        """
+        # prepare
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
+        n_pts = points.shape[1]
+        n_states = fdata.n_states
+        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
+
+        # prepare data for calculation
+        stored_data = (self._x, self._y, self._h) if self.load_mode == "preload" else None
+        (x, y, h), data, weights = self._prep_calc(mdata, coords, stored_data)
         
         # interpolate data to points:
         out = {}
@@ -744,7 +767,7 @@ class FieldData(States):
             self.var(FV.Y): y,
             self.var(FV.H): h,
         }
-        for dims, (vrs, data) in data.items():
+        for dims, (vrs, d) in data.items():
 
             # translate (WD, WS) to (U, V):
             if FV.WD in vrs or FV.WS in vrs:
@@ -754,11 +777,11 @@ class FieldData(States):
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
                 ws = (
-                    data[..., iws]
+                    d[..., iws]
                     if FV.WS in vrs
                     else self.fixed_vars[FV.WS]
                 )
-                data[..., [iwd, iws]] = wd2uv(data[..., iwd], ws, axis=-1)
+                d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
 
             # prepare grid:
@@ -794,14 +817,14 @@ class FieldData(States):
                 pts = pts.reshape(n_states * n_pts, 2)
             elif idims == (FC.STATE,):
                 if FV.WD in vrs:
-                    uv = data[..., [iwd, iws]]
-                    data[..., iwd] = uv2wd(uv)
-                    data[..., iws] = np.linalg.norm(uv, axis=-1)
+                    uv = d[..., [iwd, iws]]
+                    d[..., iwd] = uv2wd(uv)
+                    d[..., iws] = np.linalg.norm(uv, axis=-1)
                     del uv
                 for i, v in enumerate(vrs):
                     if v in self.ovars:
                         out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
-                        out[v][:] = data[:, None, i]
+                        out[v][:] = d[:, None, i]
                 continue
             elif idims == (self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
                 pts = points[0]
@@ -819,7 +842,7 @@ class FieldData(States):
             try:
                 ipars = dict(bounds_error=True, fill_value=None)
                 ipars.update(self.interpn_pars)
-                data = interpn(gvars, data, pts, **ipars).reshape(tdims)
+                d = interpn(gvars, d, pts, **ipars).reshape(tdims)
             except ValueError as e:
                 print(f"\nStates '{self.name}': Interpolation error")
                 print("INPUT VARS: (state, x, y, height)")
@@ -841,22 +864,22 @@ class FieldData(States):
 
             # translate (U, V) into (WD, WS):
             if FV.WD in vrs:
-                uv = data[..., [iwd, iws]]
-                data[..., iwd] = uv2wd(uv)
-                data[..., iws] = np.linalg.norm(uv, axis=-1)
+                uv = d[..., [iwd, iws]]
+                d[..., iwd] = uv2wd(uv)
+                d[..., iws] = np.linalg.norm(uv, axis=-1)
                 del uv
             
             # broadcast if needed:
             if tdims != (n_states, n_pts, n_vrs):
-                tmp = data
-                data = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
-                data[:] = tmp
+                tmp = d
+                d = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
+                d[:] = tmp
                 del tmp
 
             # set output:
             for i, v in enumerate(vrs):
                 if v in self.ovars:
-                    out[v] = data[..., i]
+                    out[v] = d[..., i]
 
         # set fixed variables:
         for v, d in self.fixed_vars.items():

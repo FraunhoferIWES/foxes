@@ -763,6 +763,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Inputs:
   - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
+  - New states class `PointCloudData`, interpolating data with irregular point cloud support
   - New states class `WeibullField`, representing Weibull sector data on a regular grid
   - New states class `WeibullPointCloud`, representing Weibull sector data at arbitrary point locations
   - Updated `windio` inputs
