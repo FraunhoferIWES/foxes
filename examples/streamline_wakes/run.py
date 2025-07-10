@@ -108,7 +108,7 @@ if __name__ == "__main__":
         var2ncvar={FV.WS: "ws", FV.WD: "wd"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
         load_mode=args.load_mode,
-        bounds_error=False,
+        interpn_pars=dict(bounds_error=False),
     )
 
     farm = foxes.WindFarm()
