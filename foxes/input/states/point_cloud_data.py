@@ -1,33 +1,24 @@
 import numpy as np
-from xarray import Dataset
 from scipy.interpolate import (
     LinearNDInterpolator,
     NearestNDInterpolator,
     RBFInterpolator,
 )
 
-from foxes.core import States
 from foxes.config import config
 from foxes.utils import wd2uv, uv2wd
 import foxes.variables as FV
 import foxes.constants as FC
 
-from .field_data import FieldData
+from .dataset_states import DatasetStates
 
-class PointCloudData(States):
+
+class PointCloudData(DatasetStates):
     """
-    Inflow data at point cloud support, e.g., at turbine locations.
+    Inflow data with point cloud support.
 
     Attributes
     ----------
-    ovars: list of str
-        The output variables
-    var2ncvar: dict
-        Mapping from foxes variable names to variable names
-        in the nc file
-    fixed_vars: dict
-        Fixed uniform variable values, instead of
-        reading from data
     states_coord: str
         The states coordinate name in the data
     point_coord: str
@@ -38,23 +29,9 @@ class PointCloudData(States):
         The y variable name in the data
     h_ncvar: str, optional
         The height variable name in the data
-    weight_ncvar: str
+    weight_ncvar: str, optional
         The name of the weights variable in the data
-    load_mode: str
-        The load mode, choices: preload, lazy, fly.
-        preload loads all data during initialization,
-        lazy lazy-loads the data using dask, and fly
-        reads only states index and weights during initialization
-        and then opens the relevant files again within
-        the chunk calculation
-    time_format: str
-        The time format for the states coordinate,
-        e.g. "%Y-%m-%d_%H:%M:%S"
-    sel: dict
-        Subset selection via xr.Dataset.sel()
-    isel: dict
-        Subset selection via xr.Dataset.isel()
-    weight_factor: float
+    weight_factor: float, optional
         The factor to multiply the weights with
     interp_method: str
         The interpolation method, "linear", "nearest" or "radialBasisFunction"
@@ -70,40 +47,26 @@ class PointCloudData(States):
 
     def __init__(
         self,
-        data_source,
-        output_vars,
-        var2ncvar={},
-        fixed_vars={},
+        *args,
         states_coord="Time",
         point_coord="point",
         x_ncvar="x",
         y_ncvar="y",
         h_ncvar=None,
         weight_ncvar=None,
-        load_mode="preload",
-        time_format="%Y-%m-%d_%H:%M:%S",
-        sel=None,
-        isel=None,
         weight_factor=None,
         interp_method="linear",
         interp_fallback_nearest=False,
-        **interp_pars,
+        interp_pars={},
+        **kwargs,
     ):
         """
         Constructor.
 
         Parameters
         ----------
-        data_source: str or xarray.Dataset
-            Either path to NetCDF file path or data
-        output_vars: list of str
-            The output variables
-        var2ncvar: dict
-            Mapping from foxes variable names to variable names
-            in the nc file
-        fixed_vars: dict
-            Fixed uniform variable values, instead of
-            reading from data
+        args: tuple, optional
+            Arguments for the base class
         states_coord: str
             The states coordinate name in the data
         point_coord: str
@@ -116,20 +79,6 @@ class PointCloudData(States):
             The height variable name in the data
         weight_ncvar: str, optional
             The name of the weights variable in the data
-        load_mode: str
-            The load mode, choices: preload, lazy, fly.
-            preload loads all data during initialization,
-            lazy lazy-loads the data using dask, and fly
-            reads only states index and weights during initialization
-            and then opens the relevant files again within
-            the chunk calculation
-        time_format: str
-            The time format for the states coordinate,
-            e.g. "%Y-%m-%d_%H:%M:%S"
-        sel: dict, optional
-            Subset selection via xr.Dataset.sel()
-        isel: dict, optional
-            Subset selection via xr.Dataset.isel()
         weight_factor: float, optional
             The factor to multiply the weights with
         interp_method: str
@@ -139,41 +88,31 @@ class PointCloudData(States):
             interpolation method fails.
         interp_pars: dict
             Additional arguments for the interpolation
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
-        super().__init__()
-        self.ovars = list(output_vars)
-        self.fixed_vars = fixed_vars
+        super().__init__(*args, **kwargs)
+
         self.states_coord = states_coord
         self.point_coord = point_coord
         self.x_ncvar = x_ncvar
         self.y_ncvar = y_ncvar
         self.h_ncvar = h_ncvar
         self.weight_ncvar = weight_ncvar
-        self.load_mode = load_mode
-        self.time_format = time_format
-        self.sel = sel if sel is not None else {}
-        self.isel = isel if isel is not None else {}
         self.weight_factor = weight_factor
         self.interp_method = interp_method
         self.interp_pars = interp_pars
         self.interp_fallback_nearest = interp_fallback_nearest
 
         self.variables = [FV.X, FV.Y]
-        self.variables += [v for v in output_vars if v not in fixed_vars]
-
-        self.var2ncvar = var2ncvar
+        self.variables += [v for v in self.ovars if v not in self.fixed_vars]
         self.var2ncvar[FV.X] = x_ncvar
         self.var2ncvar[FV.Y] = y_ncvar
 
-        self._N = None
-        self._inds = None
         self._n_pt = None
         self._n_wd = None
         self._n_ws = None
-        self._N = None
-
-        self.__data_source = data_source
 
         if FV.WS not in self.ovars:
             raise ValueError(
@@ -191,23 +130,6 @@ class PointCloudData(States):
 
     def __repr__(self):
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
-
-    @property
-    def data_source(self):
-        """
-        The data source
-
-        Returns
-        -------
-        s: object
-            The data source
-
-        """
-        if self.load_mode in ["preload", "fly"] and self.running:
-            raise ValueError(
-                f"States '{self.name}': Cannot access data_source while running for load mode '{self.load_mode}'"
-            )
-        return self.__data_source
 
     def _read_ds(self, ds, variables, verbosity=0):
         """
@@ -357,7 +279,7 @@ class PointCloudData(States):
             for i, (dims, d) in enumerate(data.items())
         }
 
-        return s, points, data, weights
+        return s, (points,), data, weights
     
     def load_data(self, algo, verbosity=0):
         """
@@ -382,142 +304,13 @@ class PointCloudData(States):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
-        # preload data:
-        coords = [self.states_coord, self.point_coord]
-        self.__data_source = FieldData._preload(
-            self, algo, coords, bounds=False, verbosity=verbosity)
-
-        idata = super().load_data(algo, verbosity)
-
-        if self.load_mode == "preload":
-
-            s, self._points, data, w = self._get_data(
-                self.data_source, self.variables, verbosity)
-
-            if s is not None:
-                idata["coords"][FC.STATE] = s
-            else:
-                del idata["coords"][FC.STATE]
-            if w is not None:
-                idata["data_vars"][FV.WEIGHT] = ((FC.STATE,), w)
-
-            self._data_state_keys = []
-            self._data_nostate = {}
-            for dims, d in data.items():
-                if FC.STATE in dims:
-                    self._data_state_keys.append(d[0])
-                    idata["coords"][dims[-1]] = d[1]
-                    idata["data_vars"][d[0]] = (dims, d[2])
-                else:
-                    self._data_nostate[dims] = (d[1], d[2])
-            del data
-
-        return idata
-
-    def set_running(
-        self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
-        """
-        Sets this model status to running, and moves
-        all large data to stash.
-
-        The stashed data will be returned by the
-        unset_running() function after running calculations.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        super().set_running(algo, data_stash, sel, isel, verbosity)
-
-        data_stash[self.name] = dict(
-            inds=self._inds,
+        return super().load_data(
+            algo, 
+            coords=[self.states_coord, self.point_coord],
+            variables=self.variables,
+            filter_xy=None,
+            verbosity=verbosity,
         )
-        del self._inds
-
-        if self.load_mode == "preload":
-            data_stash[self.name]["data_source"] = self.__data_source
-            del self.__data_source
-
-    def unset_running(
-        self,
-        algo,
-        data_stash,
-        sel=None,
-        isel=None,
-        verbosity=0,
-    ):
-        """
-        Sets this model status to not running, recovering large data
-        from stash
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
-            Key: model name. Value: dict, large model data
-        sel: dict, optional
-            The subset selection dictionary
-        isel: dict, optional
-            The index subset selection dictionary
-        verbosity: int
-            The verbosity level, 0 = silent
-
-        """
-        super().unset_running(algo, data_stash, sel, isel, verbosity)
-
-        data = data_stash[self.name]
-        self._inds = data.pop("inds")
-
-        if self.load_mode == "preload":
-            self.__data_source = data.pop("data_source")
-
-    def output_point_vars(self, algo):
-        """
-        The variables which are being modified by the model.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-
-        Returns
-        -------
-        output_vars: list of str
-            The output variable names
-
-        """
-        return self.ovars
-
-    def size(self):
-        """
-        The total number of states.
-
-        Returns
-        -------
-        int:
-            The total number of states
-
-        """
-        return self._N
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -553,9 +346,8 @@ class PointCloudData(States):
         n_pts = n_states * n_targets * n_tpoints
         coords = [self.states_coord, self.point_coord]
 
-        # prepare data for calculation
-        stored_data = (self._points,) if self.load_mode == "preload" else None
-        (qts,), data, weights = FieldData._prep_calc(self, mdata, coords, stored_data)
+        # get data for calculation
+        (qts,), data, weights = self.get_calc_data(mdata, coords, self.variables)
         n_qts = len(qts)
 
         # interpolate data to points:

@@ -763,6 +763,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Inputs:
   - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
+  - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
   - New states class `PointCloudData`, interpolating data with irregular point cloud support
   - New states class `WeibullField`, representing Weibull sector data on a regular grid
   - New states class `WeibullPointCloud`, representing Weibull sector data at arbitrary point locations
