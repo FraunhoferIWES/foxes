@@ -11,5 +11,4 @@ foxes_yaml -h
 ## Run command
 ```
 foxes_yaml inputs.yaml
-foxes_yaml inputs2.yaml
 ```
