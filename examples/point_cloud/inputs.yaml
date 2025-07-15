@@ -1,0 +1,42 @@
+states:
+  states_type: PointCloudData
+  data_source: point_cloud_100.nc
+  output_vars: [WS, WD, TI, RHO]
+  states_coord: "state"
+  point_coord: point
+  x_ncvar: x
+  y_ncvar: y
+  time_format: 
+  var2ncvar:
+    WS: ws
+    WD: wd
+    TI: ti
+    RHO: rho
+  load_mode: preload
+  
+wind_farm:
+  layouts:    # list functions from foxes.input.farm_layout below
+    - function: add_grid
+      xy_base: [-500, -500]
+      step_vectors: [[800, 0], [0, 800]]
+      steps: [3, 4]
+      turbine_models: [DTU10MW]
+
+algorithm:
+  algo_type: Downwind
+  wake_models: [Bastankhah2014_linear_k004]
+
+outputs:
+  - output_type: FarmLayoutOutput
+    functions:
+      - function: get_figure
+        color_by: mean_P
+        title: Mean power
+        figsize: [6, 7]
+        s: 150
+        annotate: 0
+  - output_type: plt
+    functions:
+      - function: show
+      - function: close
+

@@ -83,12 +83,12 @@ class WeibullSectors(StatesTable):
         self.isel = isel if isel is not None else {}
         self.rpars = read_pars
 
-        if FV.WS not in self._ovars:
+        if FV.WS not in self.ovars:
             raise ValueError(
-                f"States '{self.name}': Expecting output variable '{FV.WS}', got {self._ovars}"
+                f"States '{self.name}': Expecting output variable '{FV.WS}', got {self.ovars}"
             )
         for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
-            if v in self._ovars:
+            if v in self.ovars:
                 raise ValueError(
                     f"States '{self.name}': Cannot have '{v}' as output variable"
                 )
@@ -123,6 +123,7 @@ class WeibullSectors(StatesTable):
             self._original_data = None
 
         # read file or grab data
+        cwd = self.var2ncvar.get(FV.WD, FV.WD)
         if isinstance(self.data_source, (str, PathLike)):
             fpath = get_input_path(self.data_source)
             if not fpath.is_file():
@@ -139,15 +140,19 @@ class WeibullSectors(StatesTable):
             if fpath.suffix == ".nc":
                 data = open_dataset(fpath, engine=config.nc_engine, **rpars)
             else:
-                data = PandasFileHelper().read_file(fpath, **rpars).to_xarray()
+                data = PandasFileHelper().read_file(fpath, **rpars)
+                data.index.name = cwd
+                data = data.to_xarray()
             self._original_data = data
 
         elif isinstance(self.data_source, Dataset):
             data = self.data_source
 
         elif isinstance(self.data_source, pd.DataFrame):
-            data = self.data_source.to_xarray()
-
+            data = self.data_source
+            data.index.name = cwd
+            data = data.to_xarray()
+            
         # optionally select a subset
         if self.isel is not None and len(self.isel):
             data = data.isel(**self.isel)
@@ -155,7 +160,6 @@ class WeibullSectors(StatesTable):
             data = data.sel(**self.sel)
 
         # remove wd 360 from the end, if wd 0 is given:
-        cwd = self.var2ncvar.get(FV.WD, FV.WD)
         wd = data[cwd].to_numpy()
         if wd[0] == 0.0 and wd[-1] == 360.0:
             data = data.isel({cwd: np.s_[:-1]})
@@ -210,7 +214,7 @@ class WeibullSectors(StatesTable):
         else:
             self._data[FV.WD][:] = data[cwd].to_numpy()[:, None, None]
             self._data[FV.WS][:] = wss[None, :, None]
-        for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT] + self._ovars:
+        for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT] + self.ovars:
             if v not in [FV.WS, FV.WD] and v not in self.fixed_vars:
                 w = self.var2ncvar.get(v, v)
                 if w not in data:
@@ -310,13 +314,13 @@ class WeibullSectors(StatesTable):
         self._read_data(algo, verbosity=0)
 
         tmp = {}
-        for v in self._data.data_vars.keys():
-            if self.POINT in v.dims:
+        for v, d in self._data.data_vars.items():
+            if self.POINT in d.dims:
                 raise TypeError(
-                    f"States '{self.name}': Variable '{v}' has unsupported dimension '{self.POINT}', dims = {v.dims}"
+                    f"States '{self.name}': Variable '{v}' has unsupported dimension '{self.POINT}', dims = {d.dims}"
                 )
             else:
-                tmp[v] = self._data[v].to_numpy().reshape(self._N)
+                tmp[v] = d.to_numpy().reshape(self._N)
         self._data = tmp
         del tmp
 

@@ -47,7 +47,7 @@ def clean():
     return 0
 
 
-def run_tutorial(path, nofig):
+def run_example(path, nofig):
     try:
         with cd(path):
             if os.path.isfile("README.md") or os.path.isfile("run.py"):
@@ -55,10 +55,6 @@ def run_tutorial(path, nofig):
 
                 if not os.path.isfile("README.md"):
                     print("\nFILE 'README.md' NOT FOUND\n")
-                    return 0
-
-                if not os.path.isfile("run.py"):
-                    print("\nFILE run.py NOT FOUND\n")
                     return 0
 
                 commands = []
@@ -70,6 +66,10 @@ def run_tutorial(path, nofig):
                             if "run.py" in s:
                                 i = s.index("run.py")
                                 commands.append(["python"] + s[i:])
+                                if nofig:
+                                    commands[-1] += ["--nofig"]
+                            elif "inputs.yaml" in s:
+                                commands.append(s)
                                 if nofig:
                                     commands[-1] += ["--nofig"]
 
@@ -107,37 +107,34 @@ def run(args):
         for d in sorted(w[1]):
             tdir = os.path.join(w[0], d)
 
-            if args.incopt or args.forceopt or "optimization" not in tdir:
-                ok = True
-                for k in excld:
-                    if k in tdir:
+            ok = True
+            for k in excld:
+                if k in tdir:
+                    ok = False
+                    break
+            if ok and incld is not None:
+                for k in incld:
+                    if k not in tdir:
                         ok = False
                         break
-                if ok and incld is not None:
-                    for k in incld:
-                        if k not in tdir:
-                            ok = False
-                            break
-                if args.forceopt and "optimization" not in tdir:
-                    ok = False
 
-                if ok:
-                    if counter >= args.step:
-                        if not (args.dry or args.Dry):
-                            print("\nEXAMPLE", counter)
+            if ok:
+                if counter >= args.step:
+                    if not (args.dry or args.Dry):
+                        print("\nEXAMPLE", counter)
 
-                        if args.dry:
-                            if os.path.isfile(os.path.join(tdir, "README.md")):
-                                dryres.append(tdir)
+                    if args.dry:
+                        if os.path.isfile(os.path.join(tdir, "README.md")):
+                            dryres.append(tdir)
 
-                        elif args.Dry:
-                            if os.path.isfile(os.path.join(tdir, "README.md")):
-                                dryres.append(d)
+                    elif args.Dry:
+                        if os.path.isfile(os.path.join(tdir, "README.md")):
+                            dryres.append(d)
 
-                        elif run_tutorial(tdir, args.nofig):
-                            raise Exception(f"\nEXAMPLE {tdir} FAILED.")
+                    elif run_example(tdir, args.nofig):
+                        raise Exception(f"\nEXAMPLE {tdir} FAILED.")
 
-                    counter += 1
+                counter += 1
 
     if args.dry or args.Dry:
         for r in sorted(dryres):
@@ -168,13 +165,6 @@ def parse_args():
         "-o",
         "--incopt",
         help="Flag for inclusion of optimization cases",
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
-        "-O",
-        "--forceopt",
-        help="Flag for inclusion of optimization cases only",
         action="store_true",
         default=False,
     )

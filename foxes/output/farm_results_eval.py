@@ -25,7 +25,7 @@ class FarmResultsEval(Output):
 
     """
 
-    def __init__(self, farm_results):
+    def __init__(self, farm_results, **kwargs):
         """
         Constructor.
 
@@ -33,8 +33,11 @@ class FarmResultsEval(Output):
         ----------
         farm_results: xarray.Dataset
             The farm results
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
+        super().__init__(**kwargs)
         self.results = farm_results
 
     def weinsum(self, rhs, *vars):

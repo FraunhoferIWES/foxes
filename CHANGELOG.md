@@ -762,14 +762,18 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.4.1
 
 - Inputs:
-  - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
   - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
+  - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
   - New states class `PointCloudData`, interpolating data with irregular point cloud support
   - New states class `WeibullField`, representing Weibull sector data on a regular grid
-  - New states class `WeibullPointCloud`, representing Weibull sector data at arbitrary point locations
+  - New states class `WeibullPointCloud`, representing Weibull sector data with irregular point cloud support
   - Updated `windio` inputs
 - Models:
   - New turbine type `DirectDataType`, for direct infusion of farm data at a turbine
   - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function
+- Examples:
+  - New example `point_cloud`, demonstrating the useage of the `PointCloud` ambient states class
+  - New example `weibull_grid`, demonstrating the useage of the `WeibullField` ambient states class
+  - New example `weibull_cloud`, demonstrating the useage of the `WeibullPointCloud` ambient states class
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4.1](https://github.com/FraunhoferIWES/foxes/commits/v1.4.1)

@@ -248,6 +248,7 @@ def run_obj_function(
     fdict,
     algo,
     rlabels,
+    nofig=False,
     verbosity=None,
 ):
     """
@@ -263,6 +264,8 @@ def run_obj_function(
         The algorithm
     rlabels: dict
         Storage for result variables
+    nofig: bool
+        Do not show figures, overrules settings from fdict
     verbosity: int, optional
         The verbosity level, 0 = silent
 
@@ -307,9 +310,9 @@ def run_obj_function(
     results = f(*args, **fdict)
 
     # pyplot shortcuts:
-    if plt_show:
+    if not nofig and plt_show:
         plt.show()
-    if plt_close:
+    if not nofig and plt_close:
         results = None
         plt.close()
 
@@ -343,6 +346,7 @@ def run_outputs(
     point_results=None,
     extra_sig={},
     ret_rlabels=False,
+    nofig=False,
     verbosity=None,
 ):
     """
@@ -363,6 +367,8 @@ def run_outputs(
         arguments (key) with data (value)
     ret_rlabels: bool
         Flag for returning results variables
+    nofig: bool
+        Do not show figures, overrules settings from idict
     verbosity: int, optional
         The verbosity level, 0 = silent
 
@@ -390,6 +396,7 @@ def run_outputs(
 
         for i, d in enumerate(odicts):
             if "output_type" in d:
+                d["nofig"] = nofig
                 ocls = d.pop_item("output_type")
                 _print(f"\nRunning output {i}: {ocls}")
                 d0 = dict(output_type=ocls)
@@ -419,7 +426,7 @@ def run_outputs(
 
             fres = []
             for fdict in flist:
-                results = run_obj_function(o, fdict, algo, rlabels, verbosity)
+                results = run_obj_function(o, fdict, algo, rlabels, nofig, verbosity)
                 fres.append(results)
             out.append((d0, fres))
 
@@ -429,7 +436,7 @@ def run_outputs(
     return out if not ret_rlabels else out, rlabels
 
 
-def run_dict(idict, *args, verbosity=None, **kwargs):
+def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
     """
     Runs foxes from dictionary input
 
@@ -439,6 +446,8 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         The input parameter dictionary
     args: tuple, optional
         Additional parameters for read_dict
+    nofig: bool
+        Do not show figures, overrules settings from idict
     verbosity: int, optional
         Force a verbosity level, 0 = silent, overrules
         settings from idict
@@ -492,7 +501,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         out += (point_results,)
 
     # run outputs:
-    out += (run_outputs(idict, algo, farm_results, point_results, verbosity=verbosity),)
+    out += (run_outputs(idict, algo, farm_results, point_results, nofig=nofig, verbosity=verbosity),)
 
     # shutdown engine, if created above:
     if engine is not None:

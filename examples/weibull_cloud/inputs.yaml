@@ -1,0 +1,44 @@
+states:
+  states_type: WeibullPointCloud
+  data_source: weibull_cloud_4.nc
+  output_vars: [WS, WD, TI, RHO]
+  point_coord: wind_turbine
+  wd_coord: wind_direction
+  ws_coord: wind_speed
+  var2ncvar:
+    X: x
+    Y: y
+    H: height
+    TI: turbulence_intensity
+    Weibull_A: weibull_a
+    Weibull_k: weibull_k
+    weight: sector_probability
+  fixed_vars:
+    RHO: 1.225
+  interp_method: linear
+  
+wind_farm:
+  layouts:  
+    - function: add_grid
+      xy_base: [263900, 6505750]
+      step_vectors: [[200, 0], [0, 300]]
+      steps: [1, 2]
+      turbine_models: [NREL5MW]
+
+algorithm:
+  algo_type: Downwind
+  wake_models: [Bastankhah2014_linear_k004]
+
+outputs:                          
+  - output_type: FarmLayoutOutput
+    functions:                    
+      - function: get_figure        
+        color_by: mean_P
+        title: Mean power
+        figsize: [6, 7]
+        s: 150
+        annotate: 0
+  - output_type: plt              
+    functions:                    
+      - function: show            
+      - function: close           

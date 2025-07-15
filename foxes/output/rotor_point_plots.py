@@ -77,6 +77,9 @@ class RotorPointPlot(Output):
             The plot axes
 
         """
+        if self.nofig:
+            return None
+        
         if fig is None:
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(111)

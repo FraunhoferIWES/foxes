@@ -186,6 +186,8 @@ class FarmLayoutOutput(Output):
             The image object
 
         """
+        if self.nofig:
+            return None, None
 
         if fig is None:
             fig = plt.figure(figsize=figsize)

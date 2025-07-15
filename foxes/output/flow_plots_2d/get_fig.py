@@ -96,6 +96,7 @@ def get_fig(
         or matplotlib.QuadContourSet
 
     """
+    
     # create plot:
     if fig is None:
         hfig = plt.figure(figsize=figsize)
