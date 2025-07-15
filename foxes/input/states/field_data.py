@@ -31,8 +31,6 @@ class FieldData(DatasetStates):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    weight_factor: float
-        The factor to multiply the weights with
 
     :group: input.states
 
@@ -47,7 +45,6 @@ class FieldData(DatasetStates):
         h_coord="height",
         weight_ncvar=None,
         bounds_extra_space=1000,
-        weight_factor=None,
         interpn_pars={},
         **kwargs,
     ):
@@ -71,8 +68,6 @@ class FieldData(DatasetStates):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        weight_factor: float, optional
-            The factor to multiply the weights with
         interpn_pars: dict
             Parameters for scipy.interpolate.interpn
         kwargs: dict, optional
@@ -88,7 +83,6 @@ class FieldData(DatasetStates):
         self.weight_ncvar = weight_ncvar
         self.interpn_pars = interpn_pars
         self.bounds_extra_space = bounds_extra_space
-        self.weight_factor = weight_factor
 
         assert FV.WEIGHT not in self.ovars, (
             f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {self.ovars}"
@@ -102,166 +96,13 @@ class FieldData(DatasetStates):
                 f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
             )
         
-        if bounds_extra_space is not None:
-            self._filter_xy = dict(
-                x_coord=self.x_coord,
-                y_coord=self.y_coord,
-                bounds_extra_space=self.bounds_extra_space,
-            )
-        else:
-            self._filter_xy = None
-    
-    def _read_ds(self, ds, variables, verbosity=0):
-        """
-        Extract data from the original Dataset.
-
-        Parameters
-        ----------
-        ds: xarray.Dataset
-            The Dataset to read data from
-        variables: list of str
-            The variables to extract from the Dataset
-        verbosity: int
-            The verbosity level, 0 = silent
-        
-        Returns
-        -------
-        s: numpy.ndarray
-            The states coordinate values
-        x: numpy.ndarray
-            The x coordinate values
-        y: numpy.ndarray
-            The y coordinate values
-        h: numpy.ndarray or None
-            The height coordinate values, or None if not available
-        data: dict
-            The extracted data, keys are variable names,
-            values are tuples (dims, data_array)
-            where dims is a tuple of dimension names and
-            data_array is a numpy.ndarray with the data values
-
-        """
-        shp_s = (self.states_coord,)
-        shp_xy = (self.x_coord, self.y_coord)
-        shp_h = (self.h_coord,) if self.h_coord is not None else None
-        shp_xyh = (self.x_coord, self.y_coord, self.h_coord) if self.h_coord is not None else None
-        shp_sh = (self.states_coord, self.h_coord) if self.h_coord is not None else None
-        shp_sxy = (self.states_coord, self.x_coord, self.y_coord)
-        shp_sxyh = (self.states_coord, self.x_coord, self.y_coord, self.h_coord) if self.h_coord is not None else None
-        shps = [shp_s, shp_xy, shp_h, shp_xyh, shp_sh, shp_sxy, shp_sxyh]
-        shps = [s for s in shps if s is not None]
-        shpso = [sorted(s) for s in shps]
-
-        cmap = {
-            self.states_coord: FC.STATE,
-            self.x_coord: FV.X,
-            self.y_coord: FV.Y,
-            self.h_coord: FV.H
+        self._cmap = {
+            FC.STATE: self.states_coord,
+            FV.X: self.x_coord,
+            FV.Y: self.y_coord,
         }
-
-        data = {}
-        for v in variables:
-            w = self.var2ncvar.get(v, v)
-            if v in self.fixed_vars:
-                continue
-            if w not in ds.data_vars:
-                raise KeyError(f"States '{self.name}': Missing data variable '{w}' in Dataset, got '{list(ds.data_vars.keys())}'")
-            
-            d = ds[w]
-            dims = tuple([cmap[c] for c in d.dims])
-            if d.dims in shps:
-                data[v] = (dims, d.to_numpy())
-            elif sorted(d.dims) in shpso:
-                s = shps[shpso.index(sorted(d.dims))]
-                i = [d.dims.index(c) for c in s]
-                s = tuple([cmap[c] for c in s])
-                data[v] = (s, np.moveaxis(d.to_numpy(), i, np.arange(len(i))))
-            else:
-                raise ValueError(f"States '{self.name}': Failed to map variable '{w}' with dimensions {d.dims} to expected dimensions {shps}")
-
-        if self.weight_factor is not None and FV.WEIGHT in data:
-            data[FV.WEIGHT][1][:] *= self.weight_factor
-
-        s = ds[self.states_coord].to_numpy() if self.states_coord in ds else None
-        x = ds[self.x_coord].to_numpy()
-        y = ds[self.y_coord].to_numpy()
-        h = ds[self.h_coord].to_numpy() if self.h_coord is not None else None
-
-        if verbosity > 1 and data is not None:
-            print(f"\n{self.name}: Data ranges")
-            for v, d in data.items():
-                nn = np.sum(np.isnan(d))
-                print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
-                )
-
-        return s, x, y, h, data
-
-    def _get_data(self, ds, variables, verbosity=0):
-        """
-        Gets the data from the Dataset and prepares it for calculations.
-
-        Parameters
-        ----------
-        ds: xarray.Dataset
-            The Dataset to read data from
-        variables: list of str
-            The variables to extract from the Dataset
-        verbosity: int
-            The verbosity level, 0 = silent 
-
-        Returns
-        -------
-        s: numpy.ndarray
-            The states coordinate values
-        gpts: tuple
-            Grid point data extracted from the Dataset, like
-            (x, y, h) or similar
-        data: dict
-            The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)     
-            where DATA key is the name in the mdata object,
-            variables is a list of variable names, and
-            data_array is a numpy.ndarray with the data values,
-            the last dimension corresponds to the variables
-        weights: numpy.ndarray or None
-            The weights array, if only state dependent, otherwise
-            weights are among data. Shape: (n_states,)
-
-        """
-        s, x, y, h, data0 = self._read_ds(ds, variables, verbosity)
-
-        weights = None
-        if FV.WEIGHT in variables:
-            if FV.WEIGHT not in data0:
-                raise KeyError(
-                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(data0.keys()))}"
-                )
-            elif data0[FV.WEIGHT][0] == (self.states_coord,):
-                weights = data0.pop(FV.WEIGHT)[1]
-
-        vmap = {
-            FC.STATE: FC.STATE,
-            FV.X: self.var(FV.X),
-            FV.Y: self.var(FV.Y),
-            FV.H: self.var(FV.H)
-        }
-
-        data = {} # dim: [DATA key, variables, data array]
-        for v, (dims, d) in data0.items():
-            if dims not in data:
-                i = len(data)
-                data[dims] = [self.var(f"data{i}"), [], []]
-            data[dims][1].append(v)
-            data[dims][2].append(d)
-        for dims in data.keys():
-            data[dims][2] = np.stack(data[dims][2], axis=-1)
-        data = {
-            tuple([vmap[c] for c in dims] + [self.var(f"vars{i}")]): d
-            for i, (dims, d) in enumerate(data.items())
-        }
-
-        return s, (x, y, h), data, weights
+        if self.h_coord is not None:
+            self._cmap[FV.H] = self.h_coord   
 
     def load_data(self, algo, verbosity=0):
         """
@@ -288,9 +129,9 @@ class FieldData(DatasetStates):
         """
         return super().load_data(
             algo, 
-            coords=[self.states_coord, self.h_coord, self.y_coord, self.x_coord],
+            cmap=self._cmap,
             variables=self.variables,
-            filter_xy=self._filter_xy,
+            bounds_extra_space=self.bounds_extra_space,
             verbosity=verbosity,
         )
 
@@ -326,20 +167,13 @@ class FieldData(DatasetStates):
         n_tpoints = tdata.n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
-        n_states = fdata.n_states
-        coords = [self.states_coord, self.h_coord, self.y_coord, self.x_coord]
 
         # get data for calculation
-        (x, y, h), data, weights = self.get_calc_data(mdata, coords, self.variables)
+        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
+        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
         
         # interpolate data to points:
         out = {}
-        gmap = {
-            FC.STATE: np.arange(n_states),
-            self.var(FV.X): x,
-            self.var(FV.Y): y,
-            self.var(FV.H): h,
-        }
         for dims, (vrs, d) in data.items():
 
             # translate (WD, WS) to (U, V):
@@ -359,12 +193,12 @@ class FieldData(DatasetStates):
 
             # prepare grid:
             idims = dims[:-1]
-            gvars = tuple([gmap[c] for c in idims])
+            gvars = tuple([coords[c] for c in idims])
             
             # prepare points:
             n_vrs = len(vrs)
             tdims = [n_states, n_pts, n_vrs]
-            if idims == (FC.STATE, self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
+            if idims == (FC.STATE, FV.X, FV.Y, FV.H):
                 pts = np.append(
                     np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
                     points, 
@@ -372,7 +206,7 @@ class FieldData(DatasetStates):
                 )
                 pts[..., 0] = np.arange(n_states)[:, None]
                 pts = pts.reshape(n_states * n_pts, 4)
-            elif idims == (FC.STATE, self.var(FV.X), self.var(FV.Y)):
+            elif idims == (FC.STATE, FV.X, FV.Y):
                 pts = np.append(
                     np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
                     points[..., :2], 
@@ -380,7 +214,7 @@ class FieldData(DatasetStates):
                 )
                 pts[..., 0] = np.arange(n_states)[:, None]
                 pts = pts.reshape(n_states * n_pts, 3)
-            elif idims == (FC.STATE, self.var(FV.H)):
+            elif idims == (FC.STATE, FV.H):
                 pts = np.append(
                     np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
                     points[..., 2, None], 
@@ -399,13 +233,13 @@ class FieldData(DatasetStates):
                         out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
                         out[v][:] = d[:, None, i]
                 continue
-            elif idims == (self.var(FV.X), self.var(FV.Y), self.var(FV.H)):
+            elif idims == (FV.X, FV.Y, FV.H):
                 pts = points[0]
                 tdims = (1, n_pts, n_vrs)
-            elif idims == (self.var(FV.X), self.var(FV.Y)):
+            elif idims == (FV.X, FV.Y):
                 pts = points[0][:, :2]
                 tdims = (1, n_pts, n_vrs)
-            elif idims == (self.var(FV.H),):
+            elif idims == (FV.H,):
                 pts = points[0][:, 2]
                 tdims = (1, n_pts, n_vrs)
             else:
@@ -524,10 +358,12 @@ class WeibullField(FieldData):
             *args,
             states_coord=wd_coord, 
             time_format=None, 
+            load_mode="preload",
             **kwargs,
         )
-        self.ws_bins = None if ws_bins is None else np.sort(np.asarray(ws_bins))
+        self.wd_coord = wd_coord
         self.ws_coord = ws_coord
+        self.ws_bins = None if ws_bins is None else np.sort(np.asarray(ws_bins))
 
         assert ws_coord is None or ws_bins is None, (
             f"States '{self.name}': Cannot have both ws_coord '{ws_coord}' and ws_bins {ws_bins}"
@@ -535,6 +371,8 @@ class WeibullField(FieldData):
         assert ws_coord is not None or ws_bins is not None, (
             f"States '{self.name}': Expecting either ws_coord or ws_bins"
         )
+        if ws_coord is not None:
+            self._cmap[FV.WS] = ws_coord
 
         if FV.WD not in self.ovars:
             raise ValueError(
@@ -558,14 +396,16 @@ class WeibullField(FieldData):
     def __repr__(self):
         return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, variables, verbosity=0):
+    def _read_ds(self, ds, cmap, variables, verbosity=0):
         """
-        Extract data from the original Dataset.
+        Helper function for _get_data, extracts data from the original Dataset.
 
         Parameters
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
@@ -573,34 +413,18 @@ class WeibullField(FieldData):
         
         Returns
         -------
-        s: numpy.ndarray
-            The states coordinate values
-        x: numpy.ndarray
-            The x coordinate values
-        y: numpy.ndarray
-            The y coordinate values
-        h: numpy.ndarray or None
-            The height coordinate values, or None if not available
+        coords: dict
+            keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
             where dims is a tuple of dimension names and
             data_array is a numpy.ndarray with the data values
 
-        """
-        # check for ws_coord
-        if self.ws_coord is not None:
-            assert self.ws_coord in ds.coords, (
-                f"States '{self.name}': Expecting ws_coord '{self.ws_coord}' to be among data coordinates, got {list(ds.coords.keys())}"
-            )
-            for v, d in ds.data_vars.items():
-                if self.ws_coord in d.dims:
-                    raise NotImplementedError(
-                        f"States '{self.name}': Cannot handle variable '{v}' with dimension '{self.ws_coord}' in data, dims = {d.dims}"
-                    )
-        
+        """       
         # read data, using wd_coord as state coordinate
-        wd, x, y, h, data0 = super()._read_ds(ds, variables, verbosity)
+        coords, data0 = super()._read_ds(ds, cmap, variables, verbosity)
+        wd = coords.pop(FC.STATE)
 
         # replace state by wd coordinate
         data0 = {
@@ -705,5 +529,5 @@ class WeibullField(FieldData):
                 data[v] = (dims, d)
         data0 = data
 
-        return None, x, y, h, data
+        return coords, data
     

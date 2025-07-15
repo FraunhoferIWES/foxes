@@ -6,7 +6,7 @@ from scipy.interpolate import (
 )
 
 from foxes.config import config
-from foxes.utils import wd2uv, uv2wd
+from foxes.utils import wd2uv, uv2wd, weibull_weights
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -31,8 +31,6 @@ class PointCloudData(DatasetStates):
         The height variable name in the data
     weight_ncvar: str, optional
         The name of the weights variable in the data
-    weight_factor: float, optional
-        The factor to multiply the weights with
     interp_method: str
         The interpolation method, "linear", "nearest" or "radialBasisFunction"
     interp_fallback_nearest: bool
@@ -54,7 +52,6 @@ class PointCloudData(DatasetStates):
         y_ncvar="y",
         h_ncvar=None,
         weight_ncvar=None,
-        weight_factor=None,
         interp_method="linear",
         interp_fallback_nearest=False,
         interp_pars={},
@@ -79,8 +76,6 @@ class PointCloudData(DatasetStates):
             The height variable name in the data
         weight_ncvar: str, optional
             The name of the weights variable in the data
-        weight_factor: float, optional
-            The factor to multiply the weights with
         interp_method: str
             The interpolation method, "linear", "nearest" or "radialBasisFunction"
         interp_fallback_nearest: bool
@@ -100,7 +95,6 @@ class PointCloudData(DatasetStates):
         self.y_ncvar = y_ncvar
         self.h_ncvar = h_ncvar
         self.weight_ncvar = weight_ncvar
-        self.weight_factor = weight_factor
         self.interp_method = interp_method
         self.interp_pars = interp_pars
         self.interp_fallback_nearest = interp_fallback_nearest
@@ -127,18 +121,25 @@ class PointCloudData(DatasetStates):
                 raise ValueError(
                     f"States '{self.name}': Cannot have '{v}' as output variable"
                 )
+            
+        self._cmap = {
+            FC.STATE: self.states_coord,
+            FC.POINT: self.point_coord,
+        }
 
     def __repr__(self):
         return f"{type(self).__name__}(n_pt={self._n_pt}, n_wd={self._n_wd}, n_ws={self._n_ws})"
 
-    def _read_ds(self, ds, variables, verbosity=0):
+    def _read_ds(self, ds, cmap, variables, verbosity=0):
         """
-        Extract data from the original Dataset.
+        Helper function for _get_data, extracts data from the original Dataset.
 
         Parameters
         ----------
         ds: xarray.Dataset
             The Dataset to read data from
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
@@ -146,11 +147,8 @@ class PointCloudData(DatasetStates):
         
         Returns
         -------
-        s: numpy.ndarray
-            The states coordinate values
-        points: numpy.ndarray
-            The point coordinates, shape (n_points, 2)
-            or (n_points, 3) if height is included
+        coords: dict
+            keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are variable names,
             values are tuples (dims, data_array)
@@ -158,129 +156,29 @@ class PointCloudData(DatasetStates):
             data_array is a numpy.ndarray with the data values
 
         """
-        assert self.x_ncvar in ds.data_vars, \
-            f"States '{self.name}': Missing x variable '{self.x_ncvar}' in Dataset, got '{list(ds.data_vars.keys())}'"
-        assert self.y_ncvar in ds.data_vars, \
-            f"States '{self.name}': Missing y variable '{self.y_ncvar}' in Dataset, got '{list(ds.data_vars.keys())}'"
-        assert ds[self.x_ncvar].dims == (self.point_coord,), \
-            f"States '{self.name}': x variable '{self.x_ncvar}' has unexpected dimensions {ds[self.x_ncvar].dims}, expected ({self.point_coord},)"
-        assert ds[self.y_ncvar].dims == (self.point_coord,), \
-            f"States '{self.name}': y variable '{self.y_ncvar}' has unexpected dimensions {ds[self.y_ncvar].dims}, expected ({self.point_coord},)"
+        coords, data = super()._read_ds(ds, cmap, variables, verbosity)
         
-        points = [
-            ds[self.x_ncvar].to_numpy(),
-            ds[self.y_ncvar].to_numpy(),
-        ]
-        if self.h_ncvar is not None:
-            assert self.h_ncvar in ds.data_vars, \
-                f"States '{self.name}': Missing height variable '{self.h_ncvar}' in Dataset, got '{list(ds.data_vars.keys())}'"
-            assert ds[self.h_ncvar].dims == (self.point_coord,), \
-                f"States '{self.name}': height variable '{self.h_ncvar}' has unexpected dimensions {ds[self.h_ncvar].dims}, expected ({self.point_coord},)"
-            points.append(ds[self.h_ncvar].to_numpy())
-        points = np.stack(points, axis=-1)
+        assert FV.X in data and FV.Y in data, (
+            f"States '{self.name}': Expecting variables '{FV.X}' and '{FV.Y}' in data, found {list(data.keys())}"
+        )
+        assert data[FV.X][0] == (FC.POINT,), (
+            f"States '{self.name}': Expecting variable '{FV.X}' to have dimensions '({FC.POINT},)', got {data[FV.X][0]}"
+        )
+        assert data[FV.Y][0] == (FC.POINT,), (
+            f"States '{self.name}': Expecting variable '{FV.Y}' to have dimensions '({FC.POINT},)', got {data[FV.Y][0]}"
+        )
+        if FV.H in data:
+            assert data[FV.H][0] == (FC.POINT,), (
+                f"States '{self.name}': Expecting variable '{FV.H}' to have dimensions '({FC.POINT},)', got {data[FV.H][0]}"
+            )
 
-        cmap = {
-            self.states_coord: FC.STATE,
-            self.point_coord: FC.POINT,
-        }
+        points = [data.pop(FV.X)[1], data.pop(FV.Y)[1]]
+        if FV.H in data:
+            points.append(data.pop(FV.H)[1])
+        coords[FC.POINT] = np.stack(points, axis=-1)
 
-        data = {}
-        for v in variables:
-            w = self.var2ncvar.get(v, v)
-            if v in data or v in self.fixed_vars or v in [FV.X, FV.Y, FV.H]:
-                continue
-            if w not in ds.data_vars:
-                raise KeyError(f"States '{self.name}': Missing data variable '{w}' in Dataset, got '{list(ds.data_vars.keys())}'")
-            
-            d = ds[w]
-            dims = tuple([cmap[c] for c in d.dims])
-            if dims in [(FC.STATE,), (FC.POINT,), (FC.STATE, FC.POINT)]:
-                data[v] = (dims, d.to_numpy())
-            elif dims == (FC.POINT, FC.STATE):
-                data[v] = ((FC.STATE, FC.POINT), np.swapaxes(d.to_numpy(), 0, 1))
-            else:
-                shps = [(self.states_coord,), (self.point_coord,), (self.states_coord, self.point_coord)]
-                raise ValueError(f"States '{self.name}': Failed to map variable '{w}' with dimensions {d.dims} to expected dimensions {shps}")
+        return coords, data
 
-        if self.weight_factor is not None and FV.WEIGHT in data:
-            data[FV.WEIGHT][1][:] *= self.weight_factor
-
-        s = ds[self.states_coord].to_numpy() if self.states_coord in ds else None
-
-        if verbosity > 1 and data is not None:
-            print(f"\n{self.name}: Data ranges")
-            for v, d in data.items():
-                nn = np.sum(np.isnan(d))
-                print(
-                    f"  {v}: {np.nanmin(d)} --> {np.nanmax(d)}, nans: {nn} ({100 * nn / len(d.flat):.2f}%)"
-                )
-
-        return s, points, data
-
-    def _get_data(self, ds, variables, verbosity=0):
-        """
-        Gets the data from the Dataset and prepares it for calculations.
-
-        Parameters
-        ----------
-        ds: xarray.Dataset
-            The Dataset to read data from
-        variables: list of str
-            The variables to extract from the Dataset
-        verbosity: int
-            The verbosity level, 0 = silent 
-
-        Returns
-        -------
-        s: numpy.ndarray
-            The states coordinate values
-        points: numpy.ndarray
-            The point coordinates, shape (n_points, 2)
-            or (n_points, 3) if height is included
-        data: dict
-            The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)     
-            where DATA key is the name in the mdata object,
-            variables is a list of variable names, and
-            data_array is a numpy.ndarray with the data values,
-            the last dimension corresponds to the variables
-        weights: numpy.ndarray or None
-            The weights array, if only state dependent, otherwise
-            weights are among data. Shape: (n_states,)
-
-        """
-        s, points, data0 = self._read_ds(ds, variables, verbosity)
-
-        weights = None
-        if FV.WEIGHT in variables:
-            if FV.WEIGHT not in data0:
-                raise KeyError(
-                    f"States '{self.name}': Missing weights variable '{self.weight_ncvar}' in data, found {sorted(list(data0.keys()))}"
-                )
-            elif data0[FV.WEIGHT][0] == (self.states_coord,):
-                weights = data0.pop(FV.WEIGHT)[1]
-
-        vmap = {
-            FC.STATE: FC.STATE,
-            FC.POINT: self.var(FC.POINT)
-        }
-
-        data = {} # dim: [DATA key, variables, data array]
-        for v, (dims, d) in data0.items():
-            if dims not in data:
-                i = len(data)
-                data[dims] = [self.var(f"data{i}"), [], []]
-            data[dims][1].append(v)
-            data[dims][2].append(d)
-        for dims in data.keys():
-            data[dims][2] = np.stack(data[dims][2], axis=-1)
-        data = {
-            tuple([vmap[c] for c in dims] + [self.var(f"vars{i}")]): d
-            for i, (dims, d) in enumerate(data.items())
-        }
-
-        return s, (points,), data, weights
-    
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
@@ -306,9 +204,9 @@ class PointCloudData(DatasetStates):
         """
         return super().load_data(
             algo, 
-            coords=[self.states_coord, self.point_coord],
+            cmap=self._cmap,
             variables=self.variables,
-            filter_xy=None,
+            bounds_extra_space=None,
             verbosity=verbosity,
         )
 
@@ -347,18 +245,20 @@ class PointCloudData(DatasetStates):
         coords = [self.states_coord, self.point_coord]
 
         # get data for calculation
-        (qts,), data, weights = self.get_calc_data(mdata, coords, self.variables)
-        n_qts = len(qts)
+        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
+        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
+
 
         # interpolate data to points:
         out = {}
-        cmap = {
-            FC.STATE: FC.STATE,
-            self.var(FC.POINT): FC.POINT,
-        }
         for dims, (vrs, d) in data.items():
 
-            idims = tuple([cmap[c] for c in dims[:-1]])
+            # prepare
+            n_vrs = len(vrs)
+            qts = coords[FC.POINT]
+            n_qts, n_dms = qts.shape    
+            idims = dims[:-1]
+
             if idims == (FC.STATE,):
                 for i, v in enumerate(vrs):
                     if v in self.ovars:
@@ -368,10 +268,8 @@ class PointCloudData(DatasetStates):
 
             elif idims == (FC.POINT,):
 
-                # prepare grid data, add state index to last axis
+                # prepare grid data
                 gts = qts
-                n_vrs = len(vrs)
-                n_dms = qts.shape[1]
                 n_gts = n_qts
 
                 # prepare evaluation points
@@ -380,8 +278,6 @@ class PointCloudData(DatasetStates):
             elif idims == (FC.STATE, FC.POINT):
 
                 # prepare grid data, add state index to last axis
-                n_vrs = len(vrs)
-                n_dms = qts.shape[1]
                 gts = np.zeros((n_qts, n_states, n_dms + 1), dtype=config.dtype_double)
                 gts[..., :n_dms] = qts[:, None, :]
                 gts[..., n_dms] = np.arange(n_states)[None, :]  
@@ -488,3 +384,233 @@ class PointCloudData(DatasetStates):
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: out[v] for v in self.ovars}
+
+
+class WeibullPointCloud(PointCloudData):
+    """
+    Weibull sectors at point cloud support, e.g., at turbine locations.
+
+    Attributes
+    ----------
+    wd_coord: str
+        The wind direction coordinate name
+    ws_coord: str
+        The wind speed coordinate name, if wind speed bin
+        centres are in data, else None
+    ws_bins: numpy.ndarray
+        The wind speed bins, including
+        lower and upper bounds, shape: (n_ws_bins+1,)
+
+    :group: input.states
+
+    """
+
+    def __init__(
+        self,
+        *args,
+        wd_coord,
+        ws_coord=None,
+        ws_bins=None,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Positional arguments for the base class
+        wd_coord: str
+            The wind direction coordinate name
+        ws_coord: str, optional
+            The wind speed coordinate name, if wind speed bin
+            centres are in data
+        ws_bins: list of float, optional
+            The wind speed bins, including
+            lower and upper bounds
+        kwargs: dict, optional
+            Keyword arguments for the base class
+
+        """
+        super().__init__(
+            *args,
+            states_coord=wd_coord, 
+            time_format=None, 
+            load_mode="preload",
+            **kwargs,
+        )
+        self.wd_coord = wd_coord
+        self.ws_coord = ws_coord
+        self.ws_bins = None if ws_bins is None else np.sort(np.asarray(ws_bins))
+
+        assert ws_coord is None or ws_bins is None, (
+            f"States '{self.name}': Cannot have both ws_coord '{ws_coord}' and ws_bins {ws_bins}"
+        )
+        assert ws_coord is not None or ws_bins is not None, (
+            f"States '{self.name}': Expecting either ws_coord or ws_bins"
+        )
+
+        if FV.WD not in self.ovars:
+            raise ValueError(
+                f"States '{self.name}': Expecting output variable '{FV.WD}', got {self.ovars}"
+            )
+        for v in [FV.WEIBULL_A, FV.WEIBULL_k, FV.WEIGHT]:
+            if v in self.ovars:
+                raise ValueError(
+                    f"States '{self.name}': Cannot have '{v}' as output variable"
+                )
+            if v not in self.variables:
+                self.variables.append(v)
+
+        for v in [FV.WS, FV.WD]:
+            if v in self.variables:
+                self.variables.remove(v)
+
+        self._n_wd = None
+        self._n_ws = None
+
+    def __repr__(self):
+        return f"{type(self).__name__}(n_wd={self._n_wd}, n_ws={self._n_ws})"
+
+    def _read_ds(self, ds, cmap, variables, verbosity=0):
+        """
+        Helper function for _get_data, extracts data from the original Dataset.
+
+        Parameters
+        ----------
+        ds: xarray.Dataset
+            The Dataset to read data from
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
+        variables: list of str
+            The variables to extract from the Dataset
+        verbosity: int
+            The verbosity level, 0 = silent
+        
+        Returns
+        -------
+        coords: dict
+            keys: Foxes variable names, values: 1D coordinate value arrays
+        data: dict
+            The extracted data, keys are variable names,
+            values are tuples (dims, data_array)
+            where dims is a tuple of dimension names and
+            data_array is a numpy.ndarray with the data values
+
+        """           
+        # read data, using wd_coord as state coordinate
+        hcmap = cmap.copy()
+        if self.ws_coord is not None:
+            hcmap = {FV.WS: self.ws_coord, **cmap}
+        coords, data0 = super()._read_ds(ds, hcmap, variables, verbosity)
+        wd = coords.pop(FC.STATE)
+        wss = coords.pop(FV.WS, None)
+
+        # replace state by wd coordinate
+        data0 = {
+            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d) 
+            for v, (dims, d) in data0.items()
+        }
+
+        # check weights
+        if FV.WEIGHT not in data0:
+            raise KeyError(
+                f"States '{self.name}': Missing weights variable '{FV.WEIGHT}' in data, found {sorted(list(data0.keys()))}"
+            )
+        else:
+            dims = data0[FV.WEIGHT][0]
+            if FV.WD not in dims:
+                raise KeyError(
+                    f"States '{self.name}': Expecting weights variable '{FV.WEIGHT}' to contain dimension '{FV.WD}', got {dims}"
+                )
+            if FV.WS in dims:
+                raise KeyError(
+                    f"States '{self.name}': Expecting weights variable '{FV.WEIGHT}' to not contain dimension '{FV.WS}', got {dims}"
+                )
+
+        # construct wind speed bins and bin deltas
+        assert FV.WS not in data0, (
+            f"States '{self.name}': Cannot have '{FV.WS}' in data, found variables {list(data0.keys())}"
+        )
+        if self.ws_bins is not None:
+            wsb = self.ws_bins
+            wss = 0.5 * (wsb[:-1] + wsb[1:])
+        elif wss is not None:
+            wsb = np.zeros((len(wss) + 1,), dtype=config.dtype_double)
+            wsb[1:-1] = 0.5 * (wss[1:] + wss[:-1])
+            wsb[0] = wss[0] - 0.5 * wsb[1]
+            wsb[-1] = wss[-1] + 0.5 * wsb[-2]
+            self.ws_bins = wsb
+        else:
+            raise ValueError(
+                f"States '{self.name}': Expecting ws_bins argument, or '{self.ws_coord}' among data coordinates, got {list(ds.coords.keys())}"
+            )
+        wsd = wsb[1:] - wsb[:-1]
+        n_ws = len(wss)
+        n_wd = len(wd)
+        del wsb
+
+        # calculate Weibull weights
+        dms = [FV.WS, FV.WD]
+        shp = [n_ws, n_wd]
+        for v in [FV.WEIBULL_A, FV.WEIBULL_k]:
+            if FC.POINT in data0[v][0]:
+                dms.append(FC.POINT)
+                shp.append(data0[v][1].shape[data0[v][0].index(FC.POINT)])
+                break
+        dms = tuple(dms)
+        shp = tuple(shp)
+        if data0[FV.WEIGHT][0] == dms:
+            w = data0.pop(FV.WEIGHT)[1]
+        else:
+            s_w = tuple([np.s_[:] if c in data0[FV.WEIGHT][0] else None for c in dms])
+            w = np.zeros(shp, dtype=config.dtype_double)
+            w[:] = data0.pop(FV.WEIGHT)[1][s_w]
+        s_ws = tuple([np.s_[:], None] + [None] * (len(dms) - 2))
+        s_A = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
+        data0[FV.WEIGHT] = (
+            dms,
+            w * weibull_weights(
+                ws=wss[s_ws],
+                ws_deltas=wsd[s_ws],
+                A=data0.pop(FV.WEIBULL_A)[1][s_A],
+                k=data0.pop(FV.WEIBULL_k)[1][s_k],
+            )
+        )
+        del w, s_ws, s_A, s_k
+
+        # translate binned data to states
+        self._N = n_ws * n_wd
+        self._inds = None
+        data = {
+            FV.WS: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
+            FV.WD: np.zeros((n_ws, n_wd), dtype=config.dtype_double),
+        }
+        data[FV.WS][:] = wss[:, None]
+        data[FV.WD][:] = wd[None, :]
+        data[FV.WS] = ((FC.STATE,), data[FV.WS].reshape(self._N))
+        data[FV.WD] = ((FC.STATE,), data[FV.WD].reshape(self._N))
+        for v in list(data0.keys()):
+            dims, d = data0.pop(v)
+            if len(dims) >=2 and dims[:2] == (FV.WS, FV.WD):
+                dms = tuple([FC.STATE] + list(dims[2:]))
+                shp = [self._N] + list(d.shape[2:])
+                data[v] = (dms, d.reshape(shp))
+            elif dims[0] == FV.WD:
+                dms = tuple([FC.STATE] + list(dims[1:]))
+                shp = [n_ws] + list(d.shape)
+                data[v] = np.zeros(shp, dtype=config.dtype_double)
+                data[v][:] = d[None, ...]
+                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+            elif dims[0] == FV.WS:
+                dms = tuple([FC.STATE] + list(dims[1:]))
+                shp = [n_ws, n_wd] + list(d.shape[2:])
+                data[v] = np.zeros(shp, dtype=config.dtype_double)
+                data[v][:] = d[:, None, ...]
+                data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
+            else:
+                data[v] = (dims, d)
+        
+        return coords, data
+    
