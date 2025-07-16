@@ -93,30 +93,27 @@ The following optional dependencies are available:
 
 | Option | Usage                              |
 |--------|------------------------------------|
-| eng    | Installs all engine dependencies   |
-| eng0   | Like `eng`, but without `mpi4py`   |
 | dask   | Installs dependencies for `dask` engine |
 | opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
 | test   | Dependencies for running the tests |
 | doc    | Dependencies for creating the docs |
-| dev    | Usefull tools for code development |
 
-As an example, the optional dependencies `eng0` are installed by
+As an example, the optional dependencies `dask` are installed by
 
 ```console
-pip install foxes[eng0]
+pip install foxes[dask]
 ```
 
 or, for development mode, from the `foxes` root directory by
 
 ```console
-pip install -e .[eng0]
+pip install -e .[dask]
 ```
 
 Note that options can also be combined, e.g.
 
 ```console
-pip install foxes[test,dev,eng0]
+pip install foxes[dask,opt]
 ```
 
 ## Installation via conda

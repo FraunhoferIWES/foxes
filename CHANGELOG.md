@@ -764,7 +764,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Dependencies:
   - Dropping support for Python 3.8 and 3.9. Supported Python versions are 3.10 - 3.13
   - Introducing minimal package versions of dependencies to pyproject.toml
-  - Replacing `requirements_3_13.txt` by `uv.lock` file
 - Inputs:
   - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
   - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
