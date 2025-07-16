@@ -759,8 +759,12 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4](https://github.com/FraunhoferIWES/foxes/commits/v1.4)
 
-## v1.4.1
+## v1.5
 
+- Dependencies:
+  - Dropping support for Python 3.8 and 3.9. Supported Python versions are 3.10 - 3.13
+  - Introducing minimal package versions of dependencies to pyproject.toml
+  - Replacing `requirements_3_13.txt` by `uv.lock` file
 - Inputs:
   - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
   - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
@@ -778,4 +782,4 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Environment:
   - The previously shipped `requirements_3_13.txt` file has been replaced by a `uv.lock` file
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4.1](https://github.com/FraunhoferIWES/foxes/commits/v1.4.1)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5](https://github.com/FraunhoferIWES/foxes/commits/v1.5)
