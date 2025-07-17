@@ -78,11 +78,7 @@ class FarmDataModel(DataCalcModel):
             The farm data
 
         """
-        vrs = set(self.output_farm_vars(algo))
-        if hasattr(self, 'fixed_vars'):
-            vrs.update(self.fixed_vars.keys())
-
-        for var in vrs:
+        for var in self.output_farm_vars(algo):
             if var not in fdata:
                 fdata.add(
                     var,
@@ -275,6 +271,8 @@ class FarmDataModelList(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+        
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):

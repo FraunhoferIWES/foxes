@@ -250,6 +250,8 @@ class PointDataModelList(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
+        self.ensure_output_vars(algo, tdata)
+        
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):
