@@ -249,11 +249,16 @@ def _get_WeibullPointCloud(
                 data_source=sdata,
                 output_vars=ovars,
                 var2ncvar={
-                    FV.WEIGHT: "sector_probability",
-                    FC.POINT: dims[FV.X][0],
                 },
                 fixed_vars=fix,
+                point_coord=dims[FV.X][0],
+                wd_coord=FV.WD,
+                ws_coord=FV.WS if FV.WS in sdata.coords else None,
                 ws_bins=np.arange(60)/2 if FV.WS not in sdata else None,
+                x_ncvar=FV.X,
+                y_ncvar=FV.Y,
+                h_ncvar=FV.H if FV.H in sdata.data_vars else None,
+                weight_ncvar="sector_probability",
             )
         )
         return True

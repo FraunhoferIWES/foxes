@@ -103,7 +103,14 @@ class PointCloudData(DatasetStates):
         self.variables += [v for v in self.ovars if v not in self.fixed_vars]
         self.var2ncvar[FV.X] = x_ncvar
         self.var2ncvar[FV.Y] = y_ncvar
-
+        if weight_ncvar is not None:
+            self.var2ncvar[FV.WEIGHT] = weight_ncvar
+            self.variables.append(FV.WEIGHT)
+        elif FV.WEIGHT in self.var2ncvar:
+            raise KeyError(
+                f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
+            )
+        
         self._n_pt = None
         self._n_wd = None
         self._n_ws = None
@@ -121,7 +128,7 @@ class PointCloudData(DatasetStates):
                 raise ValueError(
                     f"States '{self.name}': Cannot have '{v}' as output variable"
                 )
-            
+        
         self._cmap = {
             FC.STATE: self.states_coord,
             FC.POINT: self.point_coord,
@@ -444,11 +451,11 @@ class WeibullPointCloud(PointCloudData):
         self.ws_coord = ws_coord
         self.ws_bins = None if ws_bins is None else np.sort(np.asarray(ws_bins))
 
-        assert ws_coord is None or ws_bins is None, (
-            f"States '{self.name}': Cannot have both ws_coord '{ws_coord}' and ws_bins {ws_bins}"
-        )
         assert ws_coord is not None or ws_bins is not None, (
             f"States '{self.name}': Expecting either ws_coord or ws_bins"
+        )
+        assert ws_coord is None or ws_bins is None, (
+            f"States '{self.name}': Expecting either ws_coord or ws_bins, not both"
         )
 
         if FV.WD not in self.ovars:
