@@ -199,7 +199,6 @@ def _run_as_ufunc(
     out_coords,
     calc_pars,
     init_vars,
-    ensure_variables,
     calculate,
 ):
     """
@@ -314,7 +313,6 @@ def _run_as_ufunc(
         data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
 
     # run model calculation:
-    ensure_variables(algo, *data)
     results = calculate(algo, *data, **calc_pars)
 
     # replace missing results by first input data with matching shape:
@@ -385,7 +383,7 @@ class XArrayEngine(DaskBaseEngine):
         self,
         algo,
         model,
-        model_data=None,
+        model_data,
         farm_data=None,
         point_data=None,
         out_vars=[],
@@ -408,9 +406,9 @@ class XArrayEngine(DaskBaseEngine):
             should be run
         model_data: xarray.Dataset
             The initial model data
-        farm_data: xarray.Dataset
+        farm_data: xarray.Dataset, optional
             The initial farm data
-        point_data: xarray.Dataset
+        point_data: xarray.Dataset, optional
             The initial point data
         out_vars: list of str, optional
             Names of the output variables
@@ -537,7 +535,6 @@ class XArrayEngine(DaskBaseEngine):
             out_coords=out_coords,
             calc_pars=calc_pars,
             init_vars=ivars,
-            ensure_variables=model.ensure_variables,
             calculate=model.calculate,
         )
 

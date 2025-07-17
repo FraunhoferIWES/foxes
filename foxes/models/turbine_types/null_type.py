@@ -1,6 +1,5 @@
 from foxes.core import TurbineType
 
-
 class NullType(TurbineType):
     """
     A turbine type that does not compute any data.
@@ -102,4 +101,5 @@ class NullType(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         return {}

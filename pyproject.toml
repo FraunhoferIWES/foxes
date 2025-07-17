@@ -71,6 +71,9 @@ test = [
     "flake8>=0.1",
     "pytest>=7.0",
 ]
+utils = [
+    "objsize>=0.5",
+]
 
 [project.urls]
 Homepage = "https://github.com/FraunhoferIWES/foxes"

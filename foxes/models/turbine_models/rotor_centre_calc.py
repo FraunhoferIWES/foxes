@@ -107,6 +107,8 @@ class RotorCentreCalc(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+        
         # prepare target point data:
         tdata = TData.from_points(
             fdata[FV.TXYH],

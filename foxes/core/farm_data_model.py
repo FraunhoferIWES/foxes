@@ -65,29 +65,30 @@ class FarmDataModel(DataCalcModel):
 
         """
         return (FC.STATE, FC.TURBINE)
-
-    def ensure_variables(self, algo, mdata, fdata):
+    
+    def ensure_output_vars(self, algo, fdata):
         """
-        Add variables to fdata, initialized with NaN
+        Ensures that the output variables are present in the farm data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
+        fdata: foxes.core.FData
             The farm data
 
         """
-        n_states = fdata.n_states
-        n_turbines = fdata.n_turbines
-        for v in self.output_farm_vars(algo):
-            if v not in fdata:
-                fdata[v] = np.full(
-                    (n_states, n_turbines), np.nan, dtype=config.dtype_double
+        vrs = set(self.output_farm_vars(algo))
+        if hasattr(self, 'fixed_vars'):
+            vrs.update(self.fixed_vars.keys())
+
+        for var in vrs:
+            if var not in fdata:
+                fdata.add(
+                    var,
+                    np.full((fdata.n_states, fdata.n_turbines), np.nan, dtype=config.dtype_double),
+                    (FC.STATE, FC.TURBINE),
                 )
-                fdata.dims[v] = (FC.STATE, FC.TURBINE)
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata):
@@ -264,7 +265,7 @@ class FarmDataModelList(FarmDataModel):
             The model data
         fdata: foxes.core.FData
             The farm data
-        parameters: list of dict, optional
+        parameters: list of dict
             A list of parameter dicts, one for each model
 
         Returns

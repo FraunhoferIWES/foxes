@@ -8,7 +8,6 @@ from foxes.data import PCTCURVE, parse_Pct_two_files
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 
-
 class WsRho2PCtFromTwo(TurbineType):
     """
     Calculate air density dependent power
@@ -262,6 +261,8 @@ class WsRho2PCtFromTwo(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        # prepare:
+        self.ensure_output_vars(algo, fdata)
 
         # calculate P:
         st_sel_P = (

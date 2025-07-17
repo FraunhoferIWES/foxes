@@ -300,6 +300,7 @@ class PCtFile(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
 
@@ -332,7 +333,7 @@ class PCtFile(TurbineType):
 
         out = {
             FV.P: fdata[FV.P],
-            FV.CT: fdata[FV.CT],
+            FV.CT: fdata[FV.CT]
         }
 
         out[FV.P][st_sel] = np.interp(

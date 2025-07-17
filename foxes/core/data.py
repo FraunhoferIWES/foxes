@@ -109,12 +109,12 @@ class Data(Dict):
             or the corresponding index
 
         """
-        if FC.STATE not in self:
-            return None
-        elif counter:
+        if counter:
             if self.__states_i0 is None:
                 raise KeyError(f"Data '{self.name}': states_i0 requested but not set")
             return self.__states_i0
+        elif FC.STATE not in self:
+            return None
         else:
             return self[FC.STATE][0]
 
@@ -395,6 +395,74 @@ class FData(Data):
                     )
 
     @classmethod
+    def from_sizes(cls, n_states, n_turbines, *args, callback=None, **kwargs):
+        """
+        Create Data object from model data
+
+        Parameters
+        ----------
+        n_states: int
+            The number of states
+        n_turbines: int
+            The number of turbines
+        args: tuple, optional
+            Additional parameters for the constructor
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        Returns
+        -------
+        data: Data
+            The data object
+
+        """
+        data = cls(*args, **kwargs)
+        data.sizes[FC.STATE] = n_states
+        data.sizes[FC.TURBINE] = n_turbines
+
+        if callback is not None:
+            callback(data, data.dims)
+
+        return data
+
+    @classmethod
+    def from_mdata(cls, mdata, *args, callback=None, **kwargs):
+        """
+        Create Data object from model data
+
+        Parameters
+        ----------
+        mdata: MData
+            The model data
+        args: tuple, optional
+            Additional parameters for the constructor
+        callback: Function, optional
+            Function f(data, dims) that manipulates
+            the data and dims dicts before construction
+        kwargs: dict, optional
+            Additional parameters for the constructor
+
+        Returns
+        -------
+        data: Data
+            The data object
+
+        """
+        data = cls(*args, **kwargs)
+        for v in [FC.STATE, FC.TURBINE]:
+            data[v] = mdata[v]
+            data.dims[v] = mdata.dims[v]
+            data.sizes[v] = mdata.sizes[v]
+
+        if callback is not None:
+            callback(data, data.dims)
+
+        return data
+    
+    @classmethod
     def from_dataset(cls, ds, *args, mdata=None, callback=None, **kwargs):
         """
         Create Data object from a dataset
@@ -427,6 +495,9 @@ class FData(Data):
                 if FC.STATE not in data:
                     data[FC.STATE] = mdata[FC.STATE]
                     dims[FC.STATE] = mdata.dims[FC.STATE]
+                if FC.TURBINE not in data:
+                    data[FC.TURBINE] = mdata[FC.TURBINE]
+                    dims[FC.TURBINE] = mdata.dims[FC.TURBINE]
                 if callback is not None:
                     callback(data, dims)
 

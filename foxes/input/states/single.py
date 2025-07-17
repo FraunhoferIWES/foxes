@@ -183,6 +183,8 @@ class SingleStateStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        self.ensure_output_vars(algo, tdata)
+        
         if self.ws is not None:
             tdata[FV.WS] = np.full(
                 (tdata.n_states, tdata.n_targets, tdata.n_tpoints),

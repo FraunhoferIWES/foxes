@@ -366,6 +366,7 @@ class OnePointFlowStates(States):
 
         """
         # prepare:
+        self.ensure_output_vars(algo, tdata)
         targets = tdata[FC.TARGETS]
         n_states, n_targets, n_tpoints = targets.shape[:3]
         n_points = n_targets * n_tpoints

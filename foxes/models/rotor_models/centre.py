@@ -199,4 +199,4 @@ class CentreRotor(RotorModel):
                 self._set_res(fdata, v, res, downwind_index)
                 del res
             if copy_to_ambient and v in FV.var2amb:
-                fdata[FV.var2amb[v]] = fdata[v].copy()
+                fdata.add(FV.var2amb[v], fdata[v].copy(), fdata.dims[v])

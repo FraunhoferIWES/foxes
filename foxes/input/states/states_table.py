@@ -407,28 +407,18 @@ class StatesTable(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        self.ensure_output_vars(algo, tdata)
+
         for i, v in enumerate(self._tvars):
-            if v in tdata:
-                tdata[v][:] = mdata[self.DATA][:, i, None, None]
-            else:
-                tdata[v] = np.zeros(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                    dtype=config.dtype_double,
-                )
-                tdata[v][:] = mdata[self.DATA][:, i, None, None]
-                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+            tdata[v][:] = mdata[self.DATA][:, i, None, None]
 
         for v, f in self.fixed_vars.items():
-            tdata[v] = np.full(
-                (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                f,
-                dtype=config.dtype_double,
-            )
+            tdata[v][:] = f
 
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
             tdata[v] = p.calculate(tdata, z)
-
+    
         if self.WEIGHT in mdata:
             tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
         else:

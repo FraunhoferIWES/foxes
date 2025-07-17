@@ -1,6 +1,5 @@
 from foxes.core import TurbineType
 
-
 class DirectDataType(TurbineType):
     """
     Direct data infusion by a user function.
@@ -119,4 +118,5 @@ class DirectDataType(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         return self._func(algo, mdata, fdata, st_sel)

@@ -477,7 +477,7 @@ class Downwind(Algorithm):
         # 2) calculate ambient rotor results:
         mlist.models.append(self.rotor_model)
         calc_pars.append(calc_parameters.get(mlist.models[-1].name, {}))
-        calc_pars[-1].update({"store": True})
+        calc_pars[-1]["store"] = True
 
         # 3) run post-rotor turbine models via farm controller:
         mlist.models.append(self.farm_controller)
@@ -508,7 +508,7 @@ class Downwind(Algorithm):
     def _launch_parallel_farm_calc(
         self,
         mlist,
-        *data,
+        model_data,
         outputs=None,
         normalize=False,
         **kwargs,
@@ -520,8 +520,8 @@ class Downwind(Algorithm):
         ----------
         mlist: foxes.models.FarmDataModelList
             The model list
-        data: tuple of xarray.Dataset
-            The (mdata, fdata) inputs
+        model_data: xarray.Dataset
+            The initial model data
         outputs: list of str, optional
             The output variables, or None for defaults
         normalize: bool
@@ -538,7 +538,7 @@ class Downwind(Algorithm):
         """
         out_vars = self.farm_vars if outputs is None else outputs
         farm_results = get_engine().run_calculation(
-            self, mlist, *data, out_vars=out_vars, **kwargs
+            self, mlist, model_data, out_vars=out_vars, **kwargs
         )
 
         if normalize:

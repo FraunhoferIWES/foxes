@@ -410,6 +410,8 @@ class MultiHeightStates(States):
             (n_states, n_targets, n_tpoints)
 
         """
+        self.ensure_output_vars(algo, tdata)
+        
         n_states = tdata.n_states
         n_targets = tdata.n_targets
         n_tpoints = tdata.n_tpoints

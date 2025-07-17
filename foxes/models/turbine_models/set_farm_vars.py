@@ -268,6 +268,8 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+        
         i0 = mdata.states_i0(counter=True)
         if not self.once or i0 not in self.__once_done:
 

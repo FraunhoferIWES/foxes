@@ -93,27 +93,28 @@ The following optional dependencies are available:
 
 | Option | Usage                              |
 |--------|------------------------------------|
-| dask   | Installs dependencies for `dask` engine |
 | opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
+| dask   | Installs dependencies for `dask` engine |
 | test   | Dependencies for running the tests |
 | doc    | Dependencies for creating the docs |
+| utils  | Dependencies for utilities         |
 
-As an example, the optional dependencies `dask` are installed by
+As an example, the optional dependencies `test` are installed by
 
 ```console
-pip install foxes[dask]
+pip install foxes[test]
 ```
 
-or, for development mode, from the `foxes` root directory by
+or, for development mode, from the `test` root directory by
 
 ```console
-pip install -e .[dask]
+pip install -e .[test]
 ```
 
 Note that options can also be combined, e.g.
 
 ```console
-pip install foxes[dask,opt]
+pip install foxes[test,opt]
 ```
 
 ## Installation via conda

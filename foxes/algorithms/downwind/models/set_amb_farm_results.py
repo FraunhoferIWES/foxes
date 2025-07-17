@@ -65,5 +65,5 @@ class SetAmbFarmResults(FarmDataModel):
 
         """
         for v in self.vars:
-            fdata[FV.var2amb[v]] = fdata[v].copy()
+            fdata.add(FV.var2amb[v], fdata[v].copy(), fdata.dims[v])
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

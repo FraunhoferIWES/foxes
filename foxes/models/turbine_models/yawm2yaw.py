@@ -56,6 +56,8 @@ class YAWM2YAW(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+        
         yawm = fdata[FV.YAWM][st_sel]
         wd = fdata[FV.WD][st_sel]
 

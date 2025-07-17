@@ -151,6 +151,7 @@ class PowerMask(TurbineModel):
 
         """
         # prepare:
+        self.ensure_output_vars(algo, fdata)
         P = fdata[FV.P]
         max_P = fdata[FV.MAX_P]
         P_rated = self._P_rated[None, :]

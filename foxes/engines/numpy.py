@@ -49,7 +49,7 @@ class NumpyEngine(Engine):
         self,
         algo,
         model,
-        model_data=None,
+        model_data,
         farm_data=None,
         point_data=None,
         out_vars=[],
@@ -71,9 +71,9 @@ class NumpyEngine(Engine):
             should be run
         model_data: xarray.Dataset
             The initial model data
-        farm_data: xarray.Dataset
+        farm_data: xarray.Dataset, optional
             The initial farm data
-        point_data: xarray.Dataset
+        point_data: xarray.Dataset, optional
             The initial point data
         out_vars: list of str, optional
             Names of the output variables
@@ -108,9 +108,6 @@ class NumpyEngine(Engine):
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        if farm_data is None:
-            farm_data = Dataset()
-        goal_data = farm_data if point_data is None else point_data
 
         # DEBUG objec mem sizes:
         # from foxes.utils import print_mem
@@ -161,10 +158,10 @@ class NumpyEngine(Engine):
                 results[key] = _run(
                     algo,
                     model,
-                    data,
-                    iterative,
-                    chunk_store,
-                    (i0_states, i0_targets),
+                    *data,
+                    iterative=iterative,
+                    chunk_store=chunk_store,
+                    i0_t0=(i0_states, i0_targets),
                     **calc_pars,
                 )
                 chunk_store.update(results[key][1])
@@ -177,7 +174,11 @@ class NumpyEngine(Engine):
 
             i0_states = i1_states
 
+        if farm_data is None:
+            farm_data = Dataset()
+        goal_data = farm_data if point_data is None else point_data
         del calc_pars, farm_data, point_data
+        
         if pbar is not None:
             pbar.close()
 
