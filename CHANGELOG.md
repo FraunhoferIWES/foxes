@@ -778,7 +778,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New example `point_cloud`, demonstrating the useage of the `PointCloud` ambient states class
   - New example `weibull_grid`, demonstrating the useage of the `WeibullField` ambient states class
   - New example `weibull_cloud`, demonstrating the useage of the `WeibullPointCloud` ambient states class
-- Environment:
-  - The previously shipped `requirements_3_13.txt` file has been replaced by a `uv.lock` file
+- Bug fixes:
+  - Bug fixed with turbine model `SetFarmVars` that mixed up the turbine ordering
+  - Bug fixed with turbine models that are marked as `pre_rotor` that mixed up the turbine ordering
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5](https://github.com/FraunhoferIWES/foxes/commits/v1.5)

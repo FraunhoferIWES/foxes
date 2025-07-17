@@ -74,17 +74,7 @@ class InitFarmData(FarmDataModel):
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
 
-        # define FV.TXYH as vector [X, Y, H]:
-        fdata[FV.TXYH] = np.full(
-            (n_states, n_turbines, 3), np.nan, dtype=config.dtype_double
-        )
-        fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
-        for i, v in enumerate([FV.X, FV.Y, FV.H]):
-            fdata[v] = fdata[FV.TXYH][..., i]
-            fdata.dims[v] = (FC.STATE, FC.TURBINE)
-
         # set X, Y, H, D:
-        fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
         for ti, t in enumerate(algo.farm.turbines):
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
@@ -110,27 +100,24 @@ class InitFarmData(FarmDataModel):
         fdata[FV.WD] = sres[FV.WD][:, :, 0]
         del tdata, sres, svrs
 
-        # calculate and inverse:
+        # calculate downwind order:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)
         ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]
+
+        # apply downwind order to all data:
+        for data in [fdata, mdata]:
+            for k in data.keys():
+                if k not in [FV.X, FV.Y, FV.H] and tuple(data.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
+                    data[k] != data[k][0, 0, None, None]
+                ):
+                    data[k][:] = data[k][ssel, order]
+        for i, v in enumerate([FV.X, FV.Y, FV.H]):
+            fdata[v] = fdata[FV.TXYH][..., i]
+        fdata[FV.YAW] = fdata[FV.WD].copy()
         fdata[FV.ORDER] = order
         fdata[FV.ORDER_SSEL] = ssel
         fdata[FV.ORDER_INV] = np.zeros_like(order)
         fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
-
-        # apply downwind order to all data:
-        fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
-        for i, v in enumerate([FV.X, FV.Y, FV.H]):
-            fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD]:
-            if np.any(fdata[v] != fdata[v][0, 0, None, None]):
-                fdata[v] = fdata[v][ssel, order]
-        fdata[FV.YAW] = fdata[FV.WD].copy()
-        for k in mdata.keys():
-            if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
-                mdata[k] != mdata[k][0, 0, None, None]
-            ):
-                mdata[k] = mdata[k][ssel, order]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     # set turbines in yaw
     yawm = np.array([[args.yawm, args.yawm2]])
-    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars()
+    mbook.turbine_models["set_yawm"] = foxes.models.turbine_models.SetFarmVars(pre_rotor=True)
     mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
 
     # create states
