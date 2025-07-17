@@ -5,6 +5,7 @@ states:
   point_coord: wind_turbine
   wd_coord: wind_direction
   ws_coord: wind_speed
+  weight_ncvar: sector_probability
   var2ncvar:
     X: x
     Y: y
@@ -12,7 +13,6 @@ states:
     TI: turbulence_intensity
     Weibull_A: weibull_a
     Weibull_k: weibull_k
-    weight: sector_probability
   fixed_vars:
     RHO: 1.225
   interp_method: linear
