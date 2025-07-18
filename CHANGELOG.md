@@ -770,8 +770,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New states class `PointCloudData`, interpolating data with irregular point cloud support
   - New states class `WeibullField`, representing Weibull sector data on a regular grid
   - New states class `WeibullPointCloud`, representing Weibull sector data with irregular point cloud support
-  - Updated `windio` inputs
   - New farm layout input function `add_from_arrays`, for directly adding turbines through one dimensional data lists or arrays
+  - Advancing `windio` to version 2.0
 - Models:
   - New turbine type `CalculatorType`, for direct infusion of farm data at a turbine through a user function
   - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function

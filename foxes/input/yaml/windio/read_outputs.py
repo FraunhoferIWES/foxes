@@ -185,13 +185,25 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
         print("    Contents  :", [k for k in wio_outs.keys()])
 
     # read subset:
-    cases_run = Dict(
-        wio_outs.pop_item("cases_run", {}), _name=wio_outs.name + ".cases_run"
-    )
-    if cases_run.pop_item("all_occurences"):
+    run_configuration = wio_outs.pop_item("run_configuration", {})
+    if "times_run" in run_configuration:
+        times_run = run_configuration.pop_item("times_run")
+        if times_run.get_item("all_occurences"):
+            states_isel = None
+        else:
+            states_isel =  times_run.get_item("subset")
+    elif "wind_speeds_run" in run_configuration:
+        wind_speeds_run = run_configuration.get_item("wind_speeds_run")
+        directions_run = run_configuration.get_item("directions_run")
+        if not wind_speeds_run.get_item("all_values"):
+            raise NotImplementedError(
+                f"Wind speed and direction subsets are not yet supported, got {wind_speeds_run.name} {wind_speeds_run}"
+            )
+        if not directions_run.get_item("all_values"):
+            raise NotImplementedError(
+                f"Wind speed and direction subsets are not yet supported, got {directions_run.name} {directions_run}"
+            )
         states_isel = None
-    else:
-        states_isel = cases_run.pop_item("subset")
 
     # read turbine_outputs:
     _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity)
