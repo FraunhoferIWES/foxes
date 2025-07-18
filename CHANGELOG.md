@@ -771,13 +771,15 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New states class `WeibullField`, representing Weibull sector data on a regular grid
   - New states class `WeibullPointCloud`, representing Weibull sector data with irregular point cloud support
   - Updated `windio` inputs
+  - New farm layout input function `add_from_arrays`, for directly adding turbines through one dimensional data lists or arrays
 - Models:
-  - New turbine type `DirectDataType`, for direct infusion of farm data at a turbine
+  - New turbine type `CalculatorType`, for direct infusion of farm data at a turbine through a user function
   - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function
 - Examples:
   - New example `point_cloud`, demonstrating the useage of the `PointCloud` ambient states class
   - New example `weibull_grid`, demonstrating the useage of the `WeibullField` ambient states class
   - New example `weibull_cloud`, demonstrating the useage of the `WeibullPointCloud` ambient states class
+  - New example `direct_mdata_infusion`, demonstrating how to infuse states data dirctly into rotor data without interpolation
 - Bug fixes:
   - Bug fixed with turbine model `SetFarmVars` that mixed up the turbine ordering
   - Bug fixed with turbine models that are marked as `pre_rotor` that mixed up the turbine ordering

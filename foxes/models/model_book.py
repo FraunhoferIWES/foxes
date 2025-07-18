@@ -91,6 +91,7 @@ class ModelBook:
 
         self.rotor_models = FDict(_name="rotor_models")
         self.rotor_models["centre"] = fm.rotor_models.CentreRotor()
+        self.rotor_models["direct_mdata"] = fm.rotor_models.DirectMDataInfusion()
 
         def _n2n(n2):
             n2 = float(n2)
