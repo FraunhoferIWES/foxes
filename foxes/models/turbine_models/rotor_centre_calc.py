@@ -108,7 +108,7 @@ class RotorCentreCalc(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         # prepare target point data:
         tdata = TData.from_points(
             fdata[FV.TXYH],

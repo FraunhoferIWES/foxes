@@ -203,7 +203,7 @@ class ScanStates(States):
 
         """
         self.ensure_output_vars(algo, tdata)
-        
+
         for i, v in enumerate(self._vars):
             if v not in tdata:
                 tdata[v] = np.zeros_like(tdata[FC.TARGETS][..., 0])

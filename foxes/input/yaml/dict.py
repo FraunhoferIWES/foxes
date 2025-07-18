@@ -501,7 +501,11 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
         out += (point_results,)
 
     # run outputs:
-    out += (run_outputs(idict, algo, farm_results, point_results, nofig=nofig, verbosity=verbosity),)
+    out += (
+        run_outputs(
+            idict, algo, farm_results, point_results, nofig=nofig, verbosity=verbosity
+        ),
+    )
 
     # shutdown engine, if created above:
     if engine is not None:

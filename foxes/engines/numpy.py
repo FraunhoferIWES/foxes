@@ -178,7 +178,7 @@ class NumpyEngine(Engine):
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
         del calc_pars, farm_data, point_data
-        
+
         if pbar is not None:
             pbar.close()
 

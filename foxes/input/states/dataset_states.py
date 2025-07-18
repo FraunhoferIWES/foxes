@@ -174,7 +174,7 @@ class DatasetStates(States):
             The variables to extract from the Dataset
         verbosity: int
             The verbosity level, 0 = silent
-        
+
         Returns
         -------
         coords: dict
@@ -207,16 +207,14 @@ class DatasetStates(States):
                 raise KeyError(
                     f"States '{self.name}': Variable '{w}' not found in data source '{self.data_source}', available variables: {list(ds.data_vars)}"
                 )
-            
+
         coords = {v: ds[c].to_numpy() for v, c in cmap.items() if c in ds.coords}
 
         if verbosity > 1:
             if len(coords):
                 print(f"\n{self.name}: Coordinate ranges")
                 for c, d in coords.items():
-                    print(
-                        f"  {c}: {np.min(d)} --> {np.max(d)}"
-                    )
+                    print(f"  {c}: {np.min(d)} --> {np.max(d)}")
             print(f"\n{self.name}: Data ranges")
             for v, d in data.items():
                 nn = np.sum(np.isnan(d))
@@ -225,7 +223,7 @@ class DatasetStates(States):
                 )
 
         return coords, data
-    
+
     def _get_data(self, ds, cmap, variables, verbosity=0):
         """
         Gets the data from the Dataset and prepares it for calculations.
@@ -239,7 +237,7 @@ class DatasetStates(States):
         variables: list of str
             The variables to extract from the Dataset
         verbosity: int
-            The verbosity level, 0 = silent 
+            The verbosity level, 0 = silent
 
         Returns
         -------
@@ -247,7 +245,7 @@ class DatasetStates(States):
             keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)     
+            values are tuples (DATA key, variables, data_array)
             where DATA key is the name in the mdata object,
             variables is a list of variable names, and
             data_array is a numpy.ndarray with the data values,
@@ -269,7 +267,7 @@ class DatasetStates(States):
             if data0[FV.WEIGHT][0] == (FC.STATE,):
                 weights = data0.pop(FV.WEIGHT)[1]
 
-        data = {} # dim: [DATA key, variables, data array]
+        data = {}  # dim: [DATA key, variables, data array]
         for v, (dims, d) in data0.items():
             if dims not in data:
                 i = len(data)
@@ -283,7 +281,7 @@ class DatasetStates(States):
             for i, (dims, d) in enumerate(data.items())
         }
         return coords, data, weights
-    
+
     def _preload(self, algo, cmap, bounds_extra_space, verbosity=0):
         """Helper function for preloading data."""
 
@@ -291,9 +289,8 @@ class DatasetStates(States):
             f"States '{self.name}': States coordinate '{FC.STATE}' not in cmap {cmap}"
         )
         states_coord = cmap[FC.STATE]
-        
-        if not isinstance(self.data_source, xr.Dataset):
 
+        if not isinstance(self.data_source, xr.Dataset):
             # check static data:
             fpath = get_input_path(self.data_source)
             if "*" not in str(self.data_source):
@@ -304,10 +301,14 @@ class DatasetStates(States):
 
             # find bounds:
             if bounds_extra_space is not None:
-                assert FV.X in cmap, f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
-                assert FV.Y in cmap, f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+                assert FV.X in cmap, (
+                    f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+                )
+                assert FV.Y in cmap, (
+                    f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+                )
 
-                #if bounds and self.x_coord is not None and self.x_coord not in self.sel:
+                # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
                 xy_min, xy_max = algo.farm.get_xy_bounds(
                     extra_space=bounds_extra_space, algo=algo
                 )
@@ -338,7 +339,7 @@ class DatasetStates(States):
                     print(
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
-                    
+
             files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
             coords = list(cmap.values())
             vars = [self.var2ncvar.get(v, v) for v in self.variables]
@@ -352,7 +353,7 @@ class DatasetStates(States):
                 sel=self.sel,
                 minimal=self.load_mode == "fly",
             )
-    
+
             if self.load_mode in ["preload", "lazy"]:
                 if self.load_mode == "lazy":
                     try:
@@ -402,12 +403,12 @@ class DatasetStates(States):
         return self.__data_source
 
     def load_data(
-        self, 
-        algo, 
-        cmap, 
+        self,
+        algo,
+        cmap,
         variables,
         bounds_extra_space=None,
-        verbosity=0, 
+        verbosity=0,
     ):
         """
         Load and/or create all model data that is subject to chunking.
@@ -443,9 +444,9 @@ class DatasetStates(States):
         idata = super().load_data(algo, verbosity)
 
         if self.load_mode == "preload":
-
             self._coords, data, w = self._get_data(
-                self.data_source, cmap, variables, verbosity)
+                self.data_source, cmap, variables, verbosity
+            )
 
             if FC.STATE in self._coords:
                 idata["coords"][FC.STATE] = self._coords.pop(FC.STATE)
@@ -468,7 +469,7 @@ class DatasetStates(States):
             del data
 
         return idata
-    
+
     def set_running(
         self,
         algo,
@@ -561,7 +562,7 @@ class DatasetStates(States):
 
         """
         return self.ovars
-    
+
     def size(self):
         """
         The total number of states.
@@ -603,14 +604,14 @@ class DatasetStates(States):
             A mapping from foxes variable names to Dataset dimension names
         variables: list of str
             The variables to extract from the Dataset
-        
+
         Returns
         -------
         coords: dict
             keys: Foxes variable names, values: 1D coordinate value arrays
         data: dict
             The extracted data, keys are dimension tuples,
-            values are tuples (DATA key, variables, data_array)     
+            values are tuples (DATA key, variables, data_array)
             where DATA key is the name in the mdata object,
             variables is a list of variable names, and
             data_array is a numpy.ndarray with the data values,
@@ -635,7 +636,10 @@ class DatasetStates(States):
             for DATA in self._data_state_keys:
                 dims = mdata.dims[DATA]
                 vrs = mdata[dims[-1]].tolist()
-                dms = tuple([self.unvar(c) if c != FC.STATE else FC.STATE for c in dims[:-1]] + [dims[-1]])
+                dms = tuple(
+                    [self.unvar(c) if c != FC.STATE else FC.STATE for c in dims[:-1]]
+                    + [dims[-1]]
+                )
                 data[dms] = (vrs, mdata[DATA].copy())
 
         # case lazy
@@ -687,12 +691,12 @@ class DatasetStates(States):
                 data = data[0]
             else:
                 data = xr.concat(
-                    data, 
-                    dim=states_coord, 
-                    data_vars="minimal", 
-                    coords="minimal", 
-                    compat="override", 
-                    join="exact", 
+                    data,
+                    dim=states_coord,
+                    data_vars="minimal",
+                    coords="minimal",
+                    compat="override",
+                    join="exact",
                     combine_attrs="drop",
                 )
             coords, data, weights = self._get_data(data, cmap, variables, verbosity=0)
@@ -702,5 +706,5 @@ class DatasetStates(States):
             raise KeyError(
                 f"States '{self.name}': Unknown load_mode '{self.load_mode}', choices: preload, lazy, fly"
             )
-        
+
         return coords, data, weights

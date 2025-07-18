@@ -8,6 +8,7 @@ from foxes.data import PCTCURVE, parse_Pct_two_files
 from foxes.config import config, get_input_path
 import foxes.variables as FV
 
+
 class WsTI2PCtFromTwo(TurbineType):
     """
     Calculate turbulent intensity dependent power

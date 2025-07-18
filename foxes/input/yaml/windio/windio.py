@@ -70,9 +70,15 @@ def read_windio(wio_dict, verbosity=1):
     read_attributes(wio_attrs, idict, mbook, verbosity=verbosity)
 
     # special case WeibullPointCloud:
-    if type(states).__name__ == "WeibullPointCloud" and idict["algorithm"]["rotor_model"] == "centre":
-        _print("Found WeibullPointCloud states, changing rotor model from 'centre' to 'direct_mdata'", level=3)
-        idict["algorithm"]["rotor_model"] = "direct_mdata"   
+    if (
+        type(states).__name__ == "WeibullPointCloud"
+        and idict["algorithm"]["rotor_model"] == "centre"
+    ):
+        _print(
+            "Found WeibullPointCloud states, changing rotor model from 'centre' to 'direct_mdata'",
+            level=3,
+        )
+        idict["algorithm"]["rotor_model"] = "direct_mdata"
 
     algo = Algorithm.new(
         farm=farm, states=states, mbook=mbook, **idict.pop_item("algorithm")

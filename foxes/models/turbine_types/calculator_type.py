@@ -1,5 +1,6 @@
 from foxes.core import TurbineType
 
+
 class CalculatorType(TurbineType):
     """
     Direct data infusion by a user function.

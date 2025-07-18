@@ -55,7 +55,7 @@ class PointDataModel(DataCalcModel):
 
         """
         vrs = set(self.output_point_vars(algo))
-        if hasattr(self, 'fixed_vars'):
+        if hasattr(self, "fixed_vars"):
             vrs.update(self.fixed_vars.keys())
 
         for var in vrs:
@@ -63,8 +63,8 @@ class PointDataModel(DataCalcModel):
                 tdata.add(
                     var,
                     np.full(
-                        (tdata.n_states, tdata.n_targets, tdata.n_tpoints), 
-                        np.nan, 
+                        (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                        np.nan,
                         dtype=config.dtype_double,
                     ),
                     (FC.STATE, FC.TARGET, FC.TPOINT),
@@ -251,7 +251,7 @@ class PointDataModelList(PointDataModel):
 
         """
         self.ensure_output_vars(algo, tdata)
-        
+
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):

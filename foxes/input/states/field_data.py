@@ -95,14 +95,14 @@ class FieldData(DatasetStates):
             raise KeyError(
                 f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
             )
-        
+
         self._cmap = {
             FC.STATE: self.states_coord,
             FV.X: self.x_coord,
             FV.Y: self.y_coord,
         }
         if self.h_coord is not None:
-            self._cmap[FV.H] = self.h_coord   
+            self._cmap[FV.H] = self.h_coord
 
     def load_data(self, algo, verbosity=0):
         """
@@ -128,7 +128,7 @@ class FieldData(DatasetStates):
 
         """
         return super().load_data(
-            algo, 
+            algo,
             cmap=self._cmap,
             variables=self.variables,
             bounds_extra_space=self.bounds_extra_space,
@@ -172,11 +172,10 @@ class FieldData(DatasetStates):
         # get data for calculation
         coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
-        
+
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
-
             # translate (WD, WS) to (U, V):
             if FV.WD in vrs or FV.WS in vrs:
                 assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
@@ -184,41 +183,37 @@ class FieldData(DatasetStates):
                 )
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
-                ws = (
-                    d[..., iws]
-                    if FV.WS in vrs
-                    else self.fixed_vars[FV.WS]
-                )
+                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
 
             # prepare grid:
             idims = dims[:-1]
             gvars = tuple([coords[c] for c in idims])
-            
+
             # prepare points:
             n_vrs = len(vrs)
             tdims = [n_states, n_pts, n_vrs]
             if idims == (FC.STATE, FV.X, FV.Y, FV.H):
                 pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
-                    points, 
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points,
                     axis=2,
                 )
                 pts[..., 0] = np.arange(n_states)[:, None]
                 pts = pts.reshape(n_states * n_pts, 4)
             elif idims == (FC.STATE, FV.X, FV.Y):
                 pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
-                    points[..., :2], 
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points[..., :2],
                     axis=2,
                 )
                 pts[..., 0] = np.arange(n_states)[:, None]
                 pts = pts.reshape(n_states * n_pts, 3)
             elif idims == (FC.STATE, FV.H):
                 pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double), 
-                    points[..., 2, None], 
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points[..., 2, None],
                     axis=2,
                 )
                 pts[..., 0] = np.arange(n_states)[:, None]
@@ -244,7 +239,9 @@ class FieldData(DatasetStates):
                 pts = points[0][:, 2]
                 tdims = (1, n_pts, n_vrs)
             else:
-                raise ValueError(f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}")
+                raise ValueError(
+                    f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
+                )
 
             # interpolate:
             try:
@@ -276,7 +273,7 @@ class FieldData(DatasetStates):
                 d[..., iwd] = uv2wd(uv)
                 d[..., iws] = np.linalg.norm(uv, axis=-1)
                 del uv
-            
+
             # broadcast if needed:
             if tdims != (n_states, n_pts, n_vrs):
                 tmp = d
@@ -291,15 +288,15 @@ class FieldData(DatasetStates):
 
         # set fixed variables:
         for v, d in self.fixed_vars.items():
-            out[v] = np.full(
-                (n_states, n_pts), d, dtype=config.dtype_double
-            )
+            out[v] = np.full((n_states, n_pts), d, dtype=config.dtype_double)
 
         # add weights:
         if weights is not None:
             tdata[FV.WEIGHT] = weights[:, None, None]
         elif FV.WEIGHT in out:
-            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT).reshape(n_states, n_targets, n_tpoints)
+            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT).reshape(
+                n_states, n_targets, n_tpoints
+            )
         else:
             tdata[FV.WEIGHT] = np.full(
                 (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
@@ -357,8 +354,8 @@ class WeibullField(FieldData):
         """
         super().__init__(
             *args,
-            states_coord=wd_coord, 
-            time_format=None, 
+            states_coord=wd_coord,
+            time_format=None,
             load_mode="preload",
             **kwargs,
         )
@@ -411,7 +408,7 @@ class WeibullField(FieldData):
             The variables to extract from the Dataset
         verbosity: int
             The verbosity level, 0 = silent
-        
+
         Returns
         -------
         coords: dict
@@ -422,14 +419,14 @@ class WeibullField(FieldData):
             where dims is a tuple of dimension names and
             data_array is a numpy.ndarray with the data values
 
-        """       
+        """
         # read data, using wd_coord as state coordinate
         coords, data0 = super()._read_ds(ds, cmap, variables, verbosity)
         wd = coords.pop(FC.STATE)
 
         # replace state by wd coordinate
         data0 = {
-            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d) 
+            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d)
             for v, (dims, d) in data0.items()
         }
 
@@ -494,12 +491,13 @@ class WeibullField(FieldData):
         s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
         data0[FV.WEIGHT] = (
             dms,
-            w * weibull_weights(
+            w
+            * weibull_weights(
                 ws=wss[s_ws],
                 ws_deltas=wsd[s_ws],
                 A=data0.pop(FV.WEIBULL_A)[1][s_A],
                 k=data0.pop(FV.WEIBULL_k)[1][s_k],
-            )
+            ),
         )
         del w, s_ws, s_A, s_k
 
@@ -522,7 +520,7 @@ class WeibullField(FieldData):
                 data[v] = np.zeros(shp, dtype=config.dtype_double)
                 data[v][:] = d[None, ...]
                 data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
-            elif len(dims) >=2 and dims[:2] == (FV.WS, FV.WD):
+            elif len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
                 dms = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
                 data[v] = (dms, d.reshape(shp))
@@ -531,4 +529,3 @@ class WeibullField(FieldData):
         data0 = data
 
         return coords, data
-    

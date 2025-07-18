@@ -190,7 +190,7 @@ class LookupTable(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         data = {
             v: self.get_data(
                 v,

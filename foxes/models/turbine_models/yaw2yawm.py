@@ -56,7 +56,7 @@ class YAW2YAWM(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         yaw = fdata[FV.YAW][st_sel]
         wd = fdata[FV.WD][st_sel]
 

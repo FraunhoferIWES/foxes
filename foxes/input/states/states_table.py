@@ -418,7 +418,7 @@ class StatesTable(States):
         z = tdata[FC.TARGETS][..., 2]
         for v, p in self._profiles.items():
             tdata[v] = p.calculate(tdata, z)
-    
+
         if self.WEIGHT in mdata:
             tdata[FV.WEIGHT] = mdata[self.WEIGHT][:, None, None]
         else:

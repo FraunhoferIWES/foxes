@@ -144,7 +144,7 @@ class TableFactors(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         n_sel = np.sum(st_sel)
         qts = np.zeros((n_sel, 2), dtype=config.dtype_double)
         qts[:, 0] = fdata[self.row_var][st_sel]

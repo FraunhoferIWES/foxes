@@ -461,7 +461,7 @@ class FData(Data):
             callback(data, data.dims)
 
         return data
-    
+
     @classmethod
     def from_dataset(cls, ds, *args, mdata=None, callback=None, **kwargs):
         """

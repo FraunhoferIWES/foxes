@@ -87,7 +87,7 @@ class Model(ABC):
         """
         lng = len(f"{self.name}_")
         return vnm[lng:] if vnm.startswith(f"{self.name}_") else None
-    
+
     @property
     def initialized(self):
         """

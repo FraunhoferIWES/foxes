@@ -76,13 +76,13 @@ class InitFarmData(FarmDataModel):
 
         # add and set X, Y, H, D:
         fdata.add(
-            FV.TXYH, 
+            FV.TXYH,
             np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double),
             (FC.STATE, FC.TURBINE, FC.XYH),
         )
         fdata.add(
-            FV.D, 
-            np.zeros((n_states, n_turbines), dtype=config.dtype_double), 
+            FV.D,
+            np.zeros((n_states, n_turbines), dtype=config.dtype_double),
             (FC.STATE, FC.TURBINE),
         )
         for ti, t in enumerate(algo.farm.turbines):
@@ -108,13 +108,13 @@ class InitFarmData(FarmDataModel):
         tdata = TData.from_points(points=fdata[FV.TXYH], variables=svrs)
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
         fdata.add(
-            FV.WD, 
-            sres[FV.WD][:, :, 0], 
+            FV.WD,
+            sres[FV.WD][:, :, 0],
             (FC.STATE, FC.TURBINE),
         )
         fdata.add(
-            FV.AMB_WD, 
-            fdata[FV.WD].copy(), 
+            FV.AMB_WD,
+            fdata[FV.WD].copy(),
             (FC.STATE, FC.TURBINE),
         )
         del tdata, sres, svrs
@@ -127,36 +127,38 @@ class InitFarmData(FarmDataModel):
         # apply downwind order to all data:
         for data in [fdata, mdata]:
             for k in data.keys():
-                if k not in [FV.X, FV.Y, FV.H] and tuple(data.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
-                    data[k] != data[k][0, 0, None, None]
+                if (
+                    k not in [FV.X, FV.Y, FV.H]
+                    and tuple(data.dims[k][:2]) == (FC.STATE, FC.TURBINE)
+                    and np.any(data[k] != data[k][0, 0, None, None])
                 ):
                     data[k][:] = data[k][ssel, order]
-        
+
         # add derived data:
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
             fdata.add(
-                v, 
-                fdata[FV.TXYH][:, :, i], 
+                v,
+                fdata[FV.TXYH][:, :, i],
                 (FC.STATE, FC.TURBINE),
             )
         fdata.add(
-            FV.YAW, 
-            fdata[FV.WD].copy(), 
+            FV.YAW,
+            fdata[FV.WD].copy(),
             (FC.STATE, FC.TURBINE),
         )
         fdata.add(
-            FV.ORDER, 
-            order, 
+            FV.ORDER,
+            order,
             (FC.STATE, FC.TURBINE),
         )
         fdata.add(
-            FV.ORDER_SSEL, 
-            ssel, 
+            FV.ORDER_SSEL,
+            ssel,
             (FC.STATE, FC.TURBINE),
         )
         fdata.add(
-            FV.ORDER_INV, 
-            np.zeros_like(order), 
+            FV.ORDER_INV,
+            np.zeros_like(order),
             (FC.STATE, FC.TURBINE),
         )
         fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]

@@ -107,7 +107,7 @@ class TurbineTypeCurves(Output):
         """
         if self.nofig:
             return None
-        
+
         vars = [variables] if isinstance(variables, str) else variables
         if isinstance(titles, str):
             titles = [titles]

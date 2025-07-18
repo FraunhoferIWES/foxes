@@ -98,7 +98,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             return None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -250,7 +250,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             return None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -403,7 +403,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             return None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -558,7 +558,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             yield None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -749,7 +749,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             yield None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -938,7 +938,7 @@ class FlowPlots2D(SliceData):
         """
         if self.nofig:
             yield None
-        
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)

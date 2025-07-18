@@ -71,7 +71,7 @@ class StateTurbineMap(Output):
         """
         if self.nofig:
             return None
-        
+
         turbines = self.results[FC.TURBINE].to_numpy()
         states = self.results[FC.STATE].to_numpy()
 

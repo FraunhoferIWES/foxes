@@ -52,9 +52,7 @@ def add_from_arrays(
 
     for i in range(len(x)):
         s = 1 if turbine_base_name_count_shift else 0
-        tname = (
-            f"{turbine_base_name}{i + s}" if names is None else names[i]
-        )
+        tname = f"{turbine_base_name}{i + s}" if names is None else names[i]
 
         farm.add_turbine(
             Turbine(

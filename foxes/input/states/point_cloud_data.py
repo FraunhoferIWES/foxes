@@ -110,7 +110,7 @@ class PointCloudData(DatasetStates):
             raise KeyError(
                 f"States '{self.name}': Cannot have '{FV.WEIGHT}' in var2ncvar, use weight_ncvar instead"
             )
-        
+
         self._n_pt = None
         self._n_wd = None
         self._n_ws = None
@@ -128,7 +128,7 @@ class PointCloudData(DatasetStates):
                 raise ValueError(
                     f"States '{self.name}': Cannot have '{v}' as output variable"
                 )
-        
+
         self._cmap = {
             FC.STATE: self.states_coord,
             FC.POINT: self.point_coord,
@@ -151,7 +151,7 @@ class PointCloudData(DatasetStates):
             The variables to extract from the Dataset
         verbosity: int
             The verbosity level, 0 = silent
-        
+
         Returns
         -------
         coords: dict
@@ -164,7 +164,7 @@ class PointCloudData(DatasetStates):
 
         """
         coords, data = super()._read_ds(ds, cmap, variables, verbosity)
-        
+
         assert FV.X in data and FV.Y in data, (
             f"States '{self.name}': Expecting variables '{FV.X}' and '{FV.Y}' in data, found {list(data.keys())}"
         )
@@ -210,7 +210,7 @@ class PointCloudData(DatasetStates):
 
         """
         return super().load_data(
-            algo, 
+            algo,
             cmap=self._cmap,
             variables=self.variables,
             bounds_extra_space=None,
@@ -256,26 +256,25 @@ class PointCloudData(DatasetStates):
         coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
 
-
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
-
             # prepare
             n_vrs = len(vrs)
             qts = coords[FC.POINT]
-            n_qts, n_dms = qts.shape    
+            n_qts, n_dms = qts.shape
             idims = dims[:-1]
 
             if idims == (FC.STATE,):
                 for i, v in enumerate(vrs):
                     if v in self.ovars:
-                        out[v] = np.zeros((n_states, n_targets, n_tpoints), dtype=config.dtype_double)
+                        out[v] = np.zeros(
+                            (n_states, n_targets, n_tpoints), dtype=config.dtype_double
+                        )
                         out[v][:] = d[:, None, None, i]
                 continue
 
             elif idims == (FC.POINT,):
-
                 # prepare grid data
                 gts = qts
                 n_gts = n_qts
@@ -284,11 +283,10 @@ class PointCloudData(DatasetStates):
                 pts = tdata[FC.TARGETS][..., :n_dms].reshape(n_pts, n_dms)
 
             elif idims == (FC.STATE, FC.POINT):
-
                 # prepare grid data, add state index to last axis
                 gts = np.zeros((n_qts, n_states, n_dms + 1), dtype=config.dtype_double)
                 gts[..., :n_dms] = qts[:, None, :]
-                gts[..., n_dms] = np.arange(n_states)[None, :]  
+                gts[..., n_dms] = np.arange(n_states)[None, :]
                 n_gts = n_qts * n_states
                 gts = gts.reshape(n_gts, n_dms + 1)
 
@@ -303,14 +301,14 @@ class PointCloudData(DatasetStates):
                     dtype=config.dtype_double,
                 )
                 pts[..., :n_dms] = tdata[FC.TARGETS][..., :n_dms]
-                pts[..., n_dms] = np.arange(n_states)[:, None, None] 
+                pts[..., n_dms] = np.arange(n_states)[:, None, None]
                 pts = pts.reshape(n_pts, n_dms + 1)
 
             else:
                 raise ValueError(
                     f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
                 )
-            
+
             # translate (WD, WS) to (U, V):
             if FV.WD in vrs or FV.WS in vrs:
                 assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
@@ -318,11 +316,7 @@ class PointCloudData(DatasetStates):
                 )
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
-                ws = (
-                    d[..., iws]
-                    if FV.WS in vrs
-                    else self.fixed_vars[FV.WS]
-                )
+                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
 
@@ -442,8 +436,8 @@ class WeibullPointCloud(PointCloudData):
         """
         super().__init__(
             *args,
-            states_coord=wd_coord, 
-            time_format=None, 
+            states_coord=wd_coord,
+            time_format=None,
             load_mode="preload",
             **kwargs,
         )
@@ -494,7 +488,7 @@ class WeibullPointCloud(PointCloudData):
             The variables to extract from the Dataset
         verbosity: int
             The verbosity level, 0 = silent
-        
+
         Returns
         -------
         coords: dict
@@ -505,7 +499,7 @@ class WeibullPointCloud(PointCloudData):
             where dims is a tuple of dimension names and
             data_array is a numpy.ndarray with the data values
 
-        """           
+        """
         # read data, using wd_coord as state coordinate
         hcmap = cmap.copy()
         if self.ws_coord is not None:
@@ -516,7 +510,7 @@ class WeibullPointCloud(PointCloudData):
 
         # replace state by wd coordinate
         data0 = {
-            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d) 
+            v: (tuple({FC.STATE: FV.WD}.get(c, c) for c in dims), d)
             for v, (dims, d) in data0.items()
         }
 
@@ -579,12 +573,13 @@ class WeibullPointCloud(PointCloudData):
         s_k = tuple([np.s_[:] if c in data0[FV.WEIBULL_A][0] else None for c in dms])
         data0[FV.WEIGHT] = (
             dms,
-            w * weibull_weights(
+            w
+            * weibull_weights(
                 ws=wss[s_ws],
                 ws_deltas=wsd[s_ws],
                 A=data0.pop(FV.WEIBULL_A)[1][s_A],
                 k=data0.pop(FV.WEIBULL_k)[1][s_k],
-            )
+            ),
         )
         del w, s_ws, s_A, s_k
 
@@ -601,7 +596,7 @@ class WeibullPointCloud(PointCloudData):
         data[FV.WD] = ((FC.STATE,), data[FV.WD].reshape(self._N))
         for v in list(data0.keys()):
             dims, d = data0.pop(v)
-            if len(dims) >=2 and dims[:2] == (FV.WS, FV.WD):
+            if len(dims) >= 2 and dims[:2] == (FV.WS, FV.WD):
                 dms = tuple([FC.STATE] + list(dims[2:]))
                 shp = [self._N] + list(d.shape[2:])
                 data[v] = (dms, d.reshape(shp))
@@ -619,6 +614,5 @@ class WeibullPointCloud(PointCloudData):
                 data[v] = (dms, data[v].reshape([self._N] + shp[2:]))
             else:
                 data[v] = (dims, d)
-        
+
         return coords, data
-    

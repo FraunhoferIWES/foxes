@@ -331,10 +331,7 @@ class PCtFile(TurbineType):
                 rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
             del yawm, cosm
 
-        out = {
-            FV.P: fdata[FV.P],
-            FV.CT: fdata[FV.CT]
-        }
+        out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
 
         out[FV.P][st_sel] = np.interp(
             rews3, self.data_ws, self.data_P, left=0.0, right=0.0

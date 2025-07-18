@@ -65,7 +65,7 @@ class FarmDataModel(DataCalcModel):
 
         """
         return (FC.STATE, FC.TURBINE)
-    
+
     def ensure_output_vars(self, algo, fdata):
         """
         Ensures that the output variables are present in the farm data.
@@ -82,7 +82,11 @@ class FarmDataModel(DataCalcModel):
             if var not in fdata:
                 fdata.add(
                     var,
-                    np.full((fdata.n_states, fdata.n_turbines), np.nan, dtype=config.dtype_double),
+                    np.full(
+                        (fdata.n_states, fdata.n_turbines),
+                        np.nan,
+                        dtype=config.dtype_double,
+                    ),
                     (FC.STATE, FC.TURBINE),
                 )
 
@@ -272,7 +276,7 @@ class FarmDataModelList(FarmDataModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):

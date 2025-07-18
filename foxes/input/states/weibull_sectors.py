@@ -152,7 +152,7 @@ class WeibullSectors(StatesTable):
             data = self.data_source
             data.index.name = cwd
             data = data.to_xarray()
-            
+
         # optionally select a subset
         if self.isel is not None and len(self.isel):
             data = data.isel(**self.isel)

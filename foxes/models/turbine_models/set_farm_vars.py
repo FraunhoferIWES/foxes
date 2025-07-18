@@ -269,10 +269,9 @@ class SetFarmVars(TurbineModel):
 
         """
         self.ensure_output_vars(algo, fdata)
-        
+
         i0 = mdata.states_i0(counter=True)
         if not self.once or i0 not in self.__once_done:
-
             bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
             bsel[st_sel] = True
 

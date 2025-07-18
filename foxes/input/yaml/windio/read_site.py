@@ -197,7 +197,7 @@ def _get_WeibullSectors(
             dict(
                 states_type="WeibullSectors",
                 data_source=sdata,
-                ws_bins=np.arange(60)/2 if FV.WS not in sdata else None,
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata else None,
                 output_vars=ovars,
                 var2ncvar={FV.WEIGHT: "sector_probability"},
                 fixed_vars=fix,
@@ -248,13 +248,12 @@ def _get_WeibullPointCloud(
                 states_type="WeibullPointCloud",
                 data_source=sdata,
                 output_vars=ovars,
-                var2ncvar={
-                },
+                var2ncvar={},
                 fixed_vars=fix,
                 point_coord=dims[FV.X][0],
                 wd_coord=FV.WD,
                 ws_coord=FV.WS if FV.WS in sdata.coords else None,
-                ws_bins=np.arange(60)/2 if FV.WS not in sdata else None,
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata else None,
                 x_ncvar=FV.X,
                 y_ncvar=FV.Y,
                 h_ncvar=FV.H if FV.H in sdata.data_vars else None,
@@ -263,6 +262,7 @@ def _get_WeibullPointCloud(
         )
         return True
     return False
+
 
 def _get_WeibullField(
     coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
@@ -307,12 +307,13 @@ def _get_WeibullField(
                 weight_ncvar="sector_probability",
                 var2ncvar={},
                 fixed_vars=fix,
-                ws_bins=np.arange(60)/2 if FV.WS not in sdata.coords else None,
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata.coords else None,
                 ws_coord=FV.WS if FV.WS in sdata.coords else None,
             )
         )
         return True
     return False
+
 
 def get_states(coords, fields, dims, verbosity=1):
     """

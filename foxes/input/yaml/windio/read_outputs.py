@@ -191,7 +191,7 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
         if times_run.get_item("all_occurences"):
             states_isel = None
         else:
-            states_isel =  times_run.get_item("subset")
+            states_isel = times_run.get_item("subset")
     elif "wind_speeds_run" in run_configuration:
         wind_speeds_run = run_configuration.get_item("wind_speeds_run")
         directions_run = run_configuration.get_item("directions_run")

@@ -8,12 +8,12 @@ import foxes.constants as FC
 
 
 def _run(
-    algo, 
-    model, 
-    *data, 
-    iterative, 
-    chunk_store, 
-    i0_t0, 
+    algo,
+    model,
+    *data,
+    iterative,
+    chunk_store,
+    i0_t0,
     **cpars,
 ):
     """Helper function for running in a single process"""
@@ -268,7 +268,7 @@ class PoolEngine(Engine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
-        
+
         del calc_pars, farm_data, point_data
         if pbar is not None:
             pbar.close()

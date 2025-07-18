@@ -6,7 +6,6 @@ from xarray import Dataset
 
 from .data import MData, FData, TData
 from foxes.utils import new_instance
-from foxes.config import config
 import foxes.constants as FC
 
 __global_engine_data__ = dict(
@@ -387,15 +386,19 @@ class Engine(ABC):
             )
 
         # create tdata:
-        tdata = TData.from_dataset(
-            point_data,
-            mdata=mdata,
-            s_states=s_states,
-            s_targets=s_targets,
-            callback=None,
-            states_i0=i0_states,
-            copy=True,
-        ) if point_data is not None else None
+        tdata = (
+            TData.from_dataset(
+                point_data,
+                mdata=mdata,
+                s_states=s_states,
+                s_targets=s_targets,
+                callback=None,
+                states_i0=i0_states,
+                copy=True,
+            )
+            if point_data is not None
+            else None
+        )
 
         return (mdata, fdata) if tdata is None else (mdata, fdata, tdata)
 
@@ -519,10 +522,10 @@ class Engine(ABC):
 
     @abstractmethod
     def run_calculation(
-        self, 
-        algo, 
-        model, 
-        model_data=None, 
+        self,
+        algo,
+        model,
+        model_data=None,
         farm_data=None,
         point_data=None,
     ):

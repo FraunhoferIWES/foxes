@@ -1,11 +1,11 @@
 import numpy as np
 
 from foxes.core import TData
-from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
 from .centre import CentreRotor
+
 
 class DirectMDataInfusion(CentreRotor):
     """
@@ -99,7 +99,7 @@ class DirectMDataInfusion(CentreRotor):
                 self.svars2mdvars[FV.WEIGHT] = FV.WEIGHT
 
         return self.calc_vars
-    
+
     def calculate(
         self,
         algo,
@@ -183,7 +183,7 @@ class DirectMDataInfusion(CentreRotor):
                 vc = dims[-1]
                 assert vc in mdata and vc in mdata.dims and mdata.dims[vc] == (vc,), (
                     f"Rotor '{self.name}': mdata coordinate '{vc}' not in mdata or wrong dimensions {mdata.dims}, expected '{(vc,)}'"
-                )   
+                )
                 vrs = list(mdata[vc])
                 if w in vrs:
                     i = vrs.index(w)
@@ -193,7 +193,7 @@ class DirectMDataInfusion(CentreRotor):
                     # pure state dependent variable
                     if dims == (FC.STATE,):
                         tdata[v][:] = mdat[:, None, None]
-                    
+
                     # state and turbine dependent variable
                     elif len(dims) == 2 and dims[0] == FC.STATE:
                         assert mdat.shape[1] == mdata.n_turbines, (
@@ -204,9 +204,8 @@ class DirectMDataInfusion(CentreRotor):
                         assert dims[1] == tcoord, (
                             f"Rotor '{self.name}': mdata variable '{mdv}' has unexpected dimensions {dims} for variable '{w}', expected ({FC.STATE}, {tcoord})"
                         )
-                        
+
                         tdata[v][:] = mdat[:, :, None]
-                        
 
                     else:
                         if tcoord is None:
@@ -214,7 +213,7 @@ class DirectMDataInfusion(CentreRotor):
                         raise ValueError(
                             f"Rotor '{self.name}': mdata variable '{mdv}' has unexpected dimensions {dims} for variable '{w}' at position {i}, expected ({FC.STATE},) or ({FC.STATE}, {tcoord})"
                         )
-                    
+
                     sres[v] = tdata[v]
                     break
 
@@ -240,4 +239,3 @@ class DirectMDataInfusion(CentreRotor):
         )
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}
-    
