@@ -912,6 +912,7 @@ class Algorithm(Model):
             isel=isel,
             **kwargs,
         )
+        self.reset_chunk_store(chunk_store)
 
         # reset to not running:
         self.unset_running(

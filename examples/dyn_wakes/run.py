@@ -158,6 +158,9 @@ if __name__ == "__main__":
     if not args.fix_ws:
         n_times = len(sdata.index)
         sdata["ws"] = 5 + 0.3 * np.sin(np.arange(n_times) * 2 * np.pi / 20)
+    sdata["wd"] = 270.0
+    sdata["ws"] = 9.0
+    print(sdata)
 
     states = States(
         data_source=sdata,

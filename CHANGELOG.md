@@ -788,5 +788,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.5.1
 
+- Bug fixes:
+ - Bug fixed that caused a reset in the `dyn_wakes` wake frame when calling `calc_points`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.1](https://github.com/FraunhoferIWES/foxes/commits/v1.5.1)
