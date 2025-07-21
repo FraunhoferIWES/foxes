@@ -3,7 +3,16 @@
     :align: center
 
 .. versionadded:: 1.5
-    New ambient states classes `DatasetStates`, `PointCloudData`, `WeibullField`, `WeibullPointCloud`; new turbine type `CalculatorType`; new rotor model `DirectMDataInfusion`
+    New ambient states classes :ref:`DatasetStates<foxes.input.states.DatasetStates>`, 
+    :ref:`PointCloudData<foxes.input.states.PointCloudData>`, 
+    :ref:`WeibullField<foxes.input.states.WeibullField>`, 
+    :ref:`WeibullPointCloud<foxes.input.states.WeibullPointCloud>`; 
+    new turbine type :ref:`CalculatorType<foxes.models.turbine_types.CalculatorType>`; new rotor model 
+    :ref:`DirectMDataInfusion<foxes.models.rotor_models.DirectMDataInfusion>`
+
+.. versionchanged:: 1.5
+    Important bug fix for turbine model :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>` that messed up the turbine ordering.
+    Similar fix for all turbine models with flag `pre_rotor` set to `True`. 
 
 .. versionadded:: 1.4
     This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame of previous versions. 
