@@ -98,31 +98,33 @@ if __name__ == "__main__":
         wake_frame=args.wake_frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
-    time0 = time.time()
-    farm_results = algo.calc_farm()
-    time1 = time.time()
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
+        time0 = time.time()
+        farm_results = algo.calc_farm()
+        time1 = time.time()
 
-    print("\nCalc time =", time1 - time0, "\n")
+        print("\nCalc time =", time1 - time0, "\n")
 
-    print(farm_results)
+        print(farm_results)
 
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
 
-    o = foxes.output.SlicesData(algo, farm_results)
-    ds = o.get_states_data_xy(
-        z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1
-    )
-    print(ds)
+        o = foxes.output.SlicesData(algo, farm_results)
+        ds = o.get_states_data_xy(
+            z_list=[90, 100], variables=[FV.WS], resolution=50, verbosity=1
+        )
+        print(ds)
 
-    if not args.nofig:
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        o.get_mean_fig_xy(FV.WS, resolution=10)
-        plt.show()
+        if not args.nofig:
+            o = foxes.output.FlowPlots2D(algo, farm_results)
+            o.get_mean_fig_xy(FV.WS, resolution=10)
+            plt.show()

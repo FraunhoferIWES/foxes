@@ -91,14 +91,16 @@ if __name__ == "__main__":
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
     )
 
-    time0 = time.time()
-    farm_results = algo.calc_farm()
-    time1 = time.time()
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+    ):
+        time0 = time.time()
+        farm_results = algo.calc_farm()
+        time1 = time.time()
 
     print("\nCalc time =", time1 - time0, "\n")
 

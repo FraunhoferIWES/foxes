@@ -129,15 +129,17 @@ if __name__ == "__main__":
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
+    )
+
+    with foxes.Engine.new(
+        engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    )
-
-    time0 = time.time()
-    farm_results = algo.calc_farm()
-    time1 = time.time()
+    ):
+        time0 = time.time()
+        farm_results = algo.calc_farm()
+        time1 = time.time()
 
     print("\nCalc time =", time1 - time0, "\n")
 

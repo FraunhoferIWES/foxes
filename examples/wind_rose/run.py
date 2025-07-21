@@ -105,37 +105,39 @@ if __name__ == "__main__":
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
+    )
+
+    with foxes.Engine.new(
+        engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    )
+    ):
+        if not args.nofig:
+            o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
+            o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20], add_inf=True)
+            plt.show()
 
-    if not args.nofig:
-        o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-        o.get_figure(16, FV.AMB_WS, [0, 3.5, 6, 10, 15, 20], add_inf=True)
-        plt.show()
+        time0 = time.time()
+        farm_results = algo.calc_farm()
+        time1 = time.time()
 
-    time0 = time.time()
-    farm_results = algo.calc_farm()
-    time1 = time.time()
+        print("\nCalc time =", time1 - time0, "\n")
 
-    print("\nCalc time =", time1 - time0, "\n")
+        print(farm_results)
 
-    print(farm_results)
+        fr = farm_results.to_dataframe()
+        print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
 
-    fr = farm_results.to_dataframe()
-    print(fr[[FV.WD, FV.H, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P, FV.WEIGHT]])
+        o = foxes.output.FarmResultsEval(farm_results)
+        P0 = o.calc_mean_farm_power(ambient=True)
+        P = o.calc_mean_farm_power()
+        print(f"\nFarm power        : {P / 1000:.1f} MW")
+        print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+        print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
+        print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P / 1000:.1f} MW")
-    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-    print(f"Annual farm yield : {o.calc_farm_yield(algo=algo):.2f} GWh")
-
-    if not args.nofig and args.calc_mean:
-        o = foxes.output.FlowPlots2D(algo, farm_results)
-        fig = o.get_mean_fig_xy(FV.WS, resolution=30)
-        plt.show()
+        if not args.nofig and args.calc_mean:
+            o = foxes.output.FlowPlots2D(algo, farm_results)
+            fig = o.get_mean_fig_xy(FV.WS, resolution=30)
+            plt.show()

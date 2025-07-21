@@ -788,6 +788,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.5.1
 
+- Examples:
+  - Now all examples are making use of an engine via the `with` context, as it should be done in scripts
 - Bug fixes:
  - Bug fixed that caused a reset in the `dyn_wakes` wake frame when calling `calc_points`
 
