@@ -45,8 +45,10 @@ class DataCalcModel(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data: tuple of foxes.core.Data
-            The input data
+        data: tuple of foxes.core.Data, optional
+            The input data, typically either (mdata, fdata) in
+            the case of farm calculations, or (mdata, fdata, tdata)
+            for point data calculations
         parameters: dict, optional
             The calculation parameters
 

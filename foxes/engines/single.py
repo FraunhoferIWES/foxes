@@ -73,7 +73,7 @@ class SingleChunkEngine(Engine):
         self,
         algo,
         model,
-        model_data=None,
+        model_data,
         farm_data=None,
         point_data=None,
         out_vars=[],
@@ -95,9 +95,9 @@ class SingleChunkEngine(Engine):
             should be run
         model_data: xarray.Dataset
             The initial model data
-        farm_data: xarray.Dataset
+        farm_data: xarray.Dataset, optional
             The initial farm data
-        point_data: xarray.Dataset
+        point_data: xarray.Dataset, optional
             The initial point data
         out_vars: list of str, optional
             Names of the output variables
@@ -133,9 +133,6 @@ class SingleChunkEngine(Engine):
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        if farm_data is None:
-            farm_data = Dataset()
-        goal_data = farm_data if point_data is None else point_data
         algo.reset_chunk_store(chunk_store)
 
         # calculate:
@@ -157,6 +154,11 @@ class SingleChunkEngine(Engine):
 
         results = {}
         results[(0, 0)] = (model.calculate(algo, *data, **calc_pars), algo.chunk_store)
+        del data
+
+        if farm_data is None:
+            farm_data = Dataset()
+        goal_data = farm_data if point_data is None else point_data
 
         return self.combine_results(
             algo=algo,

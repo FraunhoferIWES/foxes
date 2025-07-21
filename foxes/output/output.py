@@ -17,12 +17,14 @@ class Output:
         The output file directory
     out_fname_fun: Function, optional
         Modifies file names by f(fname)
+    nofig: bool
+        Do not show figures
 
     :group: output
 
     """
 
-    def __init__(self, out_dir=None, out_fname_fun=None):
+    def __init__(self, out_dir=None, out_fname_fun=None, nofig=False):
         """
         Constructor.
 
@@ -32,12 +34,15 @@ class Output:
             The output file directory
         out_fname_fun: Function, optional
             Modifies file names by f(fname)
+        nofig: bool
+            Do not show figures
 
         """
         self.out_dir = (
             get_output_path(out_dir) if out_dir is not None else config.output_dir
         )
         self.out_fname_fun = out_fname_fun
+        self.nofig = nofig
 
         if not self.out_dir.is_dir():
             print(f"{type(self).__name__}: Creating output dir {self.out_dir}")

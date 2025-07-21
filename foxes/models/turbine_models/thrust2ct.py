@@ -82,6 +82,7 @@ class Thrust2Ct(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         ct = fdata[FV.CT]
 
         T = fdata[self.thrust_var][st_sel]

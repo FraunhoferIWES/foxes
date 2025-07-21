@@ -69,6 +69,9 @@ class StateTurbineMap(Output):
             The plot axis
 
         """
+        if self.nofig:
+            return None
+
         turbines = self.results[FC.TURBINE].to_numpy()
         states = self.results[FC.STATE].to_numpy()
 

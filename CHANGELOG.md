@@ -758,3 +758,30 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New wake superposition model `WindVectorLinear`, realizing linear vector type wind vector superposition.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.4](https://github.com/FraunhoferIWES/foxes/commits/v1.4)
+
+## v1.5
+
+- Dependencies:
+  - Introducing minimal package versions of dependencies to pyproject.toml
+- Inputs:
+  - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
+  - Renamed `FieldDataNC` as `FieldData`, now with improved data handling
+  - New states class `PointCloudData`, interpolating data with irregular point cloud support
+  - New states class `WeibullField`, representing Weibull sector data on a regular grid
+  - New states class `WeibullPointCloud`, representing Weibull sector data with irregular point cloud support
+  - New farm layout input function `add_from_arrays`, for directly adding turbines through one dimensional data lists or arrays
+  - Advancing `windio` to version 2.0
+- Models:
+  - New turbine type `CalculatorType`, for direct infusion of farm data at a turbine through a user function
+  - New rotor model `DirectMDataInfusion`, piping stored model data directly into turbines
+  - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function
+- Examples:
+  - New example `point_cloud`, demonstrating the useage of the `PointCloud` ambient states class
+  - New example `weibull_grid`, demonstrating the useage of the `WeibullField` ambient states class
+  - New example `weibull_cloud`, demonstrating the useage of the `WeibullPointCloud` ambient states class
+  - New example `direct_mdata_infusion`, demonstrating how to infuse states data dirctly into rotor data without interpolation
+- Bug fixes:
+  - Bug fixed with turbine model `SetFarmVars` that mixed up the turbine ordering
+  - Bug fixed with turbine models that are marked as `pre_rotor` that mixed up the turbine ordering
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5](https://github.com/FraunhoferIWES/foxes/commits/v1.5)

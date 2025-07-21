@@ -38,7 +38,9 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             print(*args, **kwargs)
 
     if "turbine_types" not in wio_farm:
-        wio_farm["turbine_types"] = {0: wio_farm["turbines"]}
+        wio_farm["turbine_types"] = Dict(
+            {0: wio_farm["turbines"]}, _name="turbine_types"
+        )
 
     ttypes = {}
     for k, wio_trbns in wio_farm["turbine_types"].items():
@@ -49,18 +51,18 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
         _print("      Contents:", [k for k in wio_trbns.keys()], level=3)
 
         # read performance:
-        performance = Dict(wio_trbns["performance"], name="performance")
+        performance = wio_trbns["performance"]
         _print("        Reading performance", level=3)
         _print("          Contents:", [k for k in performance.keys()], level=3)
 
         # P, ct data:
         if "power_curve" in performance:
-            power_curve = Dict(performance["power_curve"], name="power_curve")
+            power_curve = performance["power_curve"]
             _print("            Reading power_curve", level=3)
             _print("              Contents:", [k for k in power_curve.keys()], level=3)
             P = power_curve["power_values"]
             ws_P = power_curve["power_wind_speeds"]
-            ct_curve = Dict(performance["Ct_curve"], name="Ct_values")
+            ct_curve = performance["Ct_curve"]
             _print("            Reading Ct_curve", level=3)
             _print("              Contents:", [k for k in ct_curve.keys()], level=3)
             ct = ct_curve["Ct_values"]
@@ -96,12 +98,12 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
 
         # P, ct data:
         elif "Cp_curve" in performance:
-            cp_curve = Dict(performance["Cp_curve"], name="Cp_curve")
+            cp_curve = performance["Cp_curve"]
             _print("            Reading Cp_curve", level=3)
             _print("              Contents:", [k for k in cp_curve.keys()], level=3)
             cp = cp_curve["Cp_values"]
             ws_cp = cp_curve["Cp_wind_speeds"]
-            ct_curve = Dict(performance["Ct_curve"], name="Ct_values")
+            ct_curve = performance["Ct_curve"]
             _print("            Reading Ct_curve", level=3)
             _print("              Contents:", [k for k in ct_curve.keys()], level=3)
             ct = ct_curve["Ct_values"]
@@ -154,7 +156,7 @@ def read_layout(lname, ldict, farm, ttypes, verbosity=1):
     """
     if verbosity > 2:
         print(f"        Reading '{lname}'")
-    cdict = Dict(ldict["coordinates"], name="coordinates")
+    cdict = ldict["coordinates"]
     tmap = ldict.get_item("turbine_types", None)
     if verbosity > 2:
         print("          Turbine type map:", tmap)
@@ -187,7 +189,7 @@ def read_farm(wio_dict, mbook, verbosity):
     :group: input.yaml.windio
 
     """
-    wio_farm = Dict(wio_dict["wind_farm"], name=wio_dict.name + ".wind_farm")
+    wio_farm = wio_dict["wind_farm"]
     if verbosity > 1:
         print("Reading wind farm")
         print("  Name:", wio_farm.pop_item("name", None))
@@ -209,10 +211,10 @@ def read_farm(wio_dict, mbook, verbosity):
     farm = WindFarm()
     wfarm = wio_farm["layouts"]
     if isinstance(wfarm, dict):
-        layouts = Dict(wfarm, name=wio_farm.name + ".layouts")
+        layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
     else:
         layouts = {str(i): lf for i, lf in enumerate(wfarm)}
-        layouts = Dict(layouts, name=wio_farm.name + ".layouts")
+        layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
     if verbosity > 2:
         print("    Reading layouts")
         print("      Contents:", [k for k in layouts.keys()])

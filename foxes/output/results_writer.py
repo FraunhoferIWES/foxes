@@ -46,7 +46,7 @@ class ResultsWriter(Output):
             self.data = data
         else:
             raise KeyError(
-                f"ResultsWriter: Either give 'farm_results' or 'data' arguments"
+                "ResultsWriter: Either give 'farm_results' or 'data' arguments"
             )
 
     def _get_data_vars(self, variables):

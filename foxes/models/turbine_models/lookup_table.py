@@ -189,6 +189,8 @@ class LookupTable(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+
         data = {
             v: self.get_data(
                 v,

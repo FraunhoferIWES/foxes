@@ -190,6 +190,7 @@ class SectorManagement(TurbineModel):
 
         """
         # prepare:
+        self.ensure_output_vars(algo, fdata)
         n_trbs = len(self._trbs)
         if n_trbs == fdata.n_turbines and np.all(
             self._trbs == np.arange(fdata.n_turbines)

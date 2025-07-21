@@ -197,11 +197,118 @@ def _get_WeibullSectors(
             dict(
                 states_type="WeibullSectors",
                 data_source=sdata,
-                ws_bins=coords.get(FV.WS, np.arange(30)),
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata else None,
                 output_vars=ovars,
                 var2ncvar={FV.WEIGHT: "sector_probability"},
                 fixed_vars=fix,
                 profiles=profiles,
+            )
+        )
+        return True
+    return False
+
+
+def _get_WeibullPointCloud(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate Weibull sector parameters
+    :group: input.yaml.windio
+    """
+    if (
+        FV.WD in coords
+        and FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+        and FV.X in fields
+        and FV.Y in fields
+        and len(dims[FV.X]) == 1
+        and dims[FV.X] == dims[FV.Y]
+        and dims[FV.X][0] != FV.WD
+        and dims[FV.X][0] in coords
+    ):
+        if verbosity > 2:
+            print("        selecting class 'WeibullPointCloud'")
+
+        data = {}
+        fix = {}
+        for v, d in fields.items():
+            if len(dims[v]) == 0:
+                fix[v] = d
+            elif v not in fixval:
+                data[v] = (dims[v], d)
+        fix.update({v: d for v, d in fixval.items() if v not in data})
+
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
+
+        states_dict.update(
+            dict(
+                states_type="WeibullPointCloud",
+                data_source=sdata,
+                output_vars=ovars,
+                var2ncvar={},
+                fixed_vars=fix,
+                point_coord=dims[FV.X][0],
+                wd_coord=FV.WD,
+                ws_coord=FV.WS if FV.WS in sdata.coords else None,
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata else None,
+                x_ncvar=FV.X,
+                y_ncvar=FV.Y,
+                h_ncvar=FV.H if FV.H in sdata.data_vars else None,
+                weight_ncvar="sector_probability",
+            )
+        )
+        return True
+    return False
+
+
+def _get_WeibullField(
+    coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+):
+    """Try to generate Weibull sector parameters
+    :group: input.yaml.windio
+    """
+    if (
+        FV.WD in coords
+        and FV.X in coords
+        and FV.Y in coords
+        and FV.WEIBULL_A in fields
+        and FV.WEIBULL_k in fields
+        and "sector_probability" in fields
+    ):
+        if verbosity > 2:
+            print("        selecting class 'WeibullField'")
+
+        data = {}
+        fix = {}
+        for v, d in fields.items():
+            if len(dims[v]) == 0:
+                fix[v] = d
+            elif v not in fixval:
+                data[v] = (dims[v], d)
+        fix.update({v: d for v, d in fixval.items() if v not in data})
+
+        sdata = Dataset(
+            coords=coords,
+            data_vars=data,
+        )
+
+        states_dict.update(
+            dict(
+                states_type="WeibullField",
+                data_source=sdata,
+                output_vars=ovars,
+                wd_coord=FV.WD,
+                x_coord=FV.X,
+                y_coord=FV.Y,
+                h_coord=FV.H if FV.H in sdata.coords else None,
+                weight_ncvar="sector_probability",
+                var2ncvar={},
+                fixed_vars=fix,
+                ws_bins=np.arange(60) / 2 if FV.WS not in sdata.coords else None,
+                ws_coord=FV.WS if FV.WS in sdata.coords else None,
             )
         )
         return True
@@ -235,7 +342,7 @@ def get_states(coords, fields, dims, verbosity=1):
         print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {FV.TI: 0.05, FV.RHO: 1.225}
+    fixval = {FV.RHO: 1.225}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
     states_dict = {}
@@ -249,7 +356,13 @@ def get_states(coords, fields, dims, verbosity=1):
         or _get_MultiHeightNCTimeseries(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
+        or _get_WeibullPointCloud(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
         or _get_WeibullSectors(
+            coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
+        )
+        or _get_WeibullField(
             coords, fields, dims, states_dict, ovars, fixval, profiles, verbosity
         )
     ):
@@ -284,32 +397,28 @@ def read_site(wio_dict, verbosity=1):
         if verbosity >= level:
             print(*args, **kwargs)
 
-    wio_site = Dict(wio_dict["site"], name=wio_dict.name + ".site")
+    wio_site = wio_dict["site"]
     _print("Reading site")
     _print("  Name:", wio_site.pop_item("name", None))
     _print("  Contents:", [k for k in wio_site.keys()])
     _print("  Ignoring boundaries", level=2)
 
     # read energy_resource:
-    energy_resource = Dict(
-        wio_site["energy_resource"], name=wio_site.name + ".energy_resource"
-    )
+    energy_resource = wio_site["energy_resource"]
     _print("  Reading energy_resource", level=2)
     _print("    Name:", energy_resource.pop_item("name", None), level=2)
     _print("    Contents:", [k for k in energy_resource.keys()], level=2)
 
     # read wind_resource:
-    wind_resource = Dict(
-        energy_resource["wind_resource"], name=energy_resource.name + ".wind_resource"
-    )
+    wind_resource = energy_resource["wind_resource"]
     _print("    Reading wind_resource", level=3)
     _print("      Name:", wind_resource.pop_item("name", None), level=3)
     _print("      Contents:", [k for k in wind_resource.keys()], level=3)
 
     # read fields
-    coords = Dict(name="coords")
-    fields = Dict(name="fields")
-    dims = Dict(name="dims")
+    coords = Dict(_name="coords")
+    fields = Dict(_name="fields")
+    dims = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
     if verbosity > 2:

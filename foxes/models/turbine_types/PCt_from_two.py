@@ -345,6 +345,7 @@ class PCtFromTwo(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
 

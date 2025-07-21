@@ -10,3 +10,4 @@ from .from_file import add_from_file as add_from_file
 from .from_df import add_from_df as add_from_df
 from .from_random import add_random as add_random
 from .ring import add_ring as add_ring
+from .from_arrays import add_from_arrays as add_from_arrays

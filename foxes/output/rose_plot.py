@@ -250,6 +250,9 @@ class RosePlotOutput(Output):
             The plot data
 
         """
+        if self.nofig:
+            return None
+
         data = self.get_data(wd_sectors, ws_var, ws_bins, wd_var, **kwargs)
 
         n_wsb = data.sizes[ws_var]
@@ -337,6 +340,8 @@ class RosePlotOutput(Output):
             The wind rose data
 
         """
+        if self.nofig:
+            return None
 
         r = self.get_figure(*args, ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)
@@ -560,6 +565,9 @@ class WindRoseBinPlot(Output):
             The axes object
 
         """
+        if self.nofig:
+            return None
+
         data = self.get_data(
             variable=variable,
             ws_bins=ws_bins,
@@ -625,6 +633,8 @@ class WindRoseBinPlot(Output):
             The wind rose data
 
         """
+        if self.nofig:
+            return None
 
         r = self.get_figure(*args, ret_data=ret_data, **kwargs)
         fpath = self.get_fpath(file_name)

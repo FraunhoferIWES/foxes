@@ -74,17 +74,17 @@ class InitFarmData(FarmDataModel):
         n_states = fdata.n_states
         n_turbines = algo.n_turbines
 
-        # define FV.TXYH as vector [X, Y, H]:
-        fdata[FV.TXYH] = np.full(
-            (n_states, n_turbines, 3), np.nan, dtype=config.dtype_double
+        # add and set X, Y, H, D:
+        fdata.add(
+            FV.TXYH,
+            np.zeros((n_states, n_turbines, 3), dtype=config.dtype_double),
+            (FC.STATE, FC.TURBINE, FC.XYH),
         )
-        fdata.dims[FV.TXYH] = (FC.STATE, FC.TURBINE, FC.XYH)
-        for i, v in enumerate([FV.X, FV.Y, FV.H]):
-            fdata[v] = fdata[FV.TXYH][..., i]
-            fdata.dims[v] = (FC.STATE, FC.TURBINE)
-
-        # set X, Y, H, D:
-        fdata[FV.D] = np.zeros((n_states, n_turbines), dtype=config.dtype_double)
+        fdata.add(
+            FV.D,
+            np.zeros((n_states, n_turbines), dtype=config.dtype_double),
+            (FC.STATE, FC.TURBINE),
+        )
         for ti, t in enumerate(algo.farm.turbines):
             if len(t.xy.shape) == 1:
                 fdata[FV.TXYH][:, ti, :2] = t.xy[None, :]
@@ -103,34 +103,64 @@ class InitFarmData(FarmDataModel):
                 D = algo.farm_controller.turbine_types[ti].D
             fdata[FV.D][:, ti] = D
 
-        # calc WD and YAW at rotor centres:
+        # calc WD at rotor centres:
         svrs = algo.states.output_point_vars(algo)
         tdata = TData.from_points(points=fdata[FV.TXYH], variables=svrs)
         sres = algo.states.calculate(algo, mdata, fdata, tdata)
-        fdata[FV.WD] = sres[FV.WD][:, :, 0]
+        fdata.add(
+            FV.WD,
+            sres[FV.WD][:, :, 0],
+            (FC.STATE, FC.TURBINE),
+        )
+        fdata.add(
+            FV.AMB_WD,
+            fdata[FV.WD].copy(),
+            (FC.STATE, FC.TURBINE),
+        )
         del tdata, sres, svrs
 
-        # calculate and inverse:
+        # calculate downwind order:
         order = algo.wake_frame.calc_order(algo, mdata, fdata)
         ssel = np.zeros_like(order)
         ssel[:] = np.arange(n_states)[:, None]
-        fdata[FV.ORDER] = order
-        fdata[FV.ORDER_SSEL] = ssel
-        fdata[FV.ORDER_INV] = np.zeros_like(order)
-        fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
 
         # apply downwind order to all data:
-        fdata[FV.TXYH] = fdata[FV.TXYH][ssel, order]
+        for data in [fdata, mdata]:
+            for k in data.keys():
+                if (
+                    k not in [FV.X, FV.Y, FV.H]
+                    and tuple(data.dims[k][:2]) == (FC.STATE, FC.TURBINE)
+                    and np.any(data[k] != data[k][0, 0, None, None])
+                ):
+                    data[k][:] = data[k][ssel, order]
+
+        # add derived data:
         for i, v in enumerate([FV.X, FV.Y, FV.H]):
-            fdata[v] = fdata[FV.TXYH][..., i]
-        for v in [FV.D, FV.WD]:
-            if np.any(fdata[v] != fdata[v][0, 0, None, None]):
-                fdata[v] = fdata[v][ssel, order]
-        fdata[FV.YAW] = fdata[FV.WD].copy()
-        for k in mdata.keys():
-            if tuple(mdata.dims[k][:2]) == (FC.STATE, FC.TURBINE) and np.any(
-                mdata[k] != mdata[k][0, 0, None, None]
-            ):
-                mdata[k] = mdata[k][ssel, order]
+            fdata.add(
+                v,
+                fdata[FV.TXYH][:, :, i],
+                (FC.STATE, FC.TURBINE),
+            )
+        fdata.add(
+            FV.YAW,
+            fdata[FV.WD].copy(),
+            (FC.STATE, FC.TURBINE),
+        )
+        fdata.add(
+            FV.ORDER,
+            order,
+            (FC.STATE, FC.TURBINE),
+        )
+        fdata.add(
+            FV.ORDER_SSEL,
+            ssel,
+            (FC.STATE, FC.TURBINE),
+        )
+        fdata.add(
+            FV.ORDER_INV,
+            np.zeros_like(order),
+            (FC.STATE, FC.TURBINE),
+        )
+        fdata[FV.ORDER_INV][ssel, order] = np.arange(n_turbines)[None, :]
 
         return {v: fdata[v] for v in self.output_farm_vars(algo)}

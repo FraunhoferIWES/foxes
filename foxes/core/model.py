@@ -64,11 +64,29 @@ class Model(ABC):
 
         Returns
         -------
-        str
+        vnm: str
             Model specific variable name
 
         """
         return f"{self.name}_{v}"
+
+    def unvar(self, vnm):
+        """
+        Translates model specific variable name to origninal variable name.
+
+        Parameters
+        ----------
+        vnm: str
+            The vamodel specific variable name
+
+        Returns
+        -------
+        v: str
+            Original variable name
+
+        """
+        lng = len(f"{self.name}_")
+        return vnm[lng:] if vnm.startswith(f"{self.name}_") else None
 
     @property
     def initialized(self):

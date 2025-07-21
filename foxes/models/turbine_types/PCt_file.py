@@ -300,6 +300,7 @@ class PCtFile(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         rews2 = fdata[self.WSCT][st_sel]
         rews3 = fdata[self.WSP][st_sel]
 
@@ -330,10 +331,7 @@ class PCtFile(TurbineType):
                 rews3 *= (cosm**self.p_P) ** (1.0 / 3.0)
             del yawm, cosm
 
-        out = {
-            FV.P: fdata[FV.P],
-            FV.CT: fdata[FV.CT],
-        }
+        out = {FV.P: fdata[FV.P], FV.CT: fdata[FV.CT]}
 
         out[FV.P][st_sel] = np.interp(
             rews3, self.data_ws, self.data_P, left=0.0, right=0.0

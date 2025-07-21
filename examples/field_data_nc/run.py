@@ -70,7 +70,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    states = foxes.input.states.FieldDataNC(
+    states = foxes.input.states.FieldData(
         args.file_pattern,
         output_vars=[FV.WS, FV.WD, FV.TI, FV.RHO],
         load_mode=args.load_mode,

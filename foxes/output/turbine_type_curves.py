@@ -105,6 +105,9 @@ class TurbineTypeCurves(Output):
             The plot axes, one for each variable
 
         """
+        if self.nofig:
+            return None
+
         vars = [variables] if isinstance(variables, str) else variables
         if isinstance(titles, str):
             titles = [titles]

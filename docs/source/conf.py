@@ -68,7 +68,7 @@ intersphinx_mapping = {
 
 # The suffix(es) of source filenames.
 #
-source_suffix = {'.rst': 'restructuredtext', '.md': 'restructuredtext'}
+source_suffix = {".rst": "restructuredtext", ".md": "restructuredtext"}
 
 # The master toctree document.
 master_doc = "index"

@@ -2,7 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are `Python 3.8`...`3.13`.
+The supported Python versions are `Python 3.9`...`3.13`.
 
 ## TLDR; Quick installation guide
 
@@ -93,30 +93,28 @@ The following optional dependencies are available:
 
 | Option | Usage                              |
 |--------|------------------------------------|
-| eng    | Installs all engine dependencies   |
-| eng0   | Like `eng`, but without `mpi4py`   |
-| dask   | Installs dependencies for `dask` engine |
 | opt    | Installs [foxes-opt](https://github.com/FraunhoferIWES/foxes-opt)  |
+| dask   | Installs dependencies for `dask` engine |
 | test   | Dependencies for running the tests |
 | doc    | Dependencies for creating the docs |
-| dev    | Usefull tools for code development |
+| utils  | Dependencies for utilities         |
 
-As an example, the optional dependencies `eng0` are installed by
+As an example, the optional dependencies `test` are installed by
 
 ```console
-pip install foxes[eng0]
+pip install foxes[test]
 ```
 
-or, for development mode, from the `foxes` root directory by
+or, for development mode, from the `test` root directory by
 
 ```console
-pip install -e .[eng0]
+pip install -e .[test]
 ```
 
 Note that options can also be combined, e.g.
 
 ```console
-pip install foxes[test,dev,eng0]
+pip install foxes[test,opt]
 ```
 
 ## Installation via conda

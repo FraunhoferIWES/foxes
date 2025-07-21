@@ -5,8 +5,8 @@ from scipy.interpolate import interpn
 from foxes.core import TurbineType
 from foxes.utils import PandasFileHelper
 from foxes.data import PCTCURVE, parse_Pct_two_files
-import foxes.variables as FV
 from foxes.config import config, get_input_path
+import foxes.variables as FV
 
 
 class WsTI2PCtFromTwo(TurbineType):
@@ -274,6 +274,8 @@ class WsTI2PCtFromTwo(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        # prepare:
+        self.ensure_output_vars(algo, fdata)
 
         # calculate P:
         st_sel_P = (

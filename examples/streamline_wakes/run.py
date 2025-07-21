@@ -97,7 +97,7 @@ if __name__ == "__main__":
         mbook.turbine_models["set_yawm"].add_var(FV.YAWM, yawm)
         ymodels = ["set_yawm"]
 
-    states = foxes.input.states.FieldDataNC(
+    states = foxes.input.states.FieldData(
         args.file_pattern,
         states_coord="state",
         x_coord="x",
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         var2ncvar={FV.WS: "ws", FV.WD: "wd"},
         fixed_vars={FV.RHO: 1.225, FV.TI: 0.1},
         load_mode=args.load_mode,
-        bounds_error=False,
+        interpn_pars=dict(bounds_error=False),
     )
 
     farm = foxes.WindFarm()

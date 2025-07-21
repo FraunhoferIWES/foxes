@@ -6,7 +6,6 @@ from xarray import Dataset
 
 from .data import MData, FData, TData
 from foxes.utils import new_instance
-from foxes.config import config
 import foxes.constants as FC
 
 __global_engine_data__ = dict(
@@ -350,8 +349,9 @@ class Engine(ABC):
 
         Returns
         -------
-        data: list of foxes.core.Data
-            Either [mdata, fdata] or [mdata, fdata, tdata]
+        data: tuple of foxes.core.Data
+            The input data for the chunk calculation,
+            either (mdata, fdata) or (mdata, fdata, tdata)
 
         """
         # prepare:
@@ -370,51 +370,37 @@ class Engine(ABC):
         )
 
         # create fdata:
-        if point_data is None:
-
-            def cb(data, dims):
-                n_states = i1_states - i0_states
-                for o in set(out_vars).difference(data.keys()):
-                    data[o] = np.full(
-                        (n_states, algo.n_turbines), np.nan, dtype=config.dtype_double
-                    )
-                    dims[o] = (FC.STATE, FC.TURBINE)
-
+        if farm_data is not None:
+            fdata = FData.from_dataset(
+                farm_data,
+                mdata=mdata,
+                s_states=s_states,
+                callback=None,
+                states_i0=i0_states,
+                copy=True,
+            )
         else:
-            cb = None
-        fdata = FData.from_dataset(
-            farm_data,
-            mdata=mdata,
-            s_states=s_states,
-            callback=cb,
-            states_i0=i0_states,
-            copy=True,
-        )
+            fdata = FData.from_mdata(
+                mdata=mdata,
+                states_i0=i0_states,
+            )
 
         # create tdata:
-        tdata = None
-        if point_data is not None:
-
-            def cb(data, dims):
-                n_states = i1_states - i0_states
-                n_targets = i1_targets - i0_targets
-                for o in set(out_vars).difference(data.keys()):
-                    data[o] = np.full(
-                        (n_states, n_targets, 1), np.nan, dtype=config.dtype_double
-                    )
-                    dims[o] = (FC.STATE, FC.TARGET, FC.TPOINT)
-
-            tdata = TData.from_dataset(
+        tdata = (
+            TData.from_dataset(
                 point_data,
                 mdata=mdata,
                 s_states=s_states,
                 s_targets=s_targets,
-                callback=cb,
+                callback=None,
                 states_i0=i0_states,
                 copy=True,
             )
+            if point_data is not None
+            else None
+        )
 
-        return [d for d in [mdata, fdata, tdata] if d is not None]
+        return (mdata, fdata) if tdata is None else (mdata, fdata, tdata)
 
     def combine_results(
         self,
@@ -535,7 +521,14 @@ class Engine(ABC):
         )
 
     @abstractmethod
-    def run_calculation(self, algo, model, model_data, farm_data, point_data=None):
+    def run_calculation(
+        self,
+        algo,
+        model,
+        model_data=None,
+        farm_data=None,
+        point_data=None,
+    ):
         """
         Runs the model calculation
 
@@ -543,12 +536,12 @@ class Engine(ABC):
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
-        model: foxes.core.DataCalcModel
+        model: foxes.core.DataCalcModel, optional
             The model that whose calculate function
             should be run
         model_data: xarray.Dataset
             The initial model data
-        farm_data: xarray.Dataset
+        farm_data: xarray.Dataset, optional
             The initial farm data
         point_data: xarray.Dataset, optional
             The initial point data

@@ -70,7 +70,7 @@ The full list of currently implemented ambient states can be found in the
 
 * :ref:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data, see :ref:`Timeseries data`,
 * :ref:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :ref:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data, see :ref:`Multi-height wind data`,
-* :ref:`FieldDataNC<foxes.input.states.FieldDataNC>`: Field data, (time, z, y, x) or (time, y, x) dependent. See :ref:`Heterogeneous flow`,
+* :ref:`FieldData<foxes.input.states.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent. See :ref:`Heterogeneous flow`,
 * :ref:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights, see :ref:`Wind rose data`,
 * :ref:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow, see :ref:`Dynamic Wakes 1`,
 * :ref:`WeibullSectors<foxes.input.states.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.

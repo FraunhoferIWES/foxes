@@ -113,13 +113,13 @@ class WakeDeflection(Model):
         )
 
     @classmethod
-    def new(cls, wframe_type, *args, **kwargs):
+    def new(cls, wdefl_type, *args, **kwargs):
         """
         Run-time wake deflection model factory.
 
         Parameters
         ----------
-        wframe_type: str
+        wdefl_type: str
             The selected derived class name
         args: tuple, optional
             Additional parameters for constructor
@@ -127,4 +127,4 @@ class WakeDeflection(Model):
             Additional parameters for constructor
 
         """
-        return new_instance(cls, wframe_type, *args, **kwargs)
+        return new_instance(cls, wdefl_type, *args, **kwargs)

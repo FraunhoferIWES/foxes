@@ -96,6 +96,9 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
+        if self.nofig:
+            return None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -245,6 +248,9 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
+        if self.nofig:
+            return None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -395,6 +401,9 @@ class FlowPlots2D(SliceData):
             The image data, shape: (n_x, n_y)
 
         """
+        if self.nofig:
+            return None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -547,6 +556,9 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
+        if self.nofig:
+            yield None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -735,6 +747,9 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
+        if self.nofig:
+            yield None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)
@@ -921,6 +936,9 @@ class FlowPlots2D(SliceData):
             or matplotlib.QuadContourSet
 
         """
+        if self.nofig:
+            yield None
+
         variables = list(set([var] + [FV.WD, FV.WS]))
         vi = variables.index(var)
         wdi = variables.index(FV.WD)

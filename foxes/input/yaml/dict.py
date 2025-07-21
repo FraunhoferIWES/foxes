@@ -110,7 +110,7 @@ def read_dict(
                     t = mbook.sources.get_item(s)
                     c = mbook.base_classes.get_item(s)
                     ms = [
-                        Dict(m, name=f"{mdict.name}.s{i}") for i, m in enumerate(mlst)
+                        Dict(m, _name=f"{mdict.name}.s.{i}") for i, m in enumerate(mlst)
                     ]
                     for m in ms:
                         mname = m.pop_item("name")
@@ -128,10 +128,7 @@ def read_dict(
         if algo is None:
             _print("Creating wind farm")
             fdict = idict.get_item("wind_farm")
-            lyts = [
-                Dict(lo, name=f"{fdict.name}.layout{i}")
-                for i, lo in enumerate(fdict.pop_item("layouts"))
-            ]
+            lyts = fdict.pop_item("layouts")
             farm = WindFarm(**fdict)
             for lyt in lyts:
                 add_fun = getattr(farm_layout, lyt.pop_item("function"))
@@ -251,6 +248,7 @@ def run_obj_function(
     fdict,
     algo,
     rlabels,
+    nofig=False,
     verbosity=None,
 ):
     """
@@ -266,6 +264,8 @@ def run_obj_function(
         The algorithm
     rlabels: dict
         Storage for result variables
+    nofig: bool
+        Do not show figures, overrules settings from fdict
     verbosity: int, optional
         The verbosity level, 0 = silent
 
@@ -310,9 +310,9 @@ def run_obj_function(
     results = f(*args, **fdict)
 
     # pyplot shortcuts:
-    if plt_show:
+    if not nofig and plt_show:
         plt.show()
-    if plt_close:
+    if not nofig and plt_close:
         results = None
         plt.close()
 
@@ -346,6 +346,7 @@ def run_outputs(
     point_results=None,
     extra_sig={},
     ret_rlabels=False,
+    nofig=False,
     verbosity=None,
 ):
     """
@@ -366,6 +367,8 @@ def run_outputs(
         arguments (key) with data (value)
     ret_rlabels: bool
         Flag for returning results variables
+    nofig: bool
+        Do not show figures, overrules settings from idict
     verbosity: int, optional
         The verbosity level, 0 = silent
 
@@ -387,24 +390,19 @@ def run_outputs(
             print(*args, **kwargs)
 
     out = []
-    rlabels = Dict(name="result_labels")
+    rlabels = Dict(_name="result_labels")
     if "outputs" in idict:
-        odicts = [
-            Dict(odict, name=f"{idict.name}.output{i}")
-            for i, odict in enumerate(idict["outputs"])
-        ]
+        odicts = idict["outputs"]
 
         for i, d in enumerate(odicts):
             if "output_type" in d:
+                d["nofig"] = nofig
                 ocls = d.pop_item("output_type")
                 _print(f"\nRunning output {i}: {ocls}")
                 d0 = dict(output_type=ocls)
                 d0.update(d)
 
-                flist = [
-                    Dict(f, name=f"{d.name}.function{j}")
-                    for j, f in enumerate(d.pop_item("functions"))
-                ]
+                flist = d.pop_item("functions")
 
                 o = get_output_obj(
                     ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
@@ -419,10 +417,7 @@ def run_outputs(
                 o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
                 d0.update(d)
-                flist = [
-                    Dict(f, name=f"{d.name}.function{j}")
-                    for j, f in enumerate(d.pop_item("functions"))
-                ]
+                flist = d.pop_item("functions")
 
             else:
                 raise KeyError(
@@ -431,7 +426,7 @@ def run_outputs(
 
             fres = []
             for fdict in flist:
-                results = run_obj_function(o, fdict, algo, rlabels, verbosity)
+                results = run_obj_function(o, fdict, algo, rlabels, nofig, verbosity)
                 fres.append(results)
             out.append((d0, fres))
 
@@ -441,7 +436,7 @@ def run_outputs(
     return out if not ret_rlabels else out, rlabels
 
 
-def run_dict(idict, *args, verbosity=None, **kwargs):
+def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
     """
     Runs foxes from dictionary input
 
@@ -451,6 +446,8 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         The input parameter dictionary
     args: tuple, optional
         Additional parameters for read_dict
+    nofig: bool
+        Do not show figures, overrules settings from idict
     verbosity: int, optional
         Force a verbosity level, 0 = silent, overrules
         settings from idict
@@ -480,7 +477,7 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
     algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
 
     # run farm calculation:
-    rdict = idict.get_item("calc_farm", Dict(name=idict.name + ".calc_farm"))
+    rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
     if rdict.pop_item("run", True):
         _print("Running calc_farm")
         farm_results = algo.calc_farm(**rdict)
@@ -504,7 +501,11 @@ def run_dict(idict, *args, verbosity=None, **kwargs):
         out += (point_results,)
 
     # run outputs:
-    out += (run_outputs(idict, algo, farm_results, point_results, verbosity=verbosity),)
+    out += (
+        run_outputs(
+            idict, algo, farm_results, point_results, nofig=nofig, verbosity=verbosity
+        ),
+    )
 
     # shutdown engine, if created above:
     if engine is not None:

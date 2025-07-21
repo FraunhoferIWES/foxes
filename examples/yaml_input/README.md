@@ -1,4 +1,4 @@
-# foxes example: _windio_
+# foxes example: _yaml\_input_
 
 This example runs an example foxes yaml input file.
 

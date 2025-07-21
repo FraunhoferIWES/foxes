@@ -69,7 +69,8 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+docs/build/
+docs/source/_*
 
 # PyBuilder
 target/
@@ -139,7 +140,6 @@ dask-worker-space/
 veri_*
 log.*
 .vscode/
-docs/source/_*
 scratch/
 *.swp
 *.gif
@@ -149,4 +149,5 @@ results/
 result*.*
 
 # exceptions:
-
+!foxes/output/results_writer.py
+!tests/**/results*

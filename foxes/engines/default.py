@@ -60,7 +60,7 @@ class DefaultEngine(Engine):
         self,
         algo,
         model,
-        model_data=None,
+        model_data,
         farm_data=None,
         point_data=None,
         **kwargs,
@@ -75,7 +75,7 @@ class DefaultEngine(Engine):
         model: foxes.core.DataCalcModel
             The model that whose calculate function
             should be run
-        model_data: xarray.Dataset, optional
+        model_data: xarray.Dataset
             The initial model data
         farm_data: xarray.Dataset, optional
             The initial farm data

@@ -99,5 +99,6 @@ def foxes_yaml():
         iterative=args.iterative,
         input_dir=fpath.parent,
         output_dir=args.output_dir,
+        nofig=args.nofig,
         verbosity=args.verbosity,
     )

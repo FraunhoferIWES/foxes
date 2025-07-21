@@ -12,10 +12,16 @@ class Calculator(TurbineModel):
     out_vars: list of str
         The output variables
     func: Function
-        The function: f(in0, in1, ..., stsel) -> (out0, out1, ...)
+        The function: f(in0, in1, ..., algo, mdata, fdata, st_sel) -> (out0, out1, ...)
         where inX and outY are numpy.ndarrays and
         st_sel is the state-turbine selection slice or array.
         All arrays have shape (n_states, n_turbines).
+
+        Beware that the turbine ordering in fdata is in downwind order,
+        hence external data X of shape (n_states, n_turbines) in farm order
+        needs to be reordered by X[ssel, order] with
+        ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
+        before using it in combination with fdata variables.
 
     :group: models.turbine_models
 
@@ -32,10 +38,16 @@ class Calculator(TurbineModel):
         out_vars: list of str
             The output variables
         func: Function
-            The function: f(in0, in1, ..., stsel) -> (out0, out1, ...)
+            The function: f(in0, in1, ..., algo, mdata, fdata, st_sel) -> (out0, out1, ...)
             where inX and outY are numpy.ndarrays and
             st_sel is the state-turbine selection slice or array.
             All arrays have shape (n_states, n_turbines).
+
+            Beware that the turbine ordering in fdata is in downwind order,
+            hence external data X of shape (n_states, n_turbines) in farm order
+            needs to be reordered by X[ssel, order] with
+            ssel = fdata[FV.ORDER_SSEL], order = fdata[FV.ORDER]
+            before using it in combination with fdata variables.
         kwargs: dict, optional
             Additional arguments for TurbineModel
 
@@ -92,7 +104,8 @@ class Calculator(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
         ins = [fdata[v] if v in fdata else mdata[v] for v in self.in_vars]
-        outs = self.func(*ins, st_sel=st_sel)
+        outs = self.func(*ins, algo=algo, mdata=mdata, fdata=fdata, st_sel=st_sel)
 
         return {v: outs[vi] for vi, v in enumerate(self.out_vars)}

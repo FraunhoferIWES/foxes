@@ -107,7 +107,7 @@ class Factory:
                         f"Factory '{name_template}': Require indicator before variable '{v}' in template, e.g. '{v}<{v}>'"
                     )
 
-        self.options = Dict(name=f"{self._pre[0]}_options")
+        self.options = Dict(_name=f"{self._pre[0]}_options")
         for v, o in options.items():
             if v not in self.variables:
                 raise KeyError(
@@ -121,7 +121,7 @@ class Factory:
                         raise TypeError(
                             f"Factory '{name_template}': Found option for variable '{v}' that is not a str, {k}"
                         )
-                self.options[v] = Dict(name=f"{self._pre[0]}_options_{v}", **o)
+                self.options[v] = Dict(_name=f"{self._pre[0]}_options_{v}", **o)
             elif hasattr(o, "__call__"):
                 self.options[v] = o
             else:

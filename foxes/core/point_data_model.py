@@ -42,30 +42,33 @@ class PointDataModel(DataCalcModel):
         """
         return (FC.STATE, FC.TARGET, FC.TPOINT)
 
-    def ensure_variables(self, algo, mdata, fdata, tdata):
+    def ensure_output_vars(self, algo, tdata):
         """
-        Add variables to tdata, initialized with NaN
+        Ensures that the output variables are present in the target data.
 
         Parameters
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        mdata: foxes.core.Data
-            The model data
-        fdata: foxes.core.Data
-            The farm data
-        tdata: foxes.core.Data
+        tdata: foxes.core.TData
             The target point data
 
         """
-        for v in self.output_point_vars(algo):
-            if v not in tdata:
-                tdata[v] = np.full(
-                    (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
-                    np.nan,
-                    dtype=config.dtype_double,
+        vrs = set(self.output_point_vars(algo))
+        if hasattr(self, "fixed_vars"):
+            vrs.update(self.fixed_vars.keys())
+
+        for var in vrs:
+            if var not in tdata:
+                tdata.add(
+                    var,
+                    np.full(
+                        (tdata.n_states, tdata.n_targets, tdata.n_tpoints),
+                        np.nan,
+                        dtype=config.dtype_double,
+                    ),
+                    (FC.STATE, FC.TARGET, FC.TPOINT),
                 )
-                tdata.dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
     @abstractmethod
     def calculate(self, algo, mdata, fdata, tdata):
@@ -247,6 +250,8 @@ class PointDataModelList(PointDataModel):
             (n_states, n_targets, n_tpoints)
 
         """
+        self.ensure_output_vars(algo, tdata)
+
         if parameters is None:
             parameters = [{}] * len(self.models)
         elif not isinstance(parameters, list):

@@ -262,6 +262,8 @@ class WsRho2PCtFromTwo(TurbineType):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        # prepare:
+        self.ensure_output_vars(algo, fdata)
 
         # calculate P:
         st_sel_P = (

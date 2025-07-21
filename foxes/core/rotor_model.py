@@ -362,6 +362,7 @@ class RotorModel(FarmDataModel):
             numpy.ndarray with results, shape: (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
 
         if rpoints is None:
             rpoints = mdata.get(

@@ -268,20 +268,15 @@ class SetFarmVars(TurbineModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        self.ensure_output_vars(algo, fdata)
+
         i0 = mdata.states_i0(counter=True)
         if not self.once or i0 not in self.__once_done:
-            if self.pre_rotor:
-                order = np.s_[:]
-                ssel = np.s_[:]
-            else:
-                order = fdata[FV.ORDER]
-                ssel = fdata[FV.ORDER_SSEL]
-
             bsel = np.zeros((fdata.n_states, fdata.n_turbines), dtype=bool)
             bsel[st_sel] = True
 
             for v in self.vars:
-                data = mdata[self.var(v)][ssel, order]
+                data = mdata[self.var(v)]
                 hsel = ~np.isnan(data)
                 tsel = bsel & hsel
 
