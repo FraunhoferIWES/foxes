@@ -762,7 +762,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 ## v1.5
 
 - Dependencies:
-  - Dropping support for Python 3.8 and 3.9. Supported Python versions are 3.10 - 3.13
   - Introducing minimal package versions of dependencies to pyproject.toml
 - Inputs:
   - New abstract states class `DatasetStates`, serving as a common base for NetCDF type input data
