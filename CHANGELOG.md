@@ -785,3 +785,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed with turbine models that are marked as `pre_rotor` that mixed up the turbine ordering
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5](https://github.com/FraunhoferIWES/foxes/commits/v1.5)
+
+## v1.5.1
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.1](https://github.com/FraunhoferIWES/foxes/commits/v1.5.1)
