@@ -774,6 +774,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Advancing `windio` to version 2.0
 - Models:
   - New turbine type `CalculatorType`, for direct infusion of farm data at a turbine through a user function
+  - New rotor model `DirectMDataInfusion`, piping stored model data directly into turbines
   - Generalizing the `Calculator` turbine model, now additionally passing `algo, mdata, fdata` to the user function
 - Examples:
   - New example `point_cloud`, demonstrating the useage of the `PointCloud` ambient states class

@@ -2,6 +2,9 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionadded:: 1.5
+    New ambient states classes `DatasetStates`, `PointCloudData`, `WeibullField`, `WeibullPointCloud`; new turbine type `CalculatorType`; new rotor model `DirectMDataInfusion`
+
 .. versionadded:: 1.4
     This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame of previous versions. 
     Now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes, see :ref:`Dynamic wake deflection`.

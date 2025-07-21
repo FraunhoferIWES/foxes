@@ -262,7 +262,7 @@ class FieldData(DatasetStates):
                     [float(np.max(p)) for p in pts.T],
                 )
                 print(
-                    "\nMaybe you want to try the option 'bounds_error=False'? This will extrapolate the data.\n"
+                    "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
                 )
                 raise e
             del pts, gvars
