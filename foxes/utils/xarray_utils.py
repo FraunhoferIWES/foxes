@@ -1,6 +1,7 @@
 import numpy as np
 from xarray import Dataset
 from pathlib import Path
+from numpy._core._exceptions import _UFuncNoLoopError
 
 from foxes.variables import get_default_digits
 
@@ -31,24 +32,32 @@ def write_nc(
         Additional parameters for xarray.to_netcdf
 
     """
+
+    def _round(x, v, d):
+        """Helper function to round values"""
+        if d is not None:
+            if verbosity > 1:
+                print(f"File {fpath.name}: Rounding {v} to {d} decimals")
+            try:
+                x = x.astype(np.float32)
+            except ValueError:
+                pass
+            try:
+                return np.round(x, d)
+            except _UFuncNoLoopError:
+                pass
+        return x
+
     fpath = Path(fpath)
     if round is not None:
         crds = {}
-        for v in ds.coords.keys():
+        for v, x in ds.coords.items():
             d = round.get(v, get_default_digits(v))
-            if d is not None:
-                if verbosity > 1:
-                    print(f"File {fpath.name}: Rounding {v} to {d} decimals")
-                crds[v] = np.round(ds[v].to_numpy(), d)
-            else:
-                crds[v] = ds[v].to_numpy()
+            crds[v] = _round(x.to_numpy(), v, d)
         dvrs = {}
-        for v in ds.data_vars.keys():
+        for v, x in ds.data_vars.items():
             d = round.get(v, get_default_digits(v))
-            if d is not None:
-                if verbosity > 1:
-                    print(f"File {fpath.name}: Rounding {v} to {d} decimals")
-                dvrs[v] = (ds[v].dims, np.round(ds[v].to_numpy(), d))
+            dvrs[v] = (x.dims, _round(x.to_numpy(), v, d))
         ds = Dataset(coords=crds, data_vars=dvrs)
 
     enc = None
