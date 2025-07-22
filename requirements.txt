@@ -70,9 +70,7 @@ contourpy==1.3.0 ; python_full_version < '3.10'
 contourpy==1.3.2 ; python_full_version >= '3.10'
     # via matplotlib
 cycler==0.12.1
-    # via
-    #   foxes
-    #   matplotlib
+    # via matplotlib
 dask==2024.8.0 ; python_full_version < '3.10'
     # via
     #   dask-jobqueue
