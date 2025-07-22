@@ -1,7 +1,6 @@
 import numpy as np
 from xarray import Dataset
 from pathlib import Path
-from numpy._core._exceptions import _UFuncNoLoopError
 
 from foxes.variables import get_default_digits
 
@@ -44,7 +43,7 @@ def write_nc(
                 pass
             try:
                 return np.round(x, d)
-            except _UFuncNoLoopError:
+            except Exception:
                 pass
         return x
 
