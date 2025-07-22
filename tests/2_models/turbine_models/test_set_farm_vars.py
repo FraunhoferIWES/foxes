@@ -9,9 +9,10 @@ def test_set_farm_vars():
     n_s = 360
     n_tr = 3
     
+    wd = np.arange(0.0, 360.0, 360/n_s)
     states = foxes.input.states.ScanStates(
         scans={
-            FV.WD: np.arange(0.0, 360.0, 360/n_s),
+            FV.WD: wd,
             FV.WS: [9.0],
             FV.TI: [0.04],
             FV.RHO: [1.225],
@@ -21,7 +22,7 @@ def test_set_farm_vars():
     n_t = n_tr**2
     x = np.zeros((n_s, n_t), dtype=foxes.config.dtype_double)
     x[:] = np.arange(n_t)[None, :] / 10
-    x[:] += np.arange(n_s)[:, None]
+    x[:] += wd[:, None]
     
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_grid(
