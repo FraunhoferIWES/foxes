@@ -104,10 +104,6 @@ if __name__ == "__main__":
         wake_frame="rotor_wd",
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
     )
 
     outputs = [
@@ -124,43 +120,49 @@ if __name__ == "__main__":
         FV.WEIGHT,
     ]
 
-    time0 = time.time()
-    farm_results = algo.calc_farm(outputs=outputs)
-    time1 = time.time()
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
+        time0 = time.time()
+        farm_results = algo.calc_farm(outputs=outputs)
+        time1 = time.time()
 
-    print("\nCalc time =", time1 - time0, "\n")
+        print("\nCalc time =", time1 - time0, "\n")
 
-    print(farm_results)
+        print(farm_results)
 
-    fr = farm_results.to_dataframe()
-    sel = fr[FV.MAX_P].dropna().index
-    fr = fr.loc[sel]
-    print(fr)
+        fr = farm_results.to_dataframe()
+        sel = fr[FV.MAX_P].dropna().index
+        fr = fr.loc[sel]
+        print(fr)
 
-    if not args.nofig:
-        fig = plt.figure(figsize=(12, 4))
-        ax1 = fig.add_subplot(121, polar=True)
-        ax2 = fig.add_subplot(122, polar=True)
+        if not args.nofig:
+            fig = plt.figure(figsize=(12, 4))
+            ax1 = fig.add_subplot(121, polar=True)
+            ax2 = fig.add_subplot(122, polar=True)
 
-        o = foxes.output.RosePlotOutput(farm_results)
-        o.get_figure(
-            16,
-            FV.P,
-            [0, 100, 1000, 2000, 4000, 5001, 7000],
-            turbine=0,
-            title="Power turbine 0",
-            fig=fig,
-            ax=ax1,
-        )
+            o = foxes.output.RosePlotOutput(farm_results)
+            o.get_figure(
+                16,
+                FV.P,
+                [0, 100, 1000, 2000, 4000, 5001, 7000],
+                turbine=0,
+                title="Power turbine 0",
+                fig=fig,
+                ax=ax1,
+            )
 
-        o = foxes.output.RosePlotOutput(farm_results)
-        o.get_figure(
-            16,
-            FV.P,
-            [0, 100, 1000, 2000, 4000, 5001, 7000],
-            turbine=1,
-            title="Power turbine 1",
-            fig=fig,
-            ax=ax2,
-        )
-        plt.show()
+            o = foxes.output.RosePlotOutput(farm_results)
+            o.get_figure(
+                16,
+                FV.P,
+                [0, 100, 1000, 2000, 4000, 5001, 7000],
+                turbine=1,
+                title="Power turbine 1",
+                fig=fig,
+                ax=ax2,
+            )
+            plt.show()

@@ -173,119 +173,121 @@ if __name__ == "__main__":
         wake_deflection=args.deflection,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
-        n_procs=args.n_cpus,
-        chunk_size_states=args.chunksize_states,
-        chunk_size_points=args.chunksize_points,
         verbosity=1,
     )
 
-    time0 = time.time()
-    farm_results = algo.calc_farm()
-    time1 = time.time()
+    with foxes.Engine.new(
+        engine_type=args.engine,
+        n_procs=args.n_cpus,
+        chunk_size_states=args.chunksize_states,
+        chunk_size_points=args.chunksize_points,
+    ):
+        time0 = time.time()
+        farm_results = algo.calc_farm()
+        time1 = time.time()
 
-    print("\nCalc time =", time1 - time0, "\n")
+        print("\nCalc time =", time1 - time0, "\n")
 
-    o = foxes.output.FarmResultsEval(farm_results)
-    o.add_capacity(algo)
-    o.add_capacity(algo, ambient=True)
-    o.add_efficiency()
+        o = foxes.output.FarmResultsEval(farm_results)
+        o.add_capacity(algo)
+        o.add_capacity(algo, ambient=True)
+        o.add_efficiency()
 
-    print("\nFarm results:\n")
-    print(farm_results)
+        print("\nFarm results:\n")
+        print(farm_results)
 
-    # state-turbine results
-    farm_df = farm_results.to_dataframe()
-    print("\nFarm results data:\n")
-    print(
-        farm_df[
-            [
-                FV.X,
-                FV.Y,
-                FV.WD,
-                FV.AMB_REWS,
-                FV.REWS,
-                FV.AMB_TI,
-                FV.TI,
-                FV.AMB_P,
-                FV.P,
-                FV.EFF,
+        # state-turbine results
+        farm_df = farm_results.to_dataframe()
+        print("\nFarm results data:\n")
+        print(
+            farm_df[
+                [
+                    FV.X,
+                    FV.Y,
+                    FV.WD,
+                    FV.AMB_REWS,
+                    FV.REWS,
+                    FV.AMB_TI,
+                    FV.TI,
+                    FV.AMB_P,
+                    FV.P,
+                    FV.EFF,
+                ]
             ]
-        ]
-    )
-    print()
-    print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
-
-    # power results
-    P0 = o.calc_mean_farm_power(ambient=True)
-    P = o.calc_mean_farm_power()
-    print(f"\nFarm power        : {P / 1000:.1f} MW")
-    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-
-    if not args.nofig:
-        sts = np.arange(farm_results.sizes["state"])
-        plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
-        plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
-        plt.legend()
-        plt.xlabel("State")
-        plt.ylabel("REWS [m/s]")
-        plt.show()
-
-    if not args.nofig and args.animation:
-        print("\nCalculating animation")
-
-        fig, axs = plt.subplots(
-            2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
         )
+        print()
+        print(farm_df[[FV.AMB_REWS, FV.REWS, FV.CT, FV.EFF]].describe())
 
-        anim = foxes.output.Animator(fig)
-        of = foxes.output.FlowPlots2D(algo, farm_results)
-        anim.add_generator(
-            of.gen_states_fig_xy(
-                FV.WS,
-                resolution=30,
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
-                quiver_n=35,
-                xmax=5000,
-                ymax=5000,
-                vmin=0,
+        # power results
+        P0 = o.calc_mean_farm_power(ambient=True)
+        P = o.calc_mean_farm_power()
+        print(f"\nFarm power        : {P / 1000:.1f} MW")
+        print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+        print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
+
+        if not args.nofig:
+            sts = np.arange(farm_results.sizes["state"])
+            plt.plot(sts, farm_results.REWS[:, 4], label="Turbine 4")
+            plt.plot(sts, farm_results.REWS[:, 7], label="Turbine 7")
+            plt.legend()
+            plt.xlabel("State")
+            plt.ylabel("REWS [m/s]")
+            plt.show()
+
+        if not args.nofig and args.animation:
+            print("\nCalculating animation")
+
+            fig, axs = plt.subplots(
+                2, 1, figsize=(5.2, 7), gridspec_kw={"height_ratios": [3, 1]}
+            )
+
+            anim = foxes.output.Animator(fig)
+            of = foxes.output.FlowPlots2D(algo, farm_results)
+            anim.add_generator(
+                of.gen_states_fig_xy(
+                    FV.WS,
+                    resolution=30,
+                    quiver_pars=dict(angles="xy", scale_units="xy", scale=0.013),
+                    quiver_n=35,
+                    xmax=5000,
+                    ymax=5000,
+                    vmin=0,
+                    fig=fig,
+                    ax=axs[0],
+                    ret_im=True,
+                    title=None,
+                    animated=True,
+                    rotor_color="red",
+                )
+            )
+            anim.add_generator(
+                o.gen_stdata(
+                    turbines=[4, 7],
+                    variable=FV.REWS,
+                    fig=fig,
+                    ax=axs[1],
+                    ret_im=True,
+                    legloc="upper left",
+                    animated=True,
+                )
+            )
+
+            ani = anim.animate()
+
+            lo = foxes.output.FarmLayoutOutput(farm)
+            lo.get_figure(
                 fig=fig,
                 ax=axs[0],
-                ret_im=True,
-                title=None,
-                animated=True,
-                rotor_color="red",
+                title="",
+                annotate=1,
+                anno_delx=-120,
+                anno_dely=-60,
+                alpha=0,
             )
-        )
-        anim.add_generator(
-            o.gen_stdata(
-                turbines=[4, 7],
-                variable=FV.REWS,
-                fig=fig,
-                ax=axs[1],
-                ret_im=True,
-                legloc="upper left",
-                animated=True,
-            )
-        )
 
-        ani = anim.animate()
-
-        lo = foxes.output.FarmLayoutOutput(farm)
-        lo.get_figure(
-            fig=fig,
-            ax=axs[0],
-            title="",
-            annotate=1,
-            anno_delx=-120,
-            anno_dely=-60,
-            alpha=0,
-        )
-
-        fpath = Path(args.ani_file)
-        print("Writing file", fpath)
-        if fpath.suffix == ".gif":
-            ani.save(filename=fpath, writer="pillow", fps=args.fps)
-        else:
-            ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)
+            fpath = Path(args.ani_file)
+            print("Writing file", fpath)
+            if fpath.suffix == ".gif":
+                ani.save(filename=fpath, writer="pillow", fps=args.fps)
+            else:
+                ani.save(filename=fpath, writer="ffmpeg", fps=args.fps)

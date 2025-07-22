@@ -187,6 +187,7 @@ class PoolEngine(Engine):
             The model results
 
         """
+
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
             model_data, farm_data, point_data, sel=sel, isel=isel
