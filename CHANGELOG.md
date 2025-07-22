@@ -795,3 +795,9 @@ This major version introduces the concept of `Engines` which handle the chunking
  - Bug fixed with `write_nc` utility, concerning string type coordinate arrays
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.1](https://github.com/FraunhoferIWES/foxes/commits/v1.5.1)
+
+## v1.5.2
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)
