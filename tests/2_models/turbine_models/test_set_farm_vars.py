@@ -21,8 +21,7 @@ def test_set_farm_vars():
 
     n_t = n_tr**2
     x = np.zeros((n_s, n_t), dtype=foxes.config.dtype_double)
-    x[:] = np.arange(n_t)[None, :] / 10
-    x[:] += wd[:, None]
+    x[:] = wd[:, None] + np.arange(n_t)[None, :] / 10
     
     farm = foxes.WindFarm()
     foxes.input.farm_layout.add_grid(
