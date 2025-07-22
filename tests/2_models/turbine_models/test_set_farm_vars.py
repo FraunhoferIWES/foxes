@@ -6,7 +6,7 @@ import foxes.constants as FC
 
 def test_set_farm_vars():
 
-    n_s = 36
+    n_s = 360
     n_tr = 3
     
     states = foxes.input.states.ScanStates(
@@ -55,7 +55,7 @@ def test_set_farm_vars():
             print(fr[[FV.WD, "x"]])
 
             for i, g in fr.reset_index().groupby(FC.TURBINE):
-                assert np.allclose(g["x"].values, (g[FV.WD].values + i) / 10)
+                assert np.allclose(g["x"].values, g[FV.WD].values + i / 10)
 
 if __name__ == "__main__":
     test_set_farm_vars()
