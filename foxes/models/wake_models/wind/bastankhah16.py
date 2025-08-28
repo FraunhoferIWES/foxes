@@ -423,7 +423,7 @@ class Bastankhah2016(DistSlicedWakeModel):
         self,
         superposition,
         alpha=0.58,
-        beta=0.07,
+        beta=0.077,
         induction="Madsen",
         **wake_k,
     ):
