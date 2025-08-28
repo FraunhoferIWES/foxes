@@ -220,7 +220,7 @@ class TurbOParkWake(GaussianWakeModel):
             # calculate sigma:
             # beta = np.sqrt(0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct))
             a = self.induction.ct2a(ct)
-            beta = (1 - a) / (1 - 2 * a)
+            beta = np.maximum((1 - a) / (1 - 2 * a), 0)
             epsilon = self.sbeta_factor * np.sqrt(beta)
             del a, beta
 

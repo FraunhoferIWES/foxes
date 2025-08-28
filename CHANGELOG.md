@@ -800,5 +800,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Tests:
   - New test `test_set_farm_vars`, checking if correct turbine ordering is maintained
+- Bug fixes:
+  - Bug fixed with negative beta in sqrt for some wake models, Madsen axial induction and high ct values
+  - Bug fixed with wake model `bastankhah16` to set default value beta to 0.077 (was 0.07)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)

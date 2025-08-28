@@ -218,7 +218,7 @@ class CrespoHernandezTIWake(TopHatWakeModel):
 
         # calculate:
         a = self.induction.ct2a(ct)
-        beta = (1 - a) / (1 - 2 * a)
+        beta = np.maximum((1 - a) / (1 - 2 * a), 0)
         radius = 2 * (k * x + self.sbeta_factor * np.sqrt(beta) * D)
 
         return radius
