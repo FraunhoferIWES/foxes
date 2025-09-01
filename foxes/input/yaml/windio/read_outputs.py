@@ -186,11 +186,10 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
 
     # read subset:
     run_configuration = wio_outs.pop_item("run_configuration", {})
+    states_isel = None
     if "times_run" in run_configuration:
         times_run = run_configuration.pop_item("times_run")
-        if times_run.get_item("all_occurences"):
-            states_isel = None
-        else:
+        if not times_run.get_item("all_occurences"):
             states_isel = times_run.get_item("subset")
     elif "wind_speeds_run" in run_configuration:
         wind_speeds_run = run_configuration.get_item("wind_speeds_run")
@@ -203,7 +202,6 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
             raise NotImplementedError(
                 f"Wind speed and direction subsets are not yet supported, got {directions_run.name} {directions_run}"
             )
-        states_isel = None
 
     # read turbine_outputs:
     _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity)

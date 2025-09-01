@@ -211,6 +211,8 @@ def read_farm(wio_dict, mbook, verbosity):
     farm = WindFarm()
     wfarm = wio_farm["layouts"]
     if isinstance(wfarm, dict):
+        if "coordinates" in wfarm:
+            wfarm = {"0": wfarm}
         layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
     else:
         layouts = {str(i): lf for i, lf in enumerate(wfarm)}
