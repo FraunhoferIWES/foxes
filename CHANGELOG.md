@@ -798,6 +798,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.5.2
 
+- Models:
+  - Wake blockage model `SelfSimilar`: Promoting `alpha` and `beta` to constructor arguments
 - Tests:
   - New test `test_set_farm_vars`, checking if correct turbine ordering is maintained
 - Bug fixes:
