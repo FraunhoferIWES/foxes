@@ -378,7 +378,7 @@ def read_attributes(wio_attrs, idict, mbook, verbosity=1):
             print("    Reading flow_model")
             print("      Name:", fmname)
             print("      Contents:", [k for k in flow_model.keys()])
-        if fmname != "foxes":
+        if verbosity > 0 and fmname != "foxes":
             print(f"Running flow model 'foxes', overruling original choice '{fmname}'")
 
     # read analysis:

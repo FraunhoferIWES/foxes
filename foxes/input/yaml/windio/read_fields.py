@@ -137,6 +137,7 @@ def read_wind_resource_field(
     """
     if name in [
         "potential_temperature",
+        "real_temperature",
         "friction_velocity",
         "k",
         "epsilon",
