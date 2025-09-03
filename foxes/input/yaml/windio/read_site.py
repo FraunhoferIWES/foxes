@@ -22,6 +22,8 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
                 print(
                     f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated."
                 )
+            fields.pop(FV.Z0)
+            dims.pop(FV.Z0)
         elif FV.MOL in fields:
             ovars.append(FV.MOL)
             fixval[FV.H] = fields[FV.H]
@@ -421,6 +423,16 @@ def read_site(wio_dict, verbosity=1):
     dims = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
+
+    # special case: operating field
+    if FV.OPERATING in fields:
+        wio_dict["wind_farm"][FV.OPERATING] = (dims.pop(FV.OPERATING), fields.pop(FV.OPERATING))
+        if FC.TURBINE in coords:
+            if not any([FC.TURBINE in dms for dms in dims.values()]):
+                if verbosity > 2:
+                    print(f"      Removing coordinate '{FC.TURBINE}', since only relevant for operating flag")
+                coords.pop(FC.TURBINE)
+
     if verbosity > 2:
         print("      Coords:")
         for c, d in coords.items():

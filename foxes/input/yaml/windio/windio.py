@@ -55,6 +55,7 @@ def read_windio(wio_dict, verbosity=1):
         algorithm=Dict(
             algo_type="Downwind",
             wake_models=[],
+            farm_controller="farm_cntrl",
             _name="wio2fxs.algorithm",
             verbosity=verbosity - 3,
         ),

@@ -3,7 +3,9 @@ import pandas as pd
 
 from foxes.utils import Dict
 from foxes.core import Turbine, TurbineType, WindFarm
+from foxes.models.farm_controllers import BasicFarmController, OpFlagController
 import foxes.variables as FV
+import foxes.constants as FC
 
 
 def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
@@ -32,7 +34,6 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
     :group: input.yaml.windio
 
     """
-
     def _print(*args, level=1, **kwargs):
         if verbosity >= level:
             print(*args, **kwargs)
@@ -203,6 +204,22 @@ def read_farm(wio_dict, mbook, verbosity):
     except KeyError:
         ws_exp_P = 1
         ws_exp_ct = 1
+
+    # create farm controller:
+    if FV.OPERATING in wio_farm:
+        op_dims, operating = wio_farm.pop_item(FV.OPERATING)
+        assert (
+            len(op_dims) == 2 and 
+            op_dims[1] == FC.TURBINE and
+            op_dims[0] in [FC.STATE, FC.TIME]
+        ), (
+            f"Expecting operating field to have dims (state, turbine), got {op_dims}"
+        )
+        mbook.farm_controllers["farm_cntrl"] = OpFlagController(operating)
+    else:
+        mbook.farm_controllers["farm_cntrl"] = BasicFarmController()
+    if verbosity > 1:
+        print(f"  Farm controller type: {type(mbook.farm_controllers['farm_cntrl']).__name__}")
 
     # read turbine type:
     ttypes = read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity)

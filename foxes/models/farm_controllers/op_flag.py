@@ -1,0 +1,175 @@
+import numpy as np
+
+from foxes.core import FarmController
+import foxes.constants as FC
+import foxes.variables as FV
+
+
+class OpFlagController(FarmController):
+    """
+    A basic controller with a flag for
+    turbine operation at each state.
+
+    Parameters
+    ----------
+    non_op_values: dict
+        The non-operational values for variables,
+        keys: variable str, values: float
+
+    :group: models.farm_controllers
+
+    """
+
+    def __init__(
+            self, 
+            op_flags,
+            non_op_values=None,
+            **kwargs,
+        ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        op_flags: numpy.ndarray
+            The operating flag data, shape: (n_states, n_turbines)
+        non_op_values: dict, optional
+            The non-operational values for variables,
+            keys: variable str, values: float
+        kwargs: dict, optional
+            Additional keyword arguments for the
+            base class constructor
+
+        """
+        super().__init__(**kwargs)
+        self._op_flags = op_flags
+        
+        self.non_op_values = {
+            FV.P: 0.0,
+            FV.CT: 0.0,
+        }
+        if non_op_values is not None:
+            self.non_op_values.update(non_op_values)    
+
+    def output_farm_vars(self, algo):
+        """
+        The variables which are being modified by the model.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+
+        Returns
+        -------
+        output_vars: list of str
+            The output variable names
+
+        """
+        vrs = set(super().output_farm_vars(algo))
+        vrs.update([FV.OPERATING])
+        return list(vrs)
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        idata = super().load_data(algo, verbosity)
+
+        if isinstance(self._op_flags, np.ndarray):
+            assert self._op_flags.shape == (algo.n_states, algo.n_turbines), (
+                f"OpFlagController data shape {self._op_flags.shape} does not match "
+                f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
+            )
+            op_flags = self._op_flags.astype(bool)
+
+        else:
+            raise TypeError(
+                f"OpFlagController data source must be ndarray, not {type(self.data_source)}"
+            )
+        
+        off = np.where(~op_flags)
+        tmsels = idata["data_vars"][FC.TMODEL_SELS][1]
+        tmsels[off[0], off[1], :] = False
+
+        idata["data_vars"][FC.TMODEL_SELS] = (
+            (FC.STATE, FC.TURBINE, FC.TMODELS),
+            tmsels,
+        )
+        idata["data_vars"][FV.OPERATING] = (
+            (FC.STATE, FC.TURBINE),
+            op_flags,
+        )
+
+        return idata
+    
+    def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
+        """
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        pre_rotor: bool
+            Flag for running pre-rotor or post-rotor
+            models
+        downwind_index: int, optional
+            The index in the downwind order
+
+        Returns
+        -------
+        results: dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape (n_states, n_turbines)
+
+        """
+        # make sure non-operating turbines have zero output:
+        if downwind_index is None:
+            off = np.where(~mdata[FV.OPERATING])
+            for v in self.output_farm_vars(algo):
+                fdata[v][off] = self.non_op_values.get(v, np.nan)
+        else:
+            off = np.where(~mdata[FV.OPERATING][:, downwind_index])
+            for v in self.output_farm_vars(algo):
+                fdata[v][off, downwind_index] = self.non_op_values.get(v, np.nan)
+
+        # non-operating turbines have no active turbine models,
+        # thanks to load_data, so the zeros will not be overwritten
+        results = super().calculate(
+            algo, mdata, fdata, pre_rotor, downwind_index
+        )            
+
+        # copy operating data to fdata:
+        if FV.OPERATING not in fdata:
+            fdata.add(FV.OPERATING, mdata[FV.OPERATING], (FC.STATE, FC.TURBINE))
+        results[FV.OPERATING] = fdata[FV.OPERATING]
+
+        return results
+    

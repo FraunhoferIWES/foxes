@@ -1,3 +1,9 @@
+
+OPERATING = "operating"
+""" Flag for turbine operation
+:group: foxes.variables
+"""
+
 X = "X"
 """ The x coordinate in m
 :group: foxes.variables
