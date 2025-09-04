@@ -110,14 +110,26 @@ def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
             assert len(xb) == 2, f"Expecting two entries for x_bounds, got {xb}"
             yb = z_planes.pop_item("y_bounds")
             assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
-            dx = z_planes.pop_item("dx")
-            dy = z_planes.pop_item("dy")
-            nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
-            if (xb[1] - xb[0]) / (nx - 1) > dx:
-                nx += 1
-            ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
-            if (yb[1] - yb[0]) / (ny - 1) > dy:
-                ny += 1
+            if "dx" in z_planes or "dy" in z_planes:
+                assert "dx" in z_planes and "dy" in z_planes, (
+                    f"Expecting both 'dx' and 'dy' in z_planes, got {list(z_planes.keys())}"
+                )
+                dx = z_planes.pop_item("dx")
+                dy = z_planes.pop_item("dy")
+                nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
+                if (xb[1] - xb[0]) / (nx - 1) > dx:
+                    nx += 1
+                ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
+                if (yb[1] - yb[0]) / (ny - 1) > dy:
+                    ny += 1
+            elif "Nx" in z_planes or "Ny" in z_planes:
+                assert "Nx" in z_planes and "Ny" in z_planes, (
+                    f"Expecting both 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
+                )
+                nx = z_planes.pop_item("Nx")
+                ny = z_planes.pop_item("Ny")
+            else:
+                raise KeyError(f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}")
             z_list = np.asarray(z_list)
             if verbosity > 2:
                 print("          x_bounds      :", xb)
