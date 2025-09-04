@@ -110,6 +110,7 @@ class OpFlagController(FarmController):
         off = np.where(~op_flags)
         tmsels = idata["data_vars"][FC.TMODEL_SELS][1]
         tmsels[off[0], off[1], :] = False
+        self._tmall = [np.all(t) for t in tmsels]
 
         idata["data_vars"][FC.TMODEL_SELS] = (
             (FC.STATE, FC.TURBINE, FC.TMODELS),
@@ -150,26 +151,27 @@ class OpFlagController(FarmController):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
-        # make sure non-operating turbines have zero output:
-        if downwind_index is None:
-            off = np.where(~mdata[FV.OPERATING])
-            for v in self.output_farm_vars(algo):
-                fdata[v][off] = self.non_op_values.get(v, np.nan)
-        else:
-            off = np.where(~mdata[FV.OPERATING][:, downwind_index])
-            for v in self.output_farm_vars(algo):
-                fdata[v][off, downwind_index] = self.non_op_values.get(v, np.nan)
+        self.ensure_output_vars(algo, fdata)
 
-        # non-operating turbines have no active turbine models,
-        # thanks to load_data, so the zeros will not be overwritten
+        # compute data for all operating turbines:
+        op = mdata[FV.OPERATING].astype(bool)
+        fdata[FV.OPERATING] = op
         results = super().calculate(
             algo, mdata, fdata, pre_rotor, downwind_index
-        )            
-
-        # copy operating data to fdata:
-        if FV.OPERATING not in fdata:
-            fdata.add(FV.OPERATING, mdata[FV.OPERATING], (FC.STATE, FC.TURBINE))
+        )   
         results[FV.OPERATING] = fdata[FV.OPERATING]
+
+        # set non-operating values:
+        if downwind_index is None:
+            off = np.where(~op)
+            for v in self.output_farm_vars(algo):
+                if v != FV.OPERATING:
+                    fdata[v][off[0], off[1]] = self.non_op_values.get(v, np.nan)
+        else:
+            off = np.where(~op[:, downwind_index])
+            for v in self.output_farm_vars(algo):
+                if v != FV.OPERATING:
+                    fdata[v][off[0], downwind_index] = self.non_op_values.get(v, np.nan)
 
         return results
     
