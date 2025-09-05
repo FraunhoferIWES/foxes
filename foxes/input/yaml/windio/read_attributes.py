@@ -171,7 +171,9 @@ def _read_blockage(blockage_model, induction, algo_dict, mbook, verbosity):
         for k in kys:
             if len(k) > 3 and k[:3] == "ss_":
                 blockage_model[k[3:]] = blockage_model.pop_item(k)
-        indc_dict = Dict(wmodel_type=indc_def_map[wname], induction=induction, **blockage_model)
+        indc_dict = Dict(
+            wmodel_type=indc_def_map[wname], induction=induction, **blockage_model
+        )
         mbook.wake_models[wname] = WakeModel.new(**indc_dict)
         if verbosity > 2:
             print(f"      Created wake model '{wname}':")

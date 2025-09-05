@@ -185,6 +185,6 @@ def read_wind_resource_field(
         "operating",
     ] and _read_multi_dimensional_data(name, wio_data, fields, dims):
         return True
-    
+
     else:
         raise NotImplementedError(f"No reading method implemented for field '{name}'")

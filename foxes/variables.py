@@ -1,4 +1,3 @@
-
 OPERATING = "operating"
 """ Flag for turbine operation
 :group: foxes.variables

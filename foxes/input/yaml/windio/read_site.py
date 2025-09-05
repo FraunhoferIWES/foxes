@@ -18,6 +18,7 @@ default_values = {
     FV.RHO: 1.225,
 }
 
+
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
     """Read ABL profiles information
     :group: input.yaml.windio
@@ -100,10 +101,7 @@ def _get_Timeseries(
             print("        selecting class 'Timeseries'")
 
         data = {}
-        fix = {
-            v: fixval.get(v, default_values[v]) 
-            for v in ovars if v not in fields
-        }
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if dims[v] == (FC.TIME,):
                 data[v] = d
@@ -143,10 +141,7 @@ def _get_MultiHeightNCTimeseries(
             )
 
         data = {}
-        fix = {
-            v: fixval.get(v, default_values[v]) 
-            for v in ovars if v not in fields
-        }
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if dims[v] == (FC.TIME, FV.H):
                 data[v] = ((FC.TIME, FV.H), d)
@@ -191,10 +186,7 @@ def _get_WeibullSectors(
             print("        selecting class 'WeibullSectors'")
 
         data = {}
-        fix = {
-            v: fixval.get(v, default_values[v]) 
-            for v in ovars if v not in fields
-        }
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         c = dims[FV.WEIBULL_A][0]
         for v, d in fields.items():
             if dims[v] == (c,):
@@ -246,10 +238,7 @@ def _get_WeibullPointCloud(
             print("        selecting class 'WeibullPointCloud'")
 
         data = {}
-        fix = {
-            v: fixval.get(v, default_values[v]) 
-            for v in ovars if v not in fields
-        }
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if len(dims[v]) == 0:
                 fix[v] = d
@@ -300,10 +289,7 @@ def _get_WeibullField(
             print("        selecting class 'WeibullField'")
 
         data = {}
-        fix = {
-            v: fixval.get(v, default_values[v]) 
-            for v in ovars if v not in fields
-        }
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if len(dims[v]) == 0:
                 fix[v] = d
@@ -444,11 +430,16 @@ def read_site(wio_dict, verbosity=1):
 
     # special case: operating field
     if FV.OPERATING in fields:
-        wio_dict["wind_farm"][FV.OPERATING] = (dims.pop(FV.OPERATING), fields.pop(FV.OPERATING))
+        wio_dict["wind_farm"][FV.OPERATING] = (
+            dims.pop(FV.OPERATING),
+            fields.pop(FV.OPERATING),
+        )
         if FC.TURBINE in coords:
             if not any([FC.TURBINE in dms for dms in dims.values()]):
                 if verbosity > 2:
-                    print(f"      Removing coordinate '{FC.TURBINE}', since only relevant for operating flag")
+                    print(
+                        f"      Removing coordinate '{FC.TURBINE}', since only relevant for operating flag"
+                    )
                 coords.pop(FC.TURBINE)
 
     if verbosity > 2:

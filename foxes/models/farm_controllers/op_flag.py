@@ -25,12 +25,12 @@ class OpFlagController(FarmController):
     """
 
     def __init__(
-            self, 
-            data_source,
-            non_op_values=None,
-            var2ncvar={},
-            **kwargs,
-        ):
+        self,
+        data_source,
+        non_op_values=None,
+        var2ncvar={},
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -53,15 +53,15 @@ class OpFlagController(FarmController):
         super().__init__(**kwargs)
         self.data_source = data_source
         self.var2ncvar = var2ncvar
-        
+
         self.non_op_values = {
             FV.P: 0.0,
             FV.CT: 0.0,
         }
         if non_op_values is not None:
-            self.non_op_values.update(non_op_values)   
+            self.non_op_values.update(non_op_values)
 
-        self._op_flags = None 
+        self._op_flags = None
 
     def output_farm_vars(self, algo):
         """
@@ -144,7 +144,7 @@ class OpFlagController(FarmController):
         )
 
         return idata
-    
+
     def calculate(self, algo, mdata, fdata, pre_rotor, downwind_index=None):
         """
         The main model calculation.
@@ -178,9 +178,7 @@ class OpFlagController(FarmController):
         # compute data for all operating turbines:
         op = mdata[FV.OPERATING].astype(bool)
         fdata[FV.OPERATING] = op
-        results = super().calculate(
-            algo, mdata, fdata, pre_rotor, downwind_index
-        )   
+        results = super().calculate(algo, mdata, fdata, pre_rotor, downwind_index)
         results[FV.OPERATING] = fdata[FV.OPERATING]
 
         # set non-operating values:
@@ -196,4 +194,3 @@ class OpFlagController(FarmController):
                     fdata[v][off[0], downwind_index] = self.non_op_values.get(v, np.nan)
 
         return results
-    

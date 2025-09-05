@@ -129,7 +129,9 @@ def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
                 nx = z_planes.pop_item("Nx")
                 ny = z_planes.pop_item("Ny")
             else:
-                raise KeyError(f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}")
+                raise KeyError(
+                    f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
+                )
             z_list = np.asarray(z_list)
             if verbosity > 2:
                 print("          x_bounds      :", xb)

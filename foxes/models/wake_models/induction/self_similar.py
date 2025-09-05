@@ -179,8 +179,10 @@ class SelfSimilar(TurbineInductionModel):
 
     def _rad_fn(self, x_R, r_R):
         """Helper function: define radial shape function (eqn 12 from [1])"""
-        with np.errstate(over='ignore'):
-            result = (1 / np.cosh(self.beta * (r_R) / self._r_half(x_R))) ** self.alpha  # * (x_R < 0)
+        with np.errstate(over="ignore"):
+            result = (
+                1 / np.cosh(self.beta * (r_R) / self._r_half(x_R))
+            ) ** self.alpha  # * (x_R < 0)
         return result
 
     def contribute(
