@@ -803,6 +803,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Wake blockage model `SelfSimilar`: Promoting `alpha` and `beta` to constructor arguments
 - Tests:
   - New test `test_set_farm_vars`, checking if correct turbine ordering is maintained
+- Notebooks:
+  - New notebook `operating_flag.ipynb`, demonstrating the usage of the `OpFlagController` class
 - Bug fixes:
   - Bug fixed with negative beta in sqrt for some wake models, Madsen axial induction and high ct values
   - Bug fixed with wake model `bastankhah16` to set default value beta to 0.077 (was 0.07)

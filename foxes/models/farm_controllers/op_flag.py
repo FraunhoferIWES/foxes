@@ -1,4 +1,5 @@
 import numpy as np
+from xarray import open_dataset, Dataset
 
 from foxes.core import FarmController
 import foxes.constants as FC
@@ -15,6 +16,9 @@ class OpFlagController(FarmController):
     non_op_values: dict
         The non-operational values for variables,
         keys: variable str, values: float
+    var2ncvar: dict
+        The mapping of variable names to NetCDF variable names,
+        only needed if data_source is a path to a NetCDF file
 
     :group: models.farm_controllers
 
@@ -22,8 +26,9 @@ class OpFlagController(FarmController):
 
     def __init__(
             self, 
-            op_flags,
+            data_source,
             non_op_values=None,
+            var2ncvar={},
             **kwargs,
         ):
         """
@@ -31,25 +36,32 @@ class OpFlagController(FarmController):
 
         Parameters
         ----------
-        op_flags: numpy.ndarray
-            The operating flag data, shape: (n_states, n_turbines)
+        data_source: numpy.ndarray or str
+            The operating flag data, shape: (n_states, n_turbines),
+            or path to a NetCDF file
         non_op_values: dict, optional
             The non-operational values for variables,
             keys: variable str, values: float
+        var2ncvar: dict
+            The mapping of variable names to NetCDF variable names,
+            only needed if data_source is a path to a NetCDF file
         kwargs: dict, optional
             Additional keyword arguments for the
             base class constructor
 
         """
         super().__init__(**kwargs)
-        self._op_flags = op_flags
+        self.data_source = data_source
+        self.var2ncvar = var2ncvar
         
         self.non_op_values = {
             FV.P: 0.0,
             FV.CT: 0.0,
         }
         if non_op_values is not None:
-            self.non_op_values.update(non_op_values)    
+            self.non_op_values.update(non_op_values)   
+
+        self._op_flags = None 
 
     def output_farm_vars(self, algo):
         """
@@ -93,20 +105,30 @@ class OpFlagController(FarmController):
             and `coords`, a dict with entries `dim_name_str -> dim_array`
 
         """
+
         idata = super().load_data(algo, verbosity)
 
-        if isinstance(self._op_flags, np.ndarray):
-            assert self._op_flags.shape == (algo.n_states, algo.n_turbines), (
-                f"OpFlagController data shape {self._op_flags.shape} does not match "
-                f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
-            )
-            op_flags = self._op_flags.astype(bool)
+        if isinstance(self.data_source, np.ndarray):
+            self._op_flags = self.data_source
+
+        elif isinstance(self.data_source, Dataset):
+            cop = self.var2ncvar.get(FV.OPERATING, FV.OPERATING)
+            self._op_flags = self.data_source[cop].to_numpy()
 
         else:
-            raise TypeError(
-                f"OpFlagController data source must be ndarray, not {type(self.data_source)}"
-            )
-        
+            if verbosity > 0:
+                print(f"OpFlagController: Reading data from {self.data_source}")
+            ds = open_dataset(self.data_source)
+            cop = self.var2ncvar.get(FV.OPERATING, FV.OPERATING)
+            self._op_flags = ds[cop].to_numpy()
+            del ds
+
+        assert self._op_flags.shape == (algo.n_states, algo.n_turbines), (
+            f"OpFlagController data shape {self._op_flags.shape} does not match "
+            f"(n_states, n_turbines)=({algo.n_states}, {algo.n_turbines})"
+        )
+        op_flags = self._op_flags.astype(bool)
+
         off = np.where(~op_flags)
         tmsels = idata["data_vars"][FC.TMODEL_SELS][1]
         tmsels[off[0], off[1], :] = False

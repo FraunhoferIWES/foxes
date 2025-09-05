@@ -39,6 +39,7 @@ class StateTurbineMap(Output):
         self,
         variable,
         title=None,
+        cbar_label=None,
         ax=None,
         figsize=None,
         rotate_xlabels=None,
@@ -93,8 +94,11 @@ class StateTurbineMap(Output):
 
         ax.set_yticks(turbines[:-1] + 0.5)
         ax.set_yticklabels(turbines[:-1])
-        xt = ax.get_xticks()
+        xt = np.asarray(ax.get_xticks())
         xtl = ax.get_xticklabels()
+        if xt.dtype != np.datetime64:
+            xt, ar = np.unique(xt.astype(int), return_index=True)
+            xtl = [int(float(xtl[i].get_text())) for i in ar]
         ax.set_xticks(
             xt[:-1] + 0.5 * (xt[-1] - xt[-2]), xtl[:-1], rotation=rotate_xlabels
         )
@@ -103,10 +107,9 @@ class StateTurbineMap(Output):
             ytl = [None for t in yt]
             ytl[::5] = ax.get_yticklabels()[::5]
             ax.set_yticks(yt, ytl)
-        fig.colorbar(c, ax=ax)
+        fig.colorbar(c, ax=ax, label=cbar_label)
 
-        t = title if title is not None else variable
-        ax.set_title(t)
+        ax.set_title(title)
         ax.set_ylabel("Turbine index")
         ax.set_xlabel("State")
 
