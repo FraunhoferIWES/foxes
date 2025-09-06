@@ -810,3 +810,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed with wake model `bastankhah16` to set default value beta to 0.077 (was 0.07)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)
+
+## v1.5.3
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.3](https://github.com/FraunhoferIWES/foxes/commits/v1.5.3)
