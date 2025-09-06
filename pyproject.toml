@@ -70,9 +70,6 @@ doc = [
 test = [
     "flake8>=0.1",
     "pytest>=7.0",
-    "nbmake>=1.2.1",
-    "dask>=2022.0",
-    "distributed>=2022.0",
 ]
 utils = [
     "objsize>=0.5",
