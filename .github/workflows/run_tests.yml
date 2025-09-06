@@ -38,7 +38,7 @@ jobs:
         #flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Running tests
       run: |
-        pytest tests
+        pytest -n=auto tests
     - name: Running notebooks
       run: |
-        pytest --nbmake -n=4 notebooks
+        pytest --nbmake -n=auto notebooks
