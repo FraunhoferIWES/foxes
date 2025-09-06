@@ -110,14 +110,28 @@ def _read_flow_field(wio_outs, olist, algo, states_isel, verbosity):
             assert len(xb) == 2, f"Expecting two entries for x_bounds, got {xb}"
             yb = z_planes.pop_item("y_bounds")
             assert len(yb) == 2, f"Expecting two entries for y_bounds, got {yb}"
-            dx = z_planes.pop_item("dx")
-            dy = z_planes.pop_item("dy")
-            nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
-            if (xb[1] - xb[0]) / (nx - 1) > dx:
-                nx += 1
-            ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
-            if (yb[1] - yb[0]) / (ny - 1) > dy:
-                ny += 1
+            if "dx" in z_planes or "dy" in z_planes:
+                assert "dx" in z_planes and "dy" in z_planes, (
+                    f"Expecting both 'dx' and 'dy' in z_planes, got {list(z_planes.keys())}"
+                )
+                dx = z_planes.pop_item("dx")
+                dy = z_planes.pop_item("dy")
+                nx = max(int((xb[1] - xb[0]) / dx), 1) + 1
+                if (xb[1] - xb[0]) / (nx - 1) > dx:
+                    nx += 1
+                ny = max(int((yb[1] - yb[0]) / dy), 1) + 1
+                if (yb[1] - yb[0]) / (ny - 1) > dy:
+                    ny += 1
+            elif "Nx" in z_planes or "Ny" in z_planes:
+                assert "Nx" in z_planes and "Ny" in z_planes, (
+                    f"Expecting both 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
+                )
+                nx = z_planes.pop_item("Nx")
+                ny = z_planes.pop_item("Ny")
+            else:
+                raise KeyError(
+                    f"Expecting either 'dx' and 'dy' or 'Nx' and 'Ny' in z_planes, got {list(z_planes.keys())}"
+                )
             z_list = np.asarray(z_list)
             if verbosity > 2:
                 print("          x_bounds      :", xb)
@@ -186,11 +200,10 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
 
     # read subset:
     run_configuration = wio_outs.pop_item("run_configuration", {})
+    states_isel = None
     if "times_run" in run_configuration:
         times_run = run_configuration.pop_item("times_run")
-        if times_run.get_item("all_occurences"):
-            states_isel = None
-        else:
+        if not times_run.get_item("all_occurences"):
             states_isel = times_run.get_item("subset")
     elif "wind_speeds_run" in run_configuration:
         wind_speeds_run = run_configuration.get_item("wind_speeds_run")
@@ -203,7 +216,6 @@ def read_outputs(wio_outs, idict, algo, verbosity=1):
             raise NotImplementedError(
                 f"Wind speed and direction subsets are not yet supported, got {directions_run.name} {directions_run}"
             )
-        states_isel = None
 
     # read turbine_outputs:
     _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity)

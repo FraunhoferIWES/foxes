@@ -25,7 +25,7 @@ class SelfSimilar2020(SelfSimilar):
 
     """
 
-    def _a0(self, ct, x_R, gamma=1.1):
+    def _a0(self, ct, x_R):
         """Helper function: define a0 with gamma factor, eqn 8 from [2]"""
 
         x_new = np.minimum(np.maximum(-1 * np.abs(x_R), -6), -1)

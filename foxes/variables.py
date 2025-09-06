@@ -1,3 +1,8 @@
+OPERATING = "operating"
+""" Flag for turbine operation
+:group: foxes.variables
+"""
+
 X = "X"
 """ The x coordinate in m
 :group: foxes.variables
@@ -19,7 +24,7 @@ D = "D"
 """
 
 TXYH = "txyh"
-""" The turbine rotor centre coordinate 
+""" The turbine rotor centre coordinate
 vector (x, y, height)
 :group: foxes.variables
 """
@@ -190,13 +195,13 @@ AMB_RHO = "AMB_RHO"
 """
 
 AMB_YAW = "AMB_YAW"
-""" The ambient absolute yaw angle of 
+""" The ambient absolute yaw angle of
 a turbine in degrees
 :group: foxes.variables
 """
 
 AMB_YAWM = "AMB_YAWM"
-""" The ambient relative yaw angle of 
+""" The ambient relative yaw angle of
 a turbine in degrees
 :group: foxes.variables
 """

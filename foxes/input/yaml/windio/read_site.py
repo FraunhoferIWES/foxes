@@ -11,6 +11,14 @@ import foxes.constants as FC
 from .read_fields import read_wind_resource_field
 
 
+default_values = {
+    FV.WS: 8.0,
+    FV.WD: 270.0,
+    FV.TI: 0.1,
+    FV.RHO: 1.225,
+}
+
+
 def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
     """Read ABL profiles information
     :group: input.yaml.windio
@@ -22,6 +30,8 @@ def _get_profiles(coords, fields, dims, ovars, fixval, verbosity):
                 print(
                     f"Ignoring '{FV.Z0}', since no reference_height found. No ABL profile activated."
                 )
+            fields.pop(FV.Z0)
+            dims.pop(FV.Z0)
         elif FV.MOL in fields:
             ovars.append(FV.MOL)
             fixval[FV.H] = fields[FV.H]
@@ -56,7 +66,7 @@ def _get_SingleStateStates(
 
     smap = {FV.WS: "ws", FV.WD: "wd", FV.TI: "ti", FV.RHO: "rho"}
 
-    data = {smap[v]: d for v, d in fixval.items()}
+    data = {smap[v]: fixval.get(v, default_values[v]) for v in ovars}
     for v, d in coords.items():
         if v in smap:
             data[smap[v]] = d
@@ -91,7 +101,7 @@ def _get_Timeseries(
             print("        selecting class 'Timeseries'")
 
         data = {}
-        fix = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if dims[v] == (FC.TIME,):
                 data[v] = d
@@ -99,7 +109,6 @@ def _get_Timeseries(
                 fix[v] = d
             elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
-        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         sdata = pd.DataFrame(index=coords[FC.TIME], data=data)
         sdata.index.name = FC.TIME
@@ -132,7 +141,7 @@ def _get_MultiHeightNCTimeseries(
             )
 
         data = {}
-        fix = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if dims[v] == (FC.TIME, FV.H):
                 data[v] = ((FC.TIME, FV.H), d)
@@ -142,7 +151,6 @@ def _get_MultiHeightNCTimeseries(
                 fix[v] = d
             elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
-        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         sdata = Dataset(coords=coords, data_vars=data)
         states_dict.update(
@@ -153,6 +161,7 @@ def _get_MultiHeightNCTimeseries(
                 data_source=sdata,
                 output_vars=ovars,
                 fixed_vars=fix,
+                bounds_error=False,
             )
         )
         return True
@@ -177,7 +186,7 @@ def _get_WeibullSectors(
             print("        selecting class 'WeibullSectors'")
 
         data = {}
-        fix = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         c = dims[FV.WEIBULL_A][0]
         for v, d in fields.items():
             if dims[v] == (c,):
@@ -186,7 +195,6 @@ def _get_WeibullSectors(
                 fix[v] = d
             elif verbosity > 2:
                 print(f"        ignoring field '{v}' with dims {dims[v]}")
-        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         if FV.WD in coords:
             data[FV.WD] = coords[FV.WD]
@@ -230,13 +238,12 @@ def _get_WeibullPointCloud(
             print("        selecting class 'WeibullPointCloud'")
 
         data = {}
-        fix = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if len(dims[v]) == 0:
                 fix[v] = d
             elif v not in fixval:
                 data[v] = (dims[v], d)
-        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         sdata = Dataset(
             coords=coords,
@@ -282,13 +289,12 @@ def _get_WeibullField(
             print("        selecting class 'WeibullField'")
 
         data = {}
-        fix = {}
+        fix = {v: fixval.get(v, default_values[v]) for v in ovars if v not in fields}
         for v, d in fields.items():
             if len(dims[v]) == 0:
                 fix[v] = d
             elif v not in fixval:
                 data[v] = (dims[v], d)
-        fix.update({v: d for v, d in fixval.items() if v not in data})
 
         sdata = Dataset(
             coords=coords,
@@ -342,7 +348,7 @@ def get_states(coords, fields, dims, verbosity=1):
         print("      Creating states")
 
     ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
-    fixval = {FV.RHO: 1.225}
+    fixval = {}
     profiles = _get_profiles(coords, fields, dims, ovars, fixval, verbosity)
 
     states_dict = {}
@@ -421,6 +427,21 @@ def read_site(wio_dict, verbosity=1):
     dims = Dict(_name="dims")
     for n, d in wind_resource.items():
         read_wind_resource_field(n, d, coords, fields, dims, verbosity)
+
+    # special case: operating field
+    if FV.OPERATING in fields:
+        wio_dict["wind_farm"][FV.OPERATING] = (
+            dims.pop(FV.OPERATING),
+            fields.pop(FV.OPERATING),
+        )
+        if FC.TURBINE in coords:
+            if not any([FC.TURBINE in dms for dms in dims.values()]):
+                if verbosity > 2:
+                    print(
+                        f"      Removing coordinate '{FC.TURBINE}', since only relevant for operating flag"
+                    )
+                coords.pop(FC.TURBINE)
+
     if verbosity > 2:
         print("      Coords:")
         for c, d in coords.items():

@@ -2,6 +2,10 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
+.. versionadded:: 1.5.2
+    New farm controller :ref:`OpFlagController<foxes.models.farm_controllers.OpFlagController>`, 
+    switching off turbines based on state-time dependent boolean input data, cf. :ref:`Turbine operation flags` example.
+
 .. versionadded:: 1.5
     New ambient states classes :ref:`DatasetStates<foxes.input.states.DatasetStates>`, 
     :ref:`PointCloudData<foxes.input.states.PointCloudData>`, 

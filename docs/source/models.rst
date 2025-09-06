@@ -13,6 +13,7 @@ The results of *foxes* runs depend on a number of model choices by the user:
 * :ref:`Wake deflections`: Bend the wakes for rotors with yaw misalignment. This effect is added to the wake frame path.
 * :ref:`Partial wakes`: Compute rotor disc averages of wake effects, i.e., the partial wakes models calculate the rotor effective wake deltas. 
 * :ref:`Turbine models`: Each wind turbine within the wind farm can have individual turbine model choices. For each state and turbine, those compute data from currently existing data. 
+* :ref:`Farm controllers`: Responsible for running the turbine models, in a certain order and optionally depending on conditions.
 * :ref:`Ground models`: Add ground effects to the wake calculation, for example the reflection from horizontal planes.
 * :ref:`Point models`: Calculate point-based data during the evaluation of `algo.calc_points()`, or as a modification of ambient states., like those from the ambient input states. 
 * :ref:`Vertical profiles`: Analytical vertical profiles transform uniform ambient states into height dependent inflow.
@@ -243,6 +244,22 @@ The list of available turbine model classes can be found
 * :ref:`YAW2YAWM<foxes.models.turbine_models.YAW2YAWM>` and :ref:`YAWM2YAW<foxes.models.turbine_models.YAWM2YAW>`: Compute absolute yaw angles from yaw misalignment, and vice-versa.
 * :ref:`Calculator<foxes.models.turbine_models.Calculator>`: Apply any user-written function that calculates values of farm variables.
 * :ref:`LookupTable<foxes.models.turbine_models.LookupTable>`: Use a lookup-table for the computation of farm variables.
+
+Farm controllers
+----------------
+Depending on the setup of the wind farm, each turbine model applies to a subset of the turbines in the farm.
+Farm controllers are responsible for running the turbine models accordingly, and optionally depending on
+conditions.
+
+The list of available farm controller classes can be found 
+:ref:`here in the API<foxes.models.farm_controllers>`. For example:
+
+* :ref:`BasicFarmController<foxes.models.farm_controllers.BasicFarmController>`: Calls turbine models based on their order of appearance, moving those with `pre_rotor` flag to the front.
+* :ref:`OpFlagController<foxes.models.farm_controllers.OpFlagController>`: Requires an operation flag farm variable for each state and turbine, and only runs turbine models for switched-on turbines.
+
+The controller is selected when constructing the algorithm object, via the parameter
+`farm_controller`. If ommited, this defaults to `basic_ctrl` which corresponds to
+the `BasicFarmController` in the model book.
 
 Ground models
 -------------

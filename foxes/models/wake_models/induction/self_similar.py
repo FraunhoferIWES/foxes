@@ -27,6 +27,12 @@ class SelfSimilar(TurbineInductionModel):
 
     Attributes
     ----------
+    alpha: float
+        The alpha parameter
+    beta: float
+        The beta parameter
+    gamma: float
+        The gamma parameter
     pre_rotor_only: bool
         Calculate only the pre-rotor region
     induction: foxes.core.AxialInductionModel or str
@@ -40,6 +46,8 @@ class SelfSimilar(TurbineInductionModel):
         self,
         superposition="ws_linear",
         induction="Madsen",
+        alpha=8 / 9,
+        beta=np.sqrt(2),
         gamma=1.1,
         pre_rotor_only=False,
     ):
@@ -52,8 +60,12 @@ class SelfSimilar(TurbineInductionModel):
             The wind speed superposition.
         induction: foxes.core.AxialInductionModel or str
             The induction model
-        gamma: float, default=1.1
-            The parameter that multiplies Ct in the ct2a calculation
+        alpha: float
+            The alpha parameter
+        beta: float
+            The beta parameter
+        gamma: float
+            The gamma parameter
         pre_rotor_only: bool
             Calculate only the pre-rotor region
 
@@ -61,6 +73,8 @@ class SelfSimilar(TurbineInductionModel):
         super().__init__(wind_superposition=superposition)
         self.induction = induction
         self.pre_rotor_only = pre_rotor_only
+        self.alpha = alpha
+        self.beta = beta
         self.gamma = gamma
 
     def __repr__(self):
@@ -163,9 +177,13 @@ class SelfSimilar(TurbineInductionModel):
         """Helper function: using eqn 13 from [2]"""
         return np.sqrt(0.587 * (1.32 + x_R**2))
 
-    def _rad_fn(self, x_R, r_R, beta=np.sqrt(2), alpha=8 / 9):
+    def _rad_fn(self, x_R, r_R):
         """Helper function: define radial shape function (eqn 12 from [1])"""
-        return (1 / np.cosh(beta * (r_R) / self._r_half(x_R))) ** alpha  # * (x_R < 0)
+        with np.errstate(over="ignore"):
+            result = (
+                1 / np.cosh(self.beta * (r_R) / self._r_half(x_R))
+            ) ** self.alpha  # * (x_R < 0)
+        return result
 
     def contribute(
         self,

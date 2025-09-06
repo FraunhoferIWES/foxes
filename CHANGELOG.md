@@ -795,3 +795,18 @@ This major version introduces the concept of `Engines` which handle the chunking
  - Bug fixed with `write_nc` utility, concerning string type coordinate arrays
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.1](https://github.com/FraunhoferIWES/foxes/commits/v1.5.1)
+
+## v1.5.2
+
+- Models:
+  - New farm controller `OpFlagController`, switching off turbines based on state-time dependent boolean input data
+  - Wake blockage model `SelfSimilar`: Promoting `alpha` and `beta` to constructor arguments
+- Tests:
+  - New test `test_set_farm_vars`, checking if correct turbine ordering is maintained
+- Notebooks:
+  - New notebook `operating_flag.ipynb`, demonstrating the usage of the `OpFlagController` class
+- Bug fixes:
+  - Bug fixed with negative beta in sqrt for some wake models, Madsen axial induction and high ct values
+  - Bug fixed with wake model `bastankhah16` to set default value beta to 0.077 (was 0.07)
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)
