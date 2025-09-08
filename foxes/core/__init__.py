@@ -31,6 +31,7 @@ from .engine import reset_engine as reset_engine
 
 from .states import States as States
 from .states import ExtendedStates as ExtendedStates
+from .states import PopulationStates as PopulationStates
 
 from .farm_data_model import FarmDataModel as FarmDataModel
 from .farm_data_model import FarmDataModelList as FarmDataModelList

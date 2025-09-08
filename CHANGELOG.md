@@ -813,6 +813,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.5.3
 
-
+- Core:
+  - Introducing `PopulationStates`, replacing `PopStates` of `foxes-opt`. Relevant for parameter studies on given original states, making room for variables values per original state.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.3](https://github.com/FraunhoferIWES/foxes/commits/v1.5.3)

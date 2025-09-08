@@ -1,5 +1,6 @@
 from .windio import foxes_windio as foxes_windio
 from .windio import read_windio as read_windio
+from .windio import read_windio_file as read_windio_file
 
 from .read_farm import read_layout as read_layout
 from .read_farm import read_turbine_types as read_turbine_types

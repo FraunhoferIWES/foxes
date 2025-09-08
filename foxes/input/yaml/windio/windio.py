@@ -93,6 +93,51 @@ def read_windio(wio_dict, verbosity=1):
     return idict, algo, odir
 
 
+def read_windio_file(yml_file, ret_wio=False, verbosity=1):
+    """
+    Read windio yaml file and translate to foxes input data
+
+    Parameters
+    ----------
+    yml_file: pathlib.Path or str
+        The windio yaml file
+    ret_wio: bool
+        Whether to return the windio data dictionary as well
+    verbosity: int
+        The verbosity level, 0 = silent
+
+    Returns
+    -------
+    idict: foxes.utils.Dict or dict
+        The foxes input data dictionary
+    algo: foxes.core.Algorithm
+        The algorithm
+    odir: pathlib.Path
+        The output directory
+
+    :group: input.yaml.windio
+
+    """
+
+    wio_file = Path(yml_file)
+    if verbosity > 0:
+        print(f"Reading windio file {wio_file}")
+
+    windio = import_module(
+        "windIO",
+        pip_hint="pip install git+https://github.com/EUFLOW/windIO@master",
+        conda_hint="",
+    )
+
+    wio = Dict(windio.load_yaml(wio_file), _name="windio")
+    idict, algo, odir = read_windio(wio, verbosity=verbosity)
+
+    if ret_wio:
+        return idict, algo, odir, wio
+    else:
+        return idict, algo, odir
+
+
 def foxes_windio():
     """
     Command line tool for running foxes from windio yaml file input.
@@ -177,15 +222,7 @@ def foxes_windio():
         epars = None
 
     wio_file = Path(args.yml_file)
-    _print(f"Reading windio file {wio_file}")
-    yml_utils = import_module(
-        "windIO.utils.yml_utils",
-        pip_hint="pip install git+https://github.com/EUFLOW/windIO@master#egg=windIO",
-        conda_hint="",
-    )
-
-    wio = Dict(yml_utils.load_yaml(wio_file), _name="windio")
-    idict, algo, odir = read_windio(wio, verbosity=args.verbosity)
+    idict, algo, odir = read_windio_file(wio_file, verbosity=args.verbosity)
 
     if args.output_dir is not None:
         odir = args.odir
