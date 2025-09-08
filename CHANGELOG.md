@@ -813,7 +813,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.5.3
 
-- Core:
-  - Introducing `PopulationStates`, replacing `PopStates` of `foxes-opt`. Relevant for parameter studies on given original states, making room for variables values per original state.
+- Algorithm:
+  - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.
+- Examples:
+  - New example `parameter_study`, demonstrating the setup of a parameter study
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.3](https://github.com/FraunhoferIWES/foxes/commits/v1.5.3)

@@ -86,8 +86,8 @@ class Turbine:
 
         Parameters
         ----------
-        model: foxes.core.TurbineModel
-            The model
+        model: str
+            The model name from mbook.turbine_models
         states_sel: numpy.ndarray of bool, optional
             The states selection for the model, shape: (n_states,)
 
@@ -103,8 +103,8 @@ class Turbine:
         ----------
         index: int
             The position in the model list
-        model: foxes.core.TurbineModel
-            The model
+        model: str
+            The model name from mbook.turbine_models
         states_sel: numpy.ndarray of bool, optional
             The states selection for the model, shape: (n_states,)
 
