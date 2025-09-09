@@ -242,3 +242,36 @@ def read_farm(wio_dict, mbook, verbosity):
         read_layout(lname, ldict, farm, ttypes, verbosity)
 
     return farm
+
+
+def read_n_turbines(wio_dict):
+    """
+    Reads the number of turbines from windio input
+
+    Parameters
+    ----------
+    wio_dict: foxes.utils.Dict
+        The windio data
+
+    Returns
+    -------
+    n_turbines: int
+        The number of turbines
+
+    :group: input.yaml.windio
+
+    """
+    wio_farm = wio_dict["wind_farm"]
+    wfarm = wio_farm["layouts"]
+    if isinstance(wfarm, dict):
+        if "coordinates" in wfarm:
+            wfarm = {"0": wfarm}
+        layouts = Dict(wfarm, _name=wio_farm.name + ".layouts")
+    else:
+        layouts = {str(i): lf for i, lf in enumerate(wfarm)}
+        layouts = Dict(layouts, _name=wio_farm.name + ".layouts")
+    n_turbines = 0
+    for ldict in layouts.values():
+        n_turbines += len(ldict["coordinates"]["x"])
+
+    return n_turbines
