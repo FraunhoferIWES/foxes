@@ -65,12 +65,21 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
             P = power_curve["power_values"]
             ws_P = power_curve["power_wind_speeds"]
             ct_curve = performance["Ct_curve"]
+            data_P = pd.DataFrame(data={"ws": ws_P, "P": P})
+
+            P_max = np.max(data_P["P"])
+            for P_unit, P_scale in [("W", 1e6), ("kW", 1e3), ("MW", 1)]:
+                if P_max / P_scale >= 1:
+                    break
+            assert P_max / P_scale >= 1 and P_max / P_scale < 1000, (
+                f"Failed to determin P_unit for max power {P_max}"
+            )
+            _print(f"              Determined P_unit = {P_unit}", level=3)
+
             _print("            Reading Ct_curve", level=3)
             _print("              Contents:", [k for k in ct_curve.keys()], level=3)
             ct = ct_curve["Ct_values"]
             ws_ct = ct_curve["Ct_wind_speeds"]
-
-            data_P = pd.DataFrame(data={"ws": ws_P, "P": P})
             data_ct = pd.DataFrame(data={"ws": ws_ct, "ct": ct})
 
             def _get_wse_var(wse):
@@ -95,6 +104,7 @@ def read_turbine_types(wio_farm, mbook, ws_exp_P, ws_exp_ct, verbosity):
                 var_ws_ct=_get_wse_var(ws_exp_ct),
                 var_ws_P=_get_wse_var(ws_exp_P),
                 rho=1.225,
+                P_unit=P_unit,
             )
             _print("               ", mbook.turbine_types[tname], level=3)
 

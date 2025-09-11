@@ -120,6 +120,8 @@ def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
         idict["algorithm"]["rotor_model"] = "direct_mdata"
 
     idict["algorithm"].update(algo_kwargs)
+    if verbosity > 1:
+        print("\nFinal input dictionary:\n\n", idict, "\n")
     algo = Algorithm.new(
         farm=farm, states=states, mbook=mbook, **idict.pop_item("algorithm")
     )

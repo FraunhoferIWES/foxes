@@ -71,6 +71,7 @@ class PopulationStates(States):
 
         idata = super().load_data(algo, verbosity)
         idata0 = algo.get_model_data(self.states)
+        n_states0 = self.states.size()
         for cname, coord in idata0["coords"].items():
             if cname != FC.STATE:
                 idata["coords"][cname] = coord
@@ -78,11 +79,15 @@ class PopulationStates(States):
                 idata["coords"][self.STATE0] = coord
 
         for dname, (dims0, data0) in idata0["data_vars"].items():
-            # if dname != FV.WEIGHT:
             hdims = tuple(
                 [d if d != FC.STATE else self.STATE0 for d in np.atleast_1d(dims0)]
             )
             idata["data_vars"][dname] = (hdims, data0)
+        if FV.WEIGHT not in idata["data_vars"]:
+            idata["data_vars"][FV.WEIGHT] = (
+                (self.STATE0,),
+                np.full(n_states0, 1 / n_states0, dtype=config.dtype_double),
+            )
 
         smap = np.zeros((self.n_pop, self.states.size()), dtype=np.int32)
         smap[:] = np.arange(self.states.size())[None, :]

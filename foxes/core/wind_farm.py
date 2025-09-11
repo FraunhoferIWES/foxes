@@ -185,3 +185,31 @@ class WindFarm:
             for i, t in enumerate(self.turbines)
         ]
         return np.array(hhs, dtype=config.dtype_double)
+
+    def get_capacity(self, algo):
+        """
+        Gets the total capacity of the wind farm
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The algorithm
+
+        Returns
+        -------
+        capa: float
+            The total capacity in W
+
+        """
+        ttypes = algo.farm_controller.turbine_types
+        assert ttypes is not None, (
+            f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
+        )
+        
+        cap = 0.0
+        for tt in ttypes:
+            assert tt.P_nominal is not None, (
+                f"WindFarm '{self.name}': P_nominal not set for turbine type '{tt.name}' "
+            )
+            cap += tt.P_nominal
+        return cap
