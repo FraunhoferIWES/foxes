@@ -29,7 +29,7 @@ class RayEngine(PoolEngine):
         load_ray()
         ray.init(num_cpus=self.n_procs)
 
-    def _submit(self, f, *args, **kwargs):
+    def submit(self, f, *args, **kwargs):
         """
         Submits to the pool
 
@@ -56,7 +56,7 @@ class RayEngine(PoolEngine):
 
         return f_ray.remote(*args, **kwargs)
 
-    def _result(self, future):
+    def result(self, future):
         """
         Waits for result from a future
 

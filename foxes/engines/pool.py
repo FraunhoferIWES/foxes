@@ -43,7 +43,7 @@ class PoolEngine(Engine):
         pass
 
     @abstractmethod
-    def _submit(self, f, *args, **kwargs):
+    def submit(self, f, *args, **kwargs):
         """
         Submits to the pool
 
@@ -66,7 +66,7 @@ class PoolEngine(Engine):
         pass
 
     @abstractmethod
-    def _result(self, future):
+    def result(self, future):
         """
         Waits for result from a future
 
@@ -132,10 +132,10 @@ class PoolEngine(Engine):
             inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
             jobs = []
             for subi in inptl:
-                jobs.append(self._submit(_run_map, func, subi, *args, **kwargs))
+                jobs.append(self.submit(_run_map, func, subi, *args, **kwargs))
             results = []
             for j in jobs:
-                results += self._result(j)
+                results += self.result(j)
             return results
 
     def run_calculation(
@@ -247,7 +247,7 @@ class PoolEngine(Engine):
                 )
 
                 # submit model calculation:
-                jobs[(chunki_states, chunki_points)] = self._submit(
+                jobs[(chunki_states, chunki_points)] = self.submit(
                     _run,
                     algo,
                     model,
@@ -288,7 +288,7 @@ class PoolEngine(Engine):
         for chunki_states in range(n_chunks_states):
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
-                results[key] = self._result(jobs.pop((chunki_states, chunki_points)))
+                results[key] = self.result(jobs.pop((chunki_states, chunki_points)))
                 if pbar is not None:
                     pbar.update()
         if pbar is not None:

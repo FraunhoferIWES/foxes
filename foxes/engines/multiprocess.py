@@ -16,7 +16,7 @@ class MultiprocessEngine(PoolEngine):
         Pool = import_module("multiprocess").Pool
         self._pool = Pool(processes=self.n_procs)
 
-    def _submit(self, f, *args, **kwargs):
+    def submit(self, f, *args, **kwargs):
         """
         Submits to the pool
 
@@ -38,7 +38,7 @@ class MultiprocessEngine(PoolEngine):
         """
         return self._pool.apply_async(f, args=args, kwds=kwargs)
 
-    def _result(self, future):
+    def result(self, future):
         """
         Waits for result from a future
 

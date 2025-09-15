@@ -15,7 +15,7 @@ class ThreadsEngine(PoolEngine):
         """Creates the pool"""
         self._pool = ThreadPoolExecutor(max_workers=self.n_procs)
 
-    def _submit(self, f, *args, **kwargs):
+    def submit(self, f, *args, **kwargs):
         """
         Submits to the pool
 
@@ -37,7 +37,7 @@ class ThreadsEngine(PoolEngine):
         """
         return self._pool.submit(f, *args, **kwargs)
 
-    def _result(self, future):
+    def result(self, future):
         """
         Waits for result from a future
 
