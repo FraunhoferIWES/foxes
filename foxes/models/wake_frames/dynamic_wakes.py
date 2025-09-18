@@ -161,6 +161,8 @@ class DynamicWakes(WakeFrame):
             for v in algo.states.output_point_vars(algo)
         }
         key = f"{self.DATA}_{downwind_index}"
+        self.AGE = self.var("age")
+        self.XYHL = self.var("xyhl")
 
         def ukey_fun(fr, to):
             """helper function to create update key"""
@@ -216,7 +218,13 @@ class DynamicWakes(WakeFrame):
             del pts, tdt
 
             # store this chunk's results:
-            algo.add_to_chunk_store(key, data, mdata, copy=False)
+            algo.add_to_chunk_store(
+                key, 
+                data, 
+                dims=(FC.STATE, self.AGE, self.XYHL), 
+                mdata=mdata, 
+                copy=False,
+            )
             algo.block_convergence(mdata=mdata)
 
         # apply updates from future chunks:
@@ -319,7 +327,11 @@ class DynamicWakes(WakeFrame):
                             udata = np.full_like(hdata, np.nan)
                             udata[sel] = hdata[sel]
                             algo.add_to_chunk_store(
-                                ukey_fun(i0, h_i0), udata, mdata=mdata, copy=False
+                                ukey_fun(i0, h_i0), 
+                                udata, 
+                                dims=(),
+                                mdata=mdata, 
+                                copy=False,
                             )
                             algo.block_convergence(mdata=mdata)
 

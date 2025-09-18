@@ -96,9 +96,11 @@ class StateTurbineMap(Output):
         ax.set_yticklabels(turbines[:-1])
         xt = np.asarray(ax.get_xticks())
         xtl = ax.get_xticklabels()
-        if xt.dtype != np.datetime64:
+        try:
             xt, ar = np.unique(xt.astype(int), return_index=True)
             xtl = [int(float(xtl[i].get_text())) for i in ar]
+        except ValueError:
+            pass
         ax.set_xticks(
             xt[:-1] + 0.5 * (xt[-1] - xt[-2]), xtl[:-1], rotation=rotate_xlabels
         )

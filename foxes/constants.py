@@ -74,6 +74,11 @@ ROTOR_POINTS = "rotor_points"
 :group: foxes.constants
 """
 
+ROTOR_POINT = "rotor_point"
+""" Identifier for a rotor point
+:group: foxes.constants
+"""
+
 ROTOR_WEIGHTS = "rotor_weights"
 """ Identifier for rotor point weights
 :group: foxes.constants

@@ -1,7 +1,11 @@
-from foxes.algorithms.downwind.downwind import Downwind
+import numpy as np
+from xarray import Dataset
+from copy import deepcopy
 
+from foxes.algorithms.downwind.downwind import Downwind
 from foxes.core import FarmDataModelList
 from foxes.utils import Dict
+import foxes.constants as FC
 
 from . import models as mdls
 
@@ -249,8 +253,12 @@ class Iterative(Downwind):
 
     def _launch_parallel_farm_calc(self, mlist, *data, **kwargs):
         """Helper function for running the main farm calculation"""
+        if self.conv_crit.conv_states is not None:
+            isel = {FC.STATE: ~self.conv_crit.conv_states}
+        else:
+            isel = None
         return super()._launch_parallel_farm_calc(
-            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, **kwargs
+            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, isel=isel, **kwargs
         )
 
     @property
@@ -299,8 +307,30 @@ class Iterative(Downwind):
 
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
 
+            subs = self.conv_crit.conv_states is not None
+            if subs:
+                chunk_store0 = deepcopy(self.chunk_store)
+
             self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
+
+            # in case of states subset selection, fill up to full states size:
+            if subs and self.__prev_farm_results is not None:
+                self.reset_chunk_store(chunk_store0)
+                del chunk_store0
+
+                dvars = {}
+                for v, d in fres.data_vars.items():
+                    if d.dims[0] == FC.STATE:
+                        dvars[v] = self.__prev_farm_results[v].copy(deep=True)
+                        dvars[v].loc[d[FC.STATE], ...] = d.values
+                    else:
+                        dvars[v] = d
+                fres = Dataset(
+                    coords = self.__prev_farm_results.coords,
+                    data_vars = dvars,
+                )
+                del dvars
 
             fres_dwnd = fres
             if self.conv_crit is not None:
@@ -313,7 +343,12 @@ class Iterative(Downwind):
                         fres,
                         verbosity=self.verbosity + 1,
                     )
-                    if conv:
+                    if conv and subs:
+                        self.print(
+                            f"{self.name}: Convergence reached, re-running full states set",
+                            vlim=0,
+                        )
+                    elif conv:
                         self.print(
                             f"\nAlgorithm {self.name}: Convergence reached.\n", vlim=0
                         )

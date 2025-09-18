@@ -223,10 +223,30 @@ class DirectMDataInfusion(CentreRotor):
                 )
 
         if store:
-            algo.add_to_chunk_store(FC.ROTOR_POINTS, rpoints, mdata=mdata)
-            algo.add_to_chunk_store(FC.ROTOR_WEIGHTS, rpoint_weights, mdata=mdata)
-            algo.add_to_chunk_store(FC.AMB_ROTOR_RES, sres, mdata=mdata)
-            algo.add_to_chunk_store(FC.WEIGHT_RES, tdata[FV.WEIGHT], mdata=mdata)
+            algo.add_to_chunk_store(
+                FC.ROTOR_POINTS, 
+                rpoints, 
+                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT, FC.XYH),
+                mdata=mdata,
+            )
+            algo.add_to_chunk_store(
+                FC.ROTOR_WEIGHTS, 
+                rpoint_weights, 
+                dims=(FC.ROTOR_POINT,), 
+                mdata=mdata,
+            )
+            algo.add_to_chunk_store(
+                FC.AMB_ROTOR_RES, 
+                sres, 
+                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT), 
+                mdata=mdata,
+            )
+            algo.add_to_chunk_store(
+                FC.WEIGHT_RES, 
+                tdata[FV.WEIGHT], 
+                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT), 
+                mdata=mdata,
+            )
 
         self.eval_rpoint_results(
             algo,

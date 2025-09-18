@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-import foxes.variables as FV
 from foxes.utils import delta_wd
-
+import foxes.variables as FV
+import foxes.constants as FC
 
 class ConvCrit(metaclass=ABCMeta):
     """
@@ -29,6 +29,9 @@ class ConvCrit(metaclass=ABCMeta):
 
         """
         self.name = name if name is not None else type(self).__name__
+
+        self._deltas = None
+        self._conv_states = None
 
     @abstractmethod
     def check_converged(self, algo, prev_results, results, verbosity=0):
@@ -56,8 +59,8 @@ class ConvCrit(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
-    def get_deltas(self):
+    @property
+    def deltas(self):
         """
         Get the most recent evaluation deltas.
 
@@ -67,7 +70,20 @@ class ConvCrit(metaclass=ABCMeta):
             The most recent evaluation deltas
 
         """
-        pass
+        return self._deltas
+    
+    @property
+    def conv_states(self):
+        """
+        Get the convergence state per state.
+
+        Returns
+        -------
+        conv_states: numpy.ndarray, bool
+            The convergence state per state
+
+        """
+        return self._conv_states
 
 
 class ConvCritList(ConvCrit):
@@ -134,26 +150,23 @@ class ConvCritList(ConvCrit):
 
         """
         self._failed = None
+        self._conv_states = None
         for c in self.crits:
-            if not c.check_converged(algo, prev_results, results, verbosity):
+            conv = c.check_converged(algo, prev_results, results, verbosity)
+
+            if self._conv_states is None:
+                self._conv_states = c.conv_states
+                self._deltas = c.deltas
+            else:
+                self._conv_states = self._conv_states & c.conv_states
+                self._deltas = {
+                    v: max(self._deltas[v], d) for v, d in c.deltas.items()
+                }
+
+            if self.failed is None and not conv:
                 self._failed = c
-                return False
 
-        return True
-
-    def get_deltas(self):
-        """
-        Get the most recent evaluation deltas.
-
-        Returns
-        -------
-        deltas: dict
-            The most recent evaluation deltas
-
-        """
-        if self._failed is not None:
-            return self._failed.get_deltas()
-        return {}
+        return self._failed is None
 
 
 class ConvVarDelta(ConvCrit):
@@ -194,8 +207,6 @@ class ConvVarDelta(ConvCrit):
         else:
             self.wd_vars = wd_vars
 
-        self._deltas = {}
-
     def check_converged(self, algo, prev_results, results, verbosity=0):
         """
         Check convergence criteria.
@@ -227,36 +238,32 @@ class ConvVarDelta(ConvCrit):
             L = max([len(v) for v in self.limits.keys()])
 
         ok = True
+        n_states = prev_results.sizes[FC.STATE]
         self._deltas = {}
+        self._conv_states = np.ones(n_states, dtype=bool)
         for v, lim in self.limits.items():
             x0 = prev_results[v].to_numpy()
             x = results[v].to_numpy()
             if v in self.wd_vars:
-                self._deltas[v] = np.max(np.abs(delta_wd(x0, x)))
+                a = np.abs(delta_wd(x0, x))
             else:
-                self._deltas[v] = np.max(np.abs(x - x0))
+                a = np.abs(x - x0)
+            self._deltas[v] = np.max(a)
             check = self._deltas[v]
+            self._conv_states = self._conv_states & np.all(a <= lim, axis=1)
             ok = ok and (check <= lim)
 
             if verbosity > 0:
                 r = "FAILED" if check > lim else "OK"
                 print(f"  {v:<{L}}: delta = {check:.3e}, lim = {lim:.3e}  --  {r}")
-            elif not ok:
-                break
+        
+        if verbosity > 0:
+            print(f"Converged states: {self._conv_states.sum()}/{n_states}")
 
+        if ok:
+            self._conv_states = None
+            
         return ok
-
-    def get_deltas(self):
-        """
-        Get the most recent evaluation deltas.
-
-        Returns
-        -------
-        deltas: dict
-            The most recent evaluation deltas
-
-        """
-        return self._deltas
 
 
 class DefaultConv(ConvVarDelta):
