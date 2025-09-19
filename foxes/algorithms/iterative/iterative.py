@@ -314,6 +314,9 @@ class Iterative(Downwind):
             self.__prev_farm_results = fres
             fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
 
+            if np.any(np.isnan(fres["REWS"].values)):
+                raise Exception("NaN encountered in REWS during iteration")
+
             # in case of states subset selection, fill up to full states size:
             if subs and self.__prev_farm_results is not None:
                 self.reset_chunk_store(chunk_store0)
@@ -336,7 +339,7 @@ class Iterative(Downwind):
             if self.conv_crit is not None:
                 if self.eval_conv_block():
                     self.print(f"{self.name}: Convergence blocked", vlim=0)
-                else:
+                else:    
                     conv = self.conv_crit.check_converged(
                         self,
                         self.__prev_farm_results,

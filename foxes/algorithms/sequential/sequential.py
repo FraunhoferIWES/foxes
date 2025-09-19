@@ -196,6 +196,7 @@ class Sequential(Iterative):
             if self._verbo0 > 0:
                 print(f"{self.name}: Running state {self.states.index()[0]}")
 
+            self.reset_chunk_store()
             fres, fres_dnwnd = super().calc_farm(
                 outputs=self.farm_vars,
                 finalize=False,
