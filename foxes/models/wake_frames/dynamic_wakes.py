@@ -89,7 +89,7 @@ class DynamicWakes(WakeFrame):
 
         # disable subset state selection in iterative algo:
         algo.conv_crit.disable_subsets()
-        
+
         # get and check times:
         times = np.asarray(algo.states.index())
         if self.dt_min is None:
@@ -222,10 +222,10 @@ class DynamicWakes(WakeFrame):
 
             # store this chunk's results:
             algo.add_to_chunk_store(
-                key, 
-                data, 
-                dims=(FC.STATE, self.AGE, self.XYHL), 
-                mdata=mdata, 
+                key,
+                data,
+                dims=(FC.STATE, self.AGE, self.XYHL),
+                mdata=mdata,
                 copy=False,
             )
             algo.block_convergence(mdata=mdata)
@@ -330,10 +330,10 @@ class DynamicWakes(WakeFrame):
                             udata = np.full_like(hdata, np.nan)
                             udata[sel] = hdata[sel]
                             algo.add_to_chunk_store(
-                                ukey_fun(i0, h_i0), 
-                                udata, 
+                                ukey_fun(i0, h_i0),
+                                udata,
                                 dims=(),
-                                mdata=mdata, 
+                                mdata=mdata,
                                 copy=False,
                             )
                             algo.block_convergence(mdata=mdata)

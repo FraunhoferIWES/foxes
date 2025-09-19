@@ -631,14 +631,11 @@ class Algorithm(Model):
         n_states = len(chunk_states)
 
         if (
-            prev_s != 0 or
-            prev_t != 0 or
-            name not in chunk_data["dims"] or
-            FC.STATE not in chunk_data["dims"][name] or
-            (
-                n_states == mdata.n_states and 
-                np.all(chunk_states == mdata[FC.STATE])
-            )
+            prev_s != 0
+            or prev_t != 0
+            or name not in chunk_data["dims"]
+            or FC.STATE not in chunk_data["dims"][name]
+            or (n_states == mdata.n_states and np.all(chunk_states == mdata[FC.STATE]))
         ):
             try:
                 data = chunk_data[name]
@@ -653,11 +650,14 @@ class Algorithm(Model):
             data = None
             for (i0, t0), d in self.chunk_store.items():
                 if d["t0"] == t0 and name in d:
-                    __, j0, j1 = np.intersect1d(d["states_index"], mdata[FC.STATE], return_indices=True) 
+                    __, j0, j1 = np.intersect1d(
+                        d["states_index"], mdata[FC.STATE], return_indices=True
+                    )
                 if isinstance(d[name], dict):
                     if data is None:
                         data = {
-                            k: np.full((mdata.n_states,) + v.shape[1:], np.nan) for k, v in d[name].items()
+                            k: np.full((mdata.n_states,) + v.shape[1:], np.nan)
+                            for k, v in d[name].items()
                         }
                     for k in d[name]:
                         data[k][j1] = d[name][k][j0]
@@ -665,7 +665,7 @@ class Algorithm(Model):
                     if data is None:
                         data = np.full((mdata.n_states,) + d[name].shape[1:], np.nan)
                     data[j1] = d[name][j0]
-            
+
         if ret_inds:
             return data, inds
         else:
@@ -879,8 +879,8 @@ class Algorithm(Model):
         farm_results = self._launch_parallel_farm_calc(
             *args,
             chunk_store=chunk_store,
-            #sel=None,
-            #isel=None,
+            # sel=None,
+            # isel=None,
             **kwargs,
         )
 

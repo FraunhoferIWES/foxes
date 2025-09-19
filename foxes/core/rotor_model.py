@@ -391,27 +391,27 @@ class RotorModel(FarmDataModel):
 
         if store:
             algo.add_to_chunk_store(
-                FC.ROTOR_POINTS, 
-                rpoints, 
+                FC.ROTOR_POINTS,
+                rpoints,
                 dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT, FC.XYH),
                 mdata=mdata,
             )
             algo.add_to_chunk_store(
-                FC.ROTOR_WEIGHTS, 
-                rpoint_weights, 
-                dims=(FC.ROTOR_POINT,), 
+                FC.ROTOR_WEIGHTS,
+                rpoint_weights,
+                dims=(FC.ROTOR_POINT,),
                 mdata=mdata,
             )
             algo.add_to_chunk_store(
-                FC.AMB_ROTOR_RES, 
-                sres, 
-                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT), 
+                FC.AMB_ROTOR_RES,
+                sres,
+                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT),
                 mdata=mdata,
             )
             algo.add_to_chunk_store(
-                FC.WEIGHT_RES, 
-                tdata[FV.WEIGHT], 
-                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT), 
+                FC.WEIGHT_RES,
+                tdata[FV.WEIGHT],
+                dims=(FC.STATE, FC.TURBINE, FC.ROTOR_POINT),
                 mdata=mdata,
             )
 

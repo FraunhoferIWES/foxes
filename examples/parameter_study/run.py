@@ -70,9 +70,11 @@ if __name__ == "__main__":
     n_pop = len(k_values)
     pop_data = np.zeros((n_pop, farm.n_turbines))
     pop_data[:] = k_values[:, None]
-    pop_data = Dataset({
-        FV.K: (("i", FC.TURBINE), pop_data),
-    })
+    pop_data = Dataset(
+        {
+            FV.K: (("i", FC.TURBINE), pop_data),
+        }
+    )
     print("\nInput population data:\n\n", pop_data)
     print(f"\n{FV.K} values: {pop_data[FV.K].values[:, 0]}\n")
 
@@ -105,5 +107,9 @@ if __name__ == "__main__":
     print("\nPopulation results:\n\n", pop_results)
     print(f"\n{FV.K} values: {pop_results[FV.K].values[:, 0, 0]}")
 
-    P_mean = (pop_results[FV.P] * pop_results[FV.WEIGHT]).sum(dim=FC.STATE).sum(dim=FC.TURBINE)
+    P_mean = (
+        (pop_results[FV.P] * pop_results[FV.WEIGHT])
+        .sum(dim=FC.STATE)
+        .sum(dim=FC.TURBINE)
+    )
     print("\nFarm P_mean:", P_mean.values)

@@ -5,6 +5,7 @@ from foxes.utils import delta_wd
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 class ConvCrit(metaclass=ABCMeta):
     """
     Abstract base class for convergence criteria
@@ -100,7 +101,7 @@ class ConvCrit(metaclass=ABCMeta):
 
         """
         return self._deltas
-    
+
     @property
     def conv_states(self):
         """
@@ -188,9 +189,7 @@ class ConvCritList(ConvCrit):
                 self._deltas = c.deltas
             else:
                 self._conv_states = self._conv_states & c.conv_states
-                self._deltas = {
-                    v: max(self._deltas[v], d) for v, d in c.deltas.items()
-                }
+                self._deltas = {v: max(self._deltas[v], d) for v, d in c.deltas.items()}
 
             if self.failed is None and not conv:
                 self._failed = c
@@ -285,13 +284,13 @@ class ConvVarDelta(ConvCrit):
             if verbosity > 0:
                 r = "FAILED" if check > lim else "OK"
                 print(f"  {v:<{L}}: delta = {check:.3e}, lim = {lim:.3e}  --  {r}")
-        
+
         if verbosity > 0:
             print(f"Converged states: {self._conv_states.sum()}/{n_states}")
 
         if ok:
             self._conv_states = None
-            
+
         return ok
 
 

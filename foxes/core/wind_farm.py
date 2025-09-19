@@ -205,7 +205,7 @@ class WindFarm:
         assert ttypes is not None, (
             f"WindFarm '{self.name}': turbine types not set in farm controller {algo.farm_controller.name}"
         )
-        
+
         cap = 0.0
         for tt in ttypes:
             assert tt.P_nominal is not None, (

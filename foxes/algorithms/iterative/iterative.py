@@ -258,7 +258,12 @@ class Iterative(Downwind):
         else:
             isel = None
         return super()._launch_parallel_farm_calc(
-            mlist, *data, farm_data=self.__prev_farm_results, iterative=True, isel=isel, **kwargs
+            mlist,
+            *data,
+            farm_data=self.__prev_farm_results,
+            iterative=True,
+            isel=isel,
+            **kwargs,
         )
 
     @property
@@ -330,8 +335,8 @@ class Iterative(Downwind):
                     else:
                         dvars[v] = d
                 fres = Dataset(
-                    coords = self.__prev_farm_results.coords,
-                    data_vars = dvars,
+                    coords=self.__prev_farm_results.coords,
+                    data_vars=dvars,
                 )
                 del dvars
 
@@ -339,7 +344,7 @@ class Iterative(Downwind):
             if self.conv_crit is not None:
                 if self.eval_conv_block():
                     self.print(f"{self.name}: Convergence blocked", vlim=0)
-                else:    
+                else:
                     conv = self.conv_crit.check_converged(
                         self,
                         self.__prev_farm_results,
