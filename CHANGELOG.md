@@ -811,11 +811,15 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)
 
-## v1.5.3
+## v1.6
 
-- Algorithm:
+- Algorithms:
   - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.
+  - Reworking the `Iterative` algorithm, such that it now computes only non-converged states in each iteration. In general, this leads to a substantial speed-up.
 - Examples:
   - New example `parameter_study`, demonstrating the setup of a parameter study
+- Bug fixes:
+  - Fix for max x selection in `FieldDataNC`, thanks @qzheng75
+  - Fix for `Sequential` algorithm with non-updated chunk store data
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.3](https://github.com/FraunhoferIWES/foxes/commits/v1.5.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6](https://github.com/FraunhoferIWES/foxes/commits/v1.6)
