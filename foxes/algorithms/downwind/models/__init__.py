@@ -4,3 +4,6 @@ from .farm_wakes_calc import FarmWakesCalculation as FarmWakesCalculation
 from .point_wakes_calc import PointWakesCalculation as PointWakesCalculation
 from .init_farm_data import InitFarmData as InitFarmData
 from .reorder_farm_output import ReorderFarmOutput as ReorderFarmOutput
+
+from .population import PopulationStates as PopulationStates
+from .population import PopulationModel as PopulationModel

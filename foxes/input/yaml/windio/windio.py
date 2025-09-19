@@ -12,7 +12,40 @@ from .read_outputs import read_outputs
 from ..dict import run_dict
 
 
-def read_windio(wio_dict, verbosity=1):
+def windio_file2dict(yml_file, verbosity=1):
+    """
+    Read windio yaml file and translate to foxes input data dictionary
+
+    Parameters
+    ----------
+    yml_file: pathlib.Path or str
+        The windio yaml file
+    verbosity: int
+        The verbosity level, 0 = silent
+
+    Returns
+    -------
+    wio_dict: foxes.utils.Dict
+        The windio data dictionary
+
+    :group: input.yaml.windio
+
+    """
+
+    wio_file = Path(yml_file)
+    if verbosity > 0:
+        print(f"Reading windio file {wio_file}")
+
+    windio = import_module(
+        "windIO",
+        pip_hint="pip install git+https://github.com/EUFLOW/windIO@master",
+        conda_hint="",
+    )
+
+    return Dict(windio.load_yaml(wio_file), _name="windio")
+
+
+def read_windio_dict(wio_dict, verbosity=1, **algo_kwargs):
     """
     Translate windio data to foxes input data
 
@@ -20,8 +53,13 @@ def read_windio(wio_dict, verbosity=1):
     ----------
     wio_dict: foxes.utils.Dict
         The windio data
+    ret_algo: bool
+        Whether to return the algorithm object, otherwise
+        return its parameters
     verbosity: int
         The verbosity level, 0 = silent
+    algo_kwargs: dict, optional
+        Additional keyword arguments for the algorithm
 
     Returns
     -------
@@ -81,6 +119,7 @@ def read_windio(wio_dict, verbosity=1):
         )
         idict["algorithm"]["rotor_model"] = "direct_mdata"
 
+    idict["algorithm"].update(algo_kwargs)
     algo = Algorithm.new(
         farm=farm, states=states, mbook=mbook, **idict.pop_item("algorithm")
     )
@@ -91,6 +130,42 @@ def read_windio(wio_dict, verbosity=1):
         odir = read_outputs(outputs, idict, algo, verbosity=verbosity)
 
     return idict, algo, odir
+
+
+def read_windio_file(yml_file, ret_wio=False, verbosity=1, **algo_kwargs):
+    """
+    Read windio yaml file and translate to foxes input data
+
+    Parameters
+    ----------
+    yml_file: pathlib.Path or str
+        The windio yaml file
+    ret_wio: bool
+        Whether to return the windio data dictionary as well
+    verbosity: int
+        The verbosity level, 0 = silent
+    algo_kwargs: dict, optional
+        Additional keyword arguments for the algorithm
+
+    Returns
+    -------
+    idict: foxes.utils.Dict or dict
+        The foxes input data dictionary
+    algo: foxes.core.Algorithm
+        The algorithm
+    odir: pathlib.Path
+        The output directory
+
+    :group: input.yaml.windio
+
+    """
+    wio = windio_file2dict(yml_file, verbosity)
+    idict, algo, odir = read_windio_dict(wio, verbosity=verbosity, **algo_kwargs)
+
+    if ret_wio:
+        return idict, algo, odir, wio
+    else:
+        return idict, algo, odir
 
 
 def foxes_windio():
@@ -156,10 +231,6 @@ def foxes_windio():
     )
     args = parser.parse_args()
 
-    def _print(*ags, level=1, **kwargs):
-        if args.verbosity >= level:
-            print(*ags, **kwargs)
-
     if (
         args.engine is not None
         or args.n_procs is not None
@@ -177,15 +248,7 @@ def foxes_windio():
         epars = None
 
     wio_file = Path(args.yml_file)
-    _print(f"Reading windio file {wio_file}")
-    yml_utils = import_module(
-        "windIO.utils.yml_utils",
-        pip_hint="pip install git+https://github.com/EUFLOW/windIO@master#egg=windIO",
-        conda_hint="",
-    )
-
-    wio = Dict(yml_utils.load_yaml(wio_file), _name="windio")
-    idict, algo, odir = read_windio(wio, verbosity=args.verbosity)
+    idict, algo, odir = read_windio_file(wio_file, verbosity=args.verbosity)
 
     if args.output_dir is not None:
         odir = args.odir

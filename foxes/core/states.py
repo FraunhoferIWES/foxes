@@ -1,8 +1,9 @@
 from abc import abstractmethod
 
-from .point_data_model import PointDataModel, PointDataModelList
 from foxes.utils import new_instance
 import foxes.constants as FC
+
+from .point_data_model import PointDataModel, PointDataModelList
 
 
 class States(PointDataModel):

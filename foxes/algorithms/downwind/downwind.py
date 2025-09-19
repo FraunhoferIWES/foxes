@@ -77,6 +77,7 @@ class Downwind(Algorithm):
         ground_models=None,
         farm_controller="basic_ctrl",
         mbook=None,
+        population_params=None,
         **kwargs,
     ):
         """
@@ -110,6 +111,9 @@ class Downwind(Algorithm):
             looked up in the model book
         mbook: foxes.ModelBook, optional
             The model book
+        population_params: dict, optional
+            The population parameters. If provided, this will be
+            used to create the population model.
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -119,7 +123,22 @@ class Downwind(Algorithm):
 
         super().__init__(mbook, farm, **kwargs)
 
-        self.__states = states
+        self._SETPOP = None
+        if population_params is None:
+            self.__states = states
+        else:
+            self._SETPOP = "set_pop_data"
+            assert self._SETPOP not in mbook.turbine_models, (
+                f"Algorithm '{self.name}': Model name '{self._SETPOP}' for population data model is reserved"
+            )
+            self._pop_model = self.get_model("PopulationModel")(**population_params)
+            mbook.turbine_models[self._SETPOP] = self._pop_model
+            self.__states = self.get_model("PopulationStates")(
+                states, n_pop=self._pop_model.n_pop
+            )
+            for t in self.farm.turbines:
+                if self._SETPOP not in t.models:
+                    t.insert_model(0, self._SETPOP)
         self.n_states = None
 
         self.__rotor_model = self.mbook.rotor_models.get_item(rotor_model)
@@ -312,6 +331,21 @@ class Downwind(Algorithm):
 
         """
         return self.__farm_controller
+
+    @property
+    def population_model(self):
+        """
+        The population model
+
+        Returns
+        -------
+        m: foxes.core.PopulationModel
+            The population model, or None if not used
+
+        """
+        if self._SETPOP is None:
+            return None
+        return self._pop_model
 
     @classmethod
     def get_model(cls, name):

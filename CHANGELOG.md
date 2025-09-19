@@ -810,3 +810,12 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Bug fixed with wake model `bastankhah16` to set default value beta to 0.077 (was 0.07)
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.2](https://github.com/FraunhoferIWES/foxes/commits/v1.5.2)
+
+## v1.5.3
+
+- Algorithm:
+  - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.
+- Examples:
+  - New example `parameter_study`, demonstrating the setup of a parameter study
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.5.3](https://github.com/FraunhoferIWES/foxes/commits/v1.5.3)
