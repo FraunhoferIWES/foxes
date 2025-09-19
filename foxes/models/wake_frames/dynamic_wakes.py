@@ -87,6 +87,9 @@ class DynamicWakes(WakeFrame):
             )
         super().initialize(algo, verbosity)
 
+        # disable subset state selection in iterative algo:
+        algo.conv_crit.disable_subsets()
+        
         # get and check times:
         times = np.asarray(algo.states.index())
         if self.dt_min is None:

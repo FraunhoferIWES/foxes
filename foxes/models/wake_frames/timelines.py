@@ -190,6 +190,9 @@ class Timelines(WakeFrame):
             )
         super().initialize(algo, verbosity)
 
+        # disable subset state selection in iterative algo:
+        algo.conv_crit.disable_subsets()
+
         # find turbine hub heights:
         t2h = np.zeros(algo.n_turbines, dtype=config.dtype_double)
         for ti, t in enumerate(algo.farm.turbines):

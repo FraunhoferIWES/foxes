@@ -32,6 +32,35 @@ class ConvCrit(metaclass=ABCMeta):
 
         self._deltas = None
         self._conv_states = None
+        self.__no_subs = False
+
+    def disable_subsets(self, no_subs=True):
+        """
+        Disable subset state selection in iterative algorithm.
+
+        This is needed if the convergence criterion requires
+        all states to be calculated in each iteration.
+
+        Parameters
+        ----------
+        no_subs: bool
+            Disable subsets flag
+
+        """
+        self.__no_subs = no_subs
+
+    @property
+    def no_subs(self):
+        """
+        Get the disable subsets flag.
+
+        Returns
+        -------
+        no_subs: bool
+            Disable subsets flag
+
+        """
+        return self.__no_subs
 
     @abstractmethod
     def check_converged(self, algo, prev_results, results, verbosity=0):
@@ -83,7 +112,7 @@ class ConvCrit(metaclass=ABCMeta):
             The convergence state per state
 
         """
-        return self._conv_states
+        return None if self.no_subs else self._conv_states
 
 
 class ConvCritList(ConvCrit):
