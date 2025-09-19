@@ -320,7 +320,7 @@ class DatasetStates(States):
                     self.sel = {}
                 self.sel.update(
                     {
-                        cmap[FV.X]: slice(xy_min[0], xy_max[1]),
+                        cmap[FV.X]: slice(xy_min[0], xy_max[0]),
                         cmap[FV.Y]: slice(xy_min[1], xy_max[1]),
                     }
                 )
