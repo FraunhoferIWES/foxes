@@ -1,4 +1,5 @@
 import numpy as np
+from xarray import Dataset
 
 from foxes.core import Algorithm, FarmDataModelList, get_engine
 from foxes.core import PointDataModel, PointDataModelList, FarmController
@@ -346,6 +347,52 @@ class Downwind(Algorithm):
         if self._SETPOP is None:
             return None
         return self._pop_model
+    
+    def select_population_member(self, pop_farm_results, pop_index):
+        """
+        Select a specific population member from the population model results.
+
+        Parameters
+        ----------
+        pop_farm_results: xarray.Dataset
+            The farm results including population index dimension
+        pop_index: int or numpy.ndarray
+            The population index to select. Either a single index
+            for all states, or an array of shape (n_states,)
+
+        Returns
+        -------
+        farm_results: xarray.Dataset
+            The farm results for the selected population member.
+
+        """
+        if self._SETPOP is None:
+            raise ValueError(f"Algorithm '{self.name}': No population model defined")
+        ini = self.initialized
+        if ini: 
+            self.finalize()
+        self.states = self.states.states
+        for t in self.farm.turbines:
+            if self._SETPOP in t.models:
+                del t.models[t.models.index(self._SETPOP)]
+        if ini:
+            self.initialize()
+
+        POP = self.population_model.index_coord
+        assert POP in pop_farm_results.sizes, (
+            f"Algorithm '{self.name}': Population index coordinate '{POP}' not found in provided farm results"
+        )
+        if isinstance(pop_index, np.ndarray):
+            return Dataset({
+                v: (
+                    (FC.STATE, FC.TURBINE), 
+                    np.take_along_axis(d.values, pop_index[None, :, None], axis=0)[0]
+                ) 
+                if d.dims == (POP, FC.STATE, FC.TURBINE) else d
+                for v, d in pop_farm_results.data_vars.items()
+            })
+        else:
+            return pop_farm_results.sel({POP: pop_index})
 
     @classmethod
     def get_model(cls, name):
@@ -451,7 +498,7 @@ class Downwind(Algorithm):
         """
         if not self.states.initialized:
             self.states.initialize(self, self.verbosity)
-            self.n_states = self.states.size()
+        self.n_states = self.states.size()
 
     def sub_models(self):
         """
