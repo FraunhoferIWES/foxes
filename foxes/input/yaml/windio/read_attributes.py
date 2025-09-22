@@ -19,7 +19,7 @@ def _read_wind_deficit(
             "Jensen": "JensenWake",
             "Bastankhah2014": "Bastankhah2014",
             "Bastankhah2016": "Bastankhah2016",
-            "TurbOPark": "TurbOPark",
+            "TurbOPark": "TurbOParkWake",
         },
         _name="wind_def_map",
     )
@@ -44,6 +44,10 @@ def _read_wind_deficit(
     )
 
     wname = wind_deficit.pop_item("name")
+    if wname in ["None", "none"]:
+        if verbosity > 2:
+            print("    No wind deficit model used")
+        return 0.0, 0.0, False
     eff_ws = wind_deficit.pop_item("use_effective_ws", True)
     if verbosity > 2:
         print("    Reading", wake_model_key)
