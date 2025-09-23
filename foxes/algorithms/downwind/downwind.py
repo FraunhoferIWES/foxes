@@ -347,7 +347,7 @@ class Downwind(Algorithm):
         if self._SETPOP is None:
             return None
         return self._pop_model
-    
+
     def select_population_member(self, pop_farm_results, pop_index):
         """
         Select a specific population member from the population model results.
@@ -369,7 +369,7 @@ class Downwind(Algorithm):
         if self._SETPOP is None:
             raise ValueError(f"Algorithm '{self.name}': No population model defined")
         ini = self.initialized
-        if ini: 
+        if ini:
             self.finalize()
         self.states = self.states.states
         for t in self.farm.turbines:
@@ -383,14 +383,19 @@ class Downwind(Algorithm):
             f"Algorithm '{self.name}': Population index coordinate '{POP}' not found in provided farm results"
         )
         if isinstance(pop_index, np.ndarray):
-            return Dataset({
-                v: (
-                    (FC.STATE, FC.TURBINE), 
-                    np.take_along_axis(d.values, pop_index[None, :, None], axis=0)[0]
-                ) 
-                if d.dims == (POP, FC.STATE, FC.TURBINE) else d
-                for v, d in pop_farm_results.data_vars.items()
-            })
+            return Dataset(
+                {
+                    v: (
+                        (FC.STATE, FC.TURBINE),
+                        np.take_along_axis(d.values, pop_index[None, :, None], axis=0)[
+                            0
+                        ],
+                    )
+                    if d.dims == (POP, FC.STATE, FC.TURBINE)
+                    else d
+                    for v, d in pop_farm_results.data_vars.items()
+                }
+            )
         else:
             return pop_farm_results.sel({POP: pop_index})
 
