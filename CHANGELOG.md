@@ -821,5 +821,6 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Fix for max x selection in `FieldDataNC`, thanks @qzheng75
   - Fix for `Sequential` algorithm with non-updated chunk store data
+  - Fix for `TurbOPark` wake model in the context of `windio` input files
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6](https://github.com/FraunhoferIWES/foxes/commits/v1.6)
