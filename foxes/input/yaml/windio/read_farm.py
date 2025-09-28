@@ -312,3 +312,30 @@ def read_hub_heights(wio_dict):
     hub_heights = [tt["hub_height"] for tt in wio_farm["turbine_types"].values()]
 
     return hub_heights
+
+def read_rotor_diameters(wio_dict):
+    """
+    Reads the rotor diameters from windio input
+
+    Parameters
+    ----------
+    wio_dict: foxes.utils.Dict
+        The windio data
+
+    Returns
+    -------
+    rotor_diameters: list of float
+        The rotor diameters of all turbines
+
+    :group: input.yaml.windio
+
+    """
+    wio_farm = wio_dict["wind_farm"]
+    if "turbine_types" not in wio_farm:
+        wio_farm["turbine_types"] = Dict(
+            {0: wio_farm["turbines"]}, _name="turbine_types"
+        )
+
+    rotor_diameters = [tt["rotor_diameter"] for tt in wio_farm["turbine_types"].values()]
+
+    return rotor_diameters
