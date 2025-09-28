@@ -285,3 +285,30 @@ def read_n_turbines(wio_dict):
         n_turbines += len(ldict["coordinates"]["x"])
 
     return n_turbines
+
+def read_hub_heights(wio_dict):
+    """
+    Reads the hub heights from windio input
+
+    Parameters
+    ----------
+    wio_dict: foxes.utils.Dict
+        The windio data
+
+    Returns
+    -------
+    hub_heights: list of float
+        The hub heights of all turbines
+
+    :group: input.yaml.windio
+
+    """
+    wio_farm = wio_dict["wind_farm"]
+    if "turbine_types" not in wio_farm:
+        wio_farm["turbine_types"] = Dict(
+            {0: wio_farm["turbines"]}, _name="turbine_types"
+        )
+
+    hub_heights = [tt["hub_height"] for tt in wio_farm["turbine_types"].values()]
+
+    return hub_heights

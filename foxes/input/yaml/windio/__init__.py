@@ -5,6 +5,7 @@ from .windio import foxes_windio as foxes_windio
 
 from .read_farm import read_layout as read_layout
 from .read_farm import read_turbine_types as read_turbine_types
+from .read_farm import read_hub_heights as read_hub_heights
 from .read_farm import read_farm as read_farm
 from .read_farm import read_n_turbines as read_n_turbines
 
