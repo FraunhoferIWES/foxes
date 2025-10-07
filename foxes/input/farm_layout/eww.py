@@ -2,16 +2,17 @@ import pandas as pd
 
 from foxes.core import Turbine
 from foxes.config import get_input_path
-from foxes.models.turbine_types import TBLFile
+from foxes.models.turbine_types import PCtFile
 
 def add_from_eww(
     farm,
     data_source,
     filter={},
     mbook=None,
-    tbl_dir=None,
+    csv_dir=None,
     rho=1.225,
     verbosity=1,
+    pct_pars={},
     **turbine_parameters,
 ):
     """
@@ -26,20 +27,21 @@ def add_from_eww(
     filter: dict, optional
         A dictionary of filters to apply to the dataframe, e.g. {"wind_farm": ["Farm1", "Farm2"]}
     mbook: foxes.ModelBook, optional
-        The model book, only needed if tbl_dir is specified
-    tbl_dir: str, optional
-        The tbl file directory. Either turbine type names correspond to tbl file names, 
-        or the sorted list of tbl files is interpreted in that order.
+        The model book, only needed if csv_dir is specified
+    csv_dir: str, optional
+        The csv file directory, containing turbine type data files
     rho: float
-        The air density for the turbine types, if tbl_dir is given
+        The air density for the turbine types, if csv_dir is given
     verbosity: int
         The verbosity level, 0 = silent
+    pct_pars: dict
+        Additional parameters for the PCtFile constructor
     turbine_parameters: dict, optional
         Additional parameters are forwarded to the WindFarm.add_turbine().
 
     Examples
     --------
-    CSV file format:
+    Data source format:
 
     ,wind_farm,oem_manufacturer,latitude,longitude,country,rated_power,rotor_diameter,hub_height,turbine_type,commissioning_date
     0,Aberdeen Offshore Wind Farm,Vestas,57.230095,-1.9742404,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
@@ -50,7 +52,8 @@ def add_from_eww(
     :group: input.farm_layout
 
     """
-
+    assert farm.data_is_lonlat, "Require input_is_lonlat = True in WindFarm constructor"
+    
     if isinstance(data_source, pd.DataFrame):
         data = data_source
     else:
@@ -60,41 +63,32 @@ def add_from_eww(
         data = pd.read_csv(pth, index_col=0)
 
     ttypes = data["turbine_type"].unique()
-    if tbl_dir is not None:
+    if csv_dir is not None:
         if mbook is None:
-            raise ValueError("Model book must be given if tbl_dir is specified")
-        tbl_dir = get_input_path(tbl_dir)
-        tbl_files = sorted(list(tbl_dir.glob("*.tbl")))
-        tbl_names = [f.stem for f in tbl_files]
-        if verbosity:
-            print(f"Reading {len(tbl_files)} turbine tables from {tbl_dir}")
-        tbl_map = []
-        if ttypes[0] in tbl_names:
-            for t in ttypes:
-                if t not in tbl_names:
-                    raise ValueError(f"Turbine type {t} not found in {tbl_dir}")
-                tbl_map.append(tbl_files[tbl_names.index(t)])
-                if verbosity > 0:
-                    print(f"  {t} -> {tbl_map[-1].name}")
-        else:
-            assert len(ttypes) == len(tbl_files), (
-                f"Number of turbine types ({len(ttypes)}) does not match "
-                f"number of tbl files ({len(tbl_files)}), and turbine types do not correspond "
-                "to tbl file names."
-            )
-            if verbosity:
-                print(
-                    "Turbine types do not correspond to tbl file names, interpreting sorted list of tbl files in that order"
-                )
-                for i, t in enumerate(ttypes):
-                    print(f"  {t} -> {tbl_files[i].name}")
-            tbl_map = tbl_files
+            raise ValueError("Model book must be given if csv_dir is specified")
+        csv_dir = get_input_path(csv_dir)
+        csv_files = sorted(list(csv_dir.glob("*.csv")))
+        csv_names = [f.stem for f in csv_files]
+        if verbosity > 0:
+            print(f"Reading {len(csv_files)} CSV files from {csv_dir}")
+        csv_map = []
+        ntt = []
+        for t in ttypes:
+            if t not in csv_names:
+                t = t.replace(" ", "_")
+            if t not in csv_names:
+                raise ValueError(f"Turbine type {t} not found in {csv_dir}")
+            ntt.append(t)
+            csv_map.append(csv_files[csv_names.index(t)])
+            if verbosity > 0:
+                print(f"  {t} -> {csv_map[-1].name}")
+        ttypes = ntt
         for t in ttypes:
             mbook.turbine_types[t] = None
 
     else:
-        if verbosity:
-            print("No tbl_dir specified, assuming turbine types correspond to model book names")
+        if verbosity > 0:
+            print("No csv_dir specified, assuming turbine types correspond to model book names")
 
     if filter is not None:
         for k, v in filter.items():
@@ -114,8 +108,8 @@ def add_from_eww(
             j = 0
 
         ttype = data.loc[i, "turbine_type"]
-        if tbl_dir is not None and mbook.turbine_types[ttype] is None:
-            mbook.turbine_types[ttype] = TBLFile(tbl_map[i], rho=rho)
+        if csv_dir is not None and mbook.turbine_types[ttype] is None:
+            mbook.turbine_types[ttype] = PCtFile(csv_map[i], rho=rho, **pct_pars)
         
         farm.add_turbine(
             Turbine(
@@ -131,3 +125,5 @@ def add_from_eww(
         )
 
         j += 1
+    
+    farm.lock(verbosity=verbosity)
