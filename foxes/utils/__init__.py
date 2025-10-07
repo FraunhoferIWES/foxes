@@ -21,6 +21,10 @@ from .geopandas_utils import shp2csv as shp2csv
 from .geopandas_utils import read_shp_polygons as read_shp_polygons
 from .geopandas_utils import shp2geom2d as shp2geom2d
 
+from .utm_utils import to_lonlat as to_lonlat
+from .utm_utils import from_lonlat as from_lonlat
+from .utm_utils import get_utm_zone as get_utm_zone
+
 from .load import import_module as import_module
 from .load import load_module as load_module
 

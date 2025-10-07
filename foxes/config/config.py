@@ -26,10 +26,20 @@ class Config(Dict):
             },
             name="config",
         )
+        self.__utmn = None
+        self.__utml = None
 
         # special treat for Python 3.8:
         if version_info[0] == 3 and version_info[1] == 8:
             self["nc_engine"] = None
+
+    def __setitem__(self, key, value):
+        if key == FC.UTM_ZONE:
+            raise KeyError(
+                "Direct setting of UTM zone is not allowed. "
+                "Use config.set_utm_zone(...) instead."
+            )
+        super().__setitem__(key, value)
 
     @property
     def dtype_double(self):
@@ -128,6 +138,56 @@ class Config(Dict):
         if nce is not None:
             import_module(nce)
         return nce
+
+    @property
+    def utm_zone_set(self):
+        """
+        Whether the UTM zone is set
+
+        Returns
+        -------
+        uzs: bool
+            True if both UTM zone number and letter are set
+
+        """
+        return self.__utmn is not None and self.__utml is not None
+
+    @property
+    def utm_zone(self):
+        """
+        The UTM zone (number, letter) tuple
+
+        Returns
+        -------
+        zn: int
+            The UTM zone number
+        zl: str
+            The UTM zone letter
+
+        """
+        assert self.utm_zone_set, "UTM zone has not been set"
+        return self.__utmn, self.__utml
+
+    def set_utm_zone(self, number, letter):
+        """
+        Set the UTM zone
+
+        Parameters
+        ----------
+        number: int
+            The UTM zone number
+        letter: str
+            The UTM zone letter
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        """
+        assert not self.utm_zone_set, (
+            f"UTM zone already set to {self.utm_zone}"
+        )
+        self.__utmn = number
+        self.__utml = letter
+        super().__setitem__(FC.UTM_ZONE, (number, letter))
 
 
 config = Config()

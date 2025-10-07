@@ -1,7 +1,7 @@
 import numpy as np
 
 from foxes.config import config
-
+from foxes.utils import get_utm_zone, from_lonlat
 
 class WindFarm:
     """
@@ -20,7 +20,13 @@ class WindFarm:
 
     """
 
-    def __init__(self, name="wind_farm", boundary=None):
+    def __init__(
+            self, 
+            name="wind_farm", 
+            boundary=None,
+            input_is_lonlat=False,
+            utm_zone="from_farm",
+        ):
         """
         Constructor.
 
@@ -28,11 +34,129 @@ class WindFarm:
         ----------
         name: str
             The wind farm name
+        boundary: foxes.utils.geom2d.AreaGeometry, optional
+            The wind farm boundary
+        input_is_lonlat: bool, optional
+            Whether the input coordinates are given in lon, lat. If True,
+            the coordinates are converted to UTM as specified by the
+            utm_zone parameter.
+        utm_zone: str or tuple, optional
+            Method for setting UTM zone in config, if not already set.
+            Options are:
+            - "from_turbine_X": use turbine X coordinates
+            - "from_farm": use farm center coordinates
+            - "XA": use given number X, letter A
+            - (lon, lat): use given lon, lat values
+            - None: do not set UTM zone, assume it is already set
 
         """
         self.name = name
-        self.turbines = []
+        self.__turbines = []
         self.boundary = boundary
+
+        self.__data_is_lonlat = input_is_lonlat
+        self.__utm_zone = utm_zone
+        self.__locked = False
+
+    @property
+    def data_is_lonlat(self):
+        """
+        Whether the input coordinates are given in lat, lon.
+
+        Returns
+        -------
+        data_is_lonlat: bool
+            True if the input coordinates are given in lat, lon
+
+        """
+        return self.__data_is_lonlat    
+
+    @property
+    def locked(self):
+        """
+        Whether the wind farm is locked (no more turbines can be added)
+
+        Returns
+        -------
+        locked: bool
+            True if the wind farm is locked
+
+        """
+        return self.__locked    
+
+    @property
+    def turbines(self):
+        """
+        The list of wind turbines
+
+        Returns
+        -------
+        turbines: list of foxes.core.Turbine
+            The wind turbines
+
+        """
+        if not self.__locked:
+            self.__locked = True
+            if self.__data_is_lonlat:
+                if not config.utm_zone_set and self.__utm_zone is None:
+                    raise ValueError(
+                        f"WindFarm '{self.name}': input_is_lonlat is True, but config.utm_zone and utm_zone are None"
+                    )
+                if self.__utm_zone is None:
+                    zone = config.utm_zone
+                elif self.__utm_zone == "from_farm":
+                    lonlat = np.mean(
+                        [t.xy for t in self.__turbines], axis=0
+                    )
+                    zone = get_utm_zone(lonlat[None, :])
+                elif (
+                    isinstance(self.__utm_zone, str)
+                    and self.__utm_zone.startswith("from_turbine_")
+                    and len(self.__utm_zone) > len("from_turbine_")
+                ):
+                    idx = int(self.__utm_zone[len("from_turbine_"):])
+                    lonlat = self.__turbines[idx].xy
+                    zone = get_utm_zone(lonlat[None, :])
+                elif isinstance(self.__utm_zone, str):
+                    zone = (int(self.__utm_zone[:-1]), self.__utm_zone[-1])
+                elif len(self.__utm_zone) == 2:
+                    lonlat = np.asarray(self.__utm_zone)
+                    zone = get_utm_zone(lonlat[None, :])
+                else:
+                    raise ValueError(
+                        f"WindFarm '{self.name}': invalid utm_zone argument: {self.__utm_zone}"
+                    )
+                if not config.utm_zone_set: 
+                    config.set_utm_zone(*zone)
+                elif config.utm_zone != zone:
+                    raise ValueError(
+                        f"WindFarm '{self.name}': input_is_lonlat is True, but config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
+                    )
+                for t in self.__turbines:
+                    t.xy = from_lonlat(t.xy[None, :])[0]
+                self.__data_is_lonlat = False
+        return self.__turbines
+    
+    def lock(self, verbosity=1):
+        """
+        Lock the wind farm (no more turbines can be added)
+
+        Parameters
+        ----------
+        verbosity: int
+            The output verbosity, 0 = silent
+
+        """
+        self.turbines
+        if verbosity > 0:
+            if config.utm_zone_set:
+                print(
+                    f"WindFarm '{self.name}': locked with {self.n_turbines} turbines, UTM zone {config.utm_zone}"
+                )
+            else:
+                print(
+                    f"WindFarm '{self.name}': locked with {self.n_turbines} turbines"
+                )
 
     def add_turbine(self, turbine, verbosity=1):
         """
@@ -46,15 +170,28 @@ class WindFarm:
             The output verbosity, 0 = silent
 
         """
+        assert not self.__locked, (
+            f"WindFarm '{self.name}': cannot add turbine, farm is locked"
+        )
         if turbine.index is None:
-            turbine.index = len(self.turbines)
+            turbine.index = len(self.__turbines)
         if turbine.name is None:
             turbine.name = f"T{turbine.index}"
-        self.turbines.append(turbine)
+        self.__turbines.append(turbine)
         if verbosity > 0:
-            print(
-                f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
-            )
+            if self.data_is_lonlat:
+                print(
+                    f"Turbine {turbine.index}, {turbine.name}: lonlat=({turbine.xy[0]:.6f}, {turbine.xy[1]:.6f}), {', '.join(turbine.models)}"
+                )
+            elif config.utm_zone_set:
+                utmn, utml = config.utm_zone
+                print(
+                    f"Turbine {turbine.index}, {turbine.name}: UTM {utmn}{utml}, xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
+                )
+            else:
+                print(
+                    f"Turbine {turbine.index}, {turbine.name}: xy=({turbine.xy[0]:.2f}, {turbine.xy[1]:.2f}), {', '.join(turbine.models)}"
+                )
 
     @property
     def n_turbines(self):
@@ -67,7 +204,7 @@ class WindFarm:
             The total number of turbines
 
         """
-        return len(self.turbines)
+        return len(self.__turbines)
 
     @property
     def turbine_names(self):
@@ -80,7 +217,7 @@ class WindFarm:
             The names of all turbines
 
         """
-        return [t.name for t in self.turbines]
+        return [t.name for t in self.__turbines]
 
     @property
     def xy_array(self):
@@ -93,7 +230,7 @@ class WindFarm:
             The turbine ground positions, shape: (n_turbines, 2)
 
         """
-        return np.array([t.xy for t in self.turbines], dtype=config.dtype_double)
+        return np.array([t.xy for t in self.__turbines], dtype=config.dtype_double)
 
     def get_xy_bounds(self, extra_space=None, algo=None):
         """
@@ -161,7 +298,7 @@ class WindFarm:
         """
         rds = [
             t.D if t.D is not None else algo.farm_controller.turbine_types[i].D
-            for i, t in enumerate(self.turbines)
+            for i, t in enumerate(self.__turbines)
         ]
         return np.array(rds, dtype=config.dtype_double)
 
@@ -182,7 +319,7 @@ class WindFarm:
         """
         hhs = [
             t.H if t.H is not None else algo.farm_controller.turbine_types[i].H
-            for i, t in enumerate(self.turbines)
+            for i, t in enumerate(self.__turbines)
         ]
         return np.array(hhs, dtype=config.dtype_double)
 

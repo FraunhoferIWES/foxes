@@ -231,3 +231,9 @@ NC_ENGINE = "nc_engine"
 """Identifier for the NetCDF engine
 :group: foxes.constants
 """
+
+
+UTM_ZONE = "utm_zone"
+"""Identifier for the UTM zone (number, letter) tuple
+:group: foxes.constants
+"""

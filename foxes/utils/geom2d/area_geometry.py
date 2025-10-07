@@ -38,6 +38,18 @@ class AreaGeometry(metaclass=ABCMeta):
         """
         pass
 
+    def box_centre(self):
+        """
+        Returns centre (x,y) point of the surrounding box.
+
+        Returns
+        -------
+        centre: numpy.ndarray
+            The centre (x,y) point, shape = (2,)
+
+        """
+        return 0.5 * (self.p_min() + self.p_max())
+
     @abstractmethod
     def points_distance(self, points, return_nearest=False):
         """

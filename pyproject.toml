@@ -43,6 +43,7 @@ dependencies = [
     "h5netcdf>=1.0",
     "pyyaml>=4.0",
     "tqdm>=2.0",
+    "utm>=0.5",
 ]
 
 [project.optional-dependencies]

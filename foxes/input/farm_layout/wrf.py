@@ -39,7 +39,7 @@ def add_from_wrf(
 
     Examples
     --------
-    TXT file format:
+    TXT file format: lon, lat, tbl_index
 
     57.230095 -1.974240 1
     57.223583 -2.012743 1
@@ -50,6 +50,7 @@ def add_from_wrf(
     :group: input.farm_layout
 
     """
+    assert farm.data_is_lonlat, "Require input_is_lonlat = True in WindFarm constructor"
     if verbosity > 0:
         print("Reading directory", directory)
     directory = get_input_path(directory)
@@ -68,13 +69,12 @@ def add_from_wrf(
         mbook.turbine_types[ttypes[i]] = TBLFile(tbl_path, rho=rho)
 
     tmodels = turbine_parameters.pop("turbine_models", [])
-    for i, (lat, lon, ttype_i) in enumerate(data):
-        ttype = ttypes[int(ttype_i)]
-        xy = np.array([lat, lon])
+    for i, row in enumerate(data):
+        ttype = ttypes[int(row[-1])]
         farm.add_turbine(
             Turbine(
                 index=i,
-                xy=xy,
+                xy=np.flip(row[:2]),
                 H=None,
                 D=None,
                 turbine_models=[ttype] + tmodels,
@@ -82,3 +82,4 @@ def add_from_wrf(
             ),
             verbosity=verbosity,
         )
+    farm.lock(verbosity=verbosity)
