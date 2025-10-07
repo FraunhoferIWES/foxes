@@ -286,6 +286,7 @@ def read_n_turbines(wio_dict):
 
     return n_turbines
 
+
 def read_hub_heights(wio_dict):
     """
     Reads the hub heights from windio input
@@ -313,6 +314,7 @@ def read_hub_heights(wio_dict):
 
     return hub_heights
 
+
 def read_rotor_diameters(wio_dict):
     """
     Reads the rotor diameters from windio input
@@ -336,6 +338,8 @@ def read_rotor_diameters(wio_dict):
             {0: wio_farm["turbines"]}, _name="turbine_types"
         )
 
-    rotor_diameters = [tt["rotor_diameter"] for tt in wio_farm["turbine_types"].values()]
+    rotor_diameters = [
+        tt["rotor_diameter"] for tt in wio_farm["turbine_types"].values()
+    ]
 
     return rotor_diameters

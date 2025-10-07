@@ -5,6 +5,7 @@ from foxes.core import Turbine
 from foxes.config import get_input_path
 from foxes.models.turbine_types import PCtFile
 
+
 def add_from_eww(
     farm,
     data_source,
@@ -54,7 +55,7 @@ def add_from_eww(
 
     """
     assert farm.data_is_lonlat, "Require input_is_lonlat = True in WindFarm constructor"
-    
+
     if isinstance(data_source, pd.DataFrame):
         data = data_source
     else:
@@ -89,13 +90,17 @@ def add_from_eww(
 
     else:
         if verbosity > 0:
-            print("No csv_dir specified, assuming turbine types correspond to model book names")
+            print(
+                "No csv_dir specified, assuming turbine types correspond to model book names"
+            )
 
     if filter is not None:
         for k, v in filter.items():
             assert k in data.columns, f"Column {k} not in data, found {data.columns}"
             for val in v:
-                assert val in data[k].values, f"Value '{val}' not found in column '{k}', got {data[k].unique().tolist()}"
+                assert val in data[k].values, (
+                    f"Value '{val}' not found in column '{k}', got {data[k].unique().tolist()}"
+                )
             data = data[data[k].isin(v)]
             if verbosity:
                 print(f"Filtering {k} for {v}, now {len(data)} turbines")
@@ -130,5 +135,5 @@ def add_from_eww(
         )
 
         j += 1
-    
+
     farm.lock(verbosity=verbosity)

@@ -4,6 +4,7 @@ from foxes.core import Turbine
 from foxes.config import get_input_path
 from foxes.models.turbine_types import TBLFile
 
+
 def add_from_wrf(
     farm,
     directory,

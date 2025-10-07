@@ -212,7 +212,7 @@ class Algorithm(Model):
             raise ValueError(
                 f"Algorithm '{self.name}': Cannot initialize while running"
             )
-        
+
         super().initialize(self, self.verbosity - 1)
 
     def store_model_data(self, model, idata, force=False):

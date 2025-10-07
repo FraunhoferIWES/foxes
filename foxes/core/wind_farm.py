@@ -3,6 +3,7 @@ import numpy as np
 from foxes.config import config
 from foxes.utils import get_utm_zone, from_lonlat
 
+
 class WindFarm:
     """
     The wind farm.
@@ -21,12 +22,12 @@ class WindFarm:
     """
 
     def __init__(
-            self, 
-            name="wind_farm", 
-            boundary=None,
-            input_is_lonlat=False,
-            utm_zone="from_farm",
-        ):
+        self,
+        name="wind_farm",
+        boundary=None,
+        input_is_lonlat=False,
+        utm_zone="from_farm",
+    ):
         """
         Constructor.
 
@@ -69,7 +70,7 @@ class WindFarm:
             True if the input coordinates are given in lat, lon
 
         """
-        return self.__data_is_lonlat    
+        return self.__data_is_lonlat
 
     @property
     def locked(self):
@@ -82,7 +83,7 @@ class WindFarm:
             True if the wind farm is locked
 
         """
-        return self.__locked    
+        return self.__locked
 
     @property
     def turbines(self):
@@ -105,16 +106,14 @@ class WindFarm:
                 if self.__utm_zone is None:
                     zone = config.utm_zone
                 elif self.__utm_zone == "from_farm":
-                    lonlat = np.mean(
-                        [t.xy for t in self.__turbines], axis=0
-                    )
+                    lonlat = np.mean([t.xy for t in self.__turbines], axis=0)
                     zone = get_utm_zone(lonlat[None, :])
                 elif (
                     isinstance(self.__utm_zone, str)
                     and self.__utm_zone.startswith("from_turbine_")
                     and len(self.__utm_zone) > len("from_turbine_")
                 ):
-                    idx = int(self.__utm_zone[len("from_turbine_"):])
+                    idx = int(self.__utm_zone[len("from_turbine_") :])
                     lonlat = self.__turbines[idx].xy
                     zone = get_utm_zone(lonlat[None, :])
                 elif isinstance(self.__utm_zone, str):
@@ -126,7 +125,7 @@ class WindFarm:
                     raise ValueError(
                         f"WindFarm '{self.name}': invalid utm_zone argument: {self.__utm_zone}"
                     )
-                if not config.utm_zone_set: 
+                if not config.utm_zone_set:
                     config.set_utm_zone(*zone)
                 elif config.utm_zone != zone:
                     raise ValueError(
@@ -136,7 +135,7 @@ class WindFarm:
                     t.xy = from_lonlat(t.xy[None, :])[0]
                 self.__data_is_lonlat = False
         return self.__turbines
-    
+
     def lock(self, verbosity=1):
         """
         Lock the wind farm (no more turbines can be added)
@@ -155,9 +154,7 @@ class WindFarm:
                     f"WindFarm '{self.name}': locked with {self.n_turbines} turbines, UTM zone {utmn}{utml}"
                 )
             else:
-                print(
-                    f"WindFarm '{self.name}': locked with {self.n_turbines} turbines"
-                )
+                print(f"WindFarm '{self.name}': locked with {self.n_turbines} turbines")
 
     def add_turbine(self, turbine, verbosity=1):
         """

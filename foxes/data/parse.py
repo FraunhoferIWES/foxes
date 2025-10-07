@@ -1,5 +1,4 @@
 from pathlib import Path
-import warnings
 
 
 def parse_Pct_file_name(file_name):
@@ -27,15 +26,15 @@ def parse_Pct_file_name(file_name):
     i = sname.find(".")
     if i >= 0:
         if "-" in sname[i:]:
-            #warnings.warn(
+            # warnings.warn(
             #    f"Failed to parse '.' in '{sname}', consider replacing by 'd' for float value dots."
-            #)
+            # )
             return pars
 
     if "-" in sname and "_" in sname:
-        #warnings.warn(
+        # warnings.warn(
         #    f"File name '{file_name}' contains both '-' and '_', not parsed."
-        #)
+        # )
         return pars
 
     if "-" in sname:

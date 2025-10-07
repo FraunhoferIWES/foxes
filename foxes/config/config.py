@@ -182,9 +182,7 @@ class Config(Dict):
             The verbosity level, 0 = silent
 
         """
-        assert not self.utm_zone_set, (
-            f"UTM zone already set to {self.utm_zone}"
-        )
+        assert not self.utm_zone_set, f"UTM zone already set to {self.utm_zone}"
         self.__utmn = number
         self.__utml = letter
         super().__setitem__(FC.UTM_ZONE, (number, letter))

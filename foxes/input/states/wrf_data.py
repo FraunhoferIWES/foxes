@@ -1,11 +1,3 @@
-import numpy as np
-from scipy.interpolate import interpn
-
-from foxes.utils import wd2uv, uv2wd, weibull_weights
-from foxes.config import config
-import foxes.variables as FV
-import foxes.constants as FC
-
 from .field_data import FieldData
 
 
@@ -44,14 +36,14 @@ class WRFData(FieldData):
         lat_coord="lat",
         h_coord="height",
         load_mode="fly",
-        #*args,
-        #states_coord="Time",
-        #x_coord="UTMX",
-        #y_coord="UTMY",
-        #h_coord="height",
-        #weight_ncvar=None,
-        #bounds_extra_space=1000,
-        #interpn_pars={},
+        # *args,
+        # states_coord="Time",
+        # x_coord="UTMX",
+        # y_coord="UTMY",
+        # h_coord="height",
+        # weight_ncvar=None,
+        # bounds_extra_space=1000,
+        # interpn_pars={},
         **kwargs,
     ):
         """
@@ -100,7 +92,7 @@ class WRFData(FieldData):
 
         """
         super().__init__(
-            data_source=input_files_nc, 
+            data_source=input_files_nc,
             states_coord=time_coord,
             x_coord=lon_coord,
             y_coord=lat_coord,
