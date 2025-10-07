@@ -820,7 +820,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.
   - Reworking the `Iterative` algorithm, such that it now computes only non-converged states in each iteration. In general, this leads to a substantial speed-up.
 - Inputs
-  - New farm layout function `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF
+  - New farm layout input `from_eww`, reading wind farm input in EuroWindWakes format
+  - New farm layout input `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF
 - Examples:
   - New example `parameter_study`, demonstrating the setup of a parameter study
 - Bug fixes:

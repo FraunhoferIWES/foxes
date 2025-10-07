@@ -150,8 +150,9 @@ class WindFarm:
         self.turbines
         if verbosity > 0:
             if config.utm_zone_set:
+                utmn, utml = config.utm_zone
                 print(
-                    f"WindFarm '{self.name}': locked with {self.n_turbines} turbines, UTM zone {config.utm_zone}"
+                    f"WindFarm '{self.name}': locked with {self.n_turbines} turbines, UTM zone {utmn}{utml}"
                 )
             else:
                 print(

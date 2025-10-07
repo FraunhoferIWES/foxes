@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from foxes.core import Turbine
@@ -75,7 +76,7 @@ def add_from_eww(
         ntt = []
         for t in ttypes:
             if t not in csv_names:
-                t = t.replace(" ", "_")
+                t = t.replace(" ", "_").replace("/", "_")
             if t not in csv_names:
                 raise ValueError(f"Turbine type {t} not found in {csv_dir}")
             ntt.append(t)
@@ -108,14 +109,18 @@ def add_from_eww(
             j = 0
 
         ttype = data.loc[i, "turbine_type"]
+        if ttype not in ttypes:
+            ttype = ttype.replace(" ", "_").replace("/", "_")
         if csv_dir is not None and mbook.turbine_types[ttype] is None:
-            mbook.turbine_types[ttype] = PCtFile(csv_map[i], rho=rho, **pct_pars)
-        
+            j = ttypes.index(ttype)
+            mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pct_pars)
+
+        lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
         farm.add_turbine(
             Turbine(
                 name=f"{fname}_{j}",
                 index=i0,
-                xy=data.loc[i, ["longitude", "latitude"]].values,
+                xy=lonlat,
                 H=data.loc[i, "hub_height"],
                 D=data.loc[i, "rotor_diameter"],
                 turbine_models=[ttype] + tmodels,

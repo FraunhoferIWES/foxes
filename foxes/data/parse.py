@@ -27,21 +27,23 @@ def parse_Pct_file_name(file_name):
     i = sname.find(".")
     if i >= 0:
         if "-" in sname[i:]:
-            warnings.warn(
-                f"Illegal use of '.' in '{sname}', please replace by 'd' for float value dots. Parsing stopped."
-            )
+            #warnings.warn(
+            #    f"Failed to parse '.' in '{sname}', consider replacing by 'd' for float value dots."
+            #)
             return pars
 
     if "-" in sname and "_" in sname:
-        warnings.warn(
-            f"Illegal file name '{file_name}': Contains both '-' and '_'. Parsing stopped."
-        )
+        #warnings.warn(
+        #    f"File name '{file_name}' contains both '-' and '_', not parsed."
+        #)
         return pars
 
     if "-" in sname:
         pieces = sname.split("-")
     elif "_" in sname:
         pieces = sname.split("_")
+    else:
+        return pars
 
     pars["name"] = pieces[0]
     pieces = pieces[1:]
