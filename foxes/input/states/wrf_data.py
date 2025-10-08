@@ -1,3 +1,5 @@
+import foxes.variables as FV
+
 from .field_data import FieldData
 
 
@@ -36,6 +38,7 @@ class WRFData(FieldData):
         lat_coord="lat",
         h_coord="height",
         load_mode="fly",
+        output_vars=None,
         # *args,
         # states_coord="Time",
         # x_coord="UTMX",
@@ -91,6 +94,11 @@ class WRFData(FieldData):
             Additional parameters for the base class
 
         """
+        if output_vars is None:
+            ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
+        else:
+            ovars = output_vars
+            
         super().__init__(
             data_source=input_files_nc,
             states_coord=time_coord,
@@ -99,5 +107,6 @@ class WRFData(FieldData):
             h_coord=h_coord,
             weight_ncvar=None,
             load_mode=load_mode,
+            output_vars=ovars,
             **kwargs,
         )

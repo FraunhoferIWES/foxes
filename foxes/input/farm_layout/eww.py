@@ -82,8 +82,6 @@ def add_from_eww(
                 raise ValueError(f"Turbine type {t} not found in {csv_dir}")
             ntt.append(t)
             csv_map.append(csv_files[csv_names.index(t)])
-            if verbosity > 0:
-                print(f"  {t} -> {csv_map[-1].name}")
         ttypes = ntt
         for t in ttypes:
             mbook.turbine_types[t] = None
@@ -118,6 +116,8 @@ def add_from_eww(
             ttype = ttype.replace(" ", "_").replace("/", "_")
         if csv_dir is not None and mbook.turbine_types[ttype] is None:
             j = ttypes.index(ttype)
+            if verbosity > 0:
+                print(f"Creating turbine type: {ttype} from file {csv_map[j].name}")
             mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pct_pars)
 
         lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
