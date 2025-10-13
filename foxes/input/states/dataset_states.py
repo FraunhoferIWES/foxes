@@ -2,14 +2,15 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from copy import copy, deepcopy
+from abc import abstractmethod
 
 from foxes.core import States, get_engine
 from foxes.utils import import_module
 from foxes.data import STATES, StaticData
+from foxes.utils.wind_dir import uv2wd, wd2uv
+from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
-from foxes.config import config, get_input_path
-
 
 def _read_nc_file(
     fpath,
@@ -19,16 +20,20 @@ def _read_nc_file(
     sel,
     isel,
     minimal,
+    drop_vars=None,
 ):
     """Helper function for nc file reading"""
-    data = xr.open_dataset(fpath, engine=nc_engine)
+    with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as ds:
+        data = ds
+
     for c in coords:
         if c is not None and c not in data.sizes:
             raise KeyError(
                 f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
             )
+        
     if minimal:
-        return data[coords[0]].to_numpy()
+        data = data[coords[0]].to_numpy()
     else:
         data = data[vars]
         data.attrs = {}
@@ -39,7 +44,8 @@ def _read_nc_file(
         assert min(data.sizes.values()) > 0, (
             f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
         )
-        return data
+    
+    return data
 
 
 class DatasetStates(States):
@@ -87,7 +93,7 @@ class DatasetStates(States):
         var2ncvar={},
         fixed_vars={},
         load_mode="preload",
-        time_format="%Y-%m-%d_%H:%M:%S",
+        time_format=r"%Y-%m-%d_%H:%M:%S",
         sel=None,
         isel=None,
         weight_factor=None,
@@ -282,7 +288,115 @@ class DatasetStates(States):
         }
         return coords, data, weights
 
-    def _preload(self, algo, cmap, bounds_extra_space, verbosity=0):
+    def preproc_first(
+            self, 
+            algo,
+            data, 
+            cmap, 
+            vars, 
+            bounds_extra_space,
+            height_bounds,
+            verbosity=0
+        ):
+        """
+        Preprocesses the first file.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: xarray.Dataset
+            The dataset to preprocess
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
+        vars: list
+            The list of variable names
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/-
+        verbosity: int
+            The verbosity level, 0 = silent
+        
+        """
+
+        # find vertical bounds:
+        if FV.H in cmap:
+            if height_bounds is None:
+                H = algo.farm.get_hub_heights(algo)
+                D = algo.farm.get_rotor_diameters(algo)
+                H = np.stack((H-0.5*D, H+0.5*D), axis=-1)
+                height_bounds = (np.min(H), np.max(H))
+                del H, D
+            if verbosity > 0:
+                print(f"States '{self.name}': Restricting heights to {height_bounds[0]} - {height_bounds[1]} m")
+            self._heights = data[cmap[FV.H]].to_numpy()
+            if np.min(self._heights) > height_bounds[0] or np.max(self._heights) < height_bounds[1]:
+                raise ValueError(
+                    f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
+                )
+            i0 = 0
+            while i0 < len(self._heights) - 1 and self._heights[i0 + 1] <= height_bounds[0]:
+                i0 += 1
+            i1 = len(self._heights) - 1
+            while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
+                i1 -= 1
+            if self.sel is None:
+                self.sel = {}
+            ch = cmap[FV.H]
+            self.sel.update({
+                ch: slice(self._heights[i0], self._heights[i1] + 1)
+            })
+            self._heights = data[ch].sel({ch: self.sel[ch]}).to_numpy()
+            if verbosity > 0:
+                print(f"States '{self.name}': Selected {ch} = {self._heights} ({len(self._heights)} heights)")
+
+        # find horizontal bounds:
+        if bounds_extra_space is not None:
+            assert FV.X in cmap, (
+                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+            )
+            assert FV.Y in cmap, (
+                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+            )
+
+            # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
+            xy_min, xy_max = algo.farm.get_xy_bounds(
+                extra_space=bounds_extra_space, algo=algo
+            )
+            if verbosity > 0:
+                print(
+                    f"States '{self.name}': Restricting xy to bounds {xy_min} - {xy_max}"
+                )
+            if self.sel is None:
+                self.sel = {}
+            for v, i in zip((FV.X, FV.Y), (0, 1)):
+                x0, x1 = xy_min[i], xy_max[i]
+                x = data[cmap[v]].to_numpy()
+                i0 = 0
+                while i0 < len(x) - 1 and x[i0 + 1] <= x0:
+                    i0 += 1
+                i1 = len(x) - 1
+                while i1 > 0 and x[i1 - 1] >= x1:
+                    i1 -= 1
+                if self.sel is None:
+                    self.sel = {}
+                self.sel.update({
+                    cmap[v]: slice(x[i0], x[i1] + 1)
+                })
+                if verbosity > 0:
+                    hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
+                    print(f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)")
+
+    def __preload(
+            self, 
+            algo, 
+            cmap, 
+            bounds_extra_space, 
+            height_bounds,
+            verbosity=0,
+        ):
         """Helper function for preloading data."""
 
         assert FC.STATE in cmap, (
@@ -299,31 +413,29 @@ class DatasetStates(States):
                         STATES, fpath.name, check_raw=False
                     )
 
-            # find bounds:
-            if bounds_extra_space is not None:
-                assert FV.X in cmap, (
-                    f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+            files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
+            coords = list(cmap.values())
+            vars = [self.var2ncvar.get(v, v) for v in self.variables]
+            
+            # pre-process first file:
+            fpath = files[0]
+            if verbosity > 0:
+                print(f"States '{self.name}': Preprocessing first file", fpath.name)
+            with xr.open_dataset(fpath, engine=config.nc_engine) as data_first:
+                self.drop_vars = [v for v in data_first.data_vars if v not in coords + vars]
+                if len(self.drop_vars) > 0 and verbosity > 0:
+                    print(f"States '{self.name}': Keeping variables  {vars}")
+                    print(f"States '{self.name}': Dropping variables {self.drop_vars}")
+                self.preproc_first(
+                    algo, 
+                    data=data_first, 
+                    cmap=cmap, 
+                    vars=vars, 
+                    bounds_extra_space=bounds_extra_space, 
+                    height_bounds=height_bounds, 
+                    verbosity=verbosity,
                 )
-                assert FV.Y in cmap, (
-                    f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
-                )
-
-                # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
-                xy_min, xy_max = algo.farm.get_xy_bounds(
-                    extra_space=bounds_extra_space, algo=algo
-                )
-                if verbosity > 0:
-                    print(
-                        f"States '{self.name}': Restricting to bounds {xy_min} - {xy_max}"
-                    )
-                if self.sel is None:
-                    self.sel = {}
-                self.sel.update(
-                    {
-                        cmap[FV.X]: slice(xy_min[0], xy_max[0]),
-                        cmap[FV.Y]: slice(xy_min[1], xy_max[1]),
-                    }
-                )
+            del data_first
 
             # read files:
             if verbosity > 0:
@@ -340,9 +452,6 @@ class DatasetStates(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
 
-            files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
-            coords = list(cmap.values())
-            vars = [self.var2ncvar.get(v, v) for v in self.variables]
             self.__data_source = get_engine().map(
                 _read_nc_file,
                 files,
@@ -352,6 +461,7 @@ class DatasetStates(States):
                 isel=self.isel,
                 sel=self.sel,
                 minimal=self.load_mode == "fly",
+                drop_vars=self.drop_vars,
             )
 
             if self.load_mode in ["preload", "lazy"]:
@@ -408,6 +518,7 @@ class DatasetStates(States):
         cmap,
         variables,
         bounds_extra_space=None,
+        height_bounds=None,
         verbosity=0,
     ):
         """
@@ -427,6 +538,8 @@ class DatasetStates(States):
             The variables to extract from the Dataset
         bounds_extra_space: float, optional
             The extra space in meters to add to the horizontal wind farm bounds
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -439,7 +552,13 @@ class DatasetStates(States):
 
         """
         # preload data:
-        self._preload(algo, cmap, bounds_extra_space, verbosity=verbosity)
+        self.__preload(
+            algo, 
+            cmap, 
+            bounds_extra_space, 
+            height_bounds, 
+            verbosity=verbosity,
+        )
 
         idata = super().load_data(algo, verbosity)
 
@@ -678,6 +797,7 @@ class DatasetStates(States):
                                 isel=isel,
                                 sel=self.sel,
                                 minimal=False,
+                                drop_vars=self.drop_vars,
                             )
                         )
 
@@ -708,3 +828,182 @@ class DatasetStates(States):
             )
 
         return coords, data, weights
+    
+    @abstractmethod
+    def interpolate_data(self, idims, icrds, d, pts, tdims):
+        """
+        Interpolates data to points.
+
+        This function should be implemented in derived classes.
+
+        Parameters
+        ----------
+        idims: list of str
+            The input dimensions, e.g. [state, x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and 
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        tdims: tuple
+            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
+
+        Returns
+        -------
+        d_interp: numpy.ndarray
+            The interpolated data array with shape tdims
+
+        """
+        pass
+
+    def calculate(self, algo, mdata, fdata, tdata):
+        """
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
+        results: dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
+
+        """
+        # prepare
+        self.ensure_output_vars(algo, tdata)
+        n_states = tdata.n_states
+        n_targets = tdata.n_targets
+        n_tpoints = tdata.n_tpoints
+        points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
+        n_pts = points.shape[1]
+
+        # get data for calculation
+        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
+        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
+
+        # interpolate data to points:
+        out = {}
+        for dims, (vrs, d) in data.items():
+            # translate (WD, WS) to (U, V):
+            if FV.WD in vrs or FV.WS in vrs:
+                assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
+                    f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
+                )
+                iwd = vrs.index(FV.WD)
+                iws = vrs.index(FV.WS)
+                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
+                d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
+                del ws
+
+            # prepare points:
+            idims = dims[:-1]
+            n_vrs = len(vrs)
+            tdims = [n_states, n_pts, n_vrs]
+            if idims == (FC.STATE, FV.X, FV.Y, FV.H):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points,
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 4)
+            elif idims == (FC.STATE, FV.X, FV.Y):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points[..., :2],
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 3)
+            elif idims == (FC.STATE, FV.H):
+                pts = np.append(
+                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
+                    points[..., 2, None],
+                    axis=2,
+                )
+                pts[..., 0] = np.arange(n_states)[:, None]
+                pts = pts.reshape(n_states * n_pts, 2)
+            elif idims == (FC.STATE,):
+                if FV.WD in vrs:
+                    uv = d[..., [iwd, iws]]
+                    d[..., iwd] = uv2wd(uv)
+                    d[..., iws] = np.linalg.norm(uv, axis=-1)
+                    del uv
+                for i, v in enumerate(vrs):
+                    if v in self.ovars:
+                        out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
+                        out[v][:] = d[:, None, i]
+                continue
+            elif idims == (FV.X, FV.Y, FV.H):
+                pts = points[0]
+                tdims = (1, n_pts, n_vrs)
+            elif idims == (FV.X, FV.Y):
+                pts = points[0][:, :2]
+                tdims = (1, n_pts, n_vrs)
+            elif idims == (FV.H,):
+                pts = points[0][:, 2]
+                tdims = (1, n_pts, n_vrs)
+            else:
+                raise ValueError(
+                    f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
+                )
+
+            # interpolate:
+            icrds = [coords[c] for c in idims]
+            d = self.interpolate_data(idims, icrds, d, pts, tdims)
+            del pts, icrds
+
+            # translate (U, V) into (WD, WS):
+            if FV.WD in vrs:
+                uv = d[..., [iwd, iws]]
+                d[..., iwd] = uv2wd(uv)
+                d[..., iws] = np.linalg.norm(uv, axis=-1)
+                del uv
+
+            # broadcast if needed:
+            if tdims != (n_states, n_pts, n_vrs):
+                tmp = d
+                d = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
+                d[:] = tmp
+                del tmp
+
+            # set output:
+            for i, v in enumerate(vrs):
+                out[v] = d[..., i]
+
+        # set fixed variables:
+        for v, d in self.fixed_vars.items():
+            out[v] = np.full((n_states, n_pts), d, dtype=config.dtype_double)
+
+        # add weights:
+        if weights is not None:
+            tdata[FV.WEIGHT] = weights[:, None, None]
+        elif FV.WEIGHT in out:
+            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT).reshape(
+                n_states, n_targets, n_tpoints
+            )
+        else:
+            tdata[FV.WEIGHT] = np.full(
+                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            )
+        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
+
+        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+    

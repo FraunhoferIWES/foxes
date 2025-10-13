@@ -32,6 +32,6 @@ from .one_point_flow import (
     OnePointFlowMultiHeightNCTimeseries as OnePointFlowMultiHeightNCTimeseries,
 )
 
-from .wrf_data import WRFData as WRFData
+from .newa_states import NEWAStates as NEWAStates
 
 from . import create as create

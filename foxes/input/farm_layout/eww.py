@@ -118,7 +118,9 @@ def add_from_eww(
             j = ttypes.index(ttype)
             if verbosity > 0:
                 print(f"Creating turbine type: {ttype} from file {csv_map[j].name}")
-            mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pct_pars)
+            pars = dict(col_P="power")
+            pars
+            mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pars)
 
         lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
         farm.add_turbine(

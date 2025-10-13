@@ -1,0 +1,385 @@
+import numpy as np
+from scipy.interpolate import griddata, LinearNDInterpolator
+from scipy.spatial import Delaunay
+
+from foxes.utils.utm_utils import from_lonlat
+from foxes.config.config import config
+import foxes.variables as FV
+import foxes.constants as FC
+
+from .dataset_states import DatasetStates
+
+
+class NEWAStates(DatasetStates):
+    """
+    Heterogeneous ambient states in NEWA-WRF format.
+
+    Attributes
+    ----------
+    states_coord: str
+        The states coordinate name in the data
+    x_coord: str
+        The x coordinate name in the data
+    y_coord: str
+        The y coordinate name in the data
+    h_coord: str
+        The height coordinate name in the data
+    weight_ncvar: str
+        Name of the weight data variable in the nc file(s)
+    interpn_pars: dict, optional
+        Additional parameters for scipy.interpolate.interpn
+    bounds_extra_space: float or str
+        The extra space, either float in m,
+        or str for units of D, e.g. '2.5D'
+    height_bounds: tuple, optional
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+    
+    :group: input.states
+
+    """
+
+    def __init__(
+        self,
+        input_files_nc,
+        time_coord="time",
+        west_east_coord="west_east",
+        south_north_coord="south_north",
+        height_coord="height",
+        xlat_coord="XLAT",
+        xlon_coord="XLON",
+        output_vars=None,
+        var2ncvar=None,
+        load_mode="fly",
+        time_format=r"%Y-%m-%dT%H:%M:%S",
+        bounds_extra_space=1000,
+        height_bounds=None,
+        interp_pars=None,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        input_files_nc: str
+            The input netcdf file(s), can contain
+            wildcards, e.g. 'wrfout_2025*.nc'
+        time_coord: str
+            The time coordinate name in the data
+        west_east_coord: str
+            The west-east coordinate name in the data
+        south_north_coord: str
+            The south-north coordinate name in the data
+        height_coord: str, optional
+            The height coordinate name in the data
+        xlat_coord: str
+            The latitude coordinate name in the data
+        xlon_coord: str
+            The longitude coordinate name in the data
+        output_vars: list of str, optional
+            The output variables to load, if None,
+            the default variables are loaded
+            (FV.WS, FV.WD, FV.TI, FV.RHO)
+        var2ncvar: dict, optional
+            A dictionary mapping foxes variable names
+            to the corresponding netcdf variable names.
+        load_mode: str
+            The load mode, choices: preload, lazy, fly.
+            preload loads all data during initialization,
+            lazy lazy-loads the data using dask, and fly
+            reads only states index and weights during initialization
+            and then opens the relevant files again within
+            the chunk calculations.
+        time_format: str
+            The datetime parsing format string
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        kwargs: dict, optional
+            Additional parameters for the base class
+        interp_pars: dict, optional
+            Additional parameters for scipy.interpolate.griddata,
+            e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
+
+        """
+        if output_vars is None:
+            ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
+        else:
+            ovars = output_vars
+
+        if var2ncvar is None:
+            var2ncvar = {
+                FV.WS: "WS",
+                FV.WD: "WD",
+                FV.TKE: "TKE",
+                FV.RHO: "RHO",
+            }
+
+        super().__init__(
+            data_source=input_files_nc,
+            output_vars=ovars,
+            var2ncvar=var2ncvar,
+            time_format=time_format,
+            load_mode=load_mode,
+            weight_factor=None,
+            **kwargs,
+        )
+
+        self.time_coord=time_coord
+        self.west_east_coord=west_east_coord
+        self.south_north_coord=south_north_coord
+        self.height_coord=height_coord
+        self.xlat_coord = xlat_coord
+        self.xlon_coord = xlon_coord
+        self.bounds_extra_space = bounds_extra_space
+        self.height_bounds = height_bounds
+        self.interp_pars = interp_pars if interp_pars is not None else {}
+        self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
+
+        self._cmap = {
+            FC.STATE: self.time_coord,
+            FV.X: self.west_east_coord,
+            FV.Y: self.south_north_coord,
+            FV.H: self.height_coord,
+        }
+
+    def preproc_first(
+            self, 
+            algo,
+            data, 
+            cmap, 
+            vars, 
+            bounds_extra_space,
+            height_bounds,
+            verbosity=0
+        ):
+        """
+        Preprocesses the first file.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        data: xarray.Dataset
+            The dataset to preprocess
+        cmap: dict
+            A mapping from foxes variable names to Dataset dimension names
+        vars: list
+            The list of variable names
+        bounds_extra_space: float or str, optional
+            The extra space, either float in m,
+            or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/-
+        verbosity: int
+            The verbosity level, 0 = silent
+        
+        """
+
+        super().preproc_first(
+            algo,
+            data,
+            cmap,
+            vars,
+            bounds_extra_space=None,
+            height_bounds=height_bounds,
+            verbosity=verbosity
+        )
+
+        lonlat = np.stack((data[self.xlon_coord].values, data[self.xlat_coord].values), axis=-1)
+        nx, ny = lonlat.shape[:2]
+        lonlat = lonlat.reshape((nx * ny, 2))
+        xy = from_lonlat(lonlat)
+        xy = xy.reshape((nx, ny, 2))
+        nh = len(self._heights)
+
+        # find horizontal bounds:
+        if bounds_extra_space is not None:
+            assert FV.X in cmap, (
+                f"States '{self.name}': x coordinate '{FV.X}' not in cmap {cmap}"
+            )
+            assert FV.Y in cmap, (
+                f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
+            )
+
+            # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
+            xy_min, xy_max = algo.farm.get_xy_bounds(
+                extra_space=bounds_extra_space, algo=algo
+            )
+            x0, x1 = xy_min[0], xy_max[0]
+            y0, y1 = xy_min[1], xy_max[1]
+            if verbosity > 0:
+                print(
+                    f"States '{self.name}': Restricting {FV.X} to bounds {x0:.2f} - {x1:.2f}"
+                )
+                print(f"States '{self.name}': Restricting {FV.Y} to bounds {y0:.2f} - {y1:.2f}"
+                )
+
+            inds = np.argwhere(
+                (xy[..., 0] >= x0) &
+                (xy[..., 0] <= x1) &
+                (xy[..., 1] >= y0) &
+                (xy[..., 1] <= y1)
+            )
+            i0 = inds[:, 0].min()
+            i1 = inds[:, 0].max()
+            j0 = inds[:, 1].min()
+            j1 = inds[:, 1].max()
+            while i0 > 0 and np.min(xy[i0, :, 0]) > x0:
+                i0 -= 1
+            while i1 < nx - 1 and np.max(xy[i1, :, 0]) < x1:
+                i1 += 1       
+            while j0 > 0 and np.min(xy[:, j0, 1]) > y0:
+                j0 -= 1
+            while j1 < ny - 1 and np.max(xy[:, j1, 1]) < y1:
+                j1 += 1 
+
+            if self.isel is None:
+                self.isel = {}
+            self.isel.update({
+                self.west_east_coord: slice(i0, i1 + 1),
+                self.south_north_coord: slice(j0, j1 + 1),
+            })
+            xy = xy[i0:i1+1, j0:j1+1]
+            nx, ny = xy.shape[:2]
+            if verbosity > 0:
+                print(f"States '{self.name}': Selected {xy.shape[:2] + (nh,)} grid points")
+        elif verbosity > 0:
+            print(f"States '{self.name}': Selecting all {xy.shape[:2] + (nh,)} grid points")
+
+        self._xy = xy.reshape((nx * ny, 2))
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        return super().load_data(
+            algo,
+            cmap=self._cmap,
+            variables=self.variables,
+            bounds_extra_space=self.bounds_extra_space,
+            height_bounds=self.height_bounds,
+            verbosity=verbosity,
+        )
+
+    def interpolate_data(self, idims, icrds, d, pts, tdims):
+        """
+        Interpolates data to points.
+
+        This function should be implemented in derived classes.
+
+        Parameters
+        ----------
+        idims: list of str
+            The input dimensions, e.g. [state, x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and 
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        tdims: tuple
+            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
+
+        Returns
+        -------
+        d_interp: numpy.ndarray
+            The interpolated data array with shape tdims
+
+        """
+
+        ipars = dict(method='linear', rescale=True,)
+        ipars.update(self.interp_pars)
+
+        gpts = np.zeros(d.shape[:-1] + (len(idims),), dtype=config.dtype_double)
+        n_gpts = 1
+        for i, c in enumerate(icrds):
+            shp = [1] * len(icrds)
+            shp[i] = c.shape[0]
+            gpts[..., i] = c.reshape(shp)
+            n_gpts *= c.shape[0]
+        gpts = gpts.reshape((n_gpts, len(idims)))
+        n_vrs = d.shape[-1]
+        d = d.reshape((n_gpts, n_vrs))
+
+        method = ipars.pop("method", "linear")
+        if method == 'linear':
+            results = LinearNDInterpolator(gpts, d, **ipars)(pts-123123)
+        else:
+            results = []
+            for iv in range(n_vrs):
+                di = d[..., iv]
+                di = griddata(gpts, di, pts, method=method, **ipars)
+                results.append(di)
+            results = np.stack(results, axis=-1)
+
+        return results.reshape(tdims)
+    
+    def calculate(self, algo, mdata, fdata, tdata):
+        """
+        The main model calculation.
+
+        This function is executed on a single chunk of data,
+        all computations should be based on numpy arrays.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        mdata: foxes.core.MData
+            The model data
+        fdata: foxes.core.FData
+            The farm data
+        tdata: foxes.core.TData
+            The target point data
+
+        Returns
+        -------
+        results: dict
+            The resulting data, keys: output variable str.
+            Values: numpy.ndarray with shape
+            (n_states, n_targets, n_tpoints)
+
+        """
+        results = super().calculate(algo, mdata, fdata, tdata)
+        
+        # convert TKE to TI if needed:
+        if FV.TI in self.ovars and FV.TI not in results:
+            assert FV.WS in results, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.WS}"
+            )
+            assert FV.TKE in results or FV.TKE in self.ovars, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
+            )
+            if FV.TKE not in self.ovars:
+                tke = results.pop(FV.TKE)
+            else:
+                tke = results[FV.TKE]
+            ws = results[FV.WS]
+            results[FV.TI] = np.sqrt(1.5 * tke) / ws
+
+        return results

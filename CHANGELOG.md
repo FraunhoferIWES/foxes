@@ -822,6 +822,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Inputs
   - New farm layout input `from_eww`, reading wind farm input in EuroWindWakes format
   - New farm layout input `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF
+  - New states `NEWAStates`, directly reading NEWA-WRF data files into foxes
 - Examples:
   - New example `parameter_study`, demonstrating the setup of a parameter study
 - Bug fixes:

@@ -31,7 +31,9 @@ class FieldData(DatasetStates):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-
+    height_bounds: tuple, optional
+        The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
+        
     :group: input.states
 
     """
@@ -45,6 +47,7 @@ class FieldData(DatasetStates):
         h_coord="height",
         weight_ncvar=None,
         bounds_extra_space=1000,
+        height_bounds=None,
         interpn_pars={},
         **kwargs,
     ):
@@ -68,6 +71,8 @@ class FieldData(DatasetStates):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
+        height_bounds: tuple, optional
+            The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         interpn_pars: dict
             Parameters for scipy.interpolate.interpn
         kwargs: dict, optional
@@ -83,6 +88,7 @@ class FieldData(DatasetStates):
         self.weight_ncvar = weight_ncvar
         self.interpn_pars = interpn_pars
         self.bounds_extra_space = bounds_extra_space
+        self.height_bounds = height_bounds
 
         assert FV.WEIGHT not in self.ovars, (
             f"States '{self.name}': Cannot have '{FV.WEIGHT}' as output variable, got {self.ovars}"
@@ -132,178 +138,62 @@ class FieldData(DatasetStates):
             cmap=self._cmap,
             variables=self.variables,
             bounds_extra_space=self.bounds_extra_space,
+            height_bounds=self.height_bounds,
             verbosity=verbosity,
         )
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def interpolate_data(self, idims, icrds, d, pts, tdims):
         """
-        The main model calculation.
+        Interpolates data to points.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function should be implemented in derived classes.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
+        idims: list of str
+            The input dimensions, e.g. [state, x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and 
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        tdims: tuple
+            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
 
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        d_interp: numpy.ndarray
+            The interpolated data array with shape tdims
 
         """
-        # prepare
-        self.ensure_output_vars(algo, tdata)
-        n_states = tdata.n_states
-        n_targets = tdata.n_targets
-        n_tpoints = tdata.n_tpoints
-        points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
-        n_pts = points.shape[1]
-
-        # get data for calculation
-        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
-        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
-
-        # interpolate data to points:
-        out = {}
-        for dims, (vrs, d) in data.items():
-            # translate (WD, WS) to (U, V):
-            if FV.WD in vrs or FV.WS in vrs:
-                assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
-                    f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
-                )
-                iwd = vrs.index(FV.WD)
-                iws = vrs.index(FV.WS)
-                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
-                d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
-                del ws
-
-            # prepare grid:
-            idims = dims[:-1]
-            gvars = tuple([coords[c] for c in idims])
-
-            # prepare points:
-            n_vrs = len(vrs)
-            tdims = [n_states, n_pts, n_vrs]
-            if idims == (FC.STATE, FV.X, FV.Y, FV.H):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points,
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 4)
-            elif idims == (FC.STATE, FV.X, FV.Y):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points[..., :2],
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 3)
-            elif idims == (FC.STATE, FV.H):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points[..., 2, None],
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 2)
-            elif idims == (FC.STATE,):
-                if FV.WD in vrs:
-                    uv = d[..., [iwd, iws]]
-                    d[..., iwd] = uv2wd(uv)
-                    d[..., iws] = np.linalg.norm(uv, axis=-1)
-                    del uv
-                for i, v in enumerate(vrs):
-                    if v in self.ovars:
-                        out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
-                        out[v][:] = d[:, None, i]
-                continue
-            elif idims == (FV.X, FV.Y, FV.H):
-                pts = points[0]
-                tdims = (1, n_pts, n_vrs)
-            elif idims == (FV.X, FV.Y):
-                pts = points[0][:, :2]
-                tdims = (1, n_pts, n_vrs)
-            elif idims == (FV.H,):
-                pts = points[0][:, 2]
-                tdims = (1, n_pts, n_vrs)
-            else:
-                raise ValueError(
-                    f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
-                )
-
-            # interpolate:
-            try:
-                ipars = dict(bounds_error=True, fill_value=None)
-                ipars.update(self.interpn_pars)
-                d = interpn(gvars, d, pts, **ipars).reshape(tdims)
-            except ValueError as e:
-                print(f"\nStates '{self.name}': Interpolation error")
-                print("INPUT VARS: (state, x, y, height)")
-                print(
-                    "DATA BOUNDS:",
-                    [float(np.min(d)) for d in gvars],
-                    [float(np.max(d)) for d in gvars],
-                )
-                print(
-                    "EVAL BOUNDS:",
-                    [float(np.min(p)) for p in pts.T],
-                    [float(np.max(p)) for p in pts.T],
-                )
-                print(
-                    "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
-                )
-                raise e
-            del pts, gvars
-
-            # translate (U, V) into (WD, WS):
-            if FV.WD in vrs:
-                uv = d[..., [iwd, iws]]
-                d[..., iwd] = uv2wd(uv)
-                d[..., iws] = np.linalg.norm(uv, axis=-1)
-                del uv
-
-            # broadcast if needed:
-            if tdims != (n_states, n_pts, n_vrs):
-                tmp = d
-                d = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
-                d[:] = tmp
-                del tmp
-
-            # set output:
-            for i, v in enumerate(vrs):
-                if v in self.ovars:
-                    out[v] = d[..., i]
-
-        # set fixed variables:
-        for v, d in self.fixed_vars.items():
-            out[v] = np.full((n_states, n_pts), d, dtype=config.dtype_double)
-
-        # add weights:
-        if weights is not None:
-            tdata[FV.WEIGHT] = weights[:, None, None]
-        elif FV.WEIGHT in out:
-            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT).reshape(
-                n_states, n_targets, n_tpoints
+        gvars = tuple(icrds)
+        try:
+            ipars = dict(bounds_error=True, fill_value=None)
+            ipars.update(self.interpn_pars)
+            d = interpn(gvars, d, pts, **ipars)
+        except ValueError as e:
+            print(f"\nStates '{self.name}': Interpolation error")
+            print(f"INPUT VARS: {idims}")
+            print(
+                "DATA BOUNDS:",
+                [float(np.min(d)) for d in gvars],
+                [float(np.max(d)) for d in gvars],
             )
-        else:
-            tdata[FV.WEIGHT] = np.full(
-                (mdata.n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
+            print(
+                "EVAL BOUNDS:",
+                [float(np.min(p)) for p in pts.T],
+                [float(np.max(p)) for p in pts.T],
             )
-        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
-
-        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
+            )
+            raise e
+        
+        return d.reshape(tdims)
 
 
 class WeibullField(FieldData):

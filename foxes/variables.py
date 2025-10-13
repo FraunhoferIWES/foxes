@@ -79,6 +79,11 @@ TI = "TI"
 :group: foxes.variables
 """
 
+TKE = "TKE"
+""" The turbulent kinetic energy
+:group: foxes.variables
+"""
+
 RHO = "RHO"
 """ The air density in kg/m3
 :group: foxes.variables
@@ -189,6 +194,11 @@ AMB_TI = "AMB_TI"
 :group: foxes.variables
 """
 
+AMB_TKE = "AMB_TKE"
+""" The ambient turbulent kinetic energy
+:group: foxes.variables
+"""
+
 AMB_RHO = "AMB_RHO"
 """ The ambient air density in kg/m3
 :group: foxes.variables
@@ -266,6 +276,7 @@ var2amb = {
         WS,
         WD,
         TI,
+        TKE,
         RHO,
         YAW,
         YAWM,
