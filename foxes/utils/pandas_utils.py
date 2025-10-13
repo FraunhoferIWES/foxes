@@ -104,6 +104,8 @@ class PandasFileHelper:
                 f = pd.read_csv
             elif fname.endswith(".csv.gz"):
                 f = pd.read_csv
+            elif fname.endswith(".csv.bz2"):
+                f = pd.read_csv
             elif fname.endswith(".csv.zip"):
                 f = pd.read_csv
             elif fname.endswith(".h5"):
@@ -161,6 +163,8 @@ class PandasFileHelper:
             if fname.endswith(".csv"):
                 f = out.to_csv
             elif fname.endswith(".csv.gz"):
+                f = out.to_csv
+            elif fname.endswith(".csv.bz2"):
                 f = out.to_csv
             elif fname.endswith(".csv.zip"):
                 f = out.to_csv
