@@ -100,11 +100,15 @@ class PandasFileHelper:
         fname = fpath.name
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            if fname[-4:] == ".csv":
+            if fname.endswith(".csv"):
                 f = pd.read_csv
-            elif fname[-3:] == ".h5":
+            elif fname.endswith(".csv.gz"):
+                f = pd.read_csv
+            elif fname.endswith(".csv.zip"):
+                f = pd.read_csv
+            elif fname.endswith(".h5"):
                 f = pd.read_hdf
-            elif fname[-3:] == ".nc":
+            elif fname.endswith(".nc"):
 
                 def f(fname, **pars):
                     """little helper to read netcdf files"""
@@ -154,11 +158,15 @@ class PandasFileHelper:
         fname = fpath.name
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            if fname[-4:] == ".csv":
+            if fname.endswith(".csv"):
                 f = out.to_csv
-            elif fname[-3:] == ".h5":
+            elif fname.endswith(".csv.gz"):
+                f = out.to_csv
+            elif fname.endswith(".csv.zip"):
+                f = out.to_csv
+            elif fname.endswith(".h5"):
                 f = out.to_hdf
-            elif fname[-3:] == ".nc":
+            elif fname.endswith(".nc"):
                 f = out.to_netcdf
 
             if f is not None:
