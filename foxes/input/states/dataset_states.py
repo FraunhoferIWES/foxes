@@ -12,6 +12,7 @@ from foxes.config import config, get_input_path
 import foxes.variables as FV
 import foxes.constants as FC
 
+
 def _read_nc_file(
     fpath,
     coords,
@@ -31,7 +32,7 @@ def _read_nc_file(
             raise KeyError(
                 f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
             )
-        
+
     if minimal:
         data = data[coords[0]].to_numpy()
     else:
@@ -44,7 +45,7 @@ def _read_nc_file(
         assert min(data.sizes.values()) > 0, (
             f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
         )
-    
+
     return data
 
 
@@ -289,15 +290,8 @@ class DatasetStates(States):
         return coords, data, weights
 
     def preproc_first(
-            self, 
-            algo,
-            data, 
-            cmap, 
-            vars, 
-            bounds_extra_space,
-            height_bounds,
-            verbosity=0
-        ):
+        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+    ):
         """
         Preprocesses the first file.
 
@@ -318,7 +312,7 @@ class DatasetStates(States):
             The (h_min, h_max) height bounds in m. Defaults to H +/-
         verbosity: int
             The verbosity level, 0 = silent
-        
+
         """
 
         # find vertical bounds:
@@ -326,18 +320,26 @@ class DatasetStates(States):
             if height_bounds is None:
                 H = algo.farm.get_hub_heights(algo)
                 D = algo.farm.get_rotor_diameters(algo)
-                H = np.stack((H-0.5*D, H+0.5*D), axis=-1)
+                H = np.stack((H - 0.5 * D, H + 0.5 * D), axis=-1)
                 height_bounds = (np.min(H), np.max(H))
                 del H, D
             if verbosity > 0:
-                print(f"States '{self.name}': Restricting heights to {height_bounds[0]} - {height_bounds[1]} m")
+                print(
+                    f"States '{self.name}': Restricting heights to {height_bounds[0]} - {height_bounds[1]} m"
+                )
             self._heights = data[cmap[FV.H]].to_numpy()
-            if np.min(self._heights) > height_bounds[0] or np.max(self._heights) < height_bounds[1]:
+            if (
+                np.min(self._heights) > height_bounds[0]
+                or np.max(self._heights) < height_bounds[1]
+            ):
                 raise ValueError(
                     f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
                 )
             i0 = 0
-            while i0 < len(self._heights) - 1 and self._heights[i0 + 1] <= height_bounds[0]:
+            while (
+                i0 < len(self._heights) - 1
+                and self._heights[i0 + 1] <= height_bounds[0]
+            ):
                 i0 += 1
             i1 = len(self._heights) - 1
             while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
@@ -345,12 +347,12 @@ class DatasetStates(States):
             if self.sel is None:
                 self.sel = {}
             ch = cmap[FV.H]
-            self.sel.update({
-                ch: slice(self._heights[i0], self._heights[i1] + 1)
-            })
+            self.sel.update({ch: slice(self._heights[i0], self._heights[i1] + 1)})
             self._heights = data[ch].sel({ch: self.sel[ch]}).to_numpy()
             if verbosity > 0:
-                print(f"States '{self.name}': Selected {ch} = {self._heights} ({len(self._heights)} heights)")
+                print(
+                    f"States '{self.name}': Selected {ch} = {self._heights} ({len(self._heights)} heights)"
+                )
 
         # find horizontal bounds:
         if bounds_extra_space is not None:
@@ -382,21 +384,21 @@ class DatasetStates(States):
                     i1 -= 1
                 if self.sel is None:
                     self.sel = {}
-                self.sel.update({
-                    cmap[v]: slice(x[i0], x[i1] + 1)
-                })
+                self.sel.update({cmap[v]: slice(x[i0], x[i1] + 1)})
                 if verbosity > 0:
                     hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
-                    print(f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)")
+                    print(
+                        f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
+                    )
 
     def __preload(
-            self, 
-            algo, 
-            cmap, 
-            bounds_extra_space, 
-            height_bounds,
-            verbosity=0,
-        ):
+        self,
+        algo,
+        cmap,
+        bounds_extra_space,
+        height_bounds,
+        verbosity=0,
+    ):
         """Helper function for preloading data."""
 
         assert FC.STATE in cmap, (
@@ -416,23 +418,25 @@ class DatasetStates(States):
             files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
             coords = list(cmap.values())
             vars = [self.var2ncvar.get(v, v) for v in self.variables]
-            
+
             # pre-process first file:
             fpath = files[0]
             if verbosity > 0:
                 print(f"States '{self.name}': Preprocessing first file", fpath.name)
             with xr.open_dataset(fpath, engine=config.nc_engine) as data_first:
-                self.drop_vars = [v for v in data_first.data_vars if v not in coords + vars]
+                self.drop_vars = [
+                    v for v in data_first.data_vars if v not in coords + vars
+                ]
                 if len(self.drop_vars) > 0 and verbosity > 0:
                     print(f"States '{self.name}': Keeping variables  {vars}")
                     print(f"States '{self.name}': Dropping variables {self.drop_vars}")
                 self.preproc_first(
-                    algo, 
-                    data=data_first, 
-                    cmap=cmap, 
-                    vars=vars, 
-                    bounds_extra_space=bounds_extra_space, 
-                    height_bounds=height_bounds, 
+                    algo,
+                    data=data_first,
+                    cmap=cmap,
+                    vars=vars,
+                    bounds_extra_space=bounds_extra_space,
+                    height_bounds=height_bounds,
                     verbosity=verbosity,
                 )
             del data_first
@@ -553,10 +557,10 @@ class DatasetStates(States):
         """
         # preload data:
         self.__preload(
-            algo, 
-            cmap, 
-            bounds_extra_space, 
-            height_bounds, 
+            algo,
+            cmap,
+            bounds_extra_space,
+            height_bounds,
             verbosity=verbosity,
         )
 
@@ -828,7 +832,7 @@ class DatasetStates(States):
             )
 
         return coords, data, weights
-    
+
     @abstractmethod
     def interpolate_data(self, idims, icrds, d, pts, tdims):
         """
@@ -845,7 +849,7 @@ class DatasetStates(States):
             where n_i is the number of grid points in dimension i
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and 
+            where ni represents the dimension sizes and
             nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
@@ -1006,4 +1010,3 @@ class DatasetStates(States):
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
         return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
-    

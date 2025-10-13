@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import interpn
 
-from foxes.utils import wd2uv, uv2wd, weibull_weights
+from foxes.utils import weibull_weights
 from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
@@ -33,7 +33,7 @@ class FieldData(DatasetStates):
         or str for units of D, e.g. '2.5D'
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        
+
     :group: input.states
 
     """
@@ -157,7 +157,7 @@ class FieldData(DatasetStates):
             where n_i is the number of grid points in dimension i
         d: numpy.ndarray
             The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and 
+            where ni represents the dimension sizes and
             nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
@@ -192,7 +192,7 @@ class FieldData(DatasetStates):
                 "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
             )
             raise e
-        
+
         return d.reshape(tdims)
 
 
