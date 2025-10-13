@@ -50,7 +50,7 @@ class NEWAStates(DatasetStates):
         var2ncvar=None,
         load_mode="fly",
         time_format=r"%Y-%m-%dT%H:%M:%S",
-        bounds_extra_space=1000,
+        bounds_extra_space=3000,
         height_bounds=None,
         interp_pars=None,
         **kwargs,
@@ -222,13 +222,13 @@ class NEWAStates(DatasetStates):
             i1 = inds[:, 0].max()
             j0 = inds[:, 1].min()
             j1 = inds[:, 1].max()
-            while i0 > 0 and np.min(xy[i0, :, 0]) > x0:
+            while i0 > 0 and np.min(xy[i0:i1+1, j0:j1+1, 0]) > x0:
                 i0 -= 1
-            while i1 < nx - 1 and np.max(xy[i1, :, 0]) < x1:
+            while i1 < nx - 1 and np.max(xy[i0:i1+1, j0:j1+1, 0]) < x1:
                 i1 += 1
-            while j0 > 0 and np.min(xy[:, j0, 1]) > y0:
+            while j0 > 0 and np.min(xy[i0:i1+1, j0:j1+1, 1]) > y0:
                 j0 -= 1
-            while j1 < ny - 1 and np.max(xy[:, j1, 1]) < y1:
+            while j1 < ny - 1 and np.max(xy[i0:i1+1, j0:j1+1, 1]) < y1:
                 j1 += 1
 
             if self.isel is None:
@@ -243,6 +243,12 @@ class NEWAStates(DatasetStates):
             nx, ny = xy.shape[:2]
             if verbosity > 0:
                 print(
+                    f"States '{self.name}': Selected {FV.X} = {np.min(xy[..., 0]):.2f} - {np.max(xy[..., 0]):.2f} ({nx} points)"
+                )
+                print(
+                    f"States '{self.name}': Selected {FV.Y} = {np.min(xy[..., 1]):.2f} - {np.max(xy[..., 1]):.2f} ({ny} points)"
+                )
+                print(
                     f"States '{self.name}': Selected {xy.shape[:2] + (nh,)} grid points"
                 )
         elif verbosity > 0:
@@ -250,7 +256,7 @@ class NEWAStates(DatasetStates):
                 f"States '{self.name}': Selecting all {xy.shape[:2] + (nh,)} grid points"
             )
 
-        self._xy = xy.reshape((nx * ny, 2))
+        self._xy = xy
 
     def load_data(self, algo, verbosity=0):
         """
@@ -313,34 +319,69 @@ class NEWAStates(DatasetStates):
 
         """
 
+        # prepare interpolation parameters:
         ipars = dict(
             method="linear",
             rescale=True,
+            fill_value=np.nan,
         )
         ipars.update(self.interp_pars)
 
+        # prepare grid points:
         gpts = np.zeros(d.shape[:-1] + (len(idims),), dtype=config.dtype_double)
         n_gpts = 1
+        ix = None
         for i, c in enumerate(icrds):
-            shp = [1] * len(icrds)
-            shp[i] = c.shape[0]
-            gpts[..., i] = c.reshape(shp)
-            n_gpts *= c.shape[0]
+            if idims[i] not in (FV.X, FV.Y): # leave out X and Y, cf. self._cmap
+                shp = [1] * len(icrds)
+                shp[i] = c.shape[0]
+                gpts[..., i] = c.reshape(shp)
+                n_gpts *= c.shape[0]
+            elif idims[i] == FV.X:
+                assert FV.Y in idims, (
+                    f"States '{self.name}': {FV.X} found in dims {idims} but not {FV.Y}"
+                )
+                ix = i
+            else:
+                assert ix == i - 1, (
+                    f"States '{self.name}': Unexpected dimension order {idims}, expected {FV.X} before {FV.Y}"
+                )
+        
+        # sneak in self._xy instead of west_east and south_north coords:
+        if ix is not None:
+            shp = [1] * (len(icrds) + 1)
+            shp[ix:ix+2] = self._xy.shape[:2]
+            shp[-1] = 2
+            gpts[..., ix:ix+2] = self._xy.reshape(shp)
+            n_gpts *= self._xy.shape[0] * self._xy.shape[1]
+        
+        # reshape:
         gpts = gpts.reshape((n_gpts, len(idims)))
         n_vrs = d.shape[-1]
         d = d.reshape((n_gpts, n_vrs))
 
-        method = ipars.pop("method", "linear")
-        if method == "linear":
-            results = LinearNDInterpolator(gpts, d, **ipars)(pts - 123123)
-        else:
-            results = []
-            for iv in range(n_vrs):
-                di = d[..., iv]
-                di = griddata(gpts, di, pts, method=method, **ipars)
-                results.append(di)
-            results = np.stack(results, axis=-1)
+        # run interpolation:
+        results = griddata(gpts, d, pts, **ipars)
 
+        # check for error:
+        if np.isnan(ipars.get("fill_value", np.nan)):
+            sel = np.isnan(results[..., 0])
+            if np.any(sel):
+                i = np.where(sel)[0]
+                n_dms = len(icrds)
+                p = pts[i[0], :n_dms]
+                qmin = np.min(gpts[:, :n_dms], axis=0)
+                qmax = np.max(gpts[:, :n_dms], axis=0)
+                method = "linear"
+                print("\n\nInterpolation error", gpts.shape, d.shape,pts.shape, results.shape)
+                print("dims:  ", idims)
+                print("point: ", p)
+                print("qmin:  ", qmin)
+                print("qmax:  ", qmax, "\n\n")
+                raise ValueError(
+                    f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
+                )
+                
         return results.reshape(tdims)
 
     def calculate(self, algo, mdata, fdata, tdata):

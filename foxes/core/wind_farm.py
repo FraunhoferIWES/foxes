@@ -153,6 +153,11 @@ class WindFarm:
                 print(
                     f"WindFarm '{self.name}': locked with {self.n_turbines} turbines, UTM zone {utmn}{utml}"
                 )
+                if verbosity > 1:
+                    for t in self.__turbines:
+                        print(
+                            f"  Turbine {t.index}, {t.name}: UTM {utmn}{utml}, xy=({t.xy[0]:.2f}, {t.xy[1]:.2f}), {', '.join(t.models)}"
+                        )
             else:
                 print(f"WindFarm '{self.name}': locked with {self.n_turbines} turbines")
 
