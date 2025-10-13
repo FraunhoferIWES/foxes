@@ -100,26 +100,20 @@ class PandasFileHelper:
         fname = fpath.name
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            if fname.endswith(".csv"):
-                f = pd.read_csv
-            elif fname.endswith(".csv.gz"):
-                f = pd.read_csv
-            elif fname.endswith(".csv.bz2"):
-                f = pd.read_csv
-            elif fname.endswith(".csv.zip"):
-                f = pd.read_csv
-            elif fname.endswith(".h5"):
-                f = pd.read_hdf
-            elif fname.endswith(".nc"):
+            if fname.endswith("." + fmt):
+                if fmt.startswith("csv"):
+                    f = pd.read_csv
+                elif fmt == "h5":
+                    f = pd.read_hdf
+                elif fmt == "nc":
+                    def f(fname, **pars):
+                        """little helper to read netcdf files"""
+                        return xarray.open_dataset(fname, **pars).to_dataframe()
 
-                def f(fname, **pars):
-                    """little helper to read netcdf files"""
-                    return xarray.open_dataset(fname, **pars).to_dataframe()
-
-            if f is not None:
-                pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
-                pars.update(kwargs)
-                return f(file_path, **pars)
+                if f is not None:
+                    pars = deepcopy(cls.DEFAULT_READING_PARAMETERS[fmt])
+                    pars.update(kwargs)
+                    return f(file_path, **pars)
 
         raise KeyError(
             f"Unknown file format '{fname}'. Supported formats: {cls.DATA_FILE_FORMATS}"
@@ -160,26 +154,21 @@ class PandasFileHelper:
         fname = fpath.name
         f = None
         for fmt in cls.DATA_FILE_FORMATS:
-            if fname.endswith(".csv"):
-                f = out.to_csv
-            elif fname.endswith(".csv.gz"):
-                f = out.to_csv
-            elif fname.endswith(".csv.bz2"):
-                f = out.to_csv
-            elif fname.endswith(".csv.zip"):
-                f = out.to_csv
-            elif fname.endswith(".h5"):
-                f = out.to_hdf
-            elif fname.endswith(".nc"):
-                f = out.to_netcdf
+            if fname.endswith("." + fmt):
+                if fmt.startswith("csv"):
+                    f = out.to_csv
+                elif fmt == "h5":
+                    f = out.to_hdf
+                elif fmt == "nc":
+                    f = out.to_netcdf
 
-            if f is not None:
-                pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
-                pars.update(kwargs)
+                if f is not None:
+                    pars = cls.DEFAULT_WRITING_PARAMETERS[fmt]
+                    pars.update(kwargs)
 
-                f(file_path, **pars)
+                    f(file_path, **pars)
 
-                return
+                    return
 
         raise KeyError(
             f"Unknown file format '{file_path}'. Supported formats: {cls.DATA_FILE_FORMATS}"
