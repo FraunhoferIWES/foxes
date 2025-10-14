@@ -36,6 +36,8 @@ jobs:
       run: |
         pytest tests
     - name: Running notebooks
+      with:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # 3.14 has notebug issue, asof 2025-10-14
       run: |
         pytest --nbmake notebooks
 
