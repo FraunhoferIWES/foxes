@@ -39,6 +39,20 @@ class PointCloudData(DatasetStates):
     interp_pars: dict
         Additional arguments for the interpolation
 
+    Examples
+    --------
+    Example of the NetCDF input files with point cloud data:
+
+    >>>    Dimensions:  (point: 30, state: 100)
+    >>>    Dimensions without coordinates: point, state
+    >>>    Data variables:
+    >>>        x        (point) float32 120B ...
+    >>>        y        (point) float32 120B ...
+    >>>        ws       (state, point) float32 12kB ...
+    >>>        wd       (state, point) float32 12kB ...
+    >>>        ti       (point) float32 120B ...
+    >>>        rho      (state) float32 400B ...
+
     :group: input.states
 
     """
@@ -403,6 +417,24 @@ class WeibullPointCloud(PointCloudData):
     ws_bins: numpy.ndarray
         The wind speed bins, including
         lower and upper bounds, shape: (n_ws_bins+1,)
+
+    Examples
+    --------
+    Example of the NetCDF input files with point cloud data:
+
+    >>>    Dimensions:               (wind_turbine: 8, wind_direction: 2, wind_speed: 2)
+    >>>    Coordinates:
+    >>>    * wind_turbine          (wind_turbine) int64 64B 0 1 2 3 4 5 6 7
+    >>>    * wind_direction        (wind_direction) int64 16B 0 30
+    >>>    * wind_speed            (wind_speed) int64 16B 8 10
+    >>>    Data variables:
+    >>>        sector_probability    (wind_turbine, wind_direction) float64 128B ...
+    >>>        weibull_a             (wind_turbine, wind_direction) float64 128B ...
+    >>>        weibull_k             (wind_turbine, wind_direction) float64 128B ...
+    >>>        turbulence_intensity  (wind_turbine, wind_direction, wind_speed) float64 256B ...
+    >>>        x                     (wind_turbine) float64 64B ...
+    >>>        y                     (wind_turbine) float64 64B ...
+    >>>        height                (wind_turbine) float64 64B ...
 
     :group: input.states
 

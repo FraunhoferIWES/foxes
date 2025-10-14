@@ -414,7 +414,13 @@ class DatasetStates(States):
                         STATES, fpath.name, check_raw=False
                     )
 
-            files = sorted(list(fpath.resolve().parent.glob(fpath.name)))
+            # find files:
+            prt = fpath.resolve().parent
+            glb = fpath.name
+            while "*" in str(prt.name):
+                glb = prt.name + "/" + glb
+                prt = prt.parent
+            files = sorted(list(prt.glob(glb)))
             coords = list(cmap.values())
             vars = [self.var2ncvar.get(v, v) for v in self.variables]
 

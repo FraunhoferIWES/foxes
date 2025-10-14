@@ -18,7 +18,7 @@ def add_from_eww(
     **turbine_parameters,
 ):
     """
-    Add turbines to wind farm via eww database csv input file.
+    Add turbines to wind farm via EuroWindWakes database csv input file.
 
     Parameters
     ----------
@@ -45,11 +45,11 @@ def add_from_eww(
     --------
     Data source format:
 
-    ,wind_farm,oem_manufacturer,latitude,longitude,country,rated_power,rotor_diameter,hub_height,turbine_type,commissioning_date
-    0,Aberdeen Offshore Wind Farm,Vestas,57.230095,-1.9742404,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
-    1,Aberdeen Offshore Wind Farm,Vestas,57.2235827,-2.0127432,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
-    2,Aberdeen Offshore Wind Farm,Vestas,57.2169301,-2.0055697,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
-    ...
+    >>>    ,wind_farm,oem_manufacturer,latitude,longitude,country,rated_power,rotor_diameter,hub_height,turbine_type,commissioning_date
+    >>>    0,Aberdeen Offshore Wind Farm,Vestas,57.230095,-1.9742404,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
+    >>>    1,Aberdeen Offshore Wind Farm,Vestas,57.2235827,-2.0127432,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
+    >>>    2,Aberdeen Offshore Wind Farm,Vestas,57.2169301,-2.0055697,United Kingdom,8.4,164.0,108.5,V164-8.4 MW,2018-09
+    >>>    ...
 
     :group: input.farm_layout
 

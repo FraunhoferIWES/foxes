@@ -34,6 +34,20 @@ class FieldData(DatasetStates):
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
+    Examples
+    --------
+    Simplistic example of the NetCDF structure:
+
+    >>>    Dimensions:  (state: 2, h: 2, y: 2, x: 2)
+    >>>    Coordinates:
+    >>>    * state    (state) int32 8B 0 1
+    >>>    * h        (h) float32 8B 0.0 300.0
+    >>>    * y        (y) float32 8B 0.0 2.5e+03
+    >>>    * x        (x) float32 8B 0.0 2.5e+03
+    >>>    Data variables:
+    >>>        ws       (state, h, y, x) float32 64B ...
+    >>>        wd       (state, h, y, x) float32 64B ...
+
     :group: input.states
 
     """

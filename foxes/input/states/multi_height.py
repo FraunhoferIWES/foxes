@@ -529,6 +529,20 @@ class MultiHeightNCStates(MultiHeightStates):
     xr_read_pars: dict
         Parameters for xarray.open_dataset
 
+    Examples
+    --------
+    Example of the NetCDF structure:
+
+    >>>    Dimensions:  (Time: 3000, height: 8)
+    >>>    Coordinates:
+    >>>    * Time     (Time) <U19 228kB '2009-01-01 00:00:00' ... '2009-01-21 19:50:00'
+    >>>    * height   (height) float32 32B 50.0 75.0 90.0 100.0 150.0 200.0 250.0 500.0
+    >>>    Data variables:
+    >>>        ws       (Time, height) float32 96kB ...
+    >>>        wd       (Time, height) float32 96kB ...
+    >>>        ti       (Time, height) float32 96kB ...
+    >>>        rho      (Time) float32 12kB ...
+
     :group: input.states
 
     """

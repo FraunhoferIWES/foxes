@@ -2,29 +2,24 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.5.2
-    New farm controller :ref:`OpFlagController<foxes.models.farm_controllers.OpFlagController>`, 
-    switching off turbines based on state-time dependent boolean input data, cf. :ref:`Turbine operation flags` example.
+.. versionadded:: 1.6
+    Direct support for WRF data fields in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format, via
+    the new ambient states class :ref:`NEWAStates<foxes.input.states.NEWAStates>`.
 
-.. versionadded:: 1.5
-    New ambient states classes :ref:`DatasetStates<foxes.input.states.DatasetStates>`, 
-    :ref:`PointCloudData<foxes.input.states.PointCloudData>`, 
-    :ref:`WeibullField<foxes.input.states.WeibullField>`, 
-    :ref:`WeibullPointCloud<foxes.input.states.WeibullPointCloud>`; 
-    new turbine type :ref:`CalculatorType<foxes.models.turbine_types.CalculatorType>`; new rotor model 
-    :ref:`DirectMDataInfusion<foxes.models.rotor_models.DirectMDataInfusion>`
+.. versionadded:: 1.6
+    Support for wind farm layouts in (longitude, latitude) coordinates, will
+    be automatically converted into the globally set UTM zone. The new layout input functions 
+    :ref:`add_from_wrf<foxes.input.farm_layout.add_from_wrf>` for WRF wind farm input folders and 
+    :ref:`add_from_eww<foxes.input.farm_layout.add_from_eww>` for farm input in EuroWindWakes format
+    are always based on (lon, lat) coordinates.
 
-.. versionchanged:: 1.5
-    Important bug fix for turbine model :ref:`SetFarmVars<foxes.models.turbine_models.SetFarmVars>` that messed up the turbine ordering.
-    Similar fix for all turbine models with flag `pre_rotor` set to `True`. 
+.. versionchanged:: 1.6
+    The :ref:`Iterative <foxes.algorithms.Iterative>` algorithm now reduces the
+    target states to the subset of non-converged states in each iteration, which
+    can significantly reduce computation time.
 
-.. versionadded:: 1.4
-    This version introduces `WakeDeflection` models. This replaces and generalizes the `YawedWakes` wake frame of previous versions. 
-    Now any choice of wake frame can be combined with yawed wakes, for example streamlines or dynamic wakes, see :ref:`Dynamic wake deflection`.
-    The wake deflection model is selected through the parameter `wake_deflection` or the algorithm and then applies to all wakes.
-
-.. versionadded:: 1.4
-    The `Jimenez` wake deflection model, which optionally rotates the waked wind vector along the bent wake path.
+.. versionadded:: 1.6
+    Support for Python 3.14.
 
 Welcome to FOXES
 ================

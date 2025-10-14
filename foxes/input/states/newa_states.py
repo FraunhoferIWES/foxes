@@ -35,6 +35,22 @@ class NEWAStates(DatasetStates):
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
+    Examples
+    --------
+    Example of one of the NetCDF input files in NEWA format:
+
+    >>>     Dimensions:      (time: 144, south_north: 165, west_east: 234, height: 15)
+    >>>     Coordinates:
+    >>>      * time         (time) datetime64[ns] 1kB 2006-01-04 ... 2006-01-04T23:54:00
+    >>>      * south_north  (south_north) float32 660B -1.79e+05 -1.77e+05 ... 1.49e+05
+    >>>      * west_east    (west_east) float32 936B -2.48e+05 -2.46e+05 ... 2.18e+05
+    >>>      * height       (height) float32 60B 25.0 50.0 75.0 90.0 ... 400.0 500.0 1e+03
+    >>>        XLAT         (south_north, west_east) float32 154kB ...
+    >>>        XLON         (south_north, west_east) float32 154kB ...
+    >>>    Data variables: (12/24)
+    >>>        WS           (time, height, south_north, west_east) float32 334MB ...
+    >>>        ...
+
     :group: input.states
 
     """

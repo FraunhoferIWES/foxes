@@ -28,6 +28,7 @@ of the sub package :ref:`foxes.input.farm_layout`. Typical choices are:
 
 * :ref:`add_from_csv<foxes.input.farm_layout.add_from_csv>`: Reads a *csv* file, in which each row describes one turbine (also accepts a pandas *DataFrame* instead of the file),
 * :ref:`add_from_file<foxes.input.farm_layout.add_from_file>`: Similarly, additionally also accepting *json* inputs,
+* :ref:`add_from_wrf<foxes.input.farm_layout.add_from_wrf>`: Reads a WRF wind farm input folder, optionally with turbine files in TBL format,
 * :ref:`add_grid<foxes.input.farm_layout.add_grid>`: Adds a regular grid of turbines with identical properties,
 * :ref:`add_row<foxes.input.farm_layout.add_row>`: Adds a row of turbines with identical properties.
 * :ref:`add_random<foxes.input.farm_layout.add_random>`: Adds turbines at random positions with identical properties.
@@ -71,6 +72,7 @@ The full list of currently implemented ambient states can be found in the
 * :ref:`Timeseries<foxes.input.states.Timeseries>`: Spatially homogeneous timeseries data, see :ref:`Timeseries data`,
 * :ref:`MultiHeightTimeseries<foxes.input.states.MultiHeightTimeseries>`, :ref:`MultiHeightNCTimeseries<foxes.input.states.MultiHeightNCTimeseries>`: Height dependent timeseries data, see :ref:`Multi-height wind data`,
 * :ref:`FieldData<foxes.input.states.FieldData>`: Field data, (time, z, y, x) or (time, y, x) dependent. See :ref:`Heterogeneous flow`,
+* :ref:`NEWAStates<foxes.input.states.NEWAStates>`: WRF data files in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format,
 * :ref:`StatesTable<foxes.input.states.StatesTable>`: Spatially homogeneous data with weights, see :ref:`Wind rose data`,
 * :ref:`OnePointFlowTimeseries<foxes.input.states.OnePointFlowTimeseries>`: Horizontally homogeneous data translated into inhomogeneous flow, see :ref:`Dynamic Wakes 1`,
 * :ref:`WeibullSectors<foxes.input.states.WeibullSectors>`: Spatially homogeneous Weibull wind speed distributions organized in wind direction sectors.
