@@ -813,6 +813,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.6
 
+- Python version:
+  - Adding support for Python 3.14
 - Core:
   - Wind farms now support turbine locations in terms of longitude, lattitude. They will automatically be translated into
   a uniquely fixed UTM zone, stored in the global config object.

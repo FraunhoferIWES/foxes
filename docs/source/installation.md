@@ -2,7 +2,7 @@
 
 ## Requirements
 
-The supported Python versions are `Python 3.9`...`3.13`.
+The supported Python versions are `Python 3.9`...`3.14`.
 
 ## TLDR; Quick installation guide
 
