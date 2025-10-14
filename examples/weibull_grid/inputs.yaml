@@ -6,6 +6,7 @@ states:
   x_coord: x
   y_coord: y
   h_coord: height
+  height_bounds: [30, 153]
   weight_ncvar: sector_probability
   ws_bins: [0,2,4,6,8,10,15,20,25,30]
   var2ncvar:
