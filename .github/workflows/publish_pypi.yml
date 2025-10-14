@@ -11,7 +11,7 @@ jobs:
 
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
@@ -25,7 +25,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install .[test]
-        python -m pip install dask distributed nbmake
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -35,9 +34,28 @@ jobs:
     - name: Running tests
       run: |
         pytest tests
-    - name: Running notebooks
+
+  notebooks:
+    name: Running notebooks
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # 3.14 notebook issue, asof 2025-10-14
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
       with:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"] # 3.14 has notebug issue, asof 2025-10-14
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[test]
+        python -m pip install dask distributed nbmake
+    - name: Running notebooks
       run: |
         pytest --nbmake notebooks
 
@@ -94,6 +112,7 @@ jobs:
       Publish 🐍 to PyPI 📦
     needs:
     - tests
+    - notebooks
     - publish-to-testpypi
     runs-on: ubuntu-latest
     environment:
