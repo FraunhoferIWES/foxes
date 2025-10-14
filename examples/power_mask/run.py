@@ -153,7 +153,6 @@ if __name__ == "__main__":
         ]
 
         # run calculation with power mask:
-
         farm_results = algo.calc_farm(outputs=outputs)
 
         fr = farm_results.to_dataframe()
@@ -167,10 +166,9 @@ if __name__ == "__main__":
         o1 = foxes.output.StateTurbineMap(farm_results)
 
         # run calculation without power mask:
-
-        mbook.finalize(algo)
-        models.remove("set_Pmax")
-        models.remove("PMask")
+        for t in farm.turbines:
+            t.models.remove("set_Pmax")
+            t.models.remove("PMask")
 
         farm_results = algo.calc_farm(outputs=outputs)
 
@@ -186,7 +184,7 @@ if __name__ == "__main__":
             o0 = foxes.output.StateTurbineMap(farm_results)
 
             # show power:
-            fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+            fig, axs = plt.subplots(1, 3, figsize=(11, 5))
             o0.plot_map(
                 FV.P,
                 ax=axs[0],
@@ -218,7 +216,7 @@ if __name__ == "__main__":
             plt.close(fig)
 
             # show ct:
-            fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+            fig, axs = plt.subplots(1, 3, figsize=(11, 5))
             o0.plot_map(
                 FV.CT,
                 ax=axs[0],
