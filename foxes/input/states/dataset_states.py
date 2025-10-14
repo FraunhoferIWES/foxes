@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from copy import copy, deepcopy
-from abc import abstractmethod
 
 from foxes.core import States, get_engine
 from foxes.utils import import_module
@@ -833,7 +832,6 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    @abstractmethod
     def interpolate_data(self, idims, icrds, d, pts, tdims):
         """
         Interpolates data to points.
@@ -862,7 +860,9 @@ class DatasetStates(States):
             The interpolated data array with shape tdims
 
         """
-        pass
+        raise NotImplementedError(
+            f"States '{self.name}': interpolate_data not implemented"
+        )
 
     def calculate(self, algo, mdata, fdata, tdata):
         """

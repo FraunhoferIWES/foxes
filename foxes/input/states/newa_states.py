@@ -107,7 +107,7 @@ class NEWAStates(DatasetStates):
         wrf_point_plot: str, optional
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
-            
+
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
@@ -232,13 +232,13 @@ class NEWAStates(DatasetStates):
             j1 = inds[:, 1].max()
             while True:
                 self._xy = xy[i0 : i1 + 1, j0 : j1 + 1]
-                if i0 > 0 and x0 < np.min(self._xy[...,0]):
+                if i0 > 0 and x0 < np.min(self._xy[..., 0]):
                     i0 -= 1
-                elif i1 < nx - 1 and x1 > np.max(self._xy[...,0]):
+                elif i1 < nx - 1 and x1 > np.max(self._xy[..., 0]):
                     i1 += 1
-                elif j0 > 0 and y0 < np.min(self._xy[...,1]):
+                elif j0 > 0 and y0 < np.min(self._xy[..., 1]):
                     j0 -= 1
-                elif j1 < ny - 1 and y1 > np.max(self._xy[...,1]):
+                elif j1 < ny - 1 and y1 > np.max(self._xy[..., 1]):
                     j1 += 1
                 else:
                     break
@@ -274,8 +274,15 @@ class NEWAStates(DatasetStates):
             if verbosity > 0:
                 print(f"States '{self.name}': Writing WRF grid point plot to '{fpath}'")
             fig, ax = plt.subplots()
-            ax.plot(self._xy[..., 0].flatten(), self._xy[..., 1].flatten(), c="blue", alpha=0.5, marker=".", linestyle="None")
-            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig,ax=ax)
+            ax.plot(
+                self._xy[..., 0].flatten(),
+                self._xy[..., 1].flatten(),
+                c="blue",
+                alpha=0.5,
+                marker=".",
+                linestyle="None",
+            )
+            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax)
             ax.set_xlabel(f"{FV.X} [m]")
             ax.set_ylabel(f"{FV.Y} [m]")
             ax.set_aspect("equal", adjustable="box")
@@ -357,7 +364,7 @@ class NEWAStates(DatasetStates):
         n_gpts = 1
         ix = None
         for i, c in enumerate(icrds):
-            if idims[i] not in (FV.X, FV.Y): # leave out X and Y, cf. self._cmap
+            if idims[i] not in (FV.X, FV.Y):  # leave out X and Y, cf. self._cmap
                 shp = [1] * len(icrds)
                 shp[i] = c.shape[0]
                 gpts[..., i] = c.reshape(shp)
@@ -371,15 +378,15 @@ class NEWAStates(DatasetStates):
                 assert ix == i - 1, (
                     f"States '{self.name}': Unexpected dimension order {idims}, expected {FV.X} before {FV.Y}"
                 )
-        
+
         # sneak in self._xy instead of west_east and south_north coords:
         if ix is not None:
             shp = [1] * (len(icrds) + 1)
-            shp[ix:ix+2] = self._xy.shape[:2]
+            shp[ix : ix + 2] = self._xy.shape[:2]
             shp[-1] = 2
-            gpts[..., ix:ix+2] = self._xy.reshape(shp)
+            gpts[..., ix : ix + 2] = self._xy.reshape(shp)
             n_gpts *= self._xy.shape[0] * self._xy.shape[1]
-        
+
         # reshape:
         gpts = gpts.reshape((n_gpts, len(idims)))
         n_vrs = d.shape[-1]
@@ -398,7 +405,13 @@ class NEWAStates(DatasetStates):
                 qmin = np.min(gpts[:, :n_dms], axis=0)
                 qmax = np.max(gpts[:, :n_dms], axis=0)
                 method = "linear"
-                print("\n\nInterpolation error", gpts.shape, d.shape,pts.shape, results.shape)
+                print(
+                    "\n\nInterpolation error",
+                    gpts.shape,
+                    d.shape,
+                    pts.shape,
+                    results.shape,
+                )
                 print("dims:  ", idims)
                 print("point: ", p)
                 print("qmin:  ", qmin)
@@ -406,7 +419,7 @@ class NEWAStates(DatasetStates):
                 raise ValueError(
                     f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
                 )
-                
+
         return results.reshape(tdims)
 
     def calculate(self, algo, mdata, fdata, tdata):

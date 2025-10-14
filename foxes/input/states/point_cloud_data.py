@@ -3,7 +3,6 @@ from scipy.interpolate import (
     LinearNDInterpolator,
     NearestNDInterpolator,
     RBFInterpolator,
-    griddata,
 )
 
 from foxes.config import config
@@ -218,64 +217,6 @@ class PointCloudData(DatasetStates):
             verbosity=verbosity,
         )
 
-    def interpolate_data(self, idims, icrds, d, pts, tdims):
-        """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
-
-        Parameters
-        ----------
-        idims: list of str
-            The input dimensions, e.g. [state, x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
-        d: numpy.ndarray
-            The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
-        pts: numpy.ndarray
-            The points to interpolate to, with shape (n_pts, n_idims)
-        tdims: tuple
-            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
-
-        Returns
-        -------
-        d_interp: numpy.ndarray
-            The interpolated data array with shape tdims
-
-        """
-        ipars = dict(
-            method="linear",
-            rescale=True,
-        )
-        ipars.update(self.interp_pars)
-
-        gpts = np.zeros(d.shape[:-1] + (len(idims),), dtype=config.dtype_double)
-        n_gpts = 1
-        for i, c in enumerate(icrds):
-            shp = [1] * len(icrds)
-            shp[i] = c.shape[0]
-            gpts[..., i] = c.reshape(shp)
-            n_gpts *= c.shape[0]
-        gpts = gpts.reshape((n_gpts, len(idims)))
-        n_vrs = d.shape[-1]
-        d = d.reshape((n_gpts, n_vrs))
-
-        method = ipars.pop("method", "linear")
-        if method == "linear":
-            results = LinearNDInterpolator(gpts, d, **ipars)(pts - 123123)
-        else:
-            results = []
-            for iv in range(n_vrs):
-                di = d[..., iv]
-                di = griddata(gpts, di, pts, method=method, **ipars)
-                results.append(di)
-            results = np.stack(results, axis=-1)
-
-        return results.reshape(tdims)
-    
     def calculate(self, algo, mdata, fdata, tdata):
         """
         The main model calculation.
@@ -302,7 +243,7 @@ class PointCloudData(DatasetStates):
             (n_states, n_targets, n_tpoints)
 
         """
-        return super().calculate(algo, mdata, fdata, tdata)
+
         # prepare
         self.ensure_output_vars(algo, tdata)
         n_states = tdata.n_states
