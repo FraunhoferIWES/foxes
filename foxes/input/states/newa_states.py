@@ -1,8 +1,10 @@
 import numpy as np
-from scipy.interpolate import griddata, LinearNDInterpolator
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
 
 from foxes.utils.utm_utils import from_lonlat
-from foxes.config.config import config
+from foxes.config.config import config, get_output_path
+from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -50,9 +52,10 @@ class NEWAStates(DatasetStates):
         var2ncvar=None,
         load_mode="fly",
         time_format=r"%Y-%m-%dT%H:%M:%S",
-        bounds_extra_space=3000,
+        bounds_extra_space=0.0,
         height_bounds=None,
         interp_pars=None,
+        wrf_point_plot=None,
         **kwargs,
     ):
         """
@@ -101,7 +104,10 @@ class NEWAStates(DatasetStates):
         interp_pars: dict, optional
             Additional parameters for scipy.interpolate.griddata,
             e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
-
+        wrf_point_plot: str, optional
+            Path to a plot file, e.g. wrf_points.png, to visualize the
+            selected WRF grid points and the layout of the farm.
+            
         """
         if output_vars is None:
             ovars = [FV.WS, FV.WD, FV.TI, FV.RHO]
@@ -134,6 +140,7 @@ class NEWAStates(DatasetStates):
         self.xlon_coord = xlon_coord
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
+        self.wrf_point_plot = wrf_point_plot
         self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
 
@@ -183,6 +190,7 @@ class NEWAStates(DatasetStates):
         lonlat = np.stack(
             (data[self.xlon_coord].values, data[self.xlat_coord].values), axis=-1
         )
+        lonlat = np.moveaxis(lonlat, 0, 1)  # (y, x, 2) to (x, y, 2)
         nx, ny = lonlat.shape[:2]
         lonlat = lonlat.reshape((nx * ny, 2))
         xy = from_lonlat(lonlat)
@@ -222,14 +230,19 @@ class NEWAStates(DatasetStates):
             i1 = inds[:, 0].max()
             j0 = inds[:, 1].min()
             j1 = inds[:, 1].max()
-            while i0 > 0 and np.min(xy[i0:i1+1, j0:j1+1, 0]) > x0:
-                i0 -= 1
-            while i1 < nx - 1 and np.max(xy[i0:i1+1, j0:j1+1, 0]) < x1:
-                i1 += 1
-            while j0 > 0 and np.min(xy[i0:i1+1, j0:j1+1, 1]) > y0:
-                j0 -= 1
-            while j1 < ny - 1 and np.max(xy[i0:i1+1, j0:j1+1, 1]) < y1:
-                j1 += 1
+            while True:
+                self._xy = xy[i0 : i1 + 1, j0 : j1 + 1]
+                if i0 > 0 and x0 < np.min(self._xy[...,0]):
+                    i0 -= 1
+                elif i1 < nx - 1 and x1 > np.max(self._xy[...,0]):
+                    i1 += 1
+                elif j0 > 0 and y0 < np.min(self._xy[...,1]):
+                    j0 -= 1
+                elif j1 < ny - 1 and y1 > np.max(self._xy[...,1]):
+                    j1 += 1
+                else:
+                    break
+            nx, ny = self._xy.shape[:2]
 
             if self.isel is None:
                 self.isel = {}
@@ -239,24 +252,36 @@ class NEWAStates(DatasetStates):
                     self.south_north_coord: slice(j0, j1 + 1),
                 }
             )
-            xy = xy[i0 : i1 + 1, j0 : j1 + 1]
-            nx, ny = xy.shape[:2]
             if verbosity > 0:
                 print(
-                    f"States '{self.name}': Selected {FV.X} = {np.min(xy[..., 0]):.2f} - {np.max(xy[..., 0]):.2f} ({nx} points)"
+                    f"States '{self.name}': Selected {FV.X} = {np.min(self._xy[..., 0]):.2f} - {np.max(self._xy[..., 0]):.2f} ({nx} points)"
                 )
                 print(
-                    f"States '{self.name}': Selected {FV.Y} = {np.min(xy[..., 1]):.2f} - {np.max(xy[..., 1]):.2f} ({ny} points)"
+                    f"States '{self.name}': Selected {FV.Y} = {np.min(self._xy[..., 1]):.2f} - {np.max(self._xy[..., 1]):.2f} ({ny} points)"
                 )
                 print(
-                    f"States '{self.name}': Selected {xy.shape[:2] + (nh,)} grid points"
+                    f"States '{self.name}': Selected {self._xy.shape[:2] + (nh,)} grid points"
                 )
-        elif verbosity > 0:
-            print(
-                f"States '{self.name}': Selecting all {xy.shape[:2] + (nh,)} grid points"
-            )
+        else:
+            self._xy = xy
+            if verbosity > 0:
+                print(
+                    f"States '{self.name}': Selecting all {self._xy.shape[:2] + (nh,)} grid points"
+                )
 
-        self._xy = xy
+        if self.wrf_point_plot is not None:
+            fpath = get_output_path(self.wrf_point_plot)
+            if verbosity > 0:
+                print(f"States '{self.name}': Writing WRF grid point plot to '{fpath}'")
+            fig, ax = plt.subplots()
+            ax.plot(self._xy[..., 0].flatten(), self._xy[..., 1].flatten(), c="blue", alpha=0.5, marker=".", linestyle="None")
+            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig,ax=ax)
+            ax.set_xlabel(f"{FV.X} [m]")
+            ax.set_ylabel(f"{FV.Y} [m]")
+            ax.set_aspect("equal", adjustable="box")
+            ax.autoscale_view(tight=True)
+            fig.savefig(fpath, bbox_inches="tight")
+            plt.close()
 
     def load_data(self, algo, verbosity=0):
         """
