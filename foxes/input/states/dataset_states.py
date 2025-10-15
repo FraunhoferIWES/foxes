@@ -81,6 +81,8 @@ class DatasetStates(States):
         Subset selection via xr.Dataset.isel()
     weight_factor: float
         The factor to multiply the weights with
+    check_times: bool
+        Whether to check the time coordinates for consistency
 
     :group: input.states
 
@@ -97,6 +99,7 @@ class DatasetStates(States):
         sel=None,
         isel=None,
         weight_factor=None,
+        check_times=True,
         **kwargs,
     ):
         """
@@ -130,6 +133,8 @@ class DatasetStates(States):
             Subset selection via xr.Dataset.isel()
         weight_factor: float, optional
             The factor to multiply the weights with
+        check_times: bool
+            Whether to check the time coordinates for consistency
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -144,6 +149,7 @@ class DatasetStates(States):
         self.sel = sel
         self.isel = isel
         self.weight_factor = weight_factor
+        self.check_times = check_times
 
         self._N = None
         self._inds = None
@@ -522,7 +528,7 @@ class DatasetStates(States):
         # make sure state indices are sorted ascending:
         def _is_sorted(a):
             return np.all(a[:-1] <= a[1:])
-        if not _is_sorted(self._inds):
+        if self.check_times and not _is_sorted(self._inds):
             print("\n\nError with state indices, not sorted:\n")
             print(f"State {0:07d}: {self._inds[0]}")
             for i in range(1, self._N):
