@@ -417,7 +417,7 @@ class DatasetStates(States):
             # find files:
             prt = fpath.resolve().parent
             glb = fpath.name
-            while "*" in str(prt.name):
+            while "*" in str(prt):
                 glb = prt.name + "/" + glb
                 prt = prt.parent
             files = sorted(list(prt.glob(glb)))
@@ -518,6 +518,21 @@ class DatasetStates(States):
         else:
             self._inds = self.data_source[states_coord].to_numpy()
             self._N = len(self._inds)
+
+        # make sure state indices are sorted ascending:
+        def _is_sorted(a):
+            return np.all(a[:-1] <= a[1:])
+        if not _is_sorted(self._inds):
+            print("\n\nError with state indices, not sorted:\n")
+            print(f"State {0:07d}: {self._inds[0]}")
+            for i in range(1, self._N):
+                print(f"State {i:07d}: {self._inds[i]}")
+                if self._inds[i] < self._inds[i - 1]:
+                    break
+            print()
+            raise ValueError(
+                f"States '{self.name}': State indices are not sorted ascending: {self._inds[i - 1]} > {self._inds[i]} at position {i - 1}"
+            )
 
         return self.__data_source
 
@@ -787,13 +802,16 @@ class DatasetStates(States):
             j0 = 0
             data = []
             for fpath, n in self._files_maxi.items():
-                if i0 < j0:
+                if i0 < j0 or i0 == i1:
                     break
                 else:
                     j1 = j0 + n
                     if i0 < j1:
                         a = i0 - j0
                         b = min(i1, j1) - j0
+                        assert b > a, (
+                            f"States '{self.name}': Invalid state indices for file {fpath}: (i0, i1, j0, j1, a, b) = {(i0, i1, j0, j1, a, b)}"
+                        )
                         isel = copy(self.isel) if self.isel is not None else {}
                         isel[states_coord] = slice(a, b)
 

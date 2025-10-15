@@ -67,7 +67,7 @@ class NEWAStates(DatasetStates):
         output_vars=None,
         var2ncvar=None,
         load_mode="fly",
-        time_format=r"%Y-%m-%dT%H:%M:%S",
+        time_format=None,#r"%Y-%m-%dT%H:%M:%S",
         bounds_extra_space=0.0,
         height_bounds=None,
         interp_pars=None,
