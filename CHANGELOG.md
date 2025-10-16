@@ -825,6 +825,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - New farm layout input `from_eww`, reading wind farm input in EuroWindWakes format
   - New farm layout input `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF
   - New states `NEWAStates`, directly reading NEWA-WRF data files into foxes
+- Models:
+  - Addition of `IEA37Gaussian` wake model to the model book, requiring slight generalization of the `Bastankhah2014` wake model class.
+  - Adding default parameter wake models to the model book, following the papers: `Bastankhah2014`, `TurbOPark`.
 - Examples:
   - New example `parameter_study`, demonstrating the setup of a parameter study
 - Bug fixes:
