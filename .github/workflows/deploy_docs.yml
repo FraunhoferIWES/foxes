@@ -22,9 +22,7 @@ jobs:
 
     - name: Install foxes
       run: |
-        pip install -e .[doc]
-        pip uninstall -y nbsphinx
-        pip install git+https://github.com/SchmJo/nbsphinx.git@master
+        pip install -e .[doc] --upgrade
     - name: Build documentation
       run: |
         cd docs
