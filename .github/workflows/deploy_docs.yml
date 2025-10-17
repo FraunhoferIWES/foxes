@@ -23,7 +23,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
-        enable-cache: true
+        enable-cache: false
 
     - name: Install foxes
       run: uv sync --extra doc --upgrade
