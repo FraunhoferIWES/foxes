@@ -20,18 +20,13 @@ jobs:
       with:
         python-version-file: ".python-version"
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v6
-      with:
-        enable-cache: false
-
     - name: Install foxes
-      run: uv sync --extra doc --upgrade
+      run: pip install -e .[doc]
 
     - name: Build documentation
       run: |
         cd docs
-        uv run make html
+        make html
 
     - name: Upload artifacts
       uses: actions/upload-pages-artifact@v3
