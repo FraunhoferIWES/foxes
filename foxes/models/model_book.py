@@ -414,6 +414,25 @@ class ModelBook:
 
         self.wake_models = FDict(_name="wake_models")
 
+        # Reference for the IEA37Gaussian wake deficit model: 
+        # https://github.com/byuflowlab/iea37-wflo-casestudies/blob/master/cs1-2/iea37-wakemodel.pdf
+        self.wake_models["IEA37Gaussian"] = fm.wake_models.wind.Bastankhah2014(
+            superposition="ws_quadratic",
+            k=0.0324555,
+            sbeta=1/sqrt(8),
+        )
+        self.wake_models.add_k_factory(
+            fm.wake_models.wind.Bastankhah2014,
+            "IEA37Gaussian_<superposition>_[wake_k]",
+            kwargs=dict(sbeta=1/sqrt(8)),
+            superposition=lambda s: f"ws_{s}"
+            if f"ws_{s}" in self.wake_superpositions
+            else s,
+            hints={
+                "superposition": "(Superposition, e.g. linear for ws_linear, or vector)"
+            },
+        )
+
         self.wake_models.add_k_factory(
             fm.wake_models.wind.JensenWake,
             "Jensen_<superposition>_[wake_k]",
@@ -426,6 +445,11 @@ class ModelBook:
             },
         )
 
+        self.wake_models["Bastankhah2014"] = fm.wake_models.wind.Bastankhah2014(
+            superposition="ws_linear",
+            k=0.04,
+            induction="Madsen",
+        )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "Bastankhah2014_<superposition>_[wake_k]",
@@ -494,6 +518,12 @@ class ModelBook:
             },
         )
 
+        self.wake_models["TurbOPark"] = fm.wake_models.wind.TurbOParkWake(
+            superposition="ws_quadratic",
+            ka=0.04,
+            ti_var=FV.AMB_TI,
+            induction="Madsen",
+        )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.TurbOParkWake,
             "TurbOPark_<superposition>_[wake_k]",

@@ -20,9 +20,9 @@ def write_nc(
     ----------
     fpath: str
         Path to the output file, should be nc
-    round: dict
+    round: dict or int
         The rounding digits, falling back to defaults
-        if variable not found
+        if variable not found. If int, applies to all variables.
     complevel: int
         The compression level
     verbosity: int
@@ -51,11 +51,17 @@ def write_nc(
     if round is not None:
         crds = {}
         for v, x in ds.coords.items():
-            d = round.get(v, get_default_digits(v))
+            if isinstance(round, int):
+                d = round
+            else:
+                d = round.get(v, get_default_digits(v))
             crds[v] = _round(x.to_numpy(), v, d)
         dvrs = {}
         for v, x in ds.data_vars.items():
-            d = round.get(v, get_default_digits(v))
+            if isinstance(round, int):
+                d = round
+            else:
+                d = round.get(v, get_default_digits(v))
             dvrs[v] = (x.dims, _round(x.to_numpy(), v, d))
         ds = Dataset(coords=crds, data_vars=dvrs)
 

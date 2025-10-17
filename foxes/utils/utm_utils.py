@@ -56,8 +56,8 @@ def from_lonlat(lonlat):
 
     utmz, utml = config.utm_zone
     x, y, __, __ = utm.from_latlon(
-        lonlat[:, 1],
-        lonlat[:, 0],
+        lonlat[:, 1].astype(np.float64),
+        lonlat[:, 0].astype(np.float64),
         utmz,
         utml,
     )
@@ -82,6 +82,6 @@ def get_utm_zone(lonlat):
     :group: utils
 
     """
-    lat = lonlat[:, 1]
-    lon = lonlat[:, 0]
+    lat = lonlat[:, 1].astype(np.float64)
+    lon = lonlat[:, 0].astype(np.float64)
     return utm.from_latlon(lat, lon)[2:4]

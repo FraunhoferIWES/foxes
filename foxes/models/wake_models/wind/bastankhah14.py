@@ -21,9 +21,12 @@ class Bastankhah2014(GaussianWakeModel):
     Attributes
     ----------
     sbeta_factor: float
-        Factor multiplying sbeta
+        Factor multiplying sbeta, only relevant if sbeta is not set
+    sbeta: float
+        If set, sbeta is fixed to this value, otherwise it
+        is calculated from axial induction
     induction: foxes.core.AxialInductionModel
-        The induction model
+        The axial induction model
     wake_k: foxes.core.WakeK
         Handler for the wake growth parameter k
 
@@ -35,6 +38,7 @@ class Bastankhah2014(GaussianWakeModel):
         self,
         superposition,
         sbeta_factor=0.2,
+        sbeta=None,
         induction="Madsen",
         **wake_k,
     ):
@@ -46,15 +50,19 @@ class Bastankhah2014(GaussianWakeModel):
         superposition: str
             The wind speed deficit superposition.
         sbeta_factor: float
-            Factor multiplying sbeta
+            Factor multiplying sbeta, only relevant if sbeta is not set
+        sbeta: float, optional
+            If set, sbeta is fixed to this value, otherwise it
+            is calculated from axial induction
         induction: foxes.core.AxialInductionModel or str
-            The induction model
+            The axial induction model
         wake_k: dict, optional
             Parameters for the WakeK class
 
         """
         super().__init__(wind_superposition=superposition)
         self.sbeta_factor = sbeta_factor
+        self.sbeta = sbeta
         self.induction = induction
         self.wake_k = WakeK(**wake_k)
 
@@ -192,11 +200,16 @@ class Bastankhah2014(GaussianWakeModel):
             )
 
             # calculate sigma:
-            # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
-            a = self.induction.ct2a(ct)
-            beta = np.maximum((1 - a) / (1 - 2 * a), 0)
-            sigma = k * x + self.sbeta_factor * np.sqrt(beta) * D
-            del beta, a
+            if self.sbeta is None:
+                # beta = 0.5 * (1 + np.sqrt(1.0 - ct)) / np.sqrt(1.0 - ct)
+                a = self.induction.ct2a(ct)
+                beta = np.maximum((1 - a) / (1 - 2 * a), 0)
+                fsbeta = self.sbeta_factor * np.sqrt(beta)
+                del beta, a
+            else:
+                fsbeta = self.sbeta
+            sigma = k * x + fsbeta * D
+            del fsbeta
 
             # calculate amplitude:
             ct_eff = ct / (8 * (sigma / D) ** 2)
