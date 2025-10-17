@@ -414,17 +414,17 @@ class ModelBook:
 
         self.wake_models = FDict(_name="wake_models")
 
-        # Reference for the IEA37Gaussian wake deficit model: 
+        # Reference for the IEA37Gaussian wake deficit model:
         # https://github.com/byuflowlab/iea37-wflo-casestudies/blob/master/cs1-2/iea37-wakemodel.pdf
         self.wake_models["IEA37Gaussian"] = fm.wake_models.wind.Bastankhah2014(
             superposition="ws_quadratic",
             k=0.0324555,
-            sbeta=1/sqrt(8),
+            sbeta=1 / sqrt(8),
         )
         self.wake_models.add_k_factory(
             fm.wake_models.wind.Bastankhah2014,
             "IEA37Gaussian_<superposition>_[wake_k]",
-            kwargs=dict(sbeta=1/sqrt(8)),
+            kwargs=dict(sbeta=1 / sqrt(8)),
             superposition=lambda s: f"ws_{s}"
             if f"ws_{s}" in self.wake_superpositions
             else s,

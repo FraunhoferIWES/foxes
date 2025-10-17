@@ -528,6 +528,7 @@ class DatasetStates(States):
         # make sure state indices are sorted ascending:
         def _is_sorted(a):
             return np.all(a[:-1] <= a[1:])
+
         if self.check_times and not _is_sorted(self._inds):
             print("\n\nError with state indices, not sorted:\n")
             print(f"State {0:07d}: {self._inds[0]}")
