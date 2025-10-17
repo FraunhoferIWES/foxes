@@ -90,7 +90,7 @@ exclude_patterns = [
     # "_templates/*",
     # DEBUG
     # "examples.rst",
-    "notebooks/*",
+    # "notebooks/*",
     # "notebooks/layout_opt.ipynb",
     # "notebooks/timelines.ipynb",
     # "notebooks/heterogeneous.ipynb",
