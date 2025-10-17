@@ -862,7 +862,7 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    def interpolate_data(self, idims, icrds, d, pts, tdims):
+    def interpolate_data(self, idims, icrds, d, pts, tdims, vrs, times):
         """
         Interpolates data to points.
 
@@ -883,6 +883,10 @@ class DatasetStates(States):
             The points to interpolate to, with shape (n_pts, n_idims)
         tdims: tuple
             The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
+        vrs: list of str
+            The variable names, length nv
+        times: numpy.ndarray
+            The time coordinates of the states, with shape (n_states,)
 
         Returns
         -------
@@ -927,6 +931,7 @@ class DatasetStates(States):
         n_tpoints = tdata.n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_targets * n_tpoints, 3)
         n_pts = points.shape[1]
+        times = mdata[FC.STATE]
 
         # get data for calculation
         coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
@@ -1001,7 +1006,7 @@ class DatasetStates(States):
 
             # interpolate:
             icrds = [coords[c] for c in idims]
-            d = self.interpolate_data(idims, icrds, d, pts, tdims)
+            d = self.interpolate_data(idims, icrds, d, pts, tdims, vrs, times)
             del pts, icrds
 
             # translate (U, V) into (WD, WS):

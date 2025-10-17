@@ -338,7 +338,7 @@ class NEWAStates(DatasetStates):
             verbosity=verbosity,
         )
 
-    def interpolate_data(self, idims, icrds, d, pts, tdims):
+    def interpolate_data(self, idims, icrds, d, pts, tdims, vrs, times):
         """
         Interpolates data to points.
 
@@ -359,6 +359,10 @@ class NEWAStates(DatasetStates):
             The points to interpolate to, with shape (n_pts, n_idims)
         tdims: tuple
             The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
+        vrs: list of str
+            The variable names, length nv
+        times: numpy.ndarray
+            The time coordinates of the states, with shape (n_states,)
 
         Returns
         -------
@@ -418,24 +422,41 @@ class NEWAStates(DatasetStates):
                 i = np.where(sel)[0]
                 n_dms = len(icrds)
                 p = pts[i[0], :n_dms]
+                t = times[int(p[0])]
                 qmin = np.min(gpts[:, :n_dms], axis=0)
                 qmax = np.max(gpts[:, :n_dms], axis=0)
+                isin = (p >= qmin) & (p <= qmax)
                 method = "linear"
-                print(
-                    "\n\nInterpolation error",
-                    gpts.shape,
-                    d.shape,
-                    pts.shape,
-                    results.shape,
-                )
-                print("dims:  ", idims)
-                print("point: ", p)
-                print("qmin:  ", qmin)
-                print("qmax:  ", qmax, "\n\n")
-                raise ValueError(
-                    f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
-                )
+                print("\n\nInterpolation error",i,p)
+                print("time:   ", t)
+                print("dims:   ", idims)
+                print("point:  ", p)
+                print("qmin:   ", qmin)
+                print("qmax:   ", qmax)
+                print("Inside: ", isin, "\n\n")
 
+                if not np.all(isin):
+                    raise ValueError(
+                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p} at time {t}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
+                    )
+                else:
+                    sel2 = np.isnan(d)
+                    if np.any(sel2):
+                        i = np.where(sel2)
+                        p = gpts[i[0][0]]
+                        v = vrs[i[1][0]]
+                        print(f"NaN data found in input data, e.g. for variable '{v}' at point:")
+                        for ic, c in enumerate(idims):
+                            print(f"  {c}: {p[ic]}")
+                        for iw, w in enumerate(vrs):
+                            print(f"  {w}: {d[i[0][0], iw]}")
+                        print("\n\n")
+                        raise ValueError(
+                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} at time {t} with {v} = {d[i[0][0], i[1][0]]}."
+                        )
+                    raise ValueError(
+                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                    )
         return results.reshape(tdims)
 
     def calculate(self, algo, mdata, fdata, tdata):
