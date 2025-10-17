@@ -110,6 +110,8 @@ napolean_use_rtype = False
 
 # -- Options for nbsphinx -----------------------------------------------------
 
+nbsphinx_allow_errors = False
+
 # Execute notebooks before conversion: 'always', 'never', 'auto' (default)
 # We execute all notebooks, exclude the slow ones using 'exclude_patterns'
 nbsphinx_execute = "always"
@@ -140,10 +142,13 @@ nbsphinx_timeout = 500
 # Fix for issue with pyplot, cf
 # https://github.com/readthedocs/sphinx_rtd_theme/issues/788#issuecomment-585785027
 nbsphinx_prolog = r"""
-.. raw:: html
+{% set docname = 'docs' / env.doc2path(env.docname, base=None) %}
 
-    <script src='http://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js'></script>
-    <script>require=requirejs;</script>
+
+.. only:: html
+
+    .. role:: raw-html(raw)
+        :format: html
 
 
 """
