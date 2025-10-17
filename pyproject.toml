@@ -58,7 +58,6 @@ dask = [
     "setuptools>=61.0",
 ]
 doc = [
-    "nbsphinx @ git+https://github.com/SchmJo/nbsphinx.git@master",
     "setuptools>=61.0",
     "sphinx>=5.0",
     "sphinx-immaterial>=0.10",
