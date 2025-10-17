@@ -149,5 +149,6 @@ results/
 result*.*
 
 # exceptions:
+!.python-version
 !foxes/output/results_writer.py
 !tests/**/results*
