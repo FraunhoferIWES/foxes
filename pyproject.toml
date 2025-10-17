@@ -62,7 +62,7 @@ doc = [
     "setuptools>=61.0",
     "sphinx>=5.0",
     "sphinx-immaterial>=0.10",
-    "nbsphinx>=0.5",
+    "nbsphinx @ git+https://github.com/SchmJo/nbsphinx.git@master",
     "ipykernel>=5.0",
     "ipywidgets>=5.0",
     "m2r2>=0.2",

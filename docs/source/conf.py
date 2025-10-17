@@ -43,7 +43,7 @@ release = __version__
 extensions = [
     "nbsphinx",
     "sphinx_immaterial",
-    #"sphinx_immaterial.apidoc.python.apigen",
+    "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     #"sphinx.ext.autosummary",
