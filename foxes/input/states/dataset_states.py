@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from copy import copy, deepcopy
+from scipy.interpolate import interpn
 
 from foxes.core import States, get_engine
 from foxes.utils import import_module
@@ -895,9 +896,30 @@ class DatasetStates(States):
             The interpolated data array with shape tdims
 
         """
-        raise NotImplementedError(
-            f"States '{self.name}': interpolate_data not implemented"
-        )
+        gvars = tuple(icrds)
+        try:
+            ipars = dict(bounds_error=True, fill_value=None)
+            ipars.update(self.interpn_pars)
+            d = interpn(gvars, d, pts, **ipars)
+        except ValueError as e:
+            print(f"\nStates '{self.name}': Interpolation error")
+            print(f"INPUT VARS: {idims}")
+            print(
+                "DATA BOUNDS:",
+                [float(np.min(d)) for d in gvars],
+                [float(np.max(d)) for d in gvars],
+            )
+            print(
+                "EVAL BOUNDS:",
+                [float(np.min(p)) for p in pts.T],
+                [float(np.max(p)) for p in pts.T],
+            )
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
+            )
+            raise e
+
+        return d.reshape(tdims)
 
     def calculate(self, algo, mdata, fdata, tdata):
         """

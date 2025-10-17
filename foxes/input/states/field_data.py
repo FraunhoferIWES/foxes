@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.interpolate import interpn
 
 from foxes.utils import weibull_weights
 from foxes.config import config
@@ -155,59 +154,6 @@ class FieldData(DatasetStates):
             height_bounds=self.height_bounds,
             verbosity=verbosity,
         )
-
-    def interpolate_data(self, idims, icrds, d, pts, tdims):
-        """
-        Interpolates data to points.
-
-        This function should be implemented in derived classes.
-
-        Parameters
-        ----------
-        idims: list of str
-            The input dimensions, e.g. [state, x, y, height]
-        icrds: list of numpy.ndarray
-            The input coordinates, each with shape (n_i,)
-            where n_i is the number of grid points in dimension i
-        d: numpy.ndarray
-            The data array, with shape (n1, n2, ..., nv)
-            where ni represents the dimension sizes and
-            nv is the number of variables
-        pts: numpy.ndarray
-            The points to interpolate to, with shape (n_pts, n_idims)
-        tdims: tuple
-            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
-
-        Returns
-        -------
-        d_interp: numpy.ndarray
-            The interpolated data array with shape tdims
-
-        """
-        gvars = tuple(icrds)
-        try:
-            ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interpn_pars)
-            d = interpn(gvars, d, pts, **ipars)
-        except ValueError as e:
-            print(f"\nStates '{self.name}': Interpolation error")
-            print(f"INPUT VARS: {idims}")
-            print(
-                "DATA BOUNDS:",
-                [float(np.min(d)) for d in gvars],
-                [float(np.max(d)) for d in gvars],
-            )
-            print(
-                "EVAL BOUNDS:",
-                [float(np.min(p)) for p in pts.T],
-                [float(np.max(p)) for p in pts.T],
-            )
-            print(
-                "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
-            )
-            raise e
-
-        return d.reshape(tdims)
 
 
 class WeibullField(FieldData):
