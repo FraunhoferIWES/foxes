@@ -22,7 +22,7 @@ class Config(Dict):
                 FC.WORK_DIR: Path("."),
                 FC.INPUT_DIR: None,
                 FC.OUTPUT_DIR: None,
-                FC.NC_ENGINE: "h5netcdf",
+                FC.NC_ENGINE: "netcdf4",
             },
             name="config",
         )
@@ -135,7 +135,9 @@ class Config(Dict):
 
         """
         nce = self[FC.NC_ENGINE]
-        if nce is not None:
+        if nce == "netcdf4":
+            import_module("netCDF4")
+        elif nce is not None:
             import_module(nce)
         return nce
 
