@@ -634,7 +634,8 @@ class MultiHeightNCStates(MultiHeightStates):
                     print(f"Path: {self.data_source}")
             elif verbosity:
                 print(f"States '{self.name}': Reading file {self.data_source}")
-            data = open_dataset(self.data_source, **self.xr_read_pars)
+            with open_dataset(self.data_source, **self.xr_read_pars) as ds:
+                data = ds
         else:
             data = self.data_source
 

@@ -67,7 +67,7 @@ class NEWAStates(DatasetStates):
         output_vars=None,
         var2ncvar=None,
         load_mode="fly",
-        time_format=None,#r"%Y-%m-%dT%H:%M:%S",
+        time_format=None,  # r"%Y-%m-%dT%H:%M:%S",
         bounds_extra_space=0.0,
         height_bounds=None,
         interp_pars=None,
@@ -457,7 +457,7 @@ class NEWAStates(DatasetStates):
                 qmax = np.max(gpts[:, :n_dms], axis=0)
                 isin = (p >= qmin) & (p <= qmax)
                 method = "linear"
-                print("\n\nInterpolation error",i,p)
+                print("\n\nInterpolation error", i, p)
                 print("time:   ", t)
                 print("dims:   ", idims)
                 print("point:  ", p)
