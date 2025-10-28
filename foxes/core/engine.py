@@ -26,6 +26,9 @@ class Engine(ABC):
     n_procs: int, optional
         The number of processes to be used,
         or None for automatic
+    print_steps: int, optional
+        Print life sign instead of progress bar at every
+        multiple of print_steps states
     verbosity: int
         The verbosity level, 0 = silent
 
@@ -38,6 +41,7 @@ class Engine(ABC):
         chunk_size_states=None,
         chunk_size_points=None,
         n_procs=None,
+        print_steps=None,
         verbosity=1,
     ):
         """
@@ -52,6 +56,9 @@ class Engine(ABC):
         n_procs: int, optional
             The number of processes to be used,
             or None for automatic
+        print_steps: int, optional
+            Print life sign instead of progress bar at every
+            multiple of print_steps states
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -62,6 +69,7 @@ class Engine(ABC):
             self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
         except AttributeError:
             self.n_procs = os.cpu_count()
+        self.print_steps = print_steps
         self.verbosity = verbosity
         self.__initialized = False
         self.__entered = False
@@ -447,7 +455,9 @@ class Engine(ABC):
 
         """
         self.print(f"{type(self).__name__}: Combining results", level=2)
-        pbar = tqdm(total=len(out_vars)) if self.verbosity > 1 else None
+        pbar = None
+        if self.verbosity > 1 and self.print_steps is None:
+            pbar = tqdm(total=len(out_vars))
         data_vars = {}
         for v in out_vars:
             if v in results[(0, 0)][0]:
@@ -486,6 +496,12 @@ class Engine(ABC):
 
             if pbar is not None:
                 pbar.update()
+            elif (
+                self.verbosity > 1 and 
+                self.print_steps is not None
+            ):
+                print(f"{type(self).__name__}: Completed variable '{v}'")
+                
         del results
         if pbar is not None:
             pbar.close()

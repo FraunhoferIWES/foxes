@@ -129,13 +129,16 @@ class NumpyEngine(Engine):
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(f"{type(self).__name__}: Looping over {n_chunks_all} chunks")
-        pbar = (
-            tqdm(total=n_chunks_all)
-            if self.verbosity > 0 and n_chunks_all > 1
-            else None
-        )
+        pbar = None
+        if (
+            self.verbosity > 0 and 
+            self.print_steps is None and
+            n_chunks_all > 1
+        ):
+            pbar = tqdm(total=n_chunks_all)
         results = {}
         i0_states = 0
+        r0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -171,7 +174,13 @@ class NumpyEngine(Engine):
 
                 if pbar is not None:
                     pbar.update()
-
+            if (
+                self.verbosity > 0 and 
+                self.print_steps is not None and
+                i1_states - r0_states >= self.print_steps
+            ):
+                print(f"{type(self).__name__}: Completed {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
+                r0_states = i1_states
             i0_states = i1_states
 
         if farm_data is None:
@@ -181,7 +190,12 @@ class NumpyEngine(Engine):
 
         if pbar is not None:
             pbar.close()
-
+        elif (
+            self.verbosity > 0 and 
+            self.print_steps is not None 
+        ):
+            print(f"{type(self).__name__}: Completed all {i1_states} states\n")
+    
         return self.combine_results(
             algo=algo,
             results=results,

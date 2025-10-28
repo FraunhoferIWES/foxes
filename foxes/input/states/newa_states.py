@@ -123,6 +123,8 @@ class NEWAStates(DatasetStates):
         wrf_point_plot: str, optional
             Path to a plot file, e.g. wrf_points.png, to visualize the
             selected WRF grid points and the layout of the farm.
+        kwargs: dict, optional
+            Additional parameters for the base class
 
         """
         if output_vars is None:
@@ -168,7 +170,14 @@ class NEWAStates(DatasetStates):
         }
 
     def preproc_first(
-        self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
+        self, 
+        algo, 
+        data, 
+        cmap, 
+        vars, 
+        bounds_extra_space, 
+        height_bounds, 
+        verbosity=0,
     ):
         """
         Preprocesses the first file.
@@ -412,6 +421,27 @@ class NEWAStates(DatasetStates):
         n_vrs = d.shape[-1]
         d = d.reshape((n_gpts, n_vrs))
 
+        # remove NaN data points:
+        sel = np.any(np.isnan(d), axis=1)
+        if np.all(sel):
+            i = np.where(np.isnan(d))
+            p = gpts[i[0][0]]
+            v = vrs[i[1][0]]
+            t = times[int(p[0])]
+            print(f"NaN data found in input data, e.g. for variable '{v}' at point:")
+            print("   time:   ", t)
+            for ic, c in enumerate(idims):
+                print(f"  {c}: {p[ic]}")
+            for iw, w in enumerate(vrs):
+                print(f"  {w}: {d[i[0][0], iw]}")
+            print("\n\n")
+            raise ValueError(
+                f"States '{self.name}': All grid points contain NaN values during interpolation, e.g. at time {t}."
+            )
+        elif np.any(sel):
+            gpts = gpts[~sel, :]
+            d = d[~sel, :]
+
         # run interpolation:
         results = griddata(gpts, d, pts, **ipars)
 
@@ -445,7 +475,8 @@ class NEWAStates(DatasetStates):
                         i = np.where(sel2)
                         p = gpts[i[0][0]]
                         v = vrs[i[1][0]]
-                        print(f"NaN data found in input data, e.g. for variable '{v}' at point:")
+                        print(f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:")
+                        print("   time:   ", t)
                         for ic, c in enumerate(idims):
                             print(f"  {c}: {p[ic]}")
                         for iw, w in enumerate(vrs):

@@ -81,6 +81,10 @@ class DaskBaseEngine(Engine):
 
         self.dask_config = dask_config
         self.progress_bar = progress_bar
+        
+        assert self.print_steps is None, (
+            f"{type(self).__name__}: print_steps option not supported with dask engines"
+        )
 
     def __enter__(self):
         if self.progress_bar:

@@ -21,29 +21,42 @@ def _read_nc_file(
     isel,
     minimal,
     drop_vars=None,
+    check_input_nans=True,
 ):
     """Helper function for nc file reading"""
-    with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as ds:
-        data = ds
+    with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
+        for c in coords:
+            if c is not None and c not in data.sizes:
+                raise KeyError(
+                    f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
+                )
 
-    for c in coords:
-        if c is not None and c not in data.sizes:
-            raise KeyError(
-                f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
+        if minimal:
+            data = data[coords[0]].to_numpy()
+        else:
+            data = data[vars]
+            data.attrs = {}
+            if isel is not None and len(isel):
+                data = data.isel(**isel)
+            if sel is not None and len(sel):
+                data = data.sel(**sel)
+            assert min(data.sizes.values()) > 0, (
+                f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
             )
-
-    if minimal:
-        data = data[coords[0]].to_numpy()
-    else:
-        data = data[vars]
-        data.attrs = {}
-        if isel is not None and len(isel):
-            data = data.isel(**isel)
-        if sel is not None and len(sel):
-            data = data.sel(**sel)
-        assert min(data.sizes.values()) > 0, (
-            f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
-        )
+            if check_input_nans:
+                for v, d in data.data_vars.items():
+                    sel = np.isnan(d.to_numpy())
+                    if sel.any():
+                        i = tuple([j[0] for j in np.where(sel)])
+                        print("\n\nError: NaN data found in input data:")
+                        print(f"  File: {fpath}\n")
+                        print(f"  Variable: {v}")
+                        for ic, c in enumerate(d.dims):
+                            print(f"  {c}: {data[c].to_numpy()[i[ic]]}")
+                        print("\n\n")
+                        raise ValueError(
+                            f"States: NaN data found in input data for variable '{v}' with dims {d.dims} in file {fpath} at index {i}"
+                        )
 
     return data
 
@@ -83,6 +96,8 @@ class DatasetStates(States):
         The factor to multiply the weights with
     check_times: bool
         Whether to check the time coordinates for consistency
+    check_input_nans: bool
+        Whether to check input data for NaNs
 
     :group: input.states
 
@@ -100,6 +115,7 @@ class DatasetStates(States):
         isel=None,
         weight_factor=None,
         check_times=True,
+        check_input_nans=True,
         **kwargs,
     ):
         """
@@ -135,6 +151,8 @@ class DatasetStates(States):
             The factor to multiply the weights with
         check_times: bool
             Whether to check the time coordinates for consistency
+        check_input_nans: bool
+            Whether to check input data for NaNs
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -150,6 +168,7 @@ class DatasetStates(States):
         self.isel = isel
         self.weight_factor = weight_factor
         self.check_times = check_times
+        self.check_input_nans = check_input_nans
 
         self._N = None
         self._inds = None
@@ -477,6 +496,7 @@ class DatasetStates(States):
                 sel=self.sel,
                 minimal=self.load_mode == "fly",
                 drop_vars=self.drop_vars,
+                check_input_nans=self.check_input_nans,
             )
 
             if self.load_mode in ["preload", "lazy"]:
@@ -831,6 +851,7 @@ class DatasetStates(States):
                                 sel=self.sel,
                                 minimal=False,
                                 drop_vars=self.drop_vars,
+                                check_input_nans=self.check_input_nans,
                             )
                         )
 

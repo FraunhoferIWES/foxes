@@ -226,9 +226,12 @@ class PoolEngine(Engine):
             f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_procs} processes",
             level=2,
         )
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
+        pbar = None
+        if self.verbosity > 1 and self.print_steps is None:
+            pbar = tqdm(total=n_chunks_all)
         jobs = {}
         i0_states = 0
+        r0_states = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -263,7 +266,13 @@ class PoolEngine(Engine):
 
                 if pbar is not None:
                     pbar.update()
-
+            if (
+                self.verbosity > 1 and 
+                self.print_steps is not None and
+                i1_states - r0_states >= self.print_steps
+            ):
+                print(f"{type(self).__name__}: Submitted {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
+                r0_states = i1_states
             i0_states = i1_states
 
         if farm_data is None:
@@ -273,27 +282,46 @@ class PoolEngine(Engine):
         del calc_pars, farm_data, point_data
         if pbar is not None:
             pbar.close()
-
+        elif (
+            self.verbosity > 1 and 
+            self.print_steps is not None 
+        ):
+            print(f"{type(self).__name__}: Submitted all {i1_states} states\n")
+    
         # wait for results:
-        if n_chunks_all > 1 or self.verbosity > 1:
+        pbar = None
+        if n_chunks_all > 1 or self.verbosity > 0:
             self.print(
                 f"{type(self).__name__}: Computing {n_chunks_all} chunks using {self.n_procs} processes"
             )
-        pbar = (
-            tqdm(total=n_chunks_all)
-            if n_chunks_all > 1 and self.verbosity > 0
-            else None
-        )
+            if self.print_steps is None:
+                pbar = tqdm(total=n_chunks_all)
+        i0_states = 0
+        r0_states = 0
         results = {}
         for chunki_states in range(n_chunks_states):
+            i1_states = i0_states + chunk_sizes_states[chunki_states]
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
                 results[key] = self.result(jobs.pop((chunki_states, chunki_points)))
                 if pbar is not None:
                     pbar.update()
+            if (
+                self.verbosity > 0 and 
+                self.print_steps is not None and
+                i1_states - r0_states >= self.print_steps
+            ):
+                print(f"{type(self).__name__}: Completed {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
+                r0_states = i1_states
+            i0_states = i1_states
         if pbar is not None:
             pbar.close()
-
+        elif (
+            self.verbosity > 0 and 
+            self.print_steps is not None 
+        ):
+            print(f"{type(self).__name__}: Completed all {i1_states} states\n")
+    
         return self.combine_results(
             algo=algo,
             results=results,
