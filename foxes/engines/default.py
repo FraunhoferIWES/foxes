@@ -12,6 +12,71 @@ class DefaultEngine(Engine):
 
     """
 
+    def submit(self, f, *args, **kwargs):
+        """
+        Submits a job to worker, obtaining a future
+
+        Parameters
+        ----------
+        f: Callable
+            The function f(*args, **kwargs) to be
+            submitted
+        args: tuple, optional
+            Arguments for the function
+        kwargs: dict, optional
+            Arguments for the function
+
+        Returns
+        -------
+        future: object
+            The future object
+
+        """
+        self.finalize()
+
+        with Engine.new(
+            "process",
+            n_procs=self.n_procs,
+            chunk_size_states=self.chunk_size_states,
+            chunk_size_points=self.chunk_size_points,
+            verbosity=self.verbosity,
+        ) as e:
+            results = e.submit(f, *args, **kwargs)
+
+        self.initialize()
+
+        return results
+
+    def await_result(self, future):
+        """
+        Waits for result from a future
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        result: object
+            The calculation result
+
+        """
+        self.finalize()
+
+        with Engine.new(
+            "process",
+            n_procs=self.n_procs,
+            chunk_size_states=self.chunk_size_states,
+            chunk_size_points=self.chunk_size_points,
+            verbosity=self.verbosity,
+        ) as e:
+            results = e.await_result(future)
+
+        self.initialize()
+
+        return results
+
     def map(
         self,
         func,

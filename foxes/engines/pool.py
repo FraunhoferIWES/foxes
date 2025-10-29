@@ -43,47 +43,6 @@ class PoolEngine(Engine):
         pass
 
     @abstractmethod
-    def submit(self, f, *args, **kwargs):
-        """
-        Submits to the pool
-
-        Parameters
-        ----------
-        f: Callable
-            The function f(*args, **kwargs) to be
-            submitted
-        args: tuple, optional
-            Arguments for the function
-        kwargs: dict, optional
-            Arguments for the function
-
-        Returns
-        -------
-        future: object
-            The future object
-
-        """
-        pass
-
-    @abstractmethod
-    def result(self, future):
-        """
-        Waits for result from a future
-
-        Parameters
-        ----------
-        future: object
-            The future
-
-        Returns
-        -------
-        result: object
-            The calculation result
-
-        """
-        pass
-
-    @abstractmethod
     def _shutdown_pool(self):
         """Shuts down the pool"""
         pass
@@ -135,7 +94,7 @@ class PoolEngine(Engine):
                 jobs.append(self.submit(_run_map, func, subi, *args, **kwargs))
             results = []
             for j in jobs:
-                results += self.result(j)
+                results += self.await_result(j)
             return results
 
     def run_calculation(
@@ -303,7 +262,7 @@ class PoolEngine(Engine):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             for chunki_points in range(n_chunks_targets):
                 key = (chunki_states, chunki_points)
-                results[key] = self.result(jobs.pop((chunki_states, chunki_points)))
+                results[key] = self.await_result(jobs.pop((chunki_states, chunki_points)))
                 if pbar is not None:
                     pbar.update()
             if (

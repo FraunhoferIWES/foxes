@@ -97,6 +97,47 @@ class Engine(ABC):
         if self.initialized:
             self.finalize()
 
+    @abstractmethod
+    def submit(self, f, *args, **kwargs):
+        """
+        Submits a job to worker, obtaining a future
+
+        Parameters
+        ----------
+        f: Callable
+            The function f(*args, **kwargs) to be
+            submitted
+        args: tuple, optional
+            Arguments for the function
+        kwargs: dict, optional
+            Arguments for the function
+
+        Returns
+        -------
+        future: object
+            The future object
+
+        """
+        pass
+
+    @abstractmethod
+    def await_result(self, future):
+        """
+        Waits for result from a future
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        result: object
+            The calculation result
+
+        """
+        pass
+    
     @property
     def entered(self):
         """

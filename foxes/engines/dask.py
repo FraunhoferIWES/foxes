@@ -17,7 +17,6 @@ def delayed(func):
     """A dummy decorator"""
     return func
 
-
 def load_dask():
     """On-demand loading of the dask package"""
     global dask, ProgressBar, delayed
@@ -30,12 +29,16 @@ def load_dask():
         ).ProgressBar
         delayed = dask.delayed
 
-
 def load_distributed():
     """On-demand loading of the distributed package"""
     global distributed
     if distributed is None:
         distributed = import_module("distributed")
+
+@delayed
+def _run_map(func, inputs, *args, **kwargs):
+    """Helper function for running map func on proc"""
+    return [func(x, *args, **kwargs) for x in inputs]
 
 
 class DaskBaseEngine(Engine):
@@ -103,6 +106,45 @@ class DaskBaseEngine(Engine):
         """
         dask.config.set(**self.dask_config)
         super().initialize()
+
+    def submit(self, f, *args, **kwargs):
+        """
+        Submits a job to worker, obtaining a future
+
+        Parameters
+        ----------
+        f: Callable
+            The function f(*args, **kwargs) to be
+            submitted
+        args: tuple, optional
+            Arguments for the function
+        kwargs: dict, optional
+            Arguments for the function
+
+        Returns
+        -------
+        future: object
+            The future object
+
+        """
+        return delayed(f)(*args, **kwargs)
+
+    def await_result(self, future):
+        """
+        Waits for result from a future
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        result: object
+            The calculation result
+
+        """
+        return future.compute()
 
     def map(
         self,
@@ -575,12 +617,6 @@ def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
     chunk_store = algo.reset_chunk_store() if iterative else {}
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
     return results, cstore
-
-
-@delayed
-def _run_map(func, inputs, *args, **kwargs):
-    """Helper function for running map func on proc"""
-    return [func(x, *args, **kwargs) for x in inputs]
 
 
 class DaskEngine(DaskBaseEngine):

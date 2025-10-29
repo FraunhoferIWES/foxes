@@ -18,7 +18,7 @@ class MultiprocessEngine(PoolEngine):
 
     def submit(self, f, *args, **kwargs):
         """
-        Submits to the pool
+        Submits a job to worker, obtaining a future
 
         Parameters
         ----------
@@ -38,7 +38,7 @@ class MultiprocessEngine(PoolEngine):
         """
         return self._pool.apply_async(f, args=args, kwds=kwargs)
 
-    def result(self, future):
+    def await_result(self, future):
         """
         Waits for result from a future
 

@@ -31,7 +31,7 @@ class RayEngine(PoolEngine):
 
     def submit(self, f, *args, **kwargs):
         """
-        Submits to the pool
+        Submits a job to worker, obtaining a future
 
         Parameters
         ----------
@@ -56,7 +56,7 @@ class RayEngine(PoolEngine):
 
         return f_ray.remote(*args, **kwargs)
 
-    def result(self, future):
+    def await_result(self, future):
         """
         Waits for result from a future
 
