@@ -95,6 +95,7 @@ class NumpyEngine(Engine):
         sel=None,
         isel=None,
         iterative=False,
+        write_nc=None,
         **calc_pars,
     ):
         """
@@ -123,6 +124,19 @@ class NumpyEngine(Engine):
             Selection of coordinate subsets index values
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results', 
+            'ret_data': False, 'split': 1000}.
+            
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -192,6 +206,8 @@ class NumpyEngine(Engine):
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
                 )
 
                 # submit model calculation:
@@ -203,6 +219,8 @@ class NumpyEngine(Engine):
                     iterative=iterative,
                     chunk_store=chunk_store,
                     i0_t0=(i0_states, i0_targets),
+                    out_coords=out_coords,
+                    write_nc=write_nc,
                     **calc_pars,
                 )
                 chunk_store.update(results[key][1])
@@ -244,4 +262,5 @@ class NumpyEngine(Engine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
+            write_nc=write_nc,
         )

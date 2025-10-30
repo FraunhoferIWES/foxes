@@ -4,9 +4,12 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from xarray import Dataset
 
-from .data import MData, FData, TData
+from foxes.config import get_output_path
 from foxes.utils import new_instance
+from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
+
+from .data import MData, FData, TData
 
 __global_engine_data__ = dict(
     engine=None,
@@ -376,6 +379,8 @@ class Engine(ABC):
         states_i0_i1,
         targets_i0_i1,
         out_vars,
+        chunki_states,
+        chunki_points,
     ):
         """
         Extracts the data for a single chunk calculation
@@ -396,6 +401,10 @@ class Engine(ABC):
             The (start, end) values of the targets
         out_vars: list of str
             Names of the output variables
+        chunki_states: int
+            The index of the states chunk
+        chunki_points: int
+            The index of the points chunk
 
         Returns
         -------
@@ -417,6 +426,8 @@ class Engine(ABC):
             loop_dims=[FC.STATE],
             states_i0=i0_states,
             copy=True,
+            chunki_states=chunki_states,
+            chunki_points=chunki_points,
         )
 
         # create fdata:
@@ -463,6 +474,7 @@ class Engine(ABC):
         n_chunks_targets,
         goal_data,
         iterative,
+        write_nc=None,
     ):
         """
         Combines chunk results into final Dataset
@@ -489,34 +501,214 @@ class Engine(ABC):
             Either fdata or tdata
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results', 
+            'ret_data': False, 'split': 1000}.
+            
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
 
         Returns
         -------
-        ds: xarray.Dataset
+        ds: xarray.Dataset, optional
             The final results dataset
 
         """
         self.print(f"{type(self).__name__}: Combining results", level=2)
+
+        coords = {}
+        vrb = max(self.verbosity - 1, 0)
+        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+
+        # read parameters for file writing
+        ret_data = True
+        split_size = None
+        write_on_fly = False
+        write_from_ds = False
+        if write_nc is not None:
+            out_dir = get_output_path(write_nc.get("out_dir", "."))
+            base_name = write_nc["base_name"]
+            ret_data = write_nc.get("ret_data", False)
+            split_mode = write_nc.get("split", None)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_fpath = out_dir/(base_name + "_*.nc")
+            if split_mode == "chunks":
+                # files are already written during chunk calculations
+                self.print(f"{type(self).__name__}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}")
+                if not ret_data:
+                    return None
+            elif split_mode == "input":
+                gen_size = algo.states.gen_states_split_size()
+                split_size = next(gen_size)
+            elif isinstance(split_mode, int):
+                split_size = split_mode
+            elif split_mode is None:
+                split_size = None
+            else:
+                raise ValueError(f"Invalid split mode '{split_mode}' in 'write_nc', expected 'chunks', 'input', int or None")
+            if split_size is None:
+                out_fpath = out_dir/(base_name + ".nc")
+            if split_mode != "chunks":
+                write_on_fly = ret_data == False and split_size is not None
+                write_from_ds = not write_on_fly
+                ret_data = write_nc.get("ret_data", write_from_ds)
+                self.print(f"{type(self).__name__}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}")
+
+        def _red_dims(data_vars):
+            """Helper function for reducing unneccessary dimensions of data vars"""
+            dvars = {}
+            for v, (dims, d) in data_vars.items():
+                if (
+                    dims == (FC.STATE, FC.TURBINE)
+                    and d.shape[1] == 1
+                    and algo.n_turbines > 1
+                ):
+                    dvars[v] = ((FC.STATE,), d[:, 0])
+                elif (
+                    dims == (FC.STATE, FC.TARGET, FC.TPOINT)
+                    and goal_data.sizes[FC.TARGET] > n_chunks_targets
+                    and d.shape[1:] == (n_chunks_targets, 1)
+                ):
+                    dvars[v] = ((FC.STATE,), d[:, 0, 0])
+                else:
+                    dvars[v] = (dims, d)
+            return dvars
+
+        fcounter = 0
+        def _write_parts_on_fly(data_vars, scount, wcount):
+            """Helper function for writing chunked results to netCDF,
+                without ever constructing the full Dataset in memory
+            """
+            nonlocal fcounter, split_size
+            futures = []
+            if split_size is not None:
+                splits = min(split_size, algo.n_states - wcount)
+                while algo.n_states - wcount > 0 and scount - wcount >= splits:
+                    for v in data_vars.keys():
+                        if len(data_vars[v][1]) > 1:
+                            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+                        elif len(data_vars[v][1]) == 1:
+                            data_vars[v][1] = data_vars[v][1][0]
+                    
+                    dvars = {v: (d[0], d[1][:splits]) for v, d in data_vars.items()}
+                    dvars = _red_dims(dvars)
+
+                    crds = {v: d for v, d in coords.items()}
+                    crds[FC.STATE] = coords[FC.STATE][wcount:wcount+splits]
+                    if scount - wcount == splits:
+                        for v in data_vars.keys():
+                            data_vars[v][1] = []
+                    else:
+                        for v in data_vars.keys():
+                            data_vars[v][1] = [data_vars[v][1][splits:]]
+
+                    ds = Dataset(coords=crds,data_vars=dvars)
+                    fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
+                    future = self.submit(write_nc_file, ds, fpath, verbosity=vrb)
+                    futures.append(future)
+                    del ds, crds, dvars, future
+
+                    wcount += splits
+                    fcounter += 1
+
+                    if algo.n_states - wcount > 0:
+                        if split_mode == "input":
+                            try:
+                                split_size = next(gen_size)
+                            except StopIteration:
+                                split_size = algo.n_states - wcount
+                        splits = min(split_size, algo.n_states - wcount)
+
+            return wcount, futures
+
         pbar = None
         if self.verbosity > 1 and self.print_steps is None:
             pbar = tqdm(total=len(out_vars))
+
         data_vars = {}
+        res_vars = list(results[(0, 0)][0].keys())
+        for v in out_vars:
+            if v in res_vars:
+                data_vars[v] = [out_coords, []]
+            else:
+                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+
+        scount = 0
+        wcount = 0
+        futures = []
+        if n_chunks_targets == 1:
+            for chunki_states in range(n_chunks_states):
+                r, cstore = results[(chunki_states, 0)]
+                if iterative:
+                    for k, c in cstore.items():
+                        if k in algo.chunk_store:
+                            algo.chunk_store[k].update(c)
+                        else:
+                            algo.chunk_store[k] = c
+                for vi, v in enumerate(res_vars):
+                    data_vars[v][1].append(r[v])
+                    if vi == 0:
+                        scount += data_vars[v][1][-1].shape[0]
+                if write_on_fly:
+                    wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
+                    futures += ftrs
+                    del ftrs
+                del r, cstore
+        else:
+            for chunki_states in range(n_chunks_states):
+                tres = {v: [] for v in res_vars}
+                for chunki_points in range(n_chunks_targets):
+                    r, cstore = results[(chunki_states, chunki_points)]
+                    for v in res_vars:
+                        tres[v].append(r[v])
+                    if iterative:
+                        for k, c in cstore.items():
+                            if k in algo.chunk_store:
+                                algo.chunk_store[k].update(c)
+                            else:
+                                algo.chunk_store[k] = c
+                    del r, cstore
+                for vi, v in enumerate(res_vars):
+                    data_vars[v][1].append(np.concatenate(tres[v], axis=1))
+                    if vi == 0:
+                        scount += data_vars[v][1][-1].shape[0]
+                del tres
+                if write_on_fly:
+                    wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
+                    futures += ftrs
+                    del ftrs
+        for f in futures:
+            self.await_result(f)
+        del futures
+
+        """
         for v in out_vars:
             if v in results[(0, 0)][0]:
                 data_vars[v] = [out_coords, []]
 
                 if n_chunks_targets == 1:
-                    alls = 0
+                    scount = 0
+                    wcount = 0
                     for chunki_states in range(n_chunks_states):
                         r, cstore = results[(chunki_states, 0)]
                         data_vars[v][1].append(r[v])
-                        alls += data_vars[v][1][-1].shape[0]
+                        scount += data_vars[v][1][-1].shape[0]
                         if iterative:
                             for k, c in cstore.items():
                                 if k in algo.chunk_store:
                                     algo.chunk_store[k].update(c)
                                 else:
                                     algo.chunk_store[k] = c
+                        if write_nc is not None:
+                            scount, wcount = _write_parts_on_fly(chunki_states, data_vars, scount, wcount)
                 else:
                     for chunki_states in range(n_chunks_states):
                         tres = []
@@ -530,6 +722,9 @@ class Engine(ABC):
                                     else:
                                         algo.chunk_store[k] = c
                         data_vars[v][1].append(np.concatenate(tres, axis=1))
+                        scount += data_vars[v][1][-1].shape[0]
+                        if write_nc is not None:
+                            scount, wcount = _write_parts_on_fly(chunki_states, data_vars, scount, wcount)
                     del tres
                 del r, cstore
                 data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
@@ -547,36 +742,54 @@ class Engine(ABC):
         del results
         if pbar is not None:
             pbar.close()
+        """
 
         # if not iterative or algo.final_iteration:
         #    algo.reset_chunk_store()
 
-        coords = {}
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
-            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        if ret_data or write_from_ds:
+            for v in res_vars:
+                if len(data_vars[v][1]) > 1:
+                    data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+                elif len(data_vars[v][1]) == 1:
+                    data_vars[v][1] = data_vars[v][1][0]
 
-        # reducing weights dimensions:
-        dvars = {}
-        for v, (dims, d) in data_vars.items():
-            if (
-                dims == (FC.STATE, FC.TURBINE)
-                and d.shape[1] == 1
-                and algo.n_turbines > 1
-            ):
-                dvars[v] = ((FC.STATE,), d[:, 0])
-            elif (
-                dims == (FC.STATE, FC.TARGET, FC.TPOINT)
-                and goal_data.sizes[FC.TARGET] > n_chunks_targets
-                and d.shape[1:] == (n_chunks_targets, 1)
-            ):
-                dvars[v] = ((FC.STATE,), d[:, 0, 0])
-            else:
-                dvars[v] = (dims, d)
+            dvars = _red_dims(data_vars)
+            ds = Dataset(
+                coords=coords,
+                data_vars=dvars,
+            )
 
-        return Dataset(
-            coords=coords,
-            data_vars=dvars,
-        )
+            if write_from_ds:
+                if split_size is None:
+                    write_nc_file(ds, out_fpath, verbosity=vrb)
+                else:
+                    wcount = 0
+                    fcounter = 0
+                    futures = []
+                    while wcount < algo.n_states:
+                        splits = min(split_size, algo.n_states - wcount)
+                        dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
+
+                        fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
+                        future = self.submit(write_nc_file, dssub, fpath, verbosity=vrb)
+                        futures.append(future)
+                        del dssub, future
+
+                        wcount += splits
+                        fcounter += 1
+
+                        if wcount < algo.n_states and split_mode == "input":
+                            try:
+                                split_size = next(gen_size)
+                            except StopIteration:
+                                split_size = algo.n_states - wcount
+
+                    for f in futures:
+                        self.await_result(f)
+
+        if ret_data:
+            return ds
 
     @abstractmethod
     def run_calculation(

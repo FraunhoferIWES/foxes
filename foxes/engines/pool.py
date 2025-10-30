@@ -1,11 +1,50 @@
 import numpy as np
-import xarray as xr
+from xarray import Dataset
 from abc import abstractmethod
 from tqdm import tqdm
 
+from foxes.config import get_output_path
 from foxes.core import Engine
+from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
+def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
+    """Helper function for optionally writing chunk results to netCDF file"""
+    ret_data = True
+    if write_nc is not None and write_nc["split"] == "chunks":
+        ret_data = write_nc.get("ret_data", False)
+        out_dir = get_output_path(write_nc.get("out_dir", "."))
+        base_name = write_nc["base_name"]
+        ret_data = write_nc.get("ret_data", False)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        coords = {}
+        if FC.STATE in out_coords and FC.STATE in mdata:
+            coords[FC.STATE] = mdata[FC.STATE]
+
+        dvars = {}
+        for v, d in results.items():
+            if (
+                out_coords == (FC.STATE, FC.TURBINE)
+                and d.shape[1] == 1
+                and algo.n_turbines > 1
+            ):
+                dvars[v] = ((FC.STATE,), d[:, 0])
+            else:
+                dvars[v] = (out_coords, d)
+
+        ds = Dataset(coords=coords, data_vars=dvars)
+
+        i0 = mdata.chunki_states
+        t0 = mdata.chunki_points
+        vrb = max(algo.verbosity - 1, 0)
+        if out_coords == (FC.STATE, FC.TURBINE):
+            fpath = out_dir / f"{base_name}_{i0:04d}.nc"
+        else:
+            fpath = out_dir / f"{base_name}_{i0:04d}_{t0:04d}.nc"
+        write_nc_file(ds, fpath, verbosity=vrb)
+
+    return results if ret_data else None
 
 def _run(
     algo,
@@ -14,6 +53,8 @@ def _run(
     iterative,
     chunk_store,
     i0_t0,
+    out_coords,
+    write_nc,
     **cpars,
 ):
     """Helper function for running in a single process"""
@@ -21,6 +62,7 @@ def _run(
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
     cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
+    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
 
@@ -109,6 +151,7 @@ class PoolEngine(Engine):
         sel=None,
         isel=None,
         iterative=False,
+        write_nc=None,
         **calc_pars,
     ):
         """
@@ -137,6 +180,19 @@ class PoolEngine(Engine):
             Selection of coordinate subsets index values
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results', 
+            'ret_data': False, 'split': 1000}.
+            
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -206,6 +262,8 @@ class PoolEngine(Engine):
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
                 )
 
                 # submit model calculation:
@@ -217,6 +275,8 @@ class PoolEngine(Engine):
                     iterative=iterative,
                     chunk_store=chunk_store,
                     i0_t0=(i0_states, i0_targets),
+                    out_coords=out_coords,
+                    write_nc=write_nc,
                     **calc_pars,
                 )
                 del data
@@ -235,7 +295,7 @@ class PoolEngine(Engine):
             i0_states = i1_states
 
         if farm_data is None:
-            farm_data = xr.Dataset()
+            farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
 
         del calc_pars, farm_data, point_data
@@ -291,4 +351,5 @@ class PoolEngine(Engine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
+            write_nc=write_nc,
         )

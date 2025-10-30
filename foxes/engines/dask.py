@@ -9,6 +9,8 @@ from foxes.config import config
 import foxes.variables as FV
 import foxes.constants as FC
 
+from .pool import _run
+
 dask = None
 distributed = None
 
@@ -648,16 +650,6 @@ class XArrayEngine(DaskBaseEngine):
         return results.compute(num_workers=self.n_procs)
 
 
-@delayed
-def _run_lazy(algo, model, iterative, chunk_store, i0_t0, *data, **cpars):
-    """Helper function for lazy running"""
-    algo.reset_chunk_store(chunk_store)
-    results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
-    cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
-    return results, cstore
-
-
 class DaskEngine(DaskBaseEngine):
     """
     The dask engine for delayed foxes calculations.
@@ -678,6 +670,7 @@ class DaskEngine(DaskBaseEngine):
         sel=None,
         isel=None,
         iterative=False,
+        write_nc=None,
         **calc_pars,
     ):
         """
@@ -706,6 +699,19 @@ class DaskEngine(DaskBaseEngine):
             Selection of coordinate subsets index values
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results', 
+            'ret_data': False, 'split': 1000}.
+            
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -768,16 +774,20 @@ class DaskEngine(DaskBaseEngine):
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
                     out_vars=out_vars,
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
                 )
 
                 # submit model calculation:
-                results[(chunki_states, chunki_points)] = _run_lazy(
-                    deepcopy(algo),
-                    deepcopy(model),
-                    iterative,
-                    chunk_store,
-                    (i0_states, i0_targets),
-                    *data,
+                results[(chunki_states, chunki_points)] = delayed(_run)(
+                    algo, 
+                    model, 
+                    *data, 
+                    iterative=iterative, 
+                    chunk_store=chunk_store, 
+                    i0_t0=(i0_states, i0_targets), 
+                    out_coords=out_coords, 
+                    write_nc=write_nc, 
                     **calc_pars,
                 )
                 del data
@@ -810,6 +820,7 @@ class DaskEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
+            write_nc=write_nc,
         )
 
 

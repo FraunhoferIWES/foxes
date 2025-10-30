@@ -702,10 +702,11 @@ class Downwind(Algorithm):
             outputs=outputs,
             **kwargs,
         )
-        farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
-        for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
-            if v in farm_results:
-                farm_results[v] = farm_results[v].astype(config.dtype_int)
+        if farm_results is not None:
+            farm_results[FC.TNAME] = ((FC.TURBINE,), self.farm.turbine_names)
+            for v in [FV.ORDER, FV.ORDER_SSEL, FV.ORDER_INV]:
+                if v in farm_results:
+                    farm_results[v] = farm_results[v].astype(config.dtype_int)
         del model_data
 
         # finalize models:
@@ -716,7 +717,7 @@ class Downwind(Algorithm):
         else:
             self.del_model_data(mlist)
 
-        if ambient:
+        if ambient and farm_results:
             dvars = [v for v in farm_results.data_vars.keys() if v in FV.var2amb]
             farm_results = farm_results.drop_vars(dvars)
 

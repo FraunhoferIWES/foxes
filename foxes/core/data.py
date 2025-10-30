@@ -21,6 +21,10 @@ class Data(Dict):
         `apply_ufunc` calculations
     sizes: dict
         The dimension sizes
+    chunki_states: int, optional
+        The index of the states chunk
+    chunki_points: int, optional
+        The index of the points chunk
 
     :group: core
 
@@ -32,6 +36,8 @@ class Data(Dict):
         dims={},
         loop_dims=[FC.STATE],
         states_i0=None,
+        chunki_states=None,
+        chunki_points=None,
         name="data",
     ):
         """
@@ -49,6 +55,10 @@ class Data(Dict):
             `apply_ufunc` calculations
         states_i0: int, optional
             The index of the first state
+        chunki_states: int, optional
+            The index of the states chunk
+        chunki_points: int, optional
+            The index of the points chunk
         name: str
             The data container name
 
@@ -60,6 +70,8 @@ class Data(Dict):
         self.loop_dims = loop_dims
 
         self.__states_i0 = states_i0
+        self.__chunki_states = chunki_states
+        self.__chunki_points = chunki_points
 
         self.sizes = {}
         for v, d in data.items():
@@ -92,6 +104,32 @@ class Data(Dict):
 
         """
         return self.sizes[FC.TURBINE] if FC.TURBINE in self.sizes else None
+
+    @property
+    def chunki_states(self):
+        """
+        The index of the states chunk
+
+        Returns
+        -------
+        int:
+            The index of the states chunk
+
+        """
+        return self.__chunki_states
+
+    @property
+    def chunki_points(self):
+        """
+        The index of the points chunk
+
+        Returns
+        -------
+        int:
+            The index of the points chunk
+
+        """
+        return self.__chunki_points
 
     def states_i0(self, counter=False):
         """
@@ -501,7 +539,14 @@ class FData(Data):
                 if callback is not None:
                     callback(data, dims)
 
-            return super().from_dataset(ds, *args, callback=cb, **kwargs)
+            return super().from_dataset(
+                ds, 
+                *args, 
+                callback=cb, 
+                chunki_states=mdata.chunki_states,
+                chunki_points=mdata.chunki_points,
+                **kwargs,
+            )
 
 
 class TData(Data):
@@ -817,6 +862,8 @@ class TData(Data):
                     callback(data, dims)
 
             cb0 = cb_mdata
+            kwargs["chunki_states"] = mdata.chunki_states
+            kwargs["chunki_points"] = mdata.chunki_points
 
         if s_targets is None:
             cb1 = cb0

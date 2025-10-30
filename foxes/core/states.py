@@ -108,6 +108,18 @@ class States(PointDataModel):
         """
         pass
 
+    def gen_states_split_size(self):
+        """
+        Generator for suggested states split sizes for output writing.
+
+        Yields
+        ------
+        split_size: int or None
+            The suggested split size, or None for no splitting
+
+        """
+        yield None
+
     def __add__(self, s):
         if isinstance(s, list):
             return ExtendedStates(self, s)

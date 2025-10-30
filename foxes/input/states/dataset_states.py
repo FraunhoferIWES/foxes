@@ -501,6 +501,9 @@ class DatasetStates(States):
             )
 
             if self.load_mode in ["preload", "lazy"]:
+                self._input_sizes = [
+                    ds.sizes[states_coord] for ds in self.__data_source
+                ]
                 if self.load_mode == "lazy":
                     try:
                         self.__data_source = [ds.chunk() for ds in self.__data_source]
@@ -528,6 +531,7 @@ class DatasetStates(States):
                 self._inds = self.__data_source
                 self.__data_source = fpath
                 self._files_maxi = {f: len(inds) for f, inds in zip(files, self._inds)}
+                self._input_sizes = list(self._files_maxi.values())
                 self._inds = np.concatenate(self._inds, axis=0)
                 self._N = len(self._inds)
 
@@ -564,6 +568,19 @@ class DatasetStates(States):
 
         return self.__data_source
 
+    def gen_states_split_size(self):
+        """
+        Generator for suggested states split sizes for output writing.
+
+        Yields
+        ------
+        split_size: int or None
+            The suggested split size, or None for no splitting
+
+        """
+        for size in self._input_sizes:
+            yield size
+            
     def load_data(
         self,
         algo,

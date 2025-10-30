@@ -3,6 +3,8 @@ from xarray import Dataset
 from foxes.core import Engine
 import foxes.constants as FC
 
+from .pool import _write_chunk_results
+
 
 class SingleChunkEngine(Engine):
     """
@@ -120,6 +122,7 @@ class SingleChunkEngine(Engine):
         sel=None,
         isel=None,
         iterative=False,
+        write_nc=None,
         **calc_pars,
     ):
         """
@@ -148,6 +151,19 @@ class SingleChunkEngine(Engine):
             Selection of coordinate subsets index values
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results', 
+            'ret_data': False, 'split': 1000}.
+            
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -188,11 +204,14 @@ class SingleChunkEngine(Engine):
             point_data=point_data,
             states_i0_i1=(0, n_states),
             targets_i0_i1=(0, n_targets),
+            chunki_states=0,
+            chunki_points=0,
             out_vars=out_vars,
         )
 
-        results = {}
-        results[(0, 0)] = (model.calculate(algo, *data, **calc_pars), algo.chunk_store)
+        results = model.calculate(algo, *data, **calc_pars)
+        results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+        results = {(0, 0): (results, algo.chunk_store)}
         del data
 
         if farm_data is None:
@@ -209,4 +228,5 @@ class SingleChunkEngine(Engine):
             n_chunks_targets=1,
             goal_data=goal_data,
             iterative=iterative,
+            write_nc=write_nc,
         )
