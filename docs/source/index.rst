@@ -3,6 +3,11 @@
     :align: center
 
 .. versionadded:: 1.6
+    Parallel results writing directly by the `calc_farm` and `calc_points` functions of the algorithm,
+    optionally without ever constructing the complete dataset in memory. If the input consists of multiple files,
+    the output can be written into consistent multiple files as well.
+    
+.. versionadded:: 1.6
     Direct support for WRF data fields in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format, via
     the new ambient states class :ref:`NEWAStates<foxes.input.states.NEWAStates>`.
 

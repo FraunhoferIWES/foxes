@@ -819,20 +819,28 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Wind farms now support turbine locations in terms of longitude, lattitude. They will automatically be translated into
   a uniquely fixed UTM zone, stored in the global config object.
 - Algorithms:
+  - New optional dict-type parameter `write_nc` for `algo.calc_farm()` and `algo.calc_points()`, allowing the parallel writing of results into multiple files without ever constructing the complete dataset in memory. If writing results to file is the only intention of the run, this is the recommended approach.
   - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.
   - Reworking the `Iterative` algorithm, such that it now computes only non-converged states in each iteration. In general, this leads to a substantial speed-up.
-- Inputs
+- Engines:
+  - Now all engines have `submit` and `await_result` functions (which are trivial for serial engines), also usable by the user from the `engine` object, e.g. for parallel plotting during post-processing. 
+  - Adding support for parallel results writing via `write_nc` parameter, optionally without ever creating the full dataset in memory. Independent of writing, the futures of individual chunks are now computed directly when needed, no longer in advance. 
+  - Engines have a new boolean parameter `progress_bar`, and if set to False, they print the progress to terminal instead. This is recommended for runs on clusters.
+- Inputs:
   - New farm layout input `from_eww`, reading wind farm input in EuroWindWakes format
   - New farm layout input `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF
   - New states `NEWAStates`, directly reading NEWA-WRF data files into foxes
 - Models:
   - Addition of `IEA37Gaussian` wake model to the model book, requiring slight generalization of the `Bastankhah2014` wake model class.
   - Adding default parameter wake models to the model book, following the papers: `Bastankhah2014`, `TurbOPark`.
+- Utils:
+  - Improved `write_nc` utility, now better data compression through the usage of appropriate encoding
 - Examples:
   - New example `parameter_study`, demonstrating the setup of a parameter study
 - Bug fixes:
   - Fix for max x selection in `FieldDataNC`, thanks @qzheng75
   - Fix for `Sequential` algorithm with non-updated chunk store data
   - Fix for `TurbOPark` wake model in the context of `windio` input files
+  - Fox for bug with writing time stamps to NetCDF in `write_nc`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6](https://github.com/FraunhoferIWES/foxes/commits/v1.6)
