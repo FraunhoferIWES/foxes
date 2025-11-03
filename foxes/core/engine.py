@@ -29,9 +29,10 @@ class Engine(ABC):
     n_procs: int, optional
         The number of processes to be used,
         or None for automatic
-    print_steps: int, optional
-        Print life sign instead of progress bar at every
-        multiple of print_steps states
+    progress_bar: bool, optional
+        Use a progress bar instead of simply
+        printing lines of reached percentages.
+        Unless progress_bar is None, then neither
     verbosity: int
         The verbosity level, 0 = silent
 
@@ -44,7 +45,7 @@ class Engine(ABC):
         chunk_size_states=None,
         chunk_size_points=None,
         n_procs=None,
-        print_steps=None,
+        progress_bar=True,
         verbosity=1,
     ):
         """
@@ -59,9 +60,10 @@ class Engine(ABC):
         n_procs: int, optional
             The number of processes to be used,
             or None for automatic
-        print_steps: int, optional
-            Print life sign instead of progress bar at every
-            multiple of print_steps states
+        progress_bar: bool, optional
+            Use a progress bar instead of simply
+            printing lines of reached percentages.
+            Unless progress_bar is None, then neither
         verbosity: int
             The verbosity level, 0 = silent
 
@@ -72,14 +74,54 @@ class Engine(ABC):
             self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
         except AttributeError:
             self.n_procs = os.cpu_count()
-        self.print_steps = print_steps
+        self.progress_bar = progress_bar
         self.verbosity = verbosity
+        self.__name = type(self).__name__
         self.__initialized = False
         self.__entered = False
 
+    @property
+    def name(self):
+        """
+        The engine's name
+        
+        Returns
+        -------
+        nme: str
+            The engine's name
+
+        """
+        return self.__name
+    
+    @property
+    def has_progress_bar(self):
+        """
+        Flag for active progress bar
+        
+        Returns
+        -------
+        has_pbar: bool
+            True if progress bar is active
+
+        """
+        return self.progress_bar is not None and self.progress_bar
+    
+    @property
+    def prints_progress(self):
+        """
+        Flag for active progress printing
+        
+        Returns
+        -------
+        has_pbar: bool
+            True if progress printing is active
+
+        """
+        return self.progress_bar is not None and not self.progress_bar
+
     def __repr__(self):
         s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
-        return f"{type(self).__name__}({s})"
+        return f"{self.name}({s})"
 
     def __enter__(self):
         if self.__entered:
@@ -135,7 +177,7 @@ class Engine(ABC):
         elif not self.initialized:
             if get_engine(error=False, default=False) is not None:
                 raise ValueError(
-                    f"Cannot initialize engine '{type(self).__name__}', since engine already set to '{type(get_engine()).__name__}'"
+                    f"Cannot initialize engine '{self.name}', since engine already set to '{type(get_engine()).__name__}'"
                 )
             __global_engine_data__["engine"] = self
             self.__initialized = True
@@ -466,7 +508,7 @@ class Engine(ABC):
     def combine_results(
         self,
         algo,
-        results,
+        futures,
         model_data,
         out_vars,
         out_coords,
@@ -475,6 +517,7 @@ class Engine(ABC):
         goal_data,
         iterative,
         write_nc=None,
+        results=None,
     ):
         """
         Combines chunk results into final Dataset
@@ -483,10 +526,10 @@ class Engine(ABC):
         ----------
         algo: foxes.core.Algorithm
             The algorithm object
-        results: dict
-            The results from the chunk calculations,
+        futures: dict
+            The futures from the chunk calculations,
             key: (chunki_states, chunki_targets),
-            value: dict with numpy.ndarray values
+            value: future unpacking to (results, cstore)
         model_data: xarray.Dataset
             The initial model data
         out_vars: list of str
@@ -514,6 +557,8 @@ class Engine(ABC):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
+        results: dict, options
+            The evaluated futures
 
         Returns
         -------
@@ -521,7 +566,11 @@ class Engine(ABC):
             The final results dataset
 
         """
-        self.print(f"{type(self).__name__}: Combining results", level=2)
+        assert (futures is not None and results is None) or (
+            futures is None and results is not None
+        ), f"{self.name}: Either futures or results must be provided, not both"
+
+        self.print(f"{self.name}: Combining results", level=2)
 
         coords = {}
         vrb = max(self.verbosity - 1, 0)
@@ -542,7 +591,7 @@ class Engine(ABC):
             out_fpath = out_dir/(base_name + "_*.nc")
             if split_mode == "chunks":
                 # files are already written during chunk calculations
-                self.print(f"{type(self).__name__}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}")
+                self.print(f"{self.name}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}")
                 if not ret_data:
                     return None
             elif split_mode == "input":
@@ -560,7 +609,7 @@ class Engine(ABC):
                 write_on_fly = ret_data == False and split_size is not None
                 write_from_ds = not write_on_fly
                 ret_data = write_nc.get("ret_data", write_from_ds)
-                self.print(f"{type(self).__name__}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}")
+                self.print(f"{self.name}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}")
 
         def _red_dims(data_vars):
             """Helper function for reducing unneccessary dimensions of data vars"""
@@ -588,7 +637,7 @@ class Engine(ABC):
                 without ever constructing the full Dataset in memory
             """
             nonlocal fcounter, split_size
-            futures = []
+            wfutures = []
             if split_size is not None:
                 splits = min(split_size, algo.n_states - wcount)
                 while algo.n_states - wcount > 0 and scount - wcount >= splits:
@@ -613,7 +662,7 @@ class Engine(ABC):
                     ds = Dataset(coords=crds,data_vars=dvars)
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
                     future = self.submit(write_nc_file, ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
-                    futures.append(future)
+                    wfutures.append(future)
                     del ds, crds, dvars, future
 
                     wcount += splits
@@ -627,46 +676,88 @@ class Engine(ABC):
                                 split_size = algo.n_states - wcount
                         splits = min(split_size, algo.n_states - wcount)
 
-            return wcount, futures
-
-        pbar = None
-        if self.verbosity > 1 and self.print_steps is None:
-            pbar = tqdm(total=len(out_vars))
+            return wcount, wfutures
 
         data_vars = {}
-        res_vars = list(results[(0, 0)][0].keys())
-        for v in out_vars:
-            if v in res_vars:
-                data_vars[v] = [out_coords, []]
-            else:
-                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+        def _get_res_vars(result, data_vars):
+            """Helper function for extracting results variables"""
+            res_vars = list(result.keys())
+            for v in out_vars:
+                if v in res_vars:
+                    data_vars[v] = [out_coords, []]
+                else:
+                    data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+            return res_vars
+
+        keys = list(futures.keys()) if futures is not None else list(results.keys())
+        if futures is not None:
+            self.print(f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes")
+            vlevel = 0
+        else:
+            self.print(f"{self.name}: Combining results from {len(keys)} chunks")
+            vlevel = 1
+        pbar = None
+        if self.verbosity > vlevel and self.has_progress_bar:
+            pbar = tqdm(total=len(keys))
 
         scount = 0
         wcount = 0
-        futures = []
+        wfutures = []
+        res_vars = None
+        pdone = -1
         if n_chunks_targets == 1:
-            for chunki_states in range(n_chunks_states):
-                r, cstore = results[(chunki_states, 0)]
+            for key in keys:
+                if futures is not None:
+                    r, cstore = self.await_result(futures.pop(key))
+                else:
+                    r, cstore = results.pop(key)
+                if res_vars is None:
+                    res_vars =_get_res_vars(r, data_vars)
                 if iterative:
                     for k, c in cstore.items():
                         if k in algo.chunk_store:
                             algo.chunk_store[k].update(c)
                         else:
                             algo.chunk_store[k] = c
-                for vi, v in enumerate(res_vars):
-                    data_vars[v][1].append(r[v])
-                    if vi == 0:
-                        scount += data_vars[v][1][-1].shape[0]
+                scount += r[res_vars[0]].shape[0]
+                for v in res_vars:
+                    if v in data_vars:
+                        data_vars[v][1].append(r[v])
                 if write_on_fly:
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
-                    futures += ftrs
+                    wfutures += ftrs
                     del ftrs
                 del r, cstore
+                if pbar is not None:
+                    pbar.update()
+                elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
+                    pr = int(100 * key[0]/(len(keys) - 1))
+                    if pr > pdone:
+                        pdone = pr
+                        print(f"{self.name}: Completed {key[0]} of {len(keys)} chunks, {pdone}%")
         else:
+            pdone = -1
+            counter = 0
             for chunki_states in range(n_chunks_states):
-                tres = {v: [] for v in res_vars}
+                tres = None
                 for chunki_points in range(n_chunks_targets):
-                    r, cstore = results[(chunki_states, chunki_points)]
+                    found = False
+                    for key in keys:
+                        if key == (chunki_states, chunki_points):
+                            if futures is not None:
+                                r, cstore = self.await_result(futures.pop(key))
+                            else:
+                                r, cstore = results.pop(key)
+                            if res_vars is None:
+                                res_vars =_get_res_vars(r, data_vars)
+                            if tres is None:
+                                tres = {v: [] for v in res_vars}
+                            
+                            found = True
+                            break
+                    if not found:
+                        raise KeyError(f"{self.name}: Missing future for key {key}")
+                    
                     for v in res_vars:
                         tres[v].append(r[v])
                     if iterative:
@@ -676,83 +767,46 @@ class Engine(ABC):
                             else:
                                 algo.chunk_store[k] = c
                     del r, cstore
-                for vi, v in enumerate(res_vars):
-                    data_vars[v][1].append(np.concatenate(tres[v], axis=1))
-                    if vi == 0:
-                        scount += data_vars[v][1][-1].shape[0]
+
+                    if pbar is not None:
+                        pbar.update()
+                    elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
+                        pr = int(100 * counter/(len(keys) - 1))
+                        if pr > pdone:
+                            pdone = pr
+                            print(f"{self.name}: Completed {counter} of {len(keys)} chunks, {pdone}%")
+                    counter += 1
+
+                found = False
+                for v in res_vars:
+                    if v in data_vars:
+                        data_vars[v][1].append(np.concatenate(tres[v], axis=1))
+                        if not found:
+                            scount += data_vars[v][1][-1].shape[0]
+                        found = True
                 del tres
                 if write_on_fly:
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
-                    futures += ftrs
+                    wfutures += ftrs
                     del ftrs
-        for f in futures:
-            self.await_result(f)
-        del futures
+        for wf in wfutures:
+            self.await_result(wf)
+        del wfutures
 
-        """
-        for v in out_vars:
-            if v in results[(0, 0)][0]:
-                data_vars[v] = [out_coords, []]
-
-                if n_chunks_targets == 1:
-                    scount = 0
-                    wcount = 0
-                    for chunki_states in range(n_chunks_states):
-                        r, cstore = results[(chunki_states, 0)]
-                        data_vars[v][1].append(r[v])
-                        scount += data_vars[v][1][-1].shape[0]
-                        if iterative:
-                            for k, c in cstore.items():
-                                if k in algo.chunk_store:
-                                    algo.chunk_store[k].update(c)
-                                else:
-                                    algo.chunk_store[k] = c
-                        if write_nc is not None:
-                            scount, wcount = _write_parts_on_fly(chunki_states, data_vars, scount, wcount)
-                else:
-                    for chunki_states in range(n_chunks_states):
-                        tres = []
-                        for chunki_points in range(n_chunks_targets):
-                            r, cstore = results[(chunki_states, chunki_points)]
-                            tres.append(r[v])
-                            if iterative:
-                                for k, c in cstore.items():
-                                    if k in algo.chunk_store:
-                                        algo.chunk_store[k].update(c)
-                                    else:
-                                        algo.chunk_store[k] = c
-                        data_vars[v][1].append(np.concatenate(tres, axis=1))
-                        scount += data_vars[v][1][-1].shape[0]
-                        if write_nc is not None:
-                            scount, wcount = _write_parts_on_fly(chunki_states, data_vars, scount, wcount)
-                    del tres
-                del r, cstore
-                data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-            else:
-                data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
-
-            if pbar is not None:
-                pbar.update()
-            elif (
-                self.verbosity > 1 and 
-                self.print_steps is not None
-            ):
-                print(f"{type(self).__name__}: Completed variable '{v}'")
-                
-        del results
         if pbar is not None:
             pbar.close()
-        """
+        self.print(f"{self.name}: Completed all {len(keys)} chunks\n", level=vlevel+1)
 
         # if not iterative or algo.final_iteration:
         #    algo.reset_chunk_store()
 
         if ret_data or write_from_ds:
             for v in res_vars:
-                if len(data_vars[v][1]) > 1:
-                    data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-                elif len(data_vars[v][1]) == 1:
-                    data_vars[v][1] = data_vars[v][1][0]
+                if v in data_vars:
+                    if len(data_vars[v][1]) > 1:
+                        data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
+                    elif len(data_vars[v][1]) == 1:
+                        data_vars[v][1] = data_vars[v][1][0]
 
             dvars = _red_dims(data_vars)
             ds = Dataset(
@@ -766,14 +820,14 @@ class Engine(ABC):
                 else:
                     wcount = 0
                     fcounter = 0
-                    futures = []
+                    wfutures = []
                     while wcount < algo.n_states:
                         splits = min(split_size, algo.n_states - wcount)
                         dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
 
                         fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
                         future = self.submit(write_nc_file, dssub, fpath, nc_engine=config.nc_engine, verbosity=vrb)
-                        futures.append(future)
+                        wfutures.append(future)
                         del dssub, future
 
                         wcount += splits
@@ -785,8 +839,8 @@ class Engine(ABC):
                             except StopIteration:
                                 split_size = algo.n_states - wcount
 
-                    for f in futures:
-                        self.await_result(f)
+                    for wf in wfutures:
+                        self.await_result(wf)
 
         if ret_data:
             return ds
@@ -826,14 +880,14 @@ class Engine(ABC):
         n_states = model_data.sizes[FC.STATE]
         if point_data is None:
             self.print(
-                f"{type(self).__name__}: Calculating {n_states} states for {algo.n_turbines} turbines"
+                f"{self.name}: Calculating {n_states} states for {algo.n_turbines} turbines"
             )
         else:
             self.print(
-                f"{type(self).__name__}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
+                f"{self.name}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
             )
         if not self.initialized:
-            raise ValueError(f"Engine '{type(self).__name__}' not initialized")
+            raise ValueError(f"Engine '{self.name}' not initialized")
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
 

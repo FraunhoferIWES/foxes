@@ -131,12 +131,12 @@ class PoolEngine(Engine):
             return [func(inputs[0], *args, **kwargs)]
         else:
             inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
-            jobs = []
+            futures = []
             for subi in inptl:
-                jobs.append(self.submit(_run_map, func, subi, *args, **kwargs))
+                futures.append(self.submit(_run_map, func, subi, *args, **kwargs))
             results = []
-            for j in jobs:
-                results += self.await_result(j)
+            for f in futures:
+                results += self.await_result(f)
             return results
 
     def run_calculation(
@@ -242,11 +242,12 @@ class PoolEngine(Engine):
             level=2,
         )
         pbar = None
-        if self.verbosity > 1 and self.print_steps is None:
+        if self.verbosity > 1 and self.has_progress_bar:
             pbar = tqdm(total=n_chunks_all)
-        jobs = {}
+        futures = {}
         i0_states = 0
-        r0_states = 0
+        pdone = -1
+        counter = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -267,7 +268,7 @@ class PoolEngine(Engine):
                 )
 
                 # submit model calculation:
-                jobs[(chunki_states, chunki_points)] = self.submit(
+                futures[(chunki_states, chunki_points)] = self.submit(
                     _run,
                     algo,
                     model,
@@ -285,65 +286,29 @@ class PoolEngine(Engine):
 
                 if pbar is not None:
                     pbar.update()
-            if (
-                self.verbosity > 1 and 
-                self.print_steps is not None and
-                i1_states - r0_states >= self.print_steps
-            ):
-                print(f"{type(self).__name__}: Submitted {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
-                r0_states = i1_states
+                elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
+                    pr = int(100 * counter/(n_chunks_all - 1))
+                    if pr > pdone:
+                        pdone = pr
+                        print(f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%")
+                counter += 1
             i0_states = i1_states
 
         if farm_data is None:
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
-
         del calc_pars, farm_data, point_data
+
         if pbar is not None:
             pbar.close()
         elif (
-            self.verbosity > 1 and 
-            self.print_steps is not None 
+            self.verbosity > 1 and self.prints_progress
         ):
             print(f"{type(self).__name__}: Submitted all {i1_states} states\n")
-    
-        # wait for results:
-        pbar = None
-        if n_chunks_all > 1 or self.verbosity > 0:
-            self.print(
-                f"{type(self).__name__}: Computing {n_chunks_all} chunks using {self.n_procs} processes"
-            )
-            if self.print_steps is None:
-                pbar = tqdm(total=n_chunks_all)
-        i0_states = 0
-        r0_states = 0
-        results = {}
-        for chunki_states in range(n_chunks_states):
-            i1_states = i0_states + chunk_sizes_states[chunki_states]
-            for chunki_points in range(n_chunks_targets):
-                key = (chunki_states, chunki_points)
-                results[key] = self.await_result(jobs.pop((chunki_states, chunki_points)))
-                if pbar is not None:
-                    pbar.update()
-            if (
-                self.verbosity > 0 and 
-                self.print_steps is not None and
-                i1_states - r0_states >= self.print_steps
-            ):
-                print(f"{type(self).__name__}: Completed {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
-                r0_states = i1_states
-            i0_states = i1_states
-        if pbar is not None:
-            pbar.close()
-        elif (
-            self.verbosity > 0 and 
-            self.print_steps is not None 
-        ):
-            print(f"{type(self).__name__}: Completed all {i1_states} states\n")
-    
+
         return self.combine_results(
             algo=algo,
-            results=results,
+            futures=futures,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,

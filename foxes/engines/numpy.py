@@ -184,13 +184,13 @@ class NumpyEngine(Engine):
         pbar = None
         if (
             self.verbosity > 0 and 
-            self.print_steps is None and
+            self.has_progress_bar and
             n_chunks_all > 1
         ):
             pbar = tqdm(total=n_chunks_all)
         results = {}
         i0_states = 0
-        r0_states = 0
+        pdone = -1
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -230,13 +230,11 @@ class NumpyEngine(Engine):
 
                 if pbar is not None:
                     pbar.update()
-            if (
-                self.verbosity > 0 and 
-                self.print_steps is not None and
-                i1_states - r0_states >= self.print_steps
-            ):
-                print(f"{type(self).__name__}: Completed {i1_states} states, {i1_states / (n_states - 1) * 100:.1f}%")
-                r0_states = i1_states
+                elif self.verbosity > 0 and self.prints_progress and n_chunks_all > 1:
+                    pr = int(100 * chunki_states/(n_chunks_all - 1))
+                    if pr > pdone:
+                        pdone = pr
+                        print(f"{self.name}: Completed {chunki_states} of {n_chunks_all} states, {pdone}%")
             i0_states = i1_states
 
         if farm_data is None:
@@ -248,13 +246,15 @@ class NumpyEngine(Engine):
             pbar.close()
         elif (
             self.verbosity > 0 and 
-            self.print_steps is not None 
+            self.prints_progress
         ):
             print(f"{type(self).__name__}: Completed all {i1_states} states\n")
     
-        return self.combine_results(
+        pbar = self.progress_bar
+        self.progress_bar = None
+        out = self.combine_results(
             algo=algo,
-            results=results,
+            futures=results,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,
@@ -264,3 +264,7 @@ class NumpyEngine(Engine):
             iterative=iterative,
             write_nc=write_nc,
         )
+        self.progress_bar = pbar
+
+        return out
+    

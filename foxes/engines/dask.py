@@ -51,8 +51,6 @@ class DaskBaseEngine(Engine):
     ----------
     dask_config: dict
         The dask configuration parameters
-    progress_bar: bool
-        Flag for showing progress bar
 
     :group: engines
 
@@ -62,7 +60,6 @@ class DaskBaseEngine(Engine):
         self,
         *args,
         dask_config={},
-        progress_bar=True,
         **kwargs,
     ):
         """
@@ -85,20 +82,15 @@ class DaskBaseEngine(Engine):
         load_dask()
 
         self.dask_config = dask_config
-        self.progress_bar = progress_bar
-        
-        assert self.print_steps is None, (
-            f"{type(self).__name__}: print_steps option not supported with dask engines"
-        )
 
     def __enter__(self):
-        if self.progress_bar:
+        if self.has_progress_bar:
             self._pbar = ProgressBar(minimum=2)
             self._pbar.__enter__()
         return super().__enter__()
 
     def __exit__(self, *args):
-        if self.progress_bar:
+        if self.has_progress_bar:
             self._pbar.__exit__(*args)
         super().__exit__(*args)
 
@@ -182,10 +174,10 @@ class DaskBaseEngine(Engine):
             return [func(inputs[0], *args, **kwargs)]
         else:
             inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
-            jobs = []
+            futures = []
             for subi in inptl:
-                jobs.append(_run_map(func, subi, *args, **kwargs))
-            results = dask.compute(jobs)[0]
+                futures.append(_run_map(func, subi, *args, **kwargs))
+            results = dask.compute(futures)[0]
             out = []
             for r in results:
                 out += r
@@ -756,9 +748,11 @@ class DaskEngine(DaskBaseEngine):
         self.print(
             f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
         )
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 else None
-        results = {}
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 and self.has_progress_bar else None
+        futures = {}
         i0_states = 0
+        counter = 0
+        pdone = -1
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -779,7 +773,7 @@ class DaskEngine(DaskBaseEngine):
                 )
 
                 # submit model calculation:
-                results[(chunki_states, chunki_points)] = delayed(_run)(
+                futures[(chunki_states, chunki_points)] = delayed(_run)(
                     algo, 
                     model, 
                     *data, 
@@ -796,7 +790,12 @@ class DaskEngine(DaskBaseEngine):
 
                 if pbar is not None:
                     pbar.update()
-
+                elif self.verbosity > 1 and self.prints_progress and n_chunks_states > 1:
+                    pr = int(100 * counter/(n_chunks_states - 1))
+                    if pr > pdone:
+                        pdone = pr
+                        print(f"{self.name}: Submitted {counter} of {n_chunks_states} states, {pdone}%")
+                counter += 1
             i0_states = i1_states
 
         del farm_data, point_data, calc_pars
@@ -808,10 +807,12 @@ class DaskEngine(DaskBaseEngine):
             self.print(
                 f"Computing {n_chunks_all} chunks using {self.n_procs} processes"
             )
-        results = dask.compute(results)[0]
+        results = dask.compute(futures)[0]
+        del futures
 
         return self.combine_results(
             algo=algo,
+            futures=None,
             results=results,
             model_data=model_data,
             out_vars=out_vars,
@@ -954,6 +955,45 @@ class LocalClusterEngine(DaskBaseEngine):
             self._cluster.__del__()
         super().__del__()
 
+    def submit(self, f, *args, **kwargs):
+        """
+        Submits a job to worker, obtaining a future
+
+        Parameters
+        ----------
+        f: Callable
+            The function f(*args, **kwargs) to be
+            submitted
+        args: tuple, optional
+            Arguments for the function
+        kwargs: dict, optional
+            Arguments for the function
+
+        Returns
+        -------
+        future: object
+            The future object
+
+        """
+        return self._client.submit(f, *args, **kwargs)
+
+    def await_result(self, future):
+        """
+        Waits for result from a future
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        result: object
+            The calculation result
+
+        """
+        return future.result()
+    
     def run_calculation(
         self,
         algo,
@@ -1042,9 +1082,11 @@ class LocalClusterEngine(DaskBaseEngine):
 
         # submit chunks:
         self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 0 else None
-        jobs = {}
+        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 and self.has_progress_bar else None
+        futures = {}
         i0_states = 0
+        pdone = -1
+        counter = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -1059,6 +1101,8 @@ class LocalClusterEngine(DaskBaseEngine):
                     point_data=point_data,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
                     out_vars=out_vars,
                 )
 
@@ -1084,7 +1128,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     all_data.append(cstore)
 
                 # submit model calculation:
-                jobs[(chunki_states, chunki_points)] = self._client.submit(
+                futures[(chunki_states, chunki_points)] = self.submit(
                     _run_on_cluster,
                     falgo,
                     fmodel,
@@ -1107,33 +1151,21 @@ class LocalClusterEngine(DaskBaseEngine):
 
                 if pbar is not None:
                     pbar.update()
-
+                elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
+                    pr = int(100 * counter/(n_chunks_all - 1))
+                    if pr > pdone:
+                        pdone = pr
+                        print(f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%")
+                counter += 1
             i0_states = i1_states
 
         del falgo, fmodel, farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
 
-        # wait for results:
-        self.print(f"Computing {n_chunks_all} chunks using {self.n_procs} processes")
-        pbar = (
-            tqdm(total=n_chunks_all)
-            if n_chunks_all > 1 and self.verbosity > 0
-            else None
-        )
-        results = {}
-        for chunki_states in range(n_chunks_states):
-            for chunki_points in range(n_chunks_targets):
-                key = (chunki_states, chunki_points)
-                results[key] = jobs.get(key).result()
-                if pbar is not None:
-                    pbar.update()
-        if pbar is not None:
-            pbar.close()
-
         results = self.combine_results(
             algo=algo,
-            results=results,
+            futures=futures,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,
@@ -1168,7 +1200,7 @@ class SlurmClusterEngine(LocalClusterEngine):
         )
 
         self._cluster = dask_jobqueue.SLURMCluster(**cargs)
-        self._cluster.scale(jobs=nodes)
+        self._cluster.scale(futures=nodes)
         self._cluster = self._cluster.__enter__()
         self._client = distributed.Client(self._cluster, **self.client_pars).__enter__()
 

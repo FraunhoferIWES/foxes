@@ -37,6 +37,7 @@ class SingleChunkEngine(Engine):
             n_procs=1,
             **kwargs,
         )
+        self.progress_bar = None
 
     def __repr__(self):
         return f"{type(self).__name__}()"
@@ -220,7 +221,7 @@ class SingleChunkEngine(Engine):
 
         return self.combine_results(
             algo=algo,
-            results=results,
+            futures=results,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,
