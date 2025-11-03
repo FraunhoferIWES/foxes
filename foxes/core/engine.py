@@ -557,7 +557,7 @@ class Engine(ABC):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
-        results: dict, options
+        results: dict, optional
             The evaluated futures
 
         Returns
@@ -582,6 +582,7 @@ class Engine(ABC):
         split_size = None
         write_on_fly = False
         write_from_ds = False
+        keys = list(futures.keys()) if futures is not None else list(results.keys())
         if write_nc is not None:
             out_dir = get_output_path(write_nc.get("out_dir", "."))
             base_name = write_nc["base_name"]
@@ -590,12 +591,9 @@ class Engine(ABC):
             out_dir.mkdir(parents=True, exist_ok=True)
             out_fpath = out_dir / (base_name + "_*.nc")
             if split_mode == "chunks":
-                # files are already written during chunk calculations
                 self.print(
-                    f"{self.name}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}"
+                    f"{self.name}: Writing results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}"
                 )
-                if not ret_data:
-                    return None
             elif split_mode == "input":
                 gen_size = algo.states.gen_states_split_size()
                 split_size = next(gen_size)
@@ -614,7 +612,7 @@ class Engine(ABC):
                 write_from_ds = not write_on_fly
                 ret_data = write_nc.get("ret_data", write_from_ds)
                 self.print(
-                    f"{self.name}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}"
+                    f"{self.name}: Writing results to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}"
                 )
 
         def _red_dims(data_vars):
@@ -695,6 +693,8 @@ class Engine(ABC):
 
         def _get_res_vars(result, data_vars):
             """Helper function for extracting results variables"""
+            if result is None:
+                return []
             res_vars = list(result.keys())
             for v in out_vars:
                 if v in res_vars:
@@ -703,7 +703,6 @@ class Engine(ABC):
                     data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
             return res_vars
 
-        keys = list(futures.keys()) if futures is not None else list(results.keys())
         if futures is not None:
             self.print(
                 f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes"
@@ -737,12 +736,12 @@ class Engine(ABC):
                         else:
                             algo.chunk_store[k] = c
 
-                scount += r[res_vars[0]].shape[0]
                 for v in res_vars:
                     if v in data_vars:
                         data_vars[v][1].append(r[v])
 
                 if write_on_fly:
+                    scount += r[res_vars[0]].shape[0]
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
                     wfutures += ftrs
                     del ftrs
@@ -810,7 +809,7 @@ class Engine(ABC):
                 for v in res_vars:
                     if v in data_vars:
                         data_vars[v][1].append(np.concatenate(tres[v], axis=1))
-                        if not found:
+                        if not found and write_on_fly:
                             scount += data_vars[v][1][-1].shape[0]
                         found = True
                 del tres
