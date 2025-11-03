@@ -1,2 +1,20 @@
-foxes @ git+https://github.com/FraunhoferIWES/foxes.git@dev_docs[doc]
+matplotlib
+numpy
+pandas
+scipy
+xarray
+netcdf4 
+pyyaml
+tqdm
+utm
+setuptools,
+sphinx,
+sphinx-immaterial,
+nbsphinx
+ipykernel
+ipywidgets
+m2r2
+lxml_html_clean
+dask
+distributed
 furo
