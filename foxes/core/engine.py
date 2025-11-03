@@ -727,6 +727,7 @@ class Engine(ABC):
                     r, cstore = self.await_result(futures.pop(key))
                 else:
                     r, cstore = results.pop(key)
+                    
                 if res_vars is None:
                     res_vars = _get_res_vars(r, data_vars)
                 if iterative:
@@ -735,15 +736,18 @@ class Engine(ABC):
                             algo.chunk_store[k].update(c)
                         else:
                             algo.chunk_store[k] = c
+
                 scount += r[res_vars[0]].shape[0]
                 for v in res_vars:
                     if v in data_vars:
                         data_vars[v][1].append(r[v])
+
                 if write_on_fly:
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
                     wfutures += ftrs
                     del ftrs
                 del r, cstore
+
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
@@ -766,6 +770,7 @@ class Engine(ABC):
                                 r, cstore = self.await_result(futures.pop(key))
                             else:
                                 r, cstore = results.pop(key)
+
                             if res_vars is None:
                                 res_vars = _get_res_vars(r, data_vars)
                             if tres is None:
@@ -809,6 +814,7 @@ class Engine(ABC):
                             scount += data_vars[v][1][-1].shape[0]
                         found = True
                 del tres
+                
                 if write_on_fly:
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
                     wfutures += ftrs
