@@ -540,9 +540,9 @@ class FData(Data):
                     callback(data, dims)
 
             return super().from_dataset(
-                ds, 
-                *args, 
-                callback=cb, 
+                ds,
+                *args,
+                callback=cb,
                 chunki_states=mdata.chunki_states,
                 chunki_points=mdata.chunki_points,
                 **kwargs,

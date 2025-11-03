@@ -14,6 +14,7 @@ class NumpyEngine(Engine):
     :group: engines
 
     """
+
     def submit(self, f, *args, **kwargs):
         """
         Submits a job to worker, obtaining a future
@@ -126,9 +127,9 @@ class NumpyEngine(Engine):
             Flag for use within the iterative algorithm
         write_nc: dict, optional
             Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results', 
+            {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
-            
+
             The split parameter controls how the output is split:
             - 'chunks': one file per chunk (fastest method),
             - 'input': split according to sizes of multiple states input files,
@@ -182,11 +183,7 @@ class NumpyEngine(Engine):
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(f"{type(self).__name__}: Looping over {n_chunks_all} chunks")
         pbar = None
-        if (
-            self.verbosity > 0 and 
-            self.has_progress_bar and
-            n_chunks_all > 1
-        ):
+        if self.verbosity > 0 and self.has_progress_bar and n_chunks_all > 1:
             pbar = tqdm(total=n_chunks_all)
         results = {}
         i0_states = 0
@@ -231,10 +228,12 @@ class NumpyEngine(Engine):
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > 0 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * chunki_states/(n_chunks_all - 1))
+                    pr = int(100 * chunki_states / (n_chunks_all - 1))
                     if pr > pdone:
                         pdone = pr
-                        print(f"{self.name}: Completed {chunki_states} of {n_chunks_all} states, {pdone}%")
+                        print(
+                            f"{self.name}: Completed {chunki_states} of {n_chunks_all} states, {pdone}%"
+                        )
             i0_states = i1_states
 
         if farm_data is None:
@@ -244,12 +243,9 @@ class NumpyEngine(Engine):
 
         if pbar is not None:
             pbar.close()
-        elif (
-            self.verbosity > 0 and 
-            self.prints_progress
-        ):
+        elif self.verbosity > 0 and self.prints_progress:
             print(f"{type(self).__name__}: Completed all {i1_states} states\n")
-    
+
         pbar = self.progress_bar
         self.progress_bar = None
         out = self.combine_results(
@@ -267,4 +263,3 @@ class NumpyEngine(Engine):
         self.progress_bar = pbar
 
         return out
-    

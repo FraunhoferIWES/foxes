@@ -580,7 +580,7 @@ class DatasetStates(States):
         """
         for size in self._input_sizes:
             yield size
-            
+
     def load_data(
         self,
         algo,

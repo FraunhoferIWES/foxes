@@ -186,4 +186,6 @@ class ResultsWriter(Output):
         )
 
         fpath = self.get_fpath(file_name)
-        write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=verbosity, **kwargs)
+        write_nc_file(
+            ds, fpath, nc_engine=config.nc_engine, verbosity=verbosity, **kwargs
+        )

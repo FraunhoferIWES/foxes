@@ -19,6 +19,7 @@ def delayed(func):
     """A dummy decorator"""
     return func
 
+
 def load_dask():
     """On-demand loading of the dask package"""
     global dask, ProgressBar, delayed
@@ -31,11 +32,13 @@ def load_dask():
         ).ProgressBar
         delayed = dask.delayed
 
+
 def load_distributed():
     """On-demand loading of the distributed package"""
     global distributed
     if distributed is None:
         distributed = import_module("distributed")
+
 
 @delayed
 def _run_map(func, inputs, *args, **kwargs):
@@ -427,7 +430,7 @@ class XArrayEngine(DaskBaseEngine):
 
         """
         return future
-    
+
     def map(
         self,
         func,
@@ -693,9 +696,9 @@ class DaskEngine(DaskBaseEngine):
             Flag for use within the iterative algorithm
         write_nc: dict, optional
             Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results', 
+            {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
-            
+
             The split parameter controls how the output is split:
             - 'chunks': one file per chunk (fastest method),
             - 'input': split according to sizes of multiple states input files,
@@ -748,7 +751,11 @@ class DaskEngine(DaskBaseEngine):
         self.print(
             f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
         )
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 and self.has_progress_bar else None
+        pbar = (
+            tqdm(total=n_chunks_all)
+            if self.verbosity > 1 and self.has_progress_bar
+            else None
+        )
         futures = {}
         i0_states = 0
         counter = 0
@@ -774,14 +781,14 @@ class DaskEngine(DaskBaseEngine):
 
                 # submit model calculation:
                 futures[(chunki_states, chunki_points)] = delayed(_run)(
-                    algo, 
-                    model, 
-                    *data, 
-                    iterative=iterative, 
-                    chunk_store=chunk_store, 
-                    i0_t0=(i0_states, i0_targets), 
-                    out_coords=out_coords, 
-                    write_nc=write_nc, 
+                    algo,
+                    model,
+                    *data,
+                    iterative=iterative,
+                    chunk_store=chunk_store,
+                    i0_t0=(i0_states, i0_targets),
+                    out_coords=out_coords,
+                    write_nc=write_nc,
                     **calc_pars,
                 )
                 del data
@@ -790,11 +797,15 @@ class DaskEngine(DaskBaseEngine):
 
                 if pbar is not None:
                     pbar.update()
-                elif self.verbosity > 1 and self.prints_progress and n_chunks_states > 1:
-                    pr = int(100 * counter/(n_chunks_states - 1))
+                elif (
+                    self.verbosity > 1 and self.prints_progress and n_chunks_states > 1
+                ):
+                    pr = int(100 * counter / (n_chunks_states - 1))
                     if pr > pdone:
                         pdone = pr
-                        print(f"{self.name}: Submitted {counter} of {n_chunks_states} states, {pdone}%")
+                        print(
+                            f"{self.name}: Submitted {counter} of {n_chunks_states} states, {pdone}%"
+                        )
                 counter += 1
             i0_states = i1_states
 
@@ -993,7 +1004,7 @@ class LocalClusterEngine(DaskBaseEngine):
 
         """
         return future.result()
-    
+
     def run_calculation(
         self,
         algo,
@@ -1082,7 +1093,11 @@ class LocalClusterEngine(DaskBaseEngine):
 
         # submit chunks:
         self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes")
-        pbar = tqdm(total=n_chunks_all) if self.verbosity > 1 and self.has_progress_bar else None
+        pbar = (
+            tqdm(total=n_chunks_all)
+            if self.verbosity > 1 and self.has_progress_bar
+            else None
+        )
         futures = {}
         i0_states = 0
         pdone = -1
@@ -1152,10 +1167,12 @@ class LocalClusterEngine(DaskBaseEngine):
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * counter/(n_chunks_all - 1))
+                    pr = int(100 * counter / (n_chunks_all - 1))
                     if pr > pdone:
                         pdone = pr
-                        print(f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%")
+                        print(
+                            f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
+                        )
                 counter += 1
             i0_states = i1_states
 

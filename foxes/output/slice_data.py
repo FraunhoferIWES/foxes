@@ -102,10 +102,10 @@ class SliceData(Output):
 
             elif format == "xarray":
                 write_nc(
-                    data, 
-                    self.get_fpath(fname), 
-                    nc_engine=config.nc_engine, 
-                    verbosity=verbosity, 
+                    data,
+                    self.get_fpath(fname),
+                    nc_engine=config.nc_engine,
+                    verbosity=verbosity,
                     **write_pars,
                 )
 

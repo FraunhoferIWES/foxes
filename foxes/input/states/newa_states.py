@@ -170,13 +170,13 @@ class NEWAStates(DatasetStates):
         }
 
     def preproc_first(
-        self, 
-        algo, 
-        data, 
-        cmap, 
-        vars, 
-        bounds_extra_space, 
-        height_bounds, 
+        self,
+        algo,
+        data,
+        cmap,
+        vars,
+        bounds_extra_space,
+        height_bounds,
         verbosity=0,
     ):
         """
@@ -475,7 +475,9 @@ class NEWAStates(DatasetStates):
                         i = np.where(sel2)
                         p = gpts[i[0][0]]
                         v = vrs[i[1][0]]
-                        print(f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:")
+                        print(
+                            f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
+                        )
                         print("   time:   ", t)
                         for ic, c in enumerate(idims):
                             print(f"  {c}: {p[ic]}")

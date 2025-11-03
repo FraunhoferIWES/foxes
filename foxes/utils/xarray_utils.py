@@ -10,7 +10,7 @@ def compute_scale_and_offset(min, max, n, hasnan=True):
     """
     Computes scale_factor and add_offset for packing data
     into n-bit integers.
-    
+
     Parameters
     ----------
     min: float
@@ -21,14 +21,14 @@ def compute_scale_and_offset(min, max, n, hasnan=True):
         Number of bits for packing
     hasnan: bool
         NaN present in the data
-    
+
     Returns
     -------
     scale_factor: float
         The scale factor
     add_offset: float
         The add offset
-    fill_value: float   
+    fill_value: float
         The fill value for NaN
 
     Notes
@@ -39,19 +39,20 @@ def compute_scale_and_offset(min, max, n, hasnan=True):
     if min == max:
         max = min + 1
     if hasnan:
-        scale_factor = (max - min) / (2 ** n - 2)
+        scale_factor = (max - min) / (2**n - 2)
         add_offset = 0.5 * (max + min)
-        fill_value = -2**(n - 1)
+        fill_value = -(2 ** (n - 1))
     else:
-        scale_factor = (max - min) / (2 ** n - 1)
+        scale_factor = (max - min) / (2**n - 1)
         add_offset = min + 2 ** (n - 1) * scale_factor
         fill_value = None
     return scale_factor, add_offset, fill_value
 
+
 def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
     """
     Pack a floating point value into an integer representation.
-    
+
     Parameters
     ----------
     unpacked_value: float or np.ndarray
@@ -62,7 +63,7 @@ def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
         The add offset
     dtype: numpy.dtype
         The dtype of packed values
-    fill_value: float   
+    fill_value: float
         The fill value for NaN
 
     Returns
@@ -79,8 +80,9 @@ def pack_value(unpacked_value, scale_factor, add_offset, dtype, fill_value):
         return np.where(
             np.isnan(unpacked_value),
             fill_value,
-            np.floor((unpacked_value - add_offset) / scale_factor)
+            np.floor((unpacked_value - add_offset) / scale_factor),
         ).astype(dtype)
+
 
 def unpack_value(packed_value, scale_factor, add_offset, fill_value):
     """
@@ -94,14 +96,14 @@ def unpack_value(packed_value, scale_factor, add_offset, fill_value):
         The scale factor
     add_offset: float
         The add offset
-    fill_value: float   
+    fill_value: float
         The fill value for NaN
 
     Returns
     -------
     unpacked_value: float or np.ndarray
         The unpacked floating point value(s)
-    
+
     :group: utils
 
     """
@@ -109,10 +111,9 @@ def unpack_value(packed_value, scale_factor, add_offset, fill_value):
         return (packed_value * scale_factor + add_offset).astype(scale_factor.dtype)
     else:
         return np.where(
-            packed_value==fill_value,
-            np.nan,
-            packed_value * scale_factor + add_offset
+            packed_value == fill_value, np.nan, packed_value * scale_factor + add_offset
         ).astype(scale_factor.dtype)
+
 
 def get_encoding(data, complevel=5):
     """
@@ -136,14 +137,16 @@ def get_encoding(data, complevel=5):
     enc = {"zlib": True, "complevel": complevel}
     if np.issubdtype(data.dtype, np.integer):
         for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32]:
-            if np.all(data==data.astype(t)):
+            if np.all(data == data.astype(t)):
                 enc["dtype"] = t.__name__
     elif np.issubdtype(data.dtype, np.floating):
         min = np.min(data)
         max = np.max(data)
         hasnan = np.any(np.isnan(data))
         for t, n in zip([np.int8, np.int16], [8, 16]):
-            scale_factor, add_offset, fill_value = compute_scale_and_offset(min, max, n, hasnan)
+            scale_factor, add_offset, fill_value = compute_scale_and_offset(
+                min, max, n, hasnan
+            )
             packed = pack_value(data, scale_factor, add_offset, t, fill_value)
             unpacked = unpack_value(packed, scale_factor, add_offset, fill_value)
             try:
@@ -151,11 +154,12 @@ def get_encoding(data, complevel=5):
                 enc["dtype"] = t.__name__
                 enc["scale_factor"] = scale_factor
                 enc["add_offset"] = add_offset
-                enc['_FillValue'] = fill_value
+                enc["_FillValue"] = fill_value
                 break
             except AssertionError:
                 continue
     return enc
+
 
 def write_nc(
     ds,
@@ -212,7 +216,7 @@ def write_nc(
                 d = round.get(v, FV.get_default_digits(v))
             crds[v] = _round(x.to_numpy(), v, d)
             enc[v] = get_encoding(crds[v], complevel=complevel)
-            #print("WRITENC ENC",v, enc[v])
+            # print("WRITENC ENC",v, enc[v])
         dvrs = {}
         for v, x in ds.data_vars.items():
             if isinstance(round, int):
@@ -224,7 +228,7 @@ def write_nc(
             else:
                 dvrs[v] = (x.dims, x.to_numpy())
             enc[v] = get_encoding(dvrs[v][1], complevel=complevel)
-            #print("WRITENC ENC",v, enc[v])
+            # print("WRITENC ENC",v, enc[v])
         ds = Dataset(coords=crds, data_vars=dvrs)
 
     if verbosity > 0:

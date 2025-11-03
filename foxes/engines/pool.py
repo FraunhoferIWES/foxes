@@ -8,6 +8,7 @@ from foxes.core import Engine
 from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
+
 def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
     """Helper function for optionally writing chunk results to netCDF file"""
     ret_data = True
@@ -45,6 +46,7 @@ def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
         write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
 
     return results if ret_data else None
+
 
 def _run(
     algo,
@@ -182,9 +184,9 @@ class PoolEngine(Engine):
             Flag for use within the iterative algorithm
         write_nc: dict, optional
             Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results', 
+            {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
-            
+
             The split parameter controls how the output is split:
             - 'chunks': one file per chunk (fastest method),
             - 'input': split according to sizes of multiple states input files,
@@ -287,10 +289,12 @@ class PoolEngine(Engine):
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * counter/(n_chunks_all - 1))
+                    pr = int(100 * counter / (n_chunks_all - 1))
                     if pr > pdone:
                         pdone = pr
-                        print(f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%")
+                        print(
+                            f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
+                        )
                 counter += 1
             i0_states = i1_states
 
@@ -301,9 +305,7 @@ class PoolEngine(Engine):
 
         if pbar is not None:
             pbar.close()
-        elif (
-            self.verbosity > 1 and self.prints_progress
-        ):
+        elif self.verbosity > 1 and self.prints_progress:
             print(f"{type(self).__name__}: Submitted all {i1_states} states\n")
 
         return self.combine_results(

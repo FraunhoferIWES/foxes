@@ -84,7 +84,7 @@ class Engine(ABC):
     def name(self):
         """
         The engine's name
-        
+
         Returns
         -------
         nme: str
@@ -92,12 +92,12 @@ class Engine(ABC):
 
         """
         return self.__name
-    
+
     @property
     def has_progress_bar(self):
         """
         Flag for active progress bar
-        
+
         Returns
         -------
         has_pbar: bool
@@ -105,12 +105,12 @@ class Engine(ABC):
 
         """
         return self.progress_bar is not None and self.progress_bar
-    
+
     @property
     def prints_progress(self):
         """
         Flag for active progress printing
-        
+
         Returns
         -------
         has_pbar: bool
@@ -546,9 +546,9 @@ class Engine(ABC):
             Flag for use within the iterative algorithm
         write_nc: dict, optional
             Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results', 
+            {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
-            
+
             The split parameter controls how the output is split:
             - 'chunks': one file per chunk (fastest method),
             - 'input': split according to sizes of multiple states input files,
@@ -588,10 +588,12 @@ class Engine(ABC):
             ret_data = write_nc.get("ret_data", False)
             split_mode = write_nc.get("split", None)
             out_dir.mkdir(parents=True, exist_ok=True)
-            out_fpath = out_dir/(base_name + "_*.nc")
+            out_fpath = out_dir / (base_name + "_*.nc")
             if split_mode == "chunks":
                 # files are already written during chunk calculations
-                self.print(f"{self.name}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}")
+                self.print(
+                    f"{self.name}: Wrote results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}"
+                )
                 if not ret_data:
                     return None
             elif split_mode == "input":
@@ -602,14 +604,18 @@ class Engine(ABC):
             elif split_mode is None:
                 split_size = None
             else:
-                raise ValueError(f"Invalid split mode '{split_mode}' in 'write_nc', expected 'chunks', 'input', int or None")
+                raise ValueError(
+                    f"Invalid split mode '{split_mode}' in 'write_nc', expected 'chunks', 'input', int or None"
+                )
             if split_size is None:
-                out_fpath = out_dir/(base_name + ".nc")
+                out_fpath = out_dir / (base_name + ".nc")
             if split_mode != "chunks":
-                write_on_fly = ret_data == False and split_size is not None
+                write_on_fly = not ret_data and split_size is not None
                 write_from_ds = not write_on_fly
                 ret_data = write_nc.get("ret_data", write_from_ds)
-                self.print(f"{self.name}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}")
+                self.print(
+                    f"{self.name}: Results written to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}"
+                )
 
         def _red_dims(data_vars):
             """Helper function for reducing unneccessary dimensions of data vars"""
@@ -632,9 +638,10 @@ class Engine(ABC):
             return dvars
 
         fcounter = 0
+
         def _write_parts_on_fly(data_vars, scount, wcount):
             """Helper function for writing chunked results to netCDF,
-                without ever constructing the full Dataset in memory
+            without ever constructing the full Dataset in memory
             """
             nonlocal fcounter, split_size
             wfutures = []
@@ -646,12 +653,12 @@ class Engine(ABC):
                             data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
                         elif len(data_vars[v][1]) == 1:
                             data_vars[v][1] = data_vars[v][1][0]
-                    
+
                     dvars = {v: (d[0], d[1][:splits]) for v, d in data_vars.items()}
                     dvars = _red_dims(dvars)
 
                     crds = {v: d for v, d in coords.items()}
-                    crds[FC.STATE] = coords[FC.STATE][wcount:wcount+splits]
+                    crds[FC.STATE] = coords[FC.STATE][wcount : wcount + splits]
                     if scount - wcount == splits:
                         for v in data_vars.keys():
                             data_vars[v][1] = []
@@ -659,9 +666,15 @@ class Engine(ABC):
                         for v in data_vars.keys():
                             data_vars[v][1] = [data_vars[v][1][splits:]]
 
-                    ds = Dataset(coords=crds,data_vars=dvars)
+                    ds = Dataset(coords=crds, data_vars=dvars)
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                    future = self.submit(write_nc_file, ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+                    future = self.submit(
+                        write_nc_file,
+                        ds,
+                        fpath,
+                        nc_engine=config.nc_engine,
+                        verbosity=vrb,
+                    )
                     wfutures.append(future)
                     del ds, crds, dvars, future
 
@@ -679,6 +692,7 @@ class Engine(ABC):
             return wcount, wfutures
 
         data_vars = {}
+
         def _get_res_vars(result, data_vars):
             """Helper function for extracting results variables"""
             res_vars = list(result.keys())
@@ -691,7 +705,9 @@ class Engine(ABC):
 
         keys = list(futures.keys()) if futures is not None else list(results.keys())
         if futures is not None:
-            self.print(f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes")
+            self.print(
+                f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes"
+            )
             vlevel = 0
         else:
             self.print(f"{self.name}: Combining results from {len(keys)} chunks")
@@ -712,7 +728,7 @@ class Engine(ABC):
                 else:
                     r, cstore = results.pop(key)
                 if res_vars is None:
-                    res_vars =_get_res_vars(r, data_vars)
+                    res_vars = _get_res_vars(r, data_vars)
                 if iterative:
                     for k, c in cstore.items():
                         if k in algo.chunk_store:
@@ -731,10 +747,12 @@ class Engine(ABC):
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
-                    pr = int(100 * key[0]/(len(keys) - 1))
+                    pr = int(100 * key[0] / (len(keys) - 1))
                     if pr > pdone:
                         pdone = pr
-                        print(f"{self.name}: Completed {key[0]} of {len(keys)} chunks, {pdone}%")
+                        print(
+                            f"{self.name}: Completed {key[0]} of {len(keys)} chunks, {pdone}%"
+                        )
         else:
             pdone = -1
             counter = 0
@@ -749,15 +767,15 @@ class Engine(ABC):
                             else:
                                 r, cstore = results.pop(key)
                             if res_vars is None:
-                                res_vars =_get_res_vars(r, data_vars)
+                                res_vars = _get_res_vars(r, data_vars)
                             if tres is None:
                                 tres = {v: [] for v in res_vars}
-                            
+
                             found = True
                             break
                     if not found:
                         raise KeyError(f"{self.name}: Missing future for key {key}")
-                    
+
                     for v in res_vars:
                         tres[v].append(r[v])
                     if iterative:
@@ -770,11 +788,17 @@ class Engine(ABC):
 
                     if pbar is not None:
                         pbar.update()
-                    elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
-                        pr = int(100 * counter/(len(keys) - 1))
+                    elif (
+                        self.verbosity > vlevel
+                        and self.prints_progress
+                        and len(keys) > 1
+                    ):
+                        pr = int(100 * counter / (len(keys) - 1))
                         if pr > pdone:
                             pdone = pr
-                            print(f"{self.name}: Completed {counter} of {len(keys)} chunks, {pdone}%")
+                            print(
+                                f"{self.name}: Completed {counter} of {len(keys)} chunks, {pdone}%"
+                            )
                     counter += 1
 
                 found = False
@@ -795,7 +819,7 @@ class Engine(ABC):
 
         if pbar is not None:
             pbar.close()
-        self.print(f"{self.name}: Completed all {len(keys)} chunks\n", level=vlevel+1)
+        self.print(f"{self.name}: Completed all {len(keys)} chunks\n", level=vlevel + 1)
 
         # if not iterative or algo.final_iteration:
         #    algo.reset_chunk_store()
@@ -816,7 +840,9 @@ class Engine(ABC):
 
             if write_from_ds:
                 if split_size is None:
-                    write_nc_file(ds, out_fpath, nc_engine=config.nc_engine, verbosity=vrb)
+                    write_nc_file(
+                        ds, out_fpath, nc_engine=config.nc_engine, verbosity=vrb
+                    )
                 else:
                     wcount = 0
                     fcounter = 0
@@ -826,7 +852,13 @@ class Engine(ABC):
                         dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
 
                         fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                        future = self.submit(write_nc_file, dssub, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+                        future = self.submit(
+                            write_nc_file,
+                            dssub,
+                            fpath,
+                            nc_engine=config.nc_engine,
+                            verbosity=vrb,
+                        )
                         wfutures.append(future)
                         del dssub, future
 

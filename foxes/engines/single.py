@@ -63,7 +63,7 @@ class SingleChunkEngine(Engine):
 
         """
         return f(*args, **kwargs)
-    
+
     def await_result(self, future):
         """
         Waits for result from a future
@@ -154,9 +154,9 @@ class SingleChunkEngine(Engine):
             Flag for use within the iterative algorithm
         write_nc: dict, optional
             Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results', 
+            {'out_dir': 'results', 'base_name': 'calc_results',
             'ret_data': False, 'split': 1000}.
-            
+
             The split parameter controls how the output is split:
             - 'chunks': one file per chunk (fastest method),
             - 'input': split according to sizes of multiple states input files,
