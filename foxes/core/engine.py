@@ -726,7 +726,7 @@ class Engine(ABC):
                     r, cstore = self.await_result(futures.pop(key))
                 else:
                     r, cstore = results.pop(key)
-                    
+
                 if res_vars is None:
                     res_vars = _get_res_vars(r, data_vars)
                 if iterative:
@@ -813,7 +813,7 @@ class Engine(ABC):
                             scount += data_vars[v][1][-1].shape[0]
                         found = True
                 del tres
-                
+
                 if write_on_fly:
                     wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
                     wfutures += ftrs

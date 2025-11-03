@@ -798,9 +798,7 @@ class DaskEngine(DaskBaseEngine):
                 counter += 1
                 if pbar is not None:
                     pbar.update()
-                elif (
-                    self.verbosity > 1 and self.prints_progress
-                ):
+                elif self.verbosity > 1 and self.prints_progress:
                     pr = int(100 * counter / n_chunks_states)
                     if pr > pdone:
                         pdone = pr
