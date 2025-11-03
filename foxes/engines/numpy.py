@@ -227,12 +227,12 @@ class NumpyEngine(Engine):
 
                 if pbar is not None:
                     pbar.update()
-                elif self.verbosity > 0 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * chunki_states / (n_chunks_all - 1))
+                elif self.verbosity > 0 and self.prints_progress:
+                    pr = int(100 * (chunki_states + 1) / n_chunks_all)
                     if pr > pdone:
                         pdone = pr
                         print(
-                            f"{self.name}: Completed {chunki_states} of {n_chunks_all} states, {pdone}%"
+                            f"{self.name}: Completed {chunki_states + 1} of {n_chunks_all} chunks, {pdone}%"
                         )
             i0_states = i1_states
 

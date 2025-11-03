@@ -795,18 +795,18 @@ class DaskEngine(DaskBaseEngine):
 
                 i0_targets = i1_targets
 
+                counter += 1
                 if pbar is not None:
                     pbar.update()
                 elif (
-                    self.verbosity > 1 and self.prints_progress and n_chunks_states > 1
+                    self.verbosity > 1 and self.prints_progress
                 ):
-                    pr = int(100 * counter / (n_chunks_states - 1))
+                    pr = int(100 * counter / n_chunks_states)
                     if pr > pdone:
                         pdone = pr
                         print(
-                            f"{self.name}: Submitted {counter} of {n_chunks_states} states, {pdone}%"
+                            f"{self.name}: Submitted {counter} of {n_chunks_states} chunks, {pdone}%"
                         )
-                counter += 1
             i0_states = i1_states
 
         del farm_data, point_data, calc_pars
@@ -1164,21 +1164,23 @@ class LocalClusterEngine(DaskBaseEngine):
 
                 i0_targets = i1_targets
 
+                counter += 1
                 if pbar is not None:
                     pbar.update()
-                elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * counter / (n_chunks_all - 1))
+                elif self.verbosity > 1 and self.prints_progress:
+                    pr = int(100 * counter / n_chunks_all)
                     if pr > pdone:
                         pdone = pr
                         print(
                             f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
                         )
-                counter += 1
             i0_states = i1_states
 
         del falgo, fmodel, farm_data, point_data, calc_pars
         if pbar is not None:
             pbar.close()
+        elif self.verbosity > 1 and self.prints_progress:
+            print(f"{type(self).__name__}: Submitted all {counter} chunks\n")
 
         results = self.combine_results(
             algo=algo,

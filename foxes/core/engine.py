@@ -749,12 +749,12 @@ class Engine(ABC):
 
                 if pbar is not None:
                     pbar.update()
-                elif self.verbosity > vlevel and self.prints_progress and len(keys) > 1:
-                    pr = int(100 * key[0] / (len(keys) - 1))
+                elif self.verbosity > vlevel and self.prints_progress:
+                    pr = int(100 * (key[0] + 1) / len(keys))
                     if pr > pdone:
                         pdone = pr
                         print(
-                            f"{self.name}: Completed {key[0]} of {len(keys)} chunks, {pdone}%"
+                            f"{self.name}: Completed {key[0] + 1} of {len(keys)} chunks, {pdone}%"
                         )
         else:
             pdone = -1
@@ -790,6 +790,7 @@ class Engine(ABC):
                                 algo.chunk_store[k] = c
                     del r, cstore
 
+                    counter += 1
                     if pbar is not None:
                         pbar.update()
                     elif (
@@ -797,13 +798,12 @@ class Engine(ABC):
                         and self.prints_progress
                         and len(keys) > 1
                     ):
-                        pr = int(100 * counter / (len(keys) - 1))
+                        pr = int(100 * counter / len(keys))
                         if pr > pdone:
                             pdone = pr
                             print(
                                 f"{self.name}: Completed {counter} of {len(keys)} chunks, {pdone}%"
                             )
-                    counter += 1
 
                 found = False
                 for v in res_vars:

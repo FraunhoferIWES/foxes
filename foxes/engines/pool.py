@@ -286,16 +286,16 @@ class PoolEngine(Engine):
 
                 i0_targets = i1_targets
 
+                counter += 1
                 if pbar is not None:
                     pbar.update()
                 elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * counter / (n_chunks_all - 1))
+                    pr = int(100 * counter / n_chunks_all)
                     if pr > pdone:
                         pdone = pr
                         print(
                             f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
                         )
-                counter += 1
             i0_states = i1_states
 
         if farm_data is None:
@@ -306,7 +306,7 @@ class PoolEngine(Engine):
         if pbar is not None:
             pbar.close()
         elif self.verbosity > 1 and self.prints_progress:
-            print(f"{type(self).__name__}: Submitted all {i1_states} states\n")
+            print(f"{type(self).__name__}: Submitted all {counter} chunks\n")
 
         return self.combine_results(
             algo=algo,
