@@ -221,7 +221,8 @@ class SingleChunkEngine(Engine):
 
         return self.combine_results(
             algo=algo,
-            futures=results,
+            futures=None,
+            results=results,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,

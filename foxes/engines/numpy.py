@@ -246,11 +246,10 @@ class NumpyEngine(Engine):
         elif self.verbosity > 0 and self.prints_progress:
             print(f"{type(self).__name__}: Completed all {i1_states} states\n")
 
-        pbar = self.progress_bar
-        self.progress_bar = None
         out = self.combine_results(
             algo=algo,
-            futures=results,
+            futures=None,
+            results=results,
             model_data=model_data,
             out_vars=out_vars,
             out_coords=out_coords,
@@ -260,6 +259,5 @@ class NumpyEngine(Engine):
             iterative=iterative,
             write_nc=write_nc,
         )
-        self.progress_bar = pbar
 
         return out
