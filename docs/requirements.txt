@@ -7,9 +7,9 @@ netcdf4
 pyyaml
 tqdm
 utm
-setuptools,
-sphinx,
-sphinx-immaterial,
+setuptools
+sphinx
+sphinx-immaterial
 nbsphinx
 ipykernel
 ipywidgets
