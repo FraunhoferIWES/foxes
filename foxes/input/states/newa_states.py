@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 
 from foxes.utils.utm_utils import from_lonlat
-from foxes.config.config import config, get_output_path
+from foxes.config import config, get_output_path
 from foxes.output import FarmLayoutOutput
 import foxes.variables as FV
 import foxes.constants as FC

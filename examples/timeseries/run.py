@@ -119,7 +119,7 @@ if __name__ == "__main__":
         verbosity=1,
     ):
         time0 = time.time()
-        farm_results = algo.calc_farm()
+        farm_results = algo.calc_farm(write_nc=dict(out_dir="results", base_name="results", split=900, ret_data=False))
         time1 = time.time()
 
         print("\nFarm results:\n")

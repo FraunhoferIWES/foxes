@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from foxes.data import StaticData
 from foxes.utils import Dict, new_instance
-from foxes.config.config import config
+from foxes.config import config
 import foxes.constants as FC
 
 from .model import Model

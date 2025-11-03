@@ -1,5 +1,6 @@
 from xarray import Dataset
 
+from foxes.config import config
 from foxes.utils import write_nc
 import foxes.constants as FC
 
@@ -88,6 +89,6 @@ class StateTurbineTable(Output):
 
         if to_file is not None:
             fpath = self.get_fpath(to_file)
-            write_nc(ds=ds, fpath=fpath, **kwargs)
+            write_nc(ds=ds, fpath=fpath, nc_engine=config.nc_engine, **kwargs)
 
         return ds

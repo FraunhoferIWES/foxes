@@ -2,7 +2,8 @@ import numpy as np
 from pathlib import Path
 from sys import version_info
 
-from foxes.utils import Dict, import_module
+from foxes.utils.dict import Dict
+from foxes.utils.load import import_module
 import foxes.constants as FC
 
 

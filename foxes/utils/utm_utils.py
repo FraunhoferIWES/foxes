@@ -21,7 +21,7 @@ def to_lonlat(xy):
     :group: utils
 
     """
-    from foxes.config.config import config
+    from foxes.config.conf import config
 
     utmz, utml = config.utm_zone
     lat, lon = utm.to_latlon(
@@ -52,7 +52,7 @@ def from_lonlat(lonlat):
     :group: utils
 
     """
-    from foxes.config.config import config
+    from foxes.config import config
 
     utmz, utml = config.utm_zone
     x, y, __, __ = utm.from_latlon(

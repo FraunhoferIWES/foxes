@@ -1,7 +1,8 @@
 import pandas as pd
 from xarray import Dataset
 
-from foxes.utils import write_nc
+from foxes.config import config
+from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
 
 from .output import Output
@@ -185,4 +186,4 @@ class ResultsWriter(Output):
         )
 
         fpath = self.get_fpath(file_name)
-        write_nc(ds, fpath, verbosity=verbosity, **kwargs)
+        write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=verbosity, **kwargs)

@@ -28,8 +28,13 @@ from .utm_utils import get_utm_zone as get_utm_zone
 from .load import import_module as import_module
 from .load import load_module as load_module
 
-from .pandas_utils import PandasFileHelper as PandasFileHelper
 from .xarray_utils import write_nc as write_nc
+from .xarray_utils import compute_scale_and_offset as compute_scale_and_offset
+from .xarray_utils import pack_value as pack_value
+from .xarray_utils import unpack_value as unpack_value
+from .xarray_utils import get_encoding as get_encoding
+
+from .pandas_utils import PandasFileHelper as PandasFileHelper
 from .dict import Dict as Dict
 from .data_book import DataBook as DataBook
 from .cubic_roots import cubic_roots as cubic_roots

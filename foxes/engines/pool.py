@@ -3,7 +3,7 @@ from xarray import Dataset
 from abc import abstractmethod
 from tqdm import tqdm
 
-from foxes.config import get_output_path
+from foxes.config import config, get_output_path
 from foxes.core import Engine
 from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
@@ -42,7 +42,7 @@ def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
             fpath = out_dir / f"{base_name}_{i0:04d}.nc"
         else:
             fpath = out_dir / f"{base_name}_{i0:04d}_{t0:04d}.nc"
-        write_nc_file(ds, fpath, verbosity=vrb)
+        write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
 
     return results if ret_data else None
 

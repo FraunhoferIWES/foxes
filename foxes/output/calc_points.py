@@ -142,6 +142,6 @@ class PointCalculator(Output):
                 )
 
             fpath = self.get_fpath(to_file)
-            write_nc(ds, fpath, **write_pars)
+            write_nc(ds, fpath, nc_engine=config.nc_engine, **write_pars)
 
         return pres

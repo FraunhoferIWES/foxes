@@ -1,5 +1,6 @@
 import numpy as np
 
+from foxes.config import config
 from foxes.utils import write_nc
 import foxes.variables as FV
 import foxes.constants as FC
@@ -100,7 +101,13 @@ class SliceData(Output):
                 self.write(fname, data, **write_pars)
 
             elif format == "xarray":
-                write_nc(data, self.get_fpath(fname), verbosity=verbosity, **write_pars)
+                write_nc(
+                    data, 
+                    self.get_fpath(fname), 
+                    nc_engine=config.nc_engine, 
+                    verbosity=verbosity, 
+                    **write_pars,
+                )
 
             else:
                 raise ValueError(

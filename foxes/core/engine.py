@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from xarray import Dataset
 
-from foxes.config import get_output_path
+from foxes.config import config, get_output_path
 from foxes.utils import new_instance
 from foxes.utils import write_nc as write_nc_file
 import foxes.constants as FC
@@ -612,7 +612,7 @@ class Engine(ABC):
 
                     ds = Dataset(coords=crds,data_vars=dvars)
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                    future = self.submit(write_nc_file, ds, fpath, verbosity=vrb)
+                    future = self.submit(write_nc_file, ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
                     futures.append(future)
                     del ds, crds, dvars, future
 
@@ -762,7 +762,7 @@ class Engine(ABC):
 
             if write_from_ds:
                 if split_size is None:
-                    write_nc_file(ds, out_fpath, verbosity=vrb)
+                    write_nc_file(ds, out_fpath, nc_engine=config.nc_engine, verbosity=vrb)
                 else:
                     wcount = 0
                     fcounter = 0
@@ -772,7 +772,7 @@ class Engine(ABC):
                         dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
 
                         fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                        future = self.submit(write_nc_file, dssub, fpath, verbosity=vrb)
+                        future = self.submit(write_nc_file, dssub, fpath, nc_engine=config.nc_engine, verbosity=vrb)
                         futures.append(future)
                         del dssub, future
 
