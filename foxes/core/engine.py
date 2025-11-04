@@ -69,7 +69,7 @@ class Engine(ABC):
         self.chunk_size_points = chunk_size_points
         self.progress_bar = progress_bar
         self.verbosity = verbosity
-        
+
         try:
             self._n_procs = n_procs if n_procs is not None else os.process_cpu_count()
         except AttributeError:
@@ -92,7 +92,7 @@ class Engine(ABC):
 
         """
         return self.__name
-    
+
     @property
     def n_procs(self):
         """
@@ -105,7 +105,7 @@ class Engine(ABC):
 
         """
         return self._n_procs
-    
+
     @property
     def n_workers(self):
         """
