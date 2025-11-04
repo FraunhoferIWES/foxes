@@ -99,8 +99,8 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -112,7 +112,8 @@ class ScanStates(States):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name].update(dict(scans=self.scans))
+        if data_stash is not None:
+            data_stash[self.name].update(dict(scans=self.scans))
         del self.scans
 
     def unset_running(
@@ -131,8 +132,8 @@ class ScanStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -144,8 +145,9 @@ class ScanStates(States):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self.scans = data.pop("scans")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self.scans = data.pop("scans")
 
     def size(self):
         """

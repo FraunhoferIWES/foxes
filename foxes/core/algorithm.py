@@ -745,8 +745,8 @@ class Algorithm(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -758,15 +758,16 @@ class Algorithm(Model):
         """
         assert algo is self
 
-        super().set_running(algo, data_stash, sel, isel, verbosity)
+        super().set_running(algo, data_stash, sel, isel, verbosity=verbosity)
 
-        data_stash[self.name].update(
-            dict(
-                mbook=self.__mbook,
-                dbook=self.__dbook,
-                idata_mem=self.__idata_mem,
+        if data_stash is not None:
+            data_stash[self.name].update(
+                dict(
+                    mbook=self.__mbook,
+                    dbook=self.__dbook,
+                    idata_mem=self.__idata_mem,
+                )
             )
-        )
         del self.__mbook, self.__dbook
         self.__idata_mem = {}
 
@@ -786,8 +787,8 @@ class Algorithm(Model):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -801,10 +802,13 @@ class Algorithm(Model):
 
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self.__mbook = data.pop("mbook")
-        self.__dbook = data.pop("dbook")
-        self.__idata_mem = data.pop("idata_mem")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self.__mbook = data.pop("mbook")
+            self.__dbook = data.pop("dbook")
+            self.__idata_mem = data.pop("idata_mem")
+        else:
+            self.reset_chunk_store()
 
     @abstractmethod
     def _launch_parallel_farm_calc(
@@ -840,7 +844,7 @@ class Algorithm(Model):
         """
         pass
 
-    def calc_farm(self, *args, **kwargs):
+    def calc_farm(self, *args, clear_mem=False, **kwargs):
         """
         Calculate farm data.
 
@@ -848,6 +852,8 @@ class Algorithm(Model):
         ----------
         args: tuple, optional
             Parameters
+        clear_mem: bool
+            Clear idata memory after starting the run
         kwargs: dict, optional
             Keyword parameters
 
@@ -864,7 +870,7 @@ class Algorithm(Model):
             )
 
         # set to running:
-        data_stash = {}
+        data_stash = {} if not clear_mem else None
         chunk_store = self.reset_chunk_store()
         mdls = [
             m

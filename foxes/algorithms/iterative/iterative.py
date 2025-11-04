@@ -317,7 +317,7 @@ class Iterative(Downwind):
                 chunk_store0 = deepcopy(self.chunk_store)
 
             self.__prev_farm_results = fres
-            fres = super().calc_farm(outputs=None, finalize=False, **kwargs)
+            fres = super().calc_farm(outputs=None, finalize=False, clear_mem=False, **kwargs)
 
             if np.any(np.isnan(fres["REWS"].values)):
                 raise Exception("NaN encountered in REWS during iteration")

@@ -80,6 +80,29 @@ class Engine(ABC):
         self.__initialized = False
         self.__entered = False
 
+    def __repr__(self):
+        s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
+        return f"{self.name}({s})"
+
+    def __enter__(self):
+        if self.__entered:
+            raise ValueError("Enter called for already entered engine")
+        self.__entered = True
+        if not self.initialized:
+            self.initialize()
+        return self
+
+    def __exit__(self, *exit_args):
+        if not self.__entered:
+            raise ValueError("Exit called for not entered engine")
+        self.__entered = False
+        if self.initialized:
+            self.finalize(*exit_args)
+
+    def __del__(self):
+        if self.initialized:
+            self.finalize()
+
     @property
     def name(self):
         """
@@ -144,29 +167,6 @@ class Engine(ABC):
 
         """
         return self.progress_bar is not None and not self.progress_bar
-
-    def __repr__(self):
-        s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
-        return f"{self.name}({s})"
-
-    def __enter__(self):
-        if self.__entered:
-            raise ValueError("Enter called for already entered engine")
-        self.__entered = True
-        if not self.initialized:
-            self.initialize()
-        return self
-
-    def __exit__(self, *exit_args):
-        if not self.__entered:
-            raise ValueError("Exit called for not entered engine")
-        self.__entered = False
-        if self.initialized:
-            self.finalize(*exit_args)
-
-    def __del__(self):
-        if self.initialized:
-            self.finalize()
 
     @property
     def entered(self):
@@ -609,7 +609,7 @@ class Engine(ABC):
         write_on_fly = False
         write_from_ds = False
         keys = list(futures.keys()) if futures is not None else list(results.keys())
-        if write_nc is not None:
+        if write_nc is not None and not (iterative and not algo.final_iteration):
             out_dir = get_output_path(write_nc.get("out_dir", "."))
             base_name = write_nc["base_name"]
             ret_data = write_nc.get("ret_data", False)
