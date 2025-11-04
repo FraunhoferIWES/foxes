@@ -449,6 +449,8 @@ class Engine(ABC):
         out_vars,
         chunki_states,
         chunki_points,
+        n_chunks_states,
+        n_chunks_points,
     ):
         """
         Extracts the data for a single chunk calculation
@@ -473,6 +475,10 @@ class Engine(ABC):
             The index of the states chunk
         chunki_points: int
             The index of the points chunk
+        n_chunks_states: int
+            The number of states chunks
+        n_chunks_points: int
+            The number of points chunks
 
         Returns
         -------
@@ -496,6 +502,8 @@ class Engine(ABC):
             copy=True,
             chunki_states=chunki_states,
             chunki_points=chunki_points,
+            n_chunks_states=n_chunks_states,
+            n_chunks_points=n_chunks_points,
         )
 
         # create fdata:

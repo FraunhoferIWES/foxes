@@ -777,6 +777,8 @@ class DaskEngine(DaskBaseEngine):
                     out_vars=out_vars,
                     chunki_states=chunki_states,
                     chunki_points=chunki_points,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_points=n_chunks_targets,
                 )
 
                 # submit model calculation:
@@ -1114,9 +1116,11 @@ class LocalClusterEngine(DaskBaseEngine):
                     point_data=point_data,
                     states_i0_i1=(i0_states, i1_states),
                     targets_i0_i1=(i0_targets, i1_targets),
+                    out_vars=out_vars,
                     chunki_states=chunki_states,
                     chunki_points=chunki_points,
-                    out_vars=out_vars,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_points=n_chunks_targets,
                 )
 
                 # scatter data:

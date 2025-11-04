@@ -38,6 +38,8 @@ class Data(Dict):
         states_i0=None,
         chunki_states=None,
         chunki_points=None,
+        n_chunks_states=None,
+        n_chunks_points=None,
         name="data",
     ):
         """
@@ -59,6 +61,10 @@ class Data(Dict):
             The index of the states chunk
         chunki_points: int, optional
             The index of the points chunk
+        n_chunks_states: int, optional
+            The number of states chunks
+        n_chunks_points: int, optional
+            The number of points chunks
         name: str
             The data container name
 
@@ -72,6 +78,8 @@ class Data(Dict):
         self.__states_i0 = states_i0
         self.__chunki_states = chunki_states
         self.__chunki_points = chunki_points
+        self.__n_chunks_states = n_chunks_states
+        self.__n_chunks_points = n_chunks_points
 
         self.sizes = {}
         for v, d in data.items():
@@ -130,6 +138,32 @@ class Data(Dict):
 
         """
         return self.__chunki_points
+    
+    @property
+    def n_chunks_states(self):
+        """
+        The number of states chunks
+
+        Returns
+        -------
+        int:
+            The number of states chunks
+
+        """
+        return self.__n_chunks_states
+    
+    @property
+    def n_chunks_points(self):
+        """
+        The number of points chunks
+
+        Returns
+        -------
+        int:
+            The number of points chunks
+
+        """
+        return self.__n_chunks_points
 
     def states_i0(self, counter=False):
         """
@@ -489,7 +523,15 @@ class FData(Data):
             The data object
 
         """
-        data = cls(*args, **kwargs)
+        data = cls(
+            *args, 
+            chunki_states=mdata.chunki_states,
+            chunki_points=mdata.chunki_points,
+            n_chunks_states=mdata.n_chunks_states,
+            n_chunks_points=mdata.n_chunks_points,
+            **kwargs,
+        )
+
         for v in [FC.STATE, FC.TURBINE]:
             data[v] = mdata[v]
             data.dims[v] = mdata.dims[v]
@@ -545,6 +587,8 @@ class FData(Data):
                 callback=cb,
                 chunki_states=mdata.chunki_states,
                 chunki_points=mdata.chunki_points,
+                n_chunks_states=mdata.n_chunks_states,
+                n_chunks_points=mdata.n_chunks_points,
                 **kwargs,
             )
 
@@ -864,6 +908,8 @@ class TData(Data):
             cb0 = cb_mdata
             kwargs["chunki_states"] = mdata.chunki_states
             kwargs["chunki_points"] = mdata.chunki_points
+            kwargs["n_chunks_states"] = mdata.n_chunks_states
+            kwargs["n_chunks_points"] = mdata.n_chunks_points
 
         if s_targets is None:
             cb1 = cb0

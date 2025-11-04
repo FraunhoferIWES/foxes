@@ -205,6 +205,8 @@ class NumpyEngine(Engine):
                     out_vars=out_vars,
                     chunki_states=chunki_states,
                     chunki_points=chunki_points,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_points=n_chunks_targets,
                 )
 
                 # submit model calculation:
