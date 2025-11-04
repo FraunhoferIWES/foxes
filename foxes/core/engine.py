@@ -26,9 +26,6 @@ class Engine(ABC):
         The size of a states chunk
     chunk_size_points: int
         The size of a points chunk
-    n_procs: int, optional
-        The number of processes to be used,
-        or None for automatic
     progress_bar: bool, optional
         Use a progress bar instead of simply
         printing lines of reached percentages.
@@ -70,12 +67,15 @@ class Engine(ABC):
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
-        try:
-            self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
-        except AttributeError:
-            self.n_procs = os.cpu_count()
         self.progress_bar = progress_bar
         self.verbosity = verbosity
+        
+        try:
+            self._n_procs = n_procs if n_procs is not None else os.process_cpu_count()
+        except AttributeError:
+            self._n_procs = os.cpu_count()
+        self._n_workers = max(self._n_procs - 1, 1)
+
         self.__name = type(self).__name__
         self.__initialized = False
         self.__entered = False
@@ -92,6 +92,32 @@ class Engine(ABC):
 
         """
         return self.__name
+    
+    @property
+    def n_procs(self):
+        """
+        The number of processes
+
+        Returns
+        -------
+        n_procs: int
+            The number of processes
+
+        """
+        return self._n_procs
+    
+    @property
+    def n_workers(self):
+        """
+        The number of worker processes
+
+        Returns
+        -------
+        n_workers: int
+            The number of worker processes
+
+        """
+        return self._n_workers
 
     @property
     def has_progress_bar(self):
@@ -361,8 +387,8 @@ class Engine(ABC):
         """
         # determine states chunks:
         if self.chunk_size_states is None:
-            n_chunks_states = min(self.n_procs, n_states)
-            chunk_size_states = max(int(n_states / self.n_procs), 1)
+            n_chunks_states = min(self.n_workers, n_states)
+            chunk_size_states = max(int(n_states / self.n_workers), 1)
         else:
             chunk_size_states = min(n_states, self.chunk_size_states)
             n_chunks_states = max(int(n_states / chunk_size_states), 1)
@@ -378,8 +404,8 @@ class Engine(ABC):
                     chunk_size_targets = n_targets
                     n_chunks_targets = 1
                 else:
-                    n_chunks_targets = min(self.n_procs, n_targets)
-                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
+                    n_chunks_targets = min(self.n_workers, n_targets)
+                    chunk_size_targets = max(int(n_targets / self.n_workers), 1)
                     if self.chunk_size_states is None and n_chunks_states > 1:
                         while chunk_size_states * chunk_size_targets > n_targets:
                             n_chunks_states += 1
@@ -666,15 +692,15 @@ class Engine(ABC):
 
                     ds = Dataset(coords=crds, data_vars=dvars)
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                    future = self.submit(
-                        write_nc_file,
-                        ds,
-                        fpath,
-                        nc_engine=config.nc_engine,
-                        verbosity=vrb,
-                    )
-                    wfutures.append(future)
-                    del ds, crds, dvars, future
+                    args = (ds, fpath)
+                    kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
+                    if len(futures) < self.n_workers:
+                        future = self.submit(write_nc_file, *args, **kwargs)
+                        wfutures.append(future)
+                        del future
+                    else:
+                        write_nc_file(*args, **kwargs)
+                    del ds, crds, dvars, args, kwargs
 
                     wcount += splits
                     fcounter += 1
@@ -705,7 +731,7 @@ class Engine(ABC):
 
         if futures is not None:
             self.print(
-                f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes"
+                f"{self.name}: Computing {len(keys)} chunks using {self.n_workers} workers"
             )
             vlevel = 0
         else:

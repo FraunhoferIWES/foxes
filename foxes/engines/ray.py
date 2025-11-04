@@ -25,9 +25,9 @@ class RayEngine(PoolEngine):
 
     def _create_pool(self):
         """Creates the pool"""
-        self.print(f"Initializing pool of {self.n_procs} ray workers")
+        self.print(f"Initializing pool of {self.n_workers} ray workers")
         load_ray()
-        ray.init(num_cpus=self.n_procs)
+        ray.init(num_cpus=self.n_workers)
 
     def submit(self, f, *args, **kwargs):
         """
@@ -75,5 +75,5 @@ class RayEngine(PoolEngine):
 
     def _shutdown_pool(self):
         """Shuts down the pool"""
-        self.print(f"Shutting down pool of {self.n_procs} ray workers")
+        self.print(f"Shutting down pool of {self.n_workers} ray workers")
         ray.shutdown()

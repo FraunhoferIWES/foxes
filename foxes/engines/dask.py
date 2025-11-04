@@ -176,7 +176,7 @@ class DaskBaseEngine(Engine):
         elif len(inputs) == 1:
             return [func(inputs[0], *args, **kwargs)]
         else:
-            inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
+            inptl = np.array_split(inputs, min(self.n_workers, len(inputs)))
             futures = []
             for subi in inptl:
                 futures.append(_run_map(func, subi, *args, **kwargs))
@@ -642,7 +642,7 @@ class XArrayEngine(DaskBaseEngine):
         self.chunk_size_points = chunk_size_points0
 
         # update data by calculation results:
-        return results.compute(num_workers=self.n_procs)
+        return results.compute(num_workers=self.n_workers)
 
 
 class DaskEngine(DaskBaseEngine):
@@ -749,7 +749,7 @@ class DaskEngine(DaskBaseEngine):
         # submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
-            f"Submitting {n_chunks_all} chunks to {self.n_procs} processes", level=2
+            f"Submitting {n_chunks_all} chunks to {self.n_workers} workers", level=2
         )
         pbar = (
             tqdm(total=n_chunks_all)
@@ -814,7 +814,7 @@ class DaskEngine(DaskBaseEngine):
         # wait for results:
         if n_chunks_all > 1 or self.verbosity > 1:
             self.print(
-                f"Computing {n_chunks_all} chunks using {self.n_procs} processes"
+                f"Computing {n_chunks_all} chunks using {self.n_workers} workers"
             )
         results = dask.compute(futures)[0]
         del futures
@@ -940,7 +940,7 @@ class LocalClusterEngine(DaskBaseEngine):
     def __enter__(self):
         self.print("Launching local dask cluster..")
         self._cluster = distributed.LocalCluster(
-            n_workers=self.n_procs, **self.cluster_pars
+            n_workers=self.n_workers, **self.cluster_pars
         ).__enter__()
         self._client = distributed.Client(self._cluster, **self.client_pars).__enter__()
         self.print(self._cluster)
@@ -1090,7 +1090,7 @@ class LocalClusterEngine(DaskBaseEngine):
         all_data = [falgo, fmodel, cpars]
 
         # submit chunks:
-        self.print(f"Submitting {n_chunks_all} chunks to {self.n_procs} processes")
+        self.print(f"Submitting {n_chunks_all} chunks to {self.n_workers} workers")
         pbar = (
             tqdm(total=n_chunks_all)
             if self.verbosity > 1 and self.has_progress_bar

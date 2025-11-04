@@ -132,7 +132,7 @@ class PoolEngine(Engine):
         elif len(inputs) == 1:
             return [func(inputs[0], *args, **kwargs)]
         else:
-            inptl = np.array_split(inputs, min(self.n_procs, len(inputs)))
+            inptl = np.array_split(inputs, min(self.n_workers, len(inputs)))
             futures = []
             for subi in inptl:
                 futures.append(self.submit(_run_map, func, subi, *args, **kwargs))
@@ -240,7 +240,7 @@ class PoolEngine(Engine):
         # prepare and submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
-            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_procs} processes",
+            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_workers} workers",
             level=2,
         )
         pbar = None
