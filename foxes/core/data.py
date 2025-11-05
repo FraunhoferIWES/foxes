@@ -138,7 +138,7 @@ class Data(Dict):
 
         """
         return self.__chunki_points
-    
+
     @property
     def n_chunks_states(self):
         """
@@ -151,7 +151,7 @@ class Data(Dict):
 
         """
         return self.__n_chunks_states
-    
+
     @property
     def n_chunks_points(self):
         """
@@ -524,7 +524,7 @@ class FData(Data):
 
         """
         data = cls(
-            *args, 
+            *args,
             chunki_states=mdata.chunki_states,
             chunki_points=mdata.chunki_points,
             n_chunks_states=mdata.n_chunks_states,

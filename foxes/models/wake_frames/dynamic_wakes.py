@@ -175,9 +175,13 @@ class DynamicWakes(WakeFrame):
             return f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
 
         # compute wakes that start within this chunk: x, y, z, length
-        data = algo.get_from_chunk_store(name=key, mdata=mdata, prev_t=prev_t, error=False)
+        data = algo.get_from_chunk_store(
+            name=key, mdata=mdata, prev_t=prev_t, error=False
+        )
         if data is None:
-            assert itargets == 0, "DynamicWakes: Missing chunk_store data for (istates, itargets) = ({istates}, {itargets}) at ({istates}, {itargets-prev_t})"
+            assert itargets == 0, (
+                "DynamicWakes: Missing chunk_store data for (istates, itargets) = ({istates}, {itargets}) at ({istates}, {itargets-prev_t})"
+            )
             data = np.full(
                 (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
             )
@@ -257,7 +261,12 @@ class DynamicWakes(WakeFrame):
 
             # read data from previous chunk:
             hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
-                name=key, mdata=mdata, prev_s=prev_s, prev_t=prev_t, ret_inds=True, error=False
+                name=key,
+                mdata=mdata,
+                prev_s=prev_s,
+                prev_t=prev_t,
+                ret_inds=True,
+                error=False,
             )
             if hdata is None:
                 break

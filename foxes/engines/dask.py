@@ -43,6 +43,7 @@ def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
 
+
 def _run(
     algo,
     model,
@@ -54,9 +55,14 @@ def _run(
 ):
     """Helper function for running in a single process"""
     results = model.calculate(algo, *data, **cpars)
-    cstore = {chunk_key: algo.chunk_store[chunk_key]} if chunk_key in algo.chunk_store else {}
+    cstore = (
+        {chunk_key: algo.chunk_store[chunk_key]}
+        if chunk_key in algo.chunk_store
+        else {}
+    )
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
+
 
 class DaskBaseEngine(Engine):
     """

@@ -534,13 +534,13 @@ class Algorithm(Model):
         key = (mdata.chunki_states - prev_s, mdata.chunki_points - prev_t)
 
         try:
-            chunk_data = self.chunk_store[key]  
+            chunk_data = self.chunk_store[key]
         except KeyError as e:
             if error:
                 raise e
             else:
                 return (None, (None, None, None, None)) if ret_inds else None
-            
+
         chunk_states = chunk_data["states_index"]
         n_states = len(chunk_states)
 
@@ -577,7 +577,9 @@ class Algorithm(Model):
                             data[k][j1] = d[name][k][j0]
                     else:
                         if data is None:
-                            data = np.full((mdata.n_states,) + d[name].shape[1:], np.nan)
+                            data = np.full(
+                                (mdata.n_states,) + d[name].shape[1:], np.nan
+                            )
                         data[j1] = d[name][j0]
 
         if ret_inds:
