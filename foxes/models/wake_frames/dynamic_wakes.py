@@ -156,6 +156,9 @@ class DynamicWakes(WakeFrame):
         # prepare:
         n_states = mdata.n_states
         rxyh = fdata[FV.TXYH][:, downwind_index]
+        istates = mdata.chunki_states
+        itargets = mdata.chunki_points
+        prev_t = itargets
         i0 = mdata.states_i0(counter=True)
         i1 = i0 + n_states
         dt = self._dt[i0:i1]
@@ -172,8 +175,9 @@ class DynamicWakes(WakeFrame):
             return f"{self.UPDATE}_dw{downwind_index}_from_{fr}_to_{to}"
 
         # compute wakes that start within this chunk: x, y, z, length
-        data = algo.get_from_chunk_store(name=key, mdata=mdata, error=False)
+        data = algo.get_from_chunk_store(name=key, mdata=mdata, prev_t=prev_t, error=False)
         if data is None:
+            assert itargets == 0, "DynamicWakes: Missing chunk_store data for (istates, itargets) = ({istates}, {itargets}) at ({istates}, {itargets-prev_t})"
             data = np.full(
                 (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
             )
@@ -231,9 +235,9 @@ class DynamicWakes(WakeFrame):
             algo.block_convergence(mdata=mdata)
 
         # apply updates from future chunks:
-        for (j, t), cdict in algo.chunk_store.items():
-            uname = ukey_fun(j, i0)
-            if j > i0 and t == 0 and uname in cdict:
+        for (jstates, jtargets), cdict in algo.chunk_store.items():
+            uname = ukey_fun(jstates, istates)
+            if jstates > istates and jtargets == 0 and uname in cdict:
                 u = cdict[uname]
                 if u is not None:
                     sel = np.isnan(data) & ~np.isnan(u)
@@ -245,15 +249,15 @@ class DynamicWakes(WakeFrame):
                 del u
 
         # compute wakes from previous chunks:
-        prev = 0
+        prev_s = 0
         wi0 = i0
         data = [data]
-        while True:
-            prev += 1
+        while istates - prev_s > 0:
+            prev_s += 1
 
             # read data from previous chunk:
             hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
-                name=key, mdata=mdata, prev_s=prev, ret_inds=True, error=False
+                name=key, mdata=mdata, prev_s=prev_s, prev_t=prev_t, ret_inds=True, error=False
             )
             if hdata is None:
                 break
@@ -330,7 +334,7 @@ class DynamicWakes(WakeFrame):
                             udata = np.full_like(hdata, np.nan)
                             udata[sel] = hdata[sel]
                             algo.add_to_chunk_store(
-                                ukey_fun(i0, h_i0),
+                                ukey_fun(istates, istates - prev_s),
                                 udata,
                                 dims=(),
                                 mdata=mdata,
@@ -341,7 +345,7 @@ class DynamicWakes(WakeFrame):
                         del udata, tdt
                     del pts
 
-                # store prev chunk's results:
+                # store prev_s chunk's results:
                 data.insert(0, hdata)
 
                 del sts, ags, sel

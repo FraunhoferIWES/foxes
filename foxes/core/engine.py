@@ -912,7 +912,7 @@ class Engine(ABC):
 
                     for wf in wfutures:
                         self.await_result(wf)
-
+        
         if ret_data:
             return ds
 
@@ -985,7 +985,6 @@ class Engine(ABC):
             default="DefaultEngine",
             threads="ThreadsEngine",
             process="ProcessEngine",
-            xarray="XArrayEngine",
             dask="DaskEngine",
             multiprocess="MultiprocessEngine",
             local_cluster="LocalClusterEngine",

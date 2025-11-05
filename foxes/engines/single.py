@@ -209,7 +209,7 @@ class SingleChunkEngine(Engine):
             chunki_states=0,
             chunki_points=0,
             n_chunks_states=1,
-            n_chunks_points=1,
+            n_chunks_points=0,
         )
 
         results = model.calculate(algo, *data, **calc_pars)

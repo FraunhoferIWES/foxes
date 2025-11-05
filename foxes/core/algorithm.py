@@ -434,103 +434,6 @@ class Algorithm(Model):
 
         return xr.Dataset(**idata)
 
-    def find_chunk_in_store(
-        self,
-        mdata,
-        tdata=None,
-        prev_s=0,
-        prev_t=0,
-        error=True,
-    ):
-        """
-        Finds indices in chunk store
-
-        Parameters
-        ----------
-        name: str
-            The data name
-        mdata: foxes.core.MData
-            The mdata object
-        tdata: foxes.core.TData, optional
-            The tdata object
-        prev_s: int
-            How many states chunks backward
-        prev_t: int
-            How many points chunks backward
-        error: bool
-            Flag for raising KeyError if data not found
-
-        Returns
-        -------
-        inds: tuple
-            The (i0, n_states, t0, n_targets) data of the
-            returning chunk
-
-        """
-        i0 = int(mdata.states_i0(counter=True))
-        t0 = int(tdata.targets_i0() if tdata is not None else 0)
-        n_states = int(mdata.n_states)
-        n_targets = int(tdata.n_targets if tdata is not None else 0)
-
-        if (i0, t0) not in self.chunk_store:
-            assert prev_s == 0 and prev_t == 0, (
-                f"{self.name}: Key {(i0, t0)} not found in chunk store, "
-                f"cannot go back as requested by (prev_s, prev_t)={(prev_s, prev_t)}"
-            )
-            for (i0, __), d in self.chunk_store.items():
-                if d["t0"] == t0 and mdata[FC.STATE][0] in d["states_index"]:
-                    n_states = d["n_states"]
-                    n_targets = d["n_targets"]
-                    break
-
-        elif prev_s > 0 or prev_t > 0:
-            inds = np.array(
-                [
-                    [
-                        d["i0"],
-                        d["i0"] + d["n_states"],
-                        d["n_states"],
-                        d["t0"],
-                        d["t0"] + d["n_targets"],
-                        d["n_targets"],
-                    ]
-                    for d in self.chunk_store.values()
-                ],
-                dtype=int,
-            )
-
-            if prev_t > 0:
-                while prev_t > 0:
-                    sel = np.where((inds[:, 0] == i0) & (inds[:, 4] == t0))[0]
-                    if len(sel) == 0:
-                        if error:
-                            raise KeyError(
-                                f"{self.name}: Previous key {(i0, t0)}, prev={(prev_s, prev_t)}, not found in chunk store, got inds {inds}"
-                            )
-                        else:
-                            return None
-                    else:
-                        n_targets = inds[sel[0], 5]
-                        t0 -= n_targets
-                        prev_t -= 1
-
-            if prev_s > 0:
-                while prev_s > 0:
-                    sel = np.where((inds[:, 1] == i0) & (inds[:, 3] == t0))[0]
-                    if len(sel) == 0:
-                        if error:
-                            raise KeyError(
-                                f"{self.name}: Previous key {(i0, t0)}, prev={(prev_s, prev_t)}, not found in chunk store, got inds {inds}"
-                            )
-                        else:
-                            return None
-                    else:
-                        n_states = inds[sel[0], 2]
-                        i0 -= n_states
-                        prev_s -= 1
-
-        return i0, n_states, t0, n_targets
-
     def add_to_chunk_store(
         self,
         name,
@@ -559,23 +462,27 @@ class Algorithm(Model):
             Flag for copying incoming data
 
         """
-        i0 = int(mdata.states_i0(counter=True))
-        t0 = int(tdata.targets_i0() if tdata is not None else 0)
+        assert mdata.chunki_states is not None, (
+            f"{self.name}: mdata.chunki_states is None, cannot add to chunk store"
+        )
+        assert mdata.chunki_points is not None, (
+            f"{self.name}: mdata.chunki_points is None, cannot add to chunk store"
+        )
 
-        key = (i0, t0)
+        key = (mdata.chunki_states, mdata.chunki_points)
         if key not in self.chunk_store:
             n_states = int(mdata.n_states)
             n_targets = int(tdata.n_targets if tdata is not None else 0)
             self.chunk_store[key] = Dict(
                 {
-                    "i0": i0,
-                    "t0": t0,
+                    "i0": mdata.states_i0(counter=True),
+                    "t0": tdata.targets_i0() if tdata is not None else 0,
                     "n_states": n_states,
                     "n_targets": n_targets,
                     "states_index": mdata[FC.STATE].copy(),
                     "dims": {"states_index": (FC.STATE,)},
                 },
-                _name=f"chunk_store_{i0}_{t0}",
+                _name=f"chunk_store_{key[0]}_{key[1]}",
             )
 
         self.chunk_store[key][name] = data.copy() if copy else data
@@ -585,7 +492,6 @@ class Algorithm(Model):
         self,
         name,
         mdata,
-        tdata=None,
         prev_s=0,
         prev_t=0,
         ret_inds=False,
@@ -607,8 +513,7 @@ class Algorithm(Model):
         prev_t: int
             How many points chunks backward
         ret_inds: bool
-            Also return (i0, n_states, t0, n_targets)
-            of the returned chunk
+            Also return chunk index data (i0, n_states, t0, n_targets)
         error: bool
             Flag for raising KeyError if data not found
 
@@ -617,17 +522,25 @@ class Algorithm(Model):
         data: numpy.ndarray
             The data
         inds: tuple, optional
-            The (i0, n_states, t0, n_targets) data of the
-            returning chunk
+            The chunk index data (i0, n_states, t0, n_targets)
 
         """
-        inds = self.find_chunk_in_store(mdata, tdata, prev_s, prev_t, error)
+        assert mdata.chunki_states is not None, (
+            f"{self.name}: mdata.chunki_states is None, cannot add to chunk store"
+        )
+        assert mdata.chunki_points is not None, (
+            f"{self.name}: mdata.chunki_points is None, cannot add to chunk store"
+        )
+        key = (mdata.chunki_states - prev_s, mdata.chunki_points - prev_t)
 
-        if inds is None:
-            return (None, (None, None, None, None)) if ret_inds else None
-
-        i0, __, t0, __ = inds
-        chunk_data = self.chunk_store[(i0, t0)]
+        try:
+            chunk_data = self.chunk_store[key]  
+        except KeyError as e:
+            if error:
+                raise e
+            else:
+                return (None, (None, None, None, None)) if ret_inds else None
+            
         chunk_states = chunk_data["states_index"]
         n_states = len(chunk_states)
 
@@ -649,25 +562,31 @@ class Algorithm(Model):
         # combine data from multiple chunks, in case of states subset selection:
         else:
             data = None
-            for (i0, t0), d in self.chunk_store.items():
-                if d["t0"] == t0 and name in d:
+            for (__, ipoints), d in self.chunk_store.items():
+                if ipoints == key[1] and name in d:
                     __, j0, j1 = np.intersect1d(
                         d["states_index"], mdata[FC.STATE], return_indices=True
                     )
-                if isinstance(d[name], dict):
-                    if data is None:
-                        data = {
-                            k: np.full((mdata.n_states,) + v.shape[1:], np.nan)
-                            for k, v in d[name].items()
-                        }
-                    for k in d[name]:
-                        data[k][j1] = d[name][k][j0]
-                else:
-                    if data is None:
-                        data = np.full((mdata.n_states,) + d[name].shape[1:], np.nan)
-                    data[j1] = d[name][j0]
+                    if isinstance(d[name], dict):
+                        if data is None:
+                            data = {
+                                k: np.full((mdata.n_states,) + v.shape[1:], np.nan)
+                                for k, v in d[name].items()
+                            }
+                        for k in d[name]:
+                            data[k][j1] = d[name][k][j0]
+                    else:
+                        if data is None:
+                            data = np.full((mdata.n_states,) + d[name].shape[1:], np.nan)
+                        data[j1] = d[name][j0]
 
         if ret_inds:
+            inds = (
+                chunk_data["i0"],
+                chunk_data["n_states"],
+                chunk_data["t0"],
+                chunk_data["n_targets"],
+            )
             return data, inds
         else:
             return data

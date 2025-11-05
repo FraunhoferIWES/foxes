@@ -827,6 +827,7 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Now all engines have `submit` and `await_result` functions (which are trivial for serial engines), also usable by the user from the `engine` object, e.g. for parallel plotting during post-processing. 
   - Adding support for parallel results writing via `write_nc` parameter, optionally without ever creating the full dataset in memory. Independent of writing, the futures of individual chunks are now computed directly when needed, no longer in advance. 
   - Engines have a new boolean parameter `progress_bar`, and if set to False, they print the progress to terminal instead. This is recommended for runs on clusters.
+  - Dropping `XArrayEngine`, since no longer compatible
 - Inputs:
   - New farm layout input `from_eww`, reading wind farm input in EuroWindWakes format
   - New farm layout input `from_wrf`, reading a folder that contains wind farm input data in a format readable by WRF

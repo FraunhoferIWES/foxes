@@ -192,6 +192,7 @@ class NumpyEngine(Engine):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
             for chunki_points in range(n_chunks_targets):
+                key = (chunki_states, chunki_points)
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
                 # get this chunk's data:
@@ -217,12 +218,12 @@ class NumpyEngine(Engine):
                     *data,
                     iterative=iterative,
                     chunk_store=chunk_store,
-                    i0_t0=(i0_states, i0_targets),
+                    chunk_key=key,
                     out_coords=out_coords,
                     write_nc=write_nc,
                     **calc_pars,
                 )
-                chunk_store.update(results[key][1])
+                #chunk_store.update(results[key][1])
                 del data
 
                 i0_targets = i1_targets

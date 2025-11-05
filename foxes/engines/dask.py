@@ -5,11 +5,9 @@ from tqdm import tqdm
 
 from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
-from foxes.config import config
-import foxes.variables as FV
 import foxes.constants as FC
 
-from .pool import _run
+from .pool import _write_chunk_results
 
 dask = None
 distributed = None
@@ -45,6 +43,20 @@ def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
 
+def _run(
+    algo,
+    model,
+    *data,
+    chunk_key,
+    out_coords,
+    write_nc,
+    **cpars,
+):
+    """Helper function for running in a single process"""
+    results = model.calculate(algo, *data, **cpars)
+    cstore = {chunk_key: algo.chunk_store[chunk_key]} if chunk_key in algo.chunk_store else {}
+    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    return results, cstore
 
 class DaskBaseEngine(Engine):
     """
@@ -227,424 +239,6 @@ class DaskBaseEngine(Engine):
         super().finalize(*exit_args, **exit_kwargs)
 
 
-def _run_as_ufunc(
-    state_inds,
-    *ldata,
-    algo,
-    dvars,
-    lvars,
-    ldims,
-    evars,
-    edims,
-    edata,
-    loop_dims,
-    out_vars,
-    out_coords,
-    calc_pars,
-    init_vars,
-    calculate,
-):
-    """
-    Wrapper that mitigates between apply_ufunc and `calculate`.
-    """
-    n_prev = len(init_vars)
-    if n_prev:
-        prev = ldata[:n_prev]
-        ldata = ldata[n_prev:]
-
-    # reconstruct original data:
-    data = []
-    for i, hvars in enumerate(dvars):
-        v2l = {v: lvars.index(v) for v in hvars if v in lvars}
-        v2e = {v: evars.index(v) for v in hvars if v in evars}
-
-        hdata = {v: ldata[v2l[v]] if v in v2l else edata[v2e[v]] for v in hvars}
-        hdims = {v: ldims[v2l[v]] if v in v2l else edims[v2e[v]] for v in hvars}
-
-        if i == 0:
-            data.append(
-                MData(
-                    data=hdata,
-                    dims=hdims,
-                    # loop_dims=loop_dims,
-                    states_i0=state_inds[0],
-                )
-            )
-        elif i == 1:
-            data.append(
-                FData(
-                    data=hdata,
-                    dims=hdims,
-                    # loop_dims=loop_dims,
-                    states_i0=state_inds[0],
-                )
-            )
-        elif i == 2:
-            data.append(
-                TData(
-                    data=hdata,
-                    dims=hdims,
-                    # loop_dims=loop_dims,
-                    states_i0=state_inds[0],
-                )
-            )
-        else:
-            raise NotImplementedError(
-                f"Not more than 3 data sets implemented, found {len(dvars)}"
-            )
-
-        del hdata, hdims, v2l, v2e
-
-    # deduce output shape:
-    oshape = []
-    for li, ld in enumerate(out_coords):
-        for i, dims in enumerate(ldims):
-            if ld in dims:
-                oshape.append(ldata[i].shape[dims.index(ld)])
-                break
-        if len(oshape) != li + 1:
-            raise ValueError("Failed to find loop dimension")
-
-    # add zero output data arrays:
-    odims = {v: tuple(out_coords) for v in out_vars}
-    odata = {
-        v: (
-            np.full(oshape, np.nan, dtype=config.dtype_double)
-            if v not in init_vars
-            else prev[init_vars.index(v)].copy()
-        )
-        for v in out_vars
-        if v not in data[-1]
-    }
-
-    if len(data) == 1:
-        data.append(
-            FData(
-                odata,
-                odims,
-                # loop_dims,
-                states_i0=state_inds[0],
-            )
-        )
-    else:
-        odata.update(data[-1])
-        odims.update(data[-1].dims)
-        if len(data) == 2:
-            data[-1] = FData(
-                odata,
-                odims,
-                # loop_dims,
-                states_i0=state_inds[0],
-            )
-        else:
-            data[-1] = TData(
-                odata,
-                odims,
-                # loop_dims,
-                states_i0=state_inds[0],
-            )
-    del odims, odata
-
-    # link chunk state indices from mdata to fdata and tdata:
-    if FC.STATE in data[0]:
-        for d in data[1:]:
-            d[FC.STATE] = data[0][FC.STATE]
-
-    # link weights from mdata to fdata:
-    if FV.WEIGHT in data[0]:
-        data[1][FV.WEIGHT] = data[0][FV.WEIGHT]
-        data[1].dims[FV.WEIGHT] = data[0].dims[FV.WEIGHT]
-
-    # run model calculation:
-    results = calculate(algo, *data, **calc_pars)
-
-    # replace missing results by first input data with matching shape:
-    missing = set(out_vars).difference(results.keys())
-    if len(missing):
-        found = set()
-        for v in missing:
-            for dta in data:
-                if v in dta and dta[v].shape == tuple(oshape):
-                    results[v] = dta[v]
-                    found.add(v)
-                    break
-        missing -= found
-        if len(missing):
-            raise ValueError(
-                f"Missing results {list(missing)}, expected shape {oshape}"
-            )
-    del data
-
-    # create output:
-    n_vars = len(out_vars)
-    data = np.zeros(oshape + [n_vars], dtype=config.dtype_double)
-    for v in out_vars:
-        data[..., out_vars.index(v)] = results[v]
-
-    return data
-
-
-class XArrayEngine(DaskBaseEngine):
-    """
-    The engine for foxes calculations via xarray.apply_ufunc.
-
-    :group: engines
-
-    """
-
-    def submit(self, f, *args, **kwargs):
-        """
-        Submits a job to worker, obtaining a future
-
-        Parameters
-        ----------
-        f: Callable
-            The function f(*args, **kwargs) to be
-            submitted
-        args: tuple, optional
-            Arguments for the function
-        kwargs: dict, optional
-            Arguments for the function
-
-        Returns
-        -------
-        future: object
-            The future object
-
-        """
-        return f(*args, **kwargs)
-
-    def await_result(self, future):
-        """
-        Waits for result from a future
-
-        Parameters
-        ----------
-        future: object
-            The future
-
-        Returns
-        -------
-        result: object
-            The calculation result
-
-        """
-        return future
-
-    def map(
-        self,
-        func,
-        inputs,
-        *args,
-        **kwargs,
-    ):
-        """
-        Runs a function on a list of files
-
-        Parameters
-        ----------
-        func: Callable
-            Function to be called on each file,
-            func(input, *args, **kwargs) -> data
-        inputs: array-like
-            The input data list
-        args: tuple, optional
-            Arguments for func
-        kwargs: dict, optional
-            Keyword arguments for func
-
-        Returns
-        -------
-        results: list
-            The list of results
-
-        """
-        return [func(input, *args, **kwargs) for input in inputs]
-
-    def run_calculation(
-        self,
-        algo,
-        model,
-        model_data,
-        farm_data=None,
-        point_data=None,
-        out_vars=[],
-        chunk_store={},
-        sel=None,
-        isel=None,
-        persist=True,
-        iterative=False,
-        **calc_pars,
-    ):
-        """
-        Runs the model calculation
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        model: foxes.core.DataCalcModel
-            The model that whose calculate function
-            should be run
-        model_data: xarray.Dataset
-            The initial model data
-        farm_data: xarray.Dataset, optional
-            The initial farm data
-        point_data: xarray.Dataset, optional
-            The initial point data
-        out_vars: list of str, optional
-            Names of the output variables
-        chunk_store: foxes.utils.Dict
-            The chunk store
-        sel: dict, optional
-            Selection of coordinate subsets
-        isel: dict, optional
-            Selection of coordinate subsets index values
-        persist: bool
-            Flag for persisting xarray Dataset objects
-        iterative: bool
-            Flag for use within the iterative algorithm
-        calc_pars: dict, optional
-            Additional parameters for the model.calculate()
-
-        Returns
-        -------
-        results: xarray.Dataset
-            The model results
-
-        """
-        # subset selection:
-        model_data, farm_data, point_data = self.select_subsets(
-            model_data, farm_data, point_data, sel=sel, isel=isel
-        )
-
-        # basic checks:
-        super().run_calculation(algo, model, model_data, farm_data, point_data)
-
-        # find chunk sizes, if not given:
-        chunk_size_states0 = self.chunk_size_states
-        chunk_size_points0 = self.chunk_size_points
-        n_states = model_data.sizes[FC.STATE]
-        n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        chunk_sizes_states, chunk_sizes_targets = self.calc_chunk_sizes(
-            n_states, n_targets
-        )
-        self.chunk_size_states = np.min(chunk_sizes_states)
-        self.chunk_size_points = np.min(chunk_sizes_targets)
-        self.print(
-            f"{type(self).__name__}: Selecting chunk_size_states = {self.chunk_size_states}, chunk_size_points = {self.chunk_size_points}"
-        )  # , level=2)
-
-        # prepare:
-        algo.reset_chunk_store(chunk_store)
-        out_coords = model.output_coords()
-        loop_dims = [d for d in self.loop_dims if d in out_coords]
-        loopd = set(loop_dims)
-
-        # extract loop-var dependent and independent data:
-        ldata = []
-        lvars = []
-        ldims = []
-        edata = []
-        evars = []
-        edims = []
-        dvars = []
-        ivars = []
-        idims = []
-        data = [
-            self.chunk_data(d)
-            for d in [model_data, farm_data, point_data]
-            if d is not None
-        ]
-        for ds in data:
-            hvarsl = [v for v, d in ds.items() if len(loopd.intersection(d.dims))]
-            ldata += [ds[v] for v in hvarsl]
-            ldims += [ds[v].dims for v in hvarsl]
-            lvars += hvarsl
-
-            hvarse = [v for v in ds.keys() if v not in hvarsl]
-            edata += [ds[v].values for v in hvarse]
-            edims += [ds[v].dims for v in hvarse]
-            evars += hvarse
-
-            for c, d in ds.coords.items():
-                if c in loopd:
-                    ldata.append(
-                        self.chunk_data(
-                            xr.DataArray(data=d.values, coords={c: d}, dims=[c])
-                        )
-                    )
-                    ldims.append((c,))
-                    lvars.append(c)
-                else:
-                    edata.append(d.values)
-                    edims.append((c,))
-                    evars.append(c)
-
-            dvars.append(list(ds.keys()) + list(ds.coords.keys()))
-
-        # apply persist:
-        if persist:
-            ldata = [d.persist() for d in ldata]
-
-        # setup dask options:
-        dargs = dict(output_sizes={FC.VARS: len(out_vars)})
-        out_core_vars = [d for d in out_coords if d not in loop_dims] + [FC.VARS]
-        if FC.TURBINE in loopd and FC.TURBINE not in ldims.values():
-            dargs["output_sizes"][FC.TURBINE] = algo.n_turbines
-
-        # find states_i0:
-        state_inds = self.chunk_data(
-            xr.DataArray(
-                np.arange(ldata[0].sizes[FC.STATE]),
-                dims=FC.STATE,
-                coords={FC.STATE: ldata[0][FC.STATE].to_numpy()},
-            )
-        )
-
-        # setup arguments for wrapper function:
-        out_coords = loop_dims + list(set(out_core_vars).difference([FC.VARS]))
-        wargs = dict(
-            algo=algo,
-            dvars=dvars,
-            lvars=lvars,
-            ldims=ldims,
-            evars=evars,
-            edims=edims,
-            edata=edata,
-            loop_dims=loop_dims,
-            out_vars=out_vars,
-            out_coords=out_coords,
-            calc_pars=calc_pars,
-            init_vars=ivars,
-            calculate=model.calculate,
-        )
-
-        # run parallel computation:
-        iidims = [[c for c in d if c not in loopd] for d in idims]
-        icdims = [[c for c in d if c not in loopd] for d in ldims]
-        results = xr.apply_ufunc(
-            _run_as_ufunc,
-            state_inds,
-            *ldata,
-            input_core_dims=[[]] + iidims + icdims,
-            output_core_dims=[out_core_vars],
-            output_dtypes=[config.dtype_double],
-            dask="parallelized",
-            dask_gufunc_kwargs=dargs,
-            kwargs=wargs,
-        )
-
-        results = results.assign_coords({FC.VARS: out_vars}).to_dataset(dim=FC.VARS)
-
-        # reset:
-        self.chunk_size_states = chunk_size_states0
-        self.chunk_size_points = chunk_size_points0
-
-        # update data by calculation results:
-        return results.compute(num_workers=self.n_workers)
-
-
 class DaskEngine(DaskBaseEngine):
     """
     The dask engine for delayed foxes calculations.
@@ -733,6 +327,7 @@ class DaskEngine(DaskBaseEngine):
         if farm_data is None:
             farm_data = xr.Dataset()
         goal_data = farm_data if point_data is None else point_data
+        algo.reset_chunk_store(chunk_store)
 
         # calculate chunk sizes:
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
@@ -764,6 +359,7 @@ class DaskEngine(DaskBaseEngine):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
             for chunki_points in range(n_chunks_targets):
+                key = (chunki_states, chunki_points)
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
                 # get this chunk's data:
@@ -786,9 +382,7 @@ class DaskEngine(DaskBaseEngine):
                     algo,
                     model,
                     *data,
-                    iterative=iterative,
-                    chunk_store=chunk_store,
-                    i0_t0=(i0_states, i0_targets),
+                    chunk_key=key,
                     out_coords=out_coords,
                     write_nc=write_nc,
                     **calc_pars,
@@ -844,11 +438,13 @@ def _run_on_cluster(
     dims,
     mdata_size,
     fdata_size,
-    loop_dims,
     iterative,
     chunk_store,
+    chunki_states,
+    chunki_points,
+    n_chunks_states,
+    n_chunks_points,
     i0_states,
-    i0_targets,
     cpars,
 ):
     """Helper function for running on a cluster"""
@@ -858,7 +454,10 @@ def _run_on_cluster(
     mdata = MData(
         data={names[i]: data[i] for i in range(mdata_size)},
         dims={names[i]: dims[i] for i in range(mdata_size)},
-        # loop_dims=loop_dims[0],
+        chunki_states=chunki_states,
+        chunki_points=chunki_points,
+        n_chunks_states=n_chunks_states,
+        n_chunks_points=n_chunks_points,
         states_i0=i0_states,
     )
 
@@ -866,7 +465,10 @@ def _run_on_cluster(
     fdata = FData(
         data={names[i]: data[i].copy() for i in range(mdata_size, fdata_end)},
         dims={names[i]: dims[i] for i in range(mdata_size, fdata_end)},
-        # loop_dims=loop_dims[1],
+        chunki_states=chunki_states,
+        chunki_points=chunki_points,
+        n_chunks_states=n_chunks_states,
+        n_chunks_points=n_chunks_points,
         states_i0=i0_states,
     )
 
@@ -875,7 +477,10 @@ def _run_on_cluster(
         tdata = TData(
             data={names[i]: data[i].copy() for i in range(fdata_end, len(data))},
             dims={names[i]: dims[i] for i in range(fdata_end, len(data))},
-            # loop_dims=loop_dims[2],
+            chunki_states=chunki_states,
+            chunki_points=chunki_points,
+            n_chunks_states=n_chunks_states,
+            n_chunks_points=n_chunks_points,
             states_i0=i0_states,
         )
 
@@ -884,7 +489,7 @@ def _run_on_cluster(
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
 
-    k = (i0_states, i0_targets)
+    k = (chunki_states, chunki_points)
     cstore = {k: chunk_store[k]} if k in chunk_store else {}
     return results, cstore
 
@@ -1154,11 +759,13 @@ class LocalClusterEngine(DaskBaseEngine):
                     dims=dims,
                     mdata_size=len(data[0]),
                     fdata_size=len(data[1]),
-                    loop_dims=ldims,
                     iterative=iterative,
                     chunk_store=cstore,
+                    chunki_states=chunki_states,
+                    chunki_points=chunki_points,
+                    n_chunks_states=n_chunks_states,
+                    n_chunks_points=n_chunks_targets,
                     i0_states=i0_states,
-                    i0_targets=i0_targets,
                     cpars=cpars,
                     retries=10,
                 )

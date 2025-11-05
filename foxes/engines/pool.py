@@ -54,16 +54,16 @@ def _run(
     *data,
     iterative,
     chunk_store,
-    i0_t0,
+    chunk_key,
     out_coords,
     write_nc,
     **cpars,
 ):
     """Helper function for running in a single process"""
-    algo.reset_chunk_store(chunk_store)
+    algo.reset_chunk_store(chunk_store.copy())
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
-    cstore = {i0_t0: chunk_store[i0_t0]} if i0_t0 in chunk_store else {}
+    cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
@@ -254,6 +254,7 @@ class PoolEngine(Engine):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
             for chunki_points in range(n_chunks_targets):
+                key = (chunki_states, chunki_points)
                 i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
                 # get this chunk's data:
@@ -279,7 +280,7 @@ class PoolEngine(Engine):
                     *data,
                     iterative=iterative,
                     chunk_store=chunk_store,
-                    i0_t0=(i0_states, i0_targets),
+                    chunk_key=key,
                     out_coords=out_coords,
                     write_nc=write_nc,
                     **calc_pars,
