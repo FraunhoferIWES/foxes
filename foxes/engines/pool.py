@@ -67,6 +67,7 @@ def _run(
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
+
 def _run_shared(
     algo,
     model,
@@ -85,6 +86,7 @@ def _run_shared(
     )
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
+
 
 def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
@@ -107,7 +109,7 @@ class PoolEngine(Engine):
     def __init__(self, *args, share_cstore=False, **kwargs):
         """
         Constructor.
-        
+
         Parameters
         ----------
         args: tuple, optional
@@ -116,7 +118,7 @@ class PoolEngine(Engine):
             Share chunk store between chunks
         kwargs: dict, optional
             Additional arguments for the base class
-        
+
         """
         super().__init__(*args, **kwargs)
         self.share_cstore = share_cstore
