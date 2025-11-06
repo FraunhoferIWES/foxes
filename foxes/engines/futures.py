@@ -11,6 +11,12 @@ class ThreadsEngine(PoolEngine):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor
+        """
+        super().__init__(*args, share_cstore=True, **kwargs)
+
     def _create_pool(self):
         """Creates the pool"""
         self._pool = ThreadPoolExecutor(max_workers=self.n_workers)

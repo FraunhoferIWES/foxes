@@ -7,7 +7,7 @@ from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
 import foxes.constants as FC
 
-from .pool import _write_chunk_results
+from .pool import _run_shared
 
 dask = None
 distributed = None
@@ -42,26 +42,6 @@ def load_distributed():
 def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
     return [func(x, *args, **kwargs) for x in inputs]
-
-
-def _run(
-    algo,
-    model,
-    *data,
-    chunk_key,
-    out_coords,
-    write_nc,
-    **cpars,
-):
-    """Helper function for running in a single process"""
-    results = model.calculate(algo, *data, **cpars)
-    cstore = (
-        {chunk_key: algo.chunk_store[chunk_key]}
-        if chunk_key in algo.chunk_store
-        else {}
-    )
-    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
-    return results, cstore
 
 
 class DaskBaseEngine(Engine):
@@ -384,7 +364,7 @@ class DaskEngine(DaskBaseEngine):
                 )
 
                 # submit model calculation:
-                futures[(chunki_states, chunki_points)] = delayed(_run)(
+                futures[(chunki_states, chunki_points)] = delayed(_run_shared)(
                     algo,
                     model,
                     *data,

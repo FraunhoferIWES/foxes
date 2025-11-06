@@ -67,6 +67,24 @@ def _run(
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
+def _run_shared(
+    algo,
+    model,
+    *data,
+    chunk_key,
+    out_coords,
+    write_nc,
+    **cpars,
+):
+    """Helper function for running in a single process"""
+    results = model.calculate(algo, *data, **cpars)
+    cstore = (
+        {chunk_key: algo.chunk_store[chunk_key]}
+        if chunk_key in algo.chunk_store
+        else {}
+    )
+    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    return results, cstore
 
 def _run_map(func, inputs, *args, **kwargs):
     """Helper function for running map func on proc"""
@@ -77,9 +95,31 @@ class PoolEngine(Engine):
     """
     Abstract engine for pool type parallelizations.
 
+    Parameters
+    ----------
+    share_cstore: bool
+        Share chunk store between chunks
+
     :group: engines
 
     """
+
+    def __init__(self, *args, share_cstore=False, **kwargs):
+        """
+        Constructor.
+        
+        Parameters
+        ----------
+        args: tuple, optional
+            Arguments for the base class
+        share_cstore: bool
+            Share chunk store between chunks
+        kwargs: dict, optional
+            Additional arguments for the base class
+        
+        """
+        super().__init__(*args, **kwargs)
+        self.share_cstore = share_cstore
 
     @abstractmethod
     def _create_pool(self):
@@ -273,18 +313,30 @@ class PoolEngine(Engine):
                 )
 
                 # submit model calculation:
-                futures[(chunki_states, chunki_points)] = self.submit(
-                    _run,
-                    algo,
-                    model,
-                    *data,
-                    iterative=iterative,
-                    chunk_store=chunk_store,
-                    chunk_key=key,
-                    out_coords=out_coords,
-                    write_nc=write_nc,
-                    **calc_pars,
-                )
+                if self.share_cstore:
+                    futures[(chunki_states, chunki_points)] = self.submit(
+                        _run_shared,
+                        algo,
+                        model,
+                        *data,
+                        chunk_key=key,
+                        out_coords=out_coords,
+                        write_nc=write_nc,
+                        **calc_pars,
+                    )
+                else:
+                    futures[(chunki_states, chunki_points)] = self.submit(
+                        _run,
+                        algo,
+                        model,
+                        *data,
+                        iterative=iterative,
+                        chunk_store=chunk_store,
+                        chunk_key=key,
+                        out_coords=out_coords,
+                        write_nc=write_nc,
+                        **calc_pars,
+                    )
                 del data
 
                 i0_targets = i1_targets
