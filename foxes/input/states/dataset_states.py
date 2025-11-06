@@ -677,8 +677,8 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -690,14 +690,14 @@ class DatasetStates(States):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name] = dict(
-            inds=self._inds,
-        )
+        if data_stash is not None:
+            data_stash[self.name] = dict(
+                inds=self._inds,
+            )
+            if self.load_mode == "preload":
+                data_stash[self.name]["data_source"] = self.__data_source
+                del self.__data_source
         del self._inds
-
-        if self.load_mode == "preload":
-            data_stash[self.name]["data_source"] = self.__data_source
-            del self.__data_source
 
     def unset_running(
         self,
@@ -715,8 +715,8 @@ class DatasetStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -728,11 +728,12 @@ class DatasetStates(States):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self._inds = data.pop("inds")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self._inds = data.pop("inds")
 
-        if self.load_mode == "preload":
-            self.__data_source = data.pop("data_source")
+            if self.load_mode == "preload":
+                self.__data_source = data.pop("data_source")
 
     def output_point_vars(self, algo):
         """

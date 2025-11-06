@@ -153,7 +153,7 @@ class DefaultEngine(Engine):
             The model results
 
         """
-        max_n = np.sqrt(self.n_procs) * (500 / algo.n_turbines) ** 1.5
+        max_n = np.sqrt(self.n_workers) * (500 / algo.n_turbines) ** 1.5
 
         if (algo.n_states >= max_n) or (
             point_data is not None

@@ -207,8 +207,8 @@ class Model(ABC):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -228,7 +228,7 @@ class Model(ABC):
 
         if verbosity > 0:
             print(f"Model '{self.name}': running")
-        if self.name not in data_stash:
+        if data_stash is not None and self.name not in data_stash:
             data_stash[self.name] = {}
 
         self.__running = True
@@ -249,8 +249,8 @@ class Model(ABC):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary

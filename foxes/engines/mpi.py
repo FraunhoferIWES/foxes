@@ -24,4 +24,4 @@ class MPIEngine(ProcessEngine):
             pip_hint="pip install mpi4py",
             conda_hint="conda install mpi4py -c conda-forge",
         ).MPIPoolExecutor
-        self._pool = MPIPoolExecutor(max_workers=self.n_procs)
+        self._pool = MPIPoolExecutor(max_workers=self.n_workers)

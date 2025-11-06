@@ -11,9 +11,15 @@ class ThreadsEngine(PoolEngine):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor
+        """
+        super().__init__(*args, share_cstore=True, **kwargs)
+
     def _create_pool(self):
         """Creates the pool"""
-        self._pool = ThreadPoolExecutor(max_workers=self.n_procs)
+        self._pool = ThreadPoolExecutor(max_workers=self.n_workers)
 
     def submit(self, f, *args, **kwargs):
         """
@@ -69,4 +75,4 @@ class ProcessEngine(ThreadsEngine):
 
     def _create_pool(self):
         """Creates the pool"""
-        self._pool = ProcessPoolExecutor(max_workers=self.n_procs)
+        self._pool = ProcessPoolExecutor(max_workers=self.n_workers)

@@ -329,8 +329,8 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -342,10 +342,11 @@ class StatesTable(States):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name] = dict(
-            data_source=self._data,
-            inds=self.__inds,
-        )
+        if data_stash is not None:
+            data_stash[self.name] = dict(
+                data_source=self._data,
+                inds=self.__inds,
+            )
         del self._data, self.__inds
 
     def unset_running(
@@ -364,8 +365,8 @@ class StatesTable(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -377,9 +378,10 @@ class StatesTable(States):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self._data = data.pop("data_source")
-        self.__inds = data.pop("inds")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self._data = data.pop("data_source")
+            self.__inds = data.pop("inds")
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -593,8 +595,8 @@ class TabStates(StatesTable):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -606,12 +608,13 @@ class TabStates(StatesTable):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name].update(
-            dict(
-                tab_source=self.__tab_source,
-                tab_data=self.__tab_data,
+        if data_stash is not None:
+            data_stash[self.name].update(
+                dict(
+                    tab_source=self.__tab_source,
+                    tab_data=self.__tab_data,
+                )
             )
-        )
         del self.__tab_source, self.__tab_data
 
     def unset_running(
@@ -630,8 +633,8 @@ class TabStates(StatesTable):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -643,6 +646,7 @@ class TabStates(StatesTable):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self.__tab_source = data.pop("tab_source")
-        self.__tab_data = data.pop("tab_data")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self.__tab_source = data.pop("tab_source")
+            self.__tab_data = data.pop("tab_data")

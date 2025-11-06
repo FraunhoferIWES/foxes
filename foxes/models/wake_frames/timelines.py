@@ -228,8 +228,8 @@ class Timelines(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -241,7 +241,7 @@ class Timelines(WakeFrame):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        if sel is not None or isel is not None:
+        if data_stash is not None and (sel is not None or isel is not None):
             data_stash[self.name]["data"] = self.timelines_data
 
             if isel is not None:
@@ -265,8 +265,8 @@ class Timelines(WakeFrame):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -278,9 +278,10 @@ class Timelines(WakeFrame):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        if "data" in data:
-            self.timelines_data = data.pop("data")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            if "data" in data:
+                self.timelines_data = data.pop("data")
 
     def calc_order(self, algo, mdata, fdata):
         """

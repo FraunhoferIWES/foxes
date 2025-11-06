@@ -289,8 +289,8 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -302,10 +302,11 @@ class MultiHeightStates(States):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name] = dict(
-            data_source=self._data_source,
-            inds=self._inds,
-        )
+        if data_stash is not None:
+            data_stash[self.name] = dict(
+                data_source=self._data_source,
+                inds=self._inds,
+            )
         del self._data_source, self._inds
 
     def unset_running(
@@ -324,8 +325,8 @@ class MultiHeightStates(States):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -337,9 +338,10 @@ class MultiHeightStates(States):
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
 
-        data = data_stash[self.name]
-        self._data_source = data.pop("data_source")
-        self._inds = data.pop("inds")
+        if data_stash is not None:
+            data = data_stash[self.name]
+            self._data_source = data.pop("data_source")
+            self._inds = data.pop("inds")
 
     def size(self):
         """

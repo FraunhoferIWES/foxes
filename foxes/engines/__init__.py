@@ -10,7 +10,6 @@ from .futures import ThreadsEngine as ThreadsEngine
 from .futures import ProcessEngine as ProcessEngine
 
 from .dask import DaskBaseEngine as DaskBaseEngine
-from .dask import XArrayEngine as XArrayEngine
 from .dask import DaskEngine as DaskEngine
 from .dask import LocalClusterEngine as LocalClusterEngine
 from .dask import SlurmClusterEngine as SlurmClusterEngine

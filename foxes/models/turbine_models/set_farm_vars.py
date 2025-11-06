@@ -196,8 +196,8 @@ class SetFarmVars(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Large data stash, this function adds data here, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -209,7 +209,8 @@ class SetFarmVars(TurbineModel):
         """
         super().set_running(algo, data_stash, sel, isel, verbosity)
 
-        data_stash[self.name]["vdata"] = self.__vdata
+        if data_stash is not None:
+            data_stash[self.name]["vdata"] = self.__vdata
         del self.__vdata
 
     def unset_running(
@@ -228,8 +229,8 @@ class SetFarmVars(TurbineModel):
         ----------
         algo: foxes.core.Algorithm
             The calculation algorithm
-        data_stash: dict
-            Large data stash, this function adds data here.
+        data_stash: dict, optional
+            Reconstruct model data from this stash, if given.
             Key: model name. Value: dict, large model data
         sel: dict, optional
             The subset selection dictionary
@@ -240,7 +241,9 @@ class SetFarmVars(TurbineModel):
 
         """
         super().unset_running(algo, data_stash, sel, isel, verbosity)
-        self.__vdata = data_stash[self.name].pop("vdata")
+
+        if data_stash is not None:
+            self.__vdata = data_stash[self.name].pop("vdata")
 
     def calculate(self, algo, mdata, fdata, st_sel):
         """

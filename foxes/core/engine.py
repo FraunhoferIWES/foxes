@@ -26,9 +26,6 @@ class Engine(ABC):
         The size of a states chunk
     chunk_size_points: int
         The size of a points chunk
-    n_procs: int, optional
-        The number of processes to be used,
-        or None for automatic
     progress_bar: bool, optional
         Use a progress bar instead of simply
         printing lines of reached percentages.
@@ -70,15 +67,41 @@ class Engine(ABC):
         """
         self.chunk_size_states = chunk_size_states
         self.chunk_size_points = chunk_size_points
-        try:
-            self.n_procs = n_procs if n_procs is not None else os.process_cpu_count()
-        except AttributeError:
-            self.n_procs = os.cpu_count()
         self.progress_bar = progress_bar
         self.verbosity = verbosity
+
+        try:
+            self._n_procs = n_procs if n_procs is not None else os.process_cpu_count()
+        except AttributeError:
+            self._n_procs = os.cpu_count()
+        self._n_workers = max(self._n_procs - 1, 1)
+
         self.__name = type(self).__name__
         self.__initialized = False
         self.__entered = False
+
+    def __repr__(self):
+        s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
+        return f"{self.name}({s})"
+
+    def __enter__(self):
+        if self.__entered:
+            raise ValueError("Enter called for already entered engine")
+        self.__entered = True
+        if not self.initialized:
+            self.initialize()
+        return self
+
+    def __exit__(self, *exit_args):
+        if not self.__entered:
+            raise ValueError("Exit called for not entered engine")
+        self.__entered = False
+        if self.initialized:
+            self.finalize(*exit_args)
+
+    def __del__(self):
+        if self.initialized:
+            self.finalize()
 
     @property
     def name(self):
@@ -92,6 +115,32 @@ class Engine(ABC):
 
         """
         return self.__name
+
+    @property
+    def n_procs(self):
+        """
+        The number of processes
+
+        Returns
+        -------
+        n_procs: int
+            The number of processes
+
+        """
+        return self._n_procs
+
+    @property
+    def n_workers(self):
+        """
+        The number of worker processes
+
+        Returns
+        -------
+        n_workers: int
+            The number of worker processes
+
+        """
+        return self._n_workers
 
     @property
     def has_progress_bar(self):
@@ -118,29 +167,6 @@ class Engine(ABC):
 
         """
         return self.progress_bar is not None and not self.progress_bar
-
-    def __repr__(self):
-        s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
-        return f"{self.name}({s})"
-
-    def __enter__(self):
-        if self.__entered:
-            raise ValueError("Enter called for already entered engine")
-        self.__entered = True
-        if not self.initialized:
-            self.initialize()
-        return self
-
-    def __exit__(self, *exit_args):
-        if not self.__entered:
-            raise ValueError("Exit called for not entered engine")
-        self.__entered = False
-        if self.initialized:
-            self.finalize(*exit_args)
-
-    def __del__(self):
-        if self.initialized:
-            self.finalize()
 
     @property
     def entered(self):
@@ -361,8 +387,8 @@ class Engine(ABC):
         """
         # determine states chunks:
         if self.chunk_size_states is None:
-            n_chunks_states = min(self.n_procs, n_states)
-            chunk_size_states = max(int(n_states / self.n_procs), 1)
+            n_chunks_states = min(self.n_workers, n_states)
+            chunk_size_states = max(int(n_states / self.n_workers), 1)
         else:
             chunk_size_states = min(n_states, self.chunk_size_states)
             n_chunks_states = max(int(n_states / chunk_size_states), 1)
@@ -378,8 +404,8 @@ class Engine(ABC):
                     chunk_size_targets = n_targets
                     n_chunks_targets = 1
                 else:
-                    n_chunks_targets = min(self.n_procs, n_targets)
-                    chunk_size_targets = max(int(n_targets / self.n_procs), 1)
+                    n_chunks_targets = min(self.n_workers, n_targets)
+                    chunk_size_targets = max(int(n_targets / self.n_workers), 1)
                     if self.chunk_size_states is None and n_chunks_states > 1:
                         while chunk_size_states * chunk_size_targets > n_targets:
                             n_chunks_states += 1
@@ -423,6 +449,8 @@ class Engine(ABC):
         out_vars,
         chunki_states,
         chunki_points,
+        n_chunks_states,
+        n_chunks_points,
     ):
         """
         Extracts the data for a single chunk calculation
@@ -447,6 +475,10 @@ class Engine(ABC):
             The index of the states chunk
         chunki_points: int
             The index of the points chunk
+        n_chunks_states: int
+            The number of states chunks
+        n_chunks_points: int
+            The number of points chunks
 
         Returns
         -------
@@ -470,6 +502,8 @@ class Engine(ABC):
             copy=True,
             chunki_states=chunki_states,
             chunki_points=chunki_points,
+            n_chunks_states=n_chunks_states,
+            n_chunks_points=n_chunks_points,
         )
 
         # create fdata:
@@ -583,7 +617,7 @@ class Engine(ABC):
         write_on_fly = False
         write_from_ds = False
         keys = list(futures.keys()) if futures is not None else list(results.keys())
-        if write_nc is not None:
+        if write_nc is not None and not (iterative and not algo.final_iteration):
             out_dir = get_output_path(write_nc.get("out_dir", "."))
             base_name = write_nc["base_name"]
             ret_data = write_nc.get("ret_data", False)
@@ -666,15 +700,15 @@ class Engine(ABC):
 
                     ds = Dataset(coords=crds, data_vars=dvars)
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
-                    future = self.submit(
-                        write_nc_file,
-                        ds,
-                        fpath,
-                        nc_engine=config.nc_engine,
-                        verbosity=vrb,
-                    )
-                    wfutures.append(future)
-                    del ds, crds, dvars, future
+                    args = (ds, fpath)
+                    kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
+                    if len(futures) < self.n_workers:
+                        future = self.submit(write_nc_file, *args, **kwargs)
+                        wfutures.append(future)
+                        del future
+                    else:
+                        write_nc_file(*args, **kwargs)
+                    del ds, crds, dvars, args, kwargs
 
                     wcount += splits
                     fcounter += 1
@@ -705,7 +739,7 @@ class Engine(ABC):
 
         if futures is not None:
             self.print(
-                f"{self.name}: Computing {len(keys)} chunks using {self.n_procs} processes"
+                f"{self.name}: Computing {len(keys)} chunks using {self.n_workers} workers"
             )
             vlevel = 0
         else:
@@ -878,7 +912,6 @@ class Engine(ABC):
 
                     for wf in wfutures:
                         self.await_result(wf)
-
         if ret_data:
             return ds
 
@@ -951,7 +984,6 @@ class Engine(ABC):
             default="DefaultEngine",
             threads="ThreadsEngine",
             process="ProcessEngine",
-            xarray="XArrayEngine",
             dask="DaskEngine",
             multiprocess="MultiprocessEngine",
             local_cluster="LocalClusterEngine",

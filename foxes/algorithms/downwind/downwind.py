@@ -636,8 +636,9 @@ class Downwind(Algorithm):
         self,
         outputs=None,
         calc_parameters={},
-        finalize=True,
         ambient=False,
+        finalize=True,
+        clear_mem=False,
         **kwargs,
     ):
         """
@@ -650,10 +651,12 @@ class Downwind(Algorithm):
             Key: model name str, value: parameter dict
         outputs: list of str, optional
             The output variables, or None for defaults
-        finalize: bool
-            Flag for finalization after calculation
         ambient: bool
             Flag for ambient instead of waked calculation
+        finalize: bool
+            Flag for finalization after calculation
+        clear_mem: bool
+            Clear idata memory after starting the run
         kwargs: dict, optional
             Additional parameters for run_calculation
 
@@ -700,6 +703,7 @@ class Downwind(Algorithm):
             model_data,
             parameters=calc_pars,
             outputs=outputs,
+            clear_mem=clear_mem,
             **kwargs,
         )
         if farm_results is not None:
@@ -710,10 +714,10 @@ class Downwind(Algorithm):
         del model_data
 
         # finalize models:
-        if finalize:
+        if clear_mem or finalize:
             self.print("\n")
             mlist.finalize(self, self.verbosity - 1)
-            self.finalize()
+            self.finalize(clear_mem=clear_mem)
         else:
             self.del_model_data(mlist)
 
