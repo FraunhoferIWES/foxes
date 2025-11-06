@@ -41,7 +41,7 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "nbsphinx",
+    #"nbsphinx",
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
@@ -54,6 +54,7 @@ extensions = [
     #"sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
+    "myst_nb",
 ]
 
 intersphinx_mapping = {
@@ -68,7 +69,12 @@ intersphinx_mapping = {
 
 # The suffix(es) of source filenames.
 #
-source_suffix = {".rst": "restructuredtext", ".md": "restructuredtext"}
+source_suffix = {
+    ".rst": "restructuredtext", 
+    ".md": "restructuredtext",
+    '.ipynb': 'myst-nb',
+    '.myst': 'myst-nb',
+}
 
 # The master toctree document.
 master_doc = "index"
