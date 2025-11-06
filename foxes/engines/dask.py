@@ -296,6 +296,9 @@ class DaskEngine(DaskBaseEngine):
             The model results
 
         """
+        # reset chunk store:
+        algo.reset_chunk_store(chunk_store)
+        
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
             model_data, farm_data, point_data, sel=sel, isel=isel

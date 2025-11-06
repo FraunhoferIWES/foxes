@@ -245,6 +245,10 @@ class PoolEngine(Engine):
 
         """
 
+        # reset chunk store:
+        if self.share_cstore:
+            algo.reset_chunk_store(chunk_store)
+
         # subset selection:
         model_data, farm_data, point_data = self.select_subsets(
             model_data, farm_data, point_data, sel=sel, isel=isel

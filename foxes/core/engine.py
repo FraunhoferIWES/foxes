@@ -912,7 +912,6 @@ class Engine(ABC):
 
                     for wf in wfutures:
                         self.await_result(wf)
-
         if ret_data:
             return ds
 

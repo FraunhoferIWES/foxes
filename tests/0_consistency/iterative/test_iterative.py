@@ -20,7 +20,7 @@ def test():
     lims = {FV.REWS: 5e-7, FV.P: 5e-4}
 
     base_results = None
-    with foxes.Engine.new("threads", chunk_size_states=1000):
+    with foxes.Engine.new("threads", chunk_size_states=1000, n_procs=2):
         for Algo, frame in cases:
             print(f"\nENTERING CASE {(Algo.__name__, frame)}\n")
 
