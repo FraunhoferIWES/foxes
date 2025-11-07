@@ -251,6 +251,7 @@ class NEWAStates(DatasetStates):
                 & (xy[..., 1] >= y0)
                 & (xy[..., 1] <= y1)
             )
+            assert len(inds) > 0, f"States '{self.name}': No grid points found within bounds (x0, x1)=({x0}, {x1}), (y0, y1)=({y0}, {y1})"
             i0 = inds[:, 0].min()
             i1 = inds[:, 0].max()
             j0 = inds[:, 1].min()

@@ -51,7 +51,7 @@ def add_from_wrf(
     :group: input.farm_layout
 
     """
-    assert farm.data_is_lonlat, "Require input_is_lonlat = True in WindFarm constructor"
+    assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"
     if verbosity > 0:
         print("Reading directory", directory)
     directory = get_input_path(directory)

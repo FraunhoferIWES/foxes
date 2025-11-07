@@ -26,8 +26,12 @@ def add_from_eww(
         The wind farm
     data_source: str or pandas.DataFrame
         The input csv file or data source
-    filter: dict, optional
-        A dictionary of filters to apply to the dataframe, e.g. {"wind_farm": ["Farm1", "Farm2"]}
+    filter: list of tuple, optional
+        A list of filters to apply to the dataframe, 
+        e.g. ("wind_farm": ["Farm1", "Farm2"]),
+        or ("latitude", ">=54.1"). For range filtering, use strings
+        that start with ">=", "<=", ">", "<". For exact matches, use single values.
+        For multiple matches, use lists, tuples or sets.
     mbook: foxes.ModelBook, optional
         The model book, only needed if csv_dir is specified
     csv_dir: str, optional
@@ -54,7 +58,7 @@ def add_from_eww(
     :group: input.farm_layout
 
     """
-    assert farm.data_is_lonlat, "Require input_is_lonlat = True in WindFarm constructor"
+    assert farm.data_is_lonlat, "Require `input_is_lonlat=True` in WindFarm constructor"
 
     if isinstance(data_source, pd.DataFrame):
         data = data_source
@@ -62,7 +66,13 @@ def add_from_eww(
         if verbosity:
             print("Reading file", data_source)
         pth = get_input_path(data_source)
-        data = pd.read_csv(pth, index_col=0)
+        data = pd.read_csv(pth, index_col=0, parse_dates=["commissioning_date"])
+
+    comm_dates = data["commissioning_date"].str.strip()
+    comm_dates = pd.to_datetime(comm_dates)
+    data["comm_year"] = comm_dates.dt.year
+    data["comm_month"] = comm_dates.dt.month
+    data["comm_day"] = comm_dates.dt.day
 
     ttypes = data["turbine_type"].unique()
     if csv_dir is not None:
@@ -93,15 +103,35 @@ def add_from_eww(
             )
 
     if filter is not None:
-        for k, v in filter.items():
+        assert isinstance(filter, list), f"filter must be a list, got {type(filter).__name__}"
+        for fi, fdata in enumerate(filter):
+            assert isinstance(fdata, tuple), f"filter items must be tuples, got {type(fdata).__name__} at position {fi}"
+            k, val = fdata
             assert k in data.columns, f"Column {k} not in data, found {data.columns}"
-            for val in v:
-                assert val in data[k].values, (
-                    f"Value '{val}' not found in column '{k}', got {data[k].unique().tolist()}"
-                )
-            data = data[data[k].isin(v)]
-            if verbosity:
-                print(f"Filtering {k} for {v}, now {len(data)} turbines")
+            if isinstance(val, str):
+                if val.startswith(">="):
+                    data = data[data[k] >= float(val[2:])]
+                elif val.startswith("<="):
+                    data = data[data[k] <= float(val[2:])]
+                elif val.startswith(">"):
+                    data = data[data[k] > float(val[1:])]
+                elif val.startswith("<"):
+                    data = data[data[k] < float(val[1:])]
+                if verbosity > 0:
+                    print(f"Applying filter {k}{val}, now {len(data.index)} turbines")
+            elif isinstance(val,(list, tuple, set)):
+                data = data[data[k].isin(val)]
+                if verbosity > 0:
+                    print(f"Applying filter {k} in {val}, now {len(data.index)} turbines")
+            else:
+                data = data[data[k] == val]
+                if verbosity > 0:
+                    print(f"Applying filter {k}=={val}, now {len(data.index)} turbines")
+
+    if verbosity > 0:
+        print(f"Selected {len(data.index)} turbines from the following wind farms:")
+        for wf, g in data.groupby("wind_farm"):
+            print(f"  {wf} ({g['commissioning_date'].min()}): {len(g.index)} turbines")
 
     farms = []
     tmodels = turbine_parameters.pop("turbine_models", [])
@@ -119,7 +149,7 @@ def add_from_eww(
             if verbosity > 0:
                 print(f"Creating turbine type: {ttype} from file {csv_map[j].name}")
             pars = dict(col_P="power")
-            pars
+            pars.update(pct_pars)
             mbook.turbine_types[ttype] = PCtFile(csv_map[j], rho=rho, **pars)
 
         lonlat = data.loc[i, ["longitude", "latitude"]].to_numpy(np.float64)
