@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "foxes"
-version = "1.6"
+version = "1.6.1"
 authors = [
   {name = "Jonas Schulte"},
 ]
