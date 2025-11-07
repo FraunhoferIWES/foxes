@@ -27,7 +27,7 @@ def add_from_eww(
     data_source: str or pandas.DataFrame
         The input csv file or data source
     filter: list of tuple, optional
-        A list of filters to apply to the dataframe, 
+        A list of filters to apply to the dataframe,
         e.g. ("wind_farm": ["Farm1", "Farm2"]),
         or ("latitude", ">=54.1"). For range filtering, use strings
         that start with ">=", "<=", ">", "<". For exact matches, use single values.
@@ -103,9 +103,13 @@ def add_from_eww(
             )
 
     if filter is not None:
-        assert isinstance(filter, list), f"filter must be a list, got {type(filter).__name__}"
+        assert isinstance(filter, list), (
+            f"filter must be a list, got {type(filter).__name__}"
+        )
         for fi, fdata in enumerate(filter):
-            assert isinstance(fdata, tuple), f"filter items must be tuples, got {type(fdata).__name__} at position {fi}"
+            assert isinstance(fdata, tuple), (
+                f"filter items must be tuples, got {type(fdata).__name__} at position {fi}"
+            )
             k, val = fdata
             assert k in data.columns, f"Column {k} not in data, found {data.columns}"
             if isinstance(val, str):
@@ -119,10 +123,12 @@ def add_from_eww(
                     data = data[data[k] < float(val[1:])]
                 if verbosity > 0:
                     print(f"Applying filter {k}{val}, now {len(data.index)} turbines")
-            elif isinstance(val,(list, tuple, set)):
+            elif isinstance(val, (list, tuple, set)):
                 data = data[data[k].isin(val)]
                 if verbosity > 0:
-                    print(f"Applying filter {k} in {val}, now {len(data.index)} turbines")
+                    print(
+                        f"Applying filter {k} in {val}, now {len(data.index)} turbines"
+                    )
             else:
                 data = data[data[k] == val]
                 if verbosity > 0:
