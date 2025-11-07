@@ -167,6 +167,7 @@ def add_from_eww(
                 H=data.loc[i, "hub_height"],
                 D=data.loc[i, "rotor_diameter"],
                 turbine_models=[ttype] + tmodels,
+                wind_farm_name=fname,
                 **turbine_parameters,
             ),
             verbosity=verbosity,

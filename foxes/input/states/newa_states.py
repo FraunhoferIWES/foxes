@@ -301,16 +301,19 @@ class NEWAStates(DatasetStates):
             fpath = get_output_path(self.wrf_point_plot)
             if verbosity > 0:
                 print(f"States '{self.name}': Writing WRF grid point plot to '{fpath}'")
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(8, 8))
             ax.plot(
                 self._xy[..., 0].flatten(),
                 self._xy[..., 1].flatten(),
                 c="blue",
-                alpha=0.5,
+                alpha=0.2,
                 marker=".",
                 linestyle="None",
             )
-            FarmLayoutOutput(farm=algo.farm).get_figure(fig=fig, ax=ax)
+            anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+            FarmLayoutOutput(farm=algo.farm).get_figure(
+                fig=fig, ax=ax, annotate=anno, fontsize=12
+            )
             ax.set_xlabel(f"{FV.X} [m]")
             ax.set_ylabel(f"{FV.Y} [m]")
             ax.set_aspect("equal", adjustable="box")

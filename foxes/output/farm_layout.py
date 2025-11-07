@@ -159,6 +159,7 @@ class FarmLayoutOutput(Output):
             0 = No annotation
             1 = Turbine indices
             2 = Turbine names
+            3 = Wind farm names
         title: str, optional
             The plot title, or None for automatic
         fig: matplotlib.pyplot.Figure, optional
@@ -265,22 +266,28 @@ class FarmLayoutOutput(Output):
                     ax.annotate(
                         t.name, (x[i] + anno_delx, y[i] + anno_dely), size=fontsize
                     )
+            elif annotate == 3:
+                for wf_name, turb_indices in self.farm.get_wind_farm_mapping().items():
+                    xc = np.mean(x[turb_indices])
+                    yc = np.mean(y[turb_indices])
+                    ax.text(xc, yc, wf_name, dict(size=fontsize))
 
         if self.farm.boundary is not None:
             hbargs = {"fill_mode": "inside_lightgray"}
             hbargs.update(bargs)
             self.farm.boundary.add_to_figure(ax, **hbargs)
 
-        ti = (
-            title
-            if title is not None
-            else (
-                self.farm.name
-                if D is None or not normalize_D
-                else f"{self.farm.name} (D = {D} m)"
+        if title is not None or annotate != 3:
+            ti = (
+                title
+                if title is not None
+                else (
+                    self.farm.name
+                    if D is None or not normalize_D
+                    else f"{self.farm.name} (D = {D} m)"
+                )
             )
-        )
-        ax.set_title(ti)
+            ax.set_title(ti)
 
         ax.set_xlabel("x [m]" if not normalize_D else "x [D]")
         ax.set_ylabel("y [m]" if not normalize_D else "y [D]")

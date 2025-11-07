@@ -818,6 +818,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Core:
   - Wind farms now support turbine locations in terms of longitude, lattitude. They will automatically be translated into
   a uniquely fixed UTM zone, stored in the global config object.
+  - Turbines now carry an optional property `wind_farm_name`, intended for cases which model multiple wind farms. The `WindFarm` class offers a property `wind_farm_names` and a function `get_wind_farm_mapping()`, returning a mapping from wind farm names to turbine indices. This is for example used by layout plots with the choice `annotate=3`, which results in printing wind farm names instead of turbine indices.
 - Algorithms:
   - New optional dict-type parameter `write_nc` for `algo.calc_farm()` and `algo.calc_points()`, allowing the parallel writing of results into multiple files without ever constructing the complete dataset in memory. If writing results to file is the only intention of the run, this is the recommended approach.
   - Introducing new parameter `population_params` to `Downwind` algorithm, for setting up a vectorized parameter study. This is based on a set of values for selected variables, which are then evaluated for each state. This is realized via the algorithm specific states class `PopulationStates` and turbine model class `PopulationModel`.

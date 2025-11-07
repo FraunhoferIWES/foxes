@@ -29,6 +29,8 @@ class Turbine:
     H: float, optional
         The hub height. Overwrites turbine type
         settings if given
+    wind_farm_name: str, optional
+        The name of the wind farm the turbine belongs to
 
     :group: core
 
@@ -43,6 +45,7 @@ class Turbine:
         models_state_sel=None,
         D=None,
         H=None,
+        wind_farm_name=None,
     ):
         """
         Constructor.
@@ -67,6 +70,8 @@ class Turbine:
         H: float, optional
             The hub height. Overwrites turbine type
             settings if given
+        wind_farm_name: str, optional
+            The name of the wind farm the turbine belongs to
 
         """
         self.index = index
@@ -75,6 +80,7 @@ class Turbine:
         self.models = deepcopy(turbine_models)
         self.D = D
         self.H = H
+        self.wind_farm_name = wind_farm_name
 
         self.mstates_sel = models_state_sel
         if self.mstates_sel is None:

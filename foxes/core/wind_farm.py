@@ -235,6 +235,45 @@ class WindFarm:
         """
         return np.array([t.xy for t in self.__turbines], dtype=config.dtype_double)
 
+    @property
+    def wind_farm_names(self):
+        """
+        The list of wind farm names for all turbines
+
+        Returns
+        -------
+        names: list of str
+            The wind farm names for all turbines
+
+        """
+        return list(
+            set(
+                [
+                    t.wind_farm_name if t.wind_farm_name is not None else self.name
+                    for t in self.__turbines
+                ]
+            )
+        )
+
+    def get_wind_farm_mapping(self):
+        """
+        Returns a mapping from wind farm names to turbine indices
+
+        Returns
+        -------
+        mapping: dict
+            A dictionary, where keys are wind farm names and
+            values are lists of turbine indices belonging to that wind farm
+
+        """
+        mapping = {}
+        for i, t in enumerate(self.__turbines):
+            wf_name = t.wind_farm_name if t.wind_farm_name is not None else self.name
+            if wf_name not in mapping:
+                mapping[wf_name] = []
+            mapping[wf_name].append(i)
+        return mapping
+
     def get_xy_bounds(self, extra_space=None, algo=None):
         """
         Returns min max points of the wind farm ground points
