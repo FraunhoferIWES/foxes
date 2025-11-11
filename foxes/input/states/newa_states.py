@@ -526,7 +526,7 @@ class NEWAStates(DatasetStates):
                         pts[:, ix] <= x1 + self.tile_safety
                     ) & (pts[:, ix + 1] >= y0 - self.tile_safety) & (
                         pts[:, ix + 1] <= y1 + self.tile_safety
-                    )
+                    ) & np.any(np.isnan(results), axis=1)
                     if np.any(sel0):
                         pts_tile = pts[sel0, :]
 
