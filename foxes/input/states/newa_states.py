@@ -32,6 +32,10 @@ class NEWAStates(DatasetStates):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
+    tile_size: float
+        Size of the tile for which the trinagulation is created, in m
+    tile_safety: float
+        Extra safety margin for the tile, in m
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
@@ -67,8 +71,10 @@ class NEWAStates(DatasetStates):
         output_vars=None,
         var2ncvar=None,
         load_mode="fly",
-        time_format=None,  # r"%Y-%m-%dT%H:%M:%S",
+        time_format=None, 
         bounds_extra_space=0.0,
+        tile_size=2e4,
+        tile_safety=3.1e3,
         height_bounds=None,
         interp_pars=None,
         wrf_point_plot=None,
@@ -113,6 +119,10 @@ class NEWAStates(DatasetStates):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
+        tile_size: float
+            Size of the tile for which the trinagulation is created, in m
+        tile_safety: float
+            Extra safety margin for the tile, in m
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         kwargs: dict, optional
@@ -157,6 +167,8 @@ class NEWAStates(DatasetStates):
         self.xlat_coord = xlat_coord
         self.xlon_coord = xlon_coord
         self.bounds_extra_space = bounds_extra_space
+        self.tile_size = tile_size
+        self.tile_safety = tile_safety
         self.height_bounds = height_bounds
         self.wrf_point_plot = wrf_point_plot
         self.interp_pars = interp_pars if interp_pars is not None else {}
@@ -448,54 +460,103 @@ class NEWAStates(DatasetStates):
             gpts = gpts[~sel, :]
             d = d[~sel, :]
 
-        # run interpolation:
-        results = griddata(gpts, d, pts, **ipars)
+        def _check_nan(gpts, d, pts, results):
+            """ Checks for NaN results and raises errors. """
+            if np.isnan(ipars.get("fill_value", np.nan)):
+                sel = np.isnan(results[..., 0])
+                if np.any(sel):
+                    i = np.where(sel)[0]
+                    n_dms = len(icrds)
+                    p = pts[i[0], :n_dms]
+                    t = times[int(p[0])]
+                    qmin = np.min(gpts[:, :n_dms], axis=0)
+                    qmax = np.max(gpts[:, :n_dms], axis=0)
+                    isin = (p >= qmin) & (p <= qmax)
+                    method = "linear"
+                    print("\n\nInterpolation error", i, p)
+                    print("time:   ", t)
+                    print("dims:   ", idims)
+                    print("point:  ", p)
+                    print("qmin:   ", qmin)
+                    print("qmax:   ", qmax)
+                    print("Inside: ", isin, "\n\n")
 
-        # check for error:
-        if np.isnan(ipars.get("fill_value", np.nan)):
-            sel = np.isnan(results[..., 0])
-            if np.any(sel):
-                i = np.where(sel)[0]
-                n_dms = len(icrds)
-                p = pts[i[0], :n_dms]
-                t = times[int(p[0])]
-                qmin = np.min(gpts[:, :n_dms], axis=0)
-                qmax = np.max(gpts[:, :n_dms], axis=0)
-                isin = (p >= qmin) & (p <= qmax)
-                method = "linear"
-                print("\n\nInterpolation error", i, p)
-                print("time:   ", t)
-                print("dims:   ", idims)
-                print("point:  ", p)
-                print("qmin:   ", qmin)
-                print("qmax:   ", qmax)
-                print("Inside: ", isin, "\n\n")
-
-                if not np.all(isin):
-                    raise ValueError(
-                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p} at time {t}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
-                    )
-                else:
-                    sel2 = np.isnan(d)
-                    if np.any(sel2):
-                        i = np.where(sel2)
-                        p = gpts[i[0][0]]
-                        v = vrs[i[1][0]]
-                        print(
-                            f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
-                        )
-                        print("   time:   ", t)
-                        for ic, c in enumerate(idims):
-                            print(f"  {c}: {p[ic]}")
-                        for iw, w in enumerate(vrs):
-                            print(f"  {w}: {d[i[0][0], iw]}")
-                        print("\n\n")
+                    if not np.all(isin):
                         raise ValueError(
-                            f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} at time {t} with {v} = {d[i[0][0], i[1][0]]}."
+                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p} at time {t}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
                         )
-                    raise ValueError(
-                        f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                    else:
+                        sel2 = np.isnan(d)
+                        if np.any(sel2):
+                            i = np.where(sel2)
+                            p = gpts[i[0][0]]
+                            v = vrs[i[1][0]]
+                            print(
+                                f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
+                            )
+                            print("   time:   ", t)
+                            for ic, c in enumerate(idims):
+                                print(f"  {c}: {p[ic]}")
+                            for iw, w in enumerate(vrs):
+                                print(f"  {w}: {d[i[0][0], iw]}")
+                            print("\n\n")
+                            raise ValueError(
+                                f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} at time {t} with {v} = {d[i[0][0], i[1][0]]}."
+                            )
+                        raise ValueError(
+                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                        )
+                    
+        # loop over tiles:
+        if ix is not None:
+            nx, ny = self._xy.shape[:2]
+            xy = self._xy.reshape((nx * ny, 2))
+            pmin = np.min(xy, axis=0)
+            pmax = np.max(xy, axis=0)
+            del xy
+
+            results = np.full(pts.shape[:1] + (n_vrs,), np.nan, dtype=d.dtype)
+            for x0 in np.arange(pmin[0], pmax[0], self.tile_size):
+                for y0 in np.arange(pmin[1], pmax[1], self.tile_size):
+                    x1 = x0 + self.tile_size
+                    y1 = y0 + self.tile_size
+
+                    # select target points in tile:
+                    sel0 = (pts[:, ix] >= x0 - self.tile_safety) & (
+                        pts[:, ix] <= x1 + self.tile_safety
+                    ) & (pts[:, ix + 1] >= y0 - self.tile_safety) & (
+                        pts[:, ix + 1] <= y1 + self.tile_safety
                     )
+                    if np.any(sel0):
+                        pts_tile = pts[sel0, :]
+
+                        # select grid points in tile:
+                        sel = (gpts[:, ix] >= x0 - self.tile_safety) & (
+                            gpts[:, ix] <= x1 + self.tile_safety
+                        ) & (gpts[:, ix + 1] >= y0 - self.tile_safety) & (
+                            gpts[:, ix + 1] <= y1 + self.tile_safety
+                        )
+                        if not np.any(sel):
+                            raise ValueError(
+                                f"States '{self.name}': No grid points found for tile x=({x0 - self.tile_safety}, {x1  + self.tile_safety }), y=({y0 - self.tile_safety}, {y1 + self.tile_safety}) during interpolation."
+                            )
+                        gpts_tile = gpts[sel, :]
+                        d_tile = d[sel, :]
+
+                        # run interpolation:
+                        r = griddata(gpts_tile, d_tile, pts_tile, **ipars)
+                        _check_nan(gpts_tile, d_tile, pts_tile, r)
+                        results[sel0, :] = r
+                        del pts_tile, gpts_tile, d_tile, r
+            
+            # combine results:
+            results = np.concatenate(results, axis=0)
+
+        # run (x, y) independent interpolation:
+        else:
+            results = griddata(gpts, d, pts, **ipars)
+            _check_nan(gpts, d, pts, results)
+                
         return results.reshape(tdims)
 
     def calculate(self, algo, mdata, fdata, tdata):
