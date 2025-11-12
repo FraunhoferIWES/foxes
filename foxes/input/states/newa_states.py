@@ -456,9 +456,6 @@ class NEWAStates(DatasetStates):
 
         # prepare grid points:
         n_dms = len(idims)
-        n_states = d.shape[0]
-        n_vrs = len(vrs)
-        n_trg = int(pts.shape[0] / n_states)
         gpts = np.zeros(d.shape[:n_dms] + (n_dms,), dtype=config.dtype_double)
         n_gpts = 1
         ix = None
@@ -489,6 +486,13 @@ class NEWAStates(DatasetStates):
         # reshape:
         gpts = gpts.reshape((n_gpts, n_dms))
         d = d.reshape((n_gpts,) + d.shape[n_dms:])
+
+        # remove NaN data points:
+        if self.check_input_nans:
+            sel = np.any(np.isnan(d), axis=1)
+            if np.any(sel):
+                gpts = gpts[~sel]
+                d = d[~sel]
 
         # interpolate:
         results = griddata(gpts, d, pts, **ipars)
