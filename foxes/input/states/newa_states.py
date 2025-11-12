@@ -460,7 +460,7 @@ class NEWAStates(DatasetStates):
         n_gpts = 1
         ix = None
         for i, c in enumerate(icrds):
-            if idims[i] not in (FV.X, FV.Y):  # leave out X and Y, cf. self._cmap
+            if idims[i] not in (FV.X, FV.Y):
                 shp = [1] * n_dms
                 shp[i] = c.shape[0]
                 gpts[..., i] = c.reshape(shp)
