@@ -111,7 +111,7 @@ class DatasetStates(States):
         var2ncvar={},
         fixed_vars={},
         load_mode="preload",
-        time_format=r"%Y-%m-%d_%H:%M:%S",
+        time_format=None,
         sel=None,
         isel=None,
         weight_factor=None,
@@ -142,7 +142,7 @@ class DatasetStates(States):
             reads only states index and weights during initialization
             and then opens the relevant files again within
             the chunk calculation
-        time_format: str
+        time_format: str, optional
             The datetime parsing format string
         sel: dict, optional
             Subset selection via xr.Dataset.sel()
@@ -903,7 +903,7 @@ class DatasetStates(States):
 
         return coords, data, weights
 
-    def interpolate_data(self, idims, icrds, d, pts, tdims, vrs, times):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
         """
         Interpolates data to points.
 
@@ -912,7 +912,7 @@ class DatasetStates(States):
         Parameters
         ----------
         idims: list of str
-            The input dimensions, e.g. [state, x, y, height]
+            The input dimensions, e.g. [x, y, height]
         icrds: list of numpy.ndarray
             The input coordinates, each with shape (n_i,)
             where n_i is the number of grid points in dimension i
@@ -922,17 +922,14 @@ class DatasetStates(States):
             nv is the number of variables
         pts: numpy.ndarray
             The points to interpolate to, with shape (n_pts, n_idims)
-        tdims: tuple
-            The target dimensions, e.g. (1, m, nv) or (n_states, m, nv)
         vrs: list of str
             The variable names, length nv
         times: numpy.ndarray
             The time coordinates of the states, with shape (n_states,)
-
         Returns
         -------
         d_interp: numpy.ndarray
-            The interpolated data array with shape tdims
+            The interpolated data array with shape (n_pts, nv)
 
         """
         gvars = tuple(icrds)
@@ -958,7 +955,7 @@ class DatasetStates(States):
             )
             raise e
 
-        return d.reshape(tdims)
+        return d
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -999,10 +996,50 @@ class DatasetStates(States):
         coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
         coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
 
+        # check if points are state dependent
+        _points_data = None
+        def _analyze_points(has_p, has_h):
+            """ Helper function for points analysis. """
+            nonlocal _points_data
+
+            if _points_data is None:
+                pmin = np.min(points, axis=0)
+                pmax = np.max(points, axis=0)
+                _points_data = {}
+                _points_data["pmin"] = pmin
+                _points_data["pmax"] = pmax
+            else:
+                pmin = _points_data["pmin"]
+                pmax = _points_data["pmax"]
+
+            if has_p and "points_vary" not in _points_data:
+                if np.max(pmax - pmin) > 1e-4:
+                    _points_data["up"], _points_data["up2p"] = np.unique(
+                        points.reshape(n_states * n_pts, 3), axis=0, return_inverse=True
+                    )
+                    _points_data["points_vary"] = True
+                else:
+                    _points_data["up"] = points[0]
+                    _points_data["up2p"] = None
+                    _points_data["points_vary"] = False
+            
+            if has_h and "heights_vary" not in _points_data:
+                if np.max(pmax[2] - pmin[2]) > 1e-4:
+                    _points_data["uh"], _points_data["uh2h"] = np.unique(
+                        points[:, :, 2].reshape(n_states * n_pts), return_inverse=True
+                    )
+                    _points_data["heights_vary"] = True
+                else:
+                    _points_data["uh"] = points[0, :, 2]
+                    _points_data["uh2h"] = None
+                    _points_data["heights_vary"] = False
+
+            return _points_data
+
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
-            # translate (WD, WS) to (U, V):
+            # replace (WD, WS) by (U, V):
             if FV.WD in vrs or FV.WS in vrs:
                 assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
                     f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
@@ -1013,63 +1050,75 @@ class DatasetStates(States):
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
 
-            # prepare points:
-            idims = dims[:-1]
-            n_vrs = len(vrs)
-            tdims = [n_states, n_pts, n_vrs]
-            if idims == (FC.STATE, FV.X, FV.Y, FV.H):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points,
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 4)
-            elif idims == (FC.STATE, FV.X, FV.Y):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points[..., :2],
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 3)
-            elif idims == (FC.STATE, FV.H):
-                pts = np.append(
-                    np.zeros((n_states, n_pts, 1), dtype=config.dtype_double),
-                    points[..., 2, None],
-                    axis=2,
-                )
-                pts[..., 0] = np.arange(n_states)[:, None]
-                pts = pts.reshape(n_states * n_pts, 2)
-            elif idims == (FC.STATE,):
-                if FV.WD in vrs:
-                    uv = d[..., [iwd, iws]]
-                    d[..., iwd] = uv2wd(uv)
-                    d[..., iws] = np.linalg.norm(uv, axis=-1)
-                    del uv
-                for i, v in enumerate(vrs):
-                    if v in self.ovars:
-                        out[v] = np.zeros((n_states, n_pts), dtype=config.dtype_double)
-                        out[v][:] = d[:, None, i]
-                continue
-            elif idims == (FV.X, FV.Y, FV.H):
-                pts = points[0]
-                tdims = (1, n_pts, n_vrs)
-            elif idims == (FV.X, FV.Y):
-                pts = points[0][:, :2]
-                tdims = (1, n_pts, n_vrs)
-            elif idims == (FV.H,):
-                pts = points[0][:, 2]
-                tdims = (1, n_pts, n_vrs)
+            # move state dimension to second last position:
+            if dims[0] == FC.STATE:
+                d = np.moveaxis(d, 0, -2)
+                dims = dims[1:-1] + (FC.STATE,) + (dims[-1],)
+                idims = list(dims[:-2])
             else:
-                raise ValueError(
-                    f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
-                )
+                idims = list(dims[:-1])
 
-            # interpolate:
-            icrds = [coords[c] for c in idims]
-            d = self.interpolate_data(idims, icrds, d, pts, tdims, vrs, times)
-            del pts, icrds
+            # interpolate data:
+            n_vrs = len(vrs)
+            if len(idims) > 0:
+
+                # prepare points:
+                pts = []
+                has_p = FV.X in idims or FV.Y in idims
+                has_h = FV.H in idims
+                for c in idims.copy():
+                    if c in [FV.X, FV.Y, FV.H]:
+                        points_data = _analyze_points(has_p, has_h)
+                        if c in [FV.X, FV.Y]:
+                            i = 0 if c == FV.X else 1
+                            pts.append(points_data["up"][:, i])
+                        elif has_p:
+                            pts.append(points_data["up"][:, 2])
+                        else:
+                            pts.append(points_data["uh"])
+                    elif c == FC.STATE:
+                        idims.remove(FC.STATE)
+                    else:
+                        raise NotImplementedError(
+                            f"States '{self.name}': Unsupported dimension '{c}' in {dims} for interpolation of variables {vrs}"
+                        )
+                pts = np.stack(pts, axis=-1)
+
+                # interpolate:
+                icrds = [coords[c] for c in idims]
+                d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
+
+                # move state dimension back to front:
+                if FC.STATE in dims:
+                    dims = (FC.STATE,) + dims[:-2] + (dims[-1],)
+                    d = np.moveaxis(d, -2, 0)
+                else:
+                    d = d[None, ...]
+
+                # reconstruct time varying pts:
+                if has_p and points_data["points_vary"]:
+                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
+                    d = d[:, points_data["up2p"], :].reshape(shp)
+                    if FC.STATE in dims:
+                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                    else:
+                        d = d[0, ...]
+                elif has_h and points_data["heights_vary"]:
+                    shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
+                    d = d[:, points_data["uh2h"], :].reshape(shp)
+                    if FC.STATE in dims:
+                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                    else:
+                        d = d[0, ...]
+                del points_data, pts, icrds
+
+            # case no interpolation needed:
+            else:
+                # reshape to include states and points dimensions:
+                if dims[0] == FC.STATE:
+                    d = d[:, None, :]
+                else:
+                    d = d[None, None, :]
 
             # translate (U, V) into (WD, WS):
             if FV.WD in vrs:
@@ -1079,7 +1128,7 @@ class DatasetStates(States):
                 del uv
 
             # broadcast if needed:
-            if tdims != (n_states, n_pts, n_vrs):
+            if d.shape != (n_states, n_pts, n_vrs):
                 tmp = d
                 d = np.zeros((n_states, n_pts, n_vrs), dtype=config.dtype_double)
                 d[:] = tmp

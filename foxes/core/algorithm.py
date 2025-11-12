@@ -268,10 +268,8 @@ class Algorithm(Model):
 
         """
         mname = f"{type(model).__name__}_{model.name}"
-        try:
+        if mname in self.idata_mem:
             del self.idata_mem[mname]
-        except KeyError:
-            raise KeyError(f"Attempt to delete data of model '{mname}', but not stored")
 
     def update_n_turbines(self):
         """

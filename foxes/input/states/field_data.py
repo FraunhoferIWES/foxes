@@ -58,6 +58,7 @@ class FieldData(DatasetStates):
         x_coord="UTMX",
         y_coord="UTMY",
         h_coord="height",
+        time_format=r"%Y-%m-%d_%H:%M:%S",
         weight_ncvar=None,
         bounds_extra_space=1000,
         height_bounds=None,
@@ -79,6 +80,8 @@ class FieldData(DatasetStates):
             The y coordinate name in the data
         h_coord: str, optional
             The height coordinate name in the data
+        time_format: str
+            The datetime parsing format string
         weight_ncvar: str, optional
             Name of the weight data variable in the nc file(s)
         bounds_extra_space: float or str, optional
@@ -92,8 +95,7 @@ class FieldData(DatasetStates):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, **kwargs)
-
+        super().__init__(*args, time_format=time_format, **kwargs)
         self.states_coord = states_coord
         self.x_coord = x_coord
         self.y_coord = y_coord

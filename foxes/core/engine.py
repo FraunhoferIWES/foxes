@@ -702,7 +702,7 @@ class Engine(ABC):
                     fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
                     args = (ds, fpath)
                     kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
-                    if len(futures) < self.n_workers:
+                    if futures is not None and len(futures) < self.n_workers:
                         future = self.submit(write_nc_file, *args, **kwargs)
                         wfutures.append(future)
                         del future
