@@ -998,8 +998,9 @@ class DatasetStates(States):
 
         # check if points are state dependent
         _points_data = None
+
         def _analyze_points(has_p, has_h):
-            """ Helper function for points analysis. """
+            """Helper function for points analysis."""
             nonlocal _points_data
 
             if _points_data is None:
@@ -1022,7 +1023,7 @@ class DatasetStates(States):
                     _points_data["up"] = points[0]
                     _points_data["up2p"] = None
                     _points_data["points_vary"] = False
-            
+
             if has_h and "heights_vary" not in _points_data:
                 if np.max(pmax[2] - pmin[2]) > 1e-4:
                     _points_data["uh"], _points_data["uh2h"] = np.unique(
@@ -1061,7 +1062,6 @@ class DatasetStates(States):
             # interpolate data:
             n_vrs = len(vrs)
             if len(idims) > 0:
-
                 # prepare points:
                 pts = []
                 has_p = FV.X in idims or FV.Y in idims or FC.POINT in idims

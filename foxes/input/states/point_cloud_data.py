@@ -252,7 +252,7 @@ class PointCloudData(DatasetStates):
         ipars.update(self.interp_pars)
 
         def _check_nan(gpts, d, pts, idims, results):
-            """ Checks for NaN results and raises errors. """
+            """Checks for NaN results and raises errors."""
             if np.isnan(ipars.get("fill_value", np.nan)):
                 sel = np.isnan(results)
                 if np.any(sel):
@@ -293,6 +293,7 @@ class PointCloudData(DatasetStates):
                         raise ValueError(
                             f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
                         )
+
         if FC.STATE in idims:
             raise NotImplementedError(
                 f"States '{self.name}': Interpolation with state dimension not implemented."
