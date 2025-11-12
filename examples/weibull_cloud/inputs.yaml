@@ -15,7 +15,6 @@ states:
     Weibull_k: weibull_k
   fixed_vars:
     RHO: 1.225
-  interp_method: linear
   
 wind_farm:
   layouts:  

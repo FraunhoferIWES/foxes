@@ -153,7 +153,7 @@ class DatasetStates(States):
         check_times: bool
             Whether to check the time coordinates for consistency
         check_input_nans: bool
-            Whether to check input data for NaNs
+            Whether to check input data for NaNs, otherwise NaNs are removed
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -1064,7 +1064,7 @@ class DatasetStates(States):
 
                 # prepare points:
                 pts = []
-                has_p = FV.X in idims or FV.Y in idims
+                has_p = FV.X in idims or FV.Y in idims or FC.POINT in idims
                 has_h = FV.H in idims
                 for c in idims.copy():
                     if c in [FV.X, FV.Y, FV.H]:
@@ -1076,6 +1076,12 @@ class DatasetStates(States):
                             pts.append(points_data["up"][:, 2])
                         else:
                             pts.append(points_data["uh"])
+                    elif c == FC.POINT:
+                        points_data = _analyze_points(has_p, has_h)
+                        pts.append(points_data["up"][:, 0])
+                        pts.append(points_data["up"][:, 1])
+                        if coords[FC.POINT].shape[1] == 3:
+                            pts.append(points_data["up"][:, 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
                     else:

@@ -32,10 +32,6 @@ class NEWAStates(DatasetStates):
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
-    tile_size: float
-        Size of the tile for which the trinagulation is created, in m
-    tile_safety: float
-        Extra safety margin for the tile, in m
     height_bounds: tuple, optional
         The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
 
@@ -73,8 +69,6 @@ class NEWAStates(DatasetStates):
         load_mode="fly",
         time_format=None, 
         bounds_extra_space=0.0,
-        tile_size=None,
-        tile_safety=None,
         height_bounds=None,
         interp_pars=None,
         wrf_point_plot=None,
@@ -119,10 +113,6 @@ class NEWAStates(DatasetStates):
         bounds_extra_space: float or str, optional
             The extra space, either float in m,
             or str for units of D, e.g. '2.5D'
-        tile_size: float, optional
-            Size of the tile for which the trinagulation is created, in m
-        tile_safety: float, optional
-            Extra safety margin for the tile, in m
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
         kwargs: dict, optional
@@ -167,8 +157,6 @@ class NEWAStates(DatasetStates):
         self.xlat_coord = xlat_coord
         self.xlon_coord = xlon_coord
         self.bounds_extra_space = bounds_extra_space
-        self.tile_size = tile_size
-        self.tile_safety = tile_safety
         self.height_bounds = height_bounds
         self.wrf_point_plot = wrf_point_plot
         self.interp_pars = interp_pars if interp_pars is not None else {}
@@ -410,7 +398,6 @@ class NEWAStates(DatasetStates):
                 if np.any(sel):
                     i = [j[0] for j in np.where(sel)]
                     t = times[i.pop(-2)] if len(results.shape) == 3 else None
-                    n_dms = len(idims)
                     p = pts[tuple(i[:-1])]
                     qmin = np.min(gpts, axis=0)
                     qmax = np.max(gpts, axis=0)
@@ -490,7 +477,6 @@ class NEWAStates(DatasetStates):
         # remove NaN data points:
         if not self.check_input_nans:
             sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
-            print(sel.shape, np.sum(sel))
             if np.any(sel):
                 gpts = gpts[~sel]
                 d = d[~sel]

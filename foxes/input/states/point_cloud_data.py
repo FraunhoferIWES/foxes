@@ -1,12 +1,8 @@
 import numpy as np
-from scipy.interpolate import (
-    LinearNDInterpolator,
-    NearestNDInterpolator,
-    RBFInterpolator,
-)
+from scipy.interpolate import griddata
 
 from foxes.config import config
-from foxes.utils import wd2uv, uv2wd, weibull_weights
+from foxes.utils import weibull_weights
 import foxes.variables as FV
 import foxes.constants as FC
 
@@ -31,11 +27,6 @@ class PointCloudData(DatasetStates):
         The height variable name in the data
     weight_ncvar: str, optional
         The name of the weights variable in the data
-    interp_method: str
-        The interpolation method, "linear", "nearest" or "radialBasisFunction"
-    interp_fallback_nearest: bool
-        If True, use nearest neighbor interpolation if the
-        interpolation method fails.
     interp_pars: dict
         Additional arguments for the interpolation
 
@@ -66,8 +57,6 @@ class PointCloudData(DatasetStates):
         y_ncvar="y",
         h_ncvar=None,
         weight_ncvar=None,
-        interp_method="linear",
-        interp_fallback_nearest=False,
         interp_pars={},
         **kwargs,
     ):
@@ -90,11 +79,6 @@ class PointCloudData(DatasetStates):
             The height variable name in the data
         weight_ncvar: str, optional
             The name of the weights variable in the data
-        interp_method: str
-            The interpolation method, "linear", "nearest" or "radialBasisFunction"
-        interp_fallback_nearest: bool
-            If True, use nearest neighbor interpolation if the
-            interpolation method fails.
         interp_pars: dict
             Additional arguments for the interpolation
         kwargs: dict, optional
@@ -109,9 +93,7 @@ class PointCloudData(DatasetStates):
         self.y_ncvar = y_ncvar
         self.h_ncvar = h_ncvar
         self.weight_ncvar = weight_ncvar
-        self.interp_method = interp_method
         self.interp_pars = interp_pars
-        self.interp_fallback_nearest = interp_fallback_nearest
 
         self.variables = [FV.X, FV.Y]
         self.variables += [v for v in self.ovars if v not in self.fixed_vars]
@@ -231,176 +213,111 @@ class PointCloudData(DatasetStates):
             verbosity=verbosity,
         )
 
-    def calculate(self, algo, mdata, fdata, tdata):
+    def interpolate_data(self, idims, icrds, d, pts, vrs, times):
         """
-        The main model calculation.
+        Interpolates data to points.
 
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
+        This function should be implemented in derived classes.
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-
+        idims: list of str
+            The input dimensions, e.g. [x, y, height]
+        icrds: list of numpy.ndarray
+            The input coordinates, each with shape (n_i,)
+            where n_i is the number of grid points in dimension i
+        d: numpy.ndarray
+            The data array, with shape (n1, n2, ..., nv)
+            where ni represents the dimension sizes and
+            nv is the number of variables
+        pts: numpy.ndarray
+            The points to interpolate to, with shape (n_pts, n_idims)
+        vrs: list of str
+            The variable names, length nv
+        times: numpy.ndarray
+            The time coordinates of the states, with shape (n_states,)
         Returns
         -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
+        d_interp: numpy.ndarray
+            The interpolated data array with shape (n_pts, nv)
 
         """
 
-        # prepare
-        self.ensure_output_vars(algo, tdata)
-        n_states = tdata.n_states
-        n_targets = tdata.n_targets
-        n_tpoints = tdata.n_tpoints
-        n_states = fdata.n_states
-        n_pts = n_states * n_targets * n_tpoints
-        coords = [self.states_coord, self.point_coord]
+        # prepare interpolation parameters:
+        ipars = dict(
+            method="linear",
+            rescale=True,
+            fill_value=np.nan,
+        )
+        ipars.update(self.interp_pars)
 
-        # get data for calculation
-        coords, data, weights = self.get_calc_data(mdata, self._cmap, self.variables)
-        coords[FC.STATE] = np.arange(n_states, dtype=config.dtype_int)
+        def _check_nan(gpts, d, pts, idims, results):
+            """ Checks for NaN results and raises errors. """
+            if np.isnan(ipars.get("fill_value", np.nan)):
+                sel = np.isnan(results)
+                if np.any(sel):
+                    i = [j[0] for j in np.where(sel)]
+                    p = pts[i[0]]
+                    qmin = np.min(gpts, axis=0)
+                    qmax = np.max(gpts, axis=0)
+                    isin = (p >= qmin) & (p <= qmax)
+                    method = "linear"
+                    print("\n\nInterpolation error")
+                    print("dims:   ", idims[1:] if FC.STATE in idims else idims)
+                    print(f"point {i[0]}: ", p)
+                    print("qmin:   ", qmin)
+                    print("qmax:   ", qmax)
+                    print("Inside: ", isin, "\n\n")
 
-        # interpolate data to points:
-        out = {}
-        for dims, (vrs, d) in data.items():
-            # prepare
-            n_vrs = len(vrs)
-            qts = coords[FC.POINT]
-            n_qts, n_dms = qts.shape
-            idims = dims[:-1]
-
-            if idims == (FC.STATE,):
-                for i, v in enumerate(vrs):
-                    if v in self.ovars:
-                        out[v] = np.zeros(
-                            (n_states, n_targets, n_tpoints), dtype=config.dtype_double
+                    if not np.all(isin):
+                        raise ValueError(
+                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}, dimensions = {idims}. "
                         )
-                        out[v][:] = d[:, None, None, i]
-                continue
+                    else:
+                        sel2 = np.isnan(d)
+                        if np.any(sel2):
+                            i = np.where(sel2)
+                            p = gpts[i[0][0]]
+                            v = vrs[i[1][0]]
+                            print(
+                                f"NaN data found in input data during interpolation, e.g. for variable '{v}' at point:"
+                            )
+                            for ic, c in enumerate(idims):
+                                print(f"  {c}: {p[ic]}")
+                            for iw, w in enumerate(vrs):
+                                print(f"  {w}: {d[i[0][0], iw]}")
+                            print("\n\n")
+                            raise ValueError(
+                                f"States '{self.name}': Interpolation method '{method}' failed, NaN values found in input data for {np.sum(sel)} grid points, e.g. {gpts[i[0]]} with {v} = {d[i[0][0], i[1][0]]}."
+                            )
+                        raise ValueError(
+                            f"States '{self.name}': Interpolation method '{method}' failed for {np.sum(sel)} points, for unknown reason."
+                        )
+        if FC.STATE in idims:
+            raise NotImplementedError(
+                f"States '{self.name}': Interpolation with state dimension not implemented."
+            )
 
-            elif idims == (FC.POINT,):
-                # prepare grid data
-                gts = qts
-                n_gts = n_qts
+        # prepare grid points:
+        assert len(idims) == 1 and idims[0] == FC.POINT, (
+            f"States '{self.name}': Only point cloud interpolation supported, got dimensions {idims}"
+        )
+        gpts = icrds[0]
 
-                # prepare evaluation points
-                pts = tdata[FC.TARGETS][..., :n_dms].reshape(n_pts, n_dms)
-
-            elif idims == (FC.STATE, FC.POINT):
-                # prepare grid data, add state index to last axis
-                gts = np.zeros((n_qts, n_states, n_dms + 1), dtype=config.dtype_double)
-                gts[..., :n_dms] = qts[:, None, :]
-                gts[..., n_dms] = np.arange(n_states)[None, :]
-                n_gts = n_qts * n_states
-                gts = gts.reshape(n_gts, n_dms + 1)
-
-                # reorder data, first to shape (n_qts, n_states, n_vars),
-                # then to (n_gts, n_vrs)
-                d = np.swapaxes(d, 0, 1)
-                d = d.reshape(n_gts, n_vrs)
-
-                # prepare evaluation points, add state index to last axis
-                pts = np.zeros(
-                    (n_states, tdata.n_targets, tdata.n_tpoints, n_dms + 1),
-                    dtype=config.dtype_double,
-                )
-                pts[..., :n_dms] = tdata[FC.TARGETS][..., :n_dms]
-                pts[..., n_dms] = np.arange(n_states)[:, None, None]
-                pts = pts.reshape(n_pts, n_dms + 1)
-
-            else:
-                raise ValueError(
-                    f"States '{self.name}': Unsupported dimensions {dims} for variables {vrs}"
-                )
-
-            # translate (WD, WS) to (U, V):
-            if FV.WD in vrs or FV.WS in vrs:
-                assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
-                    f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
-                )
-                iwd = vrs.index(FV.WD)
-                iws = vrs.index(FV.WS)
-                ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
-                d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
-                del ws
-
-            # create interpolator
-            if self.interp_method == "linear":
-                interp = LinearNDInterpolator(gts, d, **self.interp_pars)
-            elif self.interp_method == "nearest":
-                interp = NearestNDInterpolator(gts, d, **self.interp_pars)
-            elif self.interp_method == "radialBasisFunction":
-                pars = {"neighbors": 10}
-                pars.update(self.interp_pars)
-                interp = RBFInterpolator(gts, d, **pars)
-            else:
-                raise NotImplementedError(
-                    f"States '{self.name}': Interpolation method '{self.interp_method}' not implemented, choices are: 'linear', 'nearest', 'radialBasisFunction'"
-                )
-
-            # run interpolation
-            ires = interp(pts)
-            del interp
-
-            # check for error:
-            sel = np.any(np.isnan(ires), axis=-1)
+        # remove NaN data points:
+        if not self.check_input_nans:
+            sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
             if np.any(sel):
-                i = np.where(sel)[0]
-                if self.interp_fallback_nearest:
-                    interp = NearestNDInterpolator(gts, d)
-                    pts = pts[i]
-                    ires[i] = interp(pts)
-                    del interp
-                else:
-                    p = pts[i[0], :n_dms]
-                    qmin = np.min(qts[:, :n_dms], axis=0)
-                    qmax = np.max(qts[:, :n_dms], axis=0)
-                    raise ValueError(
-                        f"States '{self.name}': Interpolation method '{self.interp_method}' failed for {np.sum(sel)} points, e.g. for point {p}, outside of bounds {qmin} - {qmax}"
-                    )
-            del pts, gts, d
+                gpts = gpts[~sel]
+                d = d[~sel]
 
-            # translate (U, V) into (WD, WS):
-            if FV.WD in vrs:
-                uv = ires[..., [iwd, iws]]
-                ires[..., iwd] = uv2wd(uv)
-                ires[..., iws] = np.linalg.norm(uv, axis=-1)
-                del uv
+        # interpolate:
+        results = griddata(gpts, d, pts, **ipars)
 
-            # set output:
-            for i, v in enumerate(vrs):
-                out[v] = ires[..., i].reshape(n_states, n_targets, n_tpoints)
-            del ires
+        # check for NaN results:
+        _check_nan(gpts, d, pts, idims, results)
 
-        # set fixed variables:
-        for v, d in self.fixed_vars.items():
-            out[v] = np.full(
-                (n_states, n_targets, n_tpoints), d, dtype=config.dtype_double
-            )
-
-        # add weights:
-        if weights is not None:
-            tdata[FV.WEIGHT] = weights[:, None, None]
-        elif FV.WEIGHT in out:
-            tdata[FV.WEIGHT] = out.pop(FV.WEIGHT)
-        else:
-            tdata[FV.WEIGHT] = np.full(
-                (n_states, 1, 1), 1 / self._N, dtype=config.dtype_double
-            )
-        tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
-
-        return {v: out[v] for v in self.ovars}
+        return results
 
 
 class WeibullPointCloud(PointCloudData):
