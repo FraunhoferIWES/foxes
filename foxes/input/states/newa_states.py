@@ -488,7 +488,7 @@ class NEWAStates(DatasetStates):
         d = d.reshape((n_gpts,) + d.shape[n_dms:])
 
         # remove NaN data points:
-        if self.check_input_nans:
+        if not self.check_input_nans:
             sel = np.any(np.isnan(d), axis=1)
             if np.any(sel):
                 gpts = gpts[~sel]
