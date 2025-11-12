@@ -489,7 +489,8 @@ class NEWAStates(DatasetStates):
 
         # remove NaN data points:
         if not self.check_input_nans:
-            sel = np.any(np.isnan(d), axis=1)
+            sel = np.any(np.isnan(d), axis=tuple(range(1, d.ndim)))
+            print(sel.shape, np.sum(sel))
             if np.any(sel):
                 gpts = gpts[~sel]
                 d = d[~sel]
