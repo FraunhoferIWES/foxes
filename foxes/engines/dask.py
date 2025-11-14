@@ -7,7 +7,7 @@ from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
 import foxes.constants as FC
 
-from .pool import _run_shared
+from .pool import _run_shared, _write_chunk_results, _write_ani
 
 dask = None
 distributed = None
@@ -246,6 +246,7 @@ class DaskEngine(DaskBaseEngine):
         isel=None,
         iterative=False,
         write_nc=None,
+        write_chunk_ani=None,
         **calc_pars,
     ):
         """
@@ -287,6 +288,13 @@ class DaskEngine(DaskBaseEngine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
+        write_chunk_ani: dict, optional
+            Parameters for writing chunk animations, e.g.
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            'resolution': 100, 'chunk': 5}.'}
+            The chunk is either an integer that refers to a states chunk,
+            or a  tuple (states_chunk_index, points_chunk_index), or a list
+            of such entries.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -374,6 +382,7 @@ class DaskEngine(DaskBaseEngine):
                     chunk_key=key,
                     out_coords=out_coords,
                     write_nc=write_nc,
+                    write_chunk_ani=write_chunk_ani,
                     **calc_pars,
                 )
                 del data
@@ -425,6 +434,7 @@ def _run_on_cluster(
     *data,
     names,
     dims,
+    out_coords,
     mdata_size,
     fdata_size,
     iterative,
@@ -434,6 +444,8 @@ def _run_on_cluster(
     n_chunks_states,
     n_chunks_points,
     i0_states,
+    write_nc,
+    write_chunk_ani,
     cpars,
 ):
     """Helper function for running on a cluster"""
@@ -480,6 +492,10 @@ def _run_on_cluster(
 
     k = (chunki_states, chunki_points)
     cstore = {k: chunk_store[k]} if k in chunk_store else {}
+
+    _write_ani(algo, k, write_chunk_ani, *data)    
+    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    
     return results, cstore
 
 
@@ -611,6 +627,8 @@ class LocalClusterEngine(DaskBaseEngine):
         sel=None,
         isel=None,
         iterative=False,
+        write_nc=None,
+        write_chunk_ani=None,
         **calc_pars,
     ):
         """
@@ -639,6 +657,26 @@ class LocalClusterEngine(DaskBaseEngine):
             Selection of coordinate subsets index values
         iterative: bool
             Flag for use within the iterative algorithm
+        write_nc: dict, optional
+            Parameters for writing results to netCDF files, e.g.
+            {'out_dir': 'results', 'base_name': 'calc_results',
+            'ret_data': False, 'split': 1000}.
+
+            The split parameter controls how the output is split:
+            - 'chunks': one file per chunk (fastest method),
+            - 'input': split according to sizes of multiple states input files,
+            - int: split with this many states per file,
+            - None: create a single output file.
+
+            Use ret_data = False together with non-single file writing
+            to avoid constructing the full Dataset in memory.
+        write_chunk_ani: dict, optional
+            Parameters for writing chunk animations, e.g.
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            'resolution': 100, 'chunk': 5}.'}
+            The chunk is either an integer that refers to a states chunk,
+            or a  tuple (states_chunk_index, points_chunk_index), or a list
+            of such entries.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -746,6 +784,7 @@ class LocalClusterEngine(DaskBaseEngine):
                     *fut_data,
                     names=names,
                     dims=dims,
+                    out_coords=out_coords,
                     mdata_size=len(data[0]),
                     fdata_size=len(data[1]),
                     iterative=iterative,
@@ -755,6 +794,8 @@ class LocalClusterEngine(DaskBaseEngine):
                     n_chunks_states=n_chunks_states,
                     n_chunks_points=n_chunks_targets,
                     i0_states=i0_states,
+                    write_nc=write_nc,
+                    write_chunk_ani=write_chunk_ani,
                     cpars=cpars,
                     retries=10,
                 )
@@ -780,7 +821,7 @@ class LocalClusterEngine(DaskBaseEngine):
         elif self.verbosity > 1 and self.prints_progress:
             print(f"{type(self).__name__}: Submitted all {counter} chunks\n")
 
-        results = self.combine_results(
+        return self.combine_results(
             algo=algo,
             futures=futures,
             model_data=model_data,
@@ -790,11 +831,8 @@ class LocalClusterEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             goal_data=goal_data,
             iterative=iterative,
-        ).persist()
-
-        # self._client.cancel(all_data)
-
-        return results
+            write_nc=write_nc,
+        )
 
 
 class SlurmClusterEngine(LocalClusterEngine):

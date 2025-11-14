@@ -64,6 +64,7 @@ class SetAmbFarmResults(FarmDataModel):
             Values: numpy.ndarray with shape (n_states, n_turbines)
 
         """
+        ovars = self.output_farm_vars(algo)
         for v in self.vars:
             fdata.add(FV.var2amb[v], fdata[v].copy(), fdata.dims[v])
-        return {v: fdata[v] for v in self.output_farm_vars(algo)}
+        return {v: fdata[v] for v in ovars}

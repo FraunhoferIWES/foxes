@@ -850,4 +850,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.6.1
 
+- Input:
+  - All NetCDF based states now have improved performance in speed an memory, thanks to reworking the treatment of states during spatial interpolation
+- Engines:
+  - Engines can now optionally write flow animations of individual chunks to file during calculations. This is triggered by the new `write_chunk_ani` parameter of the `calc_farm` and `calc_points` functions.
+
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.1](https://github.com/FraunhoferIWES/foxes/commits/v1.6.1)

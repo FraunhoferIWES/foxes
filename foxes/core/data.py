@@ -257,7 +257,7 @@ class Data(Dict):
         self._run_entry_checks(name, data, dims)
         self._auto_update()
 
-    def get_slice(self, variables, s, dim_map={}, name=None):
+    def get_slice(self, variables, s, dim_map={}, name=None, force=False):
         """
         Get a slice of data.
 
@@ -272,6 +272,8 @@ class Data(Dict):
             If not found, same dimensions are assumed.
         name: str, optional
             The name of the data object
+        force: bool, optional
+            Force the slice operation even if checks fail
 
         Returns
         -------
@@ -281,6 +283,7 @@ class Data(Dict):
         """
         if not isinstance(variables, (list, tuple, np.ndarray)):
             variables = [variables]
+            s = [s]
         if not isinstance(s, (list, tuple, np.ndarray)):
             s = [s]
 
@@ -307,18 +310,38 @@ class Data(Dict):
             elif np.all(sts == np.arange(sts[0], sts[0] + len(sts))):
                 states_i0 = sts[0]
             else:
-                raise ValueError(
-                    f"Cannot determine states_i0 for states slices {a}, leading to selection {list(sts)}"
-                )
+                if force:
+                    states_i0 = sts[0]
+                else:
+                    raise ValueError(
+                        f"Cannot determine states_i0 for states slices {a}, leading to selection {list(sts)}"
+                    )
         else:
             states_i0 = None
 
         cls = type(self)
         if issubclass(cls, Data):
-            return cls(data, dims, name=name, states_i0=states_i0)
+            return cls(
+                data, 
+                dims, 
+                name=name, 
+                states_i0=states_i0, 
+                chunki_states=self.chunki_states, 
+                chunki_points=self.chunki_points, 
+                n_chunks_states=self.n_chunks_states, 
+                n_chunks_points=self.n_chunks_points,
+            )
         else:
             return cls(
-                data, dims, loop_dims=self.loop_dims, name=name, states_i0=states_i0
+                data, 
+                dims, 
+                loop_dims=self.loop_dims, 
+                name=name, 
+                states_i0=states_i0,
+                chunki_states=self.chunki_states,
+                chunki_points=self.chunki_points,
+                n_chunks_states=self.n_chunks_states,
+                n_chunks_points=self.n_chunks_points,
             )
 
     @classmethod
@@ -757,6 +780,7 @@ class TData(Data):
         data=None,
         dims=None,
         variables=None,
+        mdata=None,
         name="tdata",
         **kwargs,
     ):
@@ -775,6 +799,8 @@ class TData(Data):
         variables: list of str
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
+        mdata: MData, optional
+            The model data
         name: str
             The data container name
         kwargs: dict, optional
@@ -800,6 +826,13 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(points[:, :, None, 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+
+        if mdata is not None:
+            kwargs["chunki_states"] = mdata.chunki_states
+            kwargs["chunki_points"] = mdata.chunki_points
+            kwargs["n_chunks_states"] = mdata.n_chunks_states
+            kwargs["n_chunks_points"] = mdata.n_chunks_points
+            
         return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
@@ -810,6 +843,7 @@ class TData(Data):
         data=None,
         dims=None,
         variables=None,
+        mdata=None,
         name="tdata",
         **kwargs,
     ):
@@ -832,6 +866,8 @@ class TData(Data):
         variables: list of str
             Add default empty variables with NaN values
             and shape (n_states, n_targets, n_tpoints)
+        mdata: MData, optional
+            The model data
         name: str
             The data container name
         kwargs: dict, optional
@@ -857,6 +893,13 @@ class TData(Data):
             for v in variables:
                 data[v] = np.full_like(tpoints[..., 0], np.nan)
                 dims[v] = (FC.STATE, FC.TARGET, FC.TPOINT)
+
+        if mdata is not None:
+            kwargs["chunki_states"] = mdata.chunki_states
+            kwargs["chunki_points"] = mdata.chunki_points
+            kwargs["n_chunks_states"] = mdata.n_chunks_states
+            kwargs["n_chunks_points"] = mdata.n_chunks_points
+
         return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod

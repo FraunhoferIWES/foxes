@@ -97,6 +97,7 @@ class NumpyEngine(Engine):
         isel=None,
         iterative=False,
         write_nc=None,
+        write_chunk_ani=None,
         **calc_pars,
     ):
         """
@@ -138,6 +139,13 @@ class NumpyEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
+        write_chunk_ani: dict, optional
+            Parameters for writing chunk animations, e.g.
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            'resolution': 100, 'chunk': 5}.'}
+            The chunk is either an integer that refers to a states chunk,
+            or a  tuple (states_chunk_index, points_chunk_index), or a list
+            of such entries.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -221,6 +229,7 @@ class NumpyEngine(Engine):
                     chunk_key=key,
                     out_coords=out_coords,
                     write_nc=write_nc,
+                    write_chunk_ani=write_chunk_ani,
                     **calc_pars,
                 )
                 # chunk_store.update(results[key][1])

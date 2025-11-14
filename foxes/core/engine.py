@@ -699,7 +699,7 @@ class Engine(ABC):
                             data_vars[v][1] = [data_vars[v][1][splits:]]
 
                     ds = Dataset(coords=crds, data_vars=dvars)
-                    fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
+                    fpath = out_dir / f"{base_name}_{fcounter:06d}.nc"
                     args = (ds, fpath)
                     kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
                     if futures is not None and len(futures) < self.n_workers:
@@ -890,7 +890,7 @@ class Engine(ABC):
                         splits = min(split_size, algo.n_states - wcount)
                         dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
 
-                        fpath = out_dir / f"{base_name}_{fcounter:04d}.nc"
+                        fpath = out_dir / f"{base_name}_{fcounter:06d}.nc"
                         future = self.submit(
                             write_nc_file,
                             dssub,

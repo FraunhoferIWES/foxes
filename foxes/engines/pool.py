@@ -2,11 +2,15 @@ import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
 from tqdm import tqdm
+from pathlib import Path
+import matplotlib.pyplot as plt
 
 from foxes.config import config, get_output_path
 from foxes.core import Engine
 from foxes.utils import write_nc as write_nc_file
+from foxes.output import write_chunk_ani_xy
 import foxes.constants as FC
+import foxes.variables as FV
 
 
 def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
@@ -40,13 +44,28 @@ def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
         t0 = mdata.chunki_points
         vrb = max(algo.verbosity - 1, 0)
         if out_coords == (FC.STATE, FC.TURBINE):
-            fpath = out_dir / f"{base_name}_{i0:04d}.nc"
+            fpath = out_dir / f"{base_name}_{i0:06d}.nc"
         else:
-            fpath = out_dir / f"{base_name}_{i0:04d}_{t0:04d}.nc"
+            fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
         write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
 
     return results if ret_data else None
 
+def _write_ani(algo, chunk_key, write_chunk_ani, *data):
+    """Helper function for optionally writing chunk flow animations to file"""
+    if write_chunk_ani is not None:
+        pars = write_chunk_ani.copy()
+        chk = pars.pop("chunk")
+        def _do_run(chk):
+            if isinstance(chk, list):
+                for c in chk:
+                    if _do_run(c):
+                        return True
+                return False
+            else:
+                return chk == chunk_key if isinstance(chk, tuple) else chk == chunk_key[0]
+        if _do_run(chk):
+            write_chunk_ani_xy(algo, *data, **pars)        
 
 def _run(
     algo,
@@ -57,6 +76,7 @@ def _run(
     chunk_key,
     out_coords,
     write_nc,
+    write_chunk_ani=None,
     **cpars,
 ):
     """Helper function for running in a single process"""
@@ -64,6 +84,7 @@ def _run(
     results = model.calculate(algo, *data, **cpars)
     chunk_store = algo.reset_chunk_store() if iterative else {}
     cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
+    _write_ani(algo, chunk_key, write_chunk_ani, *data)
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
@@ -75,6 +96,7 @@ def _run_shared(
     chunk_key,
     out_coords,
     write_nc,
+    write_chunk_ani=None,
     **cpars,
 ):
     """Helper function for running in a single process"""
@@ -84,6 +106,7 @@ def _run_shared(
         if chunk_key in algo.chunk_store
         else {}
     )
+    _write_ani(algo, chunk_key, write_chunk_ani, *data)    
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
@@ -196,6 +219,7 @@ class PoolEngine(Engine):
         isel=None,
         iterative=False,
         write_nc=None,
+        write_chunk_ani=None,
         **calc_pars,
     ):
         """
@@ -237,6 +261,13 @@ class PoolEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
+        write_chunk_ani: dict, optional
+            Parameters for writing chunk animations, e.g.
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            'resolution': 100, 'chunk': 5}.'}
+            The chunk is either an integer that refers to a states chunk,
+            or a  tuple (states_chunk_index, points_chunk_index), or a list
+            of such entries.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -328,6 +359,7 @@ class PoolEngine(Engine):
                         chunk_key=key,
                         out_coords=out_coords,
                         write_nc=write_nc,
+                        write_chunk_ani=write_chunk_ani,
                         **calc_pars,
                     )
                 else:
@@ -341,6 +373,7 @@ class PoolEngine(Engine):
                         chunk_key=key,
                         out_coords=out_coords,
                         write_nc=write_nc,
+                        write_chunk_ani=write_chunk_ani,
                         **calc_pars,
                     )
                 del data

@@ -20,6 +20,8 @@ from .state_turbine_table import StateTurbineTable as StateTurbineTable
 from .plt import plt as plt
 
 from .flow_plots_2d import FlowPlots2D as FlowPlots2D
+from .flow_plots_2d import write_chunk_ani_xy as write_chunk_ani_xy
+
 from .seq_plugins import SeqFlowAnimationPlugin as SeqFlowAnimationPlugin
 from .seq_plugins import SeqWakeDebugPlugin as SeqWakeDebugPlugin
 

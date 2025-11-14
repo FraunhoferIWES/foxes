@@ -297,7 +297,7 @@ class FarmController(FarmDataModel):
 
         return pars
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -307,10 +307,12 @@ class FarmController(FarmDataModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         self.collect_models(algo)
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force)
 
     def load_data(self, algo, verbosity=0):
         """

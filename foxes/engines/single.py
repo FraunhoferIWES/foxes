@@ -3,7 +3,7 @@ from xarray import Dataset
 from foxes.core import Engine
 import foxes.constants as FC
 
-from .pool import _write_chunk_results
+from .pool import _write_chunk_results, _write_ani
 
 
 class SingleChunkEngine(Engine):
@@ -124,6 +124,7 @@ class SingleChunkEngine(Engine):
         isel=None,
         iterative=False,
         write_nc=None,
+        write_chunk_ani=None,
         **calc_pars,
     ):
         """
@@ -165,6 +166,13 @@ class SingleChunkEngine(Engine):
 
             Use ret_data = False together with non-single file writing
             to avoid constructing the full Dataset in memory.
+        write_chunk_ani: dict, optional
+            Parameters for writing chunk animations, e.g.
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            'resolution': 100, 'chunk': 5}.'}
+            The chunk is either an integer that refers to a states chunk,
+            or a  tuple (states_chunk_index, points_chunk_index), or a list
+            of such entries.
         calc_pars: dict, optional
             Additional parameters for the model.calculate()
 
@@ -213,6 +221,7 @@ class SingleChunkEngine(Engine):
         )
 
         results = model.calculate(algo, *data, **calc_pars)
+        _write_ani(algo, (0, 0), write_chunk_ani, *data)
         results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
         results = {(0, 0): (results, algo.chunk_store)}
         del data

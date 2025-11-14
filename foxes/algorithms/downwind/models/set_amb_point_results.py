@@ -85,6 +85,7 @@ class SetAmbPointResults(PointDataModel):
             Values: numpy.ndarray with shape (n_states, n_points)
 
         """
+        ovars = self.output_point_vars(algo)
         for v in self.vars:
             tdata.add(FV.var2amb[v], tdata[v].copy(), tdata.dims[v])
-        return {v: tdata[v] for v in self.output_point_vars(algo)}
+        return {v: tdata[v] for v in ovars}

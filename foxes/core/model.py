@@ -165,7 +165,7 @@ class Model(ABC):
                     if verbosity > 1 and not pr:
                         print(f">> {self.name}: Starting sub-model initialization >> ")
                         pr = True
-                    m.initialize(algo, verbosity)
+                    m.initialize(algo, verbosity, force)
             if pr:
                 print(f"<< {self.name}: Finished sub-model initialization << ")
 

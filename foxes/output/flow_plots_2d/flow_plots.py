@@ -1,10 +1,12 @@
 import numpy as np
 
+from foxes.core import TData
 from foxes.output import SliceData
 import foxes.variables as FV
+import foxes.constants as FC
 
 from .get_fig import get_fig
-
+from ..grids import get_grid_xy, np2np_sp
 
 class FlowPlots2D(SliceData):
     """
@@ -1036,3 +1038,85 @@ class FlowPlots2D(SliceData):
             )
 
             yield out
+
+    def precalc_chunk_xy(
+        self,
+        var,
+        mdata, 
+        fdata, 
+        resolution=100,
+        figsize=(8, 8),
+        n_img_points=None,
+        xmin=None,
+        ymin=None,
+        xmax=None,
+        ymax=None,
+        z=None,
+        xspace=500.0,
+        yspace=500.0,
+    ):
+        """
+        Pre-calculation of data for xy flow plots.
+
+        Parameters
+        ----------
+        var: str
+            The variable name
+        mdata: foxes.core.TData
+            The model data
+        fdata: foxes.core.TData
+            The farm data
+        resolution: float, optional
+            The resolution in m
+        figsize: tuple, optional
+            The figsize for plt.Figure
+        n_img_points: int, optional
+            The number of image points along each axis
+        xmin: float, optional
+            The minimal x position
+        ymin: float, optional
+            The minimal y position
+        xmax: float, optional
+            The maximal x position
+        ymax: float, optional
+            The maximal y position
+        z: float, optional
+            The z position
+        xspace: float, optional
+            Additional space around turbines
+        yspace: float, optional
+            Additional space around turbines    
+
+        Returns
+        -------
+        data: numpy.ndarray
+            The calculated data
+        sinds: np.ndarray
+            The state indices
+        gdata: tuple
+            The grid data
+        
+        """
+        gdata = get_grid_xy(
+            self.fres, 
+            resolution=resolution,
+            n_img_points=n_img_points,
+            xmin=xmin,
+            ymin=ymin,
+            xmax=xmax,
+            ymax=ymax,
+            z=z,
+            xspace=xspace,
+            yspace=yspace,
+        )
+
+        mlist, mpars = self.algo._collect_point_models()
+        mlist.initialize(self.algo, verbosity=0, force=True)
+        htdata = TData.from_points(gdata[-1], mdata=mdata)
+
+        sinds = mdata[FC.STATE]
+        data = mlist.calculate(self.algo, mdata, fdata, htdata, **mpars[0])
+        data.pop(FV.WEIGHT, None)
+        data = np2np_sp(data, sinds, gdata[0], gdata[1])
+
+        return data, sinds, gdata
