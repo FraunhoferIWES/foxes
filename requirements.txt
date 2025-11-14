@@ -32,7 +32,7 @@ bleach==6.2.0 ; python_full_version < '3.10'
     # via nbconvert
 bleach==6.3.0 ; python_full_version >= '3.10'
     # via nbconvert
-certifi==2025.10.5
+certifi==2025.11.12
     # via
     #   netcdf4
     #   requests
@@ -82,7 +82,7 @@ dask==2024.8.0 ; python_full_version < '3.10'
     #   dask-jobqueue
     #   distributed
     #   foxes
-dask==2025.10.0 ; python_full_version >= '3.10'
+dask==2025.11.0 ; python_full_version >= '3.10'
     # via
     #   dask-jobqueue
     #   distributed
@@ -105,7 +105,7 @@ distributed==2024.8.0 ; python_full_version < '3.10'
     # via
     #   dask-jobqueue
     #   foxes
-distributed==2025.10.0 ; python_full_version >= '3.10'
+distributed==2025.11.0 ; python_full_version >= '3.10'
     # via
     #   dask-jobqueue
     #   foxes
@@ -380,7 +380,9 @@ pymoo==0.6.1.5
     # via foxes-opt
 pyparsing==3.2.5
     # via matplotlib
-pytest==8.4.2
+pytest==8.4.2 ; python_full_version < '3.10'
+    # via foxes
+pytest==9.0.1 ; python_full_version >= '3.10'
     # via foxes
 python-dateutil==2.9.0.post0
     # via
@@ -473,7 +475,7 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 stack-data==0.6.3
     # via ipython
-tblib==3.2.1
+tblib==3.2.2
     # via distributed
 tinycss2==1.4.0
     # via nbconvert
@@ -534,7 +536,7 @@ webencodings==0.5.1
     #   tinycss2
 widgetsnbextension==4.0.15
     # via ipywidgets
-wrapt==2.0.0
+wrapt==2.0.1
     # via deprecated
 xarray==2024.7.0 ; python_full_version < '3.10'
     # via
