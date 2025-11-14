@@ -2,15 +2,12 @@ import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
 from tqdm import tqdm
-from pathlib import Path
-import matplotlib.pyplot as plt
 
 from foxes.config import config, get_output_path
 from foxes.core import Engine
 from foxes.utils import write_nc as write_nc_file
 from foxes.output import write_chunk_ani_xy
 import foxes.constants as FC
-import foxes.variables as FV
 
 
 def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
@@ -51,11 +48,13 @@ def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
 
     return results if ret_data else None
 
+
 def _write_ani(algo, chunk_key, write_chunk_ani, *data):
     """Helper function for optionally writing chunk flow animations to file"""
     if write_chunk_ani is not None:
         pars = write_chunk_ani.copy()
         chk = pars.pop("chunk")
+
         def _do_run(chk):
             if isinstance(chk, list):
                 for c in chk:
@@ -63,9 +62,13 @@ def _write_ani(algo, chunk_key, write_chunk_ani, *data):
                         return True
                 return False
             else:
-                return chk == chunk_key if isinstance(chk, tuple) else chk == chunk_key[0]
+                return (
+                    chk == chunk_key if isinstance(chk, tuple) else chk == chunk_key[0]
+                )
+
         if _do_run(chk):
-            write_chunk_ani_xy(algo, *data, **pars)        
+            write_chunk_ani_xy(algo, *data, **pars)
+
 
 def _run(
     algo,
@@ -106,7 +109,7 @@ def _run_shared(
         if chunk_key in algo.chunk_store
         else {}
     )
-    _write_ani(algo, chunk_key, write_chunk_ani, *data)    
+    _write_ani(algo, chunk_key, write_chunk_ani, *data)
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
     return results, cstore
 
@@ -263,7 +266,7 @@ class PoolEngine(Engine):
             to avoid constructing the full Dataset in memory.
         write_chunk_ani: dict, optional
             Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list

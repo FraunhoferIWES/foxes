@@ -290,7 +290,7 @@ class DaskEngine(DaskBaseEngine):
             to avoid constructing the full Dataset in memory.
         write_chunk_ani: dict, optional
             Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list
@@ -493,9 +493,9 @@ def _run_on_cluster(
     k = (chunki_states, chunki_points)
     cstore = {k: chunk_store[k]} if k in chunk_store else {}
 
-    _write_ani(algo, k, write_chunk_ani, *data)    
+    _write_ani(algo, k, write_chunk_ani, *data)
     results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
-    
+
     return results, cstore
 
 
@@ -672,7 +672,7 @@ class LocalClusterEngine(DaskBaseEngine):
             to avoid constructing the full Dataset in memory.
         write_chunk_ani: dict, optional
             Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list

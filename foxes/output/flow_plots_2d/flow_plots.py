@@ -8,6 +8,7 @@ import foxes.constants as FC
 from .get_fig import get_fig
 from ..grids import get_grid_xy, np2np_sp
 
+
 class FlowPlots2D(SliceData):
     """
     Class for horizontal or vertical 2D flow plots
@@ -1042,8 +1043,8 @@ class FlowPlots2D(SliceData):
     def precalc_chunk_xy(
         self,
         var,
-        mdata, 
-        fdata, 
+        mdata,
+        fdata,
         resolution=100,
         figsize=(8, 8),
         n_img_points=None,
@@ -1085,7 +1086,7 @@ class FlowPlots2D(SliceData):
         xspace: float, optional
             Additional space around turbines
         yspace: float, optional
-            Additional space around turbines    
+            Additional space around turbines
 
         Returns
         -------
@@ -1095,10 +1096,10 @@ class FlowPlots2D(SliceData):
             The state indices
         gdata: tuple
             The grid data
-        
+
         """
         gdata = get_grid_xy(
-            self.fres, 
+            self.fres,
             resolution=resolution,
             n_img_points=n_img_points,
             xmin=xmin,

@@ -1,21 +1,18 @@
-import numpy as np
 from xarray import Dataset
-from pathlib import Path
 import matplotlib.pyplot as plt
 
 from foxes.config import get_output_path
-from foxes.core import TData
 import foxes.constants as FC
 import foxes.variables as FV
 
 from .flow_plots import FlowPlots2D
 from ..animation import Animator
-from ..grids import get_grid_xy, np2np_sp
+
 
 def write_chunk_ani_xy(
-    algo, 
-    mdata, 
-    fdata, 
+    algo,
+    mdata,
+    fdata,
     tdata=None,
     vars=[FV.WS],
     resolution=100,
@@ -36,7 +33,7 @@ def write_chunk_ani_xy(
 ):
     """
     Writes an animation of a chunk calculation to file.
-    
+
     Parameters
     ----------
     algo: foxes.core.Algorithm
@@ -84,28 +81,27 @@ def write_chunk_ani_xy(
     """
     # case calc_farm:
     if mdata is not None and fdata is not None and tdata is None:
-
         try:
             if states_isel is not None:
                 mdata = mdata.get_slice(FC.STATE, states_isel, force=True)
                 fdata = fdata.get_slice(FC.STATE, states_isel, force=True)
             if states_sel is not None:
-                s = [i for i in range(mdata.n_states) if mdata[FC.STATE][i] in states_sel]
+                s = [
+                    i for i in range(mdata.n_states) if mdata[FC.STATE][i] in states_sel
+                ]
                 mdata = mdata.get_slice(FC.STATE, s, force=True)
                 fdata = fdata.get_slice(FC.STATE, s, force=True)
         except IndexError:
             return
-        
+
         farm_results = Dataset(
             data_vars={
-                v: ((FC.STATE, FC.TURBINE), d) 
-                for v, d in fdata.items() 
+                v: ((FC.STATE, FC.TURBINE), d)
+                for v, d in fdata.items()
                 if d.shape == (fdata.n_states, fdata.n_turbines)
             },
             coords={FC.STATE: fdata[FC.STATE]},
         )
-        sinds = mdata[FC.STATE]
-        n_states = len(sinds)
 
         fpath_base = get_output_path(fpath_base)
         odir = fpath_base.parent
@@ -122,8 +118,8 @@ def write_chunk_ani_xy(
             o = FlowPlots2D(algo, farm_results)
             precalc = o.precalc_chunk_xy(
                 var,
-                mdata, 
-                fdata, 
+                mdata,
+                fdata,
                 resolution=resolution,
                 n_img_points=n_img_points,
                 xmin=xmin,
@@ -137,15 +133,17 @@ def write_chunk_ani_xy(
 
             fig, ax = plt.subplots(figsize=figsize)
             anim = Animator(fig=fig)
-            anim.add_generator(o.gen_states_fig_xy(
-                var=var, 
-                fig=fig, 
-                ax=ax, 
-                animated=True, 
-                ret_im=True,
-                precalc=precalc,
-                **kwargs,
-            ))
+            anim.add_generator(
+                o.gen_states_fig_xy(
+                    var=var,
+                    fig=fig,
+                    ax=ax,
+                    animated=True,
+                    ret_im=True,
+                    precalc=precalc,
+                    **kwargs,
+                )
+            )
             ani = anim.animate(verbosity=0)
             plt.close(fig)
             del precalc, fig, ax, anim
@@ -157,6 +155,10 @@ def write_chunk_ani_xy(
 
     # case calc_points:
     elif mdata is not None and fdata is not None and tdata is not None:
-        raise NotImplementedError("Chunk animation writing not implemented for point calculations")
+        raise NotImplementedError(
+            "Chunk animation writing not implemented for point calculations"
+        )
     else:
-        raise NotImplementedError("Chunk animation writing not implemented for this case")
+        raise NotImplementedError(
+            "Chunk animation writing not implemented for this case"
+        )

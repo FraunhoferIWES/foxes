@@ -141,7 +141,7 @@ class NumpyEngine(Engine):
             to avoid constructing the full Dataset in memory.
         write_chunk_ani: dict, optional
             Parameters for writing chunk animations, e.g.
-            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'], 
+            {'fpath_base': 'results/chunk_animation', 'vars': ['WS'],
             'resolution': 100, 'chunk': 5}.'}
             The chunk is either an integer that refers to a states chunk,
             or a  tuple (states_chunk_index, points_chunk_index), or a list

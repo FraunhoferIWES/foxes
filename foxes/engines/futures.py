@@ -72,6 +72,7 @@ class ProcessEngine(ThreadsEngine):
     :group: engines
 
     """
+
     def __init__(self, *args, **kwargs):
         """
         Constructor

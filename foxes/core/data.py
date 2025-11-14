@@ -322,21 +322,21 @@ class Data(Dict):
         cls = type(self)
         if issubclass(cls, Data):
             return cls(
-                data, 
-                dims, 
-                name=name, 
-                states_i0=states_i0, 
-                chunki_states=self.chunki_states, 
-                chunki_points=self.chunki_points, 
-                n_chunks_states=self.n_chunks_states, 
+                data,
+                dims,
+                name=name,
+                states_i0=states_i0,
+                chunki_states=self.chunki_states,
+                chunki_points=self.chunki_points,
+                n_chunks_states=self.n_chunks_states,
                 n_chunks_points=self.n_chunks_points,
             )
         else:
             return cls(
-                data, 
-                dims, 
-                loop_dims=self.loop_dims, 
-                name=name, 
+                data,
+                dims,
+                loop_dims=self.loop_dims,
+                name=name,
                 states_i0=states_i0,
                 chunki_states=self.chunki_states,
                 chunki_points=self.chunki_points,
@@ -832,7 +832,7 @@ class TData(Data):
             kwargs["chunki_points"] = mdata.chunki_points
             kwargs["n_chunks_states"] = mdata.n_chunks_states
             kwargs["n_chunks_points"] = mdata.n_chunks_points
-            
+
         return cls(data=data, dims=dims, name=name, **kwargs)
 
     @classmethod
