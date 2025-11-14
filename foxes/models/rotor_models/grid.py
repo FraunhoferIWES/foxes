@@ -56,7 +56,7 @@ class GridRotor(RotorModel):
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -66,9 +66,11 @@ class GridRotor(RotorModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         N = self.n * self.n
         delta = 2.0 / self.n

@@ -69,7 +69,7 @@ class DynamicWakes(WakeFrame):
     def __repr__(self):
         return f"{type(self).__name__}(dt_min={self.dt_min}, max_length_km={self.max_length_km}, max_age={self.max_age})"
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -79,13 +79,15 @@ class DynamicWakes(WakeFrame):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         # disable subset state selection in iterative algo:
         algo.conv_crit.disable_subsets()

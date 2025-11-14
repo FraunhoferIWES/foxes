@@ -204,16 +204,22 @@ class Algorithm(Model):
             print(f"  n_states : {self.n_states}")
             print(f"  n_turbines: {self.n_turbines}")
 
-    def initialize(self):
+    def initialize(self, force=False):
         """
         Initializes the algorithm.
+
+        Parameters
+        ----------
+        force: bool
+            Overwrite existing data
+
         """
         if self.running:
             raise ValueError(
                 f"Algorithm '{self.name}': Cannot initialize while running"
             )
 
-        super().initialize(self, self.verbosity - 1)
+        super().initialize(self, self.verbosity - 1, force=force)
 
     def store_model_data(self, model, idata, force=False):
         """

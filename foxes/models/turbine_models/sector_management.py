@@ -74,7 +74,7 @@ class SectorManagement(TurbineModel):
         self._tdata = None
         self._trbs = None
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -84,9 +84,11 @@ class SectorManagement(TurbineModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         if isinstance(self.source, pd.DataFrame):
             data = self.source

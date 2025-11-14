@@ -98,7 +98,7 @@ class PowerMask(TurbineModel):
         """
         return [self.induction]
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -108,11 +108,13 @@ class PowerMask(TurbineModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         if isinstance(self.induction, str):
             self.induction = algo.mbook.axial_induction[self.induction]
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         self._P_rated = []
         for t in algo.farm_controller.turbine_types:

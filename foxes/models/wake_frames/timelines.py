@@ -172,7 +172,7 @@ class Timelines(WakeFrame):
 
         return weight_data
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -182,13 +182,15 @@ class Timelines(WakeFrame):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         if not isinstance(algo, Iterative):
             raise TypeError(
                 f"Incompatible algorithm type {type(algo).__name__}, expecting {Iterative.__name__}"
             )
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         # disable subset state selection in iterative algo:
         algo.conv_crit.disable_subsets()

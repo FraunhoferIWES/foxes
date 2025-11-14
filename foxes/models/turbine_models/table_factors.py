@@ -89,7 +89,7 @@ class TableFactors(TurbineModel):
         """
         return self.ovars
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -99,9 +99,11 @@ class TableFactors(TurbineModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         if isinstance(self.data_source, pd.DataFrame):
             self._data = self.data_source

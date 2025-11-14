@@ -140,7 +140,7 @@ class StatesTable(States):
         self.states_sel = states_sel
         self.states_loc = states_loc
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -150,6 +150,8 @@ class StatesTable(States):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         self._profiles = {}
@@ -166,7 +168,7 @@ class StatesTable(States):
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
 
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
     def sub_models(self):
         """

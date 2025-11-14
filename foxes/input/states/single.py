@@ -90,7 +90,7 @@ class SingleStateStates(States):
         """
         return list(self._profiles.values())
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -100,6 +100,8 @@ class SingleStateStates(States):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         self._profiles = {}
@@ -115,7 +117,7 @@ class SingleStateStates(States):
                 raise TypeError(
                     f"States '{self.name}': Wrong profile type '{type(d).__name__}' for variable '{v}'. Expecting VerticalProfile, str or dict"
                 )
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
     def size(self):
         """

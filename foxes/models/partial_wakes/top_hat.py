@@ -62,7 +62,7 @@ class PartialTopHat(PartialCentre):
         super().__init__()
         self.rotor_model = rotor_model
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -72,12 +72,14 @@ class PartialTopHat(PartialCentre):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         if self.rotor_model is None:
             self.rotor_model = algo.rotor_model
 
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         self.WCOOS_ID = self.var("WCOOS_ID")
         self.WCOOS_X = self.var("WCOOS_X")

@@ -53,7 +53,7 @@ class LevelRotor(RotorModel):
         r = "" if self.reduce else ", reduce=False"
         return f"{type(self).__name__}(n={self.n}){r}"
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -63,9 +63,11 @@ class LevelRotor(RotorModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
         delta = 2.0 / self.n
         y = [-1.0 + (i + 0.5) * delta for i in range(self.n)]

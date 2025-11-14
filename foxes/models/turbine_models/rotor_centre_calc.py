@@ -37,7 +37,7 @@ class RotorCentreCalc(TurbineModel):
         else:
             self.calc_vars = {v: v for v in calc_vars}
 
-    def initialize(self, algo, verbosity=0):
+    def initialize(self, algo, verbosity=0, force=False):
         """
         Initializes the model.
 
@@ -47,10 +47,12 @@ class RotorCentreCalc(TurbineModel):
             The calculation algorithm
         verbosity: int
             The verbosity level, 0 = silent
+        force: bool
+            Overwrite existing data
 
         """
         self._wcalc = algo.get_model("PointWakesCalculation")()
-        super().initialize(algo, verbosity)
+        super().initialize(algo, verbosity, force=force)
 
     def sub_models(self):
         """

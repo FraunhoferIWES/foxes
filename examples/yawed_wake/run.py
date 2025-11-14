@@ -131,7 +131,12 @@ if __name__ == "__main__":
             print("\nHorizontal flow figure output:")
             o = foxes.output.FlowPlots2D(algo, farm_results)
             g = o.gen_states_fig_xy(
-                args.var, resolution=10, xmin=-500, xmax=3000, rotor_color="red"
+                args.var,
+                resolution=10,
+                xmin=-500,
+                xmax=3000,
+                rotor_color="red",
+                cmap="BuPu" if args.var == FV.WD else None,
             )
             fig = next(g)
             plt.show()
@@ -149,6 +154,7 @@ if __name__ == "__main__":
                 zmin=0,
                 zmax=250,
                 rotor_color="red",
+                cmap="BuPu" if args.var == FV.WD else None,
                 verbosity=0,
             )
             fig = next(g)
