@@ -856,3 +856,9 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Engines can now optionally write flow animations of individual chunks to file during calculations. This is triggered by the new `write_chunk_ani` parameter of the `calc_farm` and `calc_points` functions.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.1](https://github.com/FraunhoferIWES/foxes/commits/v1.6.1)
+
+## v1.6.2
+
+
+
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.2](https://github.com/FraunhoferIWES/foxes/commits/v1.6.2)
