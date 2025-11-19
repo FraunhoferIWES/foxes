@@ -613,6 +613,8 @@ class Engine(ABC):
         assert not self.__running_chunk_calc, f"{self.name}: Chunk calculation already running"
 
         # prepare:
+        self._ci_states = 0
+        self._ci_targets = 0
         self._counter = 0
         self._scount = 0
         self._wcount = 0
@@ -762,8 +764,8 @@ class Engine(ABC):
         """
         assert self.__running_chunk_calc, f"{self.name}: No chunk calculation running"
 
-        chunk_keys = list(results.keys())
-        for chunk_key in chunk_keys:
+        chunk_key = (self._ci_states, self._ci_targets)
+        while chunk_key in results:
             r, cstore = results.pop(chunk_key)
 
             if self._iterative:
@@ -794,7 +796,7 @@ class Engine(ABC):
                         self._tres = {v: [] for v in self._res_vars}
                     for v in self._res_vars:
                         self._tres[v].append(r[v])
-                    if chunk_key[1] == self._n_chunks_targets - 1:
+                    if self._ci_targets == self._n_chunks_targets - 1:
                         found = False
                         for v in self._res_vars:
                             if v in self._data_vars:
@@ -802,6 +804,7 @@ class Engine(ABC):
                                 if not found and self._write_on_fly:
                                     self._scount += self._data_vars[v][1][-1].shape[0]
                                 found = True
+                        self._tres = None
 
                 if self._write_on_fly:
                     self._write_parts_on_fly(algo, futures)
@@ -814,6 +817,12 @@ class Engine(ABC):
                 if pr > self._pdone:
                     self._pdone = pr
                     print(f"{self.name}: Completed {self._counter} of {self._n_chunks_all} chunks, {self._pdone}%")
+
+            self._ci_targets += 1
+            if self._ci_targets >= self._n_chunks_targets:
+                self._ci_targets = 0
+                self._ci_states += 1
+            chunk_key = (self._ci_states, self._ci_targets)
 
     def end_chunk_calculation(self, algo):
         """
@@ -884,6 +893,8 @@ class Engine(ABC):
                     for wf in wfutures:
                         self.await_result(wf)
 
+        self._ci_states = None
+        self._ci_targets = None
         self._counter = None
         self._scount = None
         self._wcount = None
