@@ -47,6 +47,36 @@ class DefaultEngine(Engine):
 
         return results
 
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        self.finalize()
+
+        with Engine.new(
+            "process",
+            n_procs=self.n_procs,
+            chunk_size_states=self.chunk_size_states,
+            chunk_size_points=self.chunk_size_points,
+            verbosity=self.verbosity,
+        ) as e:
+            result = e.future_is_done(future)
+
+        self.initialize()
+
+        return result
+
     def await_result(self, future):
         """
         Waits for result from a future

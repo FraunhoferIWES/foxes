@@ -79,6 +79,7 @@ class Engine(ABC):
         self.__name = type(self).__name__
         self.__initialized = False
         self.__entered = False
+        self.__running_chunk_calc = False
 
     def __repr__(self):
         s = f"n_procs={self.n_procs}, chunk_size_states={self.chunk_size_states}, chunk_size_points={self.chunk_size_points}"
@@ -193,6 +194,19 @@ class Engine(ABC):
 
         """
         return self.__initialized
+    
+    @property
+    def running_chunk_calc(self):
+        """
+        Flag that a chunk calculation is running.
+
+        Returns
+        -------
+        flag: bool
+            True if a chunk calculation is running.
+
+        """
+        return self.__running_chunk_calc
 
     def initialize(self):
         """
@@ -252,6 +266,24 @@ class Engine(ABC):
         -------
         future: object
             The future object
+
+        """
+        pass
+
+    @abstractmethod
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
 
         """
         pass
@@ -539,358 +571,297 @@ class Engine(ABC):
 
         return (mdata, fdata) if tdata is None else (mdata, fdata, tdata)
 
-    def combine_results(
+    def _get_start_calc_message(
         self,
-        algo,
-        futures,
-        model_data,
-        out_vars,
-        out_coords,
         n_chunks_states,
         n_chunks_targets,
+    ):
+        """Helper function for start calculation message"""
+        msg = f"{self.name}: Starting calculation using "
+        if self.n_workers > 1:
+            msg += f"{self.n_workers} workers"
+        else:
+            msg += "a single worker"
+        if n_chunks_states > 1 or n_chunks_targets > 1:
+            msg += f", for {n_chunks_states} states chunks"
+            if n_chunks_targets > 1:
+                msg += f" and {n_chunks_targets} targets chunks"
+        msg += "."
+        return msg  
+
+    def start_chunk_calculation(
+        self,
+        algo,
+        coords,
         goal_data,
+        n_chunks_states,
+        n_chunks_targets,
         iterative,
-        write_nc=None,
-        results=None,
+        write_nc,
     ):
         """
-        Combines chunk results into final Dataset
+        Marks the start of a chunk calculation
 
         Parameters
         ----------
-        algo: foxes.core.Algorithm
-            The algorithm object
-        futures: dict
-            The futures from the chunk calculations,
-            key: (chunki_states, chunki_targets),
-            value: future unpacking to (results, cstore)
-        model_data: xarray.Dataset
-            The initial model data
-        out_vars: list of str
-            Names of the output variables
-        out_coords: list of str
-            Names of the output coordinates
         n_chunks_states: int
             The number of states chunks
         n_chunks_targets: int
             The number of targets chunks
-        goal_data: foxes.core.Data
-            Either fdata or tdata
-        iterative: bool
-            Flag for use within the iterative algorithm
-        write_nc: dict, optional
-            Parameters for writing results to netCDF files, e.g.
-            {'out_dir': 'results', 'base_name': 'calc_results',
-            'ret_data': False, 'split': 1000}.
-
-            The split parameter controls how the output is split:
-            - 'chunks': one file per chunk (fastest method),
-            - 'input': split according to sizes of multiple states input files,
-            - int: split with this many states per file,
-            - None: create a single output file.
-
-            Use ret_data = False together with non-single file writing
-            to avoid constructing the full Dataset in memory.
-        results: dict, optional
-            The evaluated futures
-
-        Returns
-        -------
-        ds: xarray.Dataset, optional
-            The final results dataset
 
         """
-        assert (futures is not None and results is None) or (
-            futures is None and results is not None
-        ), f"{self.name}: Either futures or results must be provided, not both"
+        assert not self.__running_chunk_calc, f"{self.name}: Chunk calculation already running"
 
-        self.print(f"{self.name}: Combining results", level=2)
-
-        coords = {}
-        vrb = max(self.verbosity - 1, 0)
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
-            coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        # prepare:
+        self._counter = 0
+        self._scount = 0
+        self._wcount = 0
+        self._wfutures = []
+        self._fcounter = 0
+        self._split_size = None
+        self._pdone = -1
+        self._pbar = None
+        self._res_vars = None
+        self._goal_data = goal_data
+        self._data_vars = {}
+        self._out_dir = None
+        self._base_name = None
+        self._ret_data = True
+        self._gen_size = None
+        self._write_on_fly = False
+        self._write_from_ds = False
+        self._n_chunks_states = n_chunks_states
+        self._n_chunks_targets = n_chunks_targets
+        self._n_chunks_all = n_chunks_states * n_chunks_targets
+        self._coords = coords
+        self._iterative = iterative
+        self._tres = None
 
         # read parameters for file writing
-        ret_data = True
-        split_size = None
-        write_on_fly = False
-        write_from_ds = False
-        keys = list(futures.keys()) if futures is not None else list(results.keys())
         if write_nc is not None and not (iterative and not algo.final_iteration):
-            out_dir = get_output_path(write_nc.get("out_dir", "."))
-            base_name = write_nc["base_name"]
-            ret_data = write_nc.get("ret_data", False)
-            split_mode = write_nc.get("split", None)
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out_fpath = out_dir / (base_name + "_*.nc")
-            if split_mode == "chunks":
+            self._out_dir = get_output_path(write_nc.get("out_dir", "."))
+            self._base_name = write_nc["base_name"]
+            self._ret_data = write_nc.get("ret_data", False)
+            self._split_mode = write_nc.get("split", None)
+            self._out_dir.mkdir(parents=True, exist_ok=True)
+            out_fpath = self._out_dir / (self._base_name + "_*.nc")
+            if self._split_mode == "chunks":
                 self.print(
-                    f"{self.name}: Writing results to '{out_fpath}', using split = {split_mode}, ret_data = {ret_data}"
+                    f"{self.name}: Writing results to '{out_fpath}', using split = {self._split_mode}, ret_data = {self._ret_data}"
                 )
-            elif split_mode == "input":
-                gen_size = algo.states.gen_states_split_size()
-                split_size = next(gen_size)
-            elif isinstance(split_mode, int):
-                split_size = split_mode
-            elif split_mode is None:
-                split_size = None
+            elif self._split_mode == "input":
+                self._gen_size = algo.states.gen_states_split_size()
+                self._split_size = next(self._gen_size)
+            elif isinstance(self._split_mode, int):
+                self._split_size = self._split_mode
+            elif self._split_mode is None:
+                self._split_size = None
             else:
                 raise ValueError(
-                    f"Invalid split mode '{split_mode}' in 'write_nc', expected 'chunks', 'input', int or None"
+                    f"Invalid split mode '{self._split_mode}' in 'write_nc', expected 'chunks', 'input', int or None"
                 )
-            if split_size is None:
-                out_fpath = out_dir / (base_name + ".nc")
-            if split_mode != "chunks":
-                write_on_fly = not ret_data and split_size is not None
-                write_from_ds = not write_on_fly
-                ret_data = write_nc.get("ret_data", write_from_ds)
+            if self._split_size is None:
+                out_fpath = self._out_dir / (self._base_name + ".nc")
+            if self._split_mode != "chunks":
+                self._write_on_fly = not self._ret_data and self._split_size is not None
+                self._write_from_ds = not self._write_on_fly
+                self._ret_data = write_nc.get("ret_data", self._write_from_ds)
                 self.print(
-                    f"{self.name}: Writing results to '{out_fpath}', using split = {split_mode}, on_fly = {write_on_fly}, ret_data = {ret_data}"
+                    f"{self.name}: Writing results to '{out_fpath}', using split = {self._split_mode}, on_fly = {self._write_on_fly}, ret_data = {self._ret_data}"
                 )
 
-        def _red_dims(data_vars):
-            """Helper function for reducing unneccessary dimensions of data vars"""
-            dvars = {}
-            for v, (dims, d) in data_vars.items():
-                if (
-                    dims == (FC.STATE, FC.TURBINE)
-                    and d.shape[1] == 1
-                    and algo.n_turbines > 1
-                ):
-                    dvars[v] = ((FC.STATE,), d[:, 0])
-                elif (
-                    dims == (FC.STATE, FC.TARGET, FC.TPOINT)
-                    and goal_data.sizes[FC.TARGET] > n_chunks_targets
-                    and d.shape[1:] == (n_chunks_targets, 1)
-                ):
-                    dvars[v] = ((FC.STATE,), d[:, 0, 0])
-                else:
-                    dvars[v] = (dims, d)
-            return dvars
+        self.print(self._get_start_calc_message(n_chunks_states, n_chunks_targets))
 
-        fcounter = 0
+        if self.verbosity > 0 and self.has_progress_bar:
+            self._pbar = tqdm(total=self._n_chunks_all)
 
-        def _write_parts_on_fly(data_vars, scount, wcount):
-            """Helper function for writing chunked results to netCDF,
-            without ever constructing the full Dataset in memory
-            """
-            nonlocal fcounter, split_size
-            wfutures = []
-            if split_size is not None:
-                splits = min(split_size, algo.n_states - wcount)
-                while algo.n_states - wcount > 0 and scount - wcount >= splits:
-                    for v in data_vars.keys():
-                        if len(data_vars[v][1]) > 1:
-                            data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-                        elif len(data_vars[v][1]) == 1:
-                            data_vars[v][1] = data_vars[v][1][0]
+        self.__running_chunk_calc = True
 
-                    dvars = {v: (d[0], d[1][:splits]) for v, d in data_vars.items()}
-                    dvars = _red_dims(dvars)
+    def _red_dims(self, algo, data_vars):
+        """Helper function for reducing unneccessary dimensions of data vars"""
+        dvars = {}
+        for v, (dims, d) in data_vars.items():
+            if (
+                dims == (FC.STATE, FC.TURBINE)
+                and d.shape[1] == 1
+                and algo.n_turbines > 1
+            ):
+                dvars[v] = ((FC.STATE,), d[:, 0])
+            elif (
+                dims == (FC.STATE, FC.TARGET, FC.TPOINT)
+                and self._goal_data.sizes[FC.TARGET] > self._n_chunks_targets
+                and d.shape[1:] == (self._n_chunks_targets, 1)
+            ):
+                dvars[v] = ((FC.STATE,), d[:, 0, 0])
+            else:
+                dvars[v] = (dims, d)
+        return dvars
 
-                    crds = {v: d for v, d in coords.items()}
-                    crds[FC.STATE] = coords[FC.STATE][wcount : wcount + splits]
-                    if scount - wcount == splits:
-                        for v in data_vars.keys():
-                            data_vars[v][1] = []
-                    else:
-                        for v in data_vars.keys():
-                            data_vars[v][1] = [data_vars[v][1][splits:]]
-
-                    ds = Dataset(coords=crds, data_vars=dvars)
-                    fpath = out_dir / f"{base_name}_{fcounter:06d}.nc"
-                    args = (ds, fpath)
-                    kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
-                    if futures is not None and len(futures) < self.n_workers:
-                        future = self.submit(write_nc_file, *args, **kwargs)
-                        wfutures.append(future)
-                        del future
-                    else:
-                        write_nc_file(*args, **kwargs)
-                    del ds, crds, dvars, args, kwargs
-
-                    wcount += splits
-                    fcounter += 1
-
-                    if algo.n_states - wcount > 0:
-                        if split_mode == "input":
-                            try:
-                                split_size = next(gen_size)
-                            except StopIteration:
-                                split_size = algo.n_states - wcount
-                        splits = min(split_size, algo.n_states - wcount)
-
-            return wcount, wfutures
-
-        data_vars = {}
-
-        def _get_res_vars(result, data_vars):
-            """Helper function for extracting results variables"""
-            if result is None:
-                return []
-            res_vars = list(result.keys())
-            for v in out_vars:
-                if v in res_vars:
-                    data_vars[v] = [out_coords, []]
-                else:
-                    data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
-            return res_vars
-
-        if futures is not None:
-            self.print(
-                f"{self.name}: Computing {len(keys)} chunks using {self.n_workers} workers"
-            )
-            vlevel = 0
-        else:
-            self.print(f"{self.name}: Combining results from {len(keys)} chunks")
-            vlevel = 1
-        pbar = None
-        if self.verbosity > vlevel and self.has_progress_bar:
-            pbar = tqdm(total=len(keys))
-
-        scount = 0
-        wcount = 0
+    def _write_parts_on_fly(self, algo, futures):
+        """Helper function for writing chunked results to netCDF,
+        without ever constructing the full Dataset in memory
+        """
+        vrb = max(self.verbosity - 1, 0)
         wfutures = []
-        res_vars = None
-        pdone = -1
-        if n_chunks_targets == 1:
-            for key in keys:
-                if futures is not None:
-                    r, cstore = self.await_result(futures.pop(key))
+        if self._split_size is not None:
+            splits = min(self._split_size, algo.n_states - self._wcount)
+            while algo.n_states - self._wcount > 0 and self._scount - self._wcount >= splits:
+                for v in self._data_vars.keys():
+                    if len(self._data_vars[v][1]) > 1:
+                        self._data_vars[v][1] = [np.concatenate(self._data_vars[v][1], axis=0)]
+
+                dvars = {v: (d[0], d[1][0][:splits]) for v, d in self._data_vars.items()}
+                dvars = self._red_dims(algo, dvars)
+                crds = {v: d for v, d in self._coords.items()}
+                crds[FC.STATE] = self._coords[FC.STATE][self._wcount : self._wcount + splits]
+                ds = Dataset(coords=crds, data_vars=dvars)
+                del dvars, crds
+
+                if self._scount - self._wcount == splits:
+                    for v in self._data_vars.keys():
+                        self._data_vars[v][1] = []
                 else:
-                    r, cstore = results.pop(key)
+                    for v in self._data_vars.keys():
+                        self._data_vars[v][1] = [self._data_vars[v][1][0][splits:]]
 
-                if res_vars is None:
-                    res_vars = _get_res_vars(r, data_vars)
-                if iterative:
-                    for k, c in cstore.items():
-                        if k in algo.chunk_store:
-                            algo.chunk_store[k].update(c)
+                fpath = self._out_dir / f"{self._base_name}_{self._fcounter:06d}.nc"
+                args = (ds, fpath)
+                kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
+                if futures is not None and len(futures) < self.n_workers:
+                    future = self.submit(write_nc_file, *args, **kwargs)
+                    wfutures.append(future)
+                    del future
+                else:
+                    write_nc_file(*args, **kwargs)
+                del ds, args, kwargs
+
+                self._wcount += splits
+                self._fcounter += 1
+
+                if algo.n_states - self._wcount > 0:
+                    if self._split_mode == "input":
+                        try:
+                            self._split_size = next(self._gen_size)
+                        except StopIteration:
+                            self._split_size = algo.n_states - self._wcount
+                    splits = min(self._split_size, algo.n_states - self._wcount)
+
+        self._wfutures += wfutures
+
+    def update_chunk_progress(
+        self,
+        algo,
+        results,
+        out_coords,
+        goal_data,
+        out_vars,
+        futures=None,
+    ):
+        """
+        Updates the chunk calculation progress
+        """
+        assert self.__running_chunk_calc, f"{self.name}: No chunk calculation running"
+
+        chunk_keys = list(results.keys())
+        for chunk_key in chunk_keys:
+            r, cstore = results.pop(chunk_key)
+
+            if self._iterative:
+                for k, c in cstore.items():
+                    if k in algo.chunk_store:
+                        algo.chunk_store[k].update(c)
+                    else:
+                        algo.chunk_store[k] = c
+
+            if r is not None:
+
+                if self._res_vars is None:
+                    self._res_vars = list(r.keys())
+                    for v in out_vars:
+                        if v in self._res_vars:
+                            self._data_vars[v] = [out_coords, []]
                         else:
-                            algo.chunk_store[k] = c
+                            self._data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
 
-                for v in res_vars:
-                    if v in data_vars:
-                        data_vars[v][1].append(r[v])
+                if self._n_chunks_targets == 1:
+                    for v in self._res_vars:
+                        if v in self._data_vars:
+                            self._data_vars[v][1].append(r[v])
+                    self._scount += r[self._res_vars[0]].shape[0]
 
-                if write_on_fly:
-                    scount += r[res_vars[0]].shape[0]
-                    wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
-                    wfutures += ftrs
-                    del ftrs
-                del r, cstore
+                else:
+                    if self._tres is None:
+                        self._tres = {v: [] for v in self._res_vars}
+                    for v in self._res_vars:
+                        self._tres[v].append(r[v])
+                    if chunk_key[1] == self._n_chunks_targets - 1:
+                        found = False
+                        for v in self._res_vars:
+                            if v in self._data_vars:
+                                self._data_vars[v][1].append(np.concatenate(self._tres[v], axis=1))
+                                if not found and self._write_on_fly:
+                                    self._scount += self._data_vars[v][1][-1].shape[0]
+                                found = True
 
-                if pbar is not None:
-                    pbar.update()
-                elif self.verbosity > vlevel and self.prints_progress:
-                    pr = int(100 * (key[0] + 1) / len(keys))
-                    if pr > pdone:
-                        pdone = pr
-                        print(
-                            f"{self.name}: Completed {key[0] + 1} of {len(keys)} chunks, {pdone}%"
-                        )
-        else:
-            pdone = -1
-            counter = 0
-            for chunki_states in range(n_chunks_states):
-                tres = None
-                for chunki_points in range(n_chunks_targets):
-                    found = False
-                    for key in keys:
-                        if key == (chunki_states, chunki_points):
-                            if futures is not None:
-                                r, cstore = self.await_result(futures.pop(key))
-                            else:
-                                r, cstore = results.pop(key)
+                if self._write_on_fly:
+                    self._write_parts_on_fly(algo, futures)
 
-                            if res_vars is None:
-                                res_vars = _get_res_vars(r, data_vars)
-                            if tres is None:
-                                tres = {v: [] for v in res_vars}
+            self._counter += 1
+            if self._pbar is not None:
+                self._pbar.update()
+            elif self.verbosity > 0 and self.prints_progress:
+                pr = int(100 * self._counter / self._n_chunks_all)
+                if pr > self._pdone:
+                    self._pdone = pr
+                    print(f"{self.name}: Completed {self._counter} of {self._n_chunks_all} chunks, {self._pdone}%")
 
-                            found = True
-                            break
-                    if not found:
-                        raise KeyError(f"{self.name}: Missing future for key {key}")
+    def end_chunk_calculation(self, algo):
+        """
+        Marks the end of a chunk calculation
+        """
+        assert self.__running_chunk_calc, f"{self.name}: No chunk calculation running"
+        assert self._counter == self._n_chunks_all, (
+            f"{self.name}: Incomplete chunk calculation: {self._counter} of {self._n_chunks_all} chunks done"
+        )
 
-                    for v in res_vars:
-                        tres[v].append(r[v])
-                    if iterative:
-                        for k, c in cstore.items():
-                            if k in algo.chunk_store:
-                                algo.chunk_store[k].update(c)
-                            else:
-                                algo.chunk_store[k] = c
-                    del r, cstore
+        if self._wfutures is not None:
+            for wf in self._wfutures:
+                self.await_result(wf)
 
-                    counter += 1
-                    if pbar is not None:
-                        pbar.update()
-                    elif (
-                        self.verbosity > vlevel
-                        and self.prints_progress
-                        and len(keys) > 1
-                    ):
-                        pr = int(100 * counter / len(keys))
-                        if pr > pdone:
-                            pdone = pr
-                            print(
-                                f"{self.name}: Completed {counter} of {len(keys)} chunks, {pdone}%"
-                            )
+        if self._pbar is not None:
+            self._pbar.close()
+        self.print(f"{self.name}: Completed all {self._n_chunks_all} chunks\n")
 
-                found = False
-                for v in res_vars:
-                    if v in data_vars:
-                        data_vars[v][1].append(np.concatenate(tres[v], axis=1))
-                        if not found and write_on_fly:
-                            scount += data_vars[v][1][-1].shape[0]
-                        found = True
-                del tres
-
-                if write_on_fly:
-                    wcount, ftrs = _write_parts_on_fly(data_vars, scount, wcount)
-                    wfutures += ftrs
-                    del ftrs
-        for wf in wfutures:
-            self.await_result(wf)
-        del wfutures
-
-        if pbar is not None:
-            pbar.close()
-        self.print(f"{self.name}: Completed all {len(keys)} chunks\n", level=vlevel + 1)
-
-        # if not iterative or algo.final_iteration:
-        #    algo.reset_chunk_store()
-
-        if ret_data or write_from_ds:
-            for v in res_vars:
-                if v in data_vars:
-                    if len(data_vars[v][1]) > 1:
-                        data_vars[v][1] = np.concatenate(data_vars[v][1], axis=0)
-                    elif len(data_vars[v][1]) == 1:
-                        data_vars[v][1] = data_vars[v][1][0]
-
-            dvars = _red_dims(data_vars)
+        vrb = max(self.verbosity - 1, 0)
+        ds = None
+        if self._ret_data or self._write_from_ds:
+            for v in self._res_vars:
+                if v in self._data_vars:
+                    if len(self._data_vars[v][1]) > 1:
+                        self._data_vars[v][1] = np.concatenate(self._data_vars[v][1], axis=0)
+                    elif len(self._data_vars[v][1]) == 1:
+                        self._data_vars[v][1] = self._data_vars[v][1][0]
+            self._data_vars = self._red_dims(algo, self._data_vars)
             ds = Dataset(
-                coords=coords,
-                data_vars=dvars,
+                coords=self._coords,
+                data_vars=self._data_vars,
             )
 
-            if write_from_ds:
-                if split_size is None:
+            if self._write_from_ds:
+                if self._split_size is None:
+                    fpath = self._out_dir / f"{self._base_name}.nc"
                     write_nc_file(
-                        ds, out_fpath, nc_engine=config.nc_engine, verbosity=vrb
+                        ds, fpath, nc_engine=config.nc_engine, verbosity=vrb
                     )
                 else:
                     wcount = 0
                     fcounter = 0
                     wfutures = []
                     while wcount < algo.n_states:
-                        splits = min(split_size, algo.n_states - wcount)
+                        splits = min(self._split_size, algo.n_states - wcount)
                         dssub = ds.isel({FC.STATE: slice(wcount, wcount + splits)})
 
-                        fpath = out_dir / f"{base_name}_{fcounter:06d}.nc"
+                        fpath = self._out_dir / f"{self._base_name}_{fcounter:06d}.nc"
                         future = self.submit(
                             write_nc_file,
                             dssub,
@@ -904,16 +875,38 @@ class Engine(ABC):
                         wcount += splits
                         fcounter += 1
 
-                        if wcount < algo.n_states and split_mode == "input":
+                        if wcount < algo.n_states and self._split_mode == "input":
                             try:
-                                split_size = next(gen_size)
+                                split_size = next(self._gen_size)
                             except StopIteration:
                                 split_size = algo.n_states - wcount
 
                     for wf in wfutures:
                         self.await_result(wf)
-        if ret_data:
-            return ds
+
+        self._counter = None
+        self._scount = None
+        self._wcount = None
+        self._wfutures = None
+        self._fcounter = None
+        self._split_size = None
+        self._pdone = None
+        self._pbar = None
+        self._res_vars = None
+        self._data_vars = None
+        self._goal_data = None
+        self._out_dir = None
+        self._base_name = None
+        self._ret_data = None
+        self._gen_size = None
+        self._write_on_fly = None
+        self._write_from_ds = None
+        self._coords = None
+        self._iterative = None
+        self._tres = None
+        self.__running_chunk_calc = False
+
+        return ds
 
     @abstractmethod
     def run_calculation(

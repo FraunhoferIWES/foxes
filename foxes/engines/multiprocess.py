@@ -38,6 +38,23 @@ class MultiprocessEngine(PoolEngine):
         """
         return self._pool.apply_async(f, args=args, kwds=kwargs)
 
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        return future.ready()
+        
     def await_result(self, future):
         """
         Waits for result from a future

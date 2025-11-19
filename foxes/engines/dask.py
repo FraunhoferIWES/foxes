@@ -124,6 +124,23 @@ class DaskBaseEngine(Engine):
         """
         return delayed(f)(*args, **kwargs)
 
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        return False
+
     def await_result(self, future):
         """
         Waits for result from a future
@@ -597,6 +614,23 @@ class LocalClusterEngine(DaskBaseEngine):
 
         """
         return self._client.submit(f, *args, **kwargs)
+
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        return future.done()
 
     def await_result(self, future):
         """

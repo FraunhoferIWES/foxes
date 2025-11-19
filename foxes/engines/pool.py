@@ -299,6 +299,9 @@ class PoolEngine(Engine):
         coords = {}
         if FC.STATE in out_coords and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
+        if farm_data is None:
+            farm_data = Dataset()
+        goal_data = farm_data if point_data is None else point_data
 
         # DEBUG objec mem sizes:
         # from foxes.utils import print_mem
@@ -318,15 +321,18 @@ class PoolEngine(Engine):
         )
 
         # prepare and submit chunks:
-        n_chunks_all = n_chunks_states * n_chunks_targets
-        self.print(
-            f"{type(self).__name__}: Submitting {n_chunks_all} chunks to {self.n_workers} workers",
-            level=2,
+        self.start_chunk_calculation(
+            algo, 
+            coords=coords,
+            goal_data=goal_data,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
+            iterative=iterative,
+            write_nc=write_nc,
         )
-        pbar = None
-        if self.verbosity > 1 and self.has_progress_bar:
-            pbar = tqdm(total=n_chunks_all)
+
         futures = {}
+        results = {}
         i0_states = 0
         pdone = -1
         counter = 0
@@ -383,37 +389,31 @@ class PoolEngine(Engine):
 
                 i0_targets = i1_targets
 
-                counter += 1
-                if pbar is not None:
-                    pbar.update()
-                elif self.verbosity > 1 and self.prints_progress and n_chunks_all > 1:
-                    pr = int(100 * counter / n_chunks_all)
-                    if pr > pdone:
-                        pdone = pr
-                        print(
-                            f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
+                while len(futures) > self.n_workers * 2:
+                    k = next(iter(futures))
+                    results[k] = self.await_result(futures.pop(k))
+
+                    self.update_chunk_progress(
+                            algo,
+                            results=results,
+                            out_coords=out_coords,
+                            goal_data=goal_data,
+                            out_vars=out_vars,
+                            futures=futures,
                         )
+
             i0_states = i1_states
 
-        if farm_data is None:
-            farm_data = Dataset()
-        goal_data = farm_data if point_data is None else point_data
-        del calc_pars, farm_data, point_data
+        for k in list(futures.keys()):
+            results[k] = self.await_result(futures.pop(k))
 
-        if pbar is not None:
-            pbar.close()
-        elif self.verbosity > 1 and self.prints_progress:
-            print(f"{type(self).__name__}: Submitted all {counter} chunks\n")
+            self.update_chunk_progress(
+                    algo,
+                    results=results,
+                    out_coords=out_coords,
+                    goal_data=goal_data,
+                    out_vars=out_vars,
+                    futures=futures,
+                )
 
-        return self.combine_results(
-            algo=algo,
-            futures=futures,
-            model_data=model_data,
-            out_vars=out_vars,
-            out_coords=out_coords,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            goal_data=goal_data,
-            iterative=iterative,
-            write_nc=write_nc,
-        )
+        return self.end_chunk_calculation(algo)

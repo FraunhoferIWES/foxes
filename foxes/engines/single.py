@@ -64,6 +64,23 @@ class SingleChunkEngine(Engine):
         """
         return f(*args, **kwargs)
 
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        return True
+        
     def await_result(self, future):
         """
         Waits for result from a future
@@ -199,12 +216,19 @@ class SingleChunkEngine(Engine):
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         algo.reset_chunk_store(chunk_store)
 
-        # calculate:
+        if farm_data is None:
+            farm_data = Dataset()
+        goal_data = farm_data if point_data is None else point_data
 
-        if n_states > 1:
-            self.print(
-                f"{type(self).__name__}: Running single chunk calculation for {n_states} states"
-            )
+        self.start_chunk_calculation(
+            algo, 
+            coords=coords,
+            goal_data=goal_data,
+            n_chunks_states=1,
+            n_chunks_targets=1,
+            iterative=iterative,
+            write_nc=write_nc,
+        )
 
         data = self.get_chunk_input_data(
             algo=algo,
@@ -226,20 +250,13 @@ class SingleChunkEngine(Engine):
         results = {(0, 0): (results, algo.chunk_store)}
         del data
 
-        if farm_data is None:
-            farm_data = Dataset()
-        goal_data = farm_data if point_data is None else point_data
-
-        return self.combine_results(
-            algo=algo,
-            futures=None,
+        self.update_chunk_progress(
+            algo,
             results=results,
-            model_data=model_data,
-            out_vars=out_vars,
             out_coords=out_coords,
-            n_chunks_states=1,
-            n_chunks_targets=1,
             goal_data=goal_data,
-            iterative=iterative,
-            write_nc=write_nc,
+            out_vars=out_vars,
+            futures=None,
         )
+
+        return self.end_chunk_calculation(algo)

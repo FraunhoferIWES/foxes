@@ -56,6 +56,24 @@ class RayEngine(PoolEngine):
 
         return f_ray.remote(*args, **kwargs)
 
+    def future_is_done(self, future):
+        """
+        Checks if a future is done
+
+        Parameters
+        ----------
+        future: object
+            The future
+
+        Returns
+        -------
+        is_done: bool
+            True if the future is done
+
+        """
+        ready, __ = ray.wait([future])
+        return len(ready) > 0
+
     def await_result(self, future):
         """
         Waits for result from a future
