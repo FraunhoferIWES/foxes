@@ -61,6 +61,7 @@ class DaskBaseEngine(Engine):
         self,
         *args,
         dask_config={},
+        progress_bar=True,
         **kwargs,
     ):
         """
@@ -78,20 +79,22 @@ class DaskBaseEngine(Engine):
             Additional parameters for the base class
 
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, progress_bar=None, **kwargs)
 
         load_dask()
 
         self.dask_config = dask_config
+        self._dask_progress_bar = progress_bar
+        self._pbar = None
 
     def __enter__(self):
-        if self.has_progress_bar:
+        if self._dask_progress_bar:
             self._pbar = ProgressBar(minimum=2)
             self._pbar.__enter__()
         return super().__enter__()
 
     def __exit__(self, *args):
-        if self.has_progress_bar:
+        if self._dask_progress_bar and self._pbar is not None:
             self._pbar.__exit__(*args)
         super().__exit__(*args)
 
@@ -355,6 +358,17 @@ class DaskEngine(DaskBaseEngine):
             level=2,
         )
 
+        # prepare and submit chunks:
+        self.start_chunk_calculation(
+            algo, 
+            coords=coords,
+            goal_data=goal_data,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
+            iterative=iterative,
+            write_nc=write_nc,
+        )
+
         # submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
@@ -362,7 +376,7 @@ class DaskEngine(DaskBaseEngine):
         )
         pbar = (
             tqdm(total=n_chunks_all)
-            if self.verbosity > 1 and self.has_progress_bar
+            if self.verbosity > 1 and self._dask_progress_bar
             else None
         )
         futures = {}
@@ -428,21 +442,18 @@ class DaskEngine(DaskBaseEngine):
                 f"Computing {n_chunks_all} chunks using {self.n_workers} workers"
             )
         results = dask.compute(futures)[0]
-        del futures
+        futures = None
 
-        return self.combine_results(
-            algo=algo,
-            futures=None,
-            results=results,
-            model_data=model_data,
-            out_vars=out_vars,
-            out_coords=out_coords,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            goal_data=goal_data,
-            iterative=iterative,
-            write_nc=write_nc,
-        )
+        self.update_chunk_progress(
+                algo,
+                results=results,
+                out_coords=out_coords,
+                goal_data=goal_data,
+                out_vars=out_vars,
+                futures=futures,
+            )
+
+        return self.end_chunk_calculation(algo)
 
 
 def _run_on_cluster(
@@ -761,7 +772,7 @@ class LocalClusterEngine(DaskBaseEngine):
         self.print(f"Submitting {n_chunks_all} chunks to {self.n_workers} workers")
         pbar = (
             tqdm(total=n_chunks_all)
-            if self.verbosity > 1 and self.has_progress_bar
+            if self.verbosity > 1 and self._dask_progress_bar
             else None
         )
         futures = {}

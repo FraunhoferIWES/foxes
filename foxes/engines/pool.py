@@ -1,7 +1,6 @@
 import numpy as np
 from xarray import Dataset
 from abc import abstractmethod
-from tqdm import tqdm
 
 from foxes.config import config, get_output_path
 from foxes.core import Engine
@@ -334,8 +333,6 @@ class PoolEngine(Engine):
         futures = {}
         results = {}
         i0_states = 0
-        pdone = -1
-        counter = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0

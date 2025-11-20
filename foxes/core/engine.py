@@ -832,6 +832,9 @@ class Engine(ABC):
         assert self._counter == self._n_chunks_all, (
             f"{self.name}: Incomplete chunk calculation: {self._counter} of {self._n_chunks_all} chunks done"
         )
+        assert self._ci_states == self._n_chunks_states, (
+            f"{self.name}: Incomplete chunk calculation: only {self._ci_states} of {self._n_chunks_states} states chunks done"  
+        )
 
         if self._wfutures is not None:
             for wf in self._wfutures:
@@ -886,9 +889,9 @@ class Engine(ABC):
 
                         if wcount < algo.n_states and self._split_mode == "input":
                             try:
-                                split_size = next(self._gen_size)
+                                self._split_size = next(self._gen_size)
                             except StopIteration:
-                                split_size = algo.n_states - wcount
+                                self._split_size = algo.n_states - wcount
 
                     for wf in wfutures:
                         self.await_result(wf)
