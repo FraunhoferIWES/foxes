@@ -61,7 +61,6 @@ class DaskBaseEngine(Engine):
         self,
         *args,
         dask_config={},
-        progress_bar=True,
         **kwargs,
     ):
         """
@@ -73,18 +72,16 @@ class DaskBaseEngine(Engine):
             Additional parameters for the base class
         dask_config: dict, optional
             The dask configuration parameters
-        progress_bar: bool
-            Flag for showing progress bar
         kwargs: dict, optional
             Additional parameters for the base class
 
         """
-        super().__init__(*args, progress_bar=None, **kwargs)
+        super().__init__(*args, **kwargs)
 
         load_dask()
 
         self.dask_config = dask_config
-        self._dask_progress_bar = progress_bar
+        self._dask_progress_bar = False
         self._pbar = None
 
     def __enter__(self):
@@ -252,6 +249,28 @@ class DaskEngine(DaskBaseEngine):
     :group: engines
 
     """
+
+    def __init__(
+        self,
+        *args,
+        progress_bar=True,
+        **kwargs,
+    ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        args: tuple, optional
+            Additional parameters for the base class
+        progress_bar: bool
+            Flag for showing progress bar
+        kwargs: dict, optional
+            Additional parameters for the base class
+
+        """
+        super().__init__(*args, progress_bar=None, **kwargs)
+        self._dask_progress_bar = progress_bar
 
     def run_calculation(
         self,
@@ -762,23 +781,26 @@ class LocalClusterEngine(DaskBaseEngine):
         )
 
         # scatter algo and model:
-        n_chunks_all = n_chunks_states * n_chunks_targets
         falgo = self._client.scatter(algo, broadcast=True)
         fmodel = self._client.scatter(model, broadcast=True)
         cpars = self._client.scatter(calc_pars, broadcast=True)
         all_data = [falgo, fmodel, cpars]
 
-        # submit chunks:
-        self.print(f"Submitting {n_chunks_all} chunks to {self.n_workers} workers")
-        pbar = (
-            tqdm(total=n_chunks_all)
-            if self.verbosity > 1 and self._dask_progress_bar
-            else None
+        # prepare chunks:
+        self.start_chunk_calculation(
+            algo,
+            coords=coords,
+            goal_data=goal_data,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
+            iterative=iterative,
+            write_nc=write_nc,
         )
+
+        # submit chunks:
         futures = {}
+        results = {}
         i0_states = 0
-        pdone = -1
-        counter = 0
         for chunki_states in range(n_chunks_states):
             i1_states = i0_states + chunk_sizes_states[chunki_states]
             i0_targets = 0
@@ -848,36 +870,36 @@ class LocalClusterEngine(DaskBaseEngine):
 
                 i0_targets = i1_targets
 
-                counter += 1
-                if pbar is not None:
-                    pbar.update()
-                elif self.verbosity > 1 and self.prints_progress:
-                    pr = int(100 * counter / n_chunks_all)
-                    if pr > pdone:
-                        pdone = pr
-                        print(
-                            f"{self.name}: Submitted {counter} of {n_chunks_all} chunks, {pdone}%"
-                        )
+                while len(futures) > self.n_workers * 2:
+                    k = next(iter(futures))
+                    results[k] = self.await_result(futures.pop(k))
+
+                    self.update_chunk_progress(
+                        algo,
+                        results=results,
+                        out_coords=out_coords,
+                        goal_data=goal_data,
+                        out_vars=out_vars,
+                        futures=futures,
+                    )
+
             i0_states = i1_states
 
         del falgo, fmodel, farm_data, point_data, calc_pars
-        if pbar is not None:
-            pbar.close()
-        elif self.verbosity > 1 and self.prints_progress:
-            print(f"{type(self).__name__}: Submitted all {counter} chunks\n")
 
-        return self.combine_results(
-            algo=algo,
-            futures=futures,
-            model_data=model_data,
-            out_vars=out_vars,
-            out_coords=out_coords,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            goal_data=goal_data,
-            iterative=iterative,
-            write_nc=write_nc,
-        )
+        for k in list(futures.keys()):
+            results[k] = self.await_result(futures.pop(k))
+
+            self.update_chunk_progress(
+                algo,
+                results=results,
+                out_coords=out_coords,
+                goal_data=goal_data,
+                out_vars=out_vars,
+                futures=futures,
+            )
+
+        return self.end_chunk_calculation(algo)
 
 
 class SlurmClusterEngine(LocalClusterEngine):
