@@ -193,6 +193,7 @@ class NumpyEngine(Engine):
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
+        algo.reset_chunk_store(chunk_store)
         n_states = model_data.sizes[FC.STATE]
         out_coords = model.output_coords()
         coords = {}
