@@ -321,7 +321,7 @@ class PoolEngine(Engine):
 
         # prepare and submit chunks:
         self.start_chunk_calculation(
-            algo, 
+            algo,
             coords=coords,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
@@ -391,13 +391,13 @@ class PoolEngine(Engine):
                     results[k] = self.await_result(futures.pop(k))
 
                     self.update_chunk_progress(
-                            algo,
-                            results=results,
-                            out_coords=out_coords,
-                            goal_data=goal_data,
-                            out_vars=out_vars,
-                            futures=futures,
-                        )
+                        algo,
+                        results=results,
+                        out_coords=out_coords,
+                        goal_data=goal_data,
+                        out_vars=out_vars,
+                        futures=futures,
+                    )
 
             i0_states = i1_states
 
@@ -405,12 +405,12 @@ class PoolEngine(Engine):
             results[k] = self.await_result(futures.pop(k))
 
             self.update_chunk_progress(
-                    algo,
-                    results=results,
-                    out_coords=out_coords,
-                    goal_data=goal_data,
-                    out_vars=out_vars,
-                    futures=futures,
-                )
+                algo,
+                results=results,
+                out_coords=out_coords,
+                goal_data=goal_data,
+                out_vars=out_vars,
+                futures=futures,
+            )
 
         return self.end_chunk_calculation(algo)

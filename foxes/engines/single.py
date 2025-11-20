@@ -80,7 +80,7 @@ class SingleChunkEngine(Engine):
 
         """
         return True
-        
+
     def await_result(self, future):
         """
         Waits for result from a future
@@ -221,7 +221,7 @@ class SingleChunkEngine(Engine):
         goal_data = farm_data if point_data is None else point_data
 
         self.start_chunk_calculation(
-            algo, 
+            algo,
             coords=coords,
             goal_data=goal_data,
             n_chunks_states=1,

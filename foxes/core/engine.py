@@ -194,7 +194,7 @@ class Engine(ABC):
 
         """
         return self.__initialized
-    
+
     @property
     def running_chunk_calc(self):
         """
@@ -587,7 +587,7 @@ class Engine(ABC):
             if n_chunks_targets > 1:
                 msg += f" and {n_chunks_targets} targets chunks"
         msg += "."
-        return msg  
+        return msg
 
     def start_chunk_calculation(
         self,
@@ -610,7 +610,9 @@ class Engine(ABC):
             The number of targets chunks
 
         """
-        assert not self.__running_chunk_calc, f"{self.name}: Chunk calculation already running"
+        assert not self.__running_chunk_calc, (
+            f"{self.name}: Chunk calculation already running"
+        )
 
         # prepare:
         self._ci_states = 0
@@ -707,15 +709,24 @@ class Engine(ABC):
         wfutures = []
         if self._split_size is not None:
             splits = min(self._split_size, algo.n_states - self._wcount)
-            while algo.n_states - self._wcount > 0 and self._scount - self._wcount >= splits:
+            while (
+                algo.n_states - self._wcount > 0
+                and self._scount - self._wcount >= splits
+            ):
                 for v in self._data_vars.keys():
                     if len(self._data_vars[v][1]) > 1:
-                        self._data_vars[v][1] = [np.concatenate(self._data_vars[v][1], axis=0)]
+                        self._data_vars[v][1] = [
+                            np.concatenate(self._data_vars[v][1], axis=0)
+                        ]
 
-                dvars = {v: (d[0], d[1][0][:splits]) for v, d in self._data_vars.items()}
+                dvars = {
+                    v: (d[0], d[1][0][:splits]) for v, d in self._data_vars.items()
+                }
                 dvars = self._red_dims(algo, dvars)
                 crds = {v: d for v, d in self._coords.items()}
-                crds[FC.STATE] = self._coords[FC.STATE][self._wcount : self._wcount + splits]
+                crds[FC.STATE] = self._coords[FC.STATE][
+                    self._wcount : self._wcount + splits
+                ]
                 ds = Dataset(coords=crds, data_vars=dvars)
                 del dvars, crds
 
@@ -776,14 +787,16 @@ class Engine(ABC):
                         algo.chunk_store[k] = c
 
             if r is not None:
-
                 if self._res_vars is None:
                     self._res_vars = list(r.keys())
                     for v in out_vars:
                         if v in self._res_vars:
                             self._data_vars[v] = [out_coords, []]
                         else:
-                            self._data_vars[v] = (goal_data[v].dims, goal_data[v].to_numpy())
+                            self._data_vars[v] = (
+                                goal_data[v].dims,
+                                goal_data[v].to_numpy(),
+                            )
 
                 if self._n_chunks_targets == 1:
                     for v in self._res_vars:
@@ -800,7 +813,9 @@ class Engine(ABC):
                         found = False
                         for v in self._res_vars:
                             if v in self._data_vars:
-                                self._data_vars[v][1].append(np.concatenate(self._tres[v], axis=1))
+                                self._data_vars[v][1].append(
+                                    np.concatenate(self._tres[v], axis=1)
+                                )
                                 if not found and self._write_on_fly:
                                     self._scount += self._data_vars[v][1][-1].shape[0]
                                 found = True
@@ -816,7 +831,9 @@ class Engine(ABC):
                 pr = int(100 * self._counter / self._n_chunks_all)
                 if pr > self._pdone:
                     self._pdone = pr
-                    print(f"{self.name}: Completed {self._counter} of {self._n_chunks_all} chunks, {self._pdone}%")
+                    print(
+                        f"{self.name}: Completed {self._counter} of {self._n_chunks_all} chunks, {self._pdone}%"
+                    )
 
             self._ci_targets += 1
             if self._ci_targets >= self._n_chunks_targets:
@@ -833,7 +850,7 @@ class Engine(ABC):
             f"{self.name}: Incomplete chunk calculation: {self._counter} of {self._n_chunks_all} chunks done"
         )
         assert self._ci_states == self._n_chunks_states, (
-            f"{self.name}: Incomplete chunk calculation: only {self._ci_states} of {self._n_chunks_states} states chunks done"  
+            f"{self.name}: Incomplete chunk calculation: only {self._ci_states} of {self._n_chunks_states} states chunks done"
         )
 
         if self._wfutures is not None:
@@ -850,7 +867,9 @@ class Engine(ABC):
             for v in self._res_vars:
                 if v in self._data_vars:
                     if len(self._data_vars[v][1]) > 1:
-                        self._data_vars[v][1] = np.concatenate(self._data_vars[v][1], axis=0)
+                        self._data_vars[v][1] = np.concatenate(
+                            self._data_vars[v][1], axis=0
+                        )
                     elif len(self._data_vars[v][1]) == 1:
                         self._data_vars[v][1] = self._data_vars[v][1][0]
             self._data_vars = self._red_dims(algo, self._data_vars)
@@ -862,9 +881,7 @@ class Engine(ABC):
             if self._write_from_ds:
                 if self._split_size is None:
                     fpath = self._out_dir / f"{self._base_name}.nc"
-                    write_nc_file(
-                        ds, fpath, nc_engine=config.nc_engine, verbosity=vrb
-                    )
+                    write_nc_file(ds, fpath, nc_engine=config.nc_engine, verbosity=vrb)
                 else:
                     wcount = 0
                     fcounter = 0

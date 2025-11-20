@@ -99,7 +99,7 @@ class NumpyEngine(Engine):
 
         """
         return True
-    
+
     def _get_start_calc_message(
         self,
         n_chunks_states,
@@ -111,8 +111,8 @@ class NumpyEngine(Engine):
         if n_chunks_targets > 1:
             msg += f" and {n_chunks_targets} targets chunks"
         msg += "."
-        return msg  
-    
+        return msg
+
     def run_calculation(
         self,
         algo,
@@ -221,7 +221,7 @@ class NumpyEngine(Engine):
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
         self.start_chunk_calculation(
-            algo, 
+            algo,
             coords=coords,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
@@ -229,7 +229,7 @@ class NumpyEngine(Engine):
             iterative=iterative,
             write_nc=write_nc,
         )
-        
+
         # prepare and submit chunks:
         results = {}
         i0_states = 0
@@ -272,14 +272,14 @@ class NumpyEngine(Engine):
 
                 # progress update:
                 self.update_chunk_progress(
-                        algo,
-                        results=results,
-                        out_coords=out_coords,
-                        goal_data=goal_data,
-                        out_vars=out_vars,
-                        futures=None,
-                    )
-            
+                    algo,
+                    results=results,
+                    out_coords=out_coords,
+                    goal_data=goal_data,
+                    out_vars=out_vars,
+                    futures=None,
+                )
+
                 i0_targets = i1_targets
             i0_states = i1_states
         del calc_pars, farm_data, point_data

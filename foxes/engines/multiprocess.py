@@ -54,7 +54,7 @@ class MultiprocessEngine(PoolEngine):
 
         """
         return future.ready()
-        
+
     def await_result(self, future):
         """
         Waits for result from a future
