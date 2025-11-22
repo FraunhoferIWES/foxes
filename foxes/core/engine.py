@@ -634,7 +634,7 @@ class Engine(ABC):
             raise ValueError(f"Engine '{self.name}' not initialized")
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
-        
+
     def new_chunk_results_manager(self, algo, **kwargs):
         """
         Creates a new ChunkResultsManager
@@ -658,21 +658,21 @@ class Engine(ABC):
         """Helper class for results management during chunk calculations"""
 
         def __init__(
-            self, 
+            self,
             algo,
             engine,
-            goal_data, 
-            n_chunks_states, 
-            n_chunks_targets, 
+            goal_data,
+            n_chunks_states,
+            n_chunks_targets,
             out_vars,
             out_dims,
-            coords, 
+            coords,
             iterative,
             write_nc,
         ):
             """
             Constructor
-            
+
             Parameters
             ----------
             algo: foxes.core.Algorithm
@@ -756,7 +756,9 @@ class Engine(ABC):
                 if self.split_size is None:
                     out_fpath = self.out_dir / (self.base_name + ".nc")
                 if self.split_mode != "chunks":
-                    self.write_on_fly = not self.ret_data and self.split_size is not None
+                    self.write_on_fly = (
+                        not self.ret_data and self.split_size is not None
+                    )
                     self.write_from_ds = not self.write_on_fly
                     self.ret_data = write_nc.get("ret_data", self.write_from_ds)
                     self.print(
@@ -769,7 +771,11 @@ class Engine(ABC):
             if self.__entered:
                 raise ValueError("Enter called for already entered ChunkResultsManager")
             self.__entered = True
-            self.engine.print(self.engine.get_start_calc_message(self.n_chunks_states, self.n_chunks_targets))
+            self.engine.print(
+                self.engine.get_start_calc_message(
+                    self.n_chunks_states, self.n_chunks_targets
+                )
+            )
             if self.verbosity > 0 and self.engine.has_progress_bar:
                 self.pbar = tqdm(total=self.n_chunks_all)
             return self
@@ -782,12 +788,12 @@ class Engine(ABC):
             ----------
             data_vars: dict
                 The data variables to be reduced
-            
+
             Returns
             -------
             dvars: dict
                 The reduced data variables
-            
+
             """
             dvars = {}
             for v, (dims, d) in data_vars.items():
@@ -886,7 +892,9 @@ class Engine(ABC):
                 List of current futures for asynchronous writing
 
             """
-            assert self.__entered, "ChunkResultsManager: update_chunk_progress called without enter"
+            assert self.__entered, (
+                "ChunkResultsManager: update_chunk_progress called without enter"
+            )
 
             chunk_key = (self.ci_states, self.ci_targets)
             while chunk_key in results:
@@ -969,7 +977,9 @@ class Engine(ABC):
 
             if self.pbar is not None:
                 self.pbar.close()
-            self.engine.print(f"{self.name}: Completed all {self.n_chunks_all} chunks\n")
+            self.engine.print(
+                f"{self.name}: Completed all {self.n_chunks_all} chunks\n"
+            )
 
             vrb = max(self.verbosity - 1, 0)
             if self.ret_data or self.write_from_ds:
@@ -990,14 +1000,21 @@ class Engine(ABC):
                 if self.write_from_ds:
                     if self.split_size is None:
                         fpath = self.out_dir / f"{self.base_name}.nc"
-                        write_nc_file(self.results, fpath, nc_engine=config.nc_engine, verbosity=vrb)
+                        write_nc_file(
+                            self.results,
+                            fpath,
+                            nc_engine=config.nc_engine,
+                            verbosity=vrb,
+                        )
                     else:
                         wcount = 0
                         fcounter = 0
                         wfutures = []
                         while wcount < self.algo.n_states:
                             splits = min(self.split_size, self.algo.n_states - wcount)
-                            dssub = self.results.isel({FC.STATE: slice(wcount, wcount + splits)})
+                            dssub = self.results.isel(
+                                {FC.STATE: slice(wcount, wcount + splits)}
+                            )
 
                             fpath = self.out_dir / f"{self.base_name}_{fcounter:06d}.nc"
                             future = self.submit(
@@ -1013,7 +1030,10 @@ class Engine(ABC):
                             wcount += splits
                             fcounter += 1
 
-                            if wcount < self.algo.n_states and self.split_mode == "input":
+                            if (
+                                wcount < self.algo.n_states
+                                and self.split_mode == "input"
+                            ):
                                 try:
                                     self.split_size = next(self.gen_size)
                                 except StopIteration:
@@ -1022,29 +1042,29 @@ class Engine(ABC):
                             self.await_result(wf)
 
             del (
-                self.ci_states, 
-                self.ci_targets, 
-                self.counter, 
-                self.scount, 
-                self.wcount, 
-                self.wfutures, 
-                self.fcounter, 
-                self.split_size, 
-                self.pdone, 
-                self.pbar, 
-                self.res_vars, 
-                self.data_vars, 
-                self.goal_data, 
-                self.out_dir, 
-                self.base_name, 
-                self.ret_data, 
-                self.gen_size, 
-                self.write_on_fly, 
-                self.write_from_ds, 
-                self.out_dims, 
-                self.coords, 
-                self.out_vars, 
-                self.iterative, 
+                self.ci_states,
+                self.ci_targets,
+                self.counter,
+                self.scount,
+                self.wcount,
+                self.wfutures,
+                self.fcounter,
+                self.split_size,
+                self.pdone,
+                self.pbar,
+                self.res_vars,
+                self.data_vars,
+                self.goal_data,
+                self.out_dir,
+                self.base_name,
+                self.ret_data,
+                self.gen_size,
+                self.write_on_fly,
+                self.write_from_ds,
+                self.out_dims,
+                self.coords,
+                self.out_vars,
+                self.iterative,
                 self.tres,
             )
             self.__entered = False

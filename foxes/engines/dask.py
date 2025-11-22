@@ -394,7 +394,7 @@ class DaskEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,
             out_dims=out_dims,
-            coords=coords, 
+            coords=coords,
             iterative=iterative,
             write_nc=write_nc,
         ) as results_mgr:
@@ -785,7 +785,7 @@ class LocalClusterEngine(DaskBaseEngine):
             n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,
             out_dims=out_dims,
-            coords=coords, 
+            coords=coords,
             iterative=iterative,
             write_nc=write_nc,
         ) as results_mgr:

@@ -227,11 +227,10 @@ class SingleChunkEngine(Engine):
             n_chunks_targets=1,
             out_vars=out_vars,
             out_dims=out_dims,
-            coords=coords, 
+            coords=coords,
             iterative=iterative,
             write_nc=write_nc,
         ) as results_mgr:
-
             data = self.get_chunk_input_data(
                 algo=algo,
                 model_data=model_data,

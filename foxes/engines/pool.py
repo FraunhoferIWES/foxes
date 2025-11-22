@@ -327,7 +327,7 @@ class PoolEngine(Engine):
             n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,
             out_dims=out_dims,
-            coords=coords, 
+            coords=coords,
             iterative=iterative,
             write_nc=write_nc,
         ) as results_mgr:
@@ -397,7 +397,7 @@ class PoolEngine(Engine):
             for k in list(futures.keys()):
                 results[k] = self.await_result(futures.pop(k))
                 results_mgr.update(results, futures)
-                
+
             del calc_pars, farm_data, point_data, results, futures
 
         return results_mgr.results
