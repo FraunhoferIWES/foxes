@@ -208,55 +208,50 @@ class SingleChunkEngine(Engine):
         super().run_calculation(algo, model, model_data, farm_data, point_data)
 
         # prepare:
+        algo.reset_chunk_store(chunk_store)
         n_states = model_data.sizes[FC.STATE]
         n_targets = point_data.sizes[FC.TARGET] if point_data is not None else 0
-        out_coords = model.output_coords()
+        out_dims = model.output_coords()
         coords = {}
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+        if FC.STATE in out_dims and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
-        algo.reset_chunk_store(chunk_store)
-
         if farm_data is None:
             farm_data = Dataset()
         goal_data = farm_data if point_data is None else point_data
 
-        self.start_chunk_calculation(
+        # start calculation:
+        with self.new_chunk_results_manager(
             algo,
-            coords=coords,
             goal_data=goal_data,
             n_chunks_states=1,
             n_chunks_targets=1,
+            out_vars=out_vars,
+            out_dims=out_dims,
+            coords=coords, 
             iterative=iterative,
             write_nc=write_nc,
-        )
+        ) as results_mgr:
 
-        data = self.get_chunk_input_data(
-            algo=algo,
-            model_data=model_data,
-            farm_data=farm_data,
-            point_data=point_data,
-            states_i0_i1=(0, n_states),
-            targets_i0_i1=(0, n_targets),
-            out_vars=out_vars,
-            chunki_states=0,
-            chunki_points=0,
-            n_chunks_states=1,
-            n_chunks_points=0,
-        )
+            data = self.get_chunk_input_data(
+                algo=algo,
+                model_data=model_data,
+                farm_data=farm_data,
+                point_data=point_data,
+                states_i0_i1=(0, n_states),
+                targets_i0_i1=(0, n_targets),
+                out_vars=out_vars,
+                chunki_states=0,
+                chunki_points=0,
+                n_chunks_states=1,
+                n_chunks_points=1,
+            )
 
-        results = model.calculate(algo, *data, **calc_pars)
-        _write_ani(algo, (0, 0), write_chunk_ani, *data)
-        results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
-        results = {(0, 0): (results, algo.chunk_store)}
-        del data
+            results = model.calculate(algo, *data, **calc_pars)
+            _write_ani(algo, (0, 0), write_chunk_ani, *data)
+            results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
+            results = {(0, 0): (results, algo.chunk_store)}
+            results_mgr.update(results)
 
-        self.update_chunk_progress(
-            algo,
-            results=results,
-            out_coords=out_coords,
-            goal_data=goal_data,
-            out_vars=out_vars,
-            futures=None,
-        )
+            del data, results, farm_data, point_data, calc_pars
 
-        return self.end_chunk_calculation(algo)
+        return results_mgr.results

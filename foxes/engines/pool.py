@@ -9,7 +9,7 @@ from foxes.output import write_chunk_ani_xy
 import foxes.constants as FC
 
 
-def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
+def _write_chunk_results(algo, results, write_nc, out_dims, mdata):
     """Helper function for optionally writing chunk results to netCDF file"""
     ret_data = True
     if write_nc is not None and write_nc["split"] == "chunks":
@@ -20,26 +20,26 @@ def _write_chunk_results(algo, results, write_nc, out_coords, mdata):
         out_dir.mkdir(parents=True, exist_ok=True)
 
         coords = {}
-        if FC.STATE in out_coords and FC.STATE in mdata:
+        if FC.STATE in out_dims and FC.STATE in mdata:
             coords[FC.STATE] = mdata[FC.STATE]
 
         dvars = {}
         for v, d in results.items():
             if (
-                out_coords == (FC.STATE, FC.TURBINE)
+                out_dims == (FC.STATE, FC.TURBINE)
                 and d.shape[1] == 1
                 and algo.n_turbines > 1
             ):
                 dvars[v] = ((FC.STATE,), d[:, 0])
             else:
-                dvars[v] = (out_coords, d)
+                dvars[v] = (out_dims, d)
 
         ds = Dataset(coords=coords, data_vars=dvars)
 
         i0 = mdata.chunki_states
         t0 = mdata.chunki_points
         vrb = max(algo.verbosity - 1, 0)
-        if out_coords == (FC.STATE, FC.TURBINE):
+        if out_dims == (FC.STATE, FC.TURBINE):
             fpath = out_dir / f"{base_name}_{i0:06d}.nc"
         else:
             fpath = out_dir / f"{base_name}_{i0:06d}_{t0:06d}.nc"
@@ -76,7 +76,7 @@ def _run(
     iterative,
     chunk_store,
     chunk_key,
-    out_coords,
+    out_dims,
     write_nc,
     write_chunk_ani=None,
     **cpars,
@@ -87,7 +87,7 @@ def _run(
     chunk_store = algo.reset_chunk_store() if iterative else {}
     cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
     _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
     return results, cstore
 
 
@@ -96,7 +96,7 @@ def _run_shared(
     model,
     *data,
     chunk_key,
-    out_coords,
+    out_dims,
     write_nc,
     write_chunk_ani=None,
     **cpars,
@@ -109,7 +109,7 @@ def _run_shared(
         else {}
     )
     _write_ani(algo, chunk_key, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
     return results, cstore
 
 
@@ -294,9 +294,9 @@ class PoolEngine(Engine):
 
         # prepare:
         n_states = model_data.sizes[FC.STATE]
-        out_coords = model.output_coords()
+        out_dims = model.output_coords()
         coords = {}
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+        if FC.STATE in out_dims and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = Dataset()
@@ -319,98 +319,85 @@ class PoolEngine(Engine):
             level=2,
         )
 
-        # prepare and submit chunks:
-        self.start_chunk_calculation(
+        # start calculation:
+        with self.new_chunk_results_manager(
             algo,
-            coords=coords,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
+            out_vars=out_vars,
+            out_dims=out_dims,
+            coords=coords, 
             iterative=iterative,
             write_nc=write_nc,
-        )
+        ) as results_mgr:
+            futures = {}
+            results = {}
+            i0_states = 0
+            for chunki_states in range(n_chunks_states):
+                i1_states = i0_states + chunk_sizes_states[chunki_states]
+                i0_targets = 0
+                for chunki_points in range(n_chunks_targets):
+                    key = (chunki_states, chunki_points)
+                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-        futures = {}
-        results = {}
-        i0_states = 0
-        for chunki_states in range(n_chunks_states):
-            i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0
-            for chunki_points in range(n_chunks_targets):
-                key = (chunki_states, chunki_points)
-                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                # get this chunk's data:
-                data = self.get_chunk_input_data(
-                    algo=algo,
-                    model_data=model_data,
-                    farm_data=farm_data,
-                    point_data=point_data,
-                    states_i0_i1=(i0_states, i1_states),
-                    targets_i0_i1=(i0_targets, i1_targets),
-                    out_vars=out_vars,
-                    chunki_states=chunki_states,
-                    chunki_points=chunki_points,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_points=n_chunks_targets,
-                )
-
-                # submit model calculation:
-                if self.share_cstore:
-                    futures[(chunki_states, chunki_points)] = self.submit(
-                        _run_shared,
-                        algo,
-                        model,
-                        *data,
-                        chunk_key=key,
-                        out_coords=out_coords,
-                        write_nc=write_nc,
-                        write_chunk_ani=write_chunk_ani,
-                        **calc_pars,
-                    )
-                else:
-                    futures[(chunki_states, chunki_points)] = self.submit(
-                        _run,
-                        algo,
-                        model,
-                        *data,
-                        iterative=iterative,
-                        chunk_store=chunk_store,
-                        chunk_key=key,
-                        out_coords=out_coords,
-                        write_nc=write_nc,
-                        write_chunk_ani=write_chunk_ani,
-                        **calc_pars,
-                    )
-                del data
-
-                i0_targets = i1_targets
-
-                while len(futures) > self.n_workers * 2:
-                    k = next(iter(futures))
-                    results[k] = self.await_result(futures.pop(k))
-
-                    self.update_chunk_progress(
-                        algo,
-                        results=results,
-                        out_coords=out_coords,
-                        goal_data=goal_data,
+                    # get this chunk's data:
+                    data = self.get_chunk_input_data(
+                        algo=algo,
+                        model_data=model_data,
+                        farm_data=farm_data,
+                        point_data=point_data,
+                        states_i0_i1=(i0_states, i1_states),
+                        targets_i0_i1=(i0_targets, i1_targets),
                         out_vars=out_vars,
-                        futures=futures,
+                        chunki_states=chunki_states,
+                        chunki_points=chunki_points,
+                        n_chunks_states=n_chunks_states,
+                        n_chunks_points=n_chunks_targets,
                     )
 
-            i0_states = i1_states
+                    # submit model calculation:
+                    if self.share_cstore:
+                        futures[(chunki_states, chunki_points)] = self.submit(
+                            _run_shared,
+                            algo,
+                            model,
+                            *data,
+                            chunk_key=key,
+                            out_dims=out_dims,
+                            write_nc=write_nc,
+                            write_chunk_ani=write_chunk_ani,
+                            **calc_pars,
+                        )
+                    else:
+                        futures[(chunki_states, chunki_points)] = self.submit(
+                            _run,
+                            algo,
+                            model,
+                            *data,
+                            iterative=iterative,
+                            chunk_store=chunk_store,
+                            chunk_key=key,
+                            out_dims=out_dims,
+                            write_nc=write_nc,
+                            write_chunk_ani=write_chunk_ani,
+                            **calc_pars,
+                        )
+                    del data
 
-        for k in list(futures.keys()):
-            results[k] = self.await_result(futures.pop(k))
+                    i0_targets = i1_targets
 
-            self.update_chunk_progress(
-                algo,
-                results=results,
-                out_coords=out_coords,
-                goal_data=goal_data,
-                out_vars=out_vars,
-                futures=futures,
-            )
+                    while len(futures) > self.n_workers * 2:
+                        k = next(iter(futures))
+                        results[k] = self.await_result(futures.pop(k))
+                        results_mgr.update(results, futures)
 
-        return self.end_chunk_calculation(algo)
+                i0_states = i1_states
+
+            for k in list(futures.keys()):
+                results[k] = self.await_result(futures.pop(k))
+                results_mgr.update(results, futures)
+                
+            del calc_pars, farm_data, point_data, results, futures
+
+        return results_mgr.results

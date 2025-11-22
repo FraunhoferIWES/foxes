@@ -356,9 +356,9 @@ class DaskEngine(DaskBaseEngine):
 
         # prepare:
         n_states = model_data.sizes[FC.STATE]
-        out_coords = model.output_coords()
+        out_dims = model.output_coords()
         coords = {}
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+        if FC.STATE in out_dims and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
@@ -377,17 +377,6 @@ class DaskEngine(DaskBaseEngine):
             level=2,
         )
 
-        # prepare and submit chunks:
-        self.start_chunk_calculation(
-            algo,
-            coords=coords,
-            goal_data=goal_data,
-            n_chunks_states=n_chunks_states,
-            n_chunks_targets=n_chunks_targets,
-            iterative=iterative,
-            write_nc=write_nc,
-        )
-
         # submit chunks:
         n_chunks_all = n_chunks_states * n_chunks_targets
         self.print(
@@ -398,81 +387,83 @@ class DaskEngine(DaskBaseEngine):
             if self.verbosity > 1 and self._dask_progress_bar
             else None
         )
-        futures = {}
-        i0_states = 0
-        counter = 0
-        pdone = -1
-        for chunki_states in range(n_chunks_states):
-            i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0
-            for chunki_points in range(n_chunks_targets):
-                key = (chunki_states, chunki_points)
-                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                # get this chunk's data:
-                data = self.get_chunk_input_data(
-                    algo=algo,
-                    model_data=model_data,
-                    farm_data=farm_data,
-                    point_data=point_data,
-                    states_i0_i1=(i0_states, i1_states),
-                    targets_i0_i1=(i0_targets, i1_targets),
-                    out_vars=out_vars,
-                    chunki_states=chunki_states,
-                    chunki_points=chunki_points,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_points=n_chunks_targets,
-                )
-
-                # submit model calculation:
-                futures[(chunki_states, chunki_points)] = delayed(_run_shared)(
-                    algo,
-                    model,
-                    *data,
-                    chunk_key=key,
-                    out_coords=out_coords,
-                    write_nc=write_nc,
-                    write_chunk_ani=write_chunk_ani,
-                    **calc_pars,
-                )
-                del data
-
-                i0_targets = i1_targets
-
-                counter += 1
-                if pbar is not None:
-                    pbar.update()
-                elif self.verbosity > 1 and self.prints_progress:
-                    pr = int(100 * counter / n_chunks_states)
-                    if pr > pdone:
-                        pdone = pr
-                        print(
-                            f"{self.name}: Submitted {counter} of {n_chunks_states} chunks, {pdone}%"
-                        )
-            i0_states = i1_states
-
-        del farm_data, point_data, calc_pars
-        if pbar is not None:
-            pbar.close()
-
-        # wait for results:
-        if n_chunks_all > 1 or self.verbosity > 1:
-            self.print(
-                f"Computing {n_chunks_all} chunks using {self.n_workers} workers"
-            )
-        results = dask.compute(futures)[0]
-        futures = None
-
-        self.update_chunk_progress(
+        with self.new_chunk_results_manager(
             algo,
-            results=results,
-            out_coords=out_coords,
             goal_data=goal_data,
+            n_chunks_states=n_chunks_states,
+            n_chunks_targets=n_chunks_targets,
             out_vars=out_vars,
-            futures=futures,
-        )
+            out_dims=out_dims,
+            coords=coords, 
+            iterative=iterative,
+            write_nc=write_nc,
+        ) as results_mgr:
+            futures = {}
+            i0_states = 0
+            counter = 0
+            pdone = -1
+            for chunki_states in range(n_chunks_states):
+                i1_states = i0_states + chunk_sizes_states[chunki_states]
+                i0_targets = 0
+                for chunki_points in range(n_chunks_targets):
+                    key = (chunki_states, chunki_points)
+                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-        return self.end_chunk_calculation(algo)
+                    # get this chunk's data:
+                    data = self.get_chunk_input_data(
+                        algo=algo,
+                        model_data=model_data,
+                        farm_data=farm_data,
+                        point_data=point_data,
+                        states_i0_i1=(i0_states, i1_states),
+                        targets_i0_i1=(i0_targets, i1_targets),
+                        out_vars=out_vars,
+                        chunki_states=chunki_states,
+                        chunki_points=chunki_points,
+                        n_chunks_states=n_chunks_states,
+                        n_chunks_points=n_chunks_targets,
+                    )
+
+                    # submit model calculation:
+                    futures[(chunki_states, chunki_points)] = delayed(_run_shared)(
+                        algo,
+                        model,
+                        *data,
+                        chunk_key=key,
+                        out_dims=out_dims,
+                        write_nc=write_nc,
+                        write_chunk_ani=write_chunk_ani,
+                        **calc_pars,
+                    )
+                    del data
+
+                    i0_targets = i1_targets
+
+                    counter += 1
+                    if pbar is not None:
+                        pbar.update()
+                    elif self.verbosity > 1 and self.prints_progress:
+                        pr = int(100 * counter / n_chunks_states)
+                        if pr > pdone:
+                            pdone = pr
+                            print(
+                                f"{self.name}: Submitted {counter} of {n_chunks_states} chunks, {pdone}%"
+                            )
+                i0_states = i1_states
+
+            del farm_data, point_data, calc_pars
+            if pbar is not None:
+                pbar.close()
+
+            # wait for results:
+            if n_chunks_all > 1 or self.verbosity > 1:
+                self.print(
+                    f"Computing {n_chunks_all} chunks using {self.n_workers} workers"
+                )
+            results = dask.compute(futures)[0]
+            results_mgr.update(results)
+
+        return results_mgr.results
 
 
 def _run_on_cluster(
@@ -481,7 +472,7 @@ def _run_on_cluster(
     *data,
     names,
     dims,
-    out_coords,
+    out_dims,
     mdata_size,
     fdata_size,
     iterative,
@@ -541,7 +532,7 @@ def _run_on_cluster(
     cstore = {k: chunk_store[k]} if k in chunk_store else {}
 
     _write_ani(algo, k, write_chunk_ani, *data)
-    results = _write_chunk_results(algo, results, write_nc, out_coords, data[0])
+    results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
 
     return results, cstore
 
@@ -760,9 +751,9 @@ class LocalClusterEngine(DaskBaseEngine):
 
         # prepare:
         n_states = model_data.sizes[FC.STATE]
-        out_coords = model.output_coords()
+        out_dims = model.output_coords()
         coords = {}
-        if FC.STATE in out_coords and FC.STATE in model_data.coords:
+        if FC.STATE in out_dims and FC.STATE in model_data.coords:
             coords[FC.STATE] = model_data[FC.STATE].to_numpy()
         if farm_data is None:
             farm_data = xr.Dataset()
@@ -786,120 +777,104 @@ class LocalClusterEngine(DaskBaseEngine):
         cpars = self._client.scatter(calc_pars, broadcast=True)
         all_data = [falgo, fmodel, cpars]
 
-        # prepare chunks:
-        self.start_chunk_calculation(
+        # start calculation:
+        with self.new_chunk_results_manager(
             algo,
-            coords=coords,
             goal_data=goal_data,
             n_chunks_states=n_chunks_states,
             n_chunks_targets=n_chunks_targets,
+            out_vars=out_vars,
+            out_dims=out_dims,
+            coords=coords, 
             iterative=iterative,
             write_nc=write_nc,
-        )
+        ) as results_mgr:
+            futures = {}
+            results = {}
+            i0_states = 0
+            for chunki_states in range(n_chunks_states):
+                i1_states = i0_states + chunk_sizes_states[chunki_states]
+                i0_targets = 0
+                for chunki_points in range(n_chunks_targets):
+                    i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
 
-        # submit chunks:
-        futures = {}
-        results = {}
-        i0_states = 0
-        for chunki_states in range(n_chunks_states):
-            i1_states = i0_states + chunk_sizes_states[chunki_states]
-            i0_targets = 0
-            for chunki_points in range(n_chunks_targets):
-                i1_targets = i0_targets + chunk_sizes_targets[chunki_points]
-
-                # get this chunk's data:
-                data = self.get_chunk_input_data(
-                    algo=algo,
-                    model_data=model_data,
-                    farm_data=farm_data,
-                    point_data=point_data,
-                    states_i0_i1=(i0_states, i1_states),
-                    targets_i0_i1=(i0_targets, i1_targets),
-                    out_vars=out_vars,
-                    chunki_states=chunki_states,
-                    chunki_points=chunki_points,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_points=n_chunks_targets,
-                )
-
-                # scatter data:
-                fut_data = []
-                names = []
-                dims = []
-                ldims = [d.loop_dims for d in data]
-                for dt in data:
-                    for k, d in dt.items():
-                        fut_data.append(self._client.scatter(d, hash=False))
-                        names.append(k)
-                        dims.append(dt.dims[k])
-                names = self._client.scatter(names)
-                dims = self._client.scatter(dims)
-                ldims = self._client.scatter(ldims)
-                all_data += [fut_data, names, dims, ldims]
-
-                # scatter chunk store data:
-                cstore = chunk_store
-                if len(cstore):
-                    cstore = self._client.scatter(cstore, hash=False)
-                    all_data.append(cstore)
-
-                # submit model calculation:
-                futures[(chunki_states, chunki_points)] = self.submit(
-                    _run_on_cluster,
-                    falgo,
-                    fmodel,
-                    *fut_data,
-                    names=names,
-                    dims=dims,
-                    out_coords=out_coords,
-                    mdata_size=len(data[0]),
-                    fdata_size=len(data[1]),
-                    iterative=iterative,
-                    chunk_store=cstore,
-                    chunki_states=chunki_states,
-                    chunki_points=chunki_points,
-                    n_chunks_states=n_chunks_states,
-                    n_chunks_points=n_chunks_targets,
-                    i0_states=i0_states,
-                    write_nc=write_nc,
-                    write_chunk_ani=write_chunk_ani,
-                    cpars=cpars,
-                    retries=10,
-                )
-                del fut_data, cstore
-
-                i0_targets = i1_targets
-
-                while len(futures) > self.n_workers * 2:
-                    k = next(iter(futures))
-                    results[k] = self.await_result(futures.pop(k))
-
-                    self.update_chunk_progress(
-                        algo,
-                        results=results,
-                        out_coords=out_coords,
-                        goal_data=goal_data,
+                    # get this chunk's data:
+                    data = self.get_chunk_input_data(
+                        algo=algo,
+                        model_data=model_data,
+                        farm_data=farm_data,
+                        point_data=point_data,
+                        states_i0_i1=(i0_states, i1_states),
+                        targets_i0_i1=(i0_targets, i1_targets),
                         out_vars=out_vars,
-                        futures=futures,
+                        chunki_states=chunki_states,
+                        chunki_points=chunki_points,
+                        n_chunks_states=n_chunks_states,
+                        n_chunks_points=n_chunks_targets,
                     )
 
-            i0_states = i1_states
+                    # scatter data:
+                    fut_data = []
+                    names = []
+                    dims = []
+                    ldims = [d.loop_dims for d in data]
+                    for dt in data:
+                        for k, d in dt.items():
+                            fut_data.append(self._client.scatter(d, hash=False))
+                            names.append(k)
+                            dims.append(dt.dims[k])
+                    names = self._client.scatter(names)
+                    dims = self._client.scatter(dims)
+                    ldims = self._client.scatter(ldims)
+                    all_data += [fut_data, names, dims, ldims]
 
-        del falgo, fmodel, farm_data, point_data, calc_pars
+                    # scatter chunk store data:
+                    cstore = chunk_store
+                    if len(cstore):
+                        cstore = self._client.scatter(cstore, hash=False)
+                        all_data.append(cstore)
 
-        for k in list(futures.keys()):
-            results[k] = self.await_result(futures.pop(k))
+                    # submit model calculation:
+                    futures[(chunki_states, chunki_points)] = self.submit(
+                        _run_on_cluster,
+                        falgo,
+                        fmodel,
+                        *fut_data,
+                        names=names,
+                        dims=dims,
+                        out_dims=out_dims,
+                        mdata_size=len(data[0]),
+                        fdata_size=len(data[1]),
+                        iterative=iterative,
+                        chunk_store=cstore,
+                        chunki_states=chunki_states,
+                        chunki_points=chunki_points,
+                        n_chunks_states=n_chunks_states,
+                        n_chunks_points=n_chunks_targets,
+                        i0_states=i0_states,
+                        write_nc=write_nc,
+                        write_chunk_ani=write_chunk_ani,
+                        cpars=cpars,
+                        retries=10,
+                    )
+                    del fut_data, cstore
 
-            self.update_chunk_progress(
-                algo,
-                results=results,
-                out_coords=out_coords,
-                goal_data=goal_data,
-                out_vars=out_vars,
-                futures=futures,
-            )
+                    i0_targets = i1_targets
 
-        return self.end_chunk_calculation(algo)
+                    while len(futures) > self.n_workers * 2:
+                        k = next(iter(futures))
+                        results[k] = self.await_result(futures.pop(k))
+                        results_mgr.update(results, futures)
+
+                i0_states = i1_states
+
+            del falgo, fmodel, farm_data, point_data, calc_pars
+
+            for k in list(futures.keys()):
+                results[k] = self.await_result(futures.pop(k))
+                results_mgr.update(results, futures)
+
+        return results_mgr.results
 
 
 class SlurmClusterEngine(LocalClusterEngine):

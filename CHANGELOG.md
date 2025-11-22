@@ -859,6 +859,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.6.2
 
-
+- Engines:
+  - Reworked engine implementations, in particular pool engines. This concerns progress display and a smoother balance between submissions and post-processing chunk results.
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.2](https://github.com/FraunhoferIWES/foxes/commits/v1.6.2)
