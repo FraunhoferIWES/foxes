@@ -651,6 +651,19 @@ class Engine(ABC):
         crm: foxes.core.engine.ChunkResultsManager
             The chunk results manager
 
+        Example
+        -------
+        Derived engines should receive results from chunked calculations
+        through
+        ```python
+        with engine.new_chunk_results_manager(...) as results_man:
+            ...
+            results_man.update(results, futures)
+            ...
+        ```
+        After exiting the with-block, the final results are available
+        through `results_man.results`.
+
         """
         return self.ChunkResultsManager(algo=algo, engine=self, **kwargs)
 
@@ -739,7 +752,7 @@ class Engine(ABC):
                 self.out_dir.mkdir(parents=True, exist_ok=True)
                 out_fpath = self.out_dir / (self.base_name + "_*.nc")
                 if self.split_mode == "chunks":
-                    self.print(
+                    self.engine.print(
                         f"{self.name}: Writing results to '{out_fpath}', using split = {self.split_mode}, ret_data = {self.ret_data}"
                     )
                 elif self.split_mode == "input":
@@ -761,7 +774,7 @@ class Engine(ABC):
                     )
                     self.write_from_ds = not self.write_on_fly
                     self.ret_data = write_nc.get("ret_data", self.write_from_ds)
-                    self.print(
+                    self.engine.print(
                         f"{self.name}: Writing results to '{out_fpath}', using split = {self.split_mode}, on_fly = {self.write_on_fly}, ret_data = {self.ret_data}"
                     )
 
@@ -780,21 +793,8 @@ class Engine(ABC):
                 self.pbar = tqdm(total=self.n_chunks_all)
             return self
 
-        def red_dims(self, data_vars):
-            """
-            Reduces unneccessary dimensions of data vars
-
-            Parameters
-            ----------
-            data_vars: dict
-                The data variables to be reduced
-
-            Returns
-            -------
-            dvars: dict
-                The reduced data variables
-
-            """
+        def _red_dims(self, data_vars):
+            """Helper function for reducing dimensions of data vars"""
             dvars = {}
             for v, (dims, d) in data_vars.items():
                 if (
@@ -813,17 +813,8 @@ class Engine(ABC):
                     dvars[v] = (dims, d)
             return dvars
 
-        def write_parts_on_fly(self, futures):
-            """
-            Writes chunked results to netCDF,
-            without ever constructing the full Dataset in memory
-
-            Parameters
-            ----------
-            futures: list or None
-                List of futures for asynchronous writing
-
-            """
+        def _write_parts_on_fly(self, futures):
+            """Helper function for writing results to files on the fly"""
             vrb = max(self.verbosity - 1, 0)
             wfutures = []
             if self.split_size is not None:
@@ -841,7 +832,7 @@ class Engine(ABC):
                     dvars = {
                         v: (d[0], d[1][0][:splits]) for v, d in self.data_vars.items()
                     }
-                    dvars = self.red_dims(dvars)
+                    dvars = self._red_dims(dvars)
                     crds = {v: d for v, d in self.coords.items()}
                     crds[FC.STATE] = self.coords[FC.STATE][
                         self.wcount : self.wcount + splits
@@ -859,8 +850,8 @@ class Engine(ABC):
                     fpath = self.out_dir / f"{self.base_name}_{self.fcounter:06d}.nc"
                     args = (ds, fpath)
                     kwargs = dict(nc_engine=config.nc_engine, verbosity=vrb)
-                    if futures is not None and len(futures) < self.n_workers:
-                        future = self.submit(write_nc_file, *args, **kwargs)
+                    if futures is not None and len(futures) < self.engine.n_workers:
+                        future = self.engine.submit(write_nc_file, *args, **kwargs)
                         wfutures.append(future)
                         del future
                     else:
@@ -882,7 +873,7 @@ class Engine(ABC):
 
         def update(self, results, futures=None):
             """
-            Updates the chunk calculation progress
+            Updates the chunk calculation progress, adds results to data_vars
 
             Parameters
             ----------
@@ -943,7 +934,7 @@ class Engine(ABC):
                             self.tres = None
 
                     if self.write_on_fly:
-                        self.write_parts_on_fly(futures)
+                        self._write_parts_on_fly(futures)
 
                 self.counter += 1
                 if self.pbar is not None:
@@ -973,7 +964,7 @@ class Engine(ABC):
 
             if self.wfutures is not None:
                 for wf in self.wfutures:
-                    self.await_result(wf)
+                    self.engine.await_result(wf)
 
             if self.pbar is not None:
                 self.pbar.close()
@@ -991,7 +982,7 @@ class Engine(ABC):
                             )
                         elif len(self.data_vars[v][1]) == 1:
                             self.data_vars[v][1] = self.data_vars[v][1][0]
-                self.data_vars = self.red_dims(self.data_vars)
+                self.data_vars = self._red_dims(self.data_vars)
                 self.results = Dataset(
                     coords=self.coords,
                     data_vars=self.data_vars,
