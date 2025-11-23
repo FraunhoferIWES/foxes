@@ -655,7 +655,7 @@ class Engine(ABC):
         -------
         Derived engines should receive results from chunked calculations
         through
-        
+
         >>> with engine.new_chunk_results_manager(...) as results_man:
         >>>    ...
         >>>    results_man.update(results, futures)
