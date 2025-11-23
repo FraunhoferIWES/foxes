@@ -655,12 +655,12 @@ class Engine(ABC):
         -------
         Derived engines should receive results from chunked calculations
         through
-        ```python
-        with engine.new_chunk_results_manager(...) as results_man:
-            ...
-            results_man.update(results, futures)
-            ...
-        ```
+        
+        >>> with engine.new_chunk_results_manager(...) as results_man:
+        >>>    ...
+        >>>    results_man.update(results, futures)
+        >>>    ...
+
         After exiting the with-block, the final results are available
         through `results_man.results`.
 
