@@ -115,8 +115,6 @@ class NEWAStates(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        kwargs: dict, optional
-            Additional parameters for the base class
         interp_pars: dict, optional
             Additional parameters for scipy.interpolate.griddata,
             e.g. {'method': 'linear', 'fill_value': None, 'rescale': True}
