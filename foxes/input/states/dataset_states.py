@@ -40,8 +40,10 @@ def _read_nc_file(
             data = data[vars]
             data.attrs = {}
             if isel is not None and len(isel):
+                isel = {c: s for c, s in isel.items() if c in data.sizes}
                 data = data.isel(**isel)
             if sel is not None and len(sel):
+                sel = {c: s for c, s in sel.items() if c in data.sizes}
                 data = data.sel(**sel)
             assert min(data.sizes.values()) > 0, (
                 f"States: No data in file {fpath}, isel={isel}, sel={sel}, resulting sizes={data.sizes}"
@@ -414,8 +416,6 @@ class DatasetStates(States):
                 i1 = len(x) - 1
                 while i1 > 0 and x[i1 - 1] >= x1:
                     i1 -= 1
-                if self.sel is None:
-                    self.sel = {}
                 self.sel.update({cmap[v]: slice(x[i0], x[i1] + 1)})
                 if verbosity > 0:
                     hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
