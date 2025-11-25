@@ -176,3 +176,36 @@ class ICONStates(DatasetStates):
             FV.Y: self.lat_coord,
             FV.H: self.height_level_coord,
         }
+
+    def load_data(self, algo, verbosity=0):
+        """
+        Load and/or create all model data that is subject to chunking.
+
+        Such data should not be stored under self, for memory reasons. The
+        data returned here will automatically be chunked and then provided
+        as part of the mdata object during calculations.
+
+        Parameters
+        ----------
+        algo: foxes.core.Algorithm
+            The calculation algorithm
+        verbosity: int
+            The verbosity level, 0 = silent
+
+        Returns
+        -------
+        idata: dict
+            The dict has exactly two entries: `data_vars`,
+            a dict with entries `name_str -> (dim_tuple, data_ndarray)`;
+            and `coords`, a dict with entries `dim_name_str -> dim_array`
+
+        """
+        return super().load_data(
+            algo,
+            cmap=self._cmap,
+            variables=self.variables,
+            bounds_extra_space=self.bounds_extra_space,
+            height_bounds=self.height_bounds,
+            verbosity=verbosity,
+        )
+        
