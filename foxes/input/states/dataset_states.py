@@ -23,6 +23,7 @@ def _read_nc_file(
     minimal,
     drop_vars=None,
     check_input_nans=True,
+    preprocess=None,
 ):
     """Helper function for nc file reading"""
     with xr.open_dataset(fpath, drop_variables=drop_vars, engine=nc_engine) as data:
@@ -31,7 +32,8 @@ def _read_nc_file(
                 raise KeyError(
                     f"Missing coordinate '{c}' in file {fpath}, got: {list(data.sizes.keys())}"
                 )
-
+        if preprocess is not None:
+            data = preprocess(data)
         if minimal:
             data = data[coords[0]].to_numpy()
         else:
@@ -58,7 +60,6 @@ def _read_nc_file(
                         raise ValueError(
                             f"States: NaN data found in input data for variable '{v}' with dims {d.dims} in file {fpath} at index {i}"
                         )
-
     return data
 
 
@@ -99,6 +100,8 @@ class DatasetStates(States):
         Whether to check the time coordinates for consistency
     check_input_nans: bool
         Whether to check input data for NaNs
+    preprocess_nc: callable, optional
+        A function to preprocess the netcdf Dataset before use
 
     :group: input.states
 
@@ -117,6 +120,7 @@ class DatasetStates(States):
         weight_factor=None,
         check_times=True,
         check_input_nans=True,
+        preprocess_nc=None,
         **kwargs,
     ):
         """
@@ -154,6 +158,8 @@ class DatasetStates(States):
             Whether to check the time coordinates for consistency
         check_input_nans: bool
             Whether to check input data for NaNs, otherwise NaNs are removed
+        preprocess_nc: callable, optional
+            A function to preprocess the netcdf Dataset before use
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -170,6 +176,7 @@ class DatasetStates(States):
         self.weight_factor = weight_factor
         self.check_times = check_times
         self.check_input_nans = check_input_nans
+        self.preprocess_nc = preprocess_nc
 
         self._N = None
         self._inds = None
@@ -498,6 +505,7 @@ class DatasetStates(States):
                 minimal=self.load_mode == "fly",
                 drop_vars=self.drop_vars,
                 check_input_nans=self.check_input_nans,
+                preprocess=self.preprocess_nc,
             )
 
             if self.load_mode in ["preload", "lazy"]:
@@ -872,6 +880,7 @@ class DatasetStates(States):
                                 minimal=False,
                                 drop_vars=self.drop_vars,
                                 check_input_nans=self.check_input_nans,
+                                preprocess=self.preprocess_nc,
                             )
                         )
 
