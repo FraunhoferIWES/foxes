@@ -126,12 +126,14 @@ class PoolEngine(Engine):
     ----------
     share_cstore: bool
         Share chunk store between chunks
+    pool_args: dict
+        Arguments for the pool constructor
 
     :group: engines
 
     """
 
-    def __init__(self, *args, share_cstore=False, **kwargs):
+    def __init__(self, *args, share_cstore=False, pool_args={}, **kwargs):
         """
         Constructor.
 
@@ -141,12 +143,15 @@ class PoolEngine(Engine):
             Arguments for the base class
         share_cstore: bool
             Share chunk store between chunks
+        pool_args: dict
+            Arguments for the pool constructor
         kwargs: dict, optional
             Additional arguments for the base class
 
         """
         super().__init__(*args, **kwargs)
         self.share_cstore = share_cstore
+        self.pool_args = pool_args
 
     @abstractmethod
     def _create_pool(self):
