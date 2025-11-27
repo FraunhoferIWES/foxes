@@ -51,9 +51,7 @@ class ICONStates(DatasetStates):
 
     def __init__(
         self,
-        input_files_uv_nc,
-        input_files_tke_nc=None,
-        input_files_rho_nc=None,
+        input_files_nc,
         height_level_coord="height",
         time_coord="time",
         lat_coord="lat",
@@ -74,15 +72,9 @@ class ICONStates(DatasetStates):
 
         Parameters
         ----------
-        input_files_uv_nc: str
-            The input netcdf file(s) containing UV results, can contain
-            wildcards, e.g. 'icon_uv_2025*.nc'
-        input_files_tke_nc: str, optional
-            The input netcdf file(s) containing TKE results, can contain
-            wildcards, e.g. 'icon_tke_2025*.nc'
-        input_files_rho_nc: str, optional
-            The input netcdf file(s) containing RHO results, can contain
-            wildcards, e.g. 'icon_rho_2025*.nc'
+        input_files_nc: str
+            The input netcdf file(s) containing, can contain
+            wildcards, e.g. '2025*_icon.nc'
         height_level_coord: str, optional
             The height level coordinate name in the data
         time_coord: str
@@ -142,12 +134,6 @@ class ICONStates(DatasetStates):
                 FV.TKE: "TKE",
                 FV.RHO: "RHO",
             }
-
-        input_files_nc = {
-            FV.UV: input_files_uv_nc,
-            FV.TKE: input_files_tke_nc,
-            FV.RHO: input_files_rho_nc,
-        }
 
         super().__init__(
             data_source=input_files_nc,
