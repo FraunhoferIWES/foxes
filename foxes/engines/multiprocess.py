@@ -14,7 +14,7 @@ class MultiprocessEngine(PoolEngine):
     def _create_pool(self):
         """Creates the pool"""
         Pool = import_module("multiprocess").Pool
-        self._pool = Pool(processes=self.n_workers)
+        self._pool = Pool(processes=self.n_workers, **self.pool_args)
 
     def submit(self, f, *args, **kwargs):
         """

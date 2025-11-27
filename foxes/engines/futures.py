@@ -2,24 +2,17 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 from .pool import PoolEngine
 
-
-class ThreadsEngine(PoolEngine):
+class ProcessEngine(PoolEngine):
     """
-    The threads engine for foxes calculations.
+    The processes engine for foxes calculations.
 
     :group: engines
 
     """
 
-    def __init__(self, *args, **kwargs):
-        """
-        Constructor
-        """
-        super().__init__(*args, share_cstore=True, **kwargs)
-
     def _create_pool(self):
         """Creates the pool"""
-        self._pool = ThreadPoolExecutor(max_workers=self.n_workers)
+        self._pool = ProcessPoolExecutor(max_workers=self.n_workers, **self.pool_args)
 
     def submit(self, f, *args, **kwargs):
         """
@@ -82,9 +75,9 @@ class ThreadsEngine(PoolEngine):
         self._pool.shutdown()
 
 
-class ProcessEngine(ThreadsEngine):
+class ThreadsEngine(ProcessEngine):
     """
-    The processes engine for foxes calculations.
+    The threads engine for foxes calculations.
 
     :group: engines
 
@@ -94,9 +87,8 @@ class ProcessEngine(ThreadsEngine):
         """
         Constructor
         """
-        super().__init__(*args, **kwargs)
-        self.share_cstore = False
+        super().__init__(*args, share_cstore=True, **kwargs)
 
     def _create_pool(self):
         """Creates the pool"""
-        self._pool = ProcessPoolExecutor(max_workers=self.n_workers)
+        self._pool = ThreadPoolExecutor(max_workers=self.n_workers, **self.pool_args)

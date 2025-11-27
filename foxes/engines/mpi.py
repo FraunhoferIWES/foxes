@@ -17,11 +17,16 @@ class MPIEngine(ProcessEngine):
 
     """
 
+
     def _create_pool(self):
         """Creates the pool"""
-        MPIPoolExecutor = import_module(
+        mpi4py_futures = import_module(
             "mpi4py.futures",
             pip_hint="pip install mpi4py",
             conda_hint="conda install mpi4py -c conda-forge",
-        ).MPIPoolExecutor
-        self._pool = MPIPoolExecutor(max_workers=self.n_workers)
+        )
+        MPIPoolExecutor = mpi4py_futures.MPIPoolExecutor
+
+        pargs = dict(use_pkl5=True)
+        pargs.update(self.pool_args)
+        self._pool = MPIPoolExecutor(max_workers=self.n_workers, **pargs)
