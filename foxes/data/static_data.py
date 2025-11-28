@@ -3,6 +3,7 @@ from foxes.utils import DataBook
 from . import farms
 from . import states
 from . import power_ct_curves
+from . import model_data
 
 FARM = "farm"
 """ Static wind farm data identifier
@@ -19,6 +20,10 @@ PCTCURVE = "power_ct_curve"
 :group: data
 """
 
+MODEL_DATA = "model_data"
+""" Static model data identifier
+:group: data
+"""
 
 class StaticData(DataBook):
     """
@@ -35,3 +40,4 @@ class StaticData(DataBook):
         self.add_data_package(FARM, farms, ".csv")
         self.add_data_package(STATES, states, [".csv", ".csv.gz", ".nc", ".tab"])
         self.add_data_package(PCTCURVE, power_ct_curves, ".csv")
+        self.add_data_package(MODEL_DATA, model_data, ".csv")

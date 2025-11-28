@@ -25,8 +25,6 @@ class FieldData(DatasetStates):
         The height coordinate name in the data
     weight_ncvar: str
         Name of the weight data variable in the nc file(s)
-    interpn_pars: dict, optional
-        Additional parameters for scipy.interpolate.interpn
     bounds_extra_space: float or str
         The extra space, either float in m,
         or str for units of D, e.g. '2.5D'
@@ -62,7 +60,6 @@ class FieldData(DatasetStates):
         weight_ncvar=None,
         bounds_extra_space=1000,
         height_bounds=None,
-        interpn_pars={},
         **kwargs,
     ):
         """
@@ -89,8 +86,6 @@ class FieldData(DatasetStates):
             or str for units of D, e.g. '2.5D'
         height_bounds: tuple, optional
             The (h_min, h_max) height bounds in m. Defaults to H +/- 0.5*D
-        interpn_pars: dict
-            Parameters for scipy.interpolate.interpn
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -101,7 +96,6 @@ class FieldData(DatasetStates):
         self.y_coord = y_coord
         self.h_coord = h_coord
         self.weight_ncvar = weight_ncvar
-        self.interpn_pars = interpn_pars
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
 

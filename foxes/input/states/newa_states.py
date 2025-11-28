@@ -70,7 +70,7 @@ class NEWAStates(DatasetStates):
         time_format=None,
         bounds_extra_space=0.0,
         height_bounds=None,
-        interp_pars=None,
+        interp_pars={},
         wrf_point_plot=None,
         **kwargs,
     ):
@@ -145,6 +145,7 @@ class NEWAStates(DatasetStates):
             time_format=time_format,
             load_mode=load_mode,
             weight_factor=None,
+            interp_pars=interp_pars,
             **kwargs,
         )
 
@@ -157,7 +158,6 @@ class NEWAStates(DatasetStates):
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
         self.wrf_point_plot = wrf_point_plot
-        self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
 
         self._cmap = {

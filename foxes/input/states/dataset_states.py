@@ -104,6 +104,8 @@ class DatasetStates(States):
         Whether to check input data for NaNs
     preprocess_nc: callable, optional
         A function to preprocess the netcdf Dataset before use
+    interp_pars: dict
+        Additional parameters the interpolation
 
     :group: input.states
 
@@ -123,6 +125,7 @@ class DatasetStates(States):
         check_times=True,
         check_input_nans=True,
         preprocess_nc=None,
+        interp_pars={},
         **kwargs,
     ):
         """
@@ -162,6 +165,8 @@ class DatasetStates(States):
             Whether to check input data for NaNs, otherwise NaNs are removed
         preprocess_nc: callable, optional
             A function to preprocess the netcdf Dataset before use
+        interp_pars: dict, optional
+            Additional parameters the interpolation
         kwargs: dict, optional
             Additional arguments for the base class
 
@@ -179,6 +184,7 @@ class DatasetStates(States):
         self.check_times = check_times
         self.check_input_nans = check_input_nans
         self.preprocess_nc = preprocess_nc
+        self.interp_pars = interp_pars
 
         self._N = None
         self._inds = None
@@ -322,6 +328,12 @@ class DatasetStates(States):
             for i, (dims, d) in enumerate(data.items())
         }
         return coords, data, weights
+    
+    def _find_xy_bounds(self, algo, bounds_extra_space):
+        """Helper function to determine x/y bounds with extra space."""
+        return algo.farm.get_xy_bounds(
+            extra_space=bounds_extra_space, algo=algo
+        )
 
     def preproc_first(
         self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
@@ -396,11 +408,7 @@ class DatasetStates(States):
             assert FV.Y in cmap, (
                 f"States '{self.name}': y coordinate '{FV.Y}' not in cmap {cmap}"
             )
-
-            # if bounds and self.x_coord is not None and self.x_coord not in self.sel:
-            xy_min, xy_max = algo.farm.get_xy_bounds(
-                extra_space=bounds_extra_space, algo=algo
-            )
+            xy_min, xy_max = self._find_xy_bounds(algo, bounds_extra_space)
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Restricting xy to bounds {xy_min} - {xy_max}"
@@ -416,6 +424,9 @@ class DatasetStates(States):
                 i1 = len(x) - 1
                 while i1 > 0 and x[i1 - 1] >= x1:
                     i1 -= 1
+                if i0 == i1:
+                    i0 = max(0, i0 - 1)
+                    i1 = min(len(x) - 1, i1 + 1)
                 self.sel.update({cmap[v]: slice(x[i0], x[i1] + 1)})
                 if verbosity > 0:
                     hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
@@ -468,6 +479,8 @@ class DatasetStates(States):
                 if len(self.drop_vars) > 0 and verbosity > 0:
                     print(f"States '{self.name}': Keeping variables  {vars}")
                     print(f"States '{self.name}': Dropping variables {self.drop_vars}")
+                if self.preprocess_nc is not None:
+                    data_first = self.preprocess_nc(data_first)
                 self.preproc_first(
                     algo,
                     data=data_first,
@@ -944,7 +957,7 @@ class DatasetStates(States):
         gvars = tuple(icrds)
         try:
             ipars = dict(bounds_error=True, fill_value=None)
-            ipars.update(self.interpn_pars)
+            ipars.update(self.interp_pars)
             d = interpn(gvars, d, pts, **ipars)
         except ValueError as e:
             print(f"\nStates '{self.name}': Interpolation error")
@@ -957,14 +970,26 @@ class DatasetStates(States):
             print(
                 "EVAL BOUNDS:",
                 [float(np.min(p)) for p in pts.T],
-                [float(np.max(p)) for p in pts.T],
+                [float(np.max(p)) for p in pts.T], 
             )
             print(
-                "\nMaybe you want to try the option 'bounds_error=False' in 'interpn_pars'? This will extrapolate the data.\n"
+                "INSIDE     :",
+                [
+                    float(np.min(p)) >= float(np.min(gvars[i])) and 
+                    float(np.max(p)) <= float(np.max(gvars[i])) 
+                    for i, p in enumerate(pts.T)
+                ],
+            )
+            print(
+                "\nMaybe you want to try the option 'bounds_error=False' in 'interp_pars'? This will extrapolate the data.\n"
             )
             raise e
 
         return d
+    
+    def _update_dims(self, dims, coords, vrs, d):
+        """Helper function for dimension adjustment, if needed"""
+        return dims, coords
 
     def calculate(self, algo, mdata, fdata, tdata):
         """
@@ -1049,16 +1074,29 @@ class DatasetStates(States):
         # interpolate data to points:
         out = {}
         for dims, (vrs, d) in data.items():
+            # update dims, if necessary:
+            dims, hcoords = self._update_dims(dims, coords, vrs, d)
+
             # replace (WD, WS) by (U, V):
+            iwd = None
             if FV.WD in vrs or FV.WS in vrs:
                 assert FV.WD in vrs and (FV.WS in vrs or FV.WS in self.fixed_vars), (
                     f"States '{self.name}': Missing '{FV.WD}' or '{FV.WS}' in data variables {vrs} for dimensions {dims}"
+                )
+                assert FV.U not in vrs and FV.U not in vrs, (
+                    f"States '{self.name}': Cannot have '{FV.WD}', '{FV.WS}' and  '{FV.U}', '{FV.V}' in data variables {vrs} for dimensions {dims}"
                 )
                 iwd = vrs.index(FV.WD)
                 iws = vrs.index(FV.WS)
                 ws = d[..., iws] if FV.WS in vrs else self.fixed_vars[FV.WS]
                 d[..., [iwd, iws]] = wd2uv(d[..., iwd], ws, axis=-1)
                 del ws
+            elif FV.U in vrs or FV.V in vrs:
+                assert FV.U in vrs and FV.V in vrs, (
+                    f"States '{self.name}': Missing '{FV.U}' or '{FV.V}' in variables {vrs} for dims {dims}"
+                )
+                iwd = vrs.index(FV.U)
+                iws = vrs.index(FV.V)
 
             # move state dimension to second last position:
             if dims[0] == FC.STATE:
@@ -1089,7 +1127,7 @@ class DatasetStates(States):
                         points_data = _analyze_points(has_p, has_h)
                         pts.append(points_data["up"][:, 0])
                         pts.append(points_data["up"][:, 1])
-                        if coords[FC.POINT].shape[1] == 3:
+                        if hcoords[FC.POINT].shape[1] == 3:
                             pts.append(points_data["up"][:, 2])
                     elif c == FC.STATE:
                         idims.remove(FC.STATE)
@@ -1100,7 +1138,7 @@ class DatasetStates(States):
                 pts = np.stack(pts, axis=-1)
 
                 # interpolate:
-                icrds = [coords[c] for c in idims]
+                icrds = [hcoords[c] for c in idims]
                 d = self.interpolate_data(idims, icrds, d, pts, vrs, times)
 
                 # move state dimension back to front:
@@ -1115,14 +1153,14 @@ class DatasetStates(States):
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["up2p"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
                 elif has_h and points_data["heights_vary"]:
                     shp = d.shape[0:1] + (n_states, n_pts) + d.shape[2:]
                     d = d[:, points_data["uh2h"], :].reshape(shp)
                     if FC.STATE in dims:
-                        d = d[coords[FC.STATE], coords[FC.STATE], ...]
+                        d = d[hcoords[FC.STATE], hcoords[FC.STATE], ...]
                     else:
                         d = d[0, ...]
                 del points_data, pts, icrds
@@ -1134,9 +1172,14 @@ class DatasetStates(States):
                     d = d[:, None, :]
                 else:
                     d = d[None, None, :]
+            del hcoords
 
             # translate (U, V) into (WD, WS):
-            if FV.WD in vrs:
+            if iwd is not None:
+                if FV.WD not in vrs:
+                    vrs = vrs.copy()
+                    vrs[iwd] = FV.WD
+                    vrs[iws] = FV.WS
                 uv = d[..., [iwd, iws]]
                 d[..., iwd] = uv2wd(uv)
                 d[..., iws] = np.linalg.norm(uv, axis=-1)
@@ -1170,4 +1213,41 @@ class DatasetStates(States):
             )
         tdata.dims[FV.WEIGHT] = (FC.STATE, FC.TARGET, FC.TPOINT)
 
-        return {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+        # reshape results:
+        results = {v: d.reshape(n_states, n_targets, n_tpoints) for v, d in out.items()}
+        del out
+
+        # convert TKE to TI if needed:
+        if FV.TI in self.ovars and FV.TI not in results:
+            assert FV.WS in results, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.WS}"
+            )
+            assert FV.TKE in results or FV.TKE in self.ovars, (
+                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
+            )
+            if FV.TKE not in self.ovars:
+                tke = results.pop(FV.TKE)
+            else:
+                tke = results[FV.TKE]
+            ws = results[FV.WS]
+            results[FV.TI] = np.sqrt(1.5 * tke) / ws
+        
+        # compute air density if needed:
+        if FV.RHO in self.ovars and FV.RHO not in results:
+            assert FV.p in results, (
+                f"States '{self.name}': Cannot calculate {FV.RHO} without {FV.p}"
+            )
+            assert FV.T in results, (
+                f"States '{self.name}': Cannot calculate {FV.RHO} without {FV.T}"
+            )
+            if FV.p not in self.ovars:
+                p = results.pop(FV.p)
+            else:
+                p = results[FV.p]
+            if FV.T not in self.ovars:
+                T = results.pop(FV.T)
+            else:
+                T = results[FV.T]
+            results[FV.RHO] = p / (FC.Rd * T)
+        
+        return results

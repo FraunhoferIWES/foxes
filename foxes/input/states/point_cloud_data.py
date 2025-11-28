@@ -27,8 +27,6 @@ class PointCloudData(DatasetStates):
         The height variable name in the data
     weight_ncvar: str, optional
         The name of the weights variable in the data
-    interp_pars: dict
-        Additional arguments for the interpolation
 
     Examples
     --------
@@ -57,7 +55,6 @@ class PointCloudData(DatasetStates):
         y_ncvar="y",
         h_ncvar=None,
         weight_ncvar=None,
-        interp_pars={},
         **kwargs,
     ):
         """
@@ -79,8 +76,6 @@ class PointCloudData(DatasetStates):
             The height variable name in the data
         weight_ncvar: str, optional
             The name of the weights variable in the data
-        interp_pars: dict
-            Additional arguments for the interpolation
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -93,7 +88,6 @@ class PointCloudData(DatasetStates):
         self.y_ncvar = y_ncvar
         self.h_ncvar = h_ncvar
         self.weight_ncvar = weight_ncvar
-        self.interp_pars = interp_pars
 
         self.variables = [FV.X, FV.Y]
         self.variables += [v for v in self.ovars if v not in self.fixed_vars]
