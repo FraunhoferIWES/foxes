@@ -203,12 +203,9 @@ class ICONStates(DatasetStates):
 
     def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
-        xy_min, xy_max = algo.farm.get_xy_bounds(
-            extra_space=bounds_extra_space, algo=algo
+        return algo.farm.get_xy_bounds(
+            extra_space=bounds_extra_space, algo=algo, lonlat=True
         )
-        xy_min = to_lonlat(xy_min[None, :])[0]
-        xy_max = to_lonlat(xy_max[None, :])[0]
-        return xy_min, xy_max
 
     def preproc_first(
         self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
