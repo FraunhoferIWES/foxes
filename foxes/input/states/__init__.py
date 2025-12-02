@@ -33,6 +33,5 @@ from .one_point_flow import (
 )
 
 from .newa_states import NEWAStates as NEWAStates
-from .icon_states import ICONStates as ICONStates
 
 from . import create as create
