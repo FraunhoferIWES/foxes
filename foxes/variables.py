@@ -119,6 +119,11 @@ T = "T"
 :group: foxes.variables
 """
 
+p = "p"
+""" The pressure in Pa
+:group: foxes.variables
+"""
+
 YLD = "YLD"
 """ Yield in GWh/a
 :group: foxes.variables
@@ -231,6 +236,11 @@ AMB_T = "AMB_T"
 :group: foxes.variables
 """
 
+AMB_p = "AMB_p"
+""" The ambient pressure in Pa
+:group: foxes.variables
+"""
+
 AMB_YLD = "AMB_YLD"
 """ Ambient yield in GWh/a
 :group: foxes.variables
@@ -283,6 +293,7 @@ var2amb = {
         P,
         CT,
         T,
+        p,
         REWS,
         REWS2,
         REWS3,

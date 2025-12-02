@@ -70,7 +70,7 @@ class NEWAStates(DatasetStates):
         time_format=None,
         bounds_extra_space=0.0,
         height_bounds=None,
-        interp_pars=None,
+        interp_pars={},
         wrf_point_plot=None,
         **kwargs,
     ):
@@ -145,6 +145,7 @@ class NEWAStates(DatasetStates):
             time_format=time_format,
             load_mode=load_mode,
             weight_factor=None,
+            interp_pars=interp_pars,
             **kwargs,
         )
 
@@ -157,7 +158,6 @@ class NEWAStates(DatasetStates):
         self.bounds_extra_space = bounds_extra_space
         self.height_bounds = height_bounds
         self.wrf_point_plot = wrf_point_plot
-        self.interp_pars = interp_pars if interp_pars is not None else {}
         self.variables = list(set([v if v != FV.TI else FV.TKE for v in ovars]))
 
         self._cmap = {
@@ -485,50 +485,5 @@ class NEWAStates(DatasetStates):
 
         # check for NaN results:
         _check_nan(gpts, d, pts, idims, results)
-
-        return results
-
-    def calculate(self, algo, mdata, fdata, tdata):
-        """
-        The main model calculation.
-
-        This function is executed on a single chunk of data,
-        all computations should be based on numpy arrays.
-
-        Parameters
-        ----------
-        algo: foxes.core.Algorithm
-            The calculation algorithm
-        mdata: foxes.core.MData
-            The model data
-        fdata: foxes.core.FData
-            The farm data
-        tdata: foxes.core.TData
-            The target point data
-
-        Returns
-        -------
-        results: dict
-            The resulting data, keys: output variable str.
-            Values: numpy.ndarray with shape
-            (n_states, n_targets, n_tpoints)
-
-        """
-        results = super().calculate(algo, mdata, fdata, tdata)
-
-        # convert TKE to TI if needed:
-        if FV.TI in self.ovars and FV.TI not in results:
-            assert FV.WS in results, (
-                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.WS}"
-            )
-            assert FV.TKE in results or FV.TKE in self.ovars, (
-                f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
-            )
-            if FV.TKE not in self.ovars:
-                tke = results.pop(FV.TKE)
-            else:
-                tke = results[FV.TKE]
-            ws = results[FV.WS]
-            results[FV.TI] = np.sqrt(1.5 * tke) / ws
 
         return results
