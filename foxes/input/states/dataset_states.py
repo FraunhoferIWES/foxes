@@ -1038,8 +1038,8 @@ class DatasetStates(States):
             nonlocal _points_data
 
             if _points_data is None:
-                pmin = np.min(points, axis=0)
-                pmax = np.max(points, axis=0)
+                pmin = np.min(points, axis=(0,1))
+                pmax = np.max(points, axis=(0,1))
                 _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax

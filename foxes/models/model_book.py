@@ -315,8 +315,8 @@ class ModelBook:
             hints={"step": "(Step size in m)"},
         )
         self.wake_frames.add_factory(
-            fm.wake_frames.Streamlines2D,
-            "streamlines_<step>",
+            fm.wake_frames.StreamlinesLight,
+            "streamlines_light_<step>",
             step=lambda x: float(x),
             hints={"step": "(Step size in m)"},
         )
