@@ -340,6 +340,7 @@ class WindFarm:
                     np.linspace([x1, y0], [x0, y0], nx),
                 ), axis=0,
             )
+            xy = to_lonlat(xy)
             p_min = np.min(xy, axis=0)
             p_max = np.max(xy, axis=0)
 

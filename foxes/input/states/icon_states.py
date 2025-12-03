@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from pandas import read_csv
 
-from foxes.utils import get_utm_zone, to_lonlat
+from foxes.utils import get_utm_zone, to_lonlat, from_lonlat
 from foxes.config import config, get_output_path
 from foxes.output import FarmLayoutOutput
 from foxes.data import MODEL_DATA
@@ -232,9 +232,6 @@ class ICONStates(DatasetStates):
             The verbosity level, 0 = silent
 
         """
-        super().preproc_first(
-            algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity
-        )
         if not config.utm_zone_set and self.__utm_zone is None:
             raise ValueError(
                 f"States '{self.name}': config.utm_zone is not set and no utm_zone argument given."
@@ -265,6 +262,44 @@ class ICONStates(DatasetStates):
                 f"States '{self.name}': config.utm_zone = {config.utm_zone} differs from determined zone {zone}"
             )
         
+        super().preproc_first(
+            algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity
+        )
+
+        if self.icon_point_plot is not None:
+            if self.isel is not None:
+                data = data.isel(self.isel)
+            if self.sel is not None:
+                data = data.sel(self.sel)
+
+            fpath = get_output_path(self.icon_point_plot)
+            if verbosity > 0:
+                print(f"States '{self.name}': Writing ICON grid point plot to '{fpath}'")
+            fig, ax = plt.subplots(figsize=(8, 8))
+            xx, yy = np.meshgrid(
+                data[cmap[FV.X]].values.flatten(),
+                data[cmap[FV.Y]].values.flatten(),
+            )
+            pts = from_lonlat(np.stack((xx.flatten(), yy.flatten()), axis=-1))
+            ax.plot(
+                pts[:, 0],
+                pts[:, 1],
+                c="blue",
+                alpha=0.2,
+                marker=".",
+                linestyle="None",
+            )
+            anno = 3 if len(algo.farm.wind_farm_names) > 1 else 0
+            FarmLayoutOutput(farm=algo.farm).get_figure(
+                fig=fig, ax=ax, annotate=anno, fontsize=12
+            )
+            ax.set_xlabel(f"{FV.X} [m]")
+            ax.set_ylabel(f"{FV.Y} [m]")
+            ax.set_aspect("equal", adjustable="box")
+            ax.autoscale_view(tight=True)
+            fig.savefig(fpath, bbox_inches="tight")
+            plt.close()
+
     def load_data(self, algo, verbosity=0):
         """
         Load and/or create all model data that is subject to chunking.
