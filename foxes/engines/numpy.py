@@ -100,7 +100,7 @@ class NumpyEngine(Engine):
         """
         return True
 
-    def _get_start_calc_message(
+    def get_start_calc_message(
         self,
         n_chunks_states,
         n_chunks_targets,
