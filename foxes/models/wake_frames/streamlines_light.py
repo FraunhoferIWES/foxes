@@ -46,6 +46,8 @@ class StreamlinesLight(WakeFrame):
         self.step = step
         self.cl_ipars = cl_ipars
 
+        self.WPOINTS = self.var("wpoints")
+
     def calc_order(self, algo, mdata, fdata):
         """
         Calculates the order of turbine evaluation.
@@ -87,6 +89,35 @@ class StreamlinesLight(WakeFrame):
 
         return order
 
+    def _calc_streamlines(self, algo, mdata, fdata):
+        """ Helper function for streamline calculation """
+        # prepare:
+        n_states = mdata.n_states
+        n_turbines = algo.n_turbines
+        n_steps = np.ceil((self.max_length_km * 1000) / self.step).astype(int) + 1
+        states_ovars = algo.states.output_point_vars(algo)
+        assert FV.WD in states_ovars and FV.WS in states_ovars, (
+            f"Wake frame '{self.name}': Require '{FV.WD}' and '{FV.WS}' in states output, found {states_ovars}"
+        )
+
+        # compute streamline points, starting at rotor centres:
+        wpoints = np.full((n_states, n_turbines, n_steps, 3), np.nan, dtype=config.dtype_double)
+        wpoints[:, :, 0, :2] = fdata[FV.TXYH][:, :, :2]
+        wpoints[:, :, :, 2] = fdata[FV.TXYH][:, :, None, 2]
+        for i_step in range(1, n_steps):
+            # get local wind vector directions:
+            tdata = TData.from_points(points=wpoints[:, :, i_step - 1, :], mdata=mdata)
+            wpres = algo.states.calculate(algo, mdata, fdata, tdata)
+            nx = wd2uv(wpres[FV.WD][:, :, 0])
+            del tdata, wpres
+
+            # advance point:
+            wpoints[:, :, i_step, :2] = wpoints[:, :, i_step - 1, :2] + nx * self.step
+
+        # store points:
+        mdata[self.WPOINTS] = wpoints[..., :2]
+        mdata.dims[self.WPOINTS] = (FC.STATE, FC.TURBINE, self.var("step"), FC.XY)
+
     def get_wake_coos(
         self,
         algo,
@@ -121,62 +152,63 @@ class StreamlinesLight(WakeFrame):
             (n_states, n_turbines * n_targets, n_tpoints, 3)
 
         """
+        # compute streamlines if not already done:
+        if self.WPOINTS not in mdata:
+            self._calc_streamlines(algo, mdata, fdata)
+        
         # prepare:
         n_states, n_targets, n_tpoints = tdata[FC.TARGETS].shape[:3]
         n_points = n_targets * n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_points, 3)
-        trbns = [downwind_index] if downwind_index is not None else np.arange(algo.n_turbines)
-        n_trbns = len(trbns)
+        trbns = [downwind_index] if downwind_index is not None else np.s_[:]
+        n_trbns = 1 if downwind_index is not None else algo.n_turbines
 
         states_ovars = algo.states.output_point_vars(algo)
         assert FV.WD in states_ovars and FV.WS in states_ovars, (
             f"Wake frame '{self.name}': Require '{FV.WD}' and '{FV.WS}' in states output, found {states_ovars}"
         )
 
-        # set starting points at rotor centre:
-        wpoints = fdata[FV.TXYH][:, trbns].copy()
+        # compute streamlines if not already done:
+        if self.WPOINTS not in mdata:
+            self._calc_streamlines(algo, mdata, fdata)
+        wpoints = mdata[self.WPOINTS][:, trbns, :, :]
+        n_steps = wpoints.shape[2]
+
+        # compute coordinates:
         coos = np.full((n_states, n_trbns, n_points, 3), np.nan, dtype=config.dtype_double)
-        coos[:, :, :, 2] = points[:, None, :, 2] - wpoints[:, :, None, 2]
-        wcntr = np.full((n_states, n_trbns, n_points), -1, dtype=config.dtype_int)
-        wlength = 0.0
-        counter = 0
-        while True:
-            # get local wind vector directions:
-            htdata = TData.from_points(points=wpoints, mdata=mdata)
-            wpres = algo.states.calculate(algo, mdata, fdata, htdata)
-            wnx = wd2uv(wpres[FV.WD][:, :, 0])
-            del htdata, wpres
+        coos[:, :, :, 2] = points[:, None, :, 2] - fdata[FV.TXYH][:, trbns, None, 2]
+        #wcntr = np.full((n_states, n_trbns, n_points), -1, dtype=config.dtype_int)
+        for i in range(n_steps):
+            # get wake point and local wind vector directions:
+            p = wpoints[:, :, i, :]
+            nax = np.zeros((n_states, n_trbns, 2, 2), dtype=config.dtype_double)
+            if i == 0:
+                nax[:, :, 0, :] = (wpoints[:, :, 1, :2] - p) / self.step
+            else:
+                nax[:, :, 0, :] = (p - wpoints[:, :, i - 1, :2]) / self.step
+            nax[:, :, 1, :] = np.stack(
+                (-nax[:, :, 0, 1], nax[:, :, 0, 0]), axis=-1
+            )
 
             # project points:
-            delp = points[:, None, :, :2] - wpoints[:, :, None, :2]
-            x = np.einsum("stpd,std->stp", delp, wnx)
-            selx = ((wcntr < 0) | (wcntr == counter - 1)) & (x >= -self.step) & (x < self.step)
-            if np.any(selx):
-                delp = delp[selx]
-                wny = np.where(selx)
-                wny = np.stack(
-                    (-wnx[:, :, 1], wnx[:, :, 0]), axis=-1
-                )[wny[0], wny[1]]
-                y = np.einsum("sd,sd->s", delp, wny)
-                cy = coos[selx, 1]
-                sely = np.isnan(cy) | (np.abs(y) < np.abs(cy))
-                if np.any(sely):
-                    coos[selx, 1] = np.where(sely, y, cy)
-                    coos[selx, 0] = np.where(sely, wlength + x[selx], coos[selx, 0])
-                    wcntr[selx] = np.where(sely, counter, wcntr[selx])
-                del y, cy, sely, wny
-            del delp, x, selx
+            delp = points[:, None, :, :2] - p[:, :, None, :2]
+            xy = np.einsum("stpd,stad->stpa", delp, nax)
+            del p, nax, delp
 
-            # advance points:
-            if (
-                np.all((wcntr >= 0) & (wcntr < counter)) or
-                wlength + self.step > self.max_length_km * 1000
-            ):
-                break
-            else:
-                wpoints[:, :, :2] += wnx * self.step
-                wlength += self.step
-                counter += 1
+            # update coordinates where appropriate:
+            sel = (
+                (xy[..., 0] >= -self.step) & (xy[..., 0] < self.step) &
+                (
+                    np.isnan(coos[..., 1]) |
+                    (np.abs(xy[..., 1]) < np.abs(coos[..., 1]))
+                )
+            )
+            if np.any(sel):
+                coos[sel, 1] = xy[sel, 1]
+                coos[sel, 0] = xy[sel, 0] + i * self.step
+
+            del xy, sel
+        del wpoints, points
 
         if downwind_index is None:
             coos = coos.reshape(n_states, algo.n_turbines * n_targets, n_tpoints, 3)
