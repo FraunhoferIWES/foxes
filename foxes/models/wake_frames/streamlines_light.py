@@ -160,7 +160,6 @@ class StreamlinesLight(WakeFrame):
         n_states, n_targets, n_tpoints = tdata[FC.TARGETS].shape[:3]
         n_points = n_targets * n_tpoints
         points = tdata[FC.TARGETS].reshape(n_states, n_points, 3)
-        trbns = [downwind_index] if downwind_index is not None else np.s_[:]
         n_trbns = 1 if downwind_index is not None else algo.n_turbines
 
         states_ovars = algo.states.output_point_vars(algo)
@@ -171,16 +170,53 @@ class StreamlinesLight(WakeFrame):
         # compute streamlines if not already done:
         if self.WPOINTS not in mdata:
             self._calc_streamlines(algo, mdata, fdata)
-        wpoints = mdata[self.WPOINTS][:, trbns, :, :]
+        wpoints = mdata[self.WPOINTS] if downwind_index is None else mdata[self.WPOINTS][:, downwind_index, None, :, :]
         n_steps = wpoints.shape[2]
 
         # compute coordinates:
         coos = np.full((n_states, n_trbns, n_points, 3), np.nan, dtype=config.dtype_double)
-        coos[:, :, :, 2] = points[:, None, :, 2] - fdata[FV.TXYH][:, trbns, None, 2]
-        #wcntr = np.full((n_states, n_trbns, n_points), -1, dtype=config.dtype_int)
+        heights = fdata[FV.TXYH] if downwind_index is None else fdata[FV.TXYH][:, downwind_index, None]
+        coos[:, :, :, 2] = points[:, None, :, 2] - heights[:, :, None, 2]
+        wstpi = np.full((n_states, n_trbns, n_points), -1, dtype=config.dtype_int)
         for i in range(n_steps):
             # get wake point and local wind vector directions:
             p = wpoints[:, :, i, :]
+            if i == 0:
+                nx = (wpoints[:, :, 1, :2] - p) / self.step
+            else:
+                nx = (p - wpoints[:, :, i - 1, :2]) / self.step
+            
+            # project points to get x coordinate:
+            delp = points[:, None, :, :2] - p[:, :, None, :2]
+            x = np.einsum("stpd,std->stp", delp, nx)
+            del p
+
+            # filter on x:
+            selx = ((wstpi < 0) | (wstpi == i - 1)) & (x >= -self.step) & (x < self.step)
+            if np.any(selx):
+                delp = delp[selx, :]
+                x = x[selx]
+
+                # project points to get y coordinate:
+                ny = np.where(selx)
+                nx = nx[ny[0], ny[1], :]
+                ny = np.stack((-nx[:, 1], nx[:, 0]), axis=-1)
+                y = np.einsum("sd,sd->s", delp, ny)
+
+                # filter on y:
+                cy = coos[selx, 1]
+                sely = np.isnan(cy) |(np.abs(y) < np.abs(cy))
+                if np.any(sely):
+                    coos[selx, 0] = np.where(sely, x + i * self.step, coos[selx, 0])
+                    coos[selx, 1] = np.where(sely, y, cy)
+                    wstpi[selx] = np.where(sely, i, wstpi[selx])
+                del ny, y, cy, sely
+            elif np.all(wstpi >= 0):
+                print("HERE OUT",downwind_index, i)
+                break
+            del nx, delp, x, selx
+
+            """
             nax = np.zeros((n_states, n_trbns, 2, 2), dtype=config.dtype_double)
             if i == 0:
                 nax[:, :, 0, :] = (wpoints[:, :, 1, :2] - p) / self.step
@@ -206,8 +242,9 @@ class StreamlinesLight(WakeFrame):
             if np.any(sel):
                 coos[sel, 1] = xy[sel, 1]
                 coos[sel, 0] = xy[sel, 0] + i * self.step
-
+            
             del xy, sel
+            """
         del wpoints, points
 
         if downwind_index is None:
