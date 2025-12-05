@@ -17,6 +17,8 @@ class StreamlinesLight(WakeFrame):
     ----------
     step: float
         The streamline step size in m
+    chunksize_steps: int
+        The number of steps per chunk for streamline
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
@@ -25,7 +27,14 @@ class StreamlinesLight(WakeFrame):
 
     """
 
-    def __init__(self, step, max_length_km=20, cl_ipars={}, **kwargs):
+    def __init__(
+            self, 
+            step, 
+            max_length_km=20, 
+            chunksize_steps=100,
+            cl_ipars={}, 
+            **kwargs,
+        ):
         """
         Constructor.
 
@@ -35,6 +44,8 @@ class StreamlinesLight(WakeFrame):
             The streamline step size in m
         max_length_km: float
             The maximal streamline length in km
+        chunksize_steps: int
+            The number of steps per chunk for streamline
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
@@ -44,6 +55,7 @@ class StreamlinesLight(WakeFrame):
         """
         super().__init__(max_length_km=max_length_km, **kwargs)
         self.step = step
+        self.chunksize_steps = chunksize_steps
         self.cl_ipars = cl_ipars
 
         self.WPOINTS = self.var("wpoints")
@@ -177,75 +189,39 @@ class StreamlinesLight(WakeFrame):
         coos = np.full((n_states, n_trbns, n_points, 3), np.nan, dtype=config.dtype_double)
         heights = fdata[FV.TXYH] if downwind_index is None else fdata[FV.TXYH][:, downwind_index, None]
         coos[:, :, :, 2] = points[:, None, :, 2] - heights[:, :, None, 2]
-        wstpi = np.full((n_states, n_trbns, n_points), -1, dtype=config.dtype_int)
-        for i in range(n_steps):
-            # get wake point and local wind vector directions:
-            p = wpoints[:, :, i, :]
-            if i == 0:
-                nx = (wpoints[:, :, 1, :2] - p) / self.step
-            else:
-                nx = (p - wpoints[:, :, i - 1, :2]) / self.step
-            
-            # project points to get x coordinate:
-            delp = points[:, None, :, :2] - p[:, :, None, :2]
-            x = np.einsum("stpd,std->stp", delp, nx)
-            del p
+        steps_0 = 0
+        while steps_0 < n_steps:
+            # extract steps chunk:
+            steps_1 = min(steps_0 + self.chunksize_steps, n_steps)
+            if n_steps - steps_1 < 2:   
+                steps_1 = n_steps
+            steps_s = slice(steps_0, steps_1)
+            wpts = wpoints[:, :, steps_s, :2]
 
-            # filter on x:
-            selx = ((wstpi < 0) | (wstpi == i - 1)) & (x >= -self.step) & (x < self.step)
+            # dims: (states, trbns, points, steps, xy)
+            pdel = points[:, None, :, None, :2] - wpts[:, :, None, :, :2]
+            nx = np.zeros_like(wpts)
+            nx[:, :, 1:, :] = (wpts[:, :, 1:, :] - wpts[:, :, :-1, :]) / self.step
+            nx[:, :, 0, :] = nx[:, :, 1, :]
+            del wpts
+
+            x = pdel[..., 0] * nx[:, :, None, :, 0] + pdel[..., 1] * nx[:, :, None, :, 1]
+            selx = (x > -self.step) & (x < self.step)
             if np.any(selx):
-                delp = delp[selx, :]
-                x = x[selx]
+                pdel = pdel[selx]
+                w = np.where(selx)
+                nx = nx[w[0], w[1], w[3], :]
 
-                # project points to get y coordinate:
-                ny = np.where(selx)
-                nx = nx[ny[0], ny[1], :]
-                ny = np.stack((-nx[:, 1], nx[:, 0]), axis=-1)
-                y = np.einsum("sd,sd->s", delp, ny)
-
-                # filter on y:
-                cy = coos[selx, 1]
-                sely = np.isnan(cy) |(np.abs(y) < np.abs(cy))
+                y = -pdel[:, 0] * nx[:, 1] + pdel[:, 1] * nx[:, 0]
+                cy = coos[w[0], w[1], w[2], 1]
+                sely = np.isnan(cy) | (np.abs(y) < np.abs(cy))
                 if np.any(sely):
-                    coos[selx, 0] = np.where(sely, x + i * self.step, coos[selx, 0])
-                    coos[selx, 1] = np.where(sely, y, cy)
-                    wstpi[selx] = np.where(sely, i, wstpi[selx])
-                del ny, y, cy, sely
-            elif np.all(wstpi >= 0):
-                print("HERE OUT",downwind_index, i)
-                break
-            del nx, delp, x, selx
-
-            """
-            nax = np.zeros((n_states, n_trbns, 2, 2), dtype=config.dtype_double)
-            if i == 0:
-                nax[:, :, 0, :] = (wpoints[:, :, 1, :2] - p) / self.step
-            else:
-                nax[:, :, 0, :] = (p - wpoints[:, :, i - 1, :2]) / self.step
-            nax[:, :, 1, :] = np.stack(
-                (-nax[:, :, 0, 1], nax[:, :, 0, 0]), axis=-1
-            )
-
-            # project points:
-            delp = points[:, None, :, :2] - p[:, :, None, :2]
-            xy = np.einsum("stpd,stad->stpa", delp, nax)
-            del p, nax, delp
-
-            # update coordinates where appropriate:
-            sel = (
-                (xy[..., 0] >= -self.step) & (xy[..., 0] < self.step) &
-                (
-                    np.isnan(coos[..., 1]) |
-                    (np.abs(xy[..., 1]) < np.abs(coos[..., 1]))
-                )
-            )
-            if np.any(sel):
-                coos[sel, 1] = xy[sel, 1]
-                coos[sel, 0] = xy[sel, 0] + i * self.step
-            
-            del xy, sel
-            """
-        del wpoints, points
+                    w = (w[0][sely], w[1][sely], w[2][sely], w[3][sely])
+                    coos[w[0], w[1], w[2], 0] = x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
+                    coos[w[0], w[1], w[2], 1] = y[sely]
+                del w, y, cy, sely
+            del pdel, x, selx, nx
+            steps_0 = steps_1
 
         if downwind_index is None:
             coos = coos.reshape(n_states, algo.n_turbines * n_targets, n_tpoints, 3)
