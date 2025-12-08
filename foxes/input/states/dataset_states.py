@@ -381,20 +381,24 @@ class DatasetStates(States):
                 raise ValueError(
                     f"States '{self.name}': Height bounds {height_bounds} m are outside of data height range {np.min(self._heights)} - {np.max(self._heights)} m"
                 )
-            i0 = 0
-            while (
-                i0 < len(self._heights) - 1
-                and self._heights[i0 + 1] <= height_bounds[0]
-            ):
-                i0 += 1
-            i1 = len(self._heights) - 1
-            while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
-                i1 -= 1
-            if self.sel is None:
-                self.sel = {}
             ch = cmap[FV.H]
-            self.sel.update({ch: slice(self._heights[i0], self._heights[i1] + 1)})
-            self._heights = data[ch].sel({ch: self.sel[ch]}).to_numpy()
+            if self.isel is None or ch not in self.isel:
+                i0 = 0
+                while (
+                    i0 < len(self._heights) - 1
+                    and self._heights[i0 + 1] <= height_bounds[0]
+                ):
+                    i0 += 1
+                i1 = len(self._heights) - 1
+                while i1 > 0 and self._heights[i1 - 1] >= height_bounds[1]:
+                    i1 -= 1
+                if i0 == i1:
+                    i0 = max(0, i0 - 1)
+                    i1 = min(len(self._heights) - 1, i1 + 1)
+                if self.isel is None:
+                    self.isel = {}
+                self.isel.update({ch: slice(i0, i1 + 1)})
+            self._heights = data[ch].isel({ch: self.isel[ch]}).to_numpy()
             if verbosity > 0:
                 print(
                     f"States '{self.name}': Selected {ch} = {self._heights} ({len(self._heights)} heights)"
@@ -413,23 +417,24 @@ class DatasetStates(States):
                 print(
                     f"States '{self.name}': Restricting xy to bounds {xy_min} - {xy_max}"
                 )
-            if self.sel is None:
-                self.sel = {}
             for v, i in zip((FV.X, FV.Y), (0, 1)):
-                x0, x1 = xy_min[i], xy_max[i]
-                x = data[cmap[v]].to_numpy()
-                i0 = 0
-                while i0 < len(x) - 1 and x[i0 + 1] <= x0:
-                    i0 += 1
-                i1 = len(x) - 1
-                while i1 > 0 and x[i1 - 1] >= x1:
-                    i1 -= 1
-                if i0 == i1:
-                    i0 = max(0, i0 - 1)
-                    i1 = min(len(x) - 1, i1 + 1)
-                self.sel.update({cmap[v]: slice(x[i0], x[i1] + 1)})
+                if self.isel is None or cmap[v] not in self.isel:
+                    x0, x1 = xy_min[i], xy_max[i]
+                    x = data[cmap[v]].to_numpy()
+                    i0 = 0
+                    while i0 < len(x) - 1 and x[i0 + 1] <= x0:
+                        i0 += 1
+                    i1 = len(x) - 1
+                    while i1 > 0 and x[i1 - 1] >= x1:
+                        i1 -= 1
+                    if i0 == i1:
+                        i0 = max(0, i0 - 1)
+                        i1 = min(len(x) - 1, i1 + 1)
+                    if self.isel is None:
+                        self.isel = {}
+                    self.isel.update({cmap[v]: slice(i0, i1 + 1)})
                 if verbosity > 0:
-                    hv = data[cmap[v]].sel({cmap[v]: self.sel[cmap[v]]}).to_numpy()
+                    hv = data[cmap[v]].isel({cmap[v]: self.isel[cmap[v]]}).to_numpy()
                     print(
                         f"States '{self.name}': Selected {cmap[v]} = {hv[0]} ... {hv[-1]} ({len(hv)} points)"
                     )
@@ -1038,8 +1043,8 @@ class DatasetStates(States):
             nonlocal _points_data
 
             if _points_data is None:
-                pmin = np.min(points, axis=0)
-                pmax = np.max(points, axis=0)
+                pmin = np.min(points, axis=(0,1))
+                pmax = np.max(points, axis=(0,1))
                 _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
@@ -1226,10 +1231,13 @@ class DatasetStates(States):
                 f"States '{self.name}': Cannot calculate {FV.TI} without {FV.TKE}"
             )
             if FV.TKE not in self.ovars:
-                tke = results.pop(FV.TKE)
+                tke = np.maximum(results.pop(FV.TKE), 0)
             else:
-                tke = results[FV.TKE]
+                tke = np.maximum(results[FV.TKE], 0)
             ws = results[FV.WS]
+            assert not np.any(ws <= 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.TI}, found zeros in {FV.WS}"
+            )
             results[FV.TI] = np.sqrt(1.5 * tke) / ws
         
         # compute air density if needed:
@@ -1248,6 +1256,9 @@ class DatasetStates(States):
                 T = results.pop(FV.T)
             else:
                 T = results[FV.T]
+            assert not np.any(T <= 0.0), (
+                f"States '{self.name}': Cannot calculate {FV.RHO}, found zeros or negative values in {FV.T}"
+            )
             results[FV.RHO] = p / (FC.Rd * T)
         
         return results

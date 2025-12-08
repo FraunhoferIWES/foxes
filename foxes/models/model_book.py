@@ -316,9 +316,26 @@ class ModelBook:
         )
         self.wake_frames.add_factory(
             fm.wake_frames.Streamlines2D,
-            "streamlines_<step>",
+            "streamlines_<step>_l<max_length_km>",
             step=lambda x: float(x),
-            hints={"step": "(Step size in m)"},
+            max_length_km=lambda x: float(x),
+            hints={
+                "step": "(Step size in m)",
+                "max_length_km": "(Maximal streamline length in km)",
+            },
+        )
+        self.wake_frames.add_factory(
+            fm.wake_frames.Streamlines2D,
+            "streamlines_<step>_l<max_length_km>_c<chunksize>",
+            step=lambda x: float(x),
+            max_length_km=lambda x: float(x),
+            chunksize=lambda x: int(x),
+            var2arg={"chunksize": "chunksize_steps"},
+            hints={
+                "step": "(Step size in m)",
+                "chunksize": "(Chunk size in steps)",
+                "max_length_km": "(Maximal streamline length in km)",
+            },
         )
 
         self.wake_frames["timelines"] = fm.wake_frames.Timelines()

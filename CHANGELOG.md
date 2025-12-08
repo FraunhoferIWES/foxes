@@ -866,5 +866,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.6.3
 
+- Models:
+  - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.3](https://github.com/FraunhoferIWES/foxes/commits/v1.6.3)

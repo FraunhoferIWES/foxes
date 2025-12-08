@@ -891,12 +891,11 @@ class Engine(ABC):
             while chunk_key in results:
                 r, cstore = results.pop(chunk_key)
 
-                if self.iterative:
-                    for k, c in cstore.items():
-                        if k in self.algo.chunk_store:
-                            self.algo.chunk_store[k].update(c)
-                        else:
-                            self.algo.chunk_store[k] = c
+                for k, c in cstore.items():
+                    if k in self.algo.chunk_store:
+                        self.algo.chunk_store[k].update(c)
+                    else:
+                        self.algo.chunk_store[k] = c
 
                 if r is not None:
                     if self.res_vars is None:
