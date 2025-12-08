@@ -280,10 +280,6 @@ class Streamlines2D(WakeFrame):
                 sely = np.isnan(cy) | (np.abs(y) < np.abs(cy))
                 if np.any(sely):
                     w = (w[0][sely], w[1][sely], w[2][sely], w[3][sely])
-                    if downwind_index == 4 and 74 in w[3]:
-                        u = list(w[3]).index(74)
-                        ww = [int(ww[u]) for ww in w]
-                        print("DEBUG", np.unique(w[3]),ww, coos[ww[0], ww[1], ww[2], 0])
                     coos[w[0], w[1], w[2], 0] = x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
                     coos[w[0], w[1], w[2], 1] = y[sely]
                 del w, y, cy, sely
