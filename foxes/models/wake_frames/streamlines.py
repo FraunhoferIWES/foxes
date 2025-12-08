@@ -31,7 +31,7 @@ class Streamlines2D(WakeFrame):
     def __init__(
             self, 
             step, 
-            max_length_km=10, 
+            max_length_km=20, 
             chunksize_steps=100,
             cl_ipars={}, 
             **kwargs,
