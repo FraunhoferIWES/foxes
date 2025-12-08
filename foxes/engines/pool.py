@@ -84,7 +84,7 @@ def _run(
     """Helper function for running in a single process"""
     algo.reset_chunk_store(chunk_store.copy())
     results = model.calculate(algo, *data, **cpars)
-    chunk_store = algo.reset_chunk_store() if iterative else {}
+    chunk_store = algo.reset_chunk_store() 
     cstore = {chunk_key: chunk_store[chunk_key]} if chunk_key in chunk_store else {}
     _write_ani(algo, chunk_key, write_chunk_ani, *data)
     results = _write_chunk_results(algo, results, write_nc, out_dims, data[0])
