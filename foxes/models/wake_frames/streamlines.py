@@ -23,6 +23,9 @@ class Streamlines2D(WakeFrame):
     cl_ipars: dict
         Interpolation parameters for centre line
         point interpolation
+    intersection_error: bool
+        Whether to check for streamline
+        self-intersections
 
     :group: models.wake_frames
 
@@ -34,6 +37,7 @@ class Streamlines2D(WakeFrame):
             max_length_km=20, 
             chunksize_steps=100,
             cl_ipars={}, 
+            intersection_error=True,
             **kwargs,
         ):
         """
@@ -50,6 +54,9 @@ class Streamlines2D(WakeFrame):
         cl_ipars: dict
             Interpolation parameters for centre line
             point interpolation
+        intersection_error: bool
+            Whether to check for streamline
+            self-intersections
         kwargs: dict, optional
             Additional parameters for the base class
 
@@ -58,6 +65,7 @@ class Streamlines2D(WakeFrame):
         self.step = step
         self.chunksize_steps = chunksize_steps
         self.cl_ipars = cl_ipars
+        self.intersection_error = intersection_error
 
         self.WPOINTS = self.var(f"wpoints")
         self.STEP = self.var("step")
@@ -143,28 +151,39 @@ class Streamlines2D(WakeFrame):
                 # advance point:
                 wpoints[:, :, i_step, :2] = wpoints[:, :, i_step - 1, :2] + nx * self.step
 
-                d = np.linalg.norm(wpoints[:, :, i_step, None, :2] - wpoints[:, :, :i_step, :2], axis=-1)
-                sel = (d < self.step/2)
-                if np.any(sel):
-                    w = np.where(sel)
-                    print(f"\n\nERROR: Streamline self-intersection detected")
-                    for u in range(len(w[0])):
-                        m = f" State {w[0][u]}, Turbine {w[1][u]}, Step {i_step}, Close to step {w[2][u]} (dist={d[w[0][u], w[1][u], w[2][u]]:.2f} m, length={i_step * self.step} m)"
-                        print(m)
-                    print()
-                    raise RuntimeError(f"Wake frame '{self.name}': Streamline self-intersection detected. {m}")
-            
-            """
-            # DEBUG: plot streamline curves
-            import matplotlib.pyplot as plt
-            for s in range(n_states):
-                for i in range(n_turbines):
-                    plt.plot(wpoints[s, i, :, 0], wpoints[s, i, :, 1], label=f"Turbine {i}")
-                plt.title(f"State {s}")
-                #plt.legend()
-                plt.show()
-                plt.close()
-            """
+                # check for self-intersections:
+                if self.intersection_error:
+                    d = np.linalg.norm(wpoints[:, :, i_step, None, :2] - wpoints[:, :, :i_step, :2], axis=-1)
+                    sel = (d < 0.501*self.step)
+                    if np.any(sel):
+                        w = np.where(sel)
+                        print(f"\n\nERROR: Streamline self-intersection detected")
+                        for u in range(len(w[0])):
+                            dd = d[w[0][u], w[1][u], w[2][u]]
+                            m = f" State {w[0][u]}, Turbine {w[1][u]}, Step {i_step}, Close to step {w[2][u]} (dist={dd:.2f} m, length={i_step * self.step} m)"
+                            print(m)
+
+                            """
+                            # DEBUG: plot self-intersecting streamline curve
+                            import matplotlib.pyplot as plt
+                            for i in range(n_turbines):
+                                lbl = f"Turbine {i}" if i == w[1][u] else None
+                                ls = "-" if i == w[1][u] else "--"
+                                plt.plot(wpoints[w[0][u], i, :, 0], wpoints[w[0][u], i, :, 1], linestyle=ls, label=lbl)
+                                if i == w[1][u]:
+                                    plt.plot(wpoints[w[0][u], w[1][u], i_step, 0], wpoints[w[0][u], w[1][u], i_step, 1], 'ro', label=f"step {i_step}", zorder=10)
+                                    plt.plot(wpoints[w[0][u], w[1][u], w[2][u], 0], wpoints[w[0][u], w[1][u], w[2][u], 1], 'o', c="black", label=f"step {w[2][u]}", zorder=10)
+                                else:
+                                    plt.plot(wpoints[w[0][u], w[1][u], :, 0], wpoints[w[0][u], w[1][u], :, 1], '.', c="gray")
+                            plt.title(f"State {w[0][u]}, distance={dd:.2f} m")
+                            plt.legend()
+                            plt.show()
+                            plt.close()
+                            """
+
+                        print()                     
+                    
+                        raise RuntimeError(f"Wake frame '{self.name}': Streamline self-intersection detected. {m}")
 
             # store in chunk store:
             wpoints = wpoints[..., :2]
@@ -267,8 +286,7 @@ class Streamlines2D(WakeFrame):
             del pdel, nx, x, y, cy, sel
             """
             
-            selx = np.isnan(coos[..., None, 0]) | (coos[..., None, 0] > (np.arange(steps_0, steps_1)[None, None, None, :] -2)* self.step )
-            selx =  selx & (x > -self.step) & (x < self.step) 
+            selx = (x > -self.step) & (x < self.step) 
             if np.any(selx):
                 pdel = pdel[selx]
                 w = np.where(selx)
@@ -284,8 +302,6 @@ class Streamlines2D(WakeFrame):
                     coos[w[0], w[1], w[2], 1] = y[sely]
                 del w, y, cy, sely
             del pdel, x, selx, nx
-            
-            
             
             steps_0 = steps_1
 
