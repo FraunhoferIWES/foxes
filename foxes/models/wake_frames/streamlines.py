@@ -355,7 +355,7 @@ class Streamlines2D(WakeFrame):
 
         # add hub heights to results:
         results = results.reshape(n_states, n_points, 2)
-        heights = np.repeat(fdata[FV.TXYH][:, downwind_index, None, 2], n_points, axis=2)
+        heights = np.repeat(fdata[FV.TXYH][:, downwind_index, None, 2], n_points, axis=1)
         results = np.concatenate((results, heights[:, :, None]), axis=-1)
 
         return results
