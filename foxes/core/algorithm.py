@@ -536,7 +536,6 @@ class Algorithm(Model):
             f"{self.name}: mdata.chunki_points is None, cannot add to chunk store"
         )
         key = (mdata.chunki_states - prev_s, mdata.chunki_points - prev_t)
-
         try:
             chunk_data = self.chunk_store[key]
         except KeyError as e:
@@ -547,7 +546,6 @@ class Algorithm(Model):
 
         chunk_states = chunk_data["states_index"]
         n_states = len(chunk_states)
-
         if (
             prev_s != 0
             or prev_t != 0

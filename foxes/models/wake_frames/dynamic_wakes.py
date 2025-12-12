@@ -178,12 +178,9 @@ class DynamicWakes(WakeFrame):
 
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(
-            name=key, mdata=mdata, prev_t=prev_t, error=False
+            name=key, mdata=mdata, prev_t=prev_t, error=itargets>0
         )
         if data is None:
-            assert itargets == 0, (
-                "DynamicWakes: Missing chunk_store data for (istates, itargets) = ({istates}, {itargets}) at ({istates}, {itargets-prev_t})"
-            )
             data = np.full(
                 (n_states, self.max_age, 4), np.nan, dtype=config.dtype_double
             )
@@ -200,7 +197,7 @@ class DynamicWakes(WakeFrame):
                 elif age == 0:
                     hmdata = mdata
                     hfdata = fdata
-                    htdata = TData.from_points(points=pts[:, None], data=tdt, dims=tdi)
+                    htdata = TData.from_points(points=pts[:, None], data=tdt, dims=tdi, mdata=hmdata)
                     hdt = dt[:, None]
                 else:
                     s = np.s_[age:]
@@ -208,7 +205,7 @@ class DynamicWakes(WakeFrame):
                     hmdata = mdata.get_slice(FC.STATE, s)
                     hfdata = fdata.get_slice(FC.STATE, s)
                     htdt = {v: d[s] for v, d in tdt.items()}
-                    htdata = TData.from_points(points=pts[:, None], data=htdt, dims=tdi)
+                    htdata = TData.from_points(points=pts[:, None], data=htdt, dims=tdi, mdata=hmdata)
                     hdt = dt[s, None]
                     del htdt, s
 
@@ -240,129 +237,176 @@ class DynamicWakes(WakeFrame):
             )
             algo.block_convergence(mdata=mdata)
 
-        # apply updates from future chunks:
-        for (jstates, jtargets), cdict in algo.chunk_store.items():
-            uname = ukey_fun(jstates, istates)
-            if jstates > istates and jtargets == 0 and uname in cdict:
-                u = cdict[uname]
-                if u is not None:
-                    sel = np.isnan(data) & ~np.isnan(u)
-                    if np.any(sel):
-                        data[:] = np.where(sel, u, data)
-                        algo.block_convergence(mdata=mdata)
-                    cdict[uname] = None
-                    del sel
-                del u
-
-        # compute wakes from previous chunks:
+        # wake dynamics are computed during calc_farm, hence for itargets = 0 only:
         prev_s = 0
         wi0 = i0
         data = [data]
-        while istates - prev_s > 0:
-            prev_s += 1
-
-            # read data from previous chunk:
-            hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
-                name=key,
-                mdata=mdata,
-                prev_s=prev_s,
-                prev_t=prev_t,
-                ret_inds=True,
-                error=False,
-            )
-            if hdata is None:
-                break
-            else:
-                hdata = hdata.copy()
-                wi0 = h_i0
-
-                # select points with index+age=i0:
-                sts = np.arange(h_n_states)
-                ags = i0 - (h_i0 + sts)
-                sel = ags < self.max_age - 1
-                if np.any(sel):
-                    sts = sts[sel]
-                    ags = ags[sel]
-                    pts = hdata[sts, ags, :3]
-                    sel = (
-                        np.all(~np.isnan(pts[:, :2]), axis=-1)
-                        & np.any(np.isnan(hdata[sts, ags + 1, :2]), axis=-1)
-                        & (hdata[sts, ags, 3] <= self.max_length_km * 1e3)
-                    )
-                    if np.any(sel):
-                        sts = sts[sel]
-                        ags = ags[sel]
-                        pts = pts[sel]
-                        n_pts = len(pts)
-
-                        tdt = {
-                            v: np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
-                            for v in algo.states.output_point_vars(algo)
-                        }
-
-                        # compute single state wake propagation:
-                        isnan0 = np.isnan(hdata)
-                        for si in range(n_states):
-                            s = slice(si, si + 1, None)
-                            hmdata = mdata.get_slice(FC.STATE, s)
-                            hfdata = fdata.get_slice(FC.STATE, s)
-                            htdt = {v: d[s] for v, d in tdt.items()}
-                            htdata = TData.from_points(
-                                points=pts[None, :], data=htdt, dims=tdi
-                            )
-                            hdt = dt[s, None]
-                            del htdt, s
-
-                            res = algo.states.calculate(algo, hmdata, hfdata, htdata)
-                            del hmdata, hfdata, htdata
-
-                            uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
-                            dxy = uv * hdt
-                            pts[:, :2] += dxy
-                            del res, uv, hdt
-
-                            ags += 1
-                            hdata[sts, ags, :3] = pts
-                            hdata[sts, ags, 3] = hdata[
-                                sts, ags - 1, 3
-                            ] + np.linalg.norm(dxy, axis=-1)
-                            del dxy
-
-                            hsel = (h_i0 + sts + ags < i1) & (ags < self.max_age - 1)
-                            if np.any(hsel):
-                                sts = sts[hsel]
-                                ags = ags[hsel]
-                                pts = pts[hsel]
-                                tdt = {v: d[:, hsel] for v, d in tdt.items()}
-                                del hsel
-                            else:
-                                del hsel
-                                break
-
-                        # store update:
-                        sel = isnan0 & (~np.isnan(hdata))
+        if itargets == 0:
+            # apply updates from future chunks:
+            for (jstates, jtargets), cdict in algo.chunk_store.items():
+                uname = ukey_fun(jstates, istates)
+                if jstates > istates and jtargets == 0 and uname in cdict:
+                    u = cdict[uname]
+                    if u is not None:
+                        sel = np.isnan(data[0]) & ~np.isnan(u)
                         if np.any(sel):
-                            udata = np.full_like(hdata, np.nan)
-                            udata[sel] = hdata[sel]
+                            data[0][sel] = u[sel]
                             algo.add_to_chunk_store(
-                                ukey_fun(istates, istates - prev_s),
-                                udata,
-                                dims=(),
+                                key,
+                                data[0],
+                                dims=(FC.STATE, self.AGE, self.XYHL),
                                 mdata=mdata,
                                 copy=False,
                             )
                             algo.block_convergence(mdata=mdata)
+                        cdict[uname] = None
+                        del sel
+                    del u
 
-                        del udata, tdt
-                    del pts
+            # compute wakes from previous chunks:
+            while istates - prev_s > 0:
+                prev_s += 1
 
-                # store prev_s chunk's results:
-                data.insert(0, hdata)
+                # read data from previous chunk:
+                hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
+                    name=key,
+                    mdata=mdata,
+                    prev_s=prev_s,
+                    prev_t=prev_t,
+                    ret_inds=True,
+                    error=False,
+                )
+                if hdata is None:
+                    break
+                else:
+                    hdata = hdata.copy()
+                    wi0 = h_i0
 
-                del sts, ags, sel
-            del hdata
+                    # select points with index+age=i0:
+                    sts = np.arange(h_n_states)
+                    ags = i0 - (h_i0 + sts)
+                    sel = ags < self.max_age - 1
+                    if np.any(sel):
+                        sts = sts[sel]
+                        ags = ags[sel]
+                        pts = hdata[sts, ags, :3]
+                        sel = (
+                            np.all(~np.isnan(pts[:, :2]), axis=-1)
+                            & np.any(np.isnan(hdata[sts, ags + 1, :2]), axis=-1)
+                            & (hdata[sts, ags, 3] <= self.max_length_km * 1e3)
+                        )
+                        if np.any(sel):
+                            sts = sts[sel]
+                            ags = ags[sel]
+                            pts = pts[sel]
+                            n_pts = len(pts)
 
-        return np.concatenate(data, axis=0), wi0
+                            tdt = {
+                                v: np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
+                                for v in algo.states.output_point_vars(algo)
+                            }
+
+                            # compute single state wake propagation:
+                            isnan0 = np.isnan(hdata)
+                            for si in range(n_states):
+                                s = slice(si, si + 1, None)
+                                hmdata = mdata.get_slice(FC.STATE, s)
+                                hfdata = fdata.get_slice(FC.STATE, s)
+                                htdt = {v: d[s] for v, d in tdt.items()}
+                                htdata = TData.from_points(
+                                    points=pts[None, :], data=htdt, dims=tdi, mdata=hmdata
+                                )
+                                hdt = dt[s, None]
+                                del htdt, s
+
+                                res = algo.states.calculate(algo, hmdata, hfdata, htdata)
+                                del hmdata, hfdata, htdata
+
+                                uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
+                                dxy = uv * hdt
+                                pts[:, :2] += dxy
+                                del res, uv, hdt
+
+                                ags += 1
+                                hdata[sts, ags, :3] = pts
+                                hdata[sts, ags, 3] = hdata[
+                                    sts, ags - 1, 3
+                                ] + np.linalg.norm(dxy, axis=-1)
+                                del dxy
+
+                                hsel = (h_i0 + sts + ags < i1) & (ags < self.max_age - 1)
+                                if np.any(hsel):
+                                    sts = sts[hsel]
+                                    ags = ags[hsel]
+                                    pts = pts[hsel]
+                                    tdt = {v: d[:, hsel] for v, d in tdt.items()}
+                                    del hsel
+                                else:
+                                    del hsel
+                                    break
+
+                            # store update:
+                            sel = isnan0 & (~np.isnan(hdata))
+                            if np.any(sel):
+                                udata = np.full_like(hdata, np.nan)
+                                udata[sel] = hdata[sel]
+                                algo.add_to_chunk_store(
+                                    ukey_fun(istates, istates - prev_s),
+                                    udata,
+                                    dims=(),
+                                    mdata=mdata,
+                                    copy=False,
+                                )
+                                algo.block_convergence(mdata=mdata)
+
+                            del udata, tdt
+                        del pts
+
+                    # store prev_s chunk's results:
+                    data.insert(0, hdata)
+
+                    del sts, ags, sel
+                del hdata
+
+        # for itargets > 0, just gather previous computed data:
+        else:
+            while istates - prev_s > 0:
+                prev_s += 1
+
+                # read data from previous chunk:
+                hdata, (h_i0, h_n_states, __, __) = algo.get_from_chunk_store(
+                    name=key,
+                    mdata=mdata,
+                    prev_s=prev_s,
+                    prev_t=prev_t,
+                    ret_inds=True,
+                    error=False,
+                )
+                if hdata is None:
+                    break
+                else:
+                    data.insert(0, hdata)
+                    wi0 = h_i0
+        
+        if len(data) == 1:
+            data = data[0]
+        else:
+            data = np.concatenate(data, axis=0)
+
+        """
+        # wake path plot for debugging:
+        if algo.final_iteration and itargets == 0:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            for i in range(data.shape[0]):
+                ax.plot(data[i, :, 0], data[i, :, 1], label=f"state {i}")
+            ax.set_title(f"{(mdata.chunki_states, mdata.chunki_points)}: {key} {data.shape}")
+            #ax.legend()
+            plt.show()
+            plt.close(fig)
+        """
+
+        return data, wi0
 
     def get_wake_coos(
         self,
@@ -406,6 +450,8 @@ class DynamicWakes(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyh = fdata[FV.TXYH][:, downwind_index]
         i0 = mdata.states_i0(counter=True)
+        i1 = i0 + n_states
+        dt = self._dt[i0:i1]
 
         # initialize:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)
@@ -413,7 +459,55 @@ class DynamicWakes(WakeFrame):
         wake_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         wake_si[:] = i0 + np.arange(n_states)[:, None]
 
-        # find nearest wake point:
+        # find nearest wake points: 
+        """
+        # s_ags_sts data = (states, ags, sts)
+        s_ags_sts = np.zeros((n_states, self.max_age, 3), dtype=config.dtype_int)
+        s_ags_sts[:, :, 0] = np.arange(n_states)[:, None]
+        s_ags_sts[:, :, 1] = np.arange(self.max_age)[None, :]
+        s_ags_sts[:, :, 2] = i0 + s_ags_sts[:, :, 0] - s_ags_sts[:, :, 1] - wi0
+        sel = (s_ags_sts[:, :, 2] >= 0) & (s_ags_sts[:, :, 2] < len(wdata))
+        if np.any(sel):
+            s_ags_sts = s_ags_sts[sel]
+            sel = np.all(~np.isnan(wdata[s_ags_sts[:, 2], s_ags_sts[:, 1]]), axis=-1)
+            if np.any(sel):
+                s_ags_sts = s_ags_sts[sel]
+                s = s_ags_sts[:, 0]
+                ags = s_ags_sts[:, 1]
+                sts = s_ags_sts[:, 2]
+                print("HERE C",s_ags_sts.shape)
+                nx = np.where(
+                    ags[:, None] < np.max(ags),
+                    wdata[sts, ags + 1, :2] - wdata[sts, ags, :2],
+                    wdata[sts, ags, :2] - wdata[sts, ags-1, :2],
+                )
+                dx = np.linalg.norm(nx, axis=-1)
+                nx /= dx[:, None] + 1e-14
+                print("NX",nx.shape)
+
+                # dims dp: (n_states, n_points, n_wake_points, 2)
+                dp = points[s, :, None, :2] - wdata[None, None, sts, ags, :2]
+                print("DP",dp.shape)
+                projx = dp[..., 0] * nx[None, None, :, 0] + dp[..., 1] * nx[None, None, :, 1]
+                selx = (projx > -dx[None, None, :]) & (projx < dx[None, None, :])
+                print("SELX",selx.shape, np.sum(selx))
+                if np.any(selx):
+                    w = np.where(selx)
+                    dp = dp[selx]
+                    nx = nx[w[2]]
+                    wdata = wdata[sts[w[2]], ags[w[2]], :2]
+                    cy = wcoos[w[0], w[1], 1]
+
+                    projy = -dp[:, 0] * nx[:, 1] + dp[:, 1] * nx[:, 0]
+                    sely = np.isnan(cy) | (np.abs(projy) < np.abs(cy))
+                    if np.any(sely):
+                        w = (w[0][sely], w[1][sely])
+                        wcoos[w[0], w[1], 0] = projx[selx][sely] + wdata[sely, 3]
+                        wcoos[w[0], w[1], 1] = projy[sely]  
+                        print("HERE SELY",len(w[0]))
+                        quit()
+                
+        """
         for si in range(n_states):
             ags = np.arange(self.max_age)
             sts = i0 + si - ags - wi0
@@ -426,29 +520,31 @@ class DynamicWakes(WakeFrame):
                     sts = sts[sel]
                     ags = ags[sel]
 
-                    dists = cdist(points[si, :, :2], wdata[sts, ags, :2])
-                    j = np.argmin(dists, axis=1)
-                    sts = sts[j]
-                    ags = ags[j]
-                    wake_si[si] = sts + wi0
+                    if len(ags) == 1:
+                        nx = wd2uv(fdata[FV.WD][si, downwind_index])[None, :2]
+                        dx = wdata[sts, ags, 3]
+                    else:
+                        nx = np.where(
+                            ags[:, None] < np.max(ags),
+                            wdata[sts, ags + 1, :2] - wdata[sts, ags, :2],
+                            wdata[sts, ags, :2] - wdata[sts, ags-1, :2],
+                        )
+                        dx = np.linalg.norm(nx, axis=-1)
+                        nx /= dx[:, None] + 1e-14
 
-                    nx = wdata[sts, ags, :2]
-                    dp = points[si, :, :2] - nx
-                    sel = ags < self.max_age - 1
-                    if np.any(sel):
-                        nx[sel] = wdata[sts[sel], ags[sel] + 1, :2] - nx[sel]
-                    if np.any(~sel):
-                        nx[~sel] -= wdata[sts[~sel], ags[~sel] - 1, :2]
-                    dx = np.linalg.norm(nx, axis=-1)
-                    nx /= dx[:, None] + 1e-14
+                    dp = points[si, :, None, :2] - wdata[None, sts, ags, :2]
+                    projx = dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
+                    projy = -dp[:, :, 0] * nx[None, :, 1] + dp[:, :, 1] * nx[None, :, 0]
 
-                    projx = np.einsum("sd,sd->s", dp, nx)
-                    sel = (projx > -dx) & (projx < dx)
-                    if np.any(sel):
-                        ny = np.concatenate([-nx[:, 1, None], nx[:, 0, None]], axis=1)
-
-                        wcoos[si, sel, 0] = projx[sel] + wdata[sts[sel], ags[sel], 3]
-                        wcoos[si, sel, 1] = np.einsum("sd,sd->s", dp[sel], ny[sel])
+                    selp = (projx > -dx[None, :]) & (projx < dx[None, :]) & (
+                        np.isnan(wcoos[si, :, None, 1]) |
+                        (np.abs(projy) < np.abs(wcoos[si, :, None, 1]))
+                    )
+                    if np.any(selp):
+                        w = np.where(selp)
+                        wcoos[si, w[0], 0] = projx[selp] + wdata[sts[w[1]], ags[w[1]], 3]
+                        wcoos[si, w[0], 1] = projy[selp]
+        
 
         # store turbines that cause wake:
         tdata[FC.STATE_SOURCE_ORDERI] = downwind_index
