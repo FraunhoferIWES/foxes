@@ -17,7 +17,6 @@ class MPIEngine(ProcessEngine):
 
     """
 
-
     def _create_pool(self):
         """Creates the pool"""
         mpi4py_futures = import_module(

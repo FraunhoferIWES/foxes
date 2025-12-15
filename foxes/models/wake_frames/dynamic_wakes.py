@@ -177,7 +177,7 @@ class DynamicWakes(WakeFrame):
 
         # compute wakes that start within this chunk: x, y, z, length
         data = algo.get_from_chunk_store(
-            name=key, mdata=mdata, prev_t=prev_t, error=itargets>0
+            name=key, mdata=mdata, prev_t=prev_t, error=itargets > 0
         )
         if data is None:
             data = np.full(
@@ -196,7 +196,9 @@ class DynamicWakes(WakeFrame):
                 elif age == 0:
                     hmdata = mdata
                     hfdata = fdata
-                    htdata = TData.from_points(points=pts[:, None], data=tdt, dims=tdi, mdata=hmdata)
+                    htdata = TData.from_points(
+                        points=pts[:, None], data=tdt, dims=tdi, mdata=hmdata
+                    )
                     hdt = dt[:, None]
                 else:
                     s = np.s_[age:]
@@ -204,7 +206,9 @@ class DynamicWakes(WakeFrame):
                     hmdata = mdata.get_slice(FC.STATE, s)
                     hfdata = fdata.get_slice(FC.STATE, s)
                     htdt = {v: d[s] for v, d in tdt.items()}
-                    htdata = TData.from_points(points=pts[:, None], data=htdt, dims=tdi, mdata=hmdata)
+                    htdata = TData.from_points(
+                        points=pts[:, None], data=htdt, dims=tdi, mdata=hmdata
+                    )
                     hdt = dt[s, None]
                     del htdt, s
 
@@ -301,7 +305,9 @@ class DynamicWakes(WakeFrame):
                             n_pts = len(pts)
 
                             tdt = {
-                                v: np.zeros((n_states, n_pts, 1), dtype=config.dtype_double)
+                                v: np.zeros(
+                                    (n_states, n_pts, 1), dtype=config.dtype_double
+                                )
                                 for v in algo.states.output_point_vars(algo)
                             }
 
@@ -313,12 +319,17 @@ class DynamicWakes(WakeFrame):
                                 hfdata = fdata.get_slice(FC.STATE, s)
                                 htdt = {v: d[s] for v, d in tdt.items()}
                                 htdata = TData.from_points(
-                                    points=pts[None, :], data=htdt, dims=tdi, mdata=hmdata
+                                    points=pts[None, :],
+                                    data=htdt,
+                                    dims=tdi,
+                                    mdata=hmdata,
                                 )
                                 hdt = dt[s, None]
                                 del htdt, s
 
-                                res = algo.states.calculate(algo, hmdata, hfdata, htdata)
+                                res = algo.states.calculate(
+                                    algo, hmdata, hfdata, htdata
+                                )
                                 del hmdata, hfdata, htdata
 
                                 uv = wd2uv(res[FV.WD], res[FV.WS])[0, :, 0]
@@ -333,7 +344,9 @@ class DynamicWakes(WakeFrame):
                                 ] + np.linalg.norm(dxy, axis=-1)
                                 del dxy
 
-                                hsel = (h_i0 + sts + ags < i1) & (ags < self.max_age - 1)
+                                hsel = (h_i0 + sts + ags < i1) & (
+                                    ags < self.max_age - 1
+                                )
                                 if np.any(hsel):
                                     sts = sts[hsel]
                                     ags = ags[hsel]
@@ -386,7 +399,7 @@ class DynamicWakes(WakeFrame):
                 else:
                     data.insert(0, hdata)
                     wi0 = h_i0
-        
+
         if len(data) == 1:
             data = data[0]
         else:
@@ -486,10 +499,11 @@ class DynamicWakes(WakeFrame):
                         ags0 = np.maximum(ags - 1, 0)
                         ags1 = np.minimum(ags + 1, wdata.shape[1] - 1)
                         sel = (
-                            ~done &
-                            (ags > 0) & (ags < wdata.shape[1] - 1) & 
-                            ~np.isnan(wdata[sts, ags0, 0]) & 
-                            ~np.isnan(wdata[sts, ags1, 0])
+                            ~done
+                            & (ags > 0)
+                            & (ags < wdata.shape[1] - 1)
+                            & ~np.isnan(wdata[sts, ags0, 0])
+                            & ~np.isnan(wdata[sts, ags1, 0])
                         )
                         if np.any(sel):
                             stsd = sts[sel]
@@ -500,7 +514,12 @@ class DynamicWakes(WakeFrame):
                     # forward:
                     elif aprx == "f":
                         agsd = np.minimum(ags + 1, wdata.shape[1] - 1)
-                        sel = ~done & (ags < wdata.shape[1] - 1) & ~np.isnan(wdata[sts, ags, 0]) & ~np.isnan(wdata[sts, agsd, 0])
+                        sel = (
+                            ~done
+                            & (ags < wdata.shape[1] - 1)
+                            & ~np.isnan(wdata[sts, ags, 0])
+                            & ~np.isnan(wdata[sts, agsd, 0])
+                        )
                         if np.any(sel):
                             stsd = sts[sel]
                             ags0 = ags[sel]
@@ -510,7 +529,12 @@ class DynamicWakes(WakeFrame):
                     # backward:
                     elif aprx == "b":
                         agsd = np.maximum(ags - 1, 0)
-                        sel = ~done & (ags > 0) &  ~np.isnan(wdata[sts, agsd, 0]) & ~np.isnan(wdata[sts, ags, 0])
+                        sel = (
+                            ~done
+                            & (ags > 0)
+                            & ~np.isnan(wdata[sts, agsd, 0])
+                            & ~np.isnan(wdata[sts, ags, 0])
+                        )
                         if np.any(sel):
                             stsd = sts[sel]
                             ags1 = ags[sel]
@@ -518,12 +542,11 @@ class DynamicWakes(WakeFrame):
                             agsd = ags1
 
                     if stsd is not None:
-
                         # single wake point case, must originate from rotor centre:
                         if aprx == "o":
                             nx = wd2uv(fdata[FV.WD][si, downwind_index])[None, :2]
                             dx = wdata[stsd, ags0, 3]
-                        
+
                         # compute wake tangent vectors, using next and current wake age points:
                         else:
                             nx = wdata[stsd, ags1, :2] - wdata[stsd, ags0, :2]
@@ -532,15 +555,25 @@ class DynamicWakes(WakeFrame):
 
                         # project target points onto wake points:
                         dp = points[si, :, None, :2] - wdata[None, stsd, agsd, :2]
-                        projx = dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
-                        projy = -dp[:, :, 0] * nx[None, :, 1] + dp[:, :, 1] * nx[None, :, 0]
-                        selp = (projx > -dx[None, :]) & (projx < dx[None, :]) & (
-                            np.isnan(wcoos[si, :, None, 1]) |
-                            (np.abs(projy) < np.abs(wcoos[si, :, None, 1]))
+                        projx = (
+                            dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
+                        )
+                        projy = (
+                            -dp[:, :, 0] * nx[None, :, 1] + dp[:, :, 1] * nx[None, :, 0]
+                        )
+                        selp = (
+                            (projx > -dx[None, :])
+                            & (projx < dx[None, :])
+                            & (
+                                np.isnan(wcoos[si, :, None, 1])
+                                | (np.abs(projy) < np.abs(wcoos[si, :, None, 1]))
+                            )
                         )
                         if np.any(selp):
                             w = np.where(selp)
-                            wcoos[si, w[0], 0] = projx[selp] + wdata[stsd[w[1]], agsd[w[1]], 3]
+                            wcoos[si, w[0], 0] = (
+                                projx[selp] + wdata[stsd[w[1]], agsd[w[1]], 3]
+                            )
                             wcoos[si, w[0], 1] = projy[selp]
                             del w
 

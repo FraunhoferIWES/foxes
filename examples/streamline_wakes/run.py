@@ -43,7 +43,10 @@ if __name__ == "__main__":
         nargs="+",
     )
     parser.add_argument(
-        "-wf", "--wake_frame", help="The wake frame choice", default="streamlines_100_l3"
+        "-wf",
+        "--wake_frame",
+        help="The wake frame choice",
+        default="streamlines_100_l3",
     )
     parser.add_argument(
         "-m", "--tmodels", help="The turbine models", default=[], nargs="+"

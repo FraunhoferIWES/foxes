@@ -32,14 +32,14 @@ class Streamlines2D(WakeFrame):
     """
 
     def __init__(
-            self, 
-            step, 
-            max_length_km=20, 
-            chunksize_steps=100,
-            cl_ipars={}, 
-            intersection_error=True,
-            **kwargs,
-        ):
+        self,
+        step,
+        max_length_km=20,
+        chunksize_steps=100,
+        cl_ipars={},
+        intersection_error=True,
+        **kwargs,
+    ):
         """
         Constructor.
 
@@ -99,9 +99,9 @@ class Streamlines2D(WakeFrame):
 
         # calculate streamline x coordinates for turbines rotor centre points:
         # n_states, n_turbines_source, n_turbines_target
-        coosx = self.get_wake_coos(
-            algo, mdata, fdata, tdata, downwind_index=None
-        )[:, :, 0, 0].reshape(n_states, n_turbines, n_turbines)
+        coosx = self.get_wake_coos(algo, mdata, fdata, tdata, downwind_index=None)[
+            :, :, 0, 0
+        ].reshape(n_states, n_turbines, n_turbines)
 
         # derive turbine order:
         # TODO: Remove loop over states
@@ -112,7 +112,7 @@ class Streamlines2D(WakeFrame):
         return order
 
     def _get_streamlines(self, algo, mdata, fdata):
-        """ Helper function for streamline calculation """
+        """Helper function for streamline calculation"""
 
         # check if already computed:
         wpoints = algo.get_from_chunk_store(
@@ -138,23 +138,32 @@ class Streamlines2D(WakeFrame):
             )
 
             # compute streamline points, starting at rotor centres:
-            wpoints = np.full((n_states, n_turbines, n_steps, 3), np.nan, dtype=config.dtype_double)
+            wpoints = np.full(
+                (n_states, n_turbines, n_steps, 3), np.nan, dtype=config.dtype_double
+            )
             wpoints[:, :, 0, :2] = fdata[FV.TXYH][:, :, :2]
             wpoints[:, :, :, 2] = fdata[FV.TXYH][:, :, None, 2]
             for i_step in range(1, n_steps):
                 # get local wind vector directions:
-                tdata = TData.from_points(points=wpoints[:, :, i_step - 1, :], mdata=mdata)
+                tdata = TData.from_points(
+                    points=wpoints[:, :, i_step - 1, :], mdata=mdata
+                )
                 wpres = algo.states.calculate(algo, mdata, fdata, tdata)
                 nx = wd2uv(wpres[FV.WD][:, :, 0])
                 del tdata, wpres
 
                 # advance point:
-                wpoints[:, :, i_step, :2] = wpoints[:, :, i_step - 1, :2] + nx * self.step
+                wpoints[:, :, i_step, :2] = (
+                    wpoints[:, :, i_step - 1, :2] + nx * self.step
+                )
 
                 # check for self-intersections:
                 if self.intersection_error:
-                    d = np.linalg.norm(wpoints[:, :, i_step, None, :2] - wpoints[:, :, :i_step, :2], axis=-1)
-                    sel = (d < 0.501*self.step)
+                    d = np.linalg.norm(
+                        wpoints[:, :, i_step, None, :2] - wpoints[:, :, :i_step, :2],
+                        axis=-1,
+                    )
+                    sel = d < 0.501 * self.step
                     if np.any(sel):
                         w = np.where(sel)
                         print("\n\nERROR: Streamline self-intersection detected")
@@ -181,9 +190,11 @@ class Streamlines2D(WakeFrame):
                             plt.close()
                             """
 
-                        print()                     
-                    
-                        raise RuntimeError(f"Wake frame '{self.name}': Streamline self-intersection detected. {m}")
+                        print()
+
+                        raise RuntimeError(
+                            f"Wake frame '{self.name}': Streamline self-intersection detected. {m}"
+                        )
 
             # store in chunk store:
             wpoints = wpoints[..., :2]
@@ -249,19 +260,25 @@ class Streamlines2D(WakeFrame):
         n_steps = wpoints.shape[2]
 
         # compute coordinates:
-        coos = np.full((n_states, n_trbns, n_points, 3), np.nan, dtype=config.dtype_double)
-        heights = fdata[FV.TXYH] if downwind_index is None else fdata[FV.TXYH][:, downwind_index, None]
+        coos = np.full(
+            (n_states, n_trbns, n_points, 3), np.nan, dtype=config.dtype_double
+        )
+        heights = (
+            fdata[FV.TXYH]
+            if downwind_index is None
+            else fdata[FV.TXYH][:, downwind_index, None]
+        )
         coos[:, :, :, 2] = points[:, None, :, 2] - heights[:, :, None, 2]
         steps_0 = 0
         while steps_0 < n_steps:
             # extract steps chunk:
             steps_1 = min(steps_0 + self.chunksize_steps, n_steps)
-            if n_steps - steps_1 < 2:   
+            if n_steps - steps_1 < 2:
                 steps_1 = n_steps
             steps_s = slice(steps_0, steps_1)
             wpts = wpoints[:, :, steps_s, :2]
 
-            # prepare point deltas, 
+            # prepare point deltas,
             # with dims: (states, trbns, points, steps, xy)
             pdel = points[:, None, :, None, :2] - wpts[:, :, None, :, :2]
             nx = np.zeros_like(wpts)
@@ -270,7 +287,10 @@ class Streamlines2D(WakeFrame):
             del wpts
 
             # select x values near streamline points:
-            x = pdel[..., 0] * nx[:, :, None, :, 0] + pdel[..., 1] * nx[:, :, None, :, 1]
+            x = (
+                pdel[..., 0] * nx[:, :, None, :, 0]
+                + pdel[..., 1] * nx[:, :, None, :, 1]
+            )
             """
             y = -pdel[..., 0] * nx[:, :, None, :, 1] + pdel[..., 1] * nx[:, :, None, :, 0]
             cy = coos[:, :, :, None, 1]
@@ -285,8 +305,8 @@ class Streamlines2D(WakeFrame):
                 del w
             del pdel, nx, x, y, cy, sel
             """
-            
-            selx = (x > -self.step) & (x < self.step) 
+
+            selx = (x > -self.step) & (x < self.step)
             if np.any(selx):
                 pdel = pdel[selx]
                 w = np.where(selx)
@@ -298,11 +318,13 @@ class Streamlines2D(WakeFrame):
                 sely = np.isnan(cy) | (np.abs(y) < np.abs(cy))
                 if np.any(sely):
                     w = (w[0][sely], w[1][sely], w[2][sely], w[3][sely])
-                    coos[w[0], w[1], w[2], 0] = x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
+                    coos[w[0], w[1], w[2], 0] = (
+                        x[selx][sely] + self.step * np.arange(steps_0, steps_1)[w[3]]
+                    )
                     coos[w[0], w[1], w[2], 1] = y[sely]
                 del w, y, cy, sely
             del pdel, x, selx, nx
-            
+
             steps_0 = steps_1
 
         if downwind_index is None:
@@ -355,7 +377,9 @@ class Streamlines2D(WakeFrame):
 
         # add hub heights to results:
         results = results.reshape(n_states, n_points, 2)
-        heights = np.repeat(fdata[FV.TXYH][:, downwind_index, None, 2], n_points, axis=1)
+        heights = np.repeat(
+            fdata[FV.TXYH][:, downwind_index, None, 2], n_points, axis=1
+        )
         results = np.concatenate((results, heights[:, :, None]), axis=-1)
 
         return results

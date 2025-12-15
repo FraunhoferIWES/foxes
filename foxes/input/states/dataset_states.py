@@ -328,12 +328,10 @@ class DatasetStates(States):
             for i, (dims, d) in enumerate(data.items())
         }
         return coords, data, weights
-    
+
     def _find_xy_bounds(self, algo, bounds_extra_space):
         """Helper function to determine x/y bounds with extra space."""
-        return algo.farm.get_xy_bounds(
-            extra_space=bounds_extra_space, algo=algo
-        )
+        return algo.farm.get_xy_bounds(extra_space=bounds_extra_space, algo=algo)
 
     def preproc_first(
         self, algo, data, cmap, vars, bounds_extra_space, height_bounds, verbosity=0
@@ -975,13 +973,13 @@ class DatasetStates(States):
             print(
                 "EVAL BOUNDS:",
                 [float(np.min(p)) for p in pts.T],
-                [float(np.max(p)) for p in pts.T], 
+                [float(np.max(p)) for p in pts.T],
             )
             print(
                 "INSIDE     :",
                 [
-                    float(np.min(p)) >= float(np.min(gvars[i])) and 
-                    float(np.max(p)) <= float(np.max(gvars[i])) 
+                    float(np.min(p)) >= float(np.min(gvars[i]))
+                    and float(np.max(p)) <= float(np.max(gvars[i]))
                     for i, p in enumerate(pts.T)
                 ],
             )
@@ -991,7 +989,7 @@ class DatasetStates(States):
             raise e
 
         return d
-    
+
     def _update_dims(self, dims, coords, vrs, d):
         """Helper function for dimension adjustment, if needed"""
         return dims, coords
@@ -1043,8 +1041,8 @@ class DatasetStates(States):
             nonlocal _points_data
 
             if _points_data is None:
-                pmin = np.min(points, axis=(0,1))
-                pmax = np.max(points, axis=(0,1))
+                pmin = np.min(points, axis=(0, 1))
+                pmax = np.max(points, axis=(0, 1))
                 _points_data = {}
                 _points_data["pmin"] = pmin
                 _points_data["pmax"] = pmax
@@ -1239,7 +1237,7 @@ class DatasetStates(States):
                 f"States '{self.name}': Cannot calculate {FV.TI}, found zeros in {FV.WS}"
             )
             results[FV.TI] = np.sqrt(1.5 * tke) / ws
-        
+
         # compute air density if needed:
         if FV.RHO in self.ovars and FV.RHO not in results:
             assert FV.p in results, (
@@ -1260,5 +1258,5 @@ class DatasetStates(States):
                 f"States '{self.name}': Cannot calculate {FV.RHO}, found zeros or negative values in {FV.T}"
             )
             results[FV.RHO] = p / (FC.Rd * T)
-        
+
         return results

@@ -299,9 +299,7 @@ class WindFarm:
 
         """
         if self.boundary is not None:
-            xy = np.stack(
-                (self.boundary.p_min(), self.boundary.p_max()), axis=0
-            )
+            xy = np.stack((self.boundary.p_min(), self.boundary.p_max()), axis=0)
         else:
             xy = self.xy_array
 
@@ -320,9 +318,7 @@ class WindFarm:
                 else:
                     extra_space *= rds[:, None]
 
-            xy = np.concatenate(
-                (xy - extra_space, xy + extra_space), axis=0
-            )
+            xy = np.concatenate((xy - extra_space, xy + extra_space), axis=0)
 
         p_min = np.min(xy, axis=0)
         p_max = np.max(xy, axis=0)
@@ -338,7 +334,8 @@ class WindFarm:
                     np.linspace([x0, y1], [x1, y1], nx),
                     np.linspace([x1, y1], [x1, y0], ny),
                     np.linspace([x1, y0], [x0, y0], nx),
-                ), axis=0,
+                ),
+                axis=0,
             )
             xy = to_lonlat(xy)
             p_min = np.min(xy, axis=0)
