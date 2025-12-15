@@ -42,6 +42,7 @@ class StateTurbineTable(Output):
         to_file=None,
         isel=None,
         sel=None,
+        transpose=False,
         **kwargs,
     ):
         """
@@ -59,6 +60,8 @@ class StateTurbineTable(Output):
             Parameters for xarray.Dataset.isel
         sel: dict, optional
             Parameters for xarray.Dataset.sel
+        transpose: bool, optional
+            Whether to transpose the dataset
         kwargs: dict, optional
             Additional parameters for write_nc
 
@@ -71,15 +74,21 @@ class StateTurbineTable(Output):
         state = name_map.get(FC.STATE, FC.STATE)
         turbine = name_map.get(FC.TURBINE, FC.TURBINE)
 
+        dvars = {}
+        for v in variables:
+            data = self.farm_results[v].to_numpy()
+            dims = (state, turbine)
+            if transpose:
+                data = data.T
+                dims = (turbine, state)
+            dvars[name_map.get(v, v)] = (dims, data)
+
         ds = Dataset(
             coords={
                 state: self.farm_results[FC.STATE].to_numpy(),
                 turbine: self.farm_results[FC.TURBINE].to_numpy(),
             },
-            data_vars={
-                name_map.get(v, v): ((state, turbine), self.farm_results[v].to_numpy())
-                for v in variables
-            },
+            data_vars=dvars,
         )
 
         if isel is not None:

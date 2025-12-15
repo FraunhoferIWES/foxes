@@ -52,6 +52,7 @@ def _read_turbine_outputs(wio_outs, olist, algo, states_isel, verbosity):
                             vw: FV.get_default_digits(vf) for vw, vf in vmap.items()
                         },
                         isel=isel,
+                        transpose=True,
                         verbosity=verbosity,
                     )
                 ],
