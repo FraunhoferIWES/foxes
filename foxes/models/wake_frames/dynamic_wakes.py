@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial.distance import cdist
 
 from foxes.core import WakeFrame, TData
 from foxes.utils import wd2uv
@@ -450,8 +449,6 @@ class DynamicWakes(WakeFrame):
         points = targets.reshape(n_states, n_points, 3)
         rxyh = fdata[FV.TXYH][:, downwind_index]
         i0 = mdata.states_i0(counter=True)
-        i1 = i0 + n_states
-        dt = self._dt[i0:i1]
 
         # initialize:
         wcoos = np.full((n_states, n_points, 3), 1e20, dtype=config.dtype_double)

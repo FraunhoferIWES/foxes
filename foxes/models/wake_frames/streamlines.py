@@ -67,7 +67,7 @@ class Streamlines2D(WakeFrame):
         self.cl_ipars = cl_ipars
         self.intersection_error = intersection_error
 
-        self.WPOINTS = self.var(f"wpoints")
+        self.WPOINTS = self.var("wpoints")
         self.STEP = self.var("step")
 
     def calc_order(self, algo, mdata, fdata):
@@ -157,7 +157,7 @@ class Streamlines2D(WakeFrame):
                     sel = (d < 0.501*self.step)
                     if np.any(sel):
                         w = np.where(sel)
-                        print(f"\n\nERROR: Streamline self-intersection detected")
+                        print("\n\nERROR: Streamline self-intersection detected")
                         for u in range(len(w[0])):
                             dd = d[w[0][u], w[1][u], w[2][u]]
                             m = f" State {w[0][u]}, Turbine {w[1][u]}, Step {i_step}, Close to step {w[2][u]} (dist={dd:.2f} m, length={i_step * self.step} m)"
