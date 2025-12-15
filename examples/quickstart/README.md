@@ -10,5 +10,5 @@ python3 run.py -h
 
 ## Run command
 ```
-python3 run.py 
+python3 run.py
 ```

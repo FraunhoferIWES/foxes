@@ -4,17 +4,17 @@ states:
   output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
-    WD: wd 
+    WD: wd
     TI: ti
   fixed_vars:
     RHO: 1.225
-  
+
 model_book:
   turbine_types:
     - name: my_turbine
       ttype_type: PCtFile
       data_source: NREL-5MW-D126-H90.csv
-  
+
 wind_farm:
   layouts:
     - function: add_from_file
@@ -31,7 +31,7 @@ outputs:
       - function: figure
         figsize: [10, 5]
         result_labels: $fig   # store the result of the function under $fig
-  - object: $fig              # now run functions of the object behind $fig  
+  - object: $fig              # now run functions of the object behind $fig
     functions:
       - function: add_subplot
         args: [1, 2, 1]

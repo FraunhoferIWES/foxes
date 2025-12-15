@@ -11,7 +11,7 @@ site:
     name: NetCDF timeseries with 5000 states
     wind_resource: !include windio_timeseries_5000.nc
 
-wind_farm: 
+wind_farm:
   name: One row with 5 turbines
   layouts:
     - coordinates:
@@ -59,8 +59,8 @@ attributes:
       all_occurences: False
       subset: [0, 100, 200, 3000]
     turbine_outputs:
-        turbine_nc_filename: turbine_data.nc 
-        output_variables: [power, rotor_effective_velocity] 
+        turbine_nc_filename: turbine_data.nc
+        output_variables: [power, rotor_effective_velocity]
     #
     flow_field:
       report: True
@@ -81,4 +81,3 @@ attributes:
       power_percentiles:
         report: False
         percentiles: None
-

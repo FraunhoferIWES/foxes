@@ -11,4 +11,3 @@ Sequential algorithm models
 Algorithm specific models, extending/overloading the list of :ref:`Downwind algorithm models`.
 
     .. python-apigen-group:: algorithms.sequential.models
-        
