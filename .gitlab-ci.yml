@@ -37,3 +37,31 @@ test:
     - pwd
     - flake8 foxes --count --select=E9,F63,F7,F82 --show-source --statistics
     - pytest tests
+
+stages:
+  - test
+variables:
+  PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+# ===== PRE-COMMIT =====
+pre-commit:
+  image: python:3.14
+  stage: test
+  script:
+    - pip install pre-commit --break-system-packages
+    - pre-commit run --all-files
+  cache:
+    key: pre-commit-cache
+    paths:
+      - ${PRE_COMMIT_HOME}
+  tags:
+    - linux
+# ===== TEST =====
+test:
+  image: python:3.14
+  stage: test
+  script:
+    - pip install .[test] --upgrade
+    - pytest tests
+  tags:
+    - linux
+
