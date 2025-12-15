@@ -459,53 +459,102 @@ class DynamicWakes(WakeFrame):
         wake_si = np.zeros((n_states, n_points), dtype=config.dtype_int)
         wake_si[:] = i0 + np.arange(n_states)[:, None]
 
-        # (exceptional) loop over states:
+        # loop over states:
         for si in range(n_states):
             # select wake ages that exist for this state:
             ags = np.arange(self.max_age)
             sts = i0 + si - ags - wi0
             sel = (sts >= 0) & (sts < len(wdata))
             if np.any(sel):
-                # filter to existting wake points:
+                # filter to existing wake points:
                 sts = sts[sel]
                 ags = ags[sel]
-                sel = np.all(~np.isnan(wdata[sts, ags]), axis=-1)
-                if np.any(sel):
-                    sts = sts[sel]
-                    ags = ags[sel]
-                    # single wake point case, must originate from rotor centre:
-                    if len(ags) == 1:
-                        assert ags[0] == 0, f"Unexpected ags value {ags[0]} for single wake point"
-                        nx = wd2uv(fdata[FV.WD][si, downwind_index])[None, :2]
-                        dx = wdata[sts, ags, 3]
-                    # compute wake tangent vectors, using next and current wake age points:
-                    else:
-                        sela = ags < np.max(ags)
-                        stsa = sts[sela]
-                        agsa = ags[sela]
-                        nx = np.zeros((len(ags), 2), dtype=config.dtype_double)
-                        nx[sela, :] = wdata[stsa, agsa + 1, :2] - wdata[stsa, agsa, :2]
-                        stsa = sts[~sela]
-                        agsa = ags[~sela]
-                        nx[~sela, :] = wdata[stsa, agsa, :2] - wdata[stsa, agsa-1, :2]
-                        dx = np.linalg.norm(nx, axis=-1)
-                        nx /= dx[:, None] + 1e-14
-                        del sela, stsa, agsa
+                done = np.zeros(len(ags), dtype=bool)
+                for aprx in ["c", "f", "b", "o"]:
+                    stsd = None
+                    ags1 = None
+                    ags0 = None
+                    agsd = None
 
-                    # project target points onto wake points:
-                    dp = points[si, :, None, :2] - wdata[None, sts, ags, :2]
-                    projx = dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
-                    projy = -dp[:, :, 0] * nx[None, :, 1] + dp[:, :, 1] * nx[None, :, 0]
-                    selp = (projx > -dx[None, :]) & (projx < dx[None, :]) & (
-                        np.isnan(wcoos[si, :, None, 1]) |
-                        (np.abs(projy) < np.abs(wcoos[si, :, None, 1]))
-                    )
-                    if np.any(selp):
-                        w = np.where(selp)
-                        wcoos[si, w[0], 0] = projx[selp] + wdata[sts[w[1]], ags[w[1]], 3]
-                        wcoos[si, w[0], 1] = projy[selp]
-                        del w
-                    del dp, projx, projy, selp
+                    # first step:
+                    if aprx == "o" and len(ags) == 1 and ags[0] == 0:
+                        sel = ~done & ~np.isnan(wdata[sts, ags, 0])
+                        if np.any(sel):
+                            stsd = sts[sel]
+                            ags0 = ags[sel]
+                            agsd = ags0
+
+                    # central:
+                    elif aprx == "c":
+                        ags0 = np.maximum(ags - 1, 0)
+                        ags1 = np.minimum(ags + 1, wdata.shape[1] - 1)
+                        sel = (
+                            ~done &
+                            (ags > 0) & (ags < wdata.shape[1] - 1) & 
+                            ~np.isnan(wdata[sts, ags0, 0]) & 
+                            ~np.isnan(wdata[sts, ags1, 0])
+                        )
+                        if np.any(sel):
+                            stsd = sts[sel]
+                            ags0 = ags[sel] - 1
+                            ags1 = ags0 + 2
+                            agsd = ags[sel]
+
+                    # forward:
+                    elif aprx == "f":
+                        agsd = np.minimum(ags + 1, wdata.shape[1] - 1)
+                        sel = ~done & (ags < wdata.shape[1] - 1) & ~np.isnan(wdata[sts, ags, 0]) & ~np.isnan(wdata[sts, agsd, 0])
+                        if np.any(sel):
+                            stsd = sts[sel]
+                            ags0 = ags[sel]
+                            ags1 = ags0 + 1
+                            agsd = ags0
+
+                    # backward:
+                    elif aprx == "b":
+                        agsd = np.maximum(ags - 1, 0)
+                        sel = ~done & (ags > 0) &  ~np.isnan(wdata[sts, agsd, 0]) & ~np.isnan(wdata[sts, ags, 0])
+                        if np.any(sel):
+                            stsd = sts[sel]
+                            ags1 = ags[sel]
+                            ags0 = ags1 - 1
+                            agsd = ags1
+
+                    if stsd is not None:
+
+                        # single wake point case, must originate from rotor centre:
+                        if aprx == "o":
+                            nx = wd2uv(fdata[FV.WD][si, downwind_index])[None, :2]
+                            dx = wdata[stsd, ags0, 3]
+                        
+                        # compute wake tangent vectors, using next and current wake age points:
+                        else:
+                            nx = wdata[stsd, ags1, :2] - wdata[stsd, ags0, :2]
+                            dx = np.linalg.norm(nx, axis=-1)
+                            nx /= dx[:, None] + 1e-14
+
+                        # project target points onto wake points:
+                        dp = points[si, :, None, :2] - wdata[None, stsd, agsd, :2]
+                        projx = dp[:, :, 0] * nx[None, :, 0] + dp[:, :, 1] * nx[None, :, 1]
+                        projy = -dp[:, :, 0] * nx[None, :, 1] + dp[:, :, 1] * nx[None, :, 0]
+                        selp = (projx > -dx[None, :]) & (projx < dx[None, :]) & (
+                            np.isnan(wcoos[si, :, None, 1]) |
+                            (np.abs(projy) < np.abs(wcoos[si, :, None, 1]))
+                        )
+                        if np.any(selp):
+                            w = np.where(selp)
+                            wcoos[si, w[0], 0] = projx[selp] + wdata[stsd[w[1]], agsd[w[1]], 3]
+                            wcoos[si, w[0], 1] = projy[selp]
+                            del w
+
+                        done[sel] = True
+                        del dp, projx, projy, selp
+                    del stsd, ags1, ags0, agsd
+
+                    if np.all(done):
+                        break
+
+                del done
             del sts, ags, sel
 
         # store turbines that cause wake:

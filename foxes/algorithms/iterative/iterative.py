@@ -75,7 +75,7 @@ class Iterative(Downwind):
         """
         super().__init__(*args, **kwargs)
 
-        self.max_it = max_it
+        self.max_it = max_it if max_it is not None else np.inf
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit == "default" else conv_crit
         )
@@ -307,7 +307,7 @@ class Iterative(Downwind):
         self._it = -1
         self._final_run = False
         fres_dwnd = None
-        while self._it < np.inf if self.max_it is None else self.max_it:
+        while self._it < self.max_it:
             self._it += 1
 
             self.print(f"\nAlgorithm {self.name}: Iteration {self._it}\n", vlim=0)
