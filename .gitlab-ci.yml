@@ -1,11 +1,14 @@
+image: python:3.14
+before_script:
+  - pip install --upgrade pip
 stages:
   - pre-commit
   - test
 variables:
   PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+
 # ===== PRE-COMMIT =====
 pre-commit:
-  image: python:3.14
   stage: pre-commit
   only:
     refs:
@@ -19,9 +22,9 @@ pre-commit:
     key: pre-commit-cache
     paths:
       - ${PRE_COMMIT_HOME}
+
 # ===== TEST =====
 test:
-  image: python:3.14
   stage: test
   script:
     - pip install --upgrade pip
