@@ -1,11 +1,16 @@
 stages:
+  - pre-commit
   - test
 variables:
   PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
 # ===== PRE-COMMIT =====
 pre-commit:
   image: python:3.14
-  stage: test
+  stage: pre-commit
+  only:
+    refs:
+      - main
+      - dev
   script:
     - pip install --upgrade pip
     - pip install pre-commit --break-system-packages
