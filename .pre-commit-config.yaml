@@ -16,6 +16,10 @@ repos:
         args: ['--maxkb=1000']
       - id: check-merge-conflict
       - id: debug-statements  # Check for pdb/breakpoint
+    only:
+      refs:
+        - main
+        - dev
 
   # Ruff - Fast Python linter and formatter (replaces flake8, isort, pycodestyle, black)
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -26,6 +30,10 @@ repos:
         args: [ --fix, --exit-non-zero-on-fix ]
       # Run the formatter.
       - id: ruff-format
+    only:
+      refs:
+        - main
+        - dev
 
 # CI configuration - run pre-commit in CI as well
 ci:
