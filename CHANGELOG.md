@@ -868,5 +868,9 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Models:
   - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
+- Input:
+  - Aligning the `windio` input with [WIFA](https://github.com/EUFLOW/WIFA) conventions for `turbine_results.nc` output writing, now (turbine, time)
+- Bug fixes:
+  - Fixed a bug with the `Sequential` algorithm in combination with `OnePointFlowStates`
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.3](https://github.com/FraunhoferIWES/foxes/commits/v1.6.3)

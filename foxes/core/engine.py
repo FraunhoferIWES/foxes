@@ -525,6 +525,10 @@ class Engine(ABC):
         s_states = np.s_[i0_states:i1_states]
         s_targets = np.s_[i0_targets:i1_targets]
 
+        # special case for sequential algo:
+        if hasattr(algo, "states_i0"):
+            i0_states = algo.states_i0(counter=True)
+
         # create mdata:
         mdata = MData.from_dataset(
             model_data,
