@@ -1,7 +1,7 @@
-import numpy as np  # noqa: F401
-import pandas as pd  # noqa: F401
-import xarray as xr  # noqa: F401
-import matplotlib.pyplot as plt  # noqa: F401
+import numpy as np
+import pandas as pd
+import xarray as xr
+import matplotlib.pyplot as plt
 
 
 def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
@@ -57,3 +57,39 @@ def exec_python(s, indicator="%", newline=";", globals=globals(), locals={}):
     elif isinstance(s, dict):
         return {k: exec_python(a, indicator) for k, a in s.items()}
     return s
+
+
+def eval_dict_values(d, globals=None, locals=None):
+    """
+    Tries to evaluate string values in a dictionary, recursively.
+
+    Parameters
+    ----------
+    d: dict
+        The dictionary
+    globals: dict, optional
+        The global namespace
+    locals: dict, optional
+        The local namespace
+
+    Returns
+    -------
+    d: dict
+        The dictionary with evaluated values
+
+    :group: utils
+
+    """
+    if globals is None:
+        globals = {"np": np, "pd": pd, "xr": xr, "plt": plt}
+
+    for k, v in d.items():
+        if isinstance(v, dict):
+            d[k] = eval_dict_values(v, globals, locals)
+        else:
+            if isinstance(v, str):
+                try:
+                    d[k] = eval(v, globals, locals)
+                except Exception:
+                    pass
+    return d

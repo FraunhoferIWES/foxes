@@ -870,6 +870,8 @@ This major version introduces the concept of `Engines` which handle the chunking
   - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
 - Input:
   - Aligning the `windio` input with [WIFA](https://github.com/EUFLOW/WIFA) conventions for `turbine_results.nc` output writing, now (turbine, time)
+- Utils:
+  - New function `eval_dict_values`, which recursively parses string dictionary values like e.g. `np.arange(100)` to data, applied in `Dict.eval()`
 - Bug fixes:
   - Fixed a bug with the `Sequential` algorithm in combination with `OnePointFlowStates`
 

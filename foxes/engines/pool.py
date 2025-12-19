@@ -392,10 +392,11 @@ class PoolEngine(Engine):
 
                     i0_targets = i1_targets
 
-                    while len(futures) > self.n_workers * 2:
-                        k = next(iter(futures))
-                        results[k] = self.await_result(futures.pop(k))
-                        results_mgr.update(results, futures)
+                    if self.n_workers >= 10:
+                        while len(futures) > self.n_workers * 2:
+                            k = next(iter(futures))
+                            results[k] = self.await_result(futures.pop(k))
+                            results_mgr.update(results, futures)
 
                 i0_states = i1_states
 

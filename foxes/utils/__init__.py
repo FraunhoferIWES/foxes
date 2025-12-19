@@ -34,11 +34,13 @@ from .xarray_utils import pack_value as pack_value
 from .xarray_utils import unpack_value as unpack_value
 from .xarray_utils import get_encoding as get_encoding
 
+from .exec_python import exec_python as exec_python
+from .exec_python import eval_dict_values as eval_dict_values
+
 from .pandas_utils import PandasFileHelper as PandasFileHelper
 from .dict import Dict as Dict
 from .data_book import DataBook as DataBook
 from .cubic_roots import cubic_roots as cubic_roots
-from .exec_python import exec_python as exec_python
 from .regularize import sqrt_reg as sqrt_reg
 from .tab_files import read_tab_file as read_tab_file
 from .random_xy import random_xy_square as random_xy_square
