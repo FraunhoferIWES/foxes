@@ -74,7 +74,8 @@ test = [
     "flake8>=0.1",
     "pytest>=7.0",
 ]
-utils = [
+dev = [
+    "pre-commit>=0.1",
     "objsize>=0.5",
 ]
 
