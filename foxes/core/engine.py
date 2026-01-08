@@ -31,6 +31,13 @@ class Engine(ABC):
     verbosity: int
         The verbosity level, 0 = silent
 
+    Notes
+    -----
+    Use engines via the context manager protocol:
+    >>> engine = Engine.new(...)
+    >>> with engine:
+    >>>     ...
+
     :group: core
 
     """
@@ -84,7 +91,9 @@ class Engine(ABC):
 
     def __enter__(self):
         if self.__entered:
-            raise ValueError("Enter called for already entered engine")
+            raise ValueError(
+                f"Engine '{self.name}': Enter called for already entered engine"
+            )
         self.__entered = True
         if has_engine():
             raise ValueError(
@@ -95,7 +104,9 @@ class Engine(ABC):
 
     def __exit__(self, *exit_args):
         if not self.__entered:
-            raise ValueError("Exit called for not entered engine")
+            raise ValueError(
+                f"Engine '{self.name}': Exit called for not entered engine"
+            )
         self.__entered = False
         __global_engine_data__["engine"] = None
 

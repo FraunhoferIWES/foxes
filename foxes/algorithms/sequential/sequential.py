@@ -133,7 +133,11 @@ class Sequential(Iterative):
         """Initialize the iterator"""
 
         if not self.iterating:
-            get_engine().verbosity -= 2
+            # Adjust verbosity if engine is set
+            try:
+                get_engine().verbosity -= 2
+            except ValueError:
+                pass
 
             if not self.initialized:
                 self.initialize()
@@ -263,7 +267,11 @@ class Sequential(Iterative):
             for p in self.plugins:
                 p.finalize(self)
 
-            get_engine().verbosity += 2
+            # Reset verbosity if engine is set
+            try:
+                get_engine().verbosity += 2
+            except ValueError:
+                pass
 
             raise StopIteration
 

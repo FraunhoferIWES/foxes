@@ -202,7 +202,6 @@ if __name__ == "__main__":
 
     # run all states sequentially:
     with engine:
-        print("HERE HAS ENGINE", engine, foxes.core.has_engine())
         for r in algo:
             print(algo.index)
 

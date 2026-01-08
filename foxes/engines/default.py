@@ -12,6 +12,17 @@ class DefaultEngine(Engine):
 
     """
 
+    def __enter__(self):
+        self._entered = True
+        return self
+
+    def __exit__(self, *exit_args):
+        if not hasattr(self, "_entered") or not self._entered:
+            raise ValueError(
+                f"Engine '{self.name}': Exit called for not entered engine"
+            )
+        self._entered = False
+
     def submit(self, f, *args, **kwargs):
         """
         Submits a job to worker, obtaining a future
