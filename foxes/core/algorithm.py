@@ -1,14 +1,13 @@
 import numpy as np
 import xarray as xr
-from abc import abstractmethod
 
 from foxes.data import StaticData
 from foxes.utils import Dict, new_instance
 from foxes.config import config
 import foxes.constants as FC
 
+from .engine import launch_parallel_calc
 from .model import Model
-from .engine import Engine
 
 
 class Algorithm(Model):
@@ -34,7 +33,6 @@ class Algorithm(Model):
         farm,
         verbosity=1,
         dbook=None,
-        **engine_pars,
     ):
         """
         Constructor.
@@ -49,8 +47,6 @@ class Algorithm(Model):
             The verbosity level, 0 means silent
         dbook: foxes.DataBook, optional
             The data book, or None for default
-        engine_pars: dict, optional
-            Parameters for the engine constructor
 
         """
         super().__init__()
@@ -65,28 +61,6 @@ class Algorithm(Model):
         self.__dbook = StaticData() if dbook is None else dbook
         self.__idata_mem = Dict(_name="idata_mem")
         self.__chunk_store = Dict(_name="chunk_store")
-
-        if len(engine_pars):
-            if "engine_type" in engine_pars:
-                if "engine" in engine_pars:
-                    raise KeyError(
-                        f"{self.name}: Expecting either 'engine' or 'engine_type', not both"
-                    )
-            elif "engine" in engine_pars:
-                engine_pars["engine_type"] = engine_pars.pop("engine")
-
-            if "engine_type" in engine_pars:
-                try:
-                    e = Engine.new(verbosity=verbosity, **engine_pars)
-                except TypeError as e:
-                    print(f"\nError while interpreting engine_pars {engine_pars}\n")
-                    raise e
-                self.print(f"Algorithm '{self.name}': Selecting engine '{e}'")
-                e.initialize()
-            else:
-                raise KeyError(
-                    f"{self.name}: Found unsupported parameters {list(engine_pars.keys())}"
-                )
 
     @property
     def farm(self):
@@ -733,28 +707,14 @@ class Algorithm(Model):
         else:
             self.reset_chunk_store()
 
-    @abstractmethod
-    def _launch_parallel_farm_calc(
-        self,
-        *args,
-        mbook,
-        dbook,
-        chunk_store,
-        **kwargs,
-    ):
+    def _launch_parallel_farm_calc(self, *args, **kwargs):
         """
-        Runs the main farm calculation, launching parallelization
+        Runs the farm calculation in parallel
 
         Parameters
         ----------
         args: tuple, optional
             Additional parameters for running
-        mbook: foxes.models.ModelBook
-            The model book
-        dbook: foxes.DataBook
-            The data book, or None for default
-        chunk_store: foxes.utils.Dict
-            The chunk store
         kwargs: dict, optional
             Additional parameters for running
 
@@ -765,7 +725,7 @@ class Algorithm(Model):
             dimensions (state, turbine)
 
         """
-        pass
+        return launch_parallel_calc(self, *args, **kwargs)
 
     def calc_farm(self, *args, clear_mem=False, **kwargs):
         """
@@ -809,8 +769,6 @@ class Algorithm(Model):
         farm_results = self._launch_parallel_farm_calc(
             *args,
             chunk_store=chunk_store,
-            # sel=None,
-            # isel=None,
             **kwargs,
         )
 
@@ -822,22 +780,14 @@ class Algorithm(Model):
 
         return farm_results
 
-    @abstractmethod
-    def _launch_parallel_points_calc(
-        self,
-        *args,
-        chunk_store,
-        **kwargs,
-    ):
+    def _launch_parallel_points_calc(self, *args, **kwargs):
         """
-        Runs the main points calculation, launching parallelization
+        Runs the main points calculation in parallel
 
         Parameters
         ----------
         args: tuple, optional
             Additional parameters for running
-        chunk_store: foxes.utils.Dict
-            The chunk store
         kwargs: dict, optional
             Additional parameters for running
 
@@ -848,7 +798,7 @@ class Algorithm(Model):
             dimensions (state, point)
 
         """
-        pass
+        return launch_parallel_calc(self, *args, **kwargs)
 
     def calc_points(self, *args, sel=None, isel=None, **kwargs):
         """

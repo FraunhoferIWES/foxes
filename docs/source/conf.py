@@ -41,7 +41,7 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "nbsphinx",
+    # "nbsphinx",
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
     "sphinx.ext.autodoc",
@@ -54,6 +54,7 @@ extensions = [
     # "sphinx.ext.inheritance_diagram",
     "sphinx.ext.doctest",
     "m2r2",
+    "myst_nb",
 ]
 
 intersphinx_mapping = {
@@ -68,7 +69,12 @@ intersphinx_mapping = {
 
 # The suffix(es) of source filenames.
 #
-source_suffix = {".rst": "restructuredtext", ".md": "restructuredtext"}
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
+}
 
 # The master toctree document.
 master_doc = "index"
@@ -107,71 +113,6 @@ napolean_use_rtype = False
 # -- Options for sphinxcontrib.email ------------------------------------------
 # email_automode = True
 
-
-# -- Options for nbsphinx -----------------------------------------------------
-
-# Execute notebooks before conversion: 'always', 'never', 'auto' (default)
-# We execute all notebooks, exclude the slow ones using 'exclude_patterns'
-nbsphinx_execute = "always"
-
-# Use this kernel instead of the one stored in the notebook metadata:
-# nbsphinx_kernel_name = 'python3'
-
-# List of arguments to be passed to the kernel that executes the notebooks:
-# nbsphinx_execute_arguments = []
-
-# If True, the build process is continued even if an exception occurs:
-# nbsphinx_allow_errors = True
-
-
-# Controls when a cell will time out (defaults to 30; use -1 for no timeout):
-nbsphinx_timeout = 500
-
-# Default Pygments lexer for syntax highlighting in code cells:
-# nbsphinx_codecell_lexer = 'ipython3'
-
-# Width of input/output prompts used in CSS:
-# nbsphinx_prompt_width = '8ex'
-
-# If window is narrower than this, input/output prompts are on separate lines:
-# nbsphinx_responsive_width = '700px'
-
-# This is processed by Jinja2 and inserted before each notebook
-# Fix for issue with pyplot, cf
-# https://github.com/readthedocs/sphinx_rtd_theme/issues/788#issuecomment-585785027
-nbsphinx_prolog = r"""
-.. raw:: html
-
-    <script src='http://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js'></script>
-    <script>require=requirejs;</script>
-
-
-"""
-
-# This is processed by Jinja2 and inserted after each notebook
-# nbsphinx_epilog = r"""
-# """
-
-# Input prompt for code cells. "%s" is replaced by the execution count.
-nbsphinx_input_prompt = "In [%s]:"
-
-# Output prompt for code cells. "%s" is replaced by the execution count.
-nbsphinx_output_prompt = "Out[%s]:"
-
-# Specify conversion functions for custom notebook formats:
-# import jupytext
-# nbsphinx_custom_formats = {
-#    '.Rmd': lambda s: jupytext.reads(s, '.Rmd'),
-# }
-
-# Link or path to require.js, set to empty string to disable
-# nbsphinx_requirejs_path = ''
-
-# Options for loading require.js
-# nbsphinx_requirejs_options = {'async': 'async'}
-mathjax3_config = {
-    "TeX": {"equationNumbers": {"autoNumber": "AMS", "useLabelIds": True}},
-}
 
 # Additional files needed for generating LaTeX/PDF output:
 # latex_additional_files = ['references.bib']

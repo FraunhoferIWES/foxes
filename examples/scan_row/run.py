@@ -104,97 +104,103 @@ if __name__ == "__main__":
         mbook=mbook,
     )
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
+    )
+
+    with engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
         time1 = time.time()
 
-        print("\nCalc time =", time1 - time0, "\n")
+    print("\nCalc time =", time1 - time0, "\n")
 
-        print("\nFarm results:\n", farm_results)
+    print("\nFarm results:\n", farm_results)
 
-        o = foxes.output.FarmResultsEval(farm_results)
-        o.add_capacity(algo)
-        o.add_capacity(algo, ambient=True)
-        o.add_efficiency()
+    o = foxes.output.FarmResultsEval(farm_results)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
+    o.add_efficiency()
 
-        # state-turbine results
-        farm_df = farm_results.to_dataframe()
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.EFF,
-                ]
+    # state-turbine results
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:\n")
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+                FV.EFF,
             ]
-        )
-        print()
+        ]
+    )
+    print()
 
-        # results by turbine
-        turbine_results = o.reduce_states(
-            {
-                FV.AMB_P: "weights",
-                FV.P: "weights",
-                FV.AMB_CAP: "weights",
-                FV.CAP: "weights",
-            }
-        )
-        turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
-            algo=algo, annual=True, ambient=True
-        )
-        turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
-        turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
-        print("\nResults by turbine:\n")
-        print(turbine_results)
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.AMB_P: "weights",
+            FV.P: "weights",
+            FV.AMB_CAP: "weights",
+            FV.CAP: "weights",
+        }
+    )
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
+    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
+    turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
+    print("\nResults by turbine:\n")
+    print(turbine_results)
 
-        # power results
-        P0 = o.calc_mean_farm_power(ambient=True)
-        P = o.calc_mean_farm_power()
-        print(f"\nFarm power        : {P / 1000:.1f} MW")
-        print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-        print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-        print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
-        print()
+    # power results
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power        : {P / 1000:.1f} MW")
+    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
+    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh.")
+    print()
 
-        if not args.nofig and args.calc_cline:
-            points = np.zeros((n_s, n_p, 3))
-            points[:, :, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)[
-                None, :
-            ]
-            points[:, :, 1] = p0[1]
-            points[:, :, 2] = H
-            print("\nPOINTS:\n", points[0])
+    if not args.nofig and args.calc_cline:
+        points = np.zeros((n_s, n_p, 3))
+        points[:, :, 0] = np.linspace(p0[0], p0[0] + n_t * stp[0] + 10 * D, n_p)[
+            None, :
+        ]
+        points[:, :, 1] = p0[1]
+        points[:, :, 2] = H
+        print("\nPOINTS:\n", points[0])
 
+        with engine:
             time0 = time.time()
             point_results = algo.calc_points(farm_results, points)
             time1 = time.time()
-            print("\nCalc time =", time1 - time0, "\n")
 
-            print(point_results)
+        print("\nCalc time =", time1 - time0, "\n")
 
-            fig, ax = plt.subplots()
-            for s in range(points.shape[0]):
-                ax.plot(points[s, :, 0], point_results[FV.WS][s, :])
-            ax.set_xlabel("x [m]")
-            ax.set_ylabel("Wind speed [m/s]")
-            ax.set_title("Centreline wind speed")
-            plt.show()
-            plt.close(fig)
+        print(point_results)
 
-        if not args.nofig and args.calc_mean:
-            o = foxes.output.FlowPlots2D(algo, farm_results)
-            fig = o.get_mean_fig_xy(FV.WS, resolution=10)
-            plt.show()
+        fig, ax = plt.subplots()
+        for s in range(points.shape[0]):
+            ax.plot(points[s, :, 0], point_results[FV.WS][s, :])
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("Wind speed [m/s]")
+        ax.set_title("Centreline wind speed")
+        plt.show()
+        plt.close(fig)
+
+    if not args.nofig and args.calc_mean:
+        o = foxes.output.FlowPlots2D(algo, farm_results)
+        with engine:
+            mean_data = o.get_mean_data_xy(FV.WS, resolution=10)
+        fig = o.get_mean_fig_xy(mean_data)
+        plt.show()

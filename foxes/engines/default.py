@@ -32,8 +32,6 @@ class DefaultEngine(Engine):
             The future object
 
         """
-        self.finalize()
-
         with Engine.new(
             "process",
             n_procs=self.n_procs,
@@ -42,8 +40,6 @@ class DefaultEngine(Engine):
             verbosity=self.verbosity,
         ) as e:
             results = e.submit(f, *args, **kwargs)
-
-        self.initialize()
 
         return results
 
@@ -62,8 +58,6 @@ class DefaultEngine(Engine):
             True if the future is done
 
         """
-        self.finalize()
-
         with Engine.new(
             "process",
             n_procs=self.n_procs,
@@ -72,8 +66,6 @@ class DefaultEngine(Engine):
             verbosity=self.verbosity,
         ) as e:
             result = e.future_is_done(future)
-
-        self.initialize()
 
         return result
 
@@ -92,8 +84,6 @@ class DefaultEngine(Engine):
             The calculation result
 
         """
-        self.finalize()
-
         with Engine.new(
             "process",
             n_procs=self.n_procs,
@@ -102,8 +92,6 @@ class DefaultEngine(Engine):
             verbosity=self.verbosity,
         ) as e:
             results = e.await_result(future)
-
-        self.initialize()
 
         return results
 
@@ -135,9 +123,6 @@ class DefaultEngine(Engine):
             The list of results
 
         """
-
-        self.finalize()
-
         with Engine.new(
             "process",
             n_procs=self.n_procs,
@@ -146,8 +131,6 @@ class DefaultEngine(Engine):
             verbosity=self.verbosity,
         ) as e:
             results = e.map(func, inputs, *args, **kwargs)
-
-        self.initialize()
 
         return results
 
@@ -195,8 +178,6 @@ class DefaultEngine(Engine):
 
         self.print(f"{type(self).__name__}: Selecting engine '{ename}'", level=1)
 
-        self.finalize()
-
         with Engine.new(
             ename,
             n_procs=self.n_procs,
@@ -207,7 +188,5 @@ class DefaultEngine(Engine):
             results = e.run_calculation(
                 algo, model, model_data, farm_data, point_data=point_data, **kwargs
             )
-
-        self.initialize()
 
         return results

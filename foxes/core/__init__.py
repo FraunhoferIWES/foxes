@@ -27,7 +27,9 @@ from .data import TData as TData
 from .engine import Engine as Engine
 from .engine import get_engine as get_engine
 from .engine import has_engine as has_engine
-from .engine import reset_engine as reset_engine
+from .engine import run_with_engine as run_with_engine
+from .engine import map_with_engine as map_with_engine
+from .engine import launch_parallel_calc as launch_parallel_calc
 
 from .states import States as States
 from .states import ExtendedStates as ExtendedStates

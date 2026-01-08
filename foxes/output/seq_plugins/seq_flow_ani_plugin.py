@@ -12,14 +12,16 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
     ----------
     orientation: str
         The orientation, either "yx", "xz" or "yz"
-    pars: dict
+    plot_pars: dict
         Additional parameters for plotting
+    data_pars: dict
+        Additional parameters for plot data calculation
 
     :group: output.seq_plugins
 
     """
 
-    def __init__(self, orientation, **pars):
+    def __init__(self, orientation, data_pars={}, plot_pars={}):
         """
         Constructor.
 
@@ -27,16 +29,20 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         ----------
         orientation: str
             The orientation, either "yx", "xz" or "yz"
-        pars: dict, optional
+        plot_pars: dict
             Additional parameters for plotting
+        data_pars: dict, optional
+            Additional parameters for plot data calculation
+
 
         """
         super().__init__()
         self.orientation = orientation
-        self.pars = pars
+        self.plot_pars = plot_pars
+        self.data_pars = data_pars
 
-        if "title" in self.pars and callable(self.pars["title"]):
-            self._tfun = self.pars.pop("title")
+        if "title" in self.plot_pars and callable(self.plot_pars["title"]):
+            self._tfun = self.plot_pars.pop("title")
         else:
             self._tfun = None
 
@@ -72,30 +78,37 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
-            self.pars["title"] = self._tfun(algo.states.counter, algo.states.index()[0])
+            self.plot_pars["title"] = self._tfun(
+                algo.states.counter, algo.states.index()[0]
+            )
 
         if self.orientation == "xy":
-            d = next(o.gen_states_fig_xy(**self.pars, precalc=True))
+            d = o.get_states_data_xy(**self.data_pars, data_format="numpy")
         elif self.orientation == "xz":
-            d = next(o.gen_states_fig_xz(**self.pars, precalc=True))
+            d = o.get_states_data_xz(**self.data_pars, data_format="numpy")
         elif self.orientation == "yz":
-            d = next(o.gen_states_fig_yz(**self.pars, precalc=True))
+            d = o.get_states_data_yz(**self.data_pars, data_format="numpy")
         else:
             raise KeyError(
                 f"Unkown orientation '{self.orientation}', choises: xy, xz, yz"
             )
 
         # minimize stored data:
-        od = [d[0], d[1], None]
-        if len(self._data) == 0:
-            od[2] = d[2]
+        d = list(d)
+        if len(self._data) > 0:
+            d[0] = None
+            d[-1] = None
+
         of = (
             fres
-            if ("rotor_color" in self.pars and self.pars["rotor_color"] is not None)
+            if (
+                "rotor_color" in self.plot_pars
+                and self.plot_pars["rotor_color"] is not None
+            )
             else None
         )
 
-        self._data.append((of, od))
+        self._data.append((of, d))
 
     def gen_images(self, ax):
         """
@@ -112,29 +125,34 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         """
         fig = ax.get_figure()
+        parameters = None
         gdata = None
         while len(self._data):
             fres, d = self._data.pop(0)
 
-            if d[2] is not None:
-                gdata = d[2]
+            if d[-1] is not None:
+                parameters = d[0]
+                gdata = d[-1]
+            else:
+                d[0] = parameters
+                d[-1] = gdata
 
             o = FlowPlots2D(self.algo, fres)
 
             yield next(
                 o.gen_states_fig_xy(
-                    **self.pars,
+                    d,
                     ax=ax,
                     fig=fig,
                     ret_im=True,
-                    precalc=(d[0], d[1], gdata),
+                    **self.plot_pars,
                 )
             )
 
             del o, fres, d
 
             if (
-                self.pars.get("vmin", None) is not None
-                and self.pars.get("vmax", None) is not None
+                self.plot_pars.get("vmin", None) is not None
+                and self.plot_pars.get("vmax", None) is not None
             ):
-                self.pars["add_bar"] = False
+                self.plot_pars["add_bar"] = False

@@ -71,8 +71,8 @@ attributes:
         xy_sampling: grid
         x_bounds: [-2000, 2000]
         y_bounds: [-2000, 4000]
-        dx: 10
-        dy: 10
+        dx: 100
+        dy: 100
     #
     statistics:
       stats_filename: None

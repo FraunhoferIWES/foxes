@@ -4,7 +4,7 @@ import xarray as xr
 from copy import copy, deepcopy
 from scipy.interpolate import interpn
 
-from foxes.core import States, get_engine
+from foxes.core import States, map_with_engine
 from foxes.utils import import_module
 from foxes.data import STATES, StaticData
 from foxes.utils.wind_dir import uv2wd, wd2uv
@@ -510,7 +510,7 @@ class DatasetStates(States):
                         f"States '{self.name}': Reading states from '{self.data_source}'"
                     )
 
-            self.__data_source = get_engine().map(
+            self.__data_source = map_with_engine(
                 _read_nc_file,
                 files,
                 coords=coords,

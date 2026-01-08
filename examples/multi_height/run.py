@@ -93,11 +93,13 @@ if __name__ == "__main__":
         mbook=mbook,
     )
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
-    ):
+    )
+
+    with engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
         time1 = time.time()

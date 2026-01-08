@@ -62,13 +62,14 @@ doc = [
     "setuptools>=61.0",
     "sphinx>=5.0",
     "sphinx-immaterial>=0.10",
-    "nbsphinx>=0.5",
+    "myst-nb>=0.1",
     "ipykernel>=5.0",
     "ipywidgets>=5.0",
     "m2r2>=0.2",
     "lxml_html_clean>=0.4",
     "dask>=2022.0",
     "distributed>=2022.0",
+    "ipywidgets>0.1",
 ]
 test = [
     "flake8>=0.1",
@@ -77,6 +78,7 @@ test = [
 dev = [
     "pre-commit>=0.1",
     "objsize>=0.5",
+    "jupyter>=1.0",
 ]
 
 [project.urls]

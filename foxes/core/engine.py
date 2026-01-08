@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from abc import ABC, abstractmethod
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from xarray import Dataset
 
 from foxes.config import config, get_output_path
@@ -11,9 +11,7 @@ import foxes.constants as FC
 
 from .data import MData, FData, TData
 
-__global_engine_data__ = dict(
-    engine=None,
-)
+__global_engine_data__ = dict(engine=None)
 
 
 class Engine(ABC):
@@ -77,7 +75,6 @@ class Engine(ABC):
         self._n_workers = max(self._n_procs - 1, 1)
 
         self.__name = type(self).__name__
-        self.__initialized = False
         self.__entered = False
         self.__running_chunk_calc = False
 
@@ -89,20 +86,22 @@ class Engine(ABC):
         if self.__entered:
             raise ValueError("Enter called for already entered engine")
         self.__entered = True
-        if not self.initialized:
-            self.initialize()
+        if has_engine():
+            raise ValueError(
+                f"Cannot enter engine '{self.name}', since engine already set to '{type(get_engine()).__name__}'"
+            )
+        __global_engine_data__["engine"] = self
         return self
 
     def __exit__(self, *exit_args):
         if not self.__entered:
             raise ValueError("Exit called for not entered engine")
         self.__entered = False
-        if self.initialized:
-            self.finalize(*exit_args)
+        __global_engine_data__["engine"] = None
 
     def __del__(self):
-        if self.initialized:
-            self.finalize()
+        if self.__entered:
+            __global_engine_data__["engine"] = None
 
     @property
     def name(self):
@@ -183,19 +182,6 @@ class Engine(ABC):
         return self.__entered
 
     @property
-    def initialized(self):
-        """
-        Initialization flag.
-
-        Returns
-        -------
-        flag: bool
-            True if the model has been initialized.
-
-        """
-        return self.__initialized
-
-    @property
     def running_chunk_calc(self):
         """
         Flag that a chunk calculation is running.
@@ -207,40 +193,6 @@ class Engine(ABC):
 
         """
         return self.__running_chunk_calc
-
-    def initialize(self):
-        """
-        Initializes the engine.
-        """
-        if not self.entered:
-            self.__enter__()
-        elif not self.initialized:
-            if get_engine(error=False, default=False) is not None:
-                raise ValueError(
-                    f"Cannot initialize engine '{self.name}', since engine already set to '{type(get_engine()).__name__}'"
-                )
-            __global_engine_data__["engine"] = self
-            self.__initialized = True
-
-    def finalize(self, type=None, value=None, traceback=None):
-        """
-        Finalizes the engine.
-
-        Parameters
-        ----------
-        type: object, optional
-            Dummy argument for the exit function
-        value: object, optional
-            Dummy argument for the exit function
-        traceback: object, optional
-            Dummy argument for the exit function
-
-        """
-        if self.entered:
-            self.__exit__(type, value, traceback)
-        elif self.initialized:
-            __global_engine_data__["engine"] = None
-            self.__initialized = False
 
     def print(self, *args, level=1, **kwargs):
         """Prints based on verbosity"""
@@ -634,8 +586,6 @@ class Engine(ABC):
             self.print(
                 f"{self.name}: Calculating data at {point_data.sizes[FC.TARGET]} points for {n_states} states"
             )
-        if not self.initialized:
-            raise ValueError(f"Engine '{self.name}' not initialized")
         if not model.initialized:
             raise ValueError(f"Model '{model.name}' not initialized")
 
@@ -1099,7 +1049,7 @@ class Engine(ABC):
         return new_instance(cls, engine_type, *args, **kwargs)
 
 
-def get_engine(error=True, default=True):
+def get_engine(error=True):
     """
     Gets the global calculation engine
 
@@ -1108,8 +1058,6 @@ def get_engine(error=True, default=True):
     error: bool
         Flag for raising ValueError if no
         engine is found
-    default: bool or dict or Engine
-        Set default engine if not set yet
 
     Returns
     -------
@@ -1119,24 +1067,9 @@ def get_engine(error=True, default=True):
     :group: core
 
     """
-    engine = __global_engine_data__["engine"]
-    if engine is None:
-        if isinstance(default, dict):
-            engine = Engine.new(**default)
-            print(f"Selecting default engine '{engine}'")
-            engine.initialize()
-            return engine
-        elif isinstance(default, Engine):
-            print(f"Selecting default engine '{default}'")
-            default.initialize()
-            return default
-        elif isinstance(default, bool) and default:
-            engine = Engine.new(engine_type="DefaultEngine", verbosity=1)
-            print(f"Selecting '{engine}'")
-            engine.initialize()
-            return engine
-        elif error:
-            raise ValueError("Engine not found.")
+    engine = __global_engine_data__.get("engine", None)
+    if engine is None and error:
+        raise ValueError("No engine has been set.")
     return engine
 
 
@@ -1152,16 +1085,83 @@ def has_engine():
     :group: core
 
     """
-    return __global_engine_data__["engine"] is not None
+    return __global_engine_data__.get("engine", None) is not None
 
 
-def reset_engine():
+def run_with_engine(func, *args, **kwargs):
     """
-    Resets the global calculation engine
+    Runs a function within engine context
 
-    :group: core
+    Parameters
+    ----------
+    func: Callable
+        The function to be run,
+        func(*args, **kwargs)
+    args: tuple
+        Arguments for the function
+    kwargs: dict
+        Keyword arguments for the function
+
+    Returns
+    -------
+    result: object
+        The function result
 
     """
-    engine = get_engine(error=False, default=False)
-    if engine is not None:
-        engine.finalize(type=None, value=None, traceback=None)
+    if has_engine():
+        results = func(*args, **kwargs)
+    else:
+        with Engine.new("default"):
+            results = func(*args, **kwargs)
+    return results
+
+
+def map_with_engine(*args, **kwargs):
+    """
+    Maps a function via engine
+
+    Parameters
+    ----------
+    args: tuple
+        Arguments for the Engine.map function
+    kwargs: dict
+        Keyword arguments for the Engine.map
+        function
+
+    Returns
+    -------
+    result: object
+        The function result
+
+    """
+    if has_engine():
+        results = get_engine().map(*args, **kwargs)
+    else:
+        with Engine.new("default") as e:
+            results = e.map(*args, **kwargs)
+    return results
+
+
+def launch_parallel_calc(self, *args, **kwargs):
+    """
+    Launches parallel calculation using engine
+
+    Parameters
+    ----------
+    args: tuple, optional
+        Additional parameters for running
+    kwargs: dict, optional
+        Additional parameters for running
+
+    Returns
+    -------
+    results: object
+        The calculation results
+
+    """
+    if has_engine():
+        results = get_engine().run_calculation(self, *args, **kwargs)
+    else:
+        with Engine.new("default") as e:
+            results = e.run_calculation(self, *args, **kwargs)
+    return results

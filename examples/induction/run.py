@@ -46,7 +46,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-f", "--frame", help="The wake frame", default="rotor_wd")
     parser.add_argument("-v", "--var", help="The plot variable", default=FV.WS)
-    parser.add_argument("-e", "--engine", help="The engine", default=None)
     parser.add_argument(
         "-nit",
         "--not_iterative",
@@ -92,7 +91,6 @@ if __name__ == "__main__":
         wake_frame=args.frame,
         partial_wakes=args.pwakes,
         mbook=mbook,
-        engine=args.engine,
         verbosity=1,
     )
 
@@ -157,16 +155,14 @@ if __name__ == "__main__":
         o = foxes.output.FlowPlots2D(algo, farm_results)
         xmin = -2000
         xmax = (args.nx - 1) * args.dx + 2000
-        g = o.gen_states_fig_xy(
+        d = o.get_states_data_xy(
             args.var,
-            figsize=(7, 5),
             resolution=20,
             xmin=xmin,
             xmax=xmax,
             yspace=1000.0,
-            levels=40,
-            rotor_color="black",
         )
+        g = o.gen_states_fig_xy(d, figsize=(7, 5), levels=40, rotor_color="black")
         fig = next(g)
         plt.show()
         plt.close(fig)

@@ -153,58 +153,73 @@ if __name__ == "__main__":
     sdata["y"] = np.linspace(args.ymin, args.ymax, Ny + 1)
 
     fig, ax = plt.subplots(figsize=(10, 4))
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
-        if len(args.rotors) == 1:
+    )
+
+    if len(args.rotors) == 1:
+        pwake_results = []
+        with engine:
             for pwake in args.pwakes:
                 farm_results, D = calc(args, args.rotors[0], sdata, pwake)
+                pwake_results.append((pwake, farm_results))
 
-                ax.plot(
-                    farm_results[FV.Y][:, 1] / D,
-                    farm_results[var][:, 1] / varn,
-                    linewidth=2,
-                    alpha=0.6,
-                    label=pwake,
-                )
+        for pwake, farm_results in pwake_results:
+            ax.plot(
+                farm_results[FV.Y][:, 1] / D,
+                farm_results[var][:, 1] / varn,
+                linewidth=2,
+                alpha=0.6,
+                label=pwake,
+            )
 
-                title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
+            title = f"{swks}, variable {var}\nVarying partial wake models, {ttl0}, rotor = {args.rotors[0]}"
 
-        elif len(args.pwakes) == 1:
+    elif len(args.pwakes) == 1:
+        rotor_results = []
+        with engine:
             for rotor in args.rotors:
                 farm_results, D = calc(args, rotor, sdata, args.pwakes[0])
+                rotor_results.append((rotor, farm_results))
 
-                ax.plot(
-                    farm_results[FV.Y][:, 1] / D,
-                    farm_results[var][:, 1] / varn,
-                    linewidth=2,
-                    alpha=0.6,
-                    label=rotor,
-                )
+        for rotor, farm_results in rotor_results:
+            ax.plot(
+                farm_results[FV.Y][:, 1] / D,
+                farm_results[var][:, 1] / varn,
+                linewidth=2,
+                alpha=0.6,
+                label=rotor,
+            )
 
-                title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
+            title = f"{swks}, variable {var}\nVarying rotor models, {ttl0}, pwake = {args.pwakes[0]}"
 
-        elif len(args.rotors) == len(args.pwakes):
+    elif len(args.rotors) == len(args.pwakes):
+        all_results = []
+        with engine:
             for rotor, pwake in zip(args.rotors, args.pwakes):
                 farm_results, D = calc(args, rotor, sdata, pwake)
+                all_results.append((rotor, pwake, farm_results))
 
-                ax.plot(
-                    farm_results[FV.Y][:, 1] / D,
-                    farm_results[var][:, 1] / varn,
-                    linewidth=2,
-                    alpha=0.6,
-                    label=f"{rotor}, {pwake}",
-                )
-
-                title = "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
-
-        else:
-            raise ValueError(
-                "Please either give one rotor, or one pwake, or same number of both"
+        for rotor, pwake, farm_results in all_results:
+            ax.plot(
+                farm_results[FV.Y][:, 1] / D,
+                farm_results[var][:, 1] / varn,
+                linewidth=2,
+                alpha=0.6,
+                label=f"{rotor}, {pwake}",
             )
+
+            title = (
+                "{swks}, variable {var}\nVarying rotor and partial wake models, {ttl0}"
+            )
+
+    else:
+        raise ValueError(
+            "Please either give one rotor, or one pwake, or same number of both"
+        )
 
     if args.title is not None:
         title = args.title

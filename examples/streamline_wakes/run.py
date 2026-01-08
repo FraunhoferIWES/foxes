@@ -134,36 +134,43 @@ if __name__ == "__main__":
         mbook=mbook,
     )
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
+    )
+
+    with engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
         time1 = time.time()
 
         print("\nCalc time =", time1 - time0, "\n")
 
-        print(farm_results, "\n")
-
-        fr = farm_results.to_dataframe()
-        print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
-
         if not args.nofig:
             o = foxes.output.FlowPlots2D(algo, farm_results)
-            for fig in o.gen_states_fig_xy(
+            plot_data = o.get_states_data_xy(
                 FV.WS,
                 resolution=10,
-                figsize=(8, 8),
-                quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
-                quiver_n=15,
                 xmin=0,
                 xmax=2500,
                 ymin=0,
                 ymax=2500,
-                rotor_color="red",
-            ):
-                plt.show()
-                plt.close(fig)
+            )
+
+    print(farm_results, "\n")
+
+    fr = farm_results.to_dataframe()
+    print(fr[[FV.X, FV.Y, FV.WD, FV.AMB_REWS, FV.REWS, FV.AMB_P, FV.P]])
+
+    if not args.nofig:
+        for fig in o.gen_states_fig_xy(
+            plot_data,
+            figsize=(8, 8),
+            quiver_pars=dict(angles="xy", scale_units="xy", scale=0.07),
+            quiver_n=15,
+            rotor_color="red",
+        ):
+            plt.show()
+            plt.close(fig)
