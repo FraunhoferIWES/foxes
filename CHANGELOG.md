@@ -866,6 +866,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.6.3
 
+- Python version:
+  - Removing support for Python 3.14, will be re-added at a later stage
 - Models:
   - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
 - Input:
