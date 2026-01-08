@@ -22,7 +22,6 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
-          #- "3.14"
 
     steps:
       - uses: actions/checkout@v6
@@ -49,7 +48,6 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
-          # 3.14 notebook issue, asof 2025-10-14
 
     steps:
       - uses: actions/checkout@v6
