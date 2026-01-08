@@ -864,7 +864,7 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 **Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.2](https://github.com/FraunhoferIWES/foxes/commits/v1.6.2)
 
-## v1.6.3
+## v1.7.0
 
 - Python version:
   - Removing support for Python 3.14, will be re-added at a later stage
@@ -877,4 +877,4 @@ This major version introduces the concept of `Engines` which handle the chunking
 - Bug fixes:
   - Fixed a bug with the `Sequential` algorithm in combination with `OnePointFlowStates`
 
-**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.6.3](https://github.com/FraunhoferIWES/foxes/commits/v1.6.3)
+**Full Changelog**: [https://github.com/FraunhoferIWES/foxes/commits/v1.7.0](https://github.com/FraunhoferIWES/foxes/commits/v1.7.0)
