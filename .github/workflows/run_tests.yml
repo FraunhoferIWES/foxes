@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --locked --test --dev
+        run: uv sync --locked --extra test --dev
       - name: Running tests
         run: uv run pytest tests
 
@@ -59,6 +59,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --locked --test --dev
+        run: uv sync --locked --extra test --dev
       - name: Running tests
         run: uv run pytest --nbmake notebooks
