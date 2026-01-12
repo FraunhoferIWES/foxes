@@ -1,10 +1,12 @@
-image: python:3.13
-before_script:
-  - pip install --upgrade pip
+image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
 stages:
   - pre-commit
   - test
 variables:
+  UV_VERSION: "0.9.24"
+  PYTHON_VERSION: "3.13"
+  BASE_LAYER: bookworm-slim
+  UV_LINK_MODE: copy
   PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
 
 # ===== PRE-COMMIT =====
@@ -15,8 +17,8 @@ pre-commit:
       - main
       - dev
   script:
-    - pip install pre-commit --break-system-packages
-    - pre-commit run --all-files
+    - uv pip install pre-commit --break-system-packages
+    - uv run pre-commit run --all-files
   cache:
     key: pre-commit-cache
     paths:
@@ -26,5 +28,5 @@ pre-commit:
 test:
   stage: test
   script:
-    - pip install .[test] --upgrade
-    - pytest tests
+    - uv sync --extra test --dev
+    - uv run pytest tests
