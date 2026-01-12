@@ -1,6 +1,4 @@
 image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
-before_script:
-  - uv sync --extra test --dev
 stages:
   - pre-commit
   - test
@@ -19,6 +17,7 @@ pre-commit:
       - main
       - dev
   script:
+    - uv sync --extra dev --dev
     - uv pip install pre-commit --break-system-packages
     - uv run pre-commit run --all-files
   cache:
@@ -30,4 +29,5 @@ pre-commit:
 test:
   stage: test
   script:
+    - uv sync --extra test --dev
     - uv run pytest tests
