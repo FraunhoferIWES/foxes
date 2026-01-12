@@ -1,4 +1,4 @@
-image: python:3.14
+image: python:3.13
 before_script:
   - pip install --upgrade pip
 stages:
