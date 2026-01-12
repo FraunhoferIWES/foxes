@@ -33,3 +33,11 @@ test:
   script:
     - uv sync --extra test --dev
     - uv run pytest tests
+
+# ===== NOTEBOOKS =====
+notebooks:
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+  stage: notebooks
+  script:
+    - uv sync --extra test --dev
+    - uv run pytest --nbmake notebooks
