@@ -30,14 +30,32 @@ pre-commit:
 test:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: test
+  variables:
+    UV_CACHE_DIR: .uv-cache
+  cache:
+    - key:
+        files:
+          - pyproject.toml
+      paths:
+        - $UV_CACHE_DIR
   script:
     - uv sync --extra test --dev
     - uv run pytest tests
+    - uv cache prune --ci
 
 # ===== NOTEBOOKS =====
 notebooks:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: test
+  variables:
+    UV_CACHE_DIR: .uv-cache
+  cache:
+    - key:
+        files:
+          - pyproject.toml
+      paths:
+        - $UV_CACHE_DIR
   script:
     - uv sync --extra test --dev
     - uv run pytest --nbmake notebooks
+    - uv cache prune --ci
