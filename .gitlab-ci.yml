@@ -7,6 +7,7 @@ variables:
   PYTHON_VERSION: "3.13"
   BASE_LAYER: bookworm-slim
   UV_LINK_MODE: copy
+  UV_SYSTEM_PYTHON: 1
   PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
 
 # ===== PRE-COMMIT =====
