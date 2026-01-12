@@ -1,4 +1,3 @@
-image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
 stages:
   - pre-commit
   - test
@@ -12,15 +11,16 @@ variables:
 
 # ===== PRE-COMMIT =====
 pre-commit:
+  image: python:$PYTHON_VERSION
   stage: pre-commit
   only:
     refs:
       - main
       - dev
   script:
-    - uv sync --extra dev --dev
-    - uv pip install pre-commit --break-system-packages
-    - uv run pre-commit run --all-files
+    - pip install --upgrade pip
+    - pip install pre-commit --break-system-packages
+    - pre-commit run --all-files
   cache:
     key: pre-commit-cache
     paths:
@@ -28,6 +28,7 @@ pre-commit:
 
 # ===== TEST =====
 test:
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   stage: test
   script:
     - uv sync --extra test --dev
