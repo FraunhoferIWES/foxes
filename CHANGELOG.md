@@ -868,10 +868,14 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 - Python version:
   - Removing support for Python 3.14, will be re-added at a later stage
+- Engines:
+  - All engines are now required to be used though a _with_ block. If `algo.calc_farm()` or `algo.calc_points()` are called outside such a block, the _DefaultEngine_ will be created temporarily and the _with_ block will be added in the background.
 - Models:
   - Improving the `Streamlines2D` wake frame, now substantially faster and lighter on memory
 - Input:
   - Aligning the `windio` input with [WIFA](https://github.com/EUFLOW/WIFA) conventions for `turbine_results.nc` output writing, now (turbine, time)
+- Output:
+  - Image generating outputs like `FlowPlots2D` now separate plot data computation from figure generation. This reasoning is that `matplotlib.pyplot` is not thread-safe, and now all data can first be computed in parallel before using it for graphics after exiting the engine context.
 - Utils:
   - New function `eval_dict_values`, which recursively parses string dictionary values like e.g. `np.arange(100)` to data, applied in `Dict.eval()`
 - Bug fixes:

@@ -2,29 +2,18 @@
 .. image:: ../../Logo_FOXES.svg
     :align: center
 
-.. versionadded:: 1.6
-    Parallel results writing directly by the `calc_farm` and `calc_points` functions of the algorithm,
-    optionally without ever constructing the complete dataset in memory. If the input consists of multiple files,
-    the output can be written into consistent multiple files as well.
+.. versionchanged:: 1.7.0
+    The `engine` parameter in the `Algorithm` constructor has been removed. If no engine context
+    is specified the default engine is used in the background. For other choices computations
+    have to be run within an explicit engine context, i.e. within a `with engine` block
+    (see examples).
 
-.. versionadded:: 1.6
-    Direct support for WRF data fields in `NEWA <https://map.neweuropeanwindatlas.eu/>`_ format, via
-    the new ambient states class :ref:`NEWAStates<foxes.input.states.NEWAStates>`.
+.. versionchanged:: 1.7.0
+    Image creating outputs like `FlowPlots2D` now separate plot data computation from figure
+    generation. This improves thread-safety of the plotting functions.
 
-.. versionadded:: 1.6
-    Support for wind farm layouts in (longitude, latitude) coordinates, will
-    be automatically converted into the globally set UTM zone. The new layout input functions
-    :ref:`add_from_wrf<foxes.input.farm_layout.add_from_wrf>` for WRF wind farm input folders and
-    :ref:`add_from_eww<foxes.input.farm_layout.add_from_eww>` for farm input in EuroWindWakes format
-    are always based on (lon, lat) coordinates.
-
-.. versionchanged:: 1.6
-    The :ref:`Iterative <foxes.algorithms.Iterative>` algorithm now reduces the
-    target states to the subset of non-converged states in each iteration, which
-    can significantly reduce computation time.
-
-.. versionadded:: 1.6
-    Support for Python 3.14.
+.. versionchanged:: 1.7.0
+    Support for Python 3.14 dropped, will be re-added at a later stage.
 
 Welcome to FOXES
 ================
