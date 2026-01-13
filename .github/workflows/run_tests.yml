@@ -25,14 +25,18 @@ jobs:
           - "3.13"
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+
       - name: Install dependencies
         run: uv sync --extra test --dev
+
       - name: Running tests
         run: uv run pytest tests
 
@@ -51,13 +55,17 @@ jobs:
           - "3.13"
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+
       - name: Install dependencies
         run: uv sync --extra test --dev
+
       - name: Running tests
         run: uv run pytest --nbmake notebooks
