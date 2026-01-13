@@ -1,5 +1,4 @@
 from foxes.algorithms.sequential import SequentialPlugin
-import foxes.variables as FV
 
 from ..flow_plots_2d.flow_plots import FlowPlots2D
 
@@ -23,7 +22,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
     """
 
-    def __init__(self, orientation, title_fun=None,**data_pars):
+    def __init__(self, orientation, title_fun=None, **data_pars):
         """
         Constructor.
 
@@ -77,11 +76,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
         o = FlowPlots2D(algo, fres)
 
         if self._tfun is not None:
-            self._titles.append(
-                self._tfun(
-                    algo.states.counter, algo.states.index()[0]
-                )
-            )
+            self._titles.append(self._tfun(algo.states.counter, algo.states.index()[0]))
 
         if self.orientation == "xy":
             d = o.get_states_data_xy(**self.data_pars, data_format="numpy")
@@ -119,8 +114,7 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
 
         """
         add_bar = (
-            plot_pars.get("vmin", None) is None
-            or plot_pars.get("vmax", None) is None
+            plot_pars.get("vmin", None) is None or plot_pars.get("vmax", None) is None
         )
 
         fig = ax.get_figure()
@@ -130,9 +124,8 @@ class SeqFlowAnimationPlugin(SequentialPlugin):
             o, d = self._data.pop(0)
 
             if "title" in plot_pars:
-                assert self._tfun is not None, (
-                    "Cannot have a title function "
-                    "together with the 'title' parameter"
+                assert self._tfun is None, (
+                    "Cannot have a title function together with the 'title' parameter"
                 )
                 plot_pars = plot_pars.copy()
                 title = plot_pars.pop("title")
