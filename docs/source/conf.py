@@ -91,8 +91,8 @@ language = "en"
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     "build",
-    "Thumbs.db", 
-    ".DS_Store", 
+    "Thumbs.db",
+    ".DS_Store",
     "**.ipynb_checkpoints",
     # "_templates/*",
     # DEBUG
@@ -306,7 +306,7 @@ myst_enable_extensions = [
 ]
 
 nb_execution_mode = "auto"
-nb_execution_timeout = 300  
+nb_execution_timeout = 300
 nb_ipywidgets_js = {
     "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js": {
         "integrity": "sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=",
