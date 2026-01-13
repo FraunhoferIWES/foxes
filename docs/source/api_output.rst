@@ -16,4 +16,3 @@ foxes.output.seq_plugins
 Plugins for the `Sequential` algorithm
 
     .. python-apigen-group:: output.seq_plugins
-        

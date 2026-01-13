@@ -1,6 +1,6 @@
 states:
-  states_type: WeibullSectors               
-  data_source: weibull_sectors_12.csv # weibull_sectors_12.nc 
+  states_type: WeibullSectors
+  data_source: weibull_sectors_12.csv # weibull_sectors_12.nc
   output_vars: [WS, WD, TI, RHO]
   var2ncvar:
     Weibull_A: weibull_a
@@ -14,7 +14,7 @@ states:
 
 
 wind_farm:
-  layouts:    
+  layouts:
     - function: add_from_file
       file_path: test_farm_67.csv
       turbine_models: [DTU10MW]
@@ -22,4 +22,3 @@ wind_farm:
 algorithm:
   algo_type: Downwind
   wake_models: [Bastankhah2014_linear_k004]
-

@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 from copy import deepcopy
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from foxes.core import Engine, MData, FData, TData
 from foxes.utils import import_module
@@ -88,19 +88,14 @@ class DaskBaseEngine(Engine):
         if self._dask_progress_bar:
             self._pbar = ProgressBar(minimum=2)
             self._pbar.__enter__()
+        dask.config.set(**self.dask_config)
         return super().__enter__()
 
     def __exit__(self, *args):
         if self._dask_progress_bar and self._pbar is not None:
             self._pbar.__exit__(*args)
+        dask.config.refresh()
         super().__exit__(*args)
-
-    def initialize(self):
-        """
-        Initializes the engine.
-        """
-        dask.config.set(**self.dask_config)
-        super().initialize()
 
     def submit(self, f, *args, **kwargs):
         """
@@ -225,21 +220,6 @@ class DaskBaseEngine(Engine):
             return data.chunk({v: d for v, d in cks.items() if v in data.coords})
         else:
             return data
-
-    def finalize(self, *exit_args, **exit_kwargs):
-        """
-        Finalizes the engine.
-
-        Parameters
-        ----------
-        exit_args: tuple, optional
-            Arguments from the exit function
-        exit_kwargs: dict, optional
-            Arguments from the exit function
-
-        """
-        dask.config.refresh()
-        super().finalize(*exit_args, **exit_kwargs)
 
 
 class DaskEngine(DaskBaseEngine):

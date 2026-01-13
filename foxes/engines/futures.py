@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 from .pool import PoolEngine
 
+
 class ProcessEngine(PoolEngine):
     """
     The processes engine for foxes calculations.

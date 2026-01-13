@@ -9,4 +9,3 @@ Downwind algorithm models
 Algorithm specific models
 
     .. python-apigen-group:: algorithms.downwind.models
-        

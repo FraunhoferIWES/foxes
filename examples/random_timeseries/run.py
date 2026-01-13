@@ -93,117 +93,116 @@ if __name__ == "__main__":
         seed=args.seed,
     )
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
-        if not args.nofig:
-            fig = plt.figure(figsize=(14.5, 7))
-            ax1 = fig.add_subplot(121)
-            ax2 = fig.add_subplot(122, polar=True)
-            foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax1)
+    )
+    if not args.nofig:
+        fig = plt.figure(figsize=(14.5, 7))
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122, polar=True)
+        foxes.output.FarmLayoutOutput(farm).get_figure(fig=fig, ax=ax1)
 
+        with engine:
             o = foxes.output.StatesRosePlotOutput(states, point=[0.0, 0.0, 100.0])
-            o.get_figure(
-                16,
-                FV.AMB_WS,
-                [0, 3.5, 6, 10, 15, 20],
-                fig=fig,
-                ax=ax2,
-                freq_delta=2,
-            )
-
-            plt.show()
-            plt.close(fig)
-
-        Algo = (
-            foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
-        )
-        algo = Algo(
-            farm,
-            states,
-            rotor_model=args.rotor,
-            wake_models=args.wakes,
-            wake_frame=args.frame,
-            partial_wakes=args.pwakes,
-            mbook=mbook,
-            verbosity=0,
+        o.get_figure(
+            16,
+            FV.AMB_WS,
+            [0, 3.5, 6, 10, 15, 20],
+            fig=fig,
+            ax=ax2,
+            freq_delta=2,
         )
 
+        plt.show()
+        plt.close(fig)
+
+    Algo = foxes.algorithms.Iterative if args.iterative else foxes.algorithms.Downwind
+    algo = Algo(
+        farm,
+        states,
+        rotor_model=args.rotor,
+        wake_models=args.wakes,
+        wake_frame=args.frame,
+        partial_wakes=args.pwakes,
+        mbook=mbook,
+        verbosity=0,
+    )
+    with engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
         time1 = time.time()
 
-        print("\nFarm results:\n")
-        print(farm_results)
-        print(
-            farm_results.to_dataframe()[
-                [
-                    FV.AMB_WD,
-                    FV.AMB_TI,
-                    FV.AMB_REWS,
-                    FV.AMB_CT,
-                    FV.AMB_P,
-                    FV.TI,
-                    FV.REWS,
-                    FV.CT,
-                    FV.P,
-                ]
+    print("\nFarm results:\n")
+    print(farm_results)
+    print(
+        farm_results.to_dataframe()[
+            [
+                FV.AMB_WD,
+                FV.AMB_TI,
+                FV.AMB_REWS,
+                FV.AMB_CT,
+                FV.AMB_P,
+                FV.TI,
+                FV.REWS,
+                FV.CT,
+                FV.P,
             ]
-        )
-        print("\nCalc time =", time1 - time0, "\n")
+        ]
+    )
+    print("\nCalc time =", time1 - time0, "\n")
 
-        o = foxes.output.FarmResultsEval(farm_results)
-        o.add_capacity(algo)
-        o.add_capacity(algo, ambient=True)
-        o.add_efficiency()
+    o = foxes.output.FarmResultsEval(farm_results)
+    o.add_capacity(algo)
+    o.add_capacity(algo, ambient=True)
+    o.add_efficiency()
 
-        print("\nFarm results:\n")
-        print(farm_results)
+    print("\nFarm results:\n")
+    print(farm_results)
 
-        # state-turbine results
-        farm_df = farm_results.to_dataframe()
-        print("\nFarm results data:\n")
-        print(
-            farm_df[
-                [
-                    FV.X,
-                    FV.WD,
-                    FV.AMB_REWS,
-                    FV.REWS,
-                    FV.AMB_TI,
-                    FV.TI,
-                    FV.AMB_P,
-                    FV.P,
-                    FV.EFF,
-                ]
+    # state-turbine results
+    farm_df = farm_results.to_dataframe()
+    print("\nFarm results data:\n")
+    print(
+        farm_df[
+            [
+                FV.X,
+                FV.WD,
+                FV.AMB_REWS,
+                FV.REWS,
+                FV.AMB_TI,
+                FV.TI,
+                FV.AMB_P,
+                FV.P,
+                FV.EFF,
             ]
-        )
-        print()
+        ]
+    )
+    print()
 
-        # results by turbine
-        turbine_results = o.reduce_states(
-            {
-                FV.AMB_P: "weights",
-                FV.P: "weights",
-                FV.AMB_CAP: "weights",
-                FV.CAP: "weights",
-            }
-        )
-        turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
-            algo=algo, annual=True, ambient=True
-        )
-        turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
-        turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
-        print("\nResults by turbine:\n")
-        print(turbine_results)
+    # results by turbine
+    turbine_results = o.reduce_states(
+        {
+            FV.AMB_P: "weights",
+            FV.P: "weights",
+            FV.AMB_CAP: "weights",
+            FV.CAP: "weights",
+        }
+    )
+    turbine_results[FV.AMB_YLD] = o.calc_turbine_yield(
+        algo=algo, annual=True, ambient=True
+    )
+    turbine_results[FV.YLD] = o.calc_turbine_yield(algo=algo, annual=True)
+    turbine_results[FV.EFF] = turbine_results[FV.P] / turbine_results[FV.AMB_P]
+    print("\nResults by turbine:\n")
+    print(turbine_results)
 
-        # power results
-        P0 = o.calc_mean_farm_power(ambient=True)
-        P = o.calc_mean_farm_power()
-        print(f"\nFarm power        : {P / 1000:.1f} MW")
-        print(f"Farm ambient power: {P0 / 1000:.1f} MW")
-        print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
-        print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")
+    # power results
+    P0 = o.calc_mean_farm_power(ambient=True)
+    P = o.calc_mean_farm_power()
+    print(f"\nFarm power        : {P / 1000:.1f} MW")
+    print(f"Farm ambient power: {P0 / 1000:.1f} MW")
+    print(f"Farm efficiency   : {o.calc_farm_efficiency() * 100:.2f} %")
+    print(f"Annual farm yield : {turbine_results[FV.YLD].sum():.2f} GWh")

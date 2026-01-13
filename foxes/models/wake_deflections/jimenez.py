@@ -265,6 +265,7 @@ class JimenezDeflection(WakeDeflection):
             D = _get_data(FV.D)[sel]
             gamma = np.deg2rad(gamma[sel])
             ct = ct[sel]
+            x = x[sel]
 
             alpha[sel] = np.rad2deg(
                 -(np.cos(gamma) ** 2)

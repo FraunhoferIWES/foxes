@@ -106,7 +106,6 @@ class Sequential(Iterative):
 
         self._verbo0 = self.verbosity + 1
         self.verbosity -= 1
-        get_engine().verbosity -= 2
 
         self._i = None
 
@@ -134,6 +133,12 @@ class Sequential(Iterative):
         """Initialize the iterator"""
 
         if not self.iterating:
+            # Adjust verbosity if engine is set
+            try:
+                get_engine().verbosity -= 2
+            except ValueError:
+                pass
+
             if not self.initialized:
                 self.initialize()
             self.print_deco("calc_farm")
@@ -261,6 +266,12 @@ class Sequential(Iterative):
 
             for p in self.plugins:
                 p.finalize(self)
+
+            # Reset verbosity if engine is set
+            try:
+                get_engine().verbosity += 2
+            except ValueError:
+                pass
 
             raise StopIteration
 

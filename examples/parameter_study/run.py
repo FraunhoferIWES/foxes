@@ -92,16 +92,19 @@ if __name__ == "__main__":
         ),
     )
 
-    with foxes.Engine.new(
+    engine = foxes.Engine.new(
         engine_type=args.engine,
         n_procs=args.n_cpus,
         chunk_size_states=args.chunksize_states,
         chunk_size_points=args.chunksize_points,
-    ):
+    )
+
+    with engine:
         time0 = time.time()
         farm_results = algo.calc_farm()
         time1 = time.time()
-        print("Calc time =", time1 - time0, "\n")
+
+    print("Calc time =", time1 - time0, "\n")
 
     pop_results = algo.population_model.farm2pop_results(algo, farm_results)
     print("\nPopulation results:\n\n", pop_results)

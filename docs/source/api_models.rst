@@ -2,7 +2,7 @@ foxes.models
 ============
 This package contains all concrete model classes.
 
-    .. table:: 
+    .. table::
         :widths: auto
 
         =======================================  ============================================================
@@ -48,14 +48,14 @@ from horizontal planes.
 
 foxes.models.partial_wakes
 --------------------------
-The :ref:`Partial wakes`: models. They are responsible for 
+The :ref:`Partial wakes`: models. They are responsible for
 computing rotor effective wake deltas.
 
     .. python-apigen-group:: models.partial_wakes
 
 foxes.models.point_models
 -------------------------
-The :ref:`Point models`:. They compute state-point data for 
+The :ref:`Point models`:. They compute state-point data for
 given points of interest.
 
     .. python-apigen-group:: models.point_models
@@ -69,7 +69,7 @@ from the ambient input states.
 
 foxes.models.turbine_models
 ---------------------------
-The :ref:`Turbine models`:. They compute state-turbine data based on 
+The :ref:`Turbine models`:. They compute state-turbine data based on
 the currently available and model provided data.
 
     .. python-apigen-group:: models.turbine_models
@@ -77,7 +77,7 @@ the currently available and model provided data.
 foxes.models.turbine_types
 --------------------------
 The :ref:`Turbine types`:. These are turbine models that represent
-the wind turbine machine, i.e, they specify rotor diameter, hub 
+the wind turbine machine, i.e, they specify rotor diameter, hub
 height and compute power and thrust.
 
     .. python-apigen-group:: models.turbine_types
@@ -111,7 +111,7 @@ presence of yawed rotors.
 
 foxes.models.wake_models
 ------------------------
-The :ref:`Wake models`:. They compute wake deltas due to source turbines at 
+The :ref:`Wake models`:. They compute wake deltas due to source turbines at
 any set of evaluation points.
 
     .. toctree::
@@ -121,8 +121,8 @@ any set of evaluation points.
 
 foxes.models.wake_superpositions
 --------------------------------
-The wake superposition models. These models compute net wake effects 
-from individual wake delta results. Note that wake models can but do not 
+The wake superposition models. These models compute net wake effects
+from individual wake delta results. Note that wake models can but do not
 neccessarily have to make use of wake superposition models.
 
     .. python-apigen-group:: models.wake_superpositions

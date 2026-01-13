@@ -4,17 +4,17 @@ states:
   output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
-    WD: wd 
+    WD: wd
     TI: ti
   fixed_vars:
     RHO: 1.225
-  
+
 model_book:                 # this section is optional
   turbine_types:            # name of the model book section to be updated
     - name: my_turbine      # name of the new model
       ttype_type: PCtFile   # class from foxes.models.turbine_types
       data_source: NREL-5MW-D126-H90.csv # specify constructor arguments here
-  
+
 wind_farm:
   layouts:    # list functions from foxes.input.farm_layout below
     - function: add_from_file

@@ -9,7 +9,6 @@ from .core import Engine as Engine
 from .core import WindFarm as WindFarm
 from .core import Turbine as Turbine
 from .core import get_engine as get_engine
-from .core import reset_engine as reset_engine
 from .models import ModelBook as ModelBook
 
 from .data import parse_Pct_file_name as parse_Pct_file_name

@@ -2,7 +2,7 @@ foxes.input
 ===========
 Classes and functions that describe user input data.
 
-    .. table:: 
+    .. table::
         :widths: auto
 
         =======================================  =============================================================
@@ -40,7 +40,7 @@ Runs *foxes* via parameter input yaml files, used by the command line applicatio
 *foxes_yaml*.
 
     .. python-apigen-group:: input.yaml
-        
+
 
 foxes.input.yaml.windio
 -----------------------

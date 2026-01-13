@@ -75,7 +75,7 @@ class Iterative(Downwind):
         """
         super().__init__(*args, **kwargs)
 
-        self.max_it = 2 + self.farm.n_turbines**2 if max_it is None else max_it
+        self.max_it = max_it if max_it is not None else np.inf
         self.conv_crit = (
             self.get_model("DefaultConv")() if conv_crit == "default" else conv_crit
         )

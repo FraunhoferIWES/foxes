@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from inspect import signature
+from copy import deepcopy
 
 import foxes.input.farm_layout as farm_layout
 from foxes.core import States, Engine, WindFarm, Algorithm
@@ -146,14 +147,15 @@ def read_dict(
     engine = None
     if engine_pars is not None:
         engine = Engine.new(**engine_pars)
-        _print(f"Initializing engine: {engine}")
-        engine.initialize()
+        _print(f"Using engine: {engine}")
     elif "engine" in idict:
         if verbosity is not None:
             idict["verbosity"] = verbosity - 1
         engine = Engine.new(**idict["engine"])
-        engine.initialize()
-        _print(f"Initializing engine: {engine}")
+        _print(f"Using engine: {engine}")
+    else:
+        _print("Using default engine")
+        engine = Engine.new(engine_type="default")
 
     # create algorithm:
     if algo is None:
@@ -232,22 +234,23 @@ def get_output_obj(
     return cls(**odict)
 
 
-def _get_object(rlabels, d):
+def _get_object(results_storage, d):
     """Helper function for object extraction"""
     d = d.replace("]", "")
     i0 = d.find("[")
     if i0 > 0:
         inds = tuple([int(x) for x in d[i0 + 1 :].split(",")])
-        return rlabels[d[:i0]][inds]
+        return results_storage[d[:i0]][inds]
     else:
-        return rlabels[d]
+        return results_storage[d]
 
 
 def run_obj_function(
     obj,
     fdict,
     algo,
-    rlabels,
+    with_engine,
+    results_storage,
     nofig=False,
     verbosity=None,
 ):
@@ -262,7 +265,9 @@ def run_obj_function(
         The function call dict
     algo: foxes.core.Algorithm
         The algorithm
-    rlabels: dict
+    with_engine: bool
+        Flag for running from within engine context
+    results_storage: dict
         Storage for result variables
     nofig: bool
         Do not show figures, overrules settings from fdict
@@ -283,7 +288,7 @@ def run_obj_function(
             print(*args, **kwargs)
 
     fname = fdict.pop_item("function")
-    _print(f"Running function {type(obj).__name__}.{fname}")
+    _print(f"Running function {type(obj).__name__}.{fname} (with_engine={with_engine})")
     plt_show = fdict.pop_item("plt_show", False)
     plt_close = fdict.pop_item("plt_close", False)
     rlbs = fdict.pop_item("result_labels", None)
@@ -303,7 +308,7 @@ def run_obj_function(
     # replace result labels by objects:
     for k, d in fdict.items():
         if isinstance(d, str) and d[0] == "$":
-            fdict[k] = _get_object(rlabels, d)
+            fdict[k] = _get_object(results_storage, d)
 
     # run function:
     args = fdict.pop_item("args", tuple())
@@ -319,22 +324,22 @@ def run_obj_function(
     # store results under result labels:
     if rlbs is not None:
 
-        def _set_label(rlabels, k, r):
+        def _set_label(results_storage, k, r):
             if k not in ["", "none", "None", "_", "__"]:
                 assert k[0] == "$", (
-                    f"Output {i} of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
+                    f"Output of type '{ocls}', function '{fname}': result labels must start with '$', got '{k}'"
                 )
                 assert "[" not in k and "]" not in k and "," not in k, (
-                    f"Output {i} of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
+                    f"Output of type '{ocls}', function '{fname}': result labels cannot contain '[' or ']' or comma, got '{k}'"
                 )
                 _print(f"    result label {k}: {type(r).__name__}")
-                rlabels[k] = r
+                results_storage[k] = r
 
         if isinstance(rlbs, (list, tuple)):
             for i, k in enumerate(rlbs):
-                _set_label(rlabels, k, results[i])
+                _set_label(results_storage, k, results[i])
         else:
-            _set_label(rlabels, rlbs, results)
+            _set_label(results_storage, rlbs, results)
 
     return results
 
@@ -344,8 +349,10 @@ def run_outputs(
     algo=None,
     farm_results=None,
     point_results=None,
+    with_engine=False,
     extra_sig={},
-    ret_rlabels=False,
+    results_storage=None,
+    ret_results_storage=False,
     nofig=False,
     verbosity=None,
 ):
@@ -354,6 +361,8 @@ def run_outputs(
 
     Parameters
     ----------
+    engine: foxes.core.Engine
+        The engine object
     idict: foxes.utils.Dict
         The input parameter dictionary
     algo: foxes.core.Algorithm, optional
@@ -362,10 +371,14 @@ def run_outputs(
         The farm results
     point_results: xarray.Dataset, optional
         The point results
+    with_engine: bool
+        Flag for running from within engine context
     extra_sig: dict
         Extra function signature check, sets
         arguments (key) with data (value)
-    ret_rlabels: bool
+    results_storage: dict, optional
+        Storage for result variables
+    ret_results_storage: bool
         Flag for returning results variables
     nofig: bool
         Do not show figures, overrules settings from idict
@@ -378,7 +391,7 @@ def run_outputs(
         For each output enty, a tuple (dict, results),
         where results is a list that represents one
         entry per function call
-    rlabels: dict, optional
+    results_storage: dict, optional
         The results variables
 
     :group: input.yaml
@@ -389,51 +402,92 @@ def run_outputs(
         if verbosity is None or verbosity >= level:
             print(*args, **kwargs)
 
+    if results_storage is None:
+        results_storage = Dict(_name="result_storage")
+
     out = []
-    rlabels = Dict(_name="result_labels")
     if "outputs" in idict:
         odicts = idict["outputs"]
 
         for i, d in enumerate(odicts):
+            d = deepcopy(d)
             if "output_type" in d:
                 d["nofig"] = nofig
                 ocls = d.pop_item("output_type")
-                _print(f"\nRunning output {i}: {ocls}")
                 d0 = dict(output_type=ocls)
                 d0.update(d)
 
                 flist = d.pop_item("functions")
+                ematch = [fd.pop("with_engine", False) == with_engine for fd in flist]
 
-                o = get_output_obj(
-                    ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
-                )
-                if o is None:
-                    out.append((d0, None))
-                    continue
+                if with_engine and any(ematch) and not all(ematch):
+                    ecount = sum(ematch)
+                    assert not any(ematch[ecount:]), (
+                        f"Output {i}, {ocls}: with_engine is True "
+                        f"but functions with with_engine=False are not at the end: {ematch}"
+                    )
+
+                if any(ematch) or (d.pop("with_engine", False) and with_engine):
+                    o = get_output_obj(
+                        ocls, d, algo, farm_results, point_results, extra_sig=extra_sig
+                    )
+                else:
+                    o = None
 
             elif "object" in d:
                 ocls = d.pop_item("object")
-                _print(f"Running output {i}: Object {ocls}")
-                o = _get_object(rlabels, ocls)
                 d0 = dict(object=ocls)
                 d0.update(d)
+
                 flist = d.pop_item("functions")
+                ematch = [fd.pop("with_engine", False) == with_engine for fd in flist]
+
+                if with_engine and any(ematch) and not all(ematch):
+                    ecount = sum(ematch)
+                    assert not any(ematch[ecount:]), (
+                        f"Output {i}, {ocls}: with_engine is True "
+                        f"but functions with with_engine=False are not at the end: {ematch}"
+                    )
+
+                if any(ematch):
+                    o = _get_object(results_storage, ocls)
+                else:
+                    o = None
 
             else:
                 raise KeyError(
                     f"Output {i}: Please specify either 'output_type' or 'object'"
                 )
 
-            fres = []
-            for fdict in flist:
-                results = run_obj_function(o, fdict, algo, rlabels, nofig, verbosity)
-                fres.append(results)
-            out.append((d0, fres))
+            if o is None:
+                out.append((d0, None))
+            else:
+                _print(f"Entering output {i}, {ocls} (with_engine={with_engine})")
+                fres = []
+                for fdict, em in zip(flist, ematch):
+                    if em:
+                        results = (
+                            run_obj_function(
+                                o,
+                                fdict,
+                                algo,
+                                with_engine,
+                                results_storage,
+                                nofig,
+                                verbosity,
+                            )
+                            if em
+                            else None
+                        )
+                    else:
+                        results = None
+                    fres.append(results)
+                out.append((d0, fres))
 
         if len(odicts):
             _print()
 
-    return out if not ret_rlabels else out, rlabels
+    return out if not ret_results_storage else out, results_storage
 
 
 def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
@@ -475,41 +529,61 @@ def run_dict(idict, *args, nofig=False, verbosity=None, **kwargs):
 
     # read components:
     algo, engine = read_dict(idict, *args, verbosity=verbosity, **kwargs)
-
-    # run farm calculation:
-    rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
-    if rdict.pop_item("run", True):
-        _print("Running calc_farm")
-        farm_results = algo.calc_farm(**rdict)
-    else:
-        farm_results = None
-    out = (farm_results,)
-
-    # run points calculation:
-    point_results = None
-    if "calc_points" in idict:
-        rdict = idict.get_item("calc_points")
-        if rdict.pop_item("run"):
-            _print("Running calc_points")
-            points = rdict.pop_item("points")
-            if isinstance(points, str):
-                _print("Reading file", points)
-                points = pd.read_csv(points).to_numpy()
-            point_results = algo.calc_points(farm_results, points=points, **rdict)
+    results_storage = None
+    with engine:
+        # run farm calculation:
+        rdict = idict.get_item("calc_farm", Dict(_name=idict.name + ".calc_farm"))
+        if rdict.pop_item("run", True):
+            _print("Running calc_farm")
+            farm_results = algo.calc_farm(**rdict)
         else:
-            point_results = None
-        out += (point_results,)
+            farm_results = None
+        out = (farm_results,)
 
-    # run outputs:
-    out += (
+        # run points calculation:
+        point_results = None
+        if "calc_points" in idict:
+            rdict = idict.get_item("calc_points")
+            if rdict.pop_item("run"):
+                _print("Running calc_points")
+                points = rdict.pop_item("points")
+                if isinstance(points, str):
+                    _print("Reading file", points)
+                    points = pd.read_csv(points).to_numpy()
+                point_results = algo.calc_points(farm_results, points=points, **rdict)
+            else:
+                point_results = None
+            out += (point_results,)
+
+        # run outputs with engine:
+        out_w, results_storage = run_outputs(
+            idict,
+            algo,
+            farm_results,
+            point_results,
+            with_engine=True,
+            nofig=nofig,
+            results_storage=results_storage,
+            ret_results_storage=True,
+            verbosity=verbosity,
+        )
+        out_w = list(out_w)
+
+    # run outputs w/o engine:
+    out_wo = list(
         run_outputs(
-            idict, algo, farm_results, point_results, nofig=nofig, verbosity=verbosity
+            idict,
+            algo,
+            farm_results,
+            point_results,
+            with_engine=False,
+            nofig=nofig,
+            results_storage=results_storage,
+            verbosity=verbosity,
         ),
     )
 
-    # shutdown engine, if created above:
-    if engine is not None:
-        _print(f"Finalizing engine: {engine}")
-        engine.finalize()
+    # combine outputs:
+    out += tuple(a if a is not None else b for a, b in zip(out_w, out_wo))
 
     return out

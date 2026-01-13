@@ -1,6 +1,6 @@
 name: Publish 🐍 to TestPyPI 📦
 
-on: 
+on:
   push:
     branches:
       - main
@@ -41,7 +41,7 @@ jobs:
       url: https://test.pypi.org/p/foxes
 
     permissions:
-      id-token: write 
+      id-token: write
 
     steps:
     - name: Download all the dists

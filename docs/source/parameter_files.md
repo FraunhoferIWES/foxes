@@ -1,6 +1,6 @@
 # Input parameter files
 
-Instead of running *foxes* via a Python script, it can also be run from input parameter 
+Instead of running *foxes* via a Python script, it can also be run from input parameter
 files in [YAML](https://de.wikipedia.org/wiki/YAML) format. For this purpose the two
 command line applications `foxes_yaml` and `foxes_windio` have been added.
 
@@ -63,17 +63,17 @@ states:
   output_vars: [WS, WD, TI, RHO]
   var2col:
     WS: ws
-    WD: wd 
+    WD: wd
     TI: ti
   fixed_vars:
     RHO: 1.225
-  
+
 model_book:                 # this section is optional
   turbine_types:            # name of the model book section to be updated
     - name: my_turbine      # name of the new model
       ttype_type: PCtFile   # class from foxes.models.turbine_types
       data_source: NREL-5MW-D126-H90.csv # specify constructor arguments here
-  
+
 wind_farm:
   layouts:    # list functions from foxes.input.farm_layout below
     - function: add_from_file
@@ -110,7 +110,7 @@ Whenever the outputs provided by the `foxes.output` package are sufficient for w
 
 ### Plot creation and variables
 
-For the purpose of more complex outputs, it is possible to store results of functions under _variables_, whose names are required to start with the `$` symbol. 
+For the purpose of more complex outputs, it is possible to store results of functions under _variables_, whose names are required to start with the `$` symbol.
 
 Here is an [example](https://github.com/FraunhoferIWES/foxes/blob/main/examples/yaml_input/inputs2.yaml) modification of the above input file which makes use of variables for the generation of a plot that is combined out of two sub-plots:
 
@@ -121,7 +121,7 @@ outputs:
       - function: figure
         figsize: [10, 5]
         result_labels: $fig   # store the result of the function under $fig
-  - object: $fig              # now run functions of the object behind $fig  
+  - object: $fig              # now run functions of the object behind $fig
     functions:
       - function: add_subplot
         args: [1, 2, 1]
@@ -157,7 +157,7 @@ If a function returns more than one result, those can be associated with variabl
 
 For objects that are array-like, it is additionally possible to use a syntax like `$data[0]` or `$data[0, 2, 5]`, etc, for passing sub elements of stored results to function arguments.
 
-Notice the line `object $fig` which starts a section that calls functions of the object behind the `$fig` variable, instead of an instance of an `output_type`. 
+Notice the line `object $fig` which starts a section that calls functions of the object behind the `$fig` variable, instead of an instance of an `output_type`.
 
 The above outputs create and save a figure that is composed of two sub plots, where the second is based on polar projection:
 
