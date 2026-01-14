@@ -2,8 +2,8 @@ name: Publish 🐍 to PyPI 📦
 
 on:
   push:
-    #tags:
-    #  - 'v*'
+    tags:
+      - 'v*'
 
 jobs:
   pre-commit:
