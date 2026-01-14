@@ -68,7 +68,6 @@ doc = [
     "lxml_html_clean>=0.4",
     "dask>=2022.0",
     "distributed>=2022.0",
-    "ipywidgets>0.1",
 ]
 test = [
     "pytest>=7.0",

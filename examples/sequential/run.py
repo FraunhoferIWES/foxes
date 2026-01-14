@@ -175,24 +175,14 @@ if __name__ == "__main__":
     if args.animation:
         anigen = foxes.output.SeqFlowAnimationPlugin(
             orientation="xy",
-            data_pars=dict(
-                var=args.variable,
-                resolution=10,
-                xmin=-1000,
-                ymin=-1000,
-                xmax=4000,
-                ymax=3000,
-                vmin=0,
-                vmax=args.max_variable,
-            ),
-            plot_pars=dict(
-                levels=None,
-                quiver_pars=dict(scale=0.016, alpha=0.5),
-                quiver_n=157,
-                title=None,
-                animated=True,
-                rotor_color="red",
-            ),
+            var=args.variable,
+            resolution=10,
+            xmin=-1000,
+            ymin=-1000,
+            xmax=4000,
+            ymax=3000,
+            vmin=0,
+            vmax=args.max_variable,
         )
         algo.plugins.append(anigen)
 
@@ -213,9 +203,20 @@ if args.animation:
 
     fig, ax = plt.subplots()
     anim = foxes.output.Animator(fig)
-    anim.add_generator(anigen.gen_images(ax))
+    anim.add_generator(
+        anigen.gen_images(
+            ax,
+            levels=None,
+            quiver_pars=dict(scale=0.016, alpha=0.5),
+            quiver_n=157,
+            title=None,
+            rotor_color="red",
+        )
+    )
+
     if args.debug:
         anim.add_generator(anigen_debug.gen_images(ax))
+
     ani = anim.animate(interval=600)
 
     lo = foxes.output.FarmLayoutOutput(farm)

@@ -90,9 +90,10 @@ language = "en"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
-    # ipynb checkpoints
-    "notebooks/.ipynb_checkpoints/*.ipynb",
-    "build/*",
+    "build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
     # "_templates/*",
     # DEBUG
     # "examples.rst",
@@ -293,3 +294,29 @@ python_apigen_modules = {
     "foxes.utils.abl.unstable": "_foxes/utils/abl/unstable/",
     "foxes.utils.abl.sheared": "_foxes/utils/abl/sheared/",
 }
+
+# myst-nb parameters
+
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+]
+
+nb_execution_mode = "auto"
+nb_execution_timeout = 300
+nb_ipywidgets_js = {
+    "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js": {
+        "integrity": "sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=",
+        "crossorigin": "anonymous",
+    },
+    "https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@*/dist/embed-amd.js": {
+        "data-jupyter-widgets-cdn": "https://cdn.jsdelivr.net/npm/",
+        "crossorigin": "anonymous",
+    },
+}
+# nb_render_image_options = {"width": "200px"}
+# application/vnd.plotly.v1+json and application/vnd.bokehjs_load.v0+json
+suppress_warnings = ["mystnb.unknown_mime_type"]
