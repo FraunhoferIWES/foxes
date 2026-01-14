@@ -100,6 +100,10 @@ jobs:
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    needs:
+      - tests
+      - notebooks
 
     steps:
       - name: Checkout repository
@@ -128,9 +132,9 @@ jobs:
 
   publish-to-testpypi:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
+    runs-on: ubuntu-latest
     needs:
     - build
-    runs-on: ubuntu-latest
     environment:
       name: testpypi
       url: https://test.pypi.org/p/foxes
