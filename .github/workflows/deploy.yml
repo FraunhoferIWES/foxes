@@ -1,4 +1,4 @@
-name: Publish 🐍 to PyPI 📦
+name: Publish 📦 and deploy docs
 
 on:
   push:
@@ -154,7 +154,7 @@ jobs:
           path: docs/build/
 
   publish-to-testpypi:
-    name: Publish 🐍 to TestPyPI 📦
+    name: Publish 📦 to TestPyPI 📦
     needs: build
 
     runs-on: ubuntu-latest
@@ -179,7 +179,7 @@ jobs:
           skip-existing: true
 
   publish-to-pypi:
-    name: Publish 🐍 to PyPI 📦
+    name: Publish 📦 to PyPI
     needs:
       - tests
       - notebooks
