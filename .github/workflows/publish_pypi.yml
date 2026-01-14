@@ -2,15 +2,14 @@ name: Publish 🐍 to PyPI 📦
 
 on:
   push:
-    branches-ignore:
-      - '!main'
-    tags:
-      - 'v*'
+    #tags:
+    #  - 'v*'
 
 jobs:
   pre-commit:
     name: Run pre-commit checks
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
