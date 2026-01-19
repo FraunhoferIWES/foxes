@@ -83,7 +83,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/FraunhoferIWES/foxes"
-Documentation = "https://fraunhoferiwes.github.io/foxes.docs/index.html"
+Documentation = "https://fraunhoferiwes.github.io/foxes/index.html"
 Repository = "https://github.com/FraunhoferIWES/foxes.git"
 "Bug Tracker" = "https://github.com/FraunhoferIWES/foxes/issues"
 Changelog = "https://github.com/FraunhoferIWES/foxes/blob/main/CHANGELOG.md"

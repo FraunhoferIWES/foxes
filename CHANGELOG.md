@@ -866,6 +866,8 @@ This major version introduces the concept of `Engines` which handle the chunking
 
 ## v1.7.0
 
+- Documentation:
+  - The docu has moved to a new location: [https://fraunhoferiwes.github.io/foxes/index.html](https://fraunhoferiwes.github.io/foxes/index.html)
 - Python version:
   - Removing support for Python 3.14, will be re-added at a later stage
 - Engines:
