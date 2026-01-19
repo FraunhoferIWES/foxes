@@ -13,7 +13,6 @@ jobs:
   pre-commit:
     name: Run pre-commit checks
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout repository
@@ -150,26 +149,3 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
-
-  build-docs:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: pre-commit
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.12"
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --extra doc --dev
-
-      - name: Build documentation
-        run: |
-          cd docs
-          uv run make html
