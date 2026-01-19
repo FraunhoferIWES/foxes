@@ -63,6 +63,9 @@ jobs:
       - name: Running tests
         run: uv run pytest tests
 
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+
   build:
     name: Build distribution 📦
     runs-on: ubuntu-latest
@@ -121,6 +124,9 @@ jobs:
         with:
           name: github-pages
           path: docs/build/
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
 
   deploy-docs:
     name: Deploy Documentation
